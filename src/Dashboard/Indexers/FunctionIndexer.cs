@@ -44,6 +44,15 @@ namespace Dashboard.Indexers
             _recentInvocationsByParentWriter = recentInvocationsByParentWriter;
         }
 
+        public void UpgradeData()
+        {
+            var blobs = _functionInstanceLookup.List();
+            foreach (var blob in blobs)
+            {
+                _functionInstanceLogger.LogFunctionUpdate(blob.Split('/').Last());
+            }
+        }
+
         // This method runs concurrently with other index processing.
         // Ensure all logic here is idempotent.
         public void ProcessFunctionStarted(FunctionStartedMessage message)

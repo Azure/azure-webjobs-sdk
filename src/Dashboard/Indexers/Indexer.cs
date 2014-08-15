@@ -32,6 +32,7 @@ namespace Dashboard.Indexers
 
             try
             {
+                UpgradeData();
                 UpdateCore();
             }
             catch (Exception ex)
@@ -55,6 +56,11 @@ namespace Dashboard.Indexers
 
                 _logWriter.Write(logEntry);
             }
+        }
+
+        private void UpgradeData()
+        {
+            _functionIndexer.UpgradeData();
         }
 
         private void UpdateCore()

@@ -7,11 +7,15 @@ namespace Dashboard.Data
     {
         IConcurrentDocument<TDocument> Read(string id);
 
+        ConcurrentMetadataText ReadText(string id);
+
         void CreateOrUpdate(string id, TDocument document);
 
         bool TryCreate(string id, TDocument document);
 
         bool TryUpdate(string id, string eTag, TDocument document);
+
+        bool TryUpdateText(string id, string eTag, ConcurrentMetadataText document);
 
         bool TryDelete(string id, string eTag);
     }

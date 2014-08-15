@@ -39,6 +39,15 @@ namespace Dashboard.Data
 
         public ConcurrentMetadataDocument<TDocument> Read(string id)
         {
+            ConcurrentMetadataText innerResult = ReadText(id);
+            string eTag = innerResult.ETag;
+            IDictionary<string, string> metadata = innerResult.Metadata;
+            TDocument document = JsonConvert.DeserializeObject<TDocument>(innerResult.Text, _settings);
+            return new ConcurrentMetadataDocument<TDocument>(eTag, metadata, document);
+        }
+
+        public ConcurrentMetadataText ReadText(string id)
+        {
             ConcurrentMetadataText innerResult = _innerStore.Read(id);
 
             if (innerResult == null)
@@ -46,10 +55,7 @@ namespace Dashboard.Data
                 return null;
             }
 
-            string eTag = innerResult.ETag;
-            IDictionary<string, string> metadata = innerResult.Metadata;
-            TDocument document = JsonConvert.DeserializeObject<TDocument>(innerResult.Text, _settings);
-            return new ConcurrentMetadataDocument<TDocument>(eTag, metadata, document);
+            return innerResult;
         }
 
         public void CreateOrUpdate(string id, TDocument document)
@@ -74,6 +80,11 @@ namespace Dashboard.Data
         public bool TryUpdate(string id, string eTag, TDocument document)
         {
             return TryUpdate(id, eTag, metadata: null, document: document);
+        }
+
+        public bool TryUpdateText(string id, string eTag, ConcurrentMetadataText document)
+        {
+            return _innerStore.TryUpdate(id, eTag, document.Metadata, document.Text);
         }
 
         public bool TryUpdate(string id, string eTag, IDictionary<string, string> metadata, TDocument document)

@@ -2,10 +2,12 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Linq;
 using Microsoft.Azure.Jobs.Storage;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace Dashboard.Data
 {
@@ -54,6 +56,11 @@ namespace Dashboard.Data
             }
 
             return JsonConvert.DeserializeObject<FunctionInstanceSnapshot>(contents, _settings);
+        }
+
+        IList<string> IFunctionInstanceLookup.List()
+        {
+            return _directory.ListBlobs().Select(b => ((ICloudBlob)b).Name).ToList();
         }
    }
 }

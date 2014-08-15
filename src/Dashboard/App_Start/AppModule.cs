@@ -90,7 +90,7 @@ namespace Dashboard
             {
                 // Invalid
                 SdkSetupState.ConnectionStringState = SdkSetupState.ConnectionStringStates.Invalid;
-                SdkSetupState.BadInitErrorMessage = e.Message; // $$$ don't use a global flag.                    
+                SdkSetupState.BadInitErrorMessage = e.Message; // $$$ don't use a global flag.
             }
             return null;
         }

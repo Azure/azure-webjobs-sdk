@@ -10,5 +10,7 @@ namespace Dashboard.Indexers
         void ProcessFunctionStarted(FunctionStartedMessage message);
 
         void ProcessFunctionCompleted(FunctionCompletedMessage message);
+
+        void UpgradeData();
     }
 }
