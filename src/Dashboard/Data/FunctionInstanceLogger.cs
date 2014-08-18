@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using Microsoft.WindowsAzure.Storage.Blob;
+using Newtonsoft.Json.Linq;
 
 namespace Dashboard.Data
 {
@@ -18,6 +19,22 @@ namespace Dashboard.Data
         private FunctionInstanceLogger(IConcurrentDocumentStore<FunctionInstanceSnapshot> store)
         {
             _store = store;
+        }
+
+        public void LogFunctionUpdate(string id)
+        {
+            // FunctionInstanceSnapshot
+            var document = _store.ReadText(id);
+            JToken parsedDocument = JToken.Parse(document.Text);
+
+            JToken connectionString = parsedDocument["StorageConnectionString"];
+            if (connectionString != null && connectionString.Type != JTokenType.Null)
+            {
+                connectionString.Remove();
+            }
+
+            document = new ConcurrentMetadataText(document.ETag, document.Metadata, parsedDocument.ToString());
+            _store.TryUpdateText(id, document.ETag, document);
         }
 
         public void LogFunctionQueued(FunctionInstanceSnapshot snapshot)

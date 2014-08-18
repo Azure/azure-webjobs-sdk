@@ -43,7 +43,7 @@ namespace Dashboard
                 // Using private threads for now. If indexing switches to async storage calls we need to
                 // either use the CLR threadpool or figure out how to schedule the async callbacks on the
                 // private threads.
-                for (int i = 0; i < Environment.ProcessorCount; i++)
+                for (int i = 0; i < 1; i++)
                 {
                     new Thread(IndexerWorkerLoop).Start();
                 }
