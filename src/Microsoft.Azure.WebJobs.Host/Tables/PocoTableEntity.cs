@@ -16,6 +16,12 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
             return ObjectBinderHelpers.ConvertDictToObject<TValue>(data);
         }
 
+        public static ITableEntity ToTableEntity(object pocoEntity)
+        {
+            IDictionary<string, string> data = ObjectBinderHelpers.ConvertObjectToDict(pocoEntity);
+            return ToTableEntity(data["PartitionKey"], data["RowKey"], data);
+        }
+
         public static ITableEntity ToTableEntity(string partitionKey, string rowKey, object pocoEntity)
         {
             IDictionary<string, string> data = ObjectBinderHelpers.ConvertObjectToDict(pocoEntity);
