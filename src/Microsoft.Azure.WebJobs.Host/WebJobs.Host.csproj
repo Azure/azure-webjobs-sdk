@@ -377,10 +377,17 @@
     <Compile Include="Queues\Listeners\QueuePollingIntervals.cs" />
     <Compile Include="Queues\Listeners\SharedQueueWatcher.cs" />
     <Compile Include="Queues\Listeners\SharedQueueWatcherFactory.cs" />
+    <Compile Include="Tables\CollectorArgumentBindingProvider.cs" />
     <Compile Include="Tables\PocoEntityValueBinder.cs" />
     <Compile Include="Tables\PocoEntityArgumentBinding.cs" />
+    <Compile Include="Tables\PocoEntityCollectionAdapter.cs" />
+    <Compile Include="Tables\PocoEntityCollectorBinder.cs" />
+    <Compile Include="Tables\TableEntityCollectionAdapter.cs" />
+    <Compile Include="Tables\TableEntityCollectorBinder.cs" />
     <Compile Include="Tables\TableEntityValueBinder.cs" />
     <Compile Include="Tables\TableEntityArgumentBinding.cs" />
+    <Compile Include="Tables\TableStatistics.cs" />
+    <Compile Include="Tables\TableWriter.cs" />
     <Compile Include="Timers\FixedDelayStrategy.cs" />
     <Compile Include="Timers\RandomizedExponentialBackoffStrategy.cs" />
     <Compile Include="Timers\BackgroundExceptionDispatcher.cs" />
