@@ -12,14 +12,13 @@ using Microsoft.WindowsAzure.Storage.Table;
 
 namespace Microsoft.Azure.WebJobs.Host.Tables
 {
-    internal class TableEntityBatchValuesBinder<T> : IValueBinder
-         where T : ITableEntity, new()
+    internal class PocoEntityCollectorBinder<T> : IValueBinder
     {
         private readonly CloudTable _table;
-        private readonly TableEntityCollectionAdapter<T> _value;
+        private readonly PocoEntityCollectionAdapter<T> _value;
         private readonly Type _valueType;
 
-        public TableEntityBatchValuesBinder(CloudTable table, TableEntityCollectionAdapter<T> value, Type valueType)
+        public PocoEntityCollectorBinder(CloudTable table, PocoEntityCollectionAdapter<T> value, Type valueType)
         {
             if (value != null && !valueType.IsAssignableFrom(value.GetType()))
             {

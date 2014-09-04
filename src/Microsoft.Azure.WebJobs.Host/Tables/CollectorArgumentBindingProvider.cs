@@ -57,7 +57,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
             {
                 await value.CreateIfNotExistsAsync();
                 TableEntityCollectionAdapter<TElement> collector = new TableEntityCollectionAdapter<TElement>(value);
-                return new TableEntityBatchValuesBinder<TElement>(value, collector, typeof(ICollector<TElement>));
+                return new TableEntityCollectorBinder<TElement>(value, collector, typeof(ICollector<TElement>));
             }
         }
 
@@ -72,7 +72,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
             {
                 await value.CreateIfNotExistsAsync();
                 PocoEntityCollectionAdapter<TElement> collector = new PocoEntityCollectionAdapter<TElement>(value);
-                return new PocoEntityBatchValuesBinder<TElement>(value, collector, typeof(ICollector<TElement>));
+                return new PocoEntityCollectorBinder<TElement>(value, collector, typeof(ICollector<TElement>));
             }
         }
     }
