@@ -368,9 +368,9 @@
     <Compile Include="Tables\PocoEntityValueBinder.cs" />
     <Compile Include="Tables\PocoEntityArgumentBinding.cs" />
     <Compile Include="Tables\PocoEntityCollectionAdapter.cs" />
-    <Compile Include="Tables\PocoEntityBatchValuesBinder.cs" />
+    <Compile Include="Tables\PocoEntityCollectorBinder.cs" />
     <Compile Include="Tables\TableEntityCollectionAdapter.cs" />
-    <Compile Include="Tables\TableEntityBatchValuesBinder.cs" />
+    <Compile Include="Tables\TableEntityCollectorBinder.cs" />
     <Compile Include="Tables\TableEntityValueBinder.cs" />
     <Compile Include="Tables\TableEntityArgumentBinding.cs" />
     <Compile Include="Tables\TableStatistics.cs" />
