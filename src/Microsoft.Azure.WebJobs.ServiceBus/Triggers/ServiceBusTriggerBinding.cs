@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Converters;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
@@ -35,8 +36,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         private readonly string _subscriptionName;
         private readonly string _entityPath;
 
-        public ServiceBusTriggerBinding(string parameterName, ITriggerDataArgumentBinding<BrokeredMessage> argumentBinding,
-            ServiceBusAccount account, string queueName)
+        public ServiceBusTriggerBinding(string parameterName,
+            ITriggerDataArgumentBinding<BrokeredMessage> argumentBinding, ServiceBusAccount account, string queueName)
         {
             _parameterName = parameterName;
             _argumentBinding = argumentBinding;
@@ -46,8 +47,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             _entityPath = queueName;
         }
 
-        public ServiceBusTriggerBinding(string parameterName, ITriggerDataArgumentBinding<BrokeredMessage> argumentBinding,
-            ServiceBusAccount account, string topicName, string subscriptionName)
+        public ServiceBusTriggerBinding(string parameterName,
+            ITriggerDataArgumentBinding<BrokeredMessage> argumentBinding, ServiceBusAccount account, string topicName,
+            string subscriptionName)
         {
             _parameterName = parameterName;
             _argumentBinding = argumentBinding;
@@ -102,12 +104,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         }
 
         public IFunctionDefinition CreateFunctionDefinition(IReadOnlyDictionary<string, IBinding> nonTriggerBindings,
-            FunctionDescriptor functionDescriptor, MethodInfo method)
+            IInvoker invoker, FunctionDescriptor functionDescriptor, MethodInfo method)
         {
             ITriggeredFunctionBinding<BrokeredMessage> functionBinding =
                 new TriggeredFunctionBinding<BrokeredMessage>(_parameterName, this, nonTriggerBindings);
             ITriggeredFunctionInstanceFactory<BrokeredMessage> instanceFactory =
-                new TriggeredFunctionInstanceFactory<BrokeredMessage>(functionBinding, functionDescriptor, method);
+                new TriggeredFunctionInstanceFactory<BrokeredMessage>(functionBinding, invoker, functionDescriptor,
+                    method);
             IListenerFactory listenerFactory;
 
             if (_queueName != null)

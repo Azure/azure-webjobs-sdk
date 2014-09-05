@@ -12,13 +12,15 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
     internal class TriggeredFunctionInstanceFactory<TTriggerValue> : ITriggeredFunctionInstanceFactory<TTriggerValue>
     {
         private readonly ITriggeredFunctionBinding<TTriggerValue> _binding;
+        private readonly IInvoker _invoker;
         private readonly FunctionDescriptor _descriptor;
         private readonly MethodInfo _method;
 
-        public TriggeredFunctionInstanceFactory(ITriggeredFunctionBinding<TTriggerValue> binding,
+        public TriggeredFunctionInstanceFactory(ITriggeredFunctionBinding<TTriggerValue> binding, IInvoker invoker,
             FunctionDescriptor descriptor, MethodInfo method)
         {
             _binding = binding;
+            _invoker = invoker;
             _descriptor = descriptor;
             _method = method;
         }
@@ -27,14 +29,14 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
         {
             IBindingSource bindingSource = new TriggerBindingSource<TTriggerValue>(_binding, value);
             return new FunctionInstance(Guid.NewGuid(), parentId, ExecutionReason.AutomaticTrigger, bindingSource,
-                _descriptor, _method);
+                _invoker, _descriptor, _method);
         }
 
         public IFunctionInstance Create(Guid id, Guid? parentId, ExecutionReason reason,
             IDictionary<string, object> parameters)
         {
             IBindingSource bindingSource = new BindingSource(_binding, parameters);
-            return new FunctionInstance(id, parentId, reason, bindingSource, _descriptor, _method);
+            return new FunctionInstance(id, parentId, reason, bindingSource, _invoker, _descriptor, _method);
         }
     }
 }

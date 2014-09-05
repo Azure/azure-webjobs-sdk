@@ -327,6 +327,8 @@
     <Compile Include="Blobs\TaskAsyncResult.cs" />
     <Compile Include="Blobs\ReadBlobArgumentBinding.cs" />
     <Compile Include="Blobs\Listeners\BlobTriggerMessage.cs" />
+    <Compile Include="Executors\TaskInvoker.cs" />
+    <Compile Include="Executors\VoidInvoker.cs" />
     <Compile Include="ConnectionStringNames.cs" />
     <Compile Include="Converters\CompositeAsyncObjectToTypeConverter.cs" />
     <Compile Include="Converters\IAsyncConverter.cs" />
@@ -337,6 +339,8 @@
     <Compile Include="Executors\FunctionOutputIntervals.cs" />
     <Compile Include="Executors\FunctionParameterLogIntervals.cs" />
     <Compile Include="Executors\AbortListenerFunctionExecutor.cs" />
+    <Compile Include="Executors\IInvoker.cs" />
+    <Compile Include="Executors\Invoker.cs" />
     <Compile Include="JobHostQueuesConfiguration.cs" />
     <Compile Include="Listeners\HeartbeatListener.cs" />
     <Compile Include="Listeners\ShutdownListener.cs" />
