@@ -3,13 +3,30 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal class VoidInvoker
+    internal class VoidInvoker : IInvoker
     {
+        private readonly IReadOnlyList<string> _parameterNames;
+        private readonly Action<object[]> _lambda;
+
+        public VoidInvoker(IReadOnlyList<string> parameterNames, Action<object[]> lambda)
+        {
+            _parameterNames = parameterNames;
+            _lambda = lambda;
+        }
+
+        public IReadOnlyList<string> ParameterNames
+        {
+            get { return _parameterNames; }
+        }
+
+        public Task InvokeAsync(object[] parameters)
+        {
+            _lambda.Invoke(parameters);
+            return Task.FromResult(0);
+        }
     }
 }

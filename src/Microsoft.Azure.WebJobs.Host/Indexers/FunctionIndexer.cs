@@ -220,17 +220,18 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             string triggerParameterName = triggerParameter != null ? triggerParameter.Name : null;
             FunctionDescriptor functionDescriptor = CreateFunctionDescriptor(method, triggerParameterName,
                 triggerBinding, nonTriggerBindings);
+            IInvoker invoker = Invoker.Create(method);
             IFunctionDefinition functionDefinition;
 
             if (triggerBinding != null)
             {
                 functionDefinition = triggerBinding.CreateFunctionDefinition(nonTriggerBindings,
-                    functionDescriptor, method);
+                    invoker, functionDescriptor, method);
             }
             else
             {
                 IFunctionInstanceFactory instanceFactory = new FunctionInstanceFactory(
-                    new FunctionBinding(method, nonTriggerBindings), functionDescriptor, method);
+                    new FunctionBinding(method, nonTriggerBindings), invoker, functionDescriptor, method);
                 functionDefinition = new FunctionDefinition(instanceFactory, listenerFactory: null);
             }
 

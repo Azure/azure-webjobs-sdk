@@ -11,6 +11,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Blobs.Bindings;
 using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
 using Microsoft.Azure.WebJobs.Host.Converters;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
@@ -97,12 +98,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
         }
 
         public IFunctionDefinition CreateFunctionDefinition(IReadOnlyDictionary<string, IBinding> nonTriggerBindings,
-            FunctionDescriptor functionDescriptor, MethodInfo method)
+            IInvoker invoker, FunctionDescriptor functionDescriptor, MethodInfo method)
         {
             ITriggeredFunctionBinding<ICloudBlob> functionBinding =
                 new TriggeredFunctionBinding<ICloudBlob>(_parameterName, this, nonTriggerBindings);
             ITriggeredFunctionInstanceFactory<ICloudBlob> instanceFactory =
-                new TriggeredFunctionInstanceFactory<ICloudBlob>(functionBinding, functionDescriptor, method);
+                new TriggeredFunctionInstanceFactory<ICloudBlob>(functionBinding, invoker, functionDescriptor, method);
             CloudBlobContainer container = _client.GetContainerReference(_path.ContainerNamePattern);
             IListenerFactory listenerFactory = new BlobListenerFactory(functionDescriptor.Id, container, _path,
                 instanceFactory);

@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -46,12 +47,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             MethodCallExpression call = Expression.Call(null, method, callArguments);
 
+            List<string> parameterNames = method.GetParameters().Select(p => p.Name).ToList();
+
             if (call.Type == typeof(void))
             {
                 // for: public void JobMethod()
                 Expression<Action<object[]>> lambda = Expression.Lambda<Action<object[]>>(call, parametersParameter);
                 Action<object[]> compiled = lambda.Compile();
-                return new VoidInvoker(compiled);
+                return new VoidInvoker(parameterNames, compiled);
             }
             else
             {
@@ -60,7 +63,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 Expression<Func<object[], Task>> lambda = Expression.Lambda<Func<object[], Task>>(call,
                     parametersParameter);
                 Func<object[], Task> compiled = lambda.Compile();
-                return new TaskInvoker(compiled);
+                return new TaskInvoker(parameterNames, compiled);
             }
         }
     }

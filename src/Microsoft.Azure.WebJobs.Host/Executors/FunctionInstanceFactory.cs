@@ -12,12 +12,15 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     internal class FunctionInstanceFactory : IFunctionInstanceFactory
     {
         private readonly IFunctionBinding _binding;
+        private readonly IInvoker _invoker;
         private readonly FunctionDescriptor _descriptor;
         private readonly MethodInfo _method;
 
-        public FunctionInstanceFactory(IFunctionBinding binding, FunctionDescriptor descriptor, MethodInfo method)
+        public FunctionInstanceFactory(IFunctionBinding binding, IInvoker invoker, FunctionDescriptor descriptor,
+            MethodInfo method)
         {
             _binding = binding;
+            _invoker = invoker;
             _descriptor = descriptor;
             _method = method;
         }
@@ -26,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             IDictionary<string, object> parameters)
         {
             IBindingSource bindingSource = new BindingSource(_binding, parameters);
-            return new FunctionInstance(id, parentId, reason, bindingSource, _descriptor, _method);
+            return new FunctionInstance(id, parentId, reason, bindingSource, _invoker, _descriptor, _method);
         }
     }
 }

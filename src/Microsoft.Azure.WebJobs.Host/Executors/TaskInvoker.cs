@@ -4,19 +4,24 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
     internal class TaskInvoker : IInvoker
     {
+        private readonly IReadOnlyList<string> _parameterNames;
         private readonly Func<object[], Task> _lambda;
 
-        public TaskInvoker(Func<object[], Task> lambda)
+        public TaskInvoker(IReadOnlyList<string> parameterNames, Func<object[], Task> lambda)
         {
+            _parameterNames = parameterNames;
             _lambda = lambda;
+        }
+
+        public IReadOnlyList<string> ParameterNames
+        {
+            get { return _parameterNames; }
         }
 
         public Task InvokeAsync(object[] parameters)
@@ -29,21 +34,22 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
 
             Type taskType = task.GetType();
-
+            ThrowIfWrappedTaskInstance(taskType);
+            return task;
         }
 
-        private static void ThrowIfWrappedTaskInstance(Type type)
+        private static void ThrowIfWrappedTaskInstance(Type taskType)
         {
-            Debug.Assert(type != null);
+            Debug.Assert(taskType != null);
 
             // Fast path: check if type is exactly Task first.
-            if (type != typeof(Task))
+            if (taskType != typeof(Task))
             {
-                Type innerTaskType = TypeHelper.GetTaskInnerTypeOrNull(type);
+                Type innerTaskType = GetTaskInnerTypeOrNull(taskType);
                 if (innerTaskType != null && typeof(Task).IsAssignableFrom(innerTaskType))
                 {
-                    throw new InvalidOperationException("The method returned a nested task instance. Make sure to " +
-                        "call Unwrap on the returned value to avoid an unobserved faulted Task.");
+                    throw new InvalidOperationException("Returning a nested Task is not supported. Did you mean to " +
+                        "await or Unwrap the task instead of returning it?");
                 }
             }
         }
@@ -55,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 Type genericTypeDefinition = type.GetGenericTypeDefinition();
 
-                if (TaskGenericType == genericTypeDefinition)
+                if (typeof(Task<>) == genericTypeDefinition)
                 {
                     return type.GetGenericArguments()[0];
                 }
