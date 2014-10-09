@@ -12,7 +12,11 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
     {
         public static IConverter<EntityProperty, TOutput> Create<TOutput>()
         {
-            if (typeof(TOutput) == typeof(bool))
+            if (typeof(TOutput) == typeof(EntityProperty))
+            {
+                return (IConverter<EntityProperty, TOutput>)new IdentityConverter<EntityProperty>();
+            }
+            else if (typeof(TOutput) == typeof(bool))
             {
                 return (IConverter<EntityProperty, TOutput>)new EntityPropertyToBooleanConverter();
             }
