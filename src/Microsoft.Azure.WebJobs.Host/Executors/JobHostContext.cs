@@ -104,8 +104,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 await credentialsValidator.ValidateCredentialsAsync(storageAccount, combinedCancellationToken);
 
                 // Avoid double-validating the same credentials.
-                if (storageAccount != null && storageAccount.Credentials != null && dashboardAccount != null &&
-                    !storageAccount.Credentials.Equals(dashboardAccount.Credentials))
+                if (dashboardAccount != null && (
+                    storageAccount == null || 
+                    storageAccount.Credentials == null || 
+                    !storageAccount.Credentials.Equals(dashboardAccount.Credentials)))
                 {
                     // This will make a network call to verify the credentials work.
                     await credentialsValidator.ValidateCredentialsAsync(dashboardAccount, combinedCancellationToken);
@@ -128,12 +130,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 FunctionIndex functions = await FunctionIndex.CreateAsync(indexContext);
                 IEnumerable<MethodInfo> indexedMethods = functions.ReadAllMethods();
 
+                hostIdProvider = new ValidateCachedHostIdProvider(hostIdProvider);
                 string hostId = await hostIdProvider.GetHostIdAsync(indexedMethods, cancellationToken);
-
-                if (!HostIdValidator.IsValid(hostId))
-                {
-                    throw new InvalidOperationException(HostIdValidator.ValidationMessage);
-                }
 
                 HostBindingContext bindingContext = new HostBindingContext(backgroundExceptionDispatcher,
                     functions.BindingProvider, nameResolver, queueConfiguration, storageAccount,

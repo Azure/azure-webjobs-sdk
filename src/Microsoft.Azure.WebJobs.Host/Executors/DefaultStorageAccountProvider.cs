@@ -157,8 +157,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 if (!_storageAccountSet)
                 {
-                    _storageAccount = ParseStorageAccount(
-                        _ambientConnectionStringProvider.GetConnectionString(ConnectionStringNames.Storage));
+                    _storageAccount = TryParseStorageAccount(StorageConnectionString);
                     _storageAccountSet = true;
                 }
 
@@ -224,6 +223,25 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private IStorageAccount ParseStorageAccount(string connectionString)
         {
             return ParseAccount(connectionString, ConnectionStringNames.Storage);
+        }
+
+        private IStorageAccount TryParseStorageAccount(string connectionString)
+        {
+            CloudStorageAccount sdkAccount;
+            StorageAccountParseResult result = StorageAccountParser.TryParseAccount(connectionString, out sdkAccount);
+            
+            if (result == StorageAccountParseResult.Success)
+            {
+                return new StorageAccount(sdkAccount);
+            }
+
+            string message = StorageAccountParser.FormatParseAccountErrorMessage(result, ConnectionStringNames.Storage);
+            if (result == StorageAccountParseResult.MissingOrEmptyConnectionStringError)
+            {
+                return new NullStorageAccount(message);
+            }
+
+             throw new InvalidOperationException(message);
         }
 
         private static IStorageAccount ParseAccount(string connectionString, string connectionStringName)
