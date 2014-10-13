@@ -14,6 +14,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     {
         public async Task ValidateCredentialsAsync(IStorageAccount account, CancellationToken cancellationToken)
         {
+            if (account == null || account.SdkObject == null)
+            {
+                return;
+            }
+
             CloudStorageAccount sdkAccount = account.SdkObject;
 
             // Verify the credentials are correct.

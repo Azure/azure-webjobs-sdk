@@ -202,11 +202,15 @@ namespace Microsoft.Azure.WebJobs
             {
                 return new FixedHostIdProvider(_hostId);
             }
-            else
+
+            var storageAccount = _storageAccountProvider.GetAccount(ConnectionStringNames.Storage);
+            if (storageAccount != null && storageAccount.SdkObject != null)
             {
                 return new DynamicHostIdProvider(
                     _storageAccountProvider.GetAccount(ConnectionStringNames.Storage).SdkObject);
             }
+
+            return new MissingHostIdProvider();
         }
 
         // When running in Azure Web Sites, write out a manifest file.
