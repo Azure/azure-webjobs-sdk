@@ -99,9 +99,9 @@ namespace Microsoft.Azure.WebJobs
         }
 
         /// <summary>Starts the host.</summary>
-        public void Start()
+        public void Start(CancellationToken cancellationToken = default(CancellationToken))
         {
-            StartAsync().GetAwaiter().GetResult();
+            StartAsync(cancellationToken).GetAwaiter().GetResult();
         }
 
         /// <summary>Starts the host.</summary>
@@ -169,9 +169,9 @@ namespace Microsoft.Azure.WebJobs
         }
 
         /// <summary>Runs the host and blocks the current thread while the host remains running.</summary>
-        public void RunAndBlock()
+        public void RunAndBlock(CancellationToken cancellationToken = default(CancellationToken))
         {
-            Start();
+            Start(cancellationToken);
 
             // Wait for someone to begin stopping (_shutdownWatcher, Stop, or Dispose).
             _stoppingTokenSource.Token.WaitHandle.WaitOne();
