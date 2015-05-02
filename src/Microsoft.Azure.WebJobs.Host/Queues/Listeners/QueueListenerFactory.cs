@@ -10,7 +10,6 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Storage.Queue;
 using Microsoft.Azure.WebJobs.Host.Timers;
-using Microsoft.Azure.WebJobs.Host.Triggers;
 
 namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
 {
@@ -25,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         private readonly IContextSetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherSetter;
         private readonly ISharedContextProvider _sharedContextProvider;
         private readonly TextWriter _log;
-        private readonly ITriggeredFunctionInstanceFactory<IStorageQueueMessage> _instanceFactory;
+        private readonly ITriggeredFunctionExecutor _executor;
 
         public QueueListenerFactory(IStorageQueue queue,
             IQueueConfiguration queueConfiguration,
@@ -33,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             IContextSetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherSetter,
             ISharedContextProvider sharedContextProvider,
             TextWriter log,
-            ITriggeredFunctionInstanceFactory<IStorageQueueMessage> instanceFactory)
+            ITriggeredFunctionExecutor executor)
         {
             if (queue == null)
             {
@@ -64,10 +63,10 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             {
                 throw new ArgumentNullException("log");
             }
-            
-            if (instanceFactory == null)
+
+            if (executor == null)
             {
-                throw new ArgumentNullException("instanceFactory");
+                throw new ArgumentNullException("executor");
             }
 
             _queue = queue;
@@ -77,12 +76,12 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter;
             _sharedContextProvider = sharedContextProvider;
             _log = log;
-            _instanceFactory = instanceFactory;
+            _executor = executor;
         }
 
-        public Task<IListener> CreateAsync(IFunctionExecutor executor, CancellationToken cancellationToken)
+        public Task<IListener> CreateAsync(ListenerExecutionContext context, CancellationToken cancellationToken)
         {
-            QueueTriggerExecutor triggerExecutor = new QueueTriggerExecutor(_instanceFactory, executor);
+            QueueTriggerExecutor triggerExecutor = new QueueTriggerExecutor(context, _executor);
             IDelayStrategy delayStrategy = new RandomizedExponentialBackoffStrategy(QueuePollingIntervals.Minimum,
                 _queueConfiguration.MaxPollingInterval);
             SharedQueueWatcher sharedWatcher = _sharedContextProvider.GetOrCreate<SharedQueueWatcher>(

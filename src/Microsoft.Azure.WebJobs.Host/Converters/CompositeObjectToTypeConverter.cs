@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace Microsoft.Azure.WebJobs.Host.Converters
 {
-    internal class CompositeObjectToTypeConverter<T> : IObjectToTypeConverter<T>
+    public class CompositeObjectToTypeConverter<T> : IObjectToTypeConverter<T>
     {
         private readonly IEnumerable<IObjectToTypeConverter<T>> _converters;
 

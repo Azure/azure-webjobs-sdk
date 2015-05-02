@@ -10,6 +10,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.ServiceBus;
+using Microsoft.Azure.WebJobs.ServiceBus.Config;
 using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
 using Xunit;
@@ -125,9 +127,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 TypeLocator = new FakeTypeLocator(this.GetType())
             };
 
-            _namespaceManager = NamespaceManager.CreateFromConnectionString(config.ServiceBusConnectionString);
+            ServiceBusConfiguration serviceBusConfig = new ServiceBusConfiguration();
+            config.UseServiceBus(serviceBusConfig);
 
-            CreateStartMessage(config.ServiceBusConnectionString);
+            _namespaceManager = NamespaceManager.CreateFromConnectionString(serviceBusConfig.ConnectionString);
+
+            CreateStartMessage(serviceBusConfig.ConnectionString);
 
             JobHost host = new JobHost(config);
 

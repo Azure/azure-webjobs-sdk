@@ -6,7 +6,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 
 namespace Microsoft.Azure.WebJobs.Host.Triggers
 {
-    internal class TriggerData : ITriggerData
+    public class TriggerData : ITriggerData
     {
         private readonly IValueProvider _valueProvider;
         private readonly IReadOnlyDictionary<string, object> _bindingData;

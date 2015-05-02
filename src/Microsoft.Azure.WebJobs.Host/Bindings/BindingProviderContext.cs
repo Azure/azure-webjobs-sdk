@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    internal class BindingProviderContext
+    public class BindingProviderContext
     {
         private readonly ParameterInfo _parameter;
         private readonly IReadOnlyDictionary<string, Type> _bindingDataContract;

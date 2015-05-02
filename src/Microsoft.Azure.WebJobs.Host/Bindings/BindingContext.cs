@@ -10,7 +10,7 @@ using Microsoft.Azure.WebJobs.Host.Queues;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    internal class BindingContext
+    public class BindingContext
     {
         private readonly FunctionBindingContext _functionContext;
         private readonly IReadOnlyDictionary<string, object> _bindingData;

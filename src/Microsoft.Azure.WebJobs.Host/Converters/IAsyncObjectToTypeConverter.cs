@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Converters
 {
-    internal interface IAsyncObjectToTypeConverter<TOutput>
+    public interface IAsyncObjectToTypeConverter<TOutput>
     {
         Task<ConversionResult<TOutput>> TryConvertAsync(object input, CancellationToken cancellationToken);
     }

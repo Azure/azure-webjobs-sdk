@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Listeners
 {
-    internal interface ITriggerExecutor<TTriggerValue>
+    public interface ITriggerExecutor<TTriggerValue>
     {
         Task<bool> ExecuteAsync(TTriggerValue value, CancellationToken cancellationToken);
     }

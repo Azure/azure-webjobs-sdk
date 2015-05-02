@@ -25,7 +25,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
                 StorageAccount = account
             };
-            IServiceBusAccountProvider serviceBusAccountProvider = null;
             IExtensionTypeLocator extensionTypeLocator = new NullExtensionTypeLocator();
             ContextAccessor<IMessageEnqueuedWatcher> messageEnqueuedWatcherAccessor =
                 new ContextAccessor<IMessageEnqueuedWatcher>();
@@ -33,15 +32,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 new ContextAccessor<IBlobWrittenWatcher>();
             ISharedContextProvider sharedContextProvider = new SharedContextProvider();
             ITriggerBindingProvider triggerBindingProvider = DefaultTriggerBindingProvider.Create(nameResolver,
-                storageAccountProvider, serviceBusAccountProvider, extensionTypeLocator,
+                storageAccountProvider, extensionTypeLocator,
                 new FixedHostIdProvider("test"), new SimpleQueueConfiguration(maxDequeueCount: 5),
                 BackgroundExceptionDispatcher.Instance, messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor,
-                sharedContextProvider, TextWriter.Null);
+                sharedContextProvider, new DefaultExtensionRegistry(), TextWriter.Null);
             IBindingProvider bindingProvider = DefaultBindingProvider.Create(nameResolver, storageAccountProvider,
-                serviceBusAccountProvider, extensionTypeLocator, messageEnqueuedWatcherAccessor,
-                blobWrittenWatcherAccessor);
+                extensionTypeLocator, messageEnqueuedWatcherAccessor,
+                blobWrittenWatcherAccessor, new DefaultExtensionRegistry());
 
-            return new FunctionIndexer(triggerBindingProvider, bindingProvider, DefaultJobActivator.Instance);
+            return new FunctionIndexer(triggerBindingProvider, bindingProvider, DefaultJobActivator.Instance, new DefaultExtensionRegistry());
         }
     }
 }

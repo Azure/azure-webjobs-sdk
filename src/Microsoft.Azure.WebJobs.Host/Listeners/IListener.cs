@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Listeners
 {
-    internal interface IListener : IDisposable
+    public interface IListener : IDisposable
     {
         void Cancel();
 

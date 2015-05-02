@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Azure.WebJobs.ServiceBus.Config;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 {
@@ -22,17 +23,21 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
                 new AsyncCollectorArgumentBindingProvider());
 
         private readonly INameResolver _nameResolver;
-        private readonly IServiceBusAccountProvider _accountProvider;
+        private readonly ServiceBusConfiguration _config;
 
-        public ServiceBusAttributeBindingProvider(INameResolver nameResolver, IServiceBusAccountProvider accountProvider)
+        public ServiceBusAttributeBindingProvider(INameResolver nameResolver, ServiceBusConfiguration config)
         {
-            if (accountProvider == null)
+            if (nameResolver == null)
             {
-                throw new ArgumentNullException("accountProvider");
+                throw new ArgumentNullException("nameResolver");
+            }
+            if (config == null)
+            {
+                throw new ArgumentNullException("config");
             }
 
-            _accountProvider = accountProvider;
             _nameResolver = nameResolver;
+            _config = config;
         }
 
         public Task<IBinding> TryCreateAsync(BindingProviderContext context)
@@ -56,8 +61,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
                 throw new InvalidOperationException("Can't bind ServiceBus to type '" + parameter.ParameterType + "'.");
             }
 
-            string connectionString = _accountProvider.ConnectionString;
-            ServiceBusAccount account = ServiceBusAccount.CreateFromConnectionString(connectionString);
+            ServiceBusAccount account = ServiceBusAccount.CreateFromConnectionString(_config.ConnectionString);
 
             IBinding binding = new ServiceBusBinding(parameter.Name, argumentBinding, account, path);
             return Task.FromResult(binding);

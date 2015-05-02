@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Converters;
 using Microsoft.Azure.WebJobs.Host.Executors;
-using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Azure.WebJobs.ServiceBus.Bindings;
 using Microsoft.Azure.WebJobs.ServiceBus.Listeners;
 using Microsoft.ServiceBus.Messaging;
 
@@ -28,8 +28,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         private readonly string _subscriptionName;
         private readonly string _entityPath;
 
-        public ServiceBusTriggerBinding(string parameterName, Type parameterType,
-            ITriggerDataArgumentBinding<BrokeredMessage> argumentBinding, ServiceBusAccount account, string queueName)
+        public ServiceBusTriggerBinding(string parameterName, Type parameterType, ITriggerDataArgumentBinding<BrokeredMessage> argumentBinding, 
+            ServiceBusAccount account, string queueName)
         {
             _parameterName = parameterName;
             _converter = CreateConverter(parameterType);
@@ -40,9 +40,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             _entityPath = queueName;
         }
 
-        public ServiceBusTriggerBinding(string parameterName,
-            ITriggerDataArgumentBinding<BrokeredMessage> argumentBinding, ServiceBusAccount account, string topicName,
-            string subscriptionName)
+        public ServiceBusTriggerBinding(string parameterName, ITriggerDataArgumentBinding<BrokeredMessage> argumentBinding, 
+            ServiceBusAccount account, string topicName, string subscriptionName)
         {
             _parameterName = parameterName;
             _argumentBinding = argumentBinding;
@@ -96,37 +95,32 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             return BindAsync(message, context);
         }
 
-        public IFunctionDefinition CreateFunctionDefinition(IReadOnlyDictionary<string, IBinding> nonTriggerBindings,
-            IFunctionInvoker invoker, FunctionDescriptor functionDescriptor)
+        public IListenerFactory CreateListenerFactory(ITriggeredFunctionExecutor executor)
         {
-            ITriggeredFunctionBinding<BrokeredMessage> functionBinding =
-                new TriggeredFunctionBinding<BrokeredMessage>(_parameterName, this, nonTriggerBindings);
-            ITriggeredFunctionInstanceFactory<BrokeredMessage> instanceFactory =
-                new TriggeredFunctionInstanceFactory<BrokeredMessage>(functionBinding, invoker, functionDescriptor);
-            IListenerFactory listenerFactory;
-
             if (_queueName != null)
             {
-                listenerFactory = new ServiceBusQueueListenerFactory(_account, _queueName, instanceFactory);
+                return new ServiceBusQueueListenerFactory(_account, _queueName, executor);
             }
             else
             {
-                listenerFactory = new ServiceBusSubscriptionListenerFactory(_account, _topicName, _subscriptionName,
-                    instanceFactory);
+                return new ServiceBusSubscriptionListenerFactory(_account, _topicName, _subscriptionName, executor);
             }
-
-            return new FunctionDefinition(instanceFactory, listenerFactory);
         }
 
         public ParameterDescriptor ToParameterDescriptor()
         {
+            string entityPath = _queueName != null ?
+                    _queueName : string.Format("{0}/Subscriptions/{1}", _topicName, _subscriptionName);
+
+            // TODO: Need to find a way to serialize these extended properties
             return new ServiceBusTriggerParameterDescriptor
             {
                 Name = _parameterName,
                 NamespaceName = _namespaceName,
                 QueueName = _queueName,
                 TopicName = _topicName,
-                SubscriptionName = _subscriptionName
+                SubscriptionName = _subscriptionName,
+                UIDescriptor = ServiceBusBinding.CreateParameterUIDescriptor(entityPath, true)
             };
         }
 

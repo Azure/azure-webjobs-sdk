@@ -6,7 +6,7 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    internal interface IBinding
+    public interface IBinding
     {
         bool FromAttribute { get; }
 

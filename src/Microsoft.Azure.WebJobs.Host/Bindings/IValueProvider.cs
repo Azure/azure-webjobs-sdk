@@ -5,7 +5,7 @@ using System;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    internal interface IValueProvider
+    public interface IValueProvider
     {
         Type Type { get; }
 

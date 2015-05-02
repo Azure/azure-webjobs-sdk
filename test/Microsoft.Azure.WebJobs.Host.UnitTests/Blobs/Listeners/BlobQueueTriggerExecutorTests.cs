@@ -99,7 +99,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             IBlobETagReader eTagReader = mock.Object;
             BlobQueueTriggerExecutor product = CreateProductUnderTest(eTagReader);
 
-            product.Register(functionId, CreateDummyInstanceFactory());
+            product.Register(functionId, CreateDummyFunctionExecutor());
 
             BlobTriggerMessage triggerMessage = new BlobTriggerMessage
             {
@@ -128,7 +128,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             IBlobETagReader eTagReader = CreateStubETagReader(null);
             BlobQueueTriggerExecutor product = CreateProductUnderTest(eTagReader);
 
-            product.Register(functionId, CreateDummyInstanceFactory());
+            product.Register(functionId, CreateDummyFunctionExecutor());
 
             IStorageQueueMessage message = CreateMessage(functionId, "OriginalETag");
 
@@ -151,7 +151,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             IBlobWrittenWatcher blobWrittenWatcher = mock.Object;
             BlobQueueTriggerExecutor product = CreateProductUnderTest(eTagReader, blobWrittenWatcher);
 
-            product.Register(functionId, CreateDummyInstanceFactory());
+            product.Register(functionId, CreateDummyFunctionExecutor());
 
             IStorageQueueMessage message = CreateMessage(functionId, "OriginalETag");
 
@@ -171,19 +171,22 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             string functionId = "FunctionId";
             string matchingETag = "ETag";
             Guid expectedParentId = Guid.NewGuid();
+            IStorageQueueMessage message = CreateMessage(functionId, matchingETag);
+
             IBlobETagReader eTagReader = CreateStubETagReader(matchingETag);
             IBlobCausalityReader causalityReader = CreateStubCausalityReader(expectedParentId);
-            Mock<IFunctionExecutor> mock = new Mock<IFunctionExecutor>(MockBehavior.Strict);
-            mock.Setup(e => e.TryExecuteAsync(It.Is<IFunctionInstance>(f => f.ParentId == expectedParentId),
-                    It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult<IDelayedException>(null))
+            Mock<ITriggeredFunctionExecutor> mock = new Mock<ITriggeredFunctionExecutor>(MockBehavior.Strict);
+            mock.Setup(e => e.TryExecuteAsync(expectedParentId, message, It.IsAny<ListenerExecutionContext>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true)
                 .Verifiable();
-            IFunctionExecutor innerExecutor = mock.Object;
-            BlobQueueTriggerExecutor product = CreateProductUnderTest(eTagReader, causalityReader, innerExecutor);
+            ITriggeredFunctionExecutor innerExecutor = mock.Object;
+            ListenerExecutionContext context = new ListenerExecutionContext
+            {
 
-            product.Register(functionId, CreateFakeInstanceFactory());
+            };
+            BlobQueueTriggerExecutor product = CreateProductUnderTest(eTagReader, causalityReader, innerExecutor, context);
 
-            IStorageQueueMessage message = CreateMessage(functionId, matchingETag);
+            product.Register(functionId, CreateFakeFunctionExecutor());
 
             // Act
             Task<bool> task = product.ExecuteAsync(message, CancellationToken.None);
@@ -204,7 +207,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             IFunctionExecutor innerExecutor = CreateStubInnerExecutor(null);
             BlobQueueTriggerExecutor product = CreateProductUnderTest(eTagReader, causalityReader, innerExecutor);
 
-            product.Register(functionId, CreateFakeInstanceFactory());
+            product.Register(functionId, CreateFakeFunctionExecutor());
 
             IStorageQueueMessage message = CreateMessage(functionId, matchingETag);
 
@@ -226,7 +229,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             IFunctionExecutor innerExecutor = CreateStubInnerExecutor(CreateDummyDelayedException());
             BlobQueueTriggerExecutor product = CreateProductUnderTest(eTagReader, causalityReader, innerExecutor);
 
-            product.Register(functionId, CreateFakeInstanceFactory());
+            product.Register(functionId, CreateFakeFunctionExecutor());
 
             IStorageQueueMessage message = CreateMessage(functionId, matchingETag);
 
@@ -263,22 +266,23 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             return new Mock<IBlobETagReader>(MockBehavior.Strict).Object;
         }
 
-        private static IFunctionExecutor CreateDummyInnerExecutor()
+        private static ITriggeredFunctionExecutor CreateDummyInnerExecutor()
         {
-            return new Mock<IFunctionExecutor>(MockBehavior.Strict).Object;
+            return new Mock<ITriggeredFunctionExecutor>(MockBehavior.Strict).Object;
         }
 
-        private static ITriggeredFunctionInstanceFactory<IStorageBlob> CreateDummyInstanceFactory()
+        private static ITriggeredFunctionExecutor CreateDummyFunctionExecutor()
         {
-            return new Mock<ITriggeredFunctionInstanceFactory<IStorageBlob>>(MockBehavior.Strict).Object;
+            return new Mock<ITriggeredFunctionExecutor>(MockBehavior.Strict).Object;
         }
 
-        private static ITriggeredFunctionInstanceFactory<IStorageBlob> CreateFakeInstanceFactory()
+        private static ITriggeredFunctionExecutor CreateFakeFunctionExecutor()
         {
-            Mock<ITriggeredFunctionInstanceFactory<IStorageBlob>> mock =
-                new Mock<ITriggeredFunctionInstanceFactory<IStorageBlob>>(MockBehavior.Strict);
-            mock.Setup(f => f.Create(It.IsAny<IStorageBlob>(), It.IsAny<Guid?>()))
-                .Returns<IStorageBlob, Guid?>((b, parentId) => CreateStubFunctionInstance(parentId));
+            Mock<ITriggeredFunctionExecutor> mock = new Mock<ITriggeredFunctionExecutor>(MockBehavior.Strict);
+
+            // TODO: Set up this mock properly
+            // mock.Setup(p => p.TryExecuteAsync(It.IsAny<Guid?>(), It.Is<object>(), It.IsAny<AbortListenerFunctionExecutor>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
             return mock.Object;
         }
 
@@ -321,22 +325,28 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             IBlobWrittenWatcher blobWrittenWatcher)
         {
             IBlobCausalityReader causalityReader = CreateDummyCausalityReader();
-            IFunctionExecutor innerExecutor = CreateDummyInnerExecutor();
-            return CreateProductUnderTest(eTagReader, causalityReader, innerExecutor, blobWrittenWatcher);
+            ITriggeredFunctionExecutor innerExecutor = CreateDummyInnerExecutor();
+
+            IFunctionExecutor executor = new Mock<FunctionExecutor>().Object;
+            ListenerExecutionContext context = new ListenerExecutionContext
+            {
+                FunctionExecutor = executor
+            };
+            return CreateProductUnderTest(eTagReader, causalityReader, innerExecutor, context, blobWrittenWatcher);
         }
 
         private static BlobQueueTriggerExecutor CreateProductUnderTest(IBlobETagReader eTagReader,
-            IBlobCausalityReader causalityReader, IFunctionExecutor innerExecutor)
+            IBlobCausalityReader causalityReader, ITriggeredFunctionExecutor innerExecutor, ListenerExecutionContext context)
         {
-            return CreateProductUnderTest(eTagReader, causalityReader, innerExecutor, CreateDummyBlobWrittenWatcher());
+            return CreateProductUnderTest(eTagReader, causalityReader, innerExecutor, context, CreateDummyBlobWrittenWatcher());
         }
 
         private static BlobQueueTriggerExecutor CreateProductUnderTest(IBlobETagReader eTagReader,
-             IBlobCausalityReader causalityReader, IFunctionExecutor innerExecutor,
+             IBlobCausalityReader causalityReader, ITriggeredFunctionExecutor innerExecutor, ListenerExecutionContext context,
             IBlobWrittenWatcher blobWrittenWatcher)
         {
             IStorageBlobClient client = CreateClient();
-            return new BlobQueueTriggerExecutor(client, eTagReader, causalityReader, innerExecutor, blobWrittenWatcher);
+            return new BlobQueueTriggerExecutor(client, eTagReader, causalityReader, innerExecutor, context, blobWrittenWatcher);
         }
 
         private static IBlobCausalityReader CreateStubCausalityReader()

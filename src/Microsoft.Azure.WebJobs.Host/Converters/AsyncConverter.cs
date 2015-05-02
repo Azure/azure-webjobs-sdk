@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Converters
 {
-    internal class AsyncConverter<TInput, TOutput> : IAsyncConverter<TInput, TOutput>
+    public class AsyncConverter<TInput, TOutput> : IAsyncConverter<TInput, TOutput>
     {
         private readonly IConverter<TInput, TOutput> _innerConverter;
 

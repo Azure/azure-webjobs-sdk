@@ -155,8 +155,7 @@ namespace Dashboard.Indexers
             };
         }
 
-        private static IDictionary<string, ParameterSnapshot> CreateParameterSnapshots(
-            IEnumerable<ParameterDescriptor> parameters)
+        private static IDictionary<string, ParameterSnapshot> CreateParameterSnapshots(IEnumerable<ParameterDescriptor> parameters)
         {
             IDictionary<string, ParameterSnapshot> snapshots = new Dictionary<string, ParameterSnapshot>();
 
@@ -178,6 +177,12 @@ namespace Dashboard.Indexers
 
         internal static ParameterSnapshot CreateParameterSnapshot(ParameterDescriptor parameter)
         {
+            // If there is a snapshot already provided, use it.
+            if (parameter.UIDescriptor != null)
+            {
+                return new UIDescriptorParameterSnapshot(parameter.UIDescriptor);
+            }
+
             switch (parameter.Type)
             {
                 case "Blob":
@@ -225,6 +230,9 @@ namespace Dashboard.Indexers
                         RowKey = tableEntityParameter.RowKey
                     };
                 case "ServiceBus":
+                    // TEMP: This is here for back compat
+                    // Latest versions of the SDK send a snapshot
+                    // via ParameterDescriptor.UIDescriptor
                     ServiceBusParameterDescriptor serviceBusParameter = (ServiceBusParameterDescriptor)parameter;
                     return new ServiceBusParameterSnapshot
                     {
@@ -232,6 +240,9 @@ namespace Dashboard.Indexers
                         IsInput = false
                     };
                 case "ServiceBusTrigger":
+                    // TEMP: This is here for back compat
+                    // Latest versions of the SDK send a snapshot
+                    // via ParameterDescriptor.UIDescriptor
                     ServiceBusTriggerParameterDescriptor serviceBusTriggerParameter = (ServiceBusTriggerParameterDescriptor)parameter;
                     return new ServiceBusParameterSnapshot
                     {

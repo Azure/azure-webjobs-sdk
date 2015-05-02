@@ -8,8 +8,8 @@ using System.Linq;
 using Dashboard.Data;
 using Dashboard.HostMessaging;
 using Microsoft.Azure.WebJobs.Protocols;
-using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Dashboard.Indexers
 {

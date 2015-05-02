@@ -10,9 +10,6 @@ using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Storage.Blob;
 using Microsoft.Azure.WebJobs.Host.Storage.Queue;
-using Microsoft.Azure.WebJobs.Host.Triggers;
-using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage.Queue;
 using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
@@ -22,37 +19,38 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private readonly IStorageBlobClient _client;
         private readonly IBlobETagReader _eTagReader;
         private readonly IBlobCausalityReader _causalityReader;
-        private readonly IFunctionExecutor _innerExecutor;
+        private readonly ITriggeredFunctionExecutor _innerExecutor;
+        private readonly ListenerExecutionContext _context;
         private readonly IBlobWrittenWatcher _blobWrittenWatcher;
-        private readonly ConcurrentDictionary<string, ITriggeredFunctionInstanceFactory<IStorageBlob>> _registrations;
+        private readonly ConcurrentDictionary<string, ITriggeredFunctionExecutor> _registrations;
 
-        public BlobQueueTriggerExecutor(IStorageBlobClient client, IFunctionExecutor innerExecutor,
-            IBlobWrittenWatcher blobWrittenWatcher)
-            : this(client, BlobETagReader.Instance, BlobCausalityReader.Instance, innerExecutor, blobWrittenWatcher)
+        public BlobQueueTriggerExecutor(IStorageBlobClient client, ITriggeredFunctionExecutor innerExecutor, 
+            ListenerExecutionContext context, IBlobWrittenWatcher blobWrittenWatcher)
+            : this(client, BlobETagReader.Instance, BlobCausalityReader.Instance, innerExecutor, context, blobWrittenWatcher)
         {
         }
 
         public BlobQueueTriggerExecutor(IStorageBlobClient client, IBlobETagReader eTagReader,
-            IBlobCausalityReader causalityReader, IFunctionExecutor innerExecutor,
+            IBlobCausalityReader causalityReader, ITriggeredFunctionExecutor innerExecutor, ListenerExecutionContext context,
             IBlobWrittenWatcher blobWrittenWatcher)
         {
             _client = client;
             _eTagReader = eTagReader;
             _causalityReader = causalityReader;
             _innerExecutor = innerExecutor;
+            _context = context;
             _blobWrittenWatcher = blobWrittenWatcher;
-            _registrations = new ConcurrentDictionary<string, ITriggeredFunctionInstanceFactory<IStorageBlob>>();
+            _registrations = new ConcurrentDictionary<string, ITriggeredFunctionExecutor>();
         }
 
-        public void Register(string functionId, ITriggeredFunctionInstanceFactory<IStorageBlob> instanceFactory)
+        public void Register(string functionId, ITriggeredFunctionExecutor executor)
         {
-            _registrations.AddOrUpdate(functionId, instanceFactory, (i1, i2) => instanceFactory);
+            _registrations.AddOrUpdate(functionId, executor, (i1, i2) => executor);
         }
 
         public async Task<bool> ExecuteAsync(IStorageQueueMessage value, CancellationToken cancellationToken)
         {
-            BlobTriggerMessage message = JsonConvert.DeserializeObject<BlobTriggerMessage>(value.AsString,
-                JsonSerialization.Settings);
+            BlobTriggerMessage message = JsonConvert.DeserializeObject<BlobTriggerMessage>(value.AsString, JsonSerialization.Settings);
 
             if (message == null)
             {
@@ -67,9 +65,9 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             }
 
             // Ensure that the function ID is still valid. Otherwise, ignore this message.
-            ITriggeredFunctionInstanceFactory<IStorageBlob> instanceFactory;
+            ITriggeredFunctionExecutor executor;
 
-            if (!_registrations.TryGetValue(functionId, out instanceFactory))
+            if (!_registrations.TryGetValue(functionId, out executor))
             {
                 return true;
             }
@@ -109,9 +107,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             //// If the blob still exists and its ETag is still valid, execute.
             //// Note: it's possible the blob could change/be deleted between now and when the function executes.
             Guid? parentId = await _causalityReader.GetWriterAsync(blob, cancellationToken);
-            IFunctionInstance instance = instanceFactory.Create(blob, parentId);
-            IDelayedException exception = await _innerExecutor.TryExecuteAsync(instance, cancellationToken);
-            return exception == null;
+            return await executor.TryExecuteAsync(parentId, blob, _context, cancellationToken);
         }
     }
 }

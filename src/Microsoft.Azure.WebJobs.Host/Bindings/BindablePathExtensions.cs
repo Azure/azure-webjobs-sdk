@@ -6,10 +6,9 @@ using System.Collections.Generic;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    internal static class BindablePathExtensions
+    public static class BindablePathExtensions
     {
-        public static void ValidateContractCompatibility<TPath>(this IBindablePath<TPath> path,
-            IReadOnlyDictionary<string, Type> bindingDataContract)
+        public static void ValidateContractCompatibility<TPath>(this IBindablePath<TPath> path, IReadOnlyDictionary<string, Type> bindingDataContract)
         {
             if (path == null)
             {

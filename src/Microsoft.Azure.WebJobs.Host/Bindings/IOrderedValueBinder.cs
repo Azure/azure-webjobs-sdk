@@ -3,7 +3,7 @@
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    internal interface IOrderedValueBinder : IValueBinder
+    public interface IOrderedValueBinder : IValueBinder
     {
         int StepOrder { get; }
     }

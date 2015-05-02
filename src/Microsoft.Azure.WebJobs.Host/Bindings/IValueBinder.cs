@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    internal interface IValueBinder : IValueProvider
+    public interface IValueBinder : IValueProvider
     {
         Task SetValueAsync(object value, CancellationToken cancellationToken);
     }

@@ -14,7 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
 #if PUBLICPROTOCOL
     public class ParameterDescriptor
 #else
-    internal class ParameterDescriptor
+    public class ParameterDescriptor
 #endif
     {
         /// <summary>Gets or sets the parameter type.</summary>
@@ -22,6 +22,9 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
 
         /// <summary>Gets or sets the parameter name.</summary>
         public string Name { get; set; }
+
+        /// <summary>Gets or sets the parameter UI descriptor.</summary>
+        public ParameterUIDescriptor UIDescriptor { get; set; }
 
         private class ParameterDescriptorConverter : PolymorphicJsonConverter
         {

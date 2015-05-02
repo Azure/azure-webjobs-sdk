@@ -14,12 +14,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
     /// template parameters with parameter values.
     /// </summary>
     [DebuggerDisplay("{Pattern,nq}")]
-    internal class BindingTemplate
+    public class BindingTemplate
     {
         private readonly string _pattern;
         private readonly IReadOnlyList<BindingTemplateToken> _tokens;
 
-        public BindingTemplate(string pattern, IReadOnlyList<BindingTemplateToken> tokens)
+        internal BindingTemplate(string pattern, IReadOnlyList<BindingTemplateToken> tokens)
         {
             if (pattern == null)
             {
@@ -40,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
             get { return _pattern; }
         }
 
-        public IEnumerable<BindingTemplateToken> Tokens
+        internal IEnumerable<BindingTemplateToken> Tokens
         {
             get { return _tokens; }
         }

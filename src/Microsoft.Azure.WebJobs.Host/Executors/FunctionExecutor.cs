@@ -388,7 +388,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         private FunctionStartedMessage CreateStartedMessageWithoutArguments(IFunctionInstance instance)
         {
-            return new FunctionStartedMessage
+            FunctionStartedMessage message = new FunctionStartedMessage
             {
                 HostInstanceId = _hostOutputMessage.HostInstanceId,
                 HostDisplayName = _hostOutputMessage.HostDisplayName,
@@ -402,6 +402,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 Reason = instance.Reason,
                 StartTime = DateTimeOffset.UtcNow
             };
+
+            message.ReasonDetails = message.FormatReason();
+
+            return message;
         }
 
         private static FunctionCompletedMessage CreateCompletedMessage(FunctionStartedMessage startedMessage)
@@ -419,6 +423,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 Arguments = startedMessage.Arguments,
                 ParentId = startedMessage.ParentId,
                 Reason = startedMessage.Reason,
+                ReasonDetails = startedMessage.ReasonDetails,
                 StartTime = startedMessage.StartTime,
                 OutputBlob = startedMessage.OutputBlob,
                 ParameterLogBlob = startedMessage.ParameterLogBlob

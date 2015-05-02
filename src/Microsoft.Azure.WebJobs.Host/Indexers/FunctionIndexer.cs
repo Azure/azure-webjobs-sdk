@@ -12,25 +12,22 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Bindings.ConsoleOutput;
 using Microsoft.Azure.WebJobs.Host.Bindings.Invoke;
 using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 
 namespace Microsoft.Azure.WebJobs.Host.Indexers
 {
-    // Go down and build an index
     internal class FunctionIndexer
     {
         private static readonly BindingFlags _publicMethodFlags = BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly;
-        private static readonly Func<MethodInfo, bool> _hasServiceBusAttributeDefault = _ => false;
 
         private readonly ITriggerBindingProvider _triggerBindingProvider;
         private readonly IBindingProvider _bindingProvider;
         private readonly IJobActivator _activator;
-        private readonly Func<MethodInfo, bool> _hasServiceBusAttribute;
+        private readonly HashSet<Assembly> _jobTypeAssemblies;
 
-        public FunctionIndexer(ITriggerBindingProvider triggerBindingProvider, IBindingProvider bindingProvider,
-            IJobActivator activator)
+        public FunctionIndexer(ITriggerBindingProvider triggerBindingProvider, IBindingProvider bindingProvider, IJobActivator activator, IExtensionRegistry extensions)
         {
             if (triggerBindingProvider == null)
             {
@@ -50,37 +47,25 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _triggerBindingProvider = triggerBindingProvider;
             _bindingProvider = bindingProvider;
             _activator = activator;
-
-            Type serviceBusIndexerType = ServiceBusExtensionTypeLoader.Get("Microsoft.Azure.WebJobs.ServiceBus.ServiceBusIndexer");
-            if (serviceBusIndexerType != null)
-            {
-                MethodInfo serviceBusIndexerMethod = serviceBusIndexerType.GetMethod("HasSdkAttribute", new Type[] { typeof(MethodInfo) });
-                Debug.Assert(serviceBusIndexerMethod != null);
-                _hasServiceBusAttribute = (Func<MethodInfo, bool>)serviceBusIndexerMethod.CreateDelegate(
-                    typeof(Func<MethodInfo, bool>));
-            }
-            else
-            {
-                _hasServiceBusAttribute = _hasServiceBusAttributeDefault;
-            }
+            _jobTypeAssemblies = new HashSet<Assembly>(GetJobTypeAssemblies(extensions, typeof(ITriggerBindingProvider), typeof(IBindingProvider)));
         }
 
         public async Task IndexTypeAsync(Type type, IFunctionIndexCollector index, CancellationToken cancellationToken)
         {
-            foreach (MethodInfo method in type.GetMethods(_publicMethodFlags).Where(IsSdkMethod))
+            foreach (MethodInfo method in type.GetMethods(_publicMethodFlags).Where(IsJobMethod))
             {
                 await IndexMethodAsync(method, index, cancellationToken);
             }
         }
 
-        public bool IsSdkMethod(MethodInfo method)
+        public bool IsJobMethod(MethodInfo method)
         {
             if (method.ContainsGenericParameters)
             {
                 return false;
             }
 
-            if (method.GetCustomAttributesData().Any(HasSdkAttribute))
+            if (method.GetCustomAttributesData().Any(HasJobAttribute))
             {
                 return true;
             }
@@ -90,12 +75,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 return false;
             }
 
-            if (method.GetParameters().Any(p => p.GetCustomAttributesData().Any(HasSdkAttribute)))
-            {
-                return true;
-            }
-
-            if (_hasServiceBusAttribute(method))
+            if (method.GetParameters().Any(p => p.GetCustomAttributesData().Any(HasJobAttribute)))
             {
                 return true;
             }
@@ -103,13 +83,28 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             return false;
         }
 
-        private static bool HasSdkAttribute(CustomAttributeData attributeData)
+        private static HashSet<Assembly> GetJobTypeAssemblies(IExtensionRegistry extensions, params Type[] extensionTypes)
         {
-            return attributeData.AttributeType.Assembly == typeof(BlobAttribute).Assembly;
+            // create a set containing our own core assemblies
+            HashSet<Assembly> assemblies = new HashSet<Assembly>();
+            assemblies.Add(typeof(BlobAttribute).Assembly);
+       
+            // add any extension assemblies
+            foreach (Type extensionType in extensionTypes)
+            {
+                var currAssemblies = extensions.GetExtensions(extensionType).Select(p => p.GetType().Assembly);
+                assemblies.UnionWith(currAssemblies);
+            }
+
+            return assemblies;
         }
 
-        public async Task IndexMethodAsync(MethodInfo method, IFunctionIndexCollector index,
-            CancellationToken cancellationToken)
+        private bool HasJobAttribute(CustomAttributeData attributeData)
+        {
+            return _jobTypeAssemblies.Contains(attributeData.AttributeType.Assembly);
+        }
+
+        public async Task IndexMethodAsync(MethodInfo method, IFunctionIndexCollector index, CancellationToken cancellationToken)
         {
             try
             {
@@ -244,15 +239,13 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
 
             string triggerParameterName = triggerParameter != null ? triggerParameter.Name : null;
-            FunctionDescriptor functionDescriptor = CreateFunctionDescriptor(method, triggerParameterName,
-                triggerBinding, nonTriggerBindings);
+            FunctionDescriptor functionDescriptor = CreateFunctionDescriptor(method, triggerParameterName, triggerBinding, nonTriggerBindings);
             IFunctionInvoker invoker = FunctionInvokerFactory.Create(method, _activator);
             IFunctionDefinition functionDefinition;
 
             if (triggerBinding != null)
             {
-                functionDefinition = triggerBinding.CreateFunctionDefinition(nonTriggerBindings, invoker,
-                    functionDescriptor);
+                functionDefinition = CreateFunctionDefinition(functionDescriptor, triggerBinding, triggerParameterName, nonTriggerBindings, invoker, functionDescriptor);
 
                 if (hasNoAutomaticTrigger && functionDefinition != null)
                 {
@@ -267,6 +260,57 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
 
             index.Add(functionDefinition, functionDescriptor, method);
+        }
+
+        private static FunctionDefinition CreateFunctionDefinition(FunctionDescriptor descriptor, ITriggerBinding triggerBinding, string parameterName, IReadOnlyDictionary<string, IBinding> nonTriggerBindings, IFunctionInvoker invoker, FunctionDescriptor functionDescriptor)
+        {
+            Type triggerValueType = triggerBinding.GetType().GetInterface(typeof(ITriggerBinding<>).Name).GetGenericArguments()[0];
+
+            // create the function binding
+            Type genericType = typeof(TriggeredFunctionBinding<>).MakeGenericType(triggerValueType);
+            IFunctionBinding functionBinding = (IFunctionBinding)Activator.CreateInstance(genericType, parameterName, triggerBinding, nonTriggerBindings);
+
+            // create the instance factory
+            genericType = typeof(TriggeredFunctionInstanceFactory<>).MakeGenericType(triggerValueType);
+            IFunctionInstanceFactory instanceFactory = (IFunctionInstanceFactory)Activator.CreateInstance(genericType, functionBinding, invoker, functionDescriptor);
+
+            genericType = typeof(TriggeredFunctionExecutorImpl<>).MakeGenericType(triggerValueType);
+            ITriggeredFunctionExecutor triggerExecutor = (ITriggeredFunctionExecutor)Activator.CreateInstance(genericType, descriptor, instanceFactory);
+
+            IListenerFactory listenerFactory = triggerBinding.CreateListenerFactory(triggerExecutor);
+
+            return new FunctionDefinition(instanceFactory, listenerFactory);
+        }
+
+        private class TriggeredFunctionExecutorImpl<TTriggerValue> : ITriggeredFunctionExecutor
+        {
+            private FunctionDescription _description;
+            private ITriggeredFunctionInstanceFactory<TTriggerValue> _instanceFactory;
+
+            public TriggeredFunctionExecutorImpl(FunctionDescriptor descriptor, ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory)
+            {
+                _description = new FunctionDescription
+                {
+                    ID = descriptor.Id,
+                    FullName = descriptor.FullName
+                };
+                _instanceFactory = instanceFactory;
+            }
+
+            public FunctionDescription Function
+            {
+                get
+                {
+                    return _description;
+                }
+            }
+
+            public async Task<bool> TryExecuteAsync(Guid? parentId, object triggerValue, ListenerExecutionContext context, CancellationToken cancellationToken)
+            {
+                IFunctionInstance instance = _instanceFactory.Create((TTriggerValue)triggerValue, parentId);
+                IDelayedException exception = await context.FunctionExecutor.TryExecuteAsync(instance, cancellationToken);
+                return exception == null;
+            }
         }
 
         private static FunctionDescriptor CreateFunctionDescriptor(MethodInfo method, string triggerParameterName,

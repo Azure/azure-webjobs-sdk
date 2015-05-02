@@ -9,7 +9,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 {
     internal class NullListenerFactory : IListenerFactory
     {
-        public Task<IListener> CreateAsync(IFunctionExecutor executor, CancellationToken cancellationToken)
+        public Task<IListener> CreateAsync(ListenerExecutionContext context, CancellationToken cancellationToken)
         {
             IListener listener = new NullListener();
             return Task.FromResult(listener);

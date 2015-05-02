@@ -16,7 +16,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
 #if PUBLICPROTOCOL
     public static class JsonSerialization
 #else
-    internal static class JsonSerialization
+    public static class JsonSerialization
 #endif
     {
         private static readonly JsonSerializerSettings _settings = new JsonSerializerSettings

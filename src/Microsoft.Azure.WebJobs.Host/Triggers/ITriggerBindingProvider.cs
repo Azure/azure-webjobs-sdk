@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Triggers
 {
-    internal interface ITriggerBindingProvider
+    public interface ITriggerBindingProvider
     {
         Task<ITriggerBinding> TryCreateAsync(TriggerBindingProviderContext context);
     }

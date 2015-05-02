@@ -32,12 +32,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
 
         public IQueueConfiguration QueueConfiguration { get; set; }
 
-        public IServiceBusAccountProvider ServiceBusAccountProvider { get; set; }
-
         public IStorageAccountProvider StorageAccountProvider { get; set; }
 
-        public Task<JobHostContext> CreateAndLogHostStartedAsync(CancellationToken shutdownToken,
-            CancellationToken cancellationToken)
+        public Task<JobHostContext> CreateAndLogHostStartedAsync(CancellationToken shutdownToken, CancellationToken cancellationToken)
         {
             return JobHostContextFactory.CreateAndLogHostStartedAsync(StorageAccountProvider,
                 FunctionIndexProvider, BindingProvider, HostIdProvider, HostInstanceLoggerProvider,

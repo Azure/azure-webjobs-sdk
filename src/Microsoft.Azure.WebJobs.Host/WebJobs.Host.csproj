@@ -22,7 +22,7 @@
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Debug\Microsoft.Azure.WebJobs.Host.xml</DocumentationFile>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -186,6 +186,12 @@
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\ParameterDescriptor.cs">
       <Link>Protocols\ParameterDescriptor.cs</Link>
     </Compile>
+    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\TriggerParameterDescriptor.cs">
+      <Link>Protocols\TriggerParameterDescriptor.cs</Link>
+    </Compile>
+    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\ParameterUIDescriptor.cs">
+      <Link>Protocols\ParameterUIDescriptor.cs</Link>
+    </Compile>
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\ParameterLog.cs">
       <Link>Protocols\ParameterLog.cs</Link>
     </Compile>
@@ -346,16 +352,20 @@
       <Link>Storage\Table\TypeEntityResolver.cs</Link>
     </Compile>
     <Compile Include="Bindings\AmbientBindingContext.cs" />
+    <Compile Include="Config\IExtensionConfigProvider.cs" />
     <Compile Include="ContextAccessor.cs" />
     <Compile Include="Bindings\Data\TToStringArgumentBindingProvider.cs" />
     <Compile Include="Bindings\IBindingDataProvider.cs" />
+    <Compile Include="DefaultExtensionRegistry.cs" />
     <Compile Include="Executors\DefaultJobActivator.cs" />
     <Compile Include="Executors\FunctionInvoker.cs" />
     <Compile Include="Executors\FunctionInvokerFactory.cs" />
     <Compile Include="Executors\IFunctionInvoker.cs" />
     <Compile Include="Executors\IJobHostContextFactory.cs" />
     <Compile Include="Executors\ActivatorInstanceFactory.cs" />
+    <Compile Include="Executors\ITriggeredFunctionExecutor.cs" />
     <Compile Include="Executors\NullInstanceFactory.cs" />
+    <Compile Include="Extensions\IExtensionRegistryExtensions.cs" />
     <Compile Include="IContextSetter.cs" />
     <Compile Include="IContextGetter.cs" />
     <Compile Include="Bindings\ObjectToTypeConverterFactory.cs" />
@@ -367,7 +377,7 @@
     <Compile Include="Bindings\ValueBindingContext.cs" />
     <Compile Include="Bindings\IWatcher.cs" />
     <Compile Include="Bindings\Runtime\AttributeBindingSource.cs" />
-    <Compile Include="Bindings\BindingDataPath.cs" />
+    <Compile Include="Bindings\BindingDataPathHelper.cs" />
     <Compile Include="Bindings\BindingExceptionValueProvider.cs" />
     <Compile Include="Bindings\Cancellation\CancellationTokenBinding.cs" />
     <Compile Include="Bindings\Cancellation\CancellationTokenBindingProvider.cs" />
@@ -425,10 +435,9 @@
     <Compile Include="Blobs\ReadBlobArgumentBinding.cs" />
     <Compile Include="Blobs\Listeners\BlobTriggerMessage.cs" />
     <Compile Include="ClassPropertySetter.cs" />
-    <Compile Include="Executors\DefaultServiceBusAccountProvider.cs" />
-    <Compile Include="Executors\IServiceBusAccountProvider.cs" />
     <Compile Include="Executors\IStorageAccountParser.cs" />
     <Compile Include="Executors\StorageAccountProviderExtensions.cs" />
+    <Compile Include="IExtensionRegistry.cs" />
     <Compile Include="IJobActivator.cs" />
     <Compile Include="Indexers\ExtensionTypeLocator.cs" />
     <Compile Include="Indexers\FunctionIndexProvider.cs" />
@@ -814,7 +823,6 @@
     <Compile Include="NameResolverExtensions.cs" />
     <Compile Include="WebJobsShutdownWatcher.cs" />
     <Compile Include="Tables\TableEntityPath.cs" />
-    <Compile Include="Bindings\ServiceBusExtensionTypeLoader.cs" />
     <Compile Include="HostContainerNames.cs" />
     <Compile Include="INameResolver.cs" />
     <Compile Include="JobHostConfiguration.cs" />

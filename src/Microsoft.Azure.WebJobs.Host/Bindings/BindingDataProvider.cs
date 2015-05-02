@@ -6,21 +6,20 @@ using System.Collections.Generic;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    internal class BindingDataProvider : IBindingDataProvider
+    public class BindingDataProvider : IBindingDataProvider
     {
         private readonly Type _type;
         private readonly IReadOnlyDictionary<string, Type> _contract;
         private readonly IEnumerable<PropertyHelper> _propertyHelpers;
 
-        public BindingDataProvider(Type type, IReadOnlyDictionary<string, Type> contract,
-            IEnumerable<PropertyHelper> propertyHelpers)
+        internal BindingDataProvider(Type type, IReadOnlyDictionary<string, Type> contract, IEnumerable<PropertyHelper> propertyHelpers)
         {
             _type = type;
             _contract = contract;
             _propertyHelpers = propertyHelpers;
         }
 
-        public Type ValueType
+        internal Type ValueType
         {
             get { return _type; }
         }

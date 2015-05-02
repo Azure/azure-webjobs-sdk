@@ -3,7 +3,7 @@
 
 namespace Microsoft.Azure.WebJobs.Host.Converters
 {
-    internal class IdentityConverter<TValue> : IConverter<TValue, TValue>
+    public class IdentityConverter<TValue> : IConverter<TValue, TValue>
     {
         public TValue Convert(TValue input)
         {

@@ -9,7 +9,7 @@ using Microsoft.Azure.WebJobs.Host.Queues;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    internal class FunctionBindingContext
+    public class FunctionBindingContext
     {
         private readonly Guid _functionInstanceId;
         private readonly CancellationToken _functionCancellationToken;

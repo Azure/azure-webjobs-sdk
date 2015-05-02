@@ -121,7 +121,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             FunctionIndexer product = CreateProductUnderTest();
 
             // Act
-            bool actual = product.IsSdkMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithGenericParameter"));
+            bool actual = product.IsJobMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithGenericParameter"));
 
             // Verify
             Assert.Equal(false, actual);
@@ -135,7 +135,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             FunctionIndexer product = CreateProductUnderTest();
 
             // Act
-            bool actual = product.IsSdkMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithNoParameters"));
+            bool actual = product.IsJobMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithNoParameters"));
 
             // Verify
             Assert.Equal(false, actual);
@@ -149,7 +149,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             FunctionIndexer product = CreateProductUnderTest();
 
             // Act
-            bool actual = product.IsSdkMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithSdkAttribute"));
+            bool actual = product.IsJobMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithSdkAttribute"));
 
             // Verify
             Assert.Equal(true, actual);
@@ -163,7 +163,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             FunctionIndexer product = CreateProductUnderTest();
 
             // Act
-            bool actual = product.IsSdkMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithSdkAttributeButNoParameters"));
+            bool actual = product.IsJobMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithSdkAttributeButNoParameters"));
 
             // Verify
             Assert.Equal(true, actual);
@@ -177,7 +177,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             FunctionIndexer product = CreateProductUnderTest();
 
             // Act
-            bool actual = product.IsSdkMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithSdkParameterAttributes"));
+            bool actual = product.IsJobMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithSdkParameterAttributes"));
 
             // Verify
             Assert.Equal(true, actual);
@@ -191,7 +191,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             FunctionIndexer product = CreateProductUnderTest();
 
             // Act
-            bool actual = product.IsSdkMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithUnboundOutParameterAndNoSdkAttribute"));
+            bool actual = product.IsJobMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithUnboundOutParameterAndNoSdkAttribute"));
 
             // Verify
             Assert.Equal(false, actual);

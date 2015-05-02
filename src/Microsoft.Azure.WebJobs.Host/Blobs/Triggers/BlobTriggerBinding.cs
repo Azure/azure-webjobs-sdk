@@ -9,7 +9,6 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
 using Microsoft.Azure.WebJobs.Host.Converters;
 using Microsoft.Azure.WebJobs.Host.Executors;
-using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Queues;
@@ -197,18 +196,15 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             return await BindAsync(conversionResult.Result, context);
         }
 
-        public IFunctionDefinition CreateFunctionDefinition(IReadOnlyDictionary<string, IBinding> nonTriggerBindings,
-            IFunctionInvoker invoker, FunctionDescriptor functionDescriptor)
+        public IListenerFactory CreateListenerFactory(ITriggeredFunctionExecutor executor)
         {
-            ITriggeredFunctionBinding<IStorageBlob> functionBinding =
-                new TriggeredFunctionBinding<IStorageBlob>(_parameterName, this, nonTriggerBindings);
-            ITriggeredFunctionInstanceFactory<IStorageBlob> instanceFactory =
-                new TriggeredFunctionInstanceFactory<IStorageBlob>(functionBinding, invoker, functionDescriptor);
             IStorageBlobContainer container = _client.GetContainerReference(_path.ContainerNamePattern);
+
             IListenerFactory listenerFactory = new BlobListenerFactory(_hostIdProvider, _queueConfiguration,
                 _backgroundExceptionDispatcher, _blobWrittenWatcherSetter, _messageEnqueuedWatcherSetter,
-                _sharedContextProvider, _log, functionDescriptor.Id, _account, container, _path, instanceFactory);
-            return new FunctionDefinition(instanceFactory, listenerFactory);
+                _sharedContextProvider, _log, executor.Function.ID, _account, container, _path, executor);
+
+            return listenerFactory;
         }
 
         public ParameterDescriptor ToParameterDescriptor()

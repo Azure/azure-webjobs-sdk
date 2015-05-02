@@ -3,7 +3,7 @@
 
 namespace Microsoft.Azure.WebJobs.Host.Converters
 {
-    internal interface IObjectToTypeConverter<TOutput>
+    public interface IObjectToTypeConverter<TOutput>
     {
         bool TryConvert(object input, out TOutput output);
     }

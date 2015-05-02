@@ -212,7 +212,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             {
                 StorageAccount = storageAccount
             };
-            IServiceBusAccountProvider serviceBusAccountProvider = new NullServiceBusAccountProvider();
             IHostIdProvider hostIdProvider = new FakeHostIdProvider();
             INameResolver nameResolver = null;
             IQueueConfiguration queueConfiguration = new FakeQueueConfiguration();
@@ -223,20 +222,21 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             ContextAccessor<IBlobWrittenWatcher> blobWrittenWatcherAccessor =
                 new ContextAccessor<IBlobWrittenWatcher>();
             ISharedContextProvider sharedContextProvider = new SharedContextProvider();
+            IExtensionRegistry extensions = new DefaultExtensionRegistry();
+
             ITriggerBindingProvider triggerBindingProvider = DefaultTriggerBindingProvider.Create(nameResolver,
-                storageAccountProvider, serviceBusAccountProvider, extensionTypeLocator, hostIdProvider,
+                storageAccountProvider, extensionTypeLocator, hostIdProvider,
                 queueConfiguration, backgroundExceptionDispatcher, messageEnqueuedWatcherAccessor,
-                blobWrittenWatcherAccessor, sharedContextProvider, TextWriter.Null);
+                blobWrittenWatcherAccessor, sharedContextProvider, extensions, TextWriter.Null);
             IBindingProvider bindingProvider = DefaultBindingProvider.Create(nameResolver, storageAccountProvider,
-                serviceBusAccountProvider, extensionTypeLocator, messageEnqueuedWatcherAccessor,
-                blobWrittenWatcherAccessor);
+                extensionTypeLocator, messageEnqueuedWatcherAccessor,
+                blobWrittenWatcherAccessor, extensions);
 
             IJobHostContextFactory contextFactory = new FakeJobHostContextFactory
             {
                 FunctionIndexProvider = new FunctionIndexProvider(new FakeTypeLocator(programType),
-                    triggerBindingProvider, bindingProvider, activator),
+                    triggerBindingProvider, bindingProvider, activator, new DefaultExtensionRegistry()),
                 StorageAccountProvider = storageAccountProvider,
-                ServiceBusAccountProvider = serviceBusAccountProvider,
                 BackgroundExceptionDispatcher = backgroundExceptionDispatcher,
                 BindingProvider = bindingProvider,
                 ConsoleProvider = new NullConsoleProvider(),

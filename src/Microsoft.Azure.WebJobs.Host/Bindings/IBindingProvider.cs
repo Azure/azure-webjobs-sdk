@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    internal interface IBindingProvider
+    public interface IBindingProvider
     {
         Task<IBinding> TryCreateAsync(BindingProviderContext context);
     }

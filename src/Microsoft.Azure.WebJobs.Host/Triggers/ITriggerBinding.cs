@@ -6,19 +6,18 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Executors;
-using Microsoft.Azure.WebJobs.Host.Indexers;
+using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 
 namespace Microsoft.Azure.WebJobs.Host.Triggers
 {
-    internal interface ITriggerBinding
+    public interface ITriggerBinding
     {
         IReadOnlyDictionary<string, Type> BindingDataContract { get; }
 
         Task<ITriggerData> BindAsync(object value, ValueBindingContext context);
 
-        IFunctionDefinition CreateFunctionDefinition(IReadOnlyDictionary<string, IBinding> nonTriggerBindings,
-            IFunctionInvoker invoker, FunctionDescriptor functionDescriptor);
+        IListenerFactory CreateListenerFactory(ITriggeredFunctionExecutor executor);
 
         ParameterDescriptor ToParameterDescriptor();
     }

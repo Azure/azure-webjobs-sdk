@@ -72,15 +72,17 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             _functionInstanceLogger = functionInstanceLogger;
         }
 
-        public Task<IListener> CreateAsync(IFunctionExecutor executor, CancellationToken cancellationToken)
+        public Task<IListener> CreateAsync(ListenerExecutionContext context, CancellationToken cancellationToken)
         {
-            ITriggerExecutor<IStorageQueueMessage> triggerExecutor = new HostMessageExecutor(executor, _functionLookup,
-                _functionInstanceLogger);
+            ITriggerExecutor<IStorageQueueMessage> triggerExecutor = 
+                new HostMessageExecutor(context.FunctionExecutor, _functionLookup,_functionInstanceLogger);
+
             TimeSpan configuredMaximum = _queueConfiguration.MaxPollingInterval;
             // Provide an upper bound on the maximum polling interval for run/abort from dashboard.
             // Use the default maximum for host polling (1 minute) unless the configured overall maximum is even faster.
             TimeSpan maximum = configuredMaximum < DefaultMaximum ? configuredMaximum : DefaultMaximum;
             IDelayStrategy delayStrategy = new RandomizedExponentialBackoffStrategy(Minimum, maximum);
+
             IListener listener = new QueueListener(_queue,
                 poisonQueue: null,
                 triggerExecutor: triggerExecutor,
@@ -90,6 +92,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
                 sharedWatcher: null,
                 batchSize: _queueConfiguration.BatchSize,
                 maxDequeueCount: _queueConfiguration.MaxDequeueCount);
+
             return Task.FromResult(listener);
         }
     }

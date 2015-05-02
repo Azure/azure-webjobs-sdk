@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Blobs;
+using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Loggers;
@@ -26,51 +27,57 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     internal class JobHostContextFactory : IJobHostContextFactory
     {
         private readonly IStorageAccountProvider _storageAccountProvider;
-        private readonly IServiceBusAccountProvider _serviceBusAccountProvider;
         private readonly ITypeLocator _typeLocator;
         private readonly INameResolver _nameResolver;
         private readonly IJobActivator _activator;
         private readonly string _hostId;
         private readonly IQueueConfiguration _queueConfiguration;
         private readonly IConsoleProvider _consoleProvider;
+        private readonly JobHostConfiguration _jobHostConfig;
 
-        public JobHostContextFactory(IStorageAccountProvider storageAccountProvider, IServiceBusAccountProvider
-            serviceBusAccountProvider, ITypeLocator typeLocator, INameResolver nameResolver, IJobActivator activator,
-            string hostId, IQueueConfiguration queueConfiguration, IConsoleProvider consoleProvider)
+        // TODO: Clean up this ctor, now that the JobHostConfiguration is being passed in
+        public JobHostContextFactory(IStorageAccountProvider storageAccountProvider, ITypeLocator typeLocator, INameResolver nameResolver, IJobActivator activator,
+            string hostId, IQueueConfiguration queueConfiguration, IConsoleProvider consoleProvider, JobHostConfiguration config)
         {
             _storageAccountProvider = storageAccountProvider;
-            _serviceBusAccountProvider = serviceBusAccountProvider;
             _typeLocator = typeLocator;
             _activator = activator;
             _nameResolver = nameResolver;
             _hostId = hostId;
             _queueConfiguration = queueConfiguration;
             _consoleProvider = consoleProvider;
+            _jobHostConfig = config;
         }
 
-        public Task<JobHostContext> CreateAndLogHostStartedAsync(CancellationToken shutdownToken,
-            CancellationToken cancellationToken)
+        public Task<JobHostContext> CreateAndLogHostStartedAsync(CancellationToken shutdownToken, CancellationToken cancellationToken)
         {
             IFunctionIndexProvider functionIndexProvider = null;
+
             IHostIdProvider hostIdProvider = _hostId != null ? (IHostIdProvider)new FixedHostIdProvider(_hostId)
                 : new DynamicHostIdProvider(_storageAccountProvider, () => functionIndexProvider);
+
             IExtensionTypeLocator extensionTypeLocator = new ExtensionTypeLocator(_typeLocator);
             IBackgroundExceptionDispatcher backgroundExceptionDispatcher = BackgroundExceptionDispatcher.Instance;
-            ContextAccessor<IMessageEnqueuedWatcher> messageEnqueuedWatcherAccessor =
-                new ContextAccessor<IMessageEnqueuedWatcher>();
-            ContextAccessor<IBlobWrittenWatcher> blobWrittenWatcherAccessor =
-                new ContextAccessor<IBlobWrittenWatcher>();
+            ContextAccessor<IMessageEnqueuedWatcher> messageEnqueuedWatcherAccessor = new ContextAccessor<IMessageEnqueuedWatcher>();
+            ContextAccessor<IBlobWrittenWatcher> blobWrittenWatcherAccessor = new ContextAccessor<IBlobWrittenWatcher>();
             ISharedContextProvider sharedContextProvider = new SharedContextProvider();
+
+            // Register system services with the service container
+            _jobHostConfig.AddService<INameResolver>(_nameResolver);
+            IExtensionRegistry extensions = _jobHostConfig.GetExtensions();
+
+            InvokeExtensionConfigProviders(extensions);
+
             ITriggerBindingProvider triggerBindingProvider = DefaultTriggerBindingProvider.Create(_nameResolver,
-                _storageAccountProvider, _serviceBusAccountProvider, extensionTypeLocator, hostIdProvider,
-                _queueConfiguration, backgroundExceptionDispatcher, messageEnqueuedWatcherAccessor,
-                blobWrittenWatcherAccessor, sharedContextProvider, _consoleProvider.Out);
+                _storageAccountProvider, extensionTypeLocator, hostIdProvider, _queueConfiguration, backgroundExceptionDispatcher, 
+                messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor, sharedContextProvider, extensions, _consoleProvider.Out);
+
             IBindingProvider bindingProvider = DefaultBindingProvider.Create(_nameResolver, _storageAccountProvider,
-                _serviceBusAccountProvider, extensionTypeLocator, messageEnqueuedWatcherAccessor,
-                blobWrittenWatcherAccessor);
-            functionIndexProvider = new FunctionIndexProvider(_typeLocator, triggerBindingProvider, bindingProvider,
-                _activator);
+                extensionTypeLocator, messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor, extensions);
+
+            functionIndexProvider = new FunctionIndexProvider(_typeLocator, triggerBindingProvider, bindingProvider, _activator, extensions);
             DefaultLoggerProvider loggerProvider = new DefaultLoggerProvider(_storageAccountProvider);
+
             return CreateAndLogHostStartedAsync(_storageAccountProvider, functionIndexProvider, bindingProvider,
                 hostIdProvider, loggerProvider, loggerProvider, loggerProvider, _queueConfiguration,
                 backgroundExceptionDispatcher, _consoleProvider,
@@ -91,29 +98,23 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             CancellationToken shutdownToken,
             CancellationToken cancellationToken)
         {
-            using (CancellationTokenSource combinedCancellationSource =
-                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, shutdownToken))
+            using (CancellationTokenSource combinedCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, shutdownToken))
             {
                 CancellationToken combinedCancellationToken = combinedCancellationSource.Token;
 
                 await WriteSiteExtensionManifestAsync(combinedCancellationToken);
 
-                IStorageAccount dashboardAccount = await storageAccountProvider.GetDashboardAccountAsync(
-                    combinedCancellationToken);
+                IStorageAccount dashboardAccount = await storageAccountProvider.GetDashboardAccountAsync(combinedCancellationToken);
 
-                IHostInstanceLogger hostInstanceLogger = await hostInstanceLoggerProvider.GetAsync(
-                    combinedCancellationToken);
-                IFunctionInstanceLogger functionInstanceLogger = await functionInstanceLoggerProvider.GetAsync(
-                    combinedCancellationToken);
-                IFunctionOutputLogger functionOutputLogger = await functionOutputLoggerProvider.GetAsync(
-                    combinedCancellationToken);
+                IHostInstanceLogger hostInstanceLogger = await hostInstanceLoggerProvider.GetAsync(combinedCancellationToken);
+                IFunctionInstanceLogger functionInstanceLogger = await functionInstanceLoggerProvider.GetAsync(combinedCancellationToken);
+                IFunctionOutputLogger functionOutputLogger = await functionOutputLoggerProvider.GetAsync(combinedCancellationToken);
 
                 IFunctionIndex functions = await functionIndexProvider.GetAsync(combinedCancellationToken);
 
                 IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll());
 
-                FunctionExecutor executor = new FunctionExecutor(functionInstanceLogger, functionOutputLogger,
-                    backgroundExceptionDispatcher);
+                FunctionExecutor executor = new FunctionExecutor(functionInstanceLogger, functionOutputLogger, backgroundExceptionDispatcher);
 
                 TextWriter consoleOut = consoleProvider.Out;
 
@@ -211,6 +212,15 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
         }
 
+        private static void InvokeExtensionConfigProviders(IExtensionRegistry extensions)
+        {
+            IEnumerable<IExtensionConfigProvider> configProviders = extensions.GetExtensions(typeof(IExtensionConfigProvider)).Cast<IExtensionConfigProvider>();
+            foreach (IExtensionConfigProvider configProvider in configProviders)
+            {
+                configProvider.Initialize();
+            }
+        }
+
         private static IFunctionExecutor CreateHostCallExecutor(IListenerFactory instanceQueueListenerFactory,
             IRecurrentCommand heartbeatCommand, IBackgroundExceptionDispatcher backgroundExceptionDispatcher,
             CancellationToken shutdownToken, IFunctionExecutor innerExecutor)
@@ -276,7 +286,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             return logger.LogHostStartedAsync(message, cancellationToken);
         }
 
-        // When running in Azure Web Sites, write out a manifest file.
+        // When running in Azure Web Sites, write out a manifest file. This manifest file is read by
+        // the Kudu site extension to provide custom behaviors for SDK jobs
         private static async Task WriteSiteExtensionManifestAsync(CancellationToken cancellationToken)
         {
             string jobDataPath = Environment.GetEnvironmentVariable(WebSitesKnownKeyNames.JobDataPath);

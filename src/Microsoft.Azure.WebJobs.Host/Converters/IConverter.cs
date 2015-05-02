@@ -3,7 +3,7 @@
 
 namespace Microsoft.Azure.WebJobs.Host.Converters
 {
-    internal interface IConverter<TInput, TOutput>
+    public interface IConverter<TInput, TOutput>
     {
         TOutput Convert(TInput input);
     }

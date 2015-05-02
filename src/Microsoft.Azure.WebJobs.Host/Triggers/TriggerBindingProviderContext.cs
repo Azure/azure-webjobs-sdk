@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace Microsoft.Azure.WebJobs.Host.Triggers
 {
-    internal class TriggerBindingProviderContext
+    public class TriggerBindingProviderContext
     {
         private readonly ParameterInfo _parameter;
         private readonly CancellationToken _cancellationToken;

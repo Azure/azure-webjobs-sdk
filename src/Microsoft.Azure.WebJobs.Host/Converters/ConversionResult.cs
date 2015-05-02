@@ -3,7 +3,7 @@
 
 namespace Microsoft.Azure.WebJobs.Host.Converters
 {
-    internal struct ConversionResult<TResult>
+    public struct ConversionResult<TResult>
     {
         public bool Succeeded;
         public TResult Result;

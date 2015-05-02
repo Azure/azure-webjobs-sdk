@@ -8,7 +8,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 
 namespace Microsoft.Azure.WebJobs.Host.Triggers
 {
-    internal interface ITriggerDataArgumentBinding<TTriggerValue>
+    public interface ITriggerDataArgumentBinding<TTriggerValue>
     {
         Type ValueType { get; }
 

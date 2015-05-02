@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    internal interface IArgumentBinding<TArgument>
+    public interface IArgumentBinding<TArgument>
     {
         Type ValueType { get; }
 

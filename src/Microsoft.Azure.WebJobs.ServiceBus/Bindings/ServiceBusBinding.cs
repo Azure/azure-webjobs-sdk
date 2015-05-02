@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Globalization;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Converters;
@@ -19,8 +20,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
         private readonly IBindableServiceBusPath _path;
         private readonly IAsyncObjectToTypeConverter<ServiceBusEntity> _converter;
 
-        public ServiceBusBinding(string parameterName, IArgumentBinding<ServiceBusEntity> argumentBinding,
-            ServiceBusAccount account, IBindableServiceBusPath path)
+        public ServiceBusBinding(string parameterName, IArgumentBinding<ServiceBusEntity> argumentBinding, ServiceBusAccount account, IBindableServiceBusPath path)
         {
             _parameterName = parameterName;
             _argumentBinding = argumentBinding;
@@ -35,8 +35,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
             get { return true; }
         }
 
-        private static IAsyncObjectToTypeConverter<ServiceBusEntity> CreateConverter(ServiceBusAccount account,
-            IBindableServiceBusPath queueOrTopicName)
+        private static IAsyncObjectToTypeConverter<ServiceBusEntity> CreateConverter(ServiceBusAccount account, IBindableServiceBusPath queueOrTopicName)
         {
             return new OutputConverter<string>(new StringToServiceBusEntityConverter(account, queueOrTopicName));
         }
@@ -75,12 +74,33 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 
         public ParameterDescriptor ToParameterDescriptor()
         {
+            // TODO: Need to find a way to serialize these extended properties
             return new ServiceBusParameterDescriptor
             {
                 Name = _parameterName,
                 NamespaceName = _namespaceName,
-                QueueOrTopicName = _path.QueueOrTopicNamePattern
+                QueueOrTopicName = _path.QueueOrTopicNamePattern,
+                UIDescriptor = CreateParameterUIDescriptor(_path.QueueOrTopicNamePattern, false)
             };
+        }
+
+        internal static ParameterUIDescriptor CreateParameterUIDescriptor(string entityPath, bool isInput)
+        {
+            ParameterUIDescriptor descriptor = new ParameterUIDescriptor();
+
+            descriptor.Description = isInput ?
+                string.Format(CultureInfo.CurrentCulture, "dequeue from '{0}'", entityPath) :
+                string.Format(CultureInfo.CurrentCulture, "enqueue to '{0}'", entityPath);
+
+            descriptor.AttributeText = string.Format(CultureInfo.CurrentCulture, "[ServiceBus(\"{0}\")]", entityPath);
+
+            descriptor.Prompt = isInput ?
+                "Enter the queue message body" :
+                "Enter the output entity name";
+
+            descriptor.DefaultValue = isInput ? null : entityPath;
+
+            return descriptor;
         }
     }
 }

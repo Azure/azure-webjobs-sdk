@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    internal interface IBindingDataProvider
+    public interface IBindingDataProvider
     {
         IReadOnlyDictionary<string, Type> Contract { get; }
 

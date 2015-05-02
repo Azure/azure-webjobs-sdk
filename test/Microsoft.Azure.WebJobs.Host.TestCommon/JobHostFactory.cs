@@ -39,7 +39,6 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                 // use null logging string since unit tests don't need logs.
                 DashboardAccount = null
             };
-            IServiceBusAccountProvider serviceBusAccountProvider = new NullServiceBusAccountProvider();
             IExtensionTypeLocator extensionTypeLocator = new NullExtensionTypeLocator();
             IHostIdProvider hostIdProvider = new FixedHostIdProvider("test");
             INameResolver nameResolver = null;
@@ -49,17 +48,18 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             ContextAccessor<IBlobWrittenWatcher> blobWrittenWatcherAccessor =
                 new ContextAccessor<IBlobWrittenWatcher>();
             ISharedContextProvider sharedContextProvider = new SharedContextProvider();
+            IExtensionRegistry extensions = new DefaultExtensionRegistry();
 
             IJobHostContextFactory contextFactory = new TestJobHostContextFactory
             {
                 FunctionIndexProvider = new FunctionIndexProvider(new FakeTypeLocator(typeof(TProgram)),
                     DefaultTriggerBindingProvider.Create(nameResolver, storageAccountProvider,
-                        serviceBusAccountProvider, extensionTypeLocator, hostIdProvider, queueConfiguration,
+                        extensionTypeLocator, hostIdProvider, queueConfiguration,
                         BackgroundExceptionDispatcher.Instance, messageEnqueuedWatcherAccessor,
-                        blobWrittenWatcherAccessor, sharedContextProvider, TextWriter.Null),
-                    DefaultBindingProvider.Create(nameResolver, storageAccountProvider, serviceBusAccountProvider,
-                        extensionTypeLocator, messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor),
-                    DefaultJobActivator.Instance),
+                        blobWrittenWatcherAccessor, sharedContextProvider, extensions, TextWriter.Null),
+                    DefaultBindingProvider.Create(nameResolver, storageAccountProvider,  extensionTypeLocator, 
+                        messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor, extensions),
+                    DefaultJobActivator.Instance, new DefaultExtensionRegistry()),
                 StorageAccountProvider = storageAccountProvider,
                 Queues = queueConfiguration
             };
