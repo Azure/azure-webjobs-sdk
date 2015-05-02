@@ -166,9 +166,11 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             SharedBlobQueueListener sharedListener = sharedContextProvider.GetOrCreate<SharedBlobQueueListener>(
                 new SharedBlobQueueListenerFactory(context, _executor, sharedQueueWatcher, queueClient, hostBlobTriggerQueue,
                     blobClient, _queueConfiguration, _backgroundExceptionDispatcher, _log, blobWrittenWatcher));
+
             // TODO: What is the right thing to be registering here? Previously
             // it was the instance factory
             sharedListener.Register(_functionId, _executor);
+
             return new BlobListener(sharedListener);
         }
     }
