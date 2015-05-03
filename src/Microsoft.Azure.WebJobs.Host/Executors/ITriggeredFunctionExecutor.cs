@@ -7,14 +7,6 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    /// <summary>
-    /// Provides execution context for triggered function invocations.
-    /// </summary>
-    public class ListenerExecutionContext
-    {
-        internal IFunctionExecutor FunctionExecutor { get; set; }
-    }
-
     public class FunctionDescription
     {
         public string ID { get; set; }
@@ -36,9 +28,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         /// </summary>
         /// <param name="parentId">The parent ID</param>
         /// <param name="triggerValue">The value that caused the trigger to fire</param>
-        /// <param name="context">The context that was originally passed in when the listener factory for the trigger was created.</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>True if the invocation succeeded, false otherwise.</returns>
-        Task<bool> TryExecuteAsync(Guid? parentId, object triggerValue, ListenerExecutionContext context, CancellationToken cancellationToken);
+        Task<bool> TryExecuteAsync(Guid? parentId, object triggerValue, CancellationToken cancellationToken);
     }
 }

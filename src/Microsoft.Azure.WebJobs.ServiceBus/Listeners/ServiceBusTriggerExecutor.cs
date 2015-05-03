@@ -12,19 +12,17 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
 {
     internal class ServiceBusTriggerExecutor : ITriggerExecutor<BrokeredMessage>
     {
-        private readonly ListenerExecutionContext _context;
         private readonly ITriggeredFunctionExecutor _innerExecutor;
 
-        public ServiceBusTriggerExecutor(ListenerExecutionContext context, ITriggeredFunctionExecutor innerExecutor)
+        public ServiceBusTriggerExecutor(ITriggeredFunctionExecutor innerExecutor)
         {
-            _context = context;
             _innerExecutor = innerExecutor;
         }
 
         public async Task<bool> ExecuteAsync(BrokeredMessage value, CancellationToken cancellationToken)
         {
             Guid? parentId = ServiceBusCausalityHelper.GetOwner(value);
-            return await _innerExecutor.TryExecuteAsync(parentId, value, _context, cancellationToken);
+            return await _innerExecutor.TryExecuteAsync(parentId, value, cancellationToken);
         }
     }
 }

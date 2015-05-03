@@ -25,9 +25,10 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly ITriggerBindingProvider _triggerBindingProvider;
         private readonly IBindingProvider _bindingProvider;
         private readonly IJobActivator _activator;
+        private readonly IFunctionExecutor _executor;
         private readonly HashSet<Assembly> _jobTypeAssemblies;
 
-        public FunctionIndexer(ITriggerBindingProvider triggerBindingProvider, IBindingProvider bindingProvider, IJobActivator activator, IExtensionRegistry extensions)
+        public FunctionIndexer(ITriggerBindingProvider triggerBindingProvider, IBindingProvider bindingProvider, IJobActivator activator, IFunctionExecutor executor, IExtensionRegistry extensions)
         {
             if (triggerBindingProvider == null)
             {
@@ -44,9 +45,15 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 throw new ArgumentNullException("activator");
             }
 
+            if (executor == null)
+            {
+                throw new ArgumentNullException("executor");
+            }
+
             _triggerBindingProvider = triggerBindingProvider;
             _bindingProvider = bindingProvider;
             _activator = activator;
+            _executor = executor;
             _jobTypeAssemblies = new HashSet<Assembly>(GetJobTypeAssemblies(extensions, typeof(ITriggerBindingProvider), typeof(IBindingProvider)));
         }
 
@@ -120,8 +127,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
         }
 
-        internal async Task IndexMethodAsyncCore(MethodInfo method, IFunctionIndexCollector index,
-            CancellationToken cancellationToken)
+        internal async Task IndexMethodAsyncCore(MethodInfo method, IFunctionIndexCollector index, CancellationToken cancellationToken)
         {
             Debug.Assert(method != null);
             bool hasNoAutomaticTrigger = method.GetCustomAttribute<NoAutomaticTriggerAttribute>() != null;
@@ -245,7 +251,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
             if (triggerBinding != null)
             {
-                functionDefinition = CreateFunctionDefinition(functionDescriptor, triggerBinding, triggerParameterName, nonTriggerBindings, invoker, functionDescriptor);
+                functionDefinition = CreateFunctionDefinition(_executor, functionDescriptor, triggerBinding, triggerParameterName, nonTriggerBindings, invoker, functionDescriptor);
 
                 if (hasNoAutomaticTrigger && functionDefinition != null)
                 {
@@ -262,7 +268,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             index.Add(functionDefinition, functionDescriptor, method);
         }
 
-        private static FunctionDefinition CreateFunctionDefinition(FunctionDescriptor descriptor, ITriggerBinding triggerBinding, string parameterName, IReadOnlyDictionary<string, IBinding> nonTriggerBindings, IFunctionInvoker invoker, FunctionDescriptor functionDescriptor)
+        private static FunctionDefinition CreateFunctionDefinition(IFunctionExecutor executor, FunctionDescriptor descriptor, ITriggerBinding triggerBinding, string parameterName, IReadOnlyDictionary<string, IBinding> nonTriggerBindings, IFunctionInvoker invoker, FunctionDescriptor functionDescriptor)
         {
             Type triggerValueType = triggerBinding.GetType().GetInterface(typeof(ITriggerBinding<>).Name).GetGenericArguments()[0];
 
@@ -275,7 +281,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             IFunctionInstanceFactory instanceFactory = (IFunctionInstanceFactory)Activator.CreateInstance(genericType, functionBinding, invoker, functionDescriptor);
 
             genericType = typeof(TriggeredFunctionExecutorImpl<>).MakeGenericType(triggerValueType);
-            ITriggeredFunctionExecutor triggerExecutor = (ITriggeredFunctionExecutor)Activator.CreateInstance(genericType, descriptor, instanceFactory);
+            ITriggeredFunctionExecutor triggerExecutor = (ITriggeredFunctionExecutor)Activator.CreateInstance(genericType, descriptor, executor, instanceFactory);
 
             IListenerFactory listenerFactory = triggerBinding.CreateListenerFactory(triggerExecutor);
 
@@ -286,14 +292,16 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         {
             private FunctionDescription _description;
             private ITriggeredFunctionInstanceFactory<TTriggerValue> _instanceFactory;
+            private IFunctionExecutor _executor;
 
-            public TriggeredFunctionExecutorImpl(FunctionDescriptor descriptor, ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory)
+            public TriggeredFunctionExecutorImpl(FunctionDescriptor descriptor, IFunctionExecutor executor, ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory)
             {
                 _description = new FunctionDescription
                 {
                     ID = descriptor.Id,
                     FullName = descriptor.FullName
                 };
+                _executor = executor;
                 _instanceFactory = instanceFactory;
             }
 
@@ -305,10 +313,10 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 }
             }
 
-            public async Task<bool> TryExecuteAsync(Guid? parentId, object triggerValue, ListenerExecutionContext context, CancellationToken cancellationToken)
+            public async Task<bool> TryExecuteAsync(Guid? parentId, object triggerValue, CancellationToken cancellationToken)
             {
                 IFunctionInstance instance = _instanceFactory.Create((TTriggerValue)triggerValue, parentId);
-                IDelayedException exception = await context.FunctionExecutor.TryExecuteAsync(instance, cancellationToken);
+                IDelayedException exception = await _executor.TryExecuteAsync(instance, cancellationToken);
                 return exception == null;
             }
         }

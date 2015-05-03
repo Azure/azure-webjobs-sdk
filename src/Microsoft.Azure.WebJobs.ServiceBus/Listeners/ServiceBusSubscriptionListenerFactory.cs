@@ -27,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             _executor = executor;
         }
 
-        public async Task<IListener> CreateAsync(ListenerExecutionContext context, CancellationToken cancellationToken)
+        public async Task<IListener> CreateAsync(CancellationToken cancellationToken)
         {
             // Must create all messaging entities before creating message receivers and calling OnMessage.
             // Otherwise, some function could start to execute and try to output messages to entities that don't yet
@@ -37,7 +37,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
 
             string entityPath = SubscriptionClient.FormatSubscriptionPath(_topicName, _subscriptionName);
 
-            ITriggerExecutor<BrokeredMessage> triggerExecutor = new ServiceBusTriggerExecutor(context, _executor);
+            ITriggerExecutor<BrokeredMessage> triggerExecutor = new ServiceBusTriggerExecutor(_executor);
             return new ServiceBusListener(_messagingFactory, entityPath, triggerExecutor);
         }
     }

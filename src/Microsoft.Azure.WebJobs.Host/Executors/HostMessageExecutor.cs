@@ -22,8 +22,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IFunctionIndexLookup _functionLookup;
         private readonly IFunctionInstanceLogger _functionInstanceLogger;
 
-        public HostMessageExecutor(IFunctionExecutor innerExecutor, IFunctionIndexLookup functionLookup,
-            IFunctionInstanceLogger functionInstanceLogger)
+        public HostMessageExecutor(IFunctionExecutor innerExecutor, IFunctionIndexLookup functionLookup, IFunctionInstanceLogger functionInstanceLogger)
         {
             _innerExecutor = innerExecutor;
             _functionLookup = functionLookup;
@@ -113,8 +112,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             return function.InstanceFactory.Create(message.Id, message.ParentId, message.Reason, objectParameters);
         }
 
-        private async Task ProcessCallAndOverrideMessage(CallAndOverrideMessage message, DateTimeOffset insertionTime,
-            CancellationToken cancellationToken)
+        private async Task ProcessCallAndOverrideMessage(CallAndOverrideMessage message, DateTimeOffset insertionTime, CancellationToken cancellationToken)
         {
             IFunctionInstance instance = CreateFunctionInstance(message);
 

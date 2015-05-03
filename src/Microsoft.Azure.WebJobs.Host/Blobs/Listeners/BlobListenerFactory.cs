@@ -113,7 +113,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             _executor = executor;
         }
 
-        public async Task<IListener> CreateAsync(ListenerExecutionContext context, CancellationToken cancellationToken)
+        public async Task<IListener> CreateAsync(CancellationToken cancellationToken)
         {
             SharedQueueWatcher sharedQueueWatcher = _sharedContextProvider.GetOrCreate<SharedQueueWatcher>(
                 new SharedQueueWatcherFactory(_messageEnqueuedWatcherSetter));
@@ -131,7 +131,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 
             IListener blobDiscoveryToQueueMessageListener = await CreateBlobDiscoveryToQueueMessageListenerAsync(
                 hostId, sharedBlobListener, blobClient, hostBlobTriggerQueue, sharedQueueWatcher, cancellationToken);
-            IListener queueMessageToTriggerExecutionListener = CreateQueueMessageToTriggerExecutionListener(context,
+            IListener queueMessageToTriggerExecutionListener = CreateQueueMessageToTriggerExecutionListener(
                 _sharedContextProvider, sharedQueueWatcher, queueClient, hostBlobTriggerQueue, blobClient,
                 sharedBlobListener.BlobWritterWatcher);
             IListener compositeListener = new CompositeListener(
@@ -155,7 +155,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             return new BlobListener(sharedBlobListener);
         }
 
-        private IListener CreateQueueMessageToTriggerExecutionListener(ListenerExecutionContext context,
+        private IListener CreateQueueMessageToTriggerExecutionListener(
             ISharedContextProvider sharedContextProvider,
             SharedQueueWatcher sharedQueueWatcher,
             IStorageQueueClient queueClient,
@@ -164,11 +164,9 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             IBlobWrittenWatcher blobWrittenWatcher)
         {
             SharedBlobQueueListener sharedListener = sharedContextProvider.GetOrCreate<SharedBlobQueueListener>(
-                new SharedBlobQueueListenerFactory(context, _executor, sharedQueueWatcher, queueClient, hostBlobTriggerQueue,
+                new SharedBlobQueueListenerFactory(_executor, sharedQueueWatcher, queueClient, hostBlobTriggerQueue,
                     blobClient, _queueConfiguration, _backgroundExceptionDispatcher, _log, blobWrittenWatcher));
 
-            // TODO: What is the right thing to be registering here? Previously
-            // it was the instance factory
             sharedListener.Register(_functionId, _executor);
 
             return new BlobListener(sharedListener);

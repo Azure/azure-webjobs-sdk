@@ -4,7 +4,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Executors;
 
 namespace Microsoft.Azure.WebJobs.Host.Listeners
@@ -40,11 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 
         private async Task StartAsyncCore(CancellationToken cancellationToken)
         {
-            ListenerExecutionContext context = new ListenerExecutionContext
-            {
-                FunctionExecutor = _executor
-            };
-            _listener = await _factory.CreateAsync(context, cancellationToken);
+            _listener = await _factory.CreateAsync(cancellationToken);
             _cancellationRegistration = _cancellationSource.Token.Register(_listener.Cancel);
             await _listener.StartAsync(cancellationToken);
         }

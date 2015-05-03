@@ -125,7 +125,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "AmbientConnectionStringProvider",
                 "IExtensionRegistryExtensions",
                 "ITriggeredFunctionExecutor",
-                "ListenerExecutionContext",
                 "FunctionDescription"
             };
 

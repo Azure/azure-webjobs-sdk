@@ -18,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             _functionDefinitions = functionDefinitions;
         }
 
-        public async Task<IListener> CreateAsync(ListenerExecutionContext context, CancellationToken cancellationToken)
+        public async Task<IListener> CreateAsync(CancellationToken cancellationToken)
         {
             List<IListener> listeners = new List<IListener>();
 
@@ -31,7 +31,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                     continue;
                 }
 
-                IListener listener = await listenerFactory.CreateAsync(context, cancellationToken);
+                IListener listener = await listenerFactory.CreateAsync(cancellationToken);
                 listeners.Add(listener);
             }
 

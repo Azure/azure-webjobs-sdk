@@ -3,13 +3,12 @@
 
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Executors;
 
 namespace Microsoft.Azure.WebJobs.Host.Listeners
 {
     internal class NullListenerFactory : IListenerFactory
     {
-        public Task<IListener> CreateAsync(ListenerExecutionContext context, CancellationToken cancellationToken)
+        public Task<IListener> CreateAsync(CancellationToken cancellationToken)
         {
             IListener listener = new NullListener();
             return Task.FromResult(listener);
