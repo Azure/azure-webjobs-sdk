@@ -7,7 +7,7 @@ using System.Collections.Generic;
 namespace Microsoft.Azure.WebJobs.Host
 {
     /// <summary>
-    /// Defines a registry that extensions can use to register themselves
+    /// Provides methods for registering 3rd party extensions (e.g. bindings).
     /// </summary>
     public interface IExtensionRegistry
     {

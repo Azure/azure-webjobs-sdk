@@ -35,14 +35,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
             get { return true; }
         }
 
-        private static IAsyncObjectToTypeConverter<ServiceBusEntity> CreateConverter(ServiceBusAccount account, IBindableServiceBusPath queueOrTopicName)
-        {
-            return new OutputConverter<string>(new StringToServiceBusEntityConverter(account, queueOrTopicName));
-        }
-
         public async Task<IValueProvider> BindAsync(BindingContext context)
         {
             context.CancellationToken.ThrowIfCancellationRequested();
+
             string boundQueueName = _path.Bind(context.BindingData);
             MessageSender messageSender = await _account.MessagingFactory.CreateMessageSenderAsync(boundQueueName);
 
@@ -51,18 +47,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
                 Account = _account,
                 MessageSender = messageSender
             };
-            return await BindAsync(entity, context.ValueContext);
-        }
 
-        private Task<IValueProvider> BindAsync(ServiceBusEntity value, ValueBindingContext context)
-        {
-            return _argumentBinding.BindAsync(value, context);
+            return await BindAsync(entity, context.ValueContext);
         }
 
         public async Task<IValueProvider> BindAsync(object value, ValueBindingContext context)
         {
-            ConversionResult<ServiceBusEntity> conversionResult = await _converter.TryConvertAsync(value,
-                context.CancellationToken);
+            ConversionResult<ServiceBusEntity> conversionResult = await _converter.TryConvertAsync(value, context.CancellationToken);
 
             if (!conversionResult.Succeeded)
             {
@@ -82,6 +73,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
                 QueueOrTopicName = _path.QueueOrTopicNamePattern,
                 UIDescriptor = CreateParameterUIDescriptor(_path.QueueOrTopicNamePattern, false)
             };
+        }
+
+        private Task<IValueProvider> BindAsync(ServiceBusEntity value, ValueBindingContext context)
+        {
+            return _argumentBinding.BindAsync(value, context);
+        }
+
+        private static IAsyncObjectToTypeConverter<ServiceBusEntity> CreateConverter(ServiceBusAccount account, IBindableServiceBusPath queueOrTopicName)
+        {
+            return new OutputConverter<string>(new StringToServiceBusEntityConverter(account, queueOrTopicName));
         }
 
         internal static ParameterUIDescriptor CreateParameterUIDescriptor(string entityPath, bool isInput)

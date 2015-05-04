@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host;
@@ -52,7 +53,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 
             string queueOrTopicName = Resolve(serviceBusAttribute.QueueOrTopicName);
             IBindableServiceBusPath path = BindableServiceBusPath.Create(queueOrTopicName);
-            path.ValidateContractCompatibility(context.BindingDataContract);
+            ValidateContractCompatibility(path, context.BindingDataContract);
 
             IArgumentBinding<ServiceBusEntity> argumentBinding = _innerProvider.TryCreate(parameter);
 
@@ -65,6 +66,26 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 
             IBinding binding = new ServiceBusBinding(parameter.Name, argumentBinding, account, path);
             return Task.FromResult(binding);
+        }
+
+        private static void ValidateContractCompatibility(IBindableServiceBusPath path, IReadOnlyDictionary<string, Type> bindingDataContract)
+        {
+            if (path == null)
+            {
+                throw new ArgumentNullException("path");
+            }
+
+            IEnumerable<string> parameterNames = path.ParameterNames;
+            if (parameterNames != null)
+            {
+                foreach (string parameterName in parameterNames)
+                {
+                    if (bindingDataContract != null && !bindingDataContract.ContainsKey(parameterName))
+                    {
+                        throw new InvalidOperationException(string.Format("No binding parameter exists for '{0}'.", parameterName));
+                    }
+                }
+            }
         }
 
         private string Resolve(string queueName)

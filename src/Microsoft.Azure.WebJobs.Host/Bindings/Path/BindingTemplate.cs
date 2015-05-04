@@ -35,6 +35,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
             _tokens = tokens;
         }
 
+        /// <summary>
+        /// Gets the binding pattern.
+        /// </summary>
         public string Pattern
         {
             get { return _pattern; }
@@ -45,11 +48,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
             get { return _tokens; }
         }
 
+        /// <summary>
+        /// Gets the collection of parameter names this pattern applies to.
+        /// </summary>
         public IEnumerable<string> ParameterNames
         {
             get
             {
-                return from token in Tokens where token.IsParameter select token.Value;
+                return Tokens.Where(p => p.IsParameter).Select(p => p.Value);
             }
         }
 
@@ -102,6 +108,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
             return builder.ToString();
         }
 
+        /// <summary>
+        /// Gets a string representation of the binding template.
+        /// </summary>
+        /// <returns></returns>
         public override string ToString()
         {
             return _pattern;

@@ -32,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             // exist.
             await _namespaceManager.CreateQueueIfNotExistsAsync(_queueName, cancellationToken);
 
-            ITriggerExecutor<BrokeredMessage> triggerExecutor = new ServiceBusTriggerExecutor(_executor);
+            ServiceBusTriggerExecutor triggerExecutor = new ServiceBusTriggerExecutor(_executor);
             return new ServiceBusListener(_messagingFactory, _queueName, triggerExecutor);
         }
     }

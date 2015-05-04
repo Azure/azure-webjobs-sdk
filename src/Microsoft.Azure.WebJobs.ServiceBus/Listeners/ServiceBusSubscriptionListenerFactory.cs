@@ -37,7 +37,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
 
             string entityPath = SubscriptionClient.FormatSubscriptionPath(_topicName, _subscriptionName);
 
-            ITriggerExecutor<BrokeredMessage> triggerExecutor = new ServiceBusTriggerExecutor(_executor);
+            ServiceBusTriggerExecutor triggerExecutor = new ServiceBusTriggerExecutor(_executor);
             return new ServiceBusListener(_messagingFactory, entityPath, triggerExecutor);
         }
     }

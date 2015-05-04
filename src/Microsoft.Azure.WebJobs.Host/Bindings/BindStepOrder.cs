@@ -4,13 +4,18 @@
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
     /// <summary>
-    /// Defines an <see cref="IValueBinder"/> that provides an ordering hint./>
+    /// An enumeration of binding order values.
     /// </summary>
-    public interface IOrderedValueBinder : IValueBinder
+    public enum BindStepOrder
     {
         /// <summary>
-        /// Gets the bind order for the binder.
+        /// Default bind order
         /// </summary>
-        BindStepOrder StepOrder { get; }
+        Default = 0,
+
+        /// <summary>
+        /// Enqueue bind order
+        /// </summary>
+        Enqueue = 1
     }
 }

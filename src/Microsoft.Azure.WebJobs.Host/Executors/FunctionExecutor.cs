@@ -125,16 +125,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             string startedMessageId;
 
             // Create the console output writer
-            IFunctionOutputDefinition outputDefinition = await _functionOutputLogger.CreateAsync(instance,
-                cancellationToken);
+            IFunctionOutputDefinition outputDefinition = await _functionOutputLogger.CreateAsync(instance, cancellationToken);
 
             using (IFunctionOutput outputLog = await outputDefinition.CreateOutputAsync(cancellationToken))
-            using (ITaskSeriesTimer updateOutputLogTimer = StartOutputTimer(outputLog.UpdateCommand,
-                _backgroundExceptionDispatcher))
+            using (ITaskSeriesTimer updateOutputLogTimer = StartOutputTimer(outputLog.UpdateCommand, _backgroundExceptionDispatcher))
             {
                 TextWriter consoleOutput = outputLog.Output;
-                FunctionBindingContext functionContext =
-                    new FunctionBindingContext(instance.Id, cancellationToken, consoleOutput);
+                FunctionBindingContext functionContext = new FunctionBindingContext(instance.Id, cancellationToken, consoleOutput);
 
                 // Must bind before logging (bound invoke string is included in log message).
                 IReadOnlyDictionary<string, IValueProvider> parameters =
@@ -494,19 +491,19 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             public int Compare(IValueProvider x, IValueProvider y)
             {
-                int xOrder = GetStepOrder(x);
-                int yOrder = GetStepOrder(y);
+                int xOrder = (int)GetStepOrder(x);
+                int yOrder = (int)GetStepOrder(y);
 
                 return Comparer<int>.Default.Compare(xOrder, yOrder);
             }
 
-            private static int GetStepOrder(IValueProvider provider)
+            private static BindStepOrder GetStepOrder(IValueProvider provider)
             {
                 IOrderedValueBinder orderedBinder = provider as IOrderedValueBinder;
 
                 if (orderedBinder == null)
                 {
-                    return BindStepOrders.Default;
+                    return BindStepOrder.Default;
                 }
 
                 return orderedBinder.StepOrder;

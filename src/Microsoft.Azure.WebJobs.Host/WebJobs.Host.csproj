@@ -22,7 +22,7 @@
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Debug\Microsoft.Azure.WebJobs.Host.xml</DocumentationFile>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -365,6 +365,7 @@
     <Compile Include="Executors\ActivatorInstanceFactory.cs" />
     <Compile Include="Executors\ITriggeredFunctionExecutor.cs" />
     <Compile Include="Executors\NullInstanceFactory.cs" />
+    <Compile Include="Executors\TriggeredFunctionExecutor.cs" />
     <Compile Include="Extensions\IExtensionRegistryExtensions.cs" />
     <Compile Include="IContextSetter.cs" />
     <Compile Include="IContextGetter.cs" />
@@ -714,7 +715,7 @@
     <Compile Include="Bindings\Runtime\RuntimeBinding.cs" />
     <Compile Include="Bindings\Runtime\RuntimeBindingProvider.cs" />
     <Compile Include="Bindings\ImmutableWatcher.cs" />
-    <Compile Include="Bindings\BindStepOrders.cs" />
+    <Compile Include="Bindings\BindStepOrder.cs" />
     <Compile Include="Bindings\ValueProviderDisposable.cs" />
     <Compile Include="Blobs\Bindings\BlobAttributeBindingProvider.cs" />
     <Compile Include="Blobs\Bindings\BlobBinding.cs" />

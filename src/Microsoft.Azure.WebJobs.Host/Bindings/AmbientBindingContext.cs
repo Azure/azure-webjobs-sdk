@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    public class AmbientBindingContext
+    internal class AmbientBindingContext
     {
         private readonly FunctionBindingContext _functionContext;
         private readonly IReadOnlyDictionary<string, object> _bindingData;

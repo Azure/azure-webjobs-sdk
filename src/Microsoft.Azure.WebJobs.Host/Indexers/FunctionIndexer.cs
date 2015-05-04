@@ -130,7 +130,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         internal async Task IndexMethodAsyncCore(MethodInfo method, IFunctionIndexCollector index, CancellationToken cancellationToken)
         {
             Debug.Assert(method != null);
-            bool hasNoAutomaticTrigger = method.GetCustomAttribute<NoAutomaticTriggerAttribute>() != null;
+            bool hasNoAutomaticTriggerAttribute = method.GetCustomAttribute<NoAutomaticTriggerAttribute>() != null;
 
             ITriggerBinding triggerBinding = null;
             ParameterInfo triggerParameter = null;
@@ -138,8 +138,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
             foreach (ParameterInfo parameter in parameters)
             {
-                ITriggerBinding possibleTriggerBinding = await _triggerBindingProvider.TryCreateAsync(
-                    new TriggerBindingProviderContext(parameter, cancellationToken));
+                ITriggerBinding possibleTriggerBinding = await _triggerBindingProvider.TryCreateAsync(new TriggerBindingProviderContext(parameter, cancellationToken));
 
                 if (possibleTriggerBinding != null)
                 {
@@ -177,15 +176,12 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                     continue;
                 }
 
-                IBinding binding = await _bindingProvider.TryCreateAsync(new BindingProviderContext(parameter,
-                    bindingDataContract, cancellationToken));
-
+                IBinding binding = await _bindingProvider.TryCreateAsync(new BindingProviderContext(parameter, bindingDataContract, cancellationToken));
                 if (binding == null)
                 {
-                    if (triggerBinding != null && !hasNoAutomaticTrigger)
+                    if (triggerBinding != null && !hasNoAutomaticTriggerAttribute)
                     {
-                        throw new InvalidOperationException("Cannot bind parameter '" + parameter.Name +
-                            "' when using this trigger.");
+                        throw new InvalidOperationException(string.Format("Cannot bind parameter '{0}' when using this trigger.", parameter.Name));
                     }
                     else
                     {
@@ -200,8 +196,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                             // This function might not have any attribute, in which case we shouldn't throw an
                             // exception when we can't bind it. Instead, save this exception for later once we determine
                             // whether or not it is an SDK function.
-                            invalidInvokeBindingException = new InvalidOperationException("Cannot bind parameter '" +
-                                parameterName + "' to type " + parameterType.Name + ".");
+                            invalidInvokeBindingException = new InvalidOperationException(string.Format("Cannot bind parameter '{0}' to type {1}.", parameterName, parameterType.Name));
                         }
                     }
                 }
@@ -240,8 +235,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             // Validation: prevent multiple ConsoleOutputs
             if (nonTriggerBindings.OfType<ConsoleOutputBinding>().Count() > 1)
             {
-                throw new InvalidOperationException(
-                    "Can't have multiple console output TextWriter parameters on a single function.");
+                throw new InvalidOperationException("Can't have multiple console output TextWriter parameters on a single function.");
             }
 
             string triggerParameterName = triggerParameter != null ? triggerParameter.Name : null;
@@ -251,74 +245,47 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
             if (triggerBinding != null)
             {
-                functionDefinition = CreateFunctionDefinition(_executor, functionDescriptor, triggerBinding, triggerParameterName, nonTriggerBindings, invoker, functionDescriptor);
+                functionDefinition = CreateTriggeredFunctionDefinition(triggerBinding, triggerParameterName, _executor, functionDescriptor, nonTriggerBindings, invoker, functionDescriptor);
 
-                if (hasNoAutomaticTrigger && functionDefinition != null)
+                if (hasNoAutomaticTriggerAttribute && functionDefinition != null)
                 {
                     functionDefinition = new FunctionDefinition(functionDefinition.InstanceFactory, listenerFactory: null);
                 }
             }
             else
             {
-                IFunctionInstanceFactory instanceFactory = new FunctionInstanceFactory(
-                    new FunctionBinding(method, nonTriggerBindings), invoker, functionDescriptor);
+                IFunctionInstanceFactory instanceFactory = new FunctionInstanceFactory(new FunctionBinding(method, nonTriggerBindings), invoker, functionDescriptor);
                 functionDefinition = new FunctionDefinition(instanceFactory, listenerFactory: null);
             }
 
             index.Add(functionDefinition, functionDescriptor, method);
         }
 
-        private static FunctionDefinition CreateFunctionDefinition(IFunctionExecutor executor, FunctionDescriptor descriptor, ITriggerBinding triggerBinding, string parameterName, IReadOnlyDictionary<string, IBinding> nonTriggerBindings, IFunctionInvoker invoker, FunctionDescriptor functionDescriptor)
+        private static FunctionDefinition CreateTriggeredFunctionDefinition(ITriggerBinding triggerBinding, string parameterName, IFunctionExecutor executor, 
+            FunctionDescriptor descriptor, IReadOnlyDictionary<string, IBinding> nonTriggerBindings, IFunctionInvoker invoker, FunctionDescriptor functionDescriptor)
         {
-            Type triggerValueType = triggerBinding.GetType().GetInterface(typeof(ITriggerBinding<>).Name).GetGenericArguments()[0];
+            FunctionDefinition functionDefinition = null;
+            Type triggerBindingType = triggerBinding.GetType().GetInterface(typeof(ITriggerBinding<>).Name);
+            if (triggerBindingType != null)
+            {
+                Type triggerValueType = triggerBindingType.GetGenericArguments()[0];
+                MethodInfo createTriggeredFunctionDefinitionMethodInfo = typeof(FunctionIndexer).GetMethod("CreateTriggeredFunctionDefinitionImpl", BindingFlags.Static | BindingFlags.NonPublic).MakeGenericMethod(triggerValueType);
+                functionDefinition = (FunctionDefinition)createTriggeredFunctionDefinitionMethodInfo.Invoke(null, new object[] { triggerBinding, parameterName, executor, descriptor, nonTriggerBindings, invoker, functionDescriptor });
+            }
 
-            // create the function binding
-            Type genericType = typeof(TriggeredFunctionBinding<>).MakeGenericType(triggerValueType);
-            IFunctionBinding functionBinding = (IFunctionBinding)Activator.CreateInstance(genericType, parameterName, triggerBinding, nonTriggerBindings);
+            return functionDefinition;
+        }
 
-            // create the instance factory
-            genericType = typeof(TriggeredFunctionInstanceFactory<>).MakeGenericType(triggerValueType);
-            IFunctionInstanceFactory instanceFactory = (IFunctionInstanceFactory)Activator.CreateInstance(genericType, functionBinding, invoker, functionDescriptor);
-
-            genericType = typeof(TriggeredFunctionExecutorImpl<>).MakeGenericType(triggerValueType);
-            ITriggeredFunctionExecutor triggerExecutor = (ITriggeredFunctionExecutor)Activator.CreateInstance(genericType, descriptor, executor, instanceFactory);
-
+        private static FunctionDefinition CreateTriggeredFunctionDefinitionImpl<TTriggerValue>(
+            ITriggerBinding<TTriggerValue> triggerBinding, string parameterName, IFunctionExecutor executor, FunctionDescriptor descriptor,
+            IReadOnlyDictionary<string, IBinding> nonTriggerBindings, IFunctionInvoker invoker, FunctionDescriptor functionDescriptor)
+        {
+            ITriggeredFunctionBinding<TTriggerValue> functionBinding = new TriggeredFunctionBinding<TTriggerValue>(parameterName, triggerBinding, nonTriggerBindings);
+            ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory = new TriggeredFunctionInstanceFactory<TTriggerValue>(functionBinding, invoker, functionDescriptor);
+            ITriggeredFunctionExecutor triggerExecutor = new TriggeredFunctionExecutor<TTriggerValue>(descriptor, executor, instanceFactory);
             IListenerFactory listenerFactory = triggerBinding.CreateListenerFactory(triggerExecutor);
 
             return new FunctionDefinition(instanceFactory, listenerFactory);
-        }
-
-        private class TriggeredFunctionExecutorImpl<TTriggerValue> : ITriggeredFunctionExecutor
-        {
-            private FunctionDescription _description;
-            private ITriggeredFunctionInstanceFactory<TTriggerValue> _instanceFactory;
-            private IFunctionExecutor _executor;
-
-            public TriggeredFunctionExecutorImpl(FunctionDescriptor descriptor, IFunctionExecutor executor, ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory)
-            {
-                _description = new FunctionDescription
-                {
-                    ID = descriptor.Id,
-                    FullName = descriptor.FullName
-                };
-                _executor = executor;
-                _instanceFactory = instanceFactory;
-            }
-
-            public FunctionDescription Function
-            {
-                get
-                {
-                    return _description;
-                }
-            }
-
-            public async Task<bool> TryExecuteAsync(Guid? parentId, object triggerValue, CancellationToken cancellationToken)
-            {
-                IFunctionInstance instance = _instanceFactory.Create((TTriggerValue)triggerValue, parentId);
-                IDelayedException exception = await _executor.TryExecuteAsync(instance, cancellationToken);
-                return exception == null;
-            }
         }
 
         private static FunctionDescriptor CreateFunctionDescriptor(MethodInfo method, string triggerParameterName,

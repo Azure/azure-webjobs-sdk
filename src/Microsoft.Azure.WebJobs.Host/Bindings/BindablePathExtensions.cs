@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    public static class BindablePathExtensions
+    internal static class BindablePathExtensions
     {
         public static void ValidateContractCompatibility<TPath>(this IBindablePath<TPath> path, IReadOnlyDictionary<string, Type> bindingDataContract)
         {
@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 {
                     if (bindingDataContract != null && !bindingDataContract.ContainsKey(parameterName))
                     {
-                        throw new InvalidOperationException("No binding parameter exists for '" + parameterName + "'.");
+                        throw new InvalidOperationException(string.Format("No binding parameter exists for '{0}'.", parameterName));
                     }
                 }
             }

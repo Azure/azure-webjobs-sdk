@@ -10,6 +10,9 @@ using Microsoft.Azure.WebJobs.Host.Queues;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
+    /// <summary>
+    /// Context for parameter binding.
+    /// </summary>
     public class BindingContext
     {
         private readonly FunctionBindingContext _functionContext;
@@ -19,16 +22,21 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         private AmbientBindingContext _ambientContext;
         private ValueBindingContext _valueContext;
 
+        /// <summary>
+        /// Creates a new instance.
+        /// </summary>
+        /// <param name="valueContext">The value binding context.</param>
+        /// <param name="bindingData">The binding data.</param>
         public BindingContext(ValueBindingContext valueContext, IReadOnlyDictionary<string, object> bindingData)
         {
-            _functionContext = valueContext.FunctionContext;
-            _bindingData = bindingData;
-            _cancellationToken = valueContext.CancellationToken;
-
             _valueContext = valueContext;
+            _bindingData = bindingData;
+
+            _functionContext = valueContext.FunctionContext;
+            _cancellationToken = valueContext.CancellationToken;
         }
 
-        public BindingContext(AmbientBindingContext ambientContext, CancellationToken cancellationToken)
+        internal BindingContext(AmbientBindingContext ambientContext, CancellationToken cancellationToken)
         {
             _functionContext = ambientContext.FunctionContext;
             _bindingData = ambientContext.BindingData;
@@ -37,32 +45,47 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             _ambientContext = ambientContext;
         }
 
+        /// <summary>
+        /// The instance ID of the function being bound to.
+        /// </summary>
         public Guid FunctionInstanceId
         {
             get { return _functionContext.FunctionInstanceId; }
         }
 
+        /// <summary>
+        /// Gets the function <see cref="CancellationToken"/>.
+        /// </summary>
         public CancellationToken FunctionCancellationToken
         {
             get { return _functionContext.FunctionCancellationToken; }
         }
 
+        /// <summary>
+        /// Gets the console output.
+        /// </summary>
         public TextWriter ConsoleOutput
         {
             get { return _functionContext.ConsoleOutput; }
         }
 
+        /// <summary>
+        /// Gets the binding data.
+        /// </summary>
         public IReadOnlyDictionary<string, object> BindingData
         {
             get { return _bindingData; }
         }
 
+        /// <summary>
+        /// Gets the <see cref="CancellationToken"/> to use.
+        /// </summary>
         public CancellationToken CancellationToken
         {
             get { return _cancellationToken; }
         }
 
-        public AmbientBindingContext AmbientContext
+        internal AmbientBindingContext AmbientContext
         {
             get
             {
@@ -75,6 +98,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
         }
 
+        /// <summary>
+        /// Gets the value binding context.
+        /// </summary>
         public ValueBindingContext ValueContext
         {
             get

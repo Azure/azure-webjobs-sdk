@@ -5,12 +5,11 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
-using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.ServiceBus.Messaging;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
 {
-    internal class ServiceBusTriggerExecutor : ITriggerExecutor<BrokeredMessage>
+    internal class ServiceBusTriggerExecutor
     {
         private readonly ITriggeredFunctionExecutor _innerExecutor;
 
