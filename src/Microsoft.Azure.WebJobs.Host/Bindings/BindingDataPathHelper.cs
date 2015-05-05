@@ -19,6 +19,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// <returns>A collection of path compatible parameters.</returns>
         public static IReadOnlyDictionary<string, string> ConvertParameters(IReadOnlyDictionary<string, object> bindingData)
         {
+            if (bindingData == null)
+            {
+                throw new ArgumentNullException("bindingData");
+            }
+
             Dictionary<string, string> parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             if (bindingData != null)

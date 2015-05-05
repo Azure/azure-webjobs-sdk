@@ -79,16 +79,19 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             _executor = executor;
         }
 
-        public Task<IListener> CreateAsync(CancellationToken cancellationToken)
+        public Task<IListener> CreateAsync(ListenerFactoryContext context)
         {
             QueueTriggerExecutor triggerExecutor = new QueueTriggerExecutor(_executor);
-            IDelayStrategy delayStrategy = new RandomizedExponentialBackoffStrategy(QueuePollingIntervals.Minimum,
-                _queueConfiguration.MaxPollingInterval);
+
+            IDelayStrategy delayStrategy = new RandomizedExponentialBackoffStrategy(QueuePollingIntervals.Minimum, _queueConfiguration.MaxPollingInterval);
+            
             SharedQueueWatcher sharedWatcher = _sharedContextProvider.GetOrCreate<SharedQueueWatcher>(
                 new SharedQueueWatcherFactory(_messageEnqueuedWatcherSetter));
+
             IListener listener = new QueueListener(_queue, _poisonQueue, triggerExecutor, delayStrategy,
                 _backgroundExceptionDispatcher, _log, sharedWatcher, _queueConfiguration.BatchSize,
                 _queueConfiguration.MaxDequeueCount);
+
             return Task.FromResult(listener);
         }
 

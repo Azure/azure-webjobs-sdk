@@ -29,20 +29,28 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// <param name="bindingData">The binding data.</param>
         public BindingContext(ValueBindingContext valueContext, IReadOnlyDictionary<string, object> bindingData)
         {
+            if (valueContext == null)
+            {
+                throw new ArgumentNullException("valueContext");
+            }
+
             _valueContext = valueContext;
             _bindingData = bindingData;
-
             _functionContext = valueContext.FunctionContext;
             _cancellationToken = valueContext.CancellationToken;
         }
 
         internal BindingContext(AmbientBindingContext ambientContext, CancellationToken cancellationToken)
         {
+            if (ambientContext == null)
+            {
+                throw new ArgumentNullException("ambientContext");
+            }
+
+            _ambientContext = ambientContext;
             _functionContext = ambientContext.FunctionContext;
             _bindingData = ambientContext.BindingData;
             _cancellationToken = cancellationToken;
-
-            _ambientContext = ambientContext;
         }
 
         /// <summary>

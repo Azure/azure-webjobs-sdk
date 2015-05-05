@@ -144,6 +144,7 @@ namespace Microsoft.Azure.WebJobs
             set
             {
                 _serviceBusConnectionString = value;
+                _serviceBusConnectionStringSet = true;
             }
         }
 
@@ -247,10 +248,14 @@ namespace Microsoft.Azure.WebJobs
             }
             if (!serviceType.IsAssignableFrom(serviceInstance.GetType()))
             {
-                throw new ArgumentOutOfRangeException("instance");
+                throw new ArgumentOutOfRangeException("serviceInstance");
             }
 
-            _services.GetOrAdd(serviceType, (t) => serviceInstance);
+            _services.AddOrUpdate(serviceType, serviceInstance, (key, existingValue) =>
+                {
+                    // always replace existing values
+                    return serviceInstance;
+                });
         }
 
         /// <summary>

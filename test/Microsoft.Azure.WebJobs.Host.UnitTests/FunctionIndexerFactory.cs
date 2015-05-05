@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
     internal static class FunctionIndexerFactory
     {
-        public static FunctionIndexer Create(CloudStorageAccount account, INameResolver nameResolver = null)
+        public static FunctionIndexer Create(CloudStorageAccount account = null, INameResolver nameResolver = null, IExtensionRegistry extensionRegistry = null)
         {
             IStorageAccount storageAccount = account != null ? new StorageAccount(account) : null;
             IStorageAccountProvider storageAccountProvider = new SimpleStorageAccountProvider
@@ -48,7 +48,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             IFunctionOutputLogger outputLogger = task.Result;
             IFunctionExecutor executor = new FunctionExecutor(new NullFunctionInstanceLogger(), outputLogger, BackgroundExceptionDispatcher.Instance);
 
-            return new FunctionIndexer(triggerBindingProvider, bindingProvider, DefaultJobActivator.Instance, executor, new DefaultExtensionRegistry());
+            if (extensionRegistry == null)
+            {
+                extensionRegistry = new DefaultExtensionRegistry();
+            }
+
+            return new FunctionIndexer(triggerBindingProvider, bindingProvider, DefaultJobActivator.Instance, executor, extensionRegistry);
         }
     }
 }

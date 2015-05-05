@@ -27,13 +27,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             _executor = executor;
         }
 
-        public async Task<IListener> CreateAsync(CancellationToken cancellationToken)
+        public async Task<IListener> CreateAsync(ListenerFactoryContext context)
         {
             // Must create all messaging entities before creating message receivers and calling OnMessage.
             // Otherwise, some function could start to execute and try to output messages to entities that don't yet
             // exist.
-            await _namespaceManager.CreateTopicIfNotExistsAsync(_topicName, cancellationToken);
-            await _namespaceManager.CreateSubscriptionIfNotExistsAsync(_topicName, _subscriptionName, cancellationToken);
+            await _namespaceManager.CreateTopicIfNotExistsAsync(_topicName, context.CancellationToken);
+            await _namespaceManager.CreateSubscriptionIfNotExistsAsync(_topicName, _subscriptionName, context.CancellationToken);
 
             string entityPath = SubscriptionClient.FormatSubscriptionPath(_topicName, _subscriptionName);
 

@@ -447,6 +447,7 @@
     <Compile Include="Indexers\IFunctionIndexProvider.cs" />
     <Compile Include="Listeners\CompositeListenerFactory.cs" />
     <Compile Include="Listeners\ISharedContextProvider.cs" />
+    <Compile Include="Listeners\ListenerFactoryContext.cs" />
     <Compile Include="Loggers\DefaultConsoleProvider.cs" />
     <Compile Include="Loggers\DefaultLoggerProvider.cs" />
     <Compile Include="Loggers\IFunctionOutputLoggerProvider.cs" />

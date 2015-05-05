@@ -33,6 +33,11 @@ namespace Microsoft.Azure.WebJobs.Host
 
         public IEnumerable<object> GetExtensions(Type type)
         {
+            if (type == null)
+            {
+                throw new ArgumentNullException("type");
+            }
+
             ConcurrentBag<object> instances = null;
             if (_registry.TryGetValue(type, out instances))
             {

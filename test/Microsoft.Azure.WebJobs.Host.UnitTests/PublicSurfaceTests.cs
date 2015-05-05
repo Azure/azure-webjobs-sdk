@@ -120,7 +120,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "AmbientConnectionStringProvider",
                 "IExtensionRegistryExtensions",
                 "ITriggeredFunctionExecutor",
-                "FunctionDescription"
+                "FunctionDescription",
+                "ListenerFactoryContext"
             };
 
             AssertPublicTypes(expected, assembly);
