@@ -28,8 +28,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         private readonly string _subscriptionName;
         private readonly string _entityPath;
 
-        public ServiceBusTriggerBinding(string parameterName, Type parameterType, ITriggerDataArgumentBinding<BrokeredMessage> argumentBinding, 
-            ServiceBusAccount account, string queueName)
+        public ServiceBusTriggerBinding(string parameterName, Type parameterType, 
+            ITriggerDataArgumentBinding<BrokeredMessage> argumentBinding, ServiceBusAccount account, string queueName)
         {
             _parameterName = parameterName;
             _converter = CreateConverter(parameterType);
@@ -112,7 +112,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             string entityPath = _queueName != null ?
                     _queueName : string.Format("{0}/Subscriptions/{1}", _topicName, _subscriptionName);
 
-            // TODO: Need to find a way to serialize these extended properties
             return new ServiceBusTriggerParameterDescriptor
             {
                 Name = _parameterName,
@@ -120,7 +119,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
                 QueueName = _queueName,
                 TopicName = _topicName,
                 SubscriptionName = _subscriptionName,
-                UIDescriptor = ServiceBusBinding.CreateParameterUIDescriptor(entityPath, true)
+                DisplayHints = ServiceBusBinding.CreateParameterDisplayHints(entityPath, true)
             };
         }
 

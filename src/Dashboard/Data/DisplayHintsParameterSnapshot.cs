@@ -5,11 +5,11 @@ using Microsoft.Azure.WebJobs.Protocols;
 
 namespace Dashboard.Data
 {
-    public class UIDescriptorParameterSnapshot : ParameterSnapshot
+    public class DisplayHintsParameterSnapshot : ParameterSnapshot
     {
-        private ParameterUIDescriptor _uiDescriptor;
+        private ParameterDisplayHints _uiDescriptor;
 
-        public UIDescriptorParameterSnapshot(ParameterUIDescriptor uiDescriptor)
+        public DisplayHintsParameterSnapshot(ParameterDisplayHints uiDescriptor)
         {
             _uiDescriptor = uiDescriptor;
         }

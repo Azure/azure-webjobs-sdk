@@ -112,7 +112,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IValueProvider",
                 "NameResolverExtensions",
                 "ParameterDescriptor",
-                "ParameterUIDescriptor",
+                "ParameterDisplayHints",
                 "TriggerBindingProviderContext",
                 "TriggerData",
                 "TriggerParameterDescriptor",

@@ -126,6 +126,8 @@
     <Compile Include="Executors\NullInstanceFactoryTests.cs" />
     <Compile Include="FunctionIndexerFactory.cs" />
     <Compile Include="NullExtensionTypeLocator.cs" />
+    <Compile Include="Protocols\FunctionStartedMessageExtensionsTests.cs" />
+    <Compile Include="Protocols\ProtocolSerializationTests.cs" />
     <Compile Include="StructPropertySetterTests.cs" />
     <Compile Include="StructPropertyGetterTests.cs" />
     <Compile Include="Converters\CultureInfoContext.cs" />

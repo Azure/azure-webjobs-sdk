@@ -177,10 +177,14 @@ namespace Dashboard.Indexers
 
         internal static ParameterSnapshot CreateParameterSnapshot(ParameterDescriptor parameter)
         {
-            // If there is a snapshot already provided, use it.
-            if (parameter.UIDescriptor != null)
+            // If display hints have already been provided by the descriptor
+            // use them. Otherwise, we construct a new snapshot below. Note that
+            // for extensibility (e.g. custom binding extensions), this is the
+            // mechanism that must be used, since the Dashboard doesn't share type info
+            // with custom extensions, we won't have access to the actual type as we do below.
+            if (parameter.DisplayHints != null)
             {
-                return new UIDescriptorParameterSnapshot(parameter.UIDescriptor);
+                return new DisplayHintsParameterSnapshot(parameter.DisplayHints);
             }
 
             switch (parameter.Type)

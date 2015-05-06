@@ -189,8 +189,8 @@
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\TriggerParameterDescriptor.cs">
       <Link>Protocols\TriggerParameterDescriptor.cs</Link>
     </Compile>
-    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\ParameterUIDescriptor.cs">
-      <Link>Protocols\ParameterUIDescriptor.cs</Link>
+    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\ParameterDisplayHints.cs">
+      <Link>Protocols\ParameterDisplayHints.cs</Link>
     </Compile>
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\ParameterLog.cs">
       <Link>Protocols\ParameterLog.cs</Link>

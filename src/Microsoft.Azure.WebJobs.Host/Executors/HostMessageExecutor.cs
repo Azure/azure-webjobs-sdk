@@ -54,8 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 return true;
             }
 
-            string error = String.Format(CultureInfo.InvariantCulture,
-                "Unsupported invocation type '{0}'.", model.Type);
+            string error = String.Format(CultureInfo.InvariantCulture, "Unsupported invocation type '{0}'.", model.Type);
             throw new NotSupportedException(error);
         }
 

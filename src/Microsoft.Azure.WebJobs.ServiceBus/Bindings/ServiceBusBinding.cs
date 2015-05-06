@@ -65,13 +65,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 
         public ParameterDescriptor ToParameterDescriptor()
         {
-            // TODO: Need to find a way to serialize these extended properties
             return new ServiceBusParameterDescriptor
             {
                 Name = _parameterName,
                 NamespaceName = _namespaceName,
                 QueueOrTopicName = _path.QueueOrTopicNamePattern,
-                UIDescriptor = CreateParameterUIDescriptor(_path.QueueOrTopicNamePattern, false)
+                DisplayHints = CreateParameterDisplayHints(_path.QueueOrTopicNamePattern, false)
             };
         }
 
@@ -85,9 +84,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
             return new OutputConverter<string>(new StringToServiceBusEntityConverter(account, queueOrTopicName));
         }
 
-        internal static ParameterUIDescriptor CreateParameterUIDescriptor(string entityPath, bool isInput)
+        internal static ParameterDisplayHints CreateParameterDisplayHints(string entityPath, bool isInput)
         {
-            ParameterUIDescriptor descriptor = new ParameterUIDescriptor();
+            ParameterDisplayHints descriptor = new ParameterDisplayHints();
 
             descriptor.Description = isInput ?
                 string.Format(CultureInfo.CurrentCulture, "dequeue from '{0}'", entityPath) :
