@@ -55,6 +55,11 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 throw new ArgumentNullException("executor");
             }
 
+            if (extensions == null)
+            {
+                throw new ArgumentNullException("extensions");
+            }
+
             _typeLocator = typeLocator;
             _triggerBindingProvider = triggerBindingProvider;
             _bindingProvider = bindingProvider;

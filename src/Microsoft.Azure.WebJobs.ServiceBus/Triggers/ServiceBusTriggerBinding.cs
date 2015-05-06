@@ -95,7 +95,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             return BindAsync(message, context);
         }
 
-        public IListenerFactory CreateListenerFactory(ITriggeredFunctionExecutor executor)
+        public IListenerFactory CreateListenerFactory(FunctionDescriptor descriptor, ITriggeredFunctionExecutor executor)
         {
             if (_queueName != null)
             {

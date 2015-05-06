@@ -149,7 +149,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             return BindAsync(message, context);
         }
 
-        public IListenerFactory CreateListenerFactory(ITriggeredFunctionExecutor executor)
+        public IListenerFactory CreateListenerFactory(FunctionDescriptor descriptor, ITriggeredFunctionExecutor executor)
         {
             return new QueueListenerFactory(_queue, _queueConfiguration, _backgroundExceptionDispatcher, 
                 _messageEnqueuedWatcherSetter, _sharedContextProvider, _log, executor);

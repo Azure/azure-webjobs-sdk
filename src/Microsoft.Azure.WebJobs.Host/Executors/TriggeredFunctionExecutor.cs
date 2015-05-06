@@ -11,26 +11,22 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 {
     internal class TriggeredFunctionExecutor<TTriggerValue> : ITriggeredFunctionExecutor
     {
-        private FunctionDescription _description;
+        private FunctionDescriptor _descriptor;
         private ITriggeredFunctionInstanceFactory<TTriggerValue> _instanceFactory;
         private IFunctionExecutor _executor;
 
         public TriggeredFunctionExecutor(FunctionDescriptor descriptor, IFunctionExecutor executor, ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory)
         {
-            _description = new FunctionDescription
-            {
-                ID = descriptor.Id,
-                FullName = descriptor.FullName
-            };
+            _descriptor = descriptor;
             _executor = executor;
             _instanceFactory = instanceFactory;
         }
 
-        public FunctionDescription Function
+        public FunctionDescriptor Function
         {
             get
             {
-                return _description;
+                return _descriptor;
             }
         }
 

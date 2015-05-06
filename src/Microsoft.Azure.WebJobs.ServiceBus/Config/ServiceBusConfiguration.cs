@@ -14,7 +14,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
         private string _connectionString;
 
         /// <summary>
-        /// Gets or sets the Azure Service bus connection string.
+        /// Gets or sets the Azure ServiceBus connection string.
         /// </summary>
         public string ConnectionString
         {

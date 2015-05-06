@@ -8,31 +8,10 @@ using System.Threading.Tasks;
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
     /// <summary>
-    /// Metadata for a specific job function.
-    /// </summary>
-    public class FunctionDescription
-    {
-        /// <summary>
-        /// The ID of the function.
-        /// </summary>
-        public string ID { get; set; }
-
-        /// <summary>
-        /// The full name of the function.
-        /// </summary>
-        public string FullName { get; set; }
-    }
-
-    /// <summary>
     /// Interface defining the contract for executing a triggered function.
     /// </summary>
     public interface ITriggeredFunctionExecutor
     {
-        /// <summary>
-        /// Gets the <see cref="FunctionDescription"/> for the triggered function.
-        /// </summary>
-        FunctionDescription Function { get; }
-
         /// <summary>
         /// Try to invoke the triggered function using the values specified.
         /// </summary>

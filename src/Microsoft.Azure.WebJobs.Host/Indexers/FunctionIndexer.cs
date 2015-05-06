@@ -50,6 +50,11 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 throw new ArgumentNullException("executor");
             }
 
+            if (extensions == null)
+            {
+                throw new ArgumentNullException("extensions");
+            }
+
             _triggerBindingProvider = triggerBindingProvider;
             _bindingProvider = bindingProvider;
             _activator = activator;
@@ -245,7 +250,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
             if (triggerBinding != null)
             {
-                functionDefinition = CreateTriggeredFunctionDefinition(triggerBinding, triggerParameterName, _executor, functionDescriptor, nonTriggerBindings, invoker, functionDescriptor);
+                functionDefinition = CreateTriggeredFunctionDefinition(triggerBinding, triggerParameterName, _executor, functionDescriptor, nonTriggerBindings, invoker);
 
                 if (hasNoAutomaticTriggerAttribute && functionDefinition != null)
                 {
@@ -262,7 +267,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         }
 
         private static FunctionDefinition CreateTriggeredFunctionDefinition(ITriggerBinding triggerBinding, string parameterName, IFunctionExecutor executor, 
-            FunctionDescriptor descriptor, IReadOnlyDictionary<string, IBinding> nonTriggerBindings, IFunctionInvoker invoker, FunctionDescriptor functionDescriptor)
+            FunctionDescriptor descriptor, IReadOnlyDictionary<string, IBinding> nonTriggerBindings, IFunctionInvoker invoker)
         {
             FunctionDefinition functionDefinition = null;
             Type triggerBindingType = triggerBinding.GetType().GetInterface(typeof(ITriggerBinding<>).Name);
@@ -270,7 +275,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             {
                 Type triggerValueType = triggerBindingType.GetGenericArguments()[0];
                 MethodInfo createTriggeredFunctionDefinitionMethodInfo = typeof(FunctionIndexer).GetMethod("CreateTriggeredFunctionDefinitionImpl", BindingFlags.Static | BindingFlags.NonPublic).MakeGenericMethod(triggerValueType);
-                functionDefinition = (FunctionDefinition)createTriggeredFunctionDefinitionMethodInfo.Invoke(null, new object[] { triggerBinding, parameterName, executor, descriptor, nonTriggerBindings, invoker, functionDescriptor });
+                functionDefinition = (FunctionDefinition)createTriggeredFunctionDefinitionMethodInfo.Invoke(null, new object[] { triggerBinding, parameterName, executor, descriptor, nonTriggerBindings, invoker });
             }
 
             return functionDefinition;
@@ -278,12 +283,12 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
         private static FunctionDefinition CreateTriggeredFunctionDefinitionImpl<TTriggerValue>(
             ITriggerBinding<TTriggerValue> triggerBinding, string parameterName, IFunctionExecutor executor, FunctionDescriptor descriptor,
-            IReadOnlyDictionary<string, IBinding> nonTriggerBindings, IFunctionInvoker invoker, FunctionDescriptor functionDescriptor)
+            IReadOnlyDictionary<string, IBinding> nonTriggerBindings, IFunctionInvoker invoker)
         {
             ITriggeredFunctionBinding<TTriggerValue> functionBinding = new TriggeredFunctionBinding<TTriggerValue>(parameterName, triggerBinding, nonTriggerBindings);
-            ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory = new TriggeredFunctionInstanceFactory<TTriggerValue>(functionBinding, invoker, functionDescriptor);
+            ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory = new TriggeredFunctionInstanceFactory<TTriggerValue>(functionBinding, invoker, descriptor);
             ITriggeredFunctionExecutor triggerExecutor = new TriggeredFunctionExecutor<TTriggerValue>(descriptor, executor, instanceFactory);
-            IListenerFactory listenerFactory = triggerBinding.CreateListenerFactory(triggerExecutor);
+            IListenerFactory listenerFactory = triggerBinding.CreateListenerFactory(descriptor, triggerExecutor);
 
             return new FunctionDefinition(instanceFactory, listenerFactory);
         }

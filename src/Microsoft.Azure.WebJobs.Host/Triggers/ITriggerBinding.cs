@@ -32,15 +32,17 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
         /// <summary>
         /// Create an <see cref="IListenerFactory"/> for the trigger parameter.
         /// </summary>
+        /// <param name="descriptor">The <see cref="FunctionDescriptor"/> of the function to create
+        /// a listener for.</param>
         /// <param name="executor">The <see cref="ITriggeredFunctionExecutor"/> that should be used
         /// to invoke the target job function when the trigger fires.</param>
-        /// <returns></returns>
-        IListenerFactory CreateListenerFactory(ITriggeredFunctionExecutor executor);
+        /// <returns>The <see cref="IListenerFactory"/></returns>
+        IListenerFactory CreateListenerFactory(FunctionDescriptor descriptor, ITriggeredFunctionExecutor executor);
 
         /// <summary>
         /// Get a description of the binding.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The <see cref="ParameterDescriptor"/></returns>
         ParameterDescriptor ToParameterDescriptor();
     }
 }

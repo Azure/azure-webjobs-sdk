@@ -235,8 +235,8 @@ namespace Dashboard.Indexers
                     };
                 case "ServiceBus":
                     // TEMP: This is here for back compat
-                    // Latest versions of the SDK send a snapshot
-                    // via ParameterDescriptor.UIDescriptor
+                    // Latest versions of the SDK send a display info
+                    // via ParameterDescriptor.DisplayHints
                     ServiceBusParameterDescriptor serviceBusParameter = (ServiceBusParameterDescriptor)parameter;
                     return new ServiceBusParameterSnapshot
                     {
@@ -245,8 +245,8 @@ namespace Dashboard.Indexers
                     };
                 case "ServiceBusTrigger":
                     // TEMP: This is here for back compat
-                    // Latest versions of the SDK send a snapshot
-                    // via ParameterDescriptor.UIDescriptor
+                    // Latest versions of the SDK send display info
+                    // via ParameterDescriptor.DisplayHints
                     ServiceBusTriggerParameterDescriptor serviceBusTriggerParameter = (ServiceBusTriggerParameterDescriptor)parameter;
                     return new ServiceBusParameterSnapshot
                     {

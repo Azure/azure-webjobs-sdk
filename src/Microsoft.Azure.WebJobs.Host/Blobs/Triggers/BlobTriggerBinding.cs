@@ -196,13 +196,13 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             return await BindAsync(conversionResult.Result, context);
         }
 
-        public IListenerFactory CreateListenerFactory(ITriggeredFunctionExecutor executor)
+        public IListenerFactory CreateListenerFactory(FunctionDescriptor descriptor, ITriggeredFunctionExecutor executor)
         {
             IStorageBlobContainer container = _client.GetContainerReference(_path.ContainerNamePattern);
 
             IListenerFactory listenerFactory = new BlobListenerFactory(_hostIdProvider, _queueConfiguration,
                 _backgroundExceptionDispatcher, _blobWrittenWatcherSetter, _messageEnqueuedWatcherSetter,
-                _sharedContextProvider, _log, executor.Function.ID, _account, container, _path, executor);
+                _sharedContextProvider, _log, descriptor.Id, _account, container, _path, executor);
 
             return listenerFactory;
         }

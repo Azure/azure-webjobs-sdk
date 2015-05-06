@@ -81,7 +81,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
 
         public Task<IListener> CreateAsync(ListenerFactoryContext context)
         {
-            ITriggerExecutor<IStorageQueueMessage> triggerExecutor = new HostMessageExecutor(_executor, _functionLookup,_functionInstanceLogger);
+            ITriggerExecutor<IStorageQueueMessage> triggerExecutor = new HostMessageExecutor(_executor, _functionLookup, _functionInstanceLogger);
 
             TimeSpan configuredMaximum = _queueConfiguration.MaxPollingInterval;
             // Provide an upper bound on the maximum polling interval for run/abort from dashboard.

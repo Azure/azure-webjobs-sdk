@@ -111,6 +111,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IValueBinder",
                 "IValueProvider",
                 "NameResolverExtensions",
+                "FunctionDescriptor",
                 "ParameterDescriptor",
                 "ParameterDisplayHints",
                 "TriggerBindingProviderContext",
@@ -120,7 +121,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "AmbientConnectionStringProvider",
                 "IExtensionRegistryExtensions",
                 "ITriggeredFunctionExecutor",
-                "FunctionDescription",
                 "ListenerFactoryContext"
             };
 

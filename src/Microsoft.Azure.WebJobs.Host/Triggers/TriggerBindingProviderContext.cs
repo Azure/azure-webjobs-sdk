@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Reflection;
 using System.Threading;
 
@@ -21,6 +22,11 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> to use.</param>
         public TriggerBindingProviderContext(ParameterInfo parameter, CancellationToken cancellationToken)
         {
+            if (parameter == null)
+            {
+                throw new ArgumentNullException("parameter");
+            }
+
             _parameter = parameter;
             _cancellationToken = cancellationToken;
         }
