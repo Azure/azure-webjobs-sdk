@@ -11,9 +11,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
 {
     internal class ServiceBusTriggerExecutor
     {
-        private readonly ITriggeredFunctionExecutor _innerExecutor;
+        private readonly ITriggeredFunctionExecutor<BrokeredMessage> _innerExecutor;
 
-        public ServiceBusTriggerExecutor(ITriggeredFunctionExecutor innerExecutor)
+        public ServiceBusTriggerExecutor(ITriggeredFunctionExecutor<BrokeredMessage> innerExecutor)
         {
             _innerExecutor = innerExecutor;
         }

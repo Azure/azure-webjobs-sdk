@@ -192,8 +192,7 @@ namespace Microsoft.Azure.WebJobs
             {
                 if (_contextFactory == null)
                 {
-                    _contextFactory = new JobHostContextFactory(_storageAccountProvider, _typeLocator, _nameResolver, _activator, 
-                        _hostId, _queueConfiguration, _consoleProvider, this);
+                    _contextFactory = new JobHostContextFactory(_storageAccountProvider, _consoleProvider, this);
                 }
 
                 return _contextFactory;

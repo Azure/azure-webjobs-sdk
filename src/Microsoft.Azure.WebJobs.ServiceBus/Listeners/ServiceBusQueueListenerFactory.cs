@@ -15,9 +15,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         private readonly NamespaceManager _namespaceManager;
         private readonly MessagingFactory _messagingFactory;
         private readonly string _queueName;
-        private readonly ITriggeredFunctionExecutor _executor;
+        private readonly ITriggeredFunctionExecutor<BrokeredMessage> _executor;
 
-        public ServiceBusQueueListenerFactory(ServiceBusAccount account, string queueName, ITriggeredFunctionExecutor executor)
+        public ServiceBusQueueListenerFactory(ServiceBusAccount account, string queueName, ITriggeredFunctionExecutor<BrokeredMessage> executor)
         {
             _namespaceManager = account.NamespaceManager;
             _messagingFactory = account.MessagingFactory;

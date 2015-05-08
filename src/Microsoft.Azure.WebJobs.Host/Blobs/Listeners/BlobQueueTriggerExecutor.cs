@@ -19,27 +19,27 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private readonly IStorageBlobClient _client;
         private readonly IBlobETagReader _eTagReader;
         private readonly IBlobCausalityReader _causalityReader;
-        private readonly ITriggeredFunctionExecutor _innerExecutor;
+        private readonly ITriggeredFunctionExecutor<IStorageBlob> _innerExecutor;
         private readonly IBlobWrittenWatcher _blobWrittenWatcher;
-        private readonly ConcurrentDictionary<string, ITriggeredFunctionExecutor> _registrations;
+        private readonly ConcurrentDictionary<string, ITriggeredFunctionExecutor<IStorageBlob>> _registrations;
 
-        public BlobQueueTriggerExecutor(IStorageBlobClient client, ITriggeredFunctionExecutor innerExecutor, IBlobWrittenWatcher blobWrittenWatcher)
+        public BlobQueueTriggerExecutor(IStorageBlobClient client, ITriggeredFunctionExecutor<IStorageBlob> innerExecutor, IBlobWrittenWatcher blobWrittenWatcher)
             : this(client, BlobETagReader.Instance, BlobCausalityReader.Instance, innerExecutor, blobWrittenWatcher)
         {
         }
 
         public BlobQueueTriggerExecutor(IStorageBlobClient client, IBlobETagReader eTagReader,
-            IBlobCausalityReader causalityReader, ITriggeredFunctionExecutor innerExecutor, IBlobWrittenWatcher blobWrittenWatcher)
+            IBlobCausalityReader causalityReader, ITriggeredFunctionExecutor<IStorageBlob> innerExecutor, IBlobWrittenWatcher blobWrittenWatcher)
         {
             _client = client;
             _eTagReader = eTagReader;
             _causalityReader = causalityReader;
             _innerExecutor = innerExecutor;
             _blobWrittenWatcher = blobWrittenWatcher;
-            _registrations = new ConcurrentDictionary<string, ITriggeredFunctionExecutor>();
+            _registrations = new ConcurrentDictionary<string, ITriggeredFunctionExecutor<IStorageBlob>>();
         }
 
-        public void Register(string functionId, ITriggeredFunctionExecutor executor)
+        public void Register(string functionId, ITriggeredFunctionExecutor<IStorageBlob> executor)
         {
             _registrations.AddOrUpdate(functionId, executor, (i1, i2) => executor);
         }
@@ -61,8 +61,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             }
 
             // Ensure that the function ID is still valid. Otherwise, ignore this message.
-            ITriggeredFunctionExecutor executor;
-
+            ITriggeredFunctionExecutor<IStorageBlob> executor;
             if (!_registrations.TryGetValue(functionId, out executor))
             {
                 return true;

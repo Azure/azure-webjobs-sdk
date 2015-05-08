@@ -9,7 +9,7 @@ using Microsoft.Azure.WebJobs.Host.Triggers;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal class TriggeredFunctionExecutor<TTriggerValue> : ITriggeredFunctionExecutor
+    internal class TriggeredFunctionExecutor<TTriggerValue> : ITriggeredFunctionExecutor<TTriggerValue>
     {
         private FunctionDescriptor _descriptor;
         private ITriggeredFunctionInstanceFactory<TTriggerValue> _instanceFactory;
@@ -30,11 +30,17 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
         }
 
+        public async Task<bool> TryExecuteAsync(Guid? parentId, TTriggerValue triggerValue, CancellationToken cancellationToken)
+        {
+            IFunctionInstance instance = _instanceFactory.Create(triggerValue, parentId);
+            IDelayedException exception = await _executor.TryExecuteAsync(instance, cancellationToken);
+
+            return exception == null;
+        }
+
         public async Task<bool> TryExecuteAsync(Guid? parentId, object triggerValue, CancellationToken cancellationToken)
         {
-            IFunctionInstance instance = _instanceFactory.Create((TTriggerValue)triggerValue, parentId);
-            IDelayedException exception = await _executor.TryExecuteAsync(instance, cancellationToken);
-            return exception == null;
+            return await TryExecuteAsync(parentId, (TTriggerValue)triggerValue, cancellationToken);
         }
     }
 }

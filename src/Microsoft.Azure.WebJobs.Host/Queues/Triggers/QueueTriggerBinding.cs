@@ -87,6 +87,14 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             _converter = CreateConverter(queue);
         }
 
+        public Type TriggerValueType
+        {
+            get
+            {
+                return typeof(IStorageQueueMessage);
+            }
+        }
+
         public IReadOnlyDictionary<string, Type> BindingDataContract
         {
             get { return _bindingDataContract; }
@@ -97,8 +105,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             get { return _queue.Name; }
         }
 
-        private static IReadOnlyDictionary<string, Type> CreateBindingDataContract(
-            ITriggerDataArgumentBinding<IStorageQueueMessage> argumentBinding)
+        private static IReadOnlyDictionary<string, Type> CreateBindingDataContract(ITriggerDataArgumentBinding<IStorageQueueMessage> argumentBinding)
         {
             Dictionary<string, Type> contract = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
             contract.Add("QueueTrigger", typeof(string));
@@ -152,6 +159,12 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
         public IListenerFactory CreateListenerFactory(FunctionDescriptor descriptor, ITriggeredFunctionExecutor executor)
         {
             return new QueueListenerFactory(_queue, _queueConfiguration, _backgroundExceptionDispatcher, 
+                _messageEnqueuedWatcherSetter, _sharedContextProvider, _log, (ITriggeredFunctionExecutor<IStorageQueueMessage>)executor);
+        }
+
+        public IListenerFactory CreateListenerFactory(FunctionDescriptor descriptor, ITriggeredFunctionExecutor<IStorageQueueMessage> executor)
+        {
+            return new QueueListenerFactory(_queue, _queueConfiguration, _backgroundExceptionDispatcher,
                 _messageEnqueuedWatcherSetter, _sharedContextProvider, _log, executor);
         }
 

@@ -17,6 +17,11 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
     public interface ITriggerBinding
     {
         /// <summary>
+        /// The trigger value type that this binding binds to.
+        /// </summary>
+        Type TriggerValueType { get; }
+
+        /// <summary>
         /// Gets the binding data contract.
         /// </summary>
         IReadOnlyDictionary<string, Type> BindingDataContract { get; }

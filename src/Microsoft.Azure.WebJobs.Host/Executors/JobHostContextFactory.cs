@@ -27,35 +27,25 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     internal class JobHostContextFactory : IJobHostContextFactory
     {
         private readonly IStorageAccountProvider _storageAccountProvider;
-        private readonly ITypeLocator _typeLocator;
-        private readonly INameResolver _nameResolver;
-        private readonly IJobActivator _activator;
-        private readonly string _hostId;
-        private readonly IQueueConfiguration _queueConfiguration;
         private readonly IConsoleProvider _consoleProvider;
-        private readonly JobHostConfiguration _jobHostConfig;
+        private readonly JobHostConfiguration _config;
 
-        public JobHostContextFactory(IStorageAccountProvider storageAccountProvider, ITypeLocator typeLocator, INameResolver nameResolver, IJobActivator activator,
-            string hostId, IQueueConfiguration queueConfiguration, IConsoleProvider consoleProvider, JobHostConfiguration config)
+        public JobHostContextFactory(IStorageAccountProvider storageAccountProvider, IConsoleProvider consoleProvider, JobHostConfiguration config)
         {
             _storageAccountProvider = storageAccountProvider;
-            _typeLocator = typeLocator;
-            _activator = activator;
-            _nameResolver = nameResolver;
-            _hostId = hostId;
-            _queueConfiguration = queueConfiguration;
             _consoleProvider = consoleProvider;
-            _jobHostConfig = config;
+            _config = config;
         }
 
         public async Task<JobHostContext> CreateAndLogHostStartedAsync(CancellationToken shutdownToken, CancellationToken cancellationToken)
         {
             IHostIdProvider hostIdProvider = null;
-            if (_hostId != null)
+            if (_config.HostId != null)
             {
-                hostIdProvider = new FixedHostIdProvider(_hostId);
+                hostIdProvider = new FixedHostIdProvider(_config.HostId);
             }
-            return await CreateAndLogHostStartedAsync(_storageAccountProvider, _queueConfiguration, _typeLocator, _activator, _nameResolver, _consoleProvider, _jobHostConfig, shutdownToken, cancellationToken, hostIdProvider);
+            return await CreateAndLogHostStartedAsync(_storageAccountProvider, _config.Queues, _config.TypeLocator, _config.JobActivator, 
+                _config.NameResolver, _consoleProvider, _config, shutdownToken, cancellationToken, hostIdProvider);
         }
 
         public static async Task<JobHostContext> CreateAndLogHostStartedAsync(

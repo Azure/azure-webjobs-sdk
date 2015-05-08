@@ -52,6 +52,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             _entityPath = SubscriptionClient.FormatSubscriptionPath(topicName, subscriptionName);
         }
 
+        public Type TriggerValueType
+        {
+            get
+            {
+                return typeof(BrokeredMessage);
+            }
+        }
+
         public IReadOnlyDictionary<string, Type> BindingDataContract
         {
             get { return _argumentBinding.BindingDataContract; }
@@ -96,6 +104,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         }
 
         public IListenerFactory CreateListenerFactory(FunctionDescriptor descriptor, ITriggeredFunctionExecutor executor)
+        {
+            return CreateListenerFactory(descriptor, (ITriggeredFunctionExecutor<BrokeredMessage>)executor);
+        }
+
+        public IListenerFactory CreateListenerFactory(FunctionDescriptor descriptor, ITriggeredFunctionExecutor<BrokeredMessage> executor)
         {
             if (_queueName != null)
             {

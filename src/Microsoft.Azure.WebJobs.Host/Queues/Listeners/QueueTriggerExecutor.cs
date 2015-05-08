@@ -12,9 +12,9 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
 {
     internal class QueueTriggerExecutor : ITriggerExecutor<IStorageQueueMessage>
     {
-        private readonly ITriggeredFunctionExecutor _innerExecutor;
+        private readonly ITriggeredFunctionExecutor<IStorageQueueMessage> _innerExecutor;
 
-        public QueueTriggerExecutor(ITriggeredFunctionExecutor innerExecutor)
+        public QueueTriggerExecutor(ITriggeredFunctionExecutor<IStorageQueueMessage> innerExecutor)
         {
             _innerExecutor = innerExecutor;
         }
