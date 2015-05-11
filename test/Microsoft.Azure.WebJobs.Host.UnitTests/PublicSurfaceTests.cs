@@ -122,7 +122,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IExtensionRegistryExtensions",
                 "ITriggeredFunctionExecutor",
                 "ITriggeredFunctionExecutor`1",
-                "ListenerFactoryContext"
+                "ListenerFactoryContext",
+                "BindingTemplateSource"
             };
 
             AssertPublicTypes(expected, assembly);

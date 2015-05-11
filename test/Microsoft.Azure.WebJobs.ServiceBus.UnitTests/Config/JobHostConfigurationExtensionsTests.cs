@@ -49,7 +49,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
             // verify that a default ServiceBusConfiguration was created, with the host (obsolete)
             // service bus connection string propagated
 #pragma warning disable 0618
-            Assert.Equal(serviceBusConnection, serviceBusExtensionConfig.ServiceBusConfig.ConnectionString);
+            Assert.Equal(serviceBusConnection, serviceBusExtensionConfig.Config.ConnectionString);
 #pragma warning restore 0618
         }
 
@@ -76,7 +76,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
             ServiceBusExtensionConfig serviceBusExtensionConfig = (ServiceBusExtensionConfig)configProviders.Single();
             Assert.Same(config, serviceBusExtensionConfig.HostConfiguration);
 
-            Assert.Same(serviceBusConfig, serviceBusExtensionConfig.ServiceBusConfig);
+            Assert.Same(serviceBusConfig, serviceBusExtensionConfig.Config);
         }
     }
 }

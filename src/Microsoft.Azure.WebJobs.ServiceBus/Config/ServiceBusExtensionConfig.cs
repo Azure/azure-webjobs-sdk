@@ -53,7 +53,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
         /// <summary>
         /// Gets the <see cref="ServiceBusConfiguration"/>
         /// </summary>
-        public ServiceBusConfiguration ServiceBusConfig
+        public ServiceBusConfiguration Config
         {
             get
             {

@@ -3,7 +3,7 @@
 
 using Microsoft.Azure.WebJobs.Host.Executors;
 
-namespace Microsoft.Azure.WebJobs.ServiceBus.Config
+namespace Microsoft.Azure.WebJobs.ServiceBus
 {
     /// <summary>
     /// Configuration options for the ServiceBus extension.
