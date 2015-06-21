@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.ServiceBus.Messaging;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -12,6 +13,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     {
         private bool _connectionStringSet;
         private string _connectionString;
+        private OnMessageOptions _onMessageOptions = new OnMessageOptions();
 
         /// <summary>
         /// Gets or sets the Azure ServiceBus connection string.
@@ -33,6 +35,15 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 _connectionString = value;
                 _connectionStringSet = true;
             }
+        }
+
+        /// <summary>
+        /// Gets or sets OnMessageOptions to use when processing messages with <see cref="ServiceBusTriggerAttribute"/>.
+        /// </summary>
+        public OnMessageOptions OnMessageOptions
+        {
+            get { return _onMessageOptions; }
+            set { _onMessageOptions = value; }
         }
     }
 }

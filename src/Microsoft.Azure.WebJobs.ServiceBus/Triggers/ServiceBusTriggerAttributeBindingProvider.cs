@@ -6,11 +6,8 @@ using System.Globalization;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Converters;
-using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Triggers;
-using Microsoft.Azure.WebJobs.ServiceBus.Config;
 using Microsoft.ServiceBus.Messaging;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
@@ -84,11 +81,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
 
             if (queueName != null)
             {
-                binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, queueName, attribute.Access);
+                binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, _config.OnMessageOptions, queueName, attribute.Access);
             }
             else
             {
-                binding = new ServiceBusTriggerBinding(parameter.Name, argumentBinding, account, topicName, subscriptionName, attribute.Access);
+                binding = new ServiceBusTriggerBinding(parameter.Name, argumentBinding, account, _config.OnMessageOptions, topicName, subscriptionName, attribute.Access);
             }
 
             return Task.FromResult(binding);

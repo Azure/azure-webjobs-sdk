@@ -14,15 +14,17 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
     {
         private readonly NamespaceManager _namespaceManager;
         private readonly MessagingFactory _messagingFactory;
+        private readonly OnMessageOptions _onMessageOptions;
         private readonly string _topicName;
         private readonly string _subscriptionName;
         private readonly ITriggeredFunctionExecutor<BrokeredMessage> _executor;
         private readonly AccessRights _accessRights;
 
-        public ServiceBusSubscriptionListenerFactory(ServiceBusAccount account, string topicName, string subscriptionName, ITriggeredFunctionExecutor<BrokeredMessage> executor, AccessRights accessRights)
+        public ServiceBusSubscriptionListenerFactory(ServiceBusAccount account, OnMessageOptions onMessageOptions, string topicName, string subscriptionName, ITriggeredFunctionExecutor<BrokeredMessage> executor, AccessRights accessRights)
         {
             _namespaceManager = account.NamespaceManager;
             _messagingFactory = account.MessagingFactory;
+            _onMessageOptions = onMessageOptions;
             _topicName = topicName;
             _subscriptionName = subscriptionName;
             _executor = executor;
@@ -43,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             string entityPath = SubscriptionClient.FormatSubscriptionPath(_topicName, _subscriptionName);
 
             ServiceBusTriggerExecutor triggerExecutor = new ServiceBusTriggerExecutor(_executor);
-            return new ServiceBusListener(_messagingFactory, entityPath, triggerExecutor);
+            return new ServiceBusListener(_messagingFactory, entityPath, triggerExecutor, _onMessageOptions);
         }
     }
 }
