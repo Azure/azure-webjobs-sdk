@@ -14,14 +14,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
     {
         private readonly NamespaceManager _namespaceManager;
         private readonly MessagingFactory _messagingFactory;
+        private readonly OnMessageOptions _onMessageOptions;
         private readonly string _queueName;
         private readonly ITriggeredFunctionExecutor<BrokeredMessage> _executor;
         private readonly AccessRights _accessRights;
 
-        public ServiceBusQueueListenerFactory(ServiceBusAccount account, string queueName, ITriggeredFunctionExecutor<BrokeredMessage> executor, AccessRights accessRights)
+        public ServiceBusQueueListenerFactory(ServiceBusAccount account, OnMessageOptions onMessageOptions, string queueName, ITriggeredFunctionExecutor<BrokeredMessage> executor, AccessRights accessRights)
         {
             _namespaceManager = account.NamespaceManager;
             _messagingFactory = account.MessagingFactory;
+            _onMessageOptions = onMessageOptions;
             _queueName = queueName;
             _executor = executor;
             _accessRights = accessRights;
@@ -38,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             }
 
             ServiceBusTriggerExecutor triggerExecutor = new ServiceBusTriggerExecutor(_executor);
-            return new ServiceBusListener(_messagingFactory, _queueName, triggerExecutor);
+            return new ServiceBusListener(_messagingFactory, _queueName, triggerExecutor, _onMessageOptions);
         }
     }
 }

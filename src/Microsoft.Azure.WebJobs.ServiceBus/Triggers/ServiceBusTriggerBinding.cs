@@ -23,6 +23,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         private readonly IObjectToTypeConverter<BrokeredMessage> _converter;
         private readonly ITriggerDataArgumentBinding<BrokeredMessage> _argumentBinding;
         private readonly ServiceBusAccount _account;
+        private readonly OnMessageOptions _onMessageOptions;
         private readonly string _namespaceName;
         private readonly string _queueName;
         private readonly string _topicName;
@@ -31,12 +32,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         private readonly AccessRights _accessRights;
 
         public ServiceBusTriggerBinding(string parameterName, Type parameterType, 
-            ITriggerDataArgumentBinding<BrokeredMessage> argumentBinding, ServiceBusAccount account, string queueName, AccessRights accessRights)
+            ITriggerDataArgumentBinding<BrokeredMessage> argumentBinding, ServiceBusAccount account, OnMessageOptions onMessageOptions, string queueName, AccessRights accessRights)
         {
             _parameterName = parameterName;
             _converter = CreateConverter(parameterType);
             _argumentBinding = argumentBinding;
             _account = account;
+            _onMessageOptions = onMessageOptions;
             _namespaceName = ServiceBusClient.GetNamespaceName(account);
             _queueName = queueName;
             _entityPath = queueName;
@@ -44,11 +46,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         }
 
         public ServiceBusTriggerBinding(string parameterName, ITriggerDataArgumentBinding<BrokeredMessage> argumentBinding,
-            ServiceBusAccount account, string topicName, string subscriptionName, AccessRights accessRights)
+            ServiceBusAccount account, OnMessageOptions onMessageOptions, string topicName, string subscriptionName, AccessRights accessRights)
         {
             _parameterName = parameterName;
             _argumentBinding = argumentBinding;
             _account = account;
+            _onMessageOptions = onMessageOptions;
             _namespaceName = ServiceBusClient.GetNamespaceName(account);
             _topicName = topicName;
             _subscriptionName = subscriptionName;
@@ -116,11 +119,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         {
             if (_queueName != null)
             {
-                return new ServiceBusQueueListenerFactory(_account, _queueName, executor, _accessRights);
+                return new ServiceBusQueueListenerFactory(_account, _onMessageOptions, _queueName, executor, _accessRights);
             }
             else
             {
-                return new ServiceBusSubscriptionListenerFactory(_account, _topicName, _subscriptionName, executor, _accessRights);
+                return new ServiceBusSubscriptionListenerFactory(_account, _onMessageOptions, _topicName, _subscriptionName, executor, _accessRights);
             }
         }
 
