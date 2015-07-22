@@ -87,11 +87,13 @@ namespace Dashboard.Data
             IEnumerable<string> argumentValues = Arguments.Values.Select(v => v.Value);
 
 
-            // Remove newlines to avoid 403/forbidden storage exceptions when saving display title to blob metadata
-            // for function indexes. Newlines may be present in JSON-formatted arguments.
-            string parametersDisplayText = String.Join(", ", argumentValues).Replace("\r\n", String.Empty);
+            string parametersDisplayText = String.Join(", ", argumentValues);
             if (parametersDisplayText != null)
             {
+                // Remove newlines to avoid 403/forbidden storage exceptions when saving display title to blob metadata
+                // for function indexes. Newlines may be present in JSON-formatted arguments.
+                parametersDisplayText = parametersDisplayText.Replace("\r\n", String.Empty);
+
                 name.Append(" (");
                 if (parametersDisplayText.Length > 20)
                 {
