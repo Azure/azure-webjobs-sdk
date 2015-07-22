@@ -85,7 +85,11 @@ namespace Dashboard.Data
         {
             var name = new StringBuilder(FunctionShortName);
             IEnumerable<string> argumentValues = Arguments.Values.Select(v => v.Value);
-            string parametersDisplayText = String.Join(", ", argumentValues);
+
+
+            // Remove newlines to avoid 403/forbidden storage exceptions when saving display title to blob metadata
+            // for function indexes. Newlines may be present in JSON-formatted arguments.
+            string parametersDisplayText = String.Join(", ", argumentValues).Replace("\r\n", String.Empty);
             if (parametersDisplayText != null)
             {
                 name.Append(" (");
@@ -100,9 +104,7 @@ namespace Dashboard.Data
                 }
                 name.Append(")");
             }
-            // Remove newlines to avoid 403/forbidden storage exceptions when saving display title to blob metadata
-            // for function indexes. Newlines may be present in JSON-formatted arguments.
-            return name.ToString().Replace("\r\n", String.Empty);
+            return name.ToString();
         }
     }
 }
