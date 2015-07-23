@@ -80,7 +80,7 @@ namespace Dashboard.UnitTests.Indexers
         }
 
         [Theory]
-        //test string with newline starting at char 19
+        //test string with newline starting at char 19, which causes \r to remain in the final DisplayTitle string
         [InlineData("XXXXXX\r\nXXXXXXXXX\r\nYYYYYYY")]
         [InlineData("{\r\n  \"QRPoint\": {\r\n    \"X\": 0,\r\n    \"Y\": 0\r\n  },\r\n  \"TimesheetId\": 0,\r\n  \"HasReadableQrCode\": false,\r\n  \"HasSignature\": false,\r\n  \"BlobAddress\": \"https://myaccount.blob.core.windows.net/container/file.png\",\r\n  \"$AzureWebJobsParentId\": \"511f605d-14bf-46ca-b321-96b59d9e81d6\"\r\n}")]
         [InlineData("\r\n\r\n")]
