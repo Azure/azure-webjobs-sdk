@@ -79,15 +79,21 @@ namespace Dashboard.UnitTests.Indexers
             Assert.Equal(message.WebJobRunIdentifier.RunId, snapshot.WebJobRunId);
         }
 
-        [Fact]
-        public void FunctionInstanceSnapshot_CompletelyRemovesLineBreaks()
+        [Theory]
+        //test string with newline starting at char 19
+        [InlineData("XXXXXX\r\nXXXXXXXXX\r\nYYYYYYY")]
+        [InlineData("{\r\n  \"QRPoint\": {\r\n    \"X\": 0,\r\n    \"Y\": 0\r\n  },\r\n  \"TimesheetId\": 0,\r\n  \"HasReadableQrCode\": false,\r\n  \"HasSignature\": false,\r\n  \"BlobAddress\": \"https://myaccount.blob.core.windows.net/container/file.png\",\r\n  \"$AzureWebJobsParentId\": \"511f605d-14bf-46ca-b321-96b59d9e81d6\"\r\n}")]
+        [InlineData("\r\n\r\n")]
+        [InlineData("")]
+        [InlineData("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")]
+        [InlineData("XXXXXX")]
+        public void FunctionInstanceSnapshot_CompletelyRemovesLineBreaks(string messageValue)
         {
             FunctionInstanceSnapshot message = new FunctionInstanceSnapshot
             {
                 Arguments = new Dictionary<string, FunctionInstanceArgument> 
                 {
-                    //{"message", new FunctionInstanceArgument(){ Value = "{\r\n  \"QRPoint\": {\r\n    \"X\": 0,\r\n    \"Y\": 0\r\n  },\r\n  \"TimesheetId\": 0,\r\n  \"HasReadableQrCode\": false,\r\n  \"HasSignature\": false,\r\n  \"BlobAddress\": \"https://myaccount.blob.core.windows.net/container/file.png\",\r\n  \"$AzureWebJobsParentId\": \"511f605d-14bf-46ca-b321-96b59d9e81d6\"\r\n}"} }
-                    {"message", new FunctionInstanceArgument(){ Value = "XXXXXX\r\nXXXXXXXXX\r\nYYYYYYY"} }
+                    {"message", new FunctionInstanceArgument(){ Value = messageValue} }
                 },
             };
 
@@ -95,7 +101,6 @@ namespace Dashboard.UnitTests.Indexers
 
             Assert.DoesNotContain("\r", displayTitle);
             Assert.DoesNotContain("\n", displayTitle);
-            Assert.Contains("XY", displayTitle);
         }
     }
 }
