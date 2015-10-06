@@ -58,7 +58,11 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             {
                 ITriggerData triggerData = await _triggerBinding.BindAsync(value, context);
                 triggerProvider = triggerData.ValueProvider;
-                bindingData = triggerData.BindingData.Concat(AppSettingsBinding.CreateBindingData()).ToDictionary(x => x.Key, x => x.Value);
+
+                bindingData = triggerData.BindingData
+                    .Concat(AppSettingsBinding.CreateBindingData())
+                    .GroupBy(x => x.Key)
+                    .ToDictionary(x => x.Key, x => x.First().Value);
             }
             catch (OperationCanceledException)
             {
