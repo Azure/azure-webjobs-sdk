@@ -3,6 +3,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
@@ -56,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             {
                 ITriggerData triggerData = await _triggerBinding.BindAsync(value, context);
                 triggerProvider = triggerData.ValueProvider;
-                bindingData = triggerData.BindingData;
+                bindingData = triggerData.BindingData.Concat(AppSettingsBinding.CreateBindingData()).ToDictionary(x => x.Key, x => x.Value);
             }
             catch (OperationCanceledException)
             {
