@@ -8,6 +8,8 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Storage.Blob;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
@@ -245,6 +247,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             string result = _singletonManager.GetBoundScope(@"{Region}\{Zone}", bindingData);
 
             Assert.Equal(@"testregion\1", result);
+        }
+
+        [Fact]
+        public void GetBoundScopeAppSettings_Success_ReturnsExceptedResult()
+        {
+            var bindingData = AppSettingsBinding.CreateBindingData();
+
+            string result = SingletonManager.GetBoundScope(@"{testkey}", bindingData);
+
+            Assert.Equal(@"testval", result);
         }
 
         [Fact]
