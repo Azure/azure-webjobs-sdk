@@ -163,7 +163,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                 if (functionIndexProvider == null)
                 {
-                    functionIndexProvider = new FunctionIndexProvider(typeLocator, triggerBindingProvider, bindingProvider, activator, functionExecutor, extensions, singletonManager);
+                    functionIndexProvider = new FunctionIndexProvider(storageAccountProvider, typeLocator, triggerBindingProvider, bindingProvider, activator, functionExecutor, extensions, singletonManager);
                 }
 
                 IFunctionIndex functions = await functionIndexProvider.GetAsync(combinedCancellationToken);

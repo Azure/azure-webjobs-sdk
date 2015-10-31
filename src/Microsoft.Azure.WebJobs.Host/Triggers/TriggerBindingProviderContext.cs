@@ -4,6 +4,7 @@
 using System;
 using System.Reflection;
 using System.Threading;
+using Microsoft.Azure.WebJobs.Host.Storage;
 
 namespace Microsoft.Azure.WebJobs.Host.Triggers
 {
@@ -46,5 +47,10 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
         {
             get { return _cancellationToken; }
         }
+
+        /// <summary>
+        /// The Azure Storage account to use in the binding.
+        /// </summary>
+        internal IStorageAccount StorageAccount { get; set; }
     }
 }

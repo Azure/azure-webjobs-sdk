@@ -32,7 +32,12 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
 
             _functionsById.Add(id, function);
-            _functionsByMethod.Add(method, function);
+
+            if (!_functionsByMethod.ContainsKey(method))
+            {
+                _functionsByMethod.Add(method, function);
+            }
+
             _functionDescriptors.Add(descriptor);
         }
 

@@ -18,6 +18,13 @@ namespace Microsoft.Azure.WebJobs
         /// <summary>
         /// Constructs a new instance.
         /// </summary>
+        public StorageAccountAttribute()
+        {
+        }
+
+        /// <summary>
+        /// Constructs a new instance.
+        /// </summary>
         /// <param name="account">The name of the Azure Storage connection string to use. This should be the name
         /// of one of the connection strings present in the application settings (or environment variables). The
         /// connection string name in settings should be prefixed with the standard "AzureWebJobs" prefix, but the
@@ -31,5 +38,10 @@ namespace Microsoft.Azure.WebJobs
         /// Gets the name of the Azure Storage connection string to use.
         /// </summary>
         public string Account { get; private set; }
+
+        /// <summary>
+        /// The path to a file listing multiple Azure Storage connection strings.
+        /// </summary>
+        public string Path { get; set; }
     }
 }
