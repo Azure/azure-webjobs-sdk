@@ -150,6 +150,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
         }
 
+        public IStorageAccount GetAccountFromConnectionString(string connectionString)
+        {
+            return _storageAccountParser.ParseAccount(connectionString, "", _services);
+        }
+
         public async Task<IStorageAccount> GetAccountAsync(string connectionStringName, CancellationToken cancellationToken)
         {
             IStorageAccount account = null;

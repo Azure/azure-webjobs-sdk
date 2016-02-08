@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -13,6 +14,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings.Invoke;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 
 namespace Microsoft.Azure.WebJobs.Host.Indexers
@@ -21,6 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
     {
         private static readonly BindingFlags PublicMethodFlags = BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly;
 
+        private readonly IStorageAccountProvider _storageAccountProvider;
         private readonly ITriggerBindingProvider _triggerBindingProvider;
         private readonly IBindingProvider _bindingProvider;
         private readonly IJobActivator _activator;
@@ -28,8 +31,20 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly HashSet<Assembly> _jobAttributeAssemblies;
         private readonly SingletonManager _singletonManager;
 
-        public FunctionIndexer(ITriggerBindingProvider triggerBindingProvider, IBindingProvider bindingProvider, IJobActivator activator, IFunctionExecutor executor, IExtensionRegistry extensions, SingletonManager singletonManager)
+        public FunctionIndexer(
+            IStorageAccountProvider storageAccountProvider,
+            ITriggerBindingProvider triggerBindingProvider,
+            IBindingProvider bindingProvider,
+            IJobActivator activator,
+            IFunctionExecutor executor,
+            IExtensionRegistry extensions,
+            SingletonManager singletonManager)
         {
+            if (storageAccountProvider == null)
+            {
+                throw new ArgumentNullException("storageAccountProvider");
+            }
+
             if (triggerBindingProvider == null)
             {
                 throw new ArgumentNullException("triggerBindingProvider");
@@ -60,6 +75,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 throw new ArgumentNullException("singletonManager");
             }
 
+            _storageAccountProvider = storageAccountProvider;
             _triggerBindingProvider = triggerBindingProvider;
             _bindingProvider = bindingProvider;
             _activator = activator;
@@ -122,7 +138,23 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         {
             try
             {
-                await IndexMethodAsyncCore(method, index, cancellationToken);
+                var storageAccountAttribute = method.GetCustomAttribute<StorageAccountAttribute>();
+                if (storageAccountAttribute != null && storageAccountAttribute.Path != null)
+                {
+                    using (StreamReader file = new StreamReader(storageAccountAttribute.Path))
+                    {
+                        string line;
+                        while ((line = file.ReadLine()) != null)
+                        {
+                            var storageAccount = _storageAccountProvider.GetAccountFromConnectionString(line);
+                            await IndexMethodAsyncCore(method, index, storageAccount, cancellationToken);
+                        }
+                    }
+                }
+                else
+                {
+                    await IndexMethodAsyncCore(method, index, null, cancellationToken);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -134,7 +166,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
         }
 
-        internal async Task IndexMethodAsyncCore(MethodInfo method, IFunctionIndexCollector index, CancellationToken cancellationToken)
+        internal async Task IndexMethodAsyncCore(MethodInfo method, IFunctionIndexCollector index, IStorageAccount storageAccount, CancellationToken cancellationToken)
         {
             Debug.Assert(method != null);
             bool hasNoAutomaticTriggerAttribute = method.GetCustomAttribute<NoAutomaticTriggerAttribute>() != null;
@@ -145,8 +177,10 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
             foreach (ParameterInfo parameter in parameters)
             {
-                ITriggerBinding possibleTriggerBinding = await _triggerBindingProvider.TryCreateAsync(new TriggerBindingProviderContext(parameter, cancellationToken));
-
+                ITriggerBinding possibleTriggerBinding = await _triggerBindingProvider.TryCreateAsync(new TriggerBindingProviderContext(parameter, cancellationToken)
+                {
+                    StorageAccount = storageAccount
+                });
                 if (possibleTriggerBinding != null)
                 {
                     if (triggerBinding == null)
@@ -183,7 +217,11 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                     continue;
                 }
 
-                IBinding binding = await _bindingProvider.TryCreateAsync(new BindingProviderContext(parameter, bindingDataContract, cancellationToken));
+                IBinding binding = await _bindingProvider.TryCreateAsync(new BindingProviderContext(parameter, bindingDataContract, cancellationToken)
+                {
+                    StorageAccount = storageAccount
+                });
+
                 if (binding == null)
                 {
                     if (triggerBinding != null && !hasNoAutomaticTriggerAttribute)
@@ -245,8 +283,14 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 throw new InvalidOperationException("Can't have multiple TraceWriter/TextWriter parameters in a single function.");
             }
 
+            string methodIdSuffix = null;
+            if (storageAccount != null)
+            {
+                methodIdSuffix = "-" + storageAccount.Credentials.AccountName;
+            }
+
             string triggerParameterName = triggerParameter != null ? triggerParameter.Name : null;
-            FunctionDescriptor functionDescriptor = CreateFunctionDescriptor(method, triggerParameterName, triggerBinding, nonTriggerBindings);
+            FunctionDescriptor functionDescriptor = CreateFunctionDescriptor(method, methodIdSuffix, triggerParameterName, triggerBinding, nonTriggerBindings);
             IFunctionInvoker invoker = FunctionInvokerFactory.Create(method, _activator);
             IFunctionDefinition functionDefinition;
 
@@ -290,8 +334,12 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             return new FunctionDefinition(descriptor, instanceFactory, listenerFactory);
         }
 
-        private static FunctionDescriptor CreateFunctionDescriptor(MethodInfo method, string triggerParameterName,
-            ITriggerBinding triggerBinding, IReadOnlyDictionary<string, IBinding> nonTriggerBindings)
+        private static FunctionDescriptor CreateFunctionDescriptor(
+            MethodInfo method,
+            string methodIdSuffix,
+            string triggerParameterName,
+            ITriggerBinding triggerBinding,
+            IReadOnlyDictionary<string, IBinding> nonTriggerBindings)
         {
             List<ParameterDescriptor> parameters = new List<ParameterDescriptor>();
 
@@ -309,9 +357,15 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 }
             }
 
+            var id = method.GetFullName();
+            if (methodIdSuffix != null)
+            {
+                id += methodIdSuffix;
+            }
+
             return new FunctionDescriptor
             {
-                Id = method.GetFullName(),
+                Id = id,
                 Method = method,
                 FullName = method.GetFullName(),
                 ShortName = method.GetShortName(),

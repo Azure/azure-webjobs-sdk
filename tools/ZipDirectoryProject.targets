@@ -50,7 +50,7 @@
 
   <Target Name="Rebuild" DependsOnTargets="Clean;Build"/>
 
-  <UsingTask TaskName="Zip" TaskFactory="CodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.v12.0.dll">
+  <UsingTask TaskName="Zip" TaskFactory="CodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
     <ParameterGroup>
       <SourceFiles ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
       <DestinationFile ParameterType="System.String" Required="true" />

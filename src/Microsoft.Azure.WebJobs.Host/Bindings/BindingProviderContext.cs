@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
+using Microsoft.Azure.WebJobs.Host.Storage;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -54,5 +55,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         {
             get { return _cancellationToken; }
         }
+
+        /// <summary>
+        /// The Azure Storage account to use in the binding.
+        /// </summary>
+        internal IStorageAccount StorageAccount { get; set; }
     }
 }

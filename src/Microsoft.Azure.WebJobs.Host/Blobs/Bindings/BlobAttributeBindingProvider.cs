@@ -60,7 +60,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
             string resolvedPath = Resolve(blobAttribute.BlobPath);
             IBindableBlobPath path = null;
-            IStorageAccount account = await _accountProvider.GetStorageAccountAsync(context.Parameter, context.CancellationToken);
+            IStorageAccount account = context.StorageAccount ??
+                                      await _accountProvider.GetStorageAccountAsync(context.Parameter, context.CancellationToken);
             StorageClientFactoryContext clientFactoryContext = new StorageClientFactoryContext
             {
                 Parameter = context.Parameter
