@@ -36,12 +36,15 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             this._options = options;
         }
 
-        public void Cancel()
+        void IListener.Cancel()
         {
+            // $$$ Difference between Cancel and Stop?
+            this.StopAsync(CancellationToken.None).Wait();
         }
 
-        public void Dispose()
+        void IDisposable.Dispose() // via IListener
         {
+            // nothing to do. 
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -100,8 +103,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 FunctionResult result = await _executor.TryExecuteAsync(input, CancellationToken.None);
             }
 
-            await context.CheckpointAsync();
-        
+            // $$$ Only if succeeded? What about retry? 
+            await context.CheckpointAsync();        
         }
 
         async Task IEventProcessor.CloseAsync(PartitionContext context, CloseReason reason)

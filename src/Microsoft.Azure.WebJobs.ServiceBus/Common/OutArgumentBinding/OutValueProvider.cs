@@ -8,17 +8,19 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
-    // Bind to an 'Out T[]" parameter. 
-    internal class OutArrayValueProvider<TMessage> : IOrderedValueBinder
+    // Bind to an 'Out T" parameter. 
+    internal class OutValueProvider<TMessage> : IOrderedValueBinder
     {
         private readonly IFlushCollector<TMessage> _raw;
+        private readonly string _invokeString;
 
         // raw is the underlying object (exposes a Flush method).
         // obj is athe front-end veneer to pass to the user function. 
         // calls to obj will trickle through adapters to be calls on raw. 
-        public OutArrayValueProvider(IFlushCollector<TMessage> raw)
+        public OutValueProvider(IFlushCollector<TMessage> raw, string invokeString)
         {
             _raw = raw;
+            _invokeString = invokeString;
         }
 
         public BindStepOrder StepOrder
@@ -30,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         {
             get
             {
-                return typeof(TMessage[]);
+                return typeof(TMessage);
             }
         }
 
@@ -48,22 +50,15 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 return;
             }
 
-            TMessage[] messages = (TMessage[])value;
-            if (messages.Length == 0)
-            {
-                return;
-            }
+            TMessage message = (TMessage)value;
 
-            foreach (var message in messages)
-            {
-                await _raw.AddAsync(message, cancellationToken);
-            }
+            await _raw.AddAsync(message, cancellationToken);
             await _raw.FlushAsync();
         }
 
         public string ToInvokeString()
         {
-            return "???"; // $$$
+            return _invokeString;
         }
     }
 }

@@ -15,9 +15,11 @@ using Xunit;
 using System.Reflection;
 using System.Text;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
+    // $$$ Fix this
     public class EventHubEndToEndTests
     {
         class FakeNameResolver : INameResolver
@@ -41,16 +43,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             JobHostConfiguration config = new JobHostConfiguration()
             {
                 NameResolver = _nameResolver,
-                TypeLocator = new FakeTypeLocator(typeof(Functions3))
+                TypeLocator = new FakeTypeLocator(typeof(Functions))
             };
 
             var eventHubConfig = new EventHubConfiguration();
             string eventHubName = "test89123";
             _nameResolver._dict["eh"] = eventHubName; // bind %eh% in attributes to our hub
-            // $$$ get real passwords from config
-            eventHubConfig.AddSender(eventHubName, "Endpoint=sb://test89123-ns.servicebus.windows.net/;SharedAccessKeyName=SendRule;SharedAccessKey=XXXX");
-            eventHubConfig.AddReceiver(eventHubName, "Endpoint=sb://test89123-ns.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=YYYYY");
-                       
+            eventHubConfig.AddSender(eventHubName, "Endpoint=sb://test89123-ns.servicebus.windows.net/;SharedAccessKeyName=SendRule;SharedAccessKey=XXXXXXXXXXXXXXX=");
+            eventHubConfig.AddReceiver(eventHubName, "Endpoint=sb://test89123-ns.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=YYYYYYYYYYYYYYYY");
+
 
             config.Tracing.Tracers.Add(trace);
             config.UseEventHub(eventHubConfig);
@@ -66,7 +67,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                    Thread.Sleep(5 * 1000);
                }
            });
-            //host.Call(method);
+            host.Call(method);
             //t.Start();
             host.RunAndBlock();
         }
@@ -114,12 +115,35 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         public class Functions3
         {
-            // Handle 1 new event
-            public static void Trigger(
-                [EventHubTrigger("%eh%")] Payload message, string prop1, int val1)
+#if false
+            // Compare to queue 
+            public static void TriggerQueue(
+                [QueueTrigger("q123")] Payload message,
+                [Queue("q123")] out Payload output)
             {
                 // We received new events.                 
+                message.val1++;
+                output = message;
+            }
+#else
+
+            // Handle 1 new event
+            public static void Trigger8(
+                // [EventHubTrigger("%eh%")] Payload message, string prop1, int val1)
+                [EventHubTrigger("%eh%")] Payload message,
+                string prop1,
+                [EventHub("%eh%")] out Payload output)
+            {
+                bool drain = true;
+                output = null;
+                if (!drain)
+                {
+                    // We received new events.                 
+                    message.val1++;
+                    output = message;
+                }
             }       
+#endif
         }
 
         public class TriggerExamples
@@ -168,17 +192,21 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
              public static void SendEvents(
                  //[EventHub("EHName")] IAsyncCollector<string> messages,
-                 [EventHub("%eh%")] out Payload message
+                 [EventHub("%eh%")] IAsyncCollector<byte[]> message
                  )
             {
                 //await Task.Delay(0); // $$$
 
                 // Send some events. 
-                var eventData = new EventData(Encoding.UTF8.GetBytes("test1"));
+                //var eventData = new EventData(Encoding.UTF8.GetBytes("test1"));
                 //message = new EventData[] { eventData }; // Out binder
-                message = new Payload { prop1 = "MyProp", val1 = 123 };
+                //message = new Payload { prop1 = "MyProp", val1 = 123 };
                 // await messages.AddAsync("test1");
                 //messages.Add("test1");
+
+                var obj = JsonConvert.SerializeObject(new Payload { prop1 = "p1", val1 = 200 });
+                var bytes = Encoding.UTF8.GetBytes( obj);
+                message.AddAsync(bytes).Wait();
             }
         }
 

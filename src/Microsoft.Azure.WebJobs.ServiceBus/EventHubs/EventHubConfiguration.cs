@@ -39,7 +39,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         }
 
         
-        private void AddReceiver2(string eventHubName, EventProcessorHost listener)
+        private void AddReceiver(string eventHubName, EventProcessorHost listener)
         {
             _listeners[eventHubName] = listener;
         }
@@ -49,7 +49,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             // We can't get the storage string until we get a JobHostConfig. So defer this. 
             _deferredWork.Add((jobHostConfig) =>
            {
-               string storageConnectionString = jobHostConfig.DashboardConnectionString;
+               string storageConnectionString = jobHostConfig.StorageConnectionString;
                this.AddReceiver(eventHubName, receiverConnectionString, storageConnectionString);
            });
         }
@@ -65,11 +65,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 receiverConnectionString, 
                 storageConnectionString);
 
-            this.AddReceiver2(eventHubName, eventProcessorHost);
+            this.AddReceiver(eventHubName, eventProcessorHost);
         }
 
 
-        EventHubClient IEventHubProvider.GetSender(string eventHubName)
+        EventHubClient IEventHubProvider.GetEventHubClient(string eventHubName)
         {
             EventHubClient client;
             if (_senders.TryGetValue(eventHubName, out client))             
@@ -79,7 +79,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             throw new InvalidOperationException("No EventHubClient (sender) named " + eventHubName);
         }
 
-        EventProcessorHost IEventHubProvider.GetListener(string eventHubName)
+        EventProcessorHost IEventHubProvider.GetEventProcessorHost(string eventHubName)
         {
             EventProcessorHost host;
             if (_listeners.TryGetValue(eventHubName, out host))
@@ -113,16 +113,32 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             _deferredWork.Clear();
 
             // get the services we need to construct our binding providers
-            INameResolver nameResolver = context.Config.GetService<INameResolver>();
+            INameResolver nameResolver = context.Config.NameResolver;
             IExtensionRegistry extensions = context.Config.GetService<IExtensionRegistry>();
+
+            IConverterManager cm = context.Config.GetOrCreateConverterManager();
+            cm.AddConverter<string, EventData>(ConvertString2EventData); 
+            cm.AddConverter<byte[], EventData>(ConvertBytes2EventData); // direct, handles non-string representations
 
             // register our trigger binding provider
             var triggerBindingProvider = new EventHubTriggerAttributeBindingProvider(nameResolver, this);
             extensions.RegisterExtension<ITriggerBindingProvider>(triggerBindingProvider);
 
             // register our binding provider
-            var bindingProvider = new EventHubAttributeBindingProvider(nameResolver, this);
+            var bindingProvider = new EventHubAttributeBindingProvider(nameResolver, this, cm);
             extensions.RegisterExtension<IBindingProvider>(bindingProvider);
+        }
+
+        private static EventData ConvertBytes2EventData(byte[] input)
+        {
+            var eventData = new EventData(input);
+            return eventData;
+        }
+
+        private static EventData ConvertString2EventData(string input)
+        {
+            var eventData = new EventData(Encoding.UTF8.GetBytes(input));
+            return eventData;
         }
     }
 

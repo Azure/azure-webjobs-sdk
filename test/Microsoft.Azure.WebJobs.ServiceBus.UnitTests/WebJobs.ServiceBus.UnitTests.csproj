@@ -112,6 +112,8 @@
     <Compile Include="Bindings\ParameterizedServiceBusPathTests.cs" />
     <Compile Include="Bindings\ServiceBusAttributeBindingProviderTests.cs" />
     <Compile Include="Bindings\ServiceBusTriggerAttributeBindingProviderTests.cs" />
+    <Compile Include="Common\CollectorTests.cs" />
+    <Compile Include="Common\CodeFile2.cs" />
     <Compile Include="Config\ServiceBusConfigurationTests.cs" />
     <Compile Include="Config\ServiceBusJobHostConfigurationExtensionsTests.cs" />
     <Compile Include="Config\ServiceBusExtensionConfigTests.cs" />

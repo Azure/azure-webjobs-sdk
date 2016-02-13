@@ -9,7 +9,15 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     // $$$ How did SerivceBus avoid this? SB counterpart is BrokeredMessageValueProvider 
     internal class ConstantValueProvider : IValueProvider
     {
-        internal object _value;
+        private object _value;
+        private string _invokeString;
+
+        public ConstantValueProvider(object value, Type type, string invokeString)
+        {
+            this._value = value;
+            this.Type = type;
+            this._invokeString = invokeString;
+        }
 
         public Type Type { get; set; }
 
@@ -20,7 +28,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
         public string ToInvokeString()
         {
-            return "na"; // $$$
+            return _invokeString;
         }
     }
 }

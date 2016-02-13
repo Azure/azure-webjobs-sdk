@@ -21,18 +21,24 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
     // Generally usable binder. 
-    internal class CommonTriggerBinding<TTriggerValue> : ITriggerBinding
+    internal class CommonTriggerBinding<TMessage, TTriggerValue> : ITriggerBinding
     {
+        private readonly ITriggerBindingStrategy<TMessage, TTriggerValue> _hooks;
         private readonly ITriggerDataArgumentBinding<TTriggerValue> _argumentBinding;
         private readonly Func<ListenerFactoryContext, Task<IListener>> _createListener;
+        private readonly ParameterDescriptor _parameterDescriptor;
 
         public CommonTriggerBinding(
+            ITriggerBindingStrategy<TMessage, TTriggerValue> hooks,
             ITriggerDataArgumentBinding<TTriggerValue> argumentBinding,
-            Func<ListenerFactoryContext, Task<IListener>> createListener
+            Func<ListenerFactoryContext, Task<IListener>> createListener,
+            ParameterDescriptor parameterDescriptor
             )
         {
+            this._hooks = hooks;
             this._argumentBinding = argumentBinding;
             this._createListener = createListener;
+            this._parameterDescriptor = parameterDescriptor;
         }
 
         public IReadOnlyDictionary<string, Type> BindingDataContract
@@ -53,6 +59,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
         public Task<ITriggerData> BindAsync(object value, ValueBindingContext context)
         {
+            // If invoked from the dashboard, then 'value' is the string value passed in from the dashboard
+            string invokeString = value as string;
+            if (invokeString != null)
+            {
+                // $$$ generalize to a ConvertManager?
+                value = _hooks.ConvertFromString(invokeString);
+            }
+
             TTriggerValue v2 = (TTriggerValue)value;
             return _argumentBinding.BindAsync(v2, context);
         }
@@ -65,11 +79,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
         public ParameterDescriptor ToParameterDescriptor()
         {
-            // $$$ impl
-            return new ParameterDescriptor
-            {
-                Name = "NotYetImplemented"
-            };
+            return _parameterDescriptor;
         }
     }      
 

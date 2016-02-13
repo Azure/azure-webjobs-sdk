@@ -10,16 +10,17 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
-
     internal class EventHubAttributeBindingProvider : IBindingProvider
     {
         private INameResolver _nameResolver;
         private IEventHubProvider _eventHubConfig;
+        private IConverterManager _converterManager;
 
-        public EventHubAttributeBindingProvider(INameResolver nameResolver, IEventHubProvider _eventHubConfig)
+        public EventHubAttributeBindingProvider(INameResolver nameResolver, IEventHubProvider _eventHubConfig, IConverterManager converterManager)
         {
             this._nameResolver = nameResolver;
             this._eventHubConfig = _eventHubConfig;
+            this._converterManager = converterManager;
         }
 
         public Task<IBinding> TryCreateAsync(BindingProviderContext context)
@@ -39,10 +40,17 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
             string name = attribute.EventHubName;
             var resolvedName = _nameResolver.ResolveWholeString(name);
-            var eventHubClient = _eventHubConfig.GetSender(resolvedName);
+            var eventHubClient = _eventHubConfig.GetEventHubClient(resolvedName);
 
-            IBinding binding = GenericBinder.BindCollector<EventData, EventHubClient>(parameter, eventHubClient,
-              (client, valueBindingContext) => new EventHubAsyncCollector(client)
+            Func<string, EventHubClient> invokeStringBinder = (invokeString) => _eventHubConfig.GetEventHubClient(invokeString);
+
+            IBinding binding = GenericBinder.BindCollector<EventData, EventHubClient>(
+                parameter,
+                _converterManager,
+            eventHubClient,
+              (client, valueBindingContext) => new EventHubAsyncCollector(client),
+              resolvedName,
+              invokeStringBinder
               );
 
             return Task.FromResult(binding);

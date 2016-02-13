@@ -8,17 +8,22 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
-    // Bind to an 'Out T" parameter. 
-    internal class OutValueProvider<TMessage> : IOrderedValueBinder
+    // TUser is the parameter type from the user function we're binding to. 
+    // TMessage is from the underying IAsyncCollector<TMessage>
+    internal class CommonAsyncCollectorValueProvider<TUser, TMessage> : IOrderedValueBinder
     {
         private readonly IFlushCollector<TMessage> _raw;
+        private readonly TUser _object;
+        private readonly string _invokeString;
 
         // raw is the underlying object (exposes a Flush method).
         // obj is athe front-end veneer to pass to the user function. 
         // calls to obj will trickle through adapters to be calls on raw. 
-        public OutValueProvider(IFlushCollector<TMessage> raw)
+        public CommonAsyncCollectorValueProvider(TUser obj, IFlushCollector<TMessage> raw, string invokeString)
         {
             _raw = raw;
+            _object = obj;
+            _invokeString = invokeString;
         }
 
         public BindStepOrder StepOrder
@@ -30,33 +35,23 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         {
             get
             {
-                return typeof(TMessage);
+                return typeof(TUser);
             }
         }
 
         public object GetValue()
         {
-            // Out parameters are set on return
-            return null;
+            return _object;
         }
 
         public async Task SetValueAsync(object value, CancellationToken cancellationToken)
         {
-            if (value == null)
-            {
-                // Nothing set
-                return;
-            }
-
-            TMessage message = (TMessage)value;
-
-            await _raw.AddAsync(message, cancellationToken);
             await _raw.FlushAsync();
         }
 
         public string ToInvokeString()
         {
-            return "???"; // $$$
-        }
+            return _invokeString;
+        }    
     }
 }
