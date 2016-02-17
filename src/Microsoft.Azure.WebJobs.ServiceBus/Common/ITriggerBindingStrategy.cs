@@ -1,23 +1,9 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
-using Microsoft.Azure.WebJobs.Host.Config;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
-using Microsoft.ServiceBus.Messaging;
-using Microsoft.Azure.WebJobs.Host.Protocols;
-using System.Globalization;
-using Microsoft.Azure.WebJobs.Host.Triggers;
-using Microsoft.Azure.WebJobs.Host.Listeners;
-using Microsoft.Azure.WebJobs.Host.Executors;
-using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -29,20 +15,26 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     // For example, a single EventHubTriggerInput -->  can bind to 
     //  EventData, EventData[], string, string[], Poco, Poco[]    
     interface ITriggerBindingStrategy<TMessage, TTriggerValue>
-    {
-        string ConvertEventData2String(TMessage x);
+    {        
+        // Given a raw string, convert to a TTriggerValue.
+        // This is primarily used in the "invoke from dashboard" path. 
+        TTriggerValue ConvertFromString(string message);
 
-        TTriggerValue ConvertFromString(string x);
+        // Get the static route-parameter contract for the TMessage. 
+        // For example, if we bind a queue message to a POCO, 
+        // then the properties on the Poco's type are route parameters that can feed into other bindings. 
+        // Intentionally make this mutable so that callers can add more items to it and override defaults. 
+        Dictionary<string, Type> GetStaticBindingContract();
 
-        // Intentionally make this mutable so that callers can add more items to it. 
-        Dictionary<string, Type> GetCoreContract();
-
+        // Get the values of the route-parameters given an instance of the trigger value. 
+        // This should match the strucutre in GetStaticBindingContract. 
         // Intentionally make this mutable so that callers can add more items to it. 
         Dictionary<string, object> GetContractInstance(TTriggerValue value);
 
-        // The most basic binding
+        // Bind as a single-item dispatch. 
         TMessage BindMessage(TTriggerValue value, ValueBindingContext context);
 
+        // Bind as a multiple-item dispatch. 
         TMessage[] BindMessageArray(TTriggerValue value, ValueBindingContext context);
     }
 }

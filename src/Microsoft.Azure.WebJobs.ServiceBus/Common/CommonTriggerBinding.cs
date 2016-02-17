@@ -1,22 +1,13 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
-using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Azure.WebJobs.Host.Triggers;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
-using System.Threading;
-using Microsoft.ServiceBus.Messaging;
-using Microsoft.Azure.WebJobs.Host.Protocols;
-using System.Globalization;
-using Microsoft.Azure.WebJobs.Host.Triggers;
-using Microsoft.Azure.WebJobs.Host.Listeners;
-using Microsoft.Azure.WebJobs.Host.Executors;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -25,20 +16,23 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     {
         private readonly ITriggerBindingStrategy<TMessage, TTriggerValue> _hooks;
         private readonly ITriggerDataArgumentBinding<TTriggerValue> _argumentBinding;
-        private readonly Func<ListenerFactoryContext, Task<IListener>> _createListener;
+        private readonly Func<ListenerFactoryContext, bool, Task<IListener>> _createListener;
         private readonly ParameterDescriptor _parameterDescriptor;
+        private readonly bool _singleDispatch;
 
         public CommonTriggerBinding(
             ITriggerBindingStrategy<TMessage, TTriggerValue> hooks,
             ITriggerDataArgumentBinding<TTriggerValue> argumentBinding,
-            Func<ListenerFactoryContext, Task<IListener>> createListener,
-            ParameterDescriptor parameterDescriptor
+            Func<ListenerFactoryContext, bool, Task<IListener>> createListener,
+            ParameterDescriptor parameterDescriptor,
+            bool singleDispatch
             )
         {
             this._hooks = hooks;
             this._argumentBinding = argumentBinding;
             this._createListener = createListener;
             this._parameterDescriptor = parameterDescriptor;
+            this._singleDispatch = singleDispatch;
         }
 
         public IReadOnlyDictionary<string, Type> BindingDataContract
@@ -63,7 +57,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             string invokeString = value as string;
             if (invokeString != null)
             {
-                // $$$ generalize to a ConvertManager?
                 value = _hooks.ConvertFromString(invokeString);
             }
 
@@ -73,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
         public Task<IListener> CreateListenerAsync(ListenerFactoryContext context)
         {
-            var listenerTask = _createListener(context);
+            var listenerTask = _createListener(context, _singleDispatch);
             return listenerTask;
         }
 

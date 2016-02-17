@@ -1,22 +1,14 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Azure.WebJobs.Host.Bindings;
-using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.ServiceBus.Messaging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using System.Threading;
-using Microsoft.ServiceBus.Messaging;
-using Microsoft.Azure.WebJobs.Host.Protocols;
-using System.Globalization;
-using Microsoft.Azure.WebJobs.Host.Triggers;
-using Microsoft.Azure.WebJobs.Host.Listeners;
-using Microsoft.Azure.WebJobs.Host.Executors;
+using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -38,7 +30,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
         void IListener.Cancel()
         {
-            // $$$ Difference between Cancel and Stop?
             this.StopAsync(CancellationToken.None).Wait();
         }
 
@@ -58,9 +49,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         }
 
 
-        async Task IEventProcessor.OpenAsync(PartitionContext context)
+        Task IEventProcessor.OpenAsync(PartitionContext context)
         {
             // Begin listener 
+            return Task.FromResult(0);
         }
 
         async Task IEventProcessor.ProcessEventsAsync(PartitionContext context, IEnumerable<EventData> messages)
@@ -102,8 +94,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
                 FunctionResult result = await _executor.TryExecuteAsync(input, CancellationToken.None);
             }
-
-            // $$$ Only if succeeded? What about retry? 
+                        
             await context.CheckpointAsync();        
         }
 

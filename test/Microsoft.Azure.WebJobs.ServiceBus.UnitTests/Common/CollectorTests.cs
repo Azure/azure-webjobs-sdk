@@ -14,7 +14,7 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
 {
-
+    // Test IAsyncCollector binding permutations using the FakeQueue mocks. 
     public class CollectorTests
     {
         // dummy Poco to use with test. 

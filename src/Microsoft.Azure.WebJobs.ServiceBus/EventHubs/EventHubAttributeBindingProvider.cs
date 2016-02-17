@@ -16,7 +16,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         private IEventHubProvider _eventHubConfig;
         private IConverterManager _converterManager;
 
-        public EventHubAttributeBindingProvider(INameResolver nameResolver, IEventHubProvider _eventHubConfig, IConverterManager converterManager)
+        public EventHubAttributeBindingProvider(INameResolver nameResolver, IConverterManager converterManager, IEventHubProvider _eventHubConfig)
         {
             this._nameResolver = nameResolver;
             this._eventHubConfig = _eventHubConfig;
@@ -47,10 +47,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             IBinding binding = GenericBinder.BindCollector<EventData, EventHubClient>(
                 parameter,
                 _converterManager,
-            eventHubClient,
-              (client, valueBindingContext) => new EventHubAsyncCollector(client),
-              resolvedName,
-              invokeStringBinder
+                eventHubClient,
+                (client, valueBindingContext) => new EventHubAsyncCollector(client),
+                resolvedName,
+                invokeStringBinder
               );
 
             return Task.FromResult(binding);

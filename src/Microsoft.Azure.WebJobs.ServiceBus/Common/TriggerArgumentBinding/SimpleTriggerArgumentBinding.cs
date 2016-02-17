@@ -13,16 +13,19 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     class SimpleTriggerArgumentBinding<TMessage, TTriggerValue> : ITriggerDataArgumentBinding<TTriggerValue>
     {
         protected ITriggerBindingStrategy<TMessage, TTriggerValue> _hooks;
+        protected readonly IConverterManager _converterManager;
 
         // Caller can set it
         protected Dictionary<string, Type> _contract;
         protected internal Type _elementType;
+        
 
-        public SimpleTriggerArgumentBinding(ITriggerBindingStrategy<TMessage, TTriggerValue> hooks)
+        public SimpleTriggerArgumentBinding(ITriggerBindingStrategy<TMessage, TTriggerValue> hooks, IConverterManager converterManager)
         {
             _hooks = hooks;
-            _contract = _hooks.GetCoreContract();
+            _contract = _hooks.GetStaticBindingContract();
             this._elementType = typeof(TMessage);
+            _converterManager = converterManager;
         }
 
         IReadOnlyDictionary<string, Type> ITriggerDataArgumentBinding<TTriggerValue>.BindingDataContract
@@ -46,6 +49,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             return value;
         }
 
+        protected string ConvertToString(TMessage eventData)
+        {
+            var convert = _converterManager.GetConverter<TMessage, string>();
+            var result = convert(eventData);
+            return result;
+        }
+
         public virtual Task<ITriggerData> BindAsync(TTriggerValue value, ValueBindingContext context)
         {
             Dictionary<string, object> bindingData = _hooks.GetContractInstance(value);
@@ -54,7 +64,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
             object userValue = this.Convert(eventData, bindingData);
 
-            string invokeString = _hooks.ConvertEventData2String(eventData);
+            string invokeString = ConvertToString(eventData);
 
             IValueProvider valueProvider = new ConstantValueProvider(userValue, this._elementType, invokeString);
             var triggerData = new TriggerData(valueProvider, bindingData);

@@ -18,35 +18,112 @@ using Microsoft.Azure.WebJobs.Host.Triggers;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
+    /// <summary>
+    /// Provide configuration for event hubs. 
+    /// This is primarily mapping names to underlying EventHub listener and receiver objects from the EventHubs SDK. 
+    /// </summary>
     public class EventHubConfiguration : IExtensionConfigProvider, IEventHubProvider
     {
-        // $$$ are names case-sensitive?
-        Dictionary<string, EventHubClient> _senders = new Dictionary<string, EventHubClient>();
-        Dictionary<string, EventProcessorHost> _listeners  = new Dictionary<string, EventProcessorHost>();
+        // Event Hub Names are case-insensitive
+        Dictionary<string, EventHubClient> _senders = new Dictionary<string, EventHubClient>(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, EventProcessorHost> _listeners  = new Dictionary<string, EventProcessorHost>(StringComparer.OrdinalIgnoreCase);
 
         private List<Action<JobHostConfiguration>> _deferredWork = new List<Action<JobHostConfiguration>>();
 
-        public void AddSender(EventHubClient client)
+        /// <summary>
+        /// Add an existing client for sending messages to an event hub.  Infer the eventHub name from client.path
+        /// </summary>
+        /// <param name="client"></param>
+        public void AddEventHubClient(EventHubClient client)
         {
-            string name = client.Path;
-            _senders[name] = client;
+            if (client == null)
+            {
+                throw new ArgumentNullException("client");
+            }
+            string eventHubName = client.Path;
+            AddEventHubClient(eventHubName, client);
         }
 
+        /// <summary>
+        /// Add an existing client for sending messages to an event hub.  Infer the eventHub name from client.path
+        /// </summary>
+        /// <param name="eventHubName">name of the event hub</param>
+        /// <param name="client"></param>
+        public void AddEventHubClient(string eventHubName, EventHubClient client)
+        {
+            if (eventHubName == null)
+            {
+                throw new ArgumentNullException("eventHubName");
+            }
+            if (client == null)
+            {
+                throw new ArgumentNullException("client");
+            }
+            
+            _senders[eventHubName] = client;
+        }
+
+        /// <summary>
+        /// Add a connection for sending messages to an event hub. Connect via the connection string. 
+        /// </summary>
+        /// <param name="eventHubName">name of the event hub. </param>
+        /// <param name="sendConnectionString">connection string for sending messages</param>
         public void AddSender(string eventHubName, string sendConnectionString)
         {
+            if (eventHubName == null)
+            {
+                throw new ArgumentNullException("eventHubName");
+            }
+            if (sendConnectionString == null)
+            {
+                throw new ArgumentNullException("sendConnectionString");
+            }
             var client = EventHubClient.CreateFromConnectionString(sendConnectionString, eventHubName);
-            AddSender(client);
+            AddEventHubClient(eventHubName, client);
         }
 
-        
-        private void AddReceiver(string eventHubName, EventProcessorHost listener)
+        /// <summary>
+        /// Add a connection for listening on events from an event hub. 
+        /// </summary>
+        /// <param name="eventHubName">Name of hte event hub</param>
+        /// <param name="listener">initialized listener object</param>
+        /// <remarks>The EventProcessorHost type is from the ServiceBus SDK. 
+        /// Allow callers to bind to EventHubConfiguration without needing to have a direct assembly reference to the ServiceBus SDK. 
+        /// The compiler needs to resolve all types in all overloads, so give methods that use the ServiceBus SDK types unique non-overloaded names
+        /// to avoid eager comiler resolution. 
+        /// </remarks>
+        public void AddEventProcessorHost(string eventHubName, EventProcessorHost listener)
         {
+            if (eventHubName == null)
+            {
+                throw new ArgumentNullException("eventHubName");
+            }
+            if (listener == null)
+            {
+                throw new ArgumentNullException("listener");
+            }
+
             _listeners[eventHubName] = listener;
         }
 
+        /// <summary>
+        /// Add a connection for listening on events from an event hub. Connect via the connection string and use the SDK's built-in storage account.
+        /// </summary>
+        /// <param name="eventHubName">name of the event hub</param>
+        /// <param name="receiverConnectionString">connection string for receiving messages</param>
         public void AddReceiver(string eventHubName, string receiverConnectionString)
         {
-            // We can't get the storage string until we get a JobHostConfig. So defer this. 
+            if (eventHubName == null)
+            {
+                throw new ArgumentNullException("eventHubName");
+            }
+            if (receiverConnectionString == null)
+            {
+                throw new ArgumentNullException("receiverConnectionString");
+            }
+
+            // We can't get the storage string until we get a JobHostConfig. 
+            // So verify the parameter upfront, but defer the creation. 
             _deferredWork.Add((jobHostConfig) =>
            {
                string storageConnectionString = jobHostConfig.StorageConnectionString;
@@ -54,8 +131,27 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
            });
         }
 
+        /// <summary>
+        /// Add a connection for listening on events from an event hub. Connect via the connection string and use the supplied storage account
+        /// </summary>
+        /// <param name="eventHubName">name of the event hub</param>
+        /// <param name="receiverConnectionString">connection string for receiving messages</param>
+        /// <param name="storageConnectionString">storage connection string that the EventProcessorHost client will use to coordinate multiple listener instances. </param>
         public void AddReceiver(string eventHubName, string receiverConnectionString, string storageConnectionString)
         {
+            if (eventHubName == null)
+            {
+                throw new ArgumentNullException("eventHubName");
+            }
+            if (receiverConnectionString == null)
+            {
+                throw new ArgumentNullException("receiverConnectionString");
+            }
+            if (storageConnectionString == null)
+            {
+                throw new ArgumentNullException("storageConnectionString");
+            }
+
             string eventProcessorHostName = Guid.NewGuid().ToString();
 
             EventProcessorHost eventProcessorHost = new EventProcessorHost(
@@ -65,7 +161,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 receiverConnectionString, 
                 storageConnectionString);
 
-            this.AddReceiver(eventHubName, eventProcessorHost);
+            this.AddEventProcessorHost(eventHubName, eventProcessorHost);
         }
 
 
@@ -76,7 +172,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             {
                 return client;
             }
-            throw new InvalidOperationException("No EventHubClient (sender) named " + eventHubName);
+            throw new InvalidOperationException("No event hub sending named " + eventHubName);
         }
 
         EventProcessorHost IEventHubProvider.GetEventProcessorHost(string eventHubName)
@@ -86,7 +182,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             {
                 return host;
             }
-            throw new InvalidOperationException("No EventProcessorHost (receiver) named " + eventHubName);
+            throw new InvalidOperationException("No event hub receiver named " + eventHubName);
         }
 
         EventProcessorOptions IEventHubProvider.GetOptions()
@@ -117,16 +213,24 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             IExtensionRegistry extensions = context.Config.GetService<IExtensionRegistry>();
 
             IConverterManager cm = context.Config.GetOrCreateConverterManager();
-            cm.AddConverter<string, EventData>(ConvertString2EventData); 
+            cm.AddConverter<string, EventData>(ConvertString2EventData);
+            cm.AddConverter<EventData, string>(ConvertEventData2String);
             cm.AddConverter<byte[], EventData>(ConvertBytes2EventData); // direct, handles non-string representations
 
             // register our trigger binding provider
-            var triggerBindingProvider = new EventHubTriggerAttributeBindingProvider(nameResolver, this);
+            var triggerBindingProvider = new EventHubTriggerAttributeBindingProvider(nameResolver, cm, this);
             extensions.RegisterExtension<ITriggerBindingProvider>(triggerBindingProvider);
 
             // register our binding provider
-            var bindingProvider = new EventHubAttributeBindingProvider(nameResolver, this, cm);
+            var bindingProvider = new EventHubAttributeBindingProvider(nameResolver, cm, this);
             extensions.RegisterExtension<IBindingProvider>(bindingProvider);
+        }
+
+
+        // EventData --> String
+        private static string ConvertEventData2String(EventData x)
+        {
+            return Encoding.UTF8.GetString(x.GetBytes());
         }
 
         private static EventData ConvertBytes2EventData(byte[] input)

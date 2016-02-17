@@ -1,9 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.ServiceBus.Messaging;
-using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     // Core object to send events to EventHub. 
     // Any user parameter that sends events will eventually get bound to this object. 
     // This gets wrappers with various adapters and passed to the user function. 
-    public class EventHubAsyncCollector : IFlushCollector<EventData>
+    internal class EventHubAsyncCollector : IFlushCollector<EventData>
     {
         private readonly EventHubClient _client;
 

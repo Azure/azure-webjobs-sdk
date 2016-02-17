@@ -5,19 +5,18 @@ using System.Collections.Generic;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
-
-    // $$$ Use Conversion Manager
-    // Bind EventData --> String
+    // Bind TMessage --> String. USe IConverterManager for the conversion. 
     class StringTriggerArgumentBinding<TMessage, TTriggerValue> : SimpleTriggerArgumentBinding<TMessage, TTriggerValue>
     {
-        public StringTriggerArgumentBinding(ITriggerBindingStrategy<TMessage, TTriggerValue> hooks) : base(hooks)
+        public StringTriggerArgumentBinding(ITriggerBindingStrategy<TMessage, TTriggerValue> hooks, IConverterManager converterManager) : 
+            base(hooks, converterManager)
         {
             this._elementType = typeof(string);
         }
 
         internal override object Convert(TMessage value, Dictionary<string, object> bindingData)
         {
-            var obj = _hooks.ConvertEventData2String(value);
+            var obj = this.ConvertToString(value);
             return obj;
         }
     }

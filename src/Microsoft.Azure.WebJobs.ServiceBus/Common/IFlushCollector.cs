@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
     // IAsyncCollector needs a Flush() to support batching calls and drain at the end. 
-    public interface IFlushCollector<T> : IAsyncCollector<T>
-    {
-        // $$$ Should this be on IAsyncCollector?
+    internal interface IFlushCollector<T> : IAsyncCollector<T>
+    {        
+        // Flush all the events accumulated so far. 
         Task FlushAsync();
     }  
 }

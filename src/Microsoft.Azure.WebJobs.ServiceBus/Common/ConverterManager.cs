@@ -1,11 +1,10 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host.Config;
-using Microsoft.ServiceBus.Messaging;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
@@ -23,10 +22,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             return cm;
         }
 
-
-        // Central 
-        // $$$ this would be good to have in the core SDK so that any extension can add to it. 
-        // Rationalize with IConverter
+        // Concrete implementation of IConverterManager
         internal class ConverterManager : IConverterManager
         {
             // Map from <TSrc,TDest> to a converter function. 
@@ -83,7 +79,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 Func<string, TDest> fromString = TryGetConverter<string, TDest>();
                 if (fromString == null)
                 {
-                    string msg = string.Format("Can't convert from {0} to {1}", "string", typeof(TDest).FullName);
+                    string msg = string.Format(CultureInfo.CurrentCulture, "Can't convert from {0} to {1}", "string", typeof(TDest).FullName);
                     throw new NotImplementedException(msg);
                 }
 

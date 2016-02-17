@@ -1,20 +1,10 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
-using Microsoft.Azure.WebJobs.Host.Config;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
-using Microsoft.ServiceBus.Messaging;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using System.Globalization;
-using Microsoft.Azure.WebJobs.Host.Triggers;
+using System;
+using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -50,6 +40,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
         public Task<IValueProvider> BindAsync(BindingContext context)
         {
+            if (context == null)
+            {
+                throw new ArgumentNullException("context");
+            }
+
             return BindAsync(null, context.ValueContext);
         }
 
@@ -63,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 client = this._invokeStringBinder(invokeString);
             }
 
-            IValueProvider valueProvider = _argumentBuilder(_client, context);
+            IValueProvider valueProvider = _argumentBuilder(client, context);
             return Task.FromResult(valueProvider);
         }
 

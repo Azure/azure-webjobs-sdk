@@ -6,7 +6,7 @@ using System;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
-    // $$$ How did SerivceBus avoid this? SB counterpart is BrokeredMessageValueProvider 
+    // Describe a constant value, commonly used for inputs. 
     internal class ConstantValueProvider : IValueProvider
     {
         private object _value;

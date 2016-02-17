@@ -1,29 +1,53 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
-using Microsoft.Azure.WebJobs.Host.Config;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
-using Microsoft.ServiceBus.Messaging;
+using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using System.Globalization;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using System;
+using System.Globalization;
+using System.Reflection;
+using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
     // Helpers for doing general-purpose bindings. 
     internal class GenericBinder
     {
+        public static ITriggerBinding GetTriggerBinding<TMessage, TTriggerValue>(
+            ITriggerBindingStrategy<TMessage, TTriggerValue> hooks,
+            ParameterInfo parameter,
+            IConverterManager converterManager,
+            Func<ListenerFactoryContext, bool, Task<IListener>> createListener
+            )
+        {
+            bool singleDispatch;
+            var argumentBinding = GenericBinder.GetTriggerArgumentBinding(hooks, parameter, converterManager, out singleDispatch);
+
+            var parameterDescriptor = new ParameterDescriptor
+            {
+                Name = parameter.Name,
+                DisplayHints = new ParameterDisplayHints
+                {
+                    Description = singleDispatch ? "message" : "messages"
+                }
+            };
+
+            ITriggerBinding binding = new CommonTriggerBinding<TMessage, TTriggerValue>(
+                hooks, argumentBinding, createListener, parameterDescriptor, singleDispatch);
+
+            return binding;
+
+        }
+
         // Bind a trigger argument to various parameter types. 
         // Handles either T or T[], 
-        public static ITriggerDataArgumentBinding<TTriggerValue> GetTriggerArgumentBinding<TMessage, TTriggerValue>(ITriggerBindingStrategy<TMessage, TTriggerValue> hooks, ParameterInfo parameter, out bool singleDispatch)
+        public static ITriggerDataArgumentBinding<TTriggerValue> GetTriggerArgumentBinding<TMessage, TTriggerValue>(
+            ITriggerBindingStrategy<TMessage, TTriggerValue> hooks, 
+            ParameterInfo parameter, 
+            IConverterManager converterManager,
+            out bool singleDispatch)
         {
             ITriggerDataArgumentBinding<TTriggerValue> argumentBinding = null;
             if (parameter.ParameterType.IsArray)
@@ -33,9 +57,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
                 var elementType = parameter.ParameterType.GetElementType();
 
-                var innerArgumentBinding = GetTriggerArgumentElementBinding<TMessage, TTriggerValue>(elementType, hooks);
+                var innerArgumentBinding = GetTriggerArgumentElementBinding<TMessage, TTriggerValue>(elementType, hooks, converterManager);
 
-                argumentBinding = new ArrayTriggerArgumentBinding<TMessage, TTriggerValue>(hooks, innerArgumentBinding);
+                argumentBinding = new ArrayTriggerArgumentBinding<TMessage, TTriggerValue>(hooks, innerArgumentBinding, converterManager);
 
                 return argumentBinding;
             }
@@ -45,29 +69,30 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 singleDispatch = true;
 
                 var elementType = parameter.ParameterType;
-                argumentBinding = GetTriggerArgumentElementBinding<TMessage, TTriggerValue>(elementType, hooks);
+                argumentBinding = GetTriggerArgumentElementBinding<TMessage, TTriggerValue>(elementType, hooks, converterManager);
                 return argumentBinding;
             }
         }
         
         // Bind a T. 
-        private static SimpleTriggerArgumentBinding<TMessage, TTriggerValue> GetTriggerArgumentElementBinding<TMessage, TTriggerValue>(Type elementType, ITriggerBindingStrategy<TMessage, TTriggerValue> hooks)
+        private static SimpleTriggerArgumentBinding<TMessage, TTriggerValue> GetTriggerArgumentElementBinding<TMessage, TTriggerValue>(
+            Type elementType, 
+            ITriggerBindingStrategy<TMessage, TTriggerValue> hooks,
+            IConverterManager converterManager)
         {
             if (elementType == typeof(TMessage))
             {
-                return new SimpleTriggerArgumentBinding<TMessage, TTriggerValue>(hooks);
+                return new SimpleTriggerArgumentBinding<TMessage, TTriggerValue>(hooks, converterManager);
             }
             if (elementType == typeof(string))
             {
-                return new StringTriggerArgumentBinding<TMessage, TTriggerValue>(hooks);
+                return new StringTriggerArgumentBinding<TMessage, TTriggerValue>(hooks, converterManager);
             }
             else
             {
-                return new PocoTriggerArgumentBinding<TMessage, TTriggerValue>(hooks, elementType);
-            }
-
-            string msg = string.Format("Unsupported binder type: {0}. Bind to string[] or EventData[]", elementType);
-            throw new InvalidOperationException(msg);
+                // Default, assume a Poco
+                return new PocoTriggerArgumentBinding<TMessage, TTriggerValue>(hooks, converterManager, elementType);
+            }         
         }
 
 
@@ -186,7 +211,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 return new CommonCollectorBinding<TMessage, TContext>(client, argumentBuilder, param, invokeStringBinder);
             }
 
-            string msg = string.Format("Can't bind to {0}.", parameter);
+            string msg = string.Format(CultureInfo.CurrentCulture, "Can't bind to {0}.", parameter);
             throw new InvalidOperationException(msg);
         }
 
