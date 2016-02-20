@@ -26,6 +26,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
         public TypedAsyncCollectorAdapter(IFlushCollector<TDest> inner, Func<TSrc, TDest> convert)
         {
+            if (convert == null)
+            {
+                throw new ArgumentNullException("convert");
+            }
             _inner = inner;
             _convert = convert;
         }

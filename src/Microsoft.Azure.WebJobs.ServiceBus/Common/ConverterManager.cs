@@ -75,11 +75,33 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                     return exactMatch;
                 }
 
+                // Object --> TDest
+                // Catch all for any conversion to TDest
+                Func<object, TDest> objConversion = TryGetConverter<object, TDest>();
+                if (objConversion != null)
+                {
+                    return (src) =>
+                    {
+                        var result = objConversion(src);
+                        return result;
+                    };
+                }
+
+                // Inheritence (also covers idempotency)
+                if (typeof(TDest).IsAssignableFrom(typeof(TSrc)))
+                {
+                    return (src) =>
+                    {
+                        object obj = (object)src;
+                        return (TDest)obj;
+                    };
+                }
+
                 // string --> TDest
                 Func<string, TDest> fromString = TryGetConverter<string, TDest>();
                 if (fromString == null)
                 {
-                    string msg = string.Format(CultureInfo.CurrentCulture, "Can't convert from {0} to {1}", "string", typeof(TDest).FullName);
+                    string msg = string.Format(CultureInfo.CurrentCulture, "Can't convert from {0} to {1}", typeof(TSrc).FullName, typeof(TDest).FullName);
                     throw new NotImplementedException(msg);
                 }
 

@@ -32,6 +32,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             IConverterManager cm = context.Config.GetOrCreateConverterManager();
             cm.AddConverter<string, FakeQueueData>(x => new FakeQueueData { Message = x });
             cm.AddConverter<FakeQueueData, string>(msg => msg.Message);
+            cm.AddConverter<DirectFakeQueueData, FakeQueueData>(DirectFakeQueueData.ToEvent);
+            
 
             IExtensionRegistry extensions = context.Config.GetService<IExtensionRegistry>();
 
@@ -40,6 +42,21 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
 
             var triggerBindingProvider = new FakeQueueTriggerBindingProvider(this, cm);
             extensions.RegisterExtension<ITriggerBindingProvider>(triggerBindingProvider);
+        } 
+    }
+
+    // To test type-conversion, have a totally arbitrary class 
+
+    public class DirectFakeQueueData
+    {
+        public string _test;
+
+        public static FakeQueueData ToEvent(DirectFakeQueueData x)
+        {
+            return new FakeQueueData
+            {
+                ExtraPropertery = x._test
+            };
         }
     }
 }
