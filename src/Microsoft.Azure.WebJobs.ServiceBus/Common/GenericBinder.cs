@@ -105,7 +105,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         public static IBinding BindCollector<TMessage, TContext>(
             ParameterInfo parameter,
             IConverterManager converterManager,
-            TContext client,
             Func<TContext, ValueBindingContext, IFlushCollector<TMessage>> builder,
             string invokeString,
             Func<string, TContext> invokeStringBinder)
@@ -208,7 +207,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                         Description = "output"
                     }
                 };
-                return new CommonCollectorBinding<TMessage, TContext>(client, argumentBuilder, param, invokeStringBinder);
+                var initialClient = invokeStringBinder(invokeString);
+                return new CommonCollectorBinding<TMessage, TContext>(initialClient, argumentBuilder, param, invokeStringBinder);
             }
 
             string msg = string.Format(CultureInfo.CurrentCulture, "Can't bind to {0}.", parameter);

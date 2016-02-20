@@ -40,14 +40,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
             string name = attribute.EventHubName;
             var resolvedName = _nameResolver.ResolveWholeString(name);
-            var eventHubClient = _eventHubConfig.GetEventHubClient(resolvedName);
 
             Func<string, EventHubClient> invokeStringBinder = (invokeString) => _eventHubConfig.GetEventHubClient(invokeString);
 
             IBinding binding = GenericBinder.BindCollector<EventData, EventHubClient>(
                 parameter,
                 _converterManager,
-                eventHubClient,
                 (client, valueBindingContext) => new EventHubAsyncCollector(client),
                 resolvedName,
                 invokeStringBinder
