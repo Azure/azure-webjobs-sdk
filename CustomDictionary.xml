@@ -71,6 +71,7 @@
       <Word>SingletonAttribute</Word>
       <Word>Prefetch</Word>
       <Word>ScopeId</Word>
+      <Word>Poco</Word>
 	</Recognized>
     <Deprecated/>
     <Compound>
