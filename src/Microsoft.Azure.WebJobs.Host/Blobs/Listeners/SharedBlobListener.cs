@@ -91,8 +91,15 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 
         private static IBlobListenerStrategy CreateStrategy(IStorageAccount account)
         {
-            account.ToString();
-            return new ScanBlobScanLogHybridPollingStrategy();
+            if (!StorageClient.IsDevelopmentStorageAccount(account))
+            {
+                return new ScanBlobScanLogHybridPollingStrategy();
+            }
+            else
+            {
+                return new ScanContainersStrategy();
+            }
+
         }
     }
 }
