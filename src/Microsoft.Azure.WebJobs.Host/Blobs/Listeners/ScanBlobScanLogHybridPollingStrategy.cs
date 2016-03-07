@@ -33,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         public ScanBlobScanLogHybridPollingStrategy() : base()
         {
             _scanInfo = new Dictionary<IStorageBlobContainer, ContainerScanInfo>(new StorageBlobContainerComparer());
-            _pollLogStrategy = new PollLogsStrategy();
+            _pollLogStrategy = new PollLogsStrategy(performInitialScan: false);
             _cancellationTokenSource = new CancellationTokenSource();
             _blobsFoundFromScanOrNotification = new ConcurrentQueue<IStorageBlob>();
         }
@@ -66,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 containerScanInfo = new ContainerScanInfo()
                 {
                     Registrations = new List<ITriggerExecutor<IStorageBlob>>(),
-                    LastSweepCycleStartTime = DateTime.MaxValue,
+                    LastSweepCycleStartTime = DateTime.MinValue,
                     CurrentSweepCycleStartTime = DateTime.MinValue,
                     ContinuationToken = null
                 };
