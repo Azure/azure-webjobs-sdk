@@ -55,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         }
 
         // Extract the time bucket from the RowKey 
-        internal long GetTimeBucketFromRowKey()
+        public long GetTimeBucket()
         {
             string time = TableScheme.Get2ndTerm(this.RowKey);
             var minute = long.Parse(time);
@@ -66,8 +66,8 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         public DateTime GetTime()
         {
-            var bucket = GetTimeBucketFromRowKey();
-            return  TimeBucket.ConveretToDateTime(bucket);
+            var bucket = GetTimeBucket();
+            return  TimeBucket.ConvertToDateTime(bucket);
         }
          
         public int TotalRun { get; set; }

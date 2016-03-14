@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.Azure.WebJobs.Protocols;
 using Newtonsoft.Json;
+using Microsoft.Azure.WebJobs.Logging;
 
 namespace Dashboard.Data
 {
@@ -86,30 +87,8 @@ namespace Dashboard.Data
 
         private string BuildFunctionDisplayTitle()
         {
-            var name = new StringBuilder(FunctionShortName);
             IEnumerable<string> argumentValues = Arguments.Values.Select(v => v.Value);
-
-            string parametersDisplayText = String.Join(", ", argumentValues);
-            if (parametersDisplayText != null)
-            {
-                // Remove newlines to avoid 403/forbidden storage exceptions when saving display title to blob metadata
-                // for function indexes. Newlines may be present in JSON-formatted arguments.
-                parametersDisplayText = parametersDisplayText.Replace("\r\n", String.Empty);
-
-                name.Append(" (");
-                if (parametersDisplayText.Length > 20)
-                {
-                    name.Append(parametersDisplayText.Substring(0, 18))
-                        .Append(" ...");
-                }
-                else
-                {
-                    name.Append(parametersDisplayText);
-                }
-                name.Append(")");
-            }
-
-            return name.ToString();
+            return FunctionLogItem.BuildFunctionDisplayTitle(this.FunctionShortName, argumentValues);            
         }
     }
 }

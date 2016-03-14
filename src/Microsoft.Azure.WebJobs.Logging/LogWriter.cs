@@ -19,7 +19,7 @@ namespace Microsoft.Azure.WebJobs.Logging
     {
         // All writing goes to 1 table. 
         private readonly CloudTable _instanceTable;
-        private readonly string _containerName; // compute container that we're logging to. 
+        private readonly string _containerName; // compute container (not Blob Container) that we're logging for. 
 
         private string _uniqueId = Guid.NewGuid().ToString();
 
@@ -38,17 +38,17 @@ namespace Microsoft.Azure.WebJobs.Logging
         // Container is common shared across all log writer instances 
         static ContainerActiveLogger _container;
 
-        public LogWriter(string containerName, CloudTable table)
+        public LogWriter(string computerContainerName, CloudTable table)
         {
-            if (containerName == null)
+            if (computerContainerName == null)
             {
-                throw new ArgumentNullException("containerName");
+                throw new ArgumentNullException("computerContainerName");
             }
             if (table == null)
             {
                 throw new ArgumentNullException("table");
             }
-            this._containerName = containerName;         
+            this._containerName = computerContainerName;         
             table.CreateIfNotExists();
             this._instanceTable = table;
         }

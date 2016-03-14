@@ -18,6 +18,7 @@ using Ninject.Modules;
 using Ninject.Web.Mvc.FilterBindingSyntax;
 using Microsoft.WindowsAzure.Storage.Table;
 using System.Configuration;
+using Microsoft.Azure.WebJobs.Logging;
 
 namespace Dashboard
 {
@@ -43,11 +44,14 @@ namespace Dashboard
             string tableLog = ConfigurationManager.AppSettings["AzureWebJobsLogTableName"];
             if (tableLog != null)
             {
-                // ASt table reader. 
+                // fast table reader. 
                 var client = account.CreateCloudTableClient();
                 CloudTable logTable = client.GetTableReference(tableLog);
+                var reader = new LogReader(logTable);
+                Bind<ILogReader>().ToConstant(reader);
 
-                var s = new FastTableReader(logTable);
+                var s = new FastTableReader(reader);
+
                 Bind<IFunctionLookup>().ToConstant(s);
                 Bind<IFunctionInstanceLookup>().ToConstant(s);
                 Bind<IFunctionStatisticsReader>().ToConstant(s);
@@ -61,7 +65,7 @@ namespace Dashboard
                 Bind<IRecentInvocationIndexByJobRunReader>().To<NullInvocationIndexReader>();
                 Bind<IRecentInvocationIndexByParentReader>().To<NullInvocationIndexReader>();
 
-                Bind<IHeartbeatValidityMonitor>().To<NullHeadbeatValidityMonitor>();
+                Bind<IHeartbeatValidityMonitor>().To<NullHeartbeatValidityMonitor>();
                 Bind<IAborter>().To<NullAborter>();
 
                 // for diagnostics

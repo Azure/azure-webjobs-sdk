@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.WindowsAzure.Storage.Table;
+using System.Globalization;
 
 namespace Dashboard.Data
 {
@@ -31,17 +32,22 @@ namespace Dashboard.Data
             _reader = new LogReader(table);
         }
 
+        public FastTableReader(ILogReader reader)
+        {
+            _reader = reader;
+        }
+
         private async Task<FunctionSnapshot[]> GetSnapshotsAsync()
         {
             if (_snapshots == null)
             {
-                var results = await _reader.GetFunctionDefinitionsAsync();
+                string[] results = await _reader.GetFunctionNamesAsync();
 
-                _snapshots = Array.ConvertAll(results, x => new FunctionSnapshot
+                _snapshots = Array.ConvertAll(results, name => new FunctionSnapshot
                 {
-                    Id = x.RowKey,
-                    FullName = x.RowKey,
-                    ShortName = x.RowKey,
+                    Id = name,
+                    FullName = name,
+                    ShortName = name,
                     Parameters = new Dictionary<string, ParameterSnapshot>()
                 });
             }
@@ -134,11 +140,14 @@ namespace Dashboard.Data
 
         private async Task<IResultSegment<RecentInvocationEntry>> Read2Async(int maximumResults, string continuationToken)
         {
+            var endTime = FromContinuationToken(continuationToken, DateTime.MaxValue);
             var snapshots = await GetSnapshotsAsync();
 
             string[] functionNames = Array.ConvertAll(snapshots, x => x.Id);
 
-            Task<IQueryResults<RecentPerFuncEntity>>[] queryTasks = Array.ConvertAll(functionNames, functionName => _reader.GetRecentFunctionInstancesAsync(functionName));
+            Task<IQueryResults<RecentPerFuncEntity>>[] queryTasks = Array.ConvertAll(
+                functionNames, 
+                functionName => _reader.GetRecentFunctionInstancesAsync(functionName, DateTime.MinValue, endTime));
             IQueryResults<RecentPerFuncEntity>[] queries = await Task.WhenAll(queryTasks);
 
             Task<RecentPerFuncEntity[]>[] batchesTasks = Array.ConvertAll(queries, query => query.GetNextAsync(100));
@@ -154,11 +163,20 @@ namespace Dashboard.Data
             var keys = Array.ConvertAll(entityValues, x => DescendingTime(x.StartTime)); // sort descending by time, most recent at top
             Array.Sort(keys, entityValues);
 
+            int available = entityValues.Length;
             entityValues = entityValues.Take(maximumResults).ToArray();
+
+            string continuationToken2 = null;
+            if (available > maximumResults)
+            {
+                var lastDate = entityValues[entityValues.Length - 1].StartTime.DateTime;
+                lastDate.AddTicks(-1); // Descending timescale. 
+                continuationToken2 = ToContinuationToken(lastDate);
+            }
 
             var finalValues = Array.ConvertAll(entityValues, entity => Convert(entity));
 
-            return new ResultSegment<RecentInvocationEntry>(finalValues, null);
+            return new ResultSegment<RecentInvocationEntry>(finalValues, continuationToken2);
         }
 
         static RecentInvocationEntry Convert(RecentPerFuncEntity entity)
@@ -180,18 +198,44 @@ namespace Dashboard.Data
             return retVal;
         }
 
-        private async Task<IResultSegment<RecentInvocationEntry>> Read3Async(string functionId, int maximumResults, string continuationToken)
+        private async Task<IResultSegment<RecentInvocationEntry>> Read3Async(
+            string functionId, int maximumResults, string continuationToken)
         {
-            var x = await _reader.GetRecentFunctionInstancesAsync(functionId);
+            var endTime = FromContinuationToken(continuationToken, DateTime.MaxValue);
 
-            RecentPerFuncEntity[] batch = await x.GetNextAsync(1000);
+            var x = await _reader.GetRecentFunctionInstancesAsync(functionId, DateTime.MinValue, endTime);
+
+            RecentPerFuncEntity[] batch = await x.GetNextAsync(maximumResults+1);
+            int available = batch.Length;
 
             batch = batch.Take(maximumResults).ToArray();
 
             var results = Array.ConvertAll(batch, item =>
             RecentInvocationEntry.Create(RecentInvocationEntry.CreateMetadata(item.ConvertToSnapshot())));
 
-            return new ResultSegment<RecentInvocationEntry>(results, null);
+            string continuationToken2 = null;
+            if (available > maximumResults)
+            {
+                var lastDate = batch[batch.Length - 1].StartTime.DateTime;
+                lastDate.AddTicks(-1); // Descending timescale. 
+                continuationToken2 = ToContinuationToken(lastDate);
+            }
+            return new ResultSegment<RecentInvocationEntry>(results, continuationToken2);
+        }
+
+        private static string ToContinuationToken(DateTime time)
+        {
+            return time.Ticks.ToString(CultureInfo.InvariantCulture);
+        }
+
+        private static DateTime FromContinuationToken(string continuationToken, DateTime defaultValue)
+        {
+            if (continuationToken == null)
+            {
+                return defaultValue;
+            }
+            long ticks = long.Parse(continuationToken, CultureInfo.InvariantCulture);
+            return new DateTime(ticks);
         }
     }
 }

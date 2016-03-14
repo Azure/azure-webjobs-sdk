@@ -11,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.Logging
     {
         static DateTime _baselineTime = new DateTime(2000, 1, 1);
 
-        public static DateTime ConveretToDateTime(long bucket)
+        public static DateTime ConvertToDateTime(long bucket)
         {
             return _baselineTime.AddMinutes(bucket);
         }

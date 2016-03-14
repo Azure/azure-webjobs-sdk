@@ -13,7 +13,7 @@ namespace Microsoft.Azure.WebJobs.Logging
     {
         const string PartitionKeyFormat = TableScheme.RecentFuncIndexPK;
         const string RowKeyPrefix = "{0}-{1:D20}-";
-        const string RowKeyFormat = "{0}-{1:D20}-{2}"; // functionName, timeBucket, salt
+        const string RowKeyFormat = "{0}-{1:D20}-{2}"; // functionName, timeBucket(descending), salt
 
         // Have a salt value for writing to avoid collisions since timeBucket is not gauranteed to be unique
         // when many functions are quickly run within a single time tick. 
@@ -26,7 +26,8 @@ namespace Microsoft.Azure.WebJobs.Logging
                 PartitionKey = PartitionKeyFormat,
                 RowKey = RowKeyTimeStampDescending(item.FunctionName, item.StartTime),
 
-                DisplayName = item.FunctionName,
+                FunctionName = item.FunctionName,
+                DisplayName = item.GetDisplayTitle(),
                 FunctionInstanceId = item.FunctionInstanceId.ToString(),
                 StartTime = item.StartTime,
                 EndTime = item.EndTime,
@@ -34,10 +35,17 @@ namespace Microsoft.Azure.WebJobs.Logging
             };
         }
 
-        public static TableQuery<RecentPerFuncEntity> GetRecentFunctionsQuery(string functionName)
+        public static TableQuery<RecentPerFuncEntity> GetRecentFunctionsQuery(
+            string functionName,
+            DateTime start,
+            DateTime end)
         {
-            string rowKeyStart = RowKeyTimeStampDescendingPrefix(functionName, DateTime.MaxValue);
-            string rowKeyEnd = TableScheme.NextRowKey(TableScheme.NormalizeFunctionName(functionName));
+            string rowKeyStart = RowKeyTimeStampDescendingPrefix(functionName, end);
+
+            // add a tick to create a greater row key so that we lexically compare
+            var start2 = (start == DateTime.MinValue) ? start : start.AddTicks(-1);
+            string rowKeyEnd = RowKeyTimeStampDescendingPrefix(functionName, start2);
+
             string partKey = PartitionKeyFormat;
 
             var rangeQuery = TableScheme.GetRowsInRange<RecentPerFuncEntity>(
@@ -81,6 +89,9 @@ namespace Microsoft.Azure.WebJobs.Logging
         {
             get; set;
         }
+
+        public string FunctionName { get; set; }
+
         public string DisplayName { get; set; }
     }
 }

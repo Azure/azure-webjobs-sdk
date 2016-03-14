@@ -31,12 +31,14 @@ namespace Microsoft.Azure.WebJobs.Logging
             this._instanceTable = table;
         }
 
-        public async Task<FunctionDefinitionEntity[]> GetFunctionDefinitionsAsync()
+        public async Task<string[]> GetFunctionNamesAsync()
         {
             var query = TableScheme.GetRowsInPartition<FunctionDefinitionEntity>(TableScheme.FuncDefIndexPK);
             var results = _instanceTable.ExecuteQuery(query).ToArray();
 
-            return results;
+            var functionNames = Array.ConvertAll(results, entity => entity.GetFunctionName());
+
+            return functionNames;
         }
 
         // Lookup a single instance by id. 
@@ -70,10 +72,12 @@ namespace Microsoft.Azure.WebJobs.Logging
                     internedName = name;
                 }
 
+                var timeBucket = result.GetStartBucket();
                 l.Add(new ActivationEvent
                 {
                     ContainerName = name,
-                    Start = result.GetStartBucket(),
+                    StartTimeBucket = timeBucket,
+                    StartTime  = TimeBucket.ConvertToDateTime(timeBucket),
                     Length = result.GetLength()
                 });
             }
@@ -122,10 +126,12 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         // Could be very long 
         public async Task<IQueryResults<RecentPerFuncEntity>> GetRecentFunctionInstancesAsync(
-            string functionName, 
+            string functionName,
+            DateTime start,
+            DateTime end,
             bool onlyFailures)
         {
-            TableQuery<RecentPerFuncEntity> rangeQuery = RecentPerFuncEntity.GetRecentFunctionsQuery(functionName);
+            TableQuery<RecentPerFuncEntity> rangeQuery = RecentPerFuncEntity.GetRecentFunctionsQuery(functionName, start, end);
 
             var q = new RecentFuncQueryResult
             {

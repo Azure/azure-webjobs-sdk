@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace Microsoft.Azure.WebJobs.Logging
 {
@@ -53,5 +54,45 @@ namespace Microsoft.Azure.WebJobs.Logging
         // Direct inline capture for small log outputs. For large log outputs, this is faulted over to a blob. 
         /// <summary></summary>
         public string LogOutput { get; set; }
+
+
+        public string GetDisplayTitle()
+        {
+            IEnumerable<string> argumentValues = null;
+            if (this.Arguments != null)
+            {
+                argumentValues = this.Arguments.Values;
+            }
+
+            return BuildFunctionDisplayTitle(this.FunctionName, argumentValues);
+        }
+        public static string BuildFunctionDisplayTitle(string functionName, IEnumerable<string> argumentValues)
+        {
+            var name = new StringBuilder(functionName);
+            if (argumentValues != null)
+            {
+                string parametersDisplayText = String.Join(", ", argumentValues);
+                if (parametersDisplayText != null)
+                {
+                    // Remove newlines to avoid 403/forbidden storage exceptions when saving display title to blob metadata
+                    // for function indexes. Newlines may be present in JSON-formatted arguments.
+                    parametersDisplayText = parametersDisplayText.Replace("\r\n", String.Empty);
+
+                    name.Append(" (");
+                    if (parametersDisplayText.Length > 20)
+                    {
+                        name.Append(parametersDisplayText.Substring(0, 18))
+                            .Append(" ...");
+                    }
+                    else
+                    {
+                        name.Append(parametersDisplayText);
+                    }
+                    name.Append(")");
+                }
+            }
+
+            return name.ToString();
+        }
     }
 }

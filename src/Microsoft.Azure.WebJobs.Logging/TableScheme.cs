@@ -37,13 +37,27 @@ namespace Microsoft.Azure.WebJobs.Logging
             return rangeQuery;
         }
 
+        // 
+        internal static TableQuery<TElement> GetRowsInRangeInclusive<TElement>(string partitionKey, string rowKeyStart, string rowKeyEnd)
+        {
+            return GetRowsInRange<TElement>(partitionKey, rowKeyStart, rowKeyEnd, QueryComparisons.LessThanOrEqual);
+        }
+
         // Read rows in the following range
         internal static TableQuery<TElement> GetRowsInRange<TElement>(string partitionKey, string rowKeyStart, string rowKeyEnd)
+        {
+            return GetRowsInRange<TElement>(partitionKey, rowKeyStart, rowKeyEnd, QueryComparisons.LessThan);
+        }
+                          
+        
+        private static TableQuery<TElement> GetRowsInRange<TElement>(
+            string partitionKey, string rowKeyStart, string rowKeyEnd,
+            string endOperator)
         {
             var rowQuery = TableQuery.CombineFilters(
                 TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual, rowKeyStart),
                 TableOperators.And,
-                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThan, rowKeyEnd));
+                TableQuery.GenerateFilterCondition("RowKey", endOperator, rowKeyEnd));
 
 
             var query = TableQuery.CombineFilters(

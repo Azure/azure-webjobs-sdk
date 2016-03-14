@@ -17,6 +17,8 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using InternalWebJobTypes = Microsoft.Azure.WebJobs.Protocols.WebJobTypes;
 using WebJobTypes = Dashboard.ViewModels.WebJobType;
+using Microsoft.Azure.WebJobs.Logging;
+using System.Threading.Tasks;
 
 namespace Dashboard.ApiControllers
 {
@@ -38,6 +40,7 @@ namespace Dashboard.ApiControllers
             new ConcurrentDictionary<string, bool?>();
         private readonly ConcurrentDictionary<string, Tuple<int, int>> _cachedStatistics =
             new ConcurrentDictionary<string, Tuple<int, int>>();
+        private readonly ILogReader _reader;
 
         internal FunctionsController(
             CloudStorageAccount account,
@@ -51,7 +54,8 @@ namespace Dashboard.ApiControllers
             IRecentInvocationIndexByFunctionReader recentInvocationsByFunctionReader,
             IRecentInvocationIndexByJobRunReader recentInvocationsByJobRunReader,
             IRecentInvocationIndexByParentReader recentInvocationsByParentReader,
-            IFunctionStatisticsReader statisticsReader)
+            IFunctionStatisticsReader statisticsReader,
+            ILogReader reader = null)
         {
             _account = account;
             _blobClient = blobClient;
@@ -65,6 +69,7 @@ namespace Dashboard.ApiControllers
             _recentInvocationsByJobRunReader = recentInvocationsByJobRunReader;
             _recentInvocationsByParentReader = recentInvocationsByParentReader;
             _statisticsReader = statisticsReader;
+            _reader = reader;
         }
 
         [Route("api/jobs/triggered/{jobName}/runs/{runId}/functions")]
@@ -194,6 +199,59 @@ namespace Dashboard.ApiControllers
             IResultSegment<RecentInvocationEntry> indexSegment = _recentInvocationsByFunctionReader.Read(func.Id,
                 pagingInfo.Limit, pagingInfo.ContinuationToken);
             return Invocations(indexSegment);
+        }
+
+        // Returns a sparse array of (StartBucket, Start, TotalPass, TotalFail, TotalRun)                
+        [Route("api/functions/invocations/{functionId}/timeline")]
+        public async Task<IHttpActionResult> GetRecentInvocationsTimeline(
+            string functionId, 
+            [FromUri]PagingInfo pagingInfo,
+            DateTime? start = null,
+            DateTime? end = null
+            )
+        {
+            if (end == null)
+            {
+                end = DateTime.UtcNow;
+            }
+            if (start == null)
+            {
+                start = end.Value.AddDays(-7);
+            }
+
+            var entities = await _reader.GetAggregateStatsAsync(functionId, start.Value, end.Value);
+
+            var result = Array.ConvertAll(entities, entity => new
+            {
+                 StartBucket = entity.GetTimeBucket(),
+                 Start = entity.GetTime(),
+                 TotalPass = entity.TotalPass,
+                 TotalFail = entity.TotalFail,
+                 TotalRun = entity.TotalRun
+            });
+
+            return Ok(result);
+        }
+
+        // Returns sparse array of for when the containers are run.
+        [Route("api/containers/timeline")]
+        public async Task<IHttpActionResult> GetContainerTimeline(
+            [FromUri]PagingInfo pagingInfo,
+            DateTime? start = null,
+            DateTime? end = null)
+        {
+            if (end == null)
+            {
+                end = DateTime.UtcNow;
+            }
+            if (start == null)
+            {
+                start = end.Value.AddDays(-7);
+            }
+
+            ActivationEvent[] entities = await _reader.GetActiveContainerCountOverTimeAsync(start.Value, end.Value);
+                        
+            return Ok(entities);
         }
 
         [Route("api/functions/invocations/recent")]

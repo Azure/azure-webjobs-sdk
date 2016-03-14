@@ -10,18 +10,18 @@ namespace Microsoft.Azure.WebJobs.Logging
     public class ActivationEvent
     {
         public string ContainerName { get; set; }
-        public long Start { get; set; } // time-bucket, per-minute.
-        public long Length { get; set; } // # of units. 
-    }
 
-    public static class ActivationEventExtensions
-    {
-        public static DateTime GetStartTime(this ActivationEvent e)
-        {
-            return TimeBucket.ConveretToDateTime(e.Start);
-        }
-    }
+        // integral bucket value for time. Per-minute.
+        // useful for metrics. 
+        public long StartTimeBucket { get; set; }
 
+        // Start time as a usable UTC datetime.
+        public DateTime StartTime { get; set; }
+
+        // # of buckets  
+        public long Length { get; set; } 
+    }
+  
     // A "container" refers to a single VM that's running functions. A container can be identified by the machine name.
     public interface ILogReader
     {
@@ -35,7 +35,7 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         // Provides source of function Names
         // The names are needed to drill down in future queries. 
-        Task<FunctionDefinitionEntity[]> GetFunctionDefinitionsAsync();
+        Task<string[]> GetFunctionNamesAsync();
 
 
         // Drill down to function-instances of a given type within a timeline. 
@@ -48,9 +48,18 @@ namespace Microsoft.Azure.WebJobs.Logging
         // Lookup an individual instance
         Task<InstanceTableEntity> LookupFunctionInstanceAsync(Guid functionInstanceId);
 
-        // Get a query for recent function executions. 
+        /// <summary>
+        /// Get a query for recent function executions. Returned in Descending-chronological order (most-recent first).
+        /// </summary>
+        /// <param name="functionName">Name of the function to query</param>
+        /// <param name="start">start time. Use DateTime.MinValue to include all from beginning. </param>
+        /// <param name="end">end time. Use DateTime.MaxValue to include all to the end. </param>
+        /// <param name="onlyFailures"></param>
+        /// <returns></returns>
         Task<IQueryResults<RecentPerFuncEntity>> GetRecentFunctionInstancesAsync(
             string functionName,
+            DateTime start, 
+            DateTime end,
             bool onlyFailures = false // true to filter to ony failures
             );
     }
