@@ -5,10 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Text;
+using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Protocols;
 using Newtonsoft.Json;
-using Microsoft.Azure.WebJobs.Logging;
 
 namespace Dashboard.Data
 {
@@ -88,7 +87,7 @@ namespace Dashboard.Data
         private string BuildFunctionDisplayTitle()
         {
             IEnumerable<string> argumentValues = Arguments.Values.Select(v => v.Value);
-            return FunctionLogItem.BuildFunctionDisplayTitle(this.FunctionShortName, argumentValues);            
+            return FunctionInstanceLogItem.BuildFunctionDisplayTitle(this.FunctionShortName, argumentValues);            
         }
     }
 }

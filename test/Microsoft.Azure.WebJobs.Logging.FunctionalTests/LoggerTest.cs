@@ -23,8 +23,8 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
             var table = GetNewLoggingTable();
             try
             {
-                LogWriter writer = new LogWriter("c1", table);
-                ILogReader reader = new LogReader(table);
+                ILogWriter writer = LogFactory.NewWriter("c1", table);
+                ILogReader reader = LogFactory.NewReader(table);
 
                 // Time that functios are called. 
                 DateTime[] times = new DateTime[] {
@@ -37,7 +37,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
                 DateTime tBefore1 = times[1].AddMinutes(-1);
                 DateTime tAfter1 = times[1].AddMinutes(1);
 
-                var logs = Array.ConvertAll(times, time => new FunctionLogItem
+                var logs = Array.ConvertAll(times, time => new FunctionInstanceLogItem
                 {
                     FunctionInstanceId = Guid.NewGuid(),
                     FunctionName = CommonFuncName1,
@@ -73,14 +73,14 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
 
         // Verify that only the expected log items occur in the given window. 
         // logs should be sorted in reverse chronological order. 
-        private async Task Verify(ILogReader reader, DateTime start, DateTime end, params FunctionLogItem[] expected)
+        private async Task Verify(ILogReader reader, DateTime start, DateTime end, params FunctionInstanceLogItem[] expected)
         {
             var recent = await GetRecentAsync(reader, CommonFuncName1, start, end);
             Assert.Equal(expected.Length, recent.Length);
 
             for (int i = 0; i < expected.Length; i++)
             {
-                Assert.Equal(expected[i].FunctionInstanceId, recent[i].GetFunctionInstanceId());
+                Assert.Equal(expected[i].FunctionInstanceId, recent[i].FunctionInstanceId);
             }
         }
 
@@ -92,8 +92,8 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
             var table = GetNewLoggingTable();
             try
             {
-                LogWriter writer = new LogWriter("c1", table);
-                ILogReader reader = new LogReader(table);
+                ILogWriter writer = LogFactory.NewWriter("c1", table);
+                ILogReader reader = LogFactory.NewReader(table);
 
                 string Func1 = "alpha";
                 string Func2 = "beta";
@@ -102,7 +102,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
                 var t1b = new DateTime(2010, 3, 6, 10, 11, 21); // same time bucket as t1a
                 var t2 = new DateTime(2010, 3, 7, 10, 11, 21);
 
-                FunctionLogItem l1 = new FunctionLogItem
+                FunctionInstanceLogItem l1 = new FunctionInstanceLogItem
                 {
                     FunctionInstanceId = Guid.NewGuid(),
                     FunctionName = Func1,
@@ -111,7 +111,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
                 };
                 await WriteAsync(writer, l1);
 
-                FunctionLogItem l2 = new FunctionLogItem
+                FunctionInstanceLogItem l2 = new FunctionInstanceLogItem
                 {
                     FunctionInstanceId = Guid.NewGuid(),
                     FunctionName = Func2,
@@ -120,7 +120,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
                 };
                 await WriteAsync(writer, l2);
 
-                FunctionLogItem l3 = new FunctionLogItem
+                FunctionInstanceLogItem l3 = new FunctionInstanceLogItem
                 {
                     FunctionInstanceId = Guid.NewGuid(),
                     FunctionName = Func1,
@@ -140,7 +140,9 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
 
                 // Read Func1
                 {
-                    var stats1 = await reader.GetAggregateStatsAsync(Func1, DateTime.MinValue, DateTime.MaxValue);
+                    var segment1 = await reader.GetAggregateStatsAsync(Func1, DateTime.MinValue, DateTime.MaxValue, null);
+                    Assert.Null(segment1.ContinuationToken);
+                    var stats1 = segment1.Results;
                     Assert.Equal(2, stats1.Length); // includes t1 and t2
 
                     // First bucket has l1, second bucket has l3
@@ -156,13 +158,14 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
                     var recent1 = await GetRecentAsync(reader, Func1);
                     Assert.Equal(2, recent1.Length);
 
-                    Assert.Equal(recent1[0].GetFunctionInstanceId(), l3.FunctionInstanceId); 
-                    Assert.Equal(recent1[1].GetFunctionInstanceId(), l1.FunctionInstanceId);
+                    Assert.Equal(recent1[0].FunctionInstanceId, l3.FunctionInstanceId); 
+                    Assert.Equal(recent1[1].FunctionInstanceId, l1.FunctionInstanceId);
                 }
 
                 // Read Func2
                 {
-                    var stats2 = await reader.GetAggregateStatsAsync(Func2, DateTime.MinValue, DateTime.MaxValue);
+                    var segment2 = await reader.GetAggregateStatsAsync(Func2, DateTime.MinValue, DateTime.MaxValue, null);
+                    var stats2 = segment2.Results;
                     Assert.Equal(1, stats2.Length);
                     Assert.Equal(stats2[0].TotalPass, 1);
                     Assert.Equal(stats2[0].TotalRun, 1);
@@ -170,7 +173,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
 
                     var recent2 = await GetRecentAsync(reader, Func2);
                     Assert.Equal(1, recent2.Length);
-                    Assert.Equal(recent2[0].GetFunctionInstanceId(), l2.FunctionInstanceId);
+                    Assert.Equal(recent2[0].FunctionInstanceId, l2.FunctionInstanceId);
                 }           
             }
             finally
@@ -180,23 +183,38 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
             }
         }
 
-        static Task<RecentPerFuncEntity[]> GetRecentAsync(ILogReader reader, string functionName)
+        static Task<IRecentFunctionEntry[]> GetRecentAsync(ILogReader reader, string functionName)
         {
             return GetRecentAsync(reader, functionName, DateTime.MinValue, DateTime.MaxValue);
         }
 
-        static async Task<RecentPerFuncEntity[]> GetRecentAsync(ILogReader reader, string functionName, 
+        static async Task<IRecentFunctionEntry[]> GetRecentAsync(ILogReader reader, string functionName, 
             DateTime start, DateTime end)
         {
-            var query = await reader.GetRecentFunctionInstancesAsync(functionName, start, end);
-            var results = await query.GetNextAsync(1000);
+            var query = await reader.GetRecentFunctionInstancesAsync(new RecentFunctionQuery
+            {
+                FunctionName = functionName,
+                Start = start,
+                End = end,
+                MaximumResults = 1000
+            }, null);
+            var results = query.Results;
             return results;
         }
 
-        static async Task WriteAsync(LogWriter writer, FunctionLogItem item)
-        {            
+        static async Task WriteAsync(ILogWriter writer, FunctionInstanceLogItem item)
+        {
+            item.Status = FunctionInstanceStatus.Running;
             await writer.AddAsync(item); // Start
 
+            if (item.ErrorDetails == null)
+            {
+                item.Status = FunctionInstanceStatus.CompletedSuccess;
+            }
+            else
+            {
+                item.Status = FunctionInstanceStatus.CompletedFailure;
+            }
             item.EndTime = item.StartTime.AddSeconds(1);
             await writer.AddAsync(item); // end 
         }

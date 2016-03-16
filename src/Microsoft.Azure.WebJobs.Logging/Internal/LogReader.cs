@@ -1,21 +1,17 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections;
+using Microsoft.WindowsAzure.Storage.Table;
 
 namespace Microsoft.Azure.WebJobs.Logging
 {
     // Create a reader. 
-    public class LogReader : ILogReader
+    internal class LogReader : ILogReader
     {
         // All writing goes to 1 table. 
         private readonly CloudTable _instanceTable;
@@ -31,30 +27,35 @@ namespace Microsoft.Azure.WebJobs.Logging
             this._instanceTable = table;
         }
 
-        public async Task<string[]> GetFunctionNamesAsync()
+        public Task<string[]> GetFunctionNamesAsync()
         {
             var query = TableScheme.GetRowsInPartition<FunctionDefinitionEntity>(TableScheme.FuncDefIndexPK);
             var results = _instanceTable.ExecuteQuery(query).ToArray();
 
             var functionNames = Array.ConvertAll(results, entity => entity.GetFunctionName());
 
-            return functionNames;
+            return Task.FromResult(functionNames);
         }
 
         // Lookup a single instance by id. 
-        public async Task<InstanceTableEntity> LookupFunctionInstanceAsync(Guid id)
+        public async Task<FunctionInstanceLogItem> LookupFunctionInstanceAsync(Guid id)
         {
             // Create a retrieve operation that takes a customer entity.
             TableOperation retrieveOperation = InstanceTableEntity.GetRetrieveOperation(id);
 
             // Execute the retrieve operation.
-            TableResult retrievedResult = _instanceTable.Execute(retrieveOperation);
+            TableResult retrievedResult = await _instanceTable.ExecuteAsync(retrieveOperation);
 
             var x = (InstanceTableEntity)retrievedResult.Result;
-            return x;
+
+            if (x == null)
+            {
+                return null;
+            }
+            return x.ToFunctionLogItem();
         }
 
-        public async Task<ActivationEvent[]> GetActiveContainerCountOverTimeAsync(DateTime start, DateTime end)
+        public Task<Segment<ActivationEvent>> GetActiveContainerTimelineAsync(DateTime start, DateTime end, string continuationToken)
         {
             var query = ContainerActiveEntity.GetQuery(start, end);
             var results = _instanceTable.ExecuteQuery(query).ToArray();
@@ -82,63 +83,40 @@ namespace Microsoft.Azure.WebJobs.Logging
                 });
             }
 
-            return l.ToArray();
+            return Task.FromResult(new Segment<ActivationEvent>(l.ToArray(), null));
         }
 
-        public async Task<TimelineAggregateEntity[]> GetAggregateStatsAsync(string functionName, DateTime start, DateTime end)
+        public Task<Segment<IAggregateEntry>> GetAggregateStatsAsync(string functionName, DateTime start, DateTime end, string continuationToken)
         {
+            if (functionName == null)
+            {
+                throw new ArgumentNullException("functionName");
+            }
+            if (start > end)
+            {
+                throw new ArgumentOutOfRangeException("start");
+            }
             var rangeQuery = TimelineAggregateEntity.GetQuery(functionName, start, end);
             var results = _instanceTable.ExecuteQuery(rangeQuery).ToArray();
 
-            return results;
-        }
-
-        class RecentFuncQueryResult : IQueryResults<RecentPerFuncEntity>
-        {
-            internal CloudTable _instanceTable;
-            internal TableQuery<RecentPerFuncEntity> _query;
-            private TableContinuationToken _continue;
-            private bool _done;
-
-            public async Task<RecentPerFuncEntity[]> GetNextAsync(int limit)
-            {
-                if (_done)
-                {
-                    return null;
-                }
-                CancellationToken cancellationToken;
-                
-                var segment = await _instanceTable.ExecuteQuerySegmentedAsync<RecentPerFuncEntity>(_query, _continue, cancellationToken);
-
-                var results = segment.Results;
-
-                _continue = segment.ContinuationToken; // End of query? 
-                if (_continue == null)
-                {
-                    _done = true;
-                } else if (results == null)
-                {
-                    return new RecentPerFuncEntity[0]; 
-                }
-                return results.ToArray();
-            }
+            return Task.FromResult(new Segment<IAggregateEntry>(results));
         }
 
         // Could be very long 
-        public async Task<IQueryResults<RecentPerFuncEntity>> GetRecentFunctionInstancesAsync(
-            string functionName,
-            DateTime start,
-            DateTime end,
-            bool onlyFailures)
+        public async Task<Segment<IRecentFunctionEntry>> GetRecentFunctionInstancesAsync(
+            RecentFunctionQuery queryParams,
+            string continuationToken)
         {
-            TableQuery<RecentPerFuncEntity> rangeQuery = RecentPerFuncEntity.GetRecentFunctionsQuery(functionName, start, end);
+            TableQuery<RecentPerFuncEntity> rangeQuery = RecentPerFuncEntity.GetRecentFunctionsQuery(queryParams);
 
-            var q = new RecentFuncQueryResult
-            {
-                _instanceTable = this._instanceTable,
-                _query = rangeQuery
-            };
-            return q;
+            CancellationToken cancellationToken;
+            TableContinuationToken realContinuationToken = Utility.DeserializeToken(continuationToken); ;
+            var segment = await _instanceTable.ExecuteQuerySegmentedAsync<RecentPerFuncEntity>(
+                rangeQuery, 
+                realContinuationToken, 
+                cancellationToken);
+
+            return new Segment<IRecentFunctionEntry>(segment.Results.ToArray(), Utility.SerializeToken(segment.ContinuationToken));
         }
     }
 }

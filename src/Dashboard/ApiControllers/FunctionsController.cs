@@ -6,19 +6,20 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Web;
 using System.Web.Caching;
 using System.Web.Http;
 using Dashboard.Data;
 using Dashboard.HostMessaging;
 using Dashboard.ViewModels;
+using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Protocols;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
+
 using InternalWebJobTypes = Microsoft.Azure.WebJobs.Protocols.WebJobTypes;
 using WebJobTypes = Dashboard.ViewModels.WebJobType;
-using Microsoft.Azure.WebJobs.Logging;
-using System.Threading.Tasks;
 
 namespace Dashboard.ApiControllers
 {
@@ -55,7 +56,7 @@ namespace Dashboard.ApiControllers
             IRecentInvocationIndexByJobRunReader recentInvocationsByJobRunReader,
             IRecentInvocationIndexByParentReader recentInvocationsByParentReader,
             IFunctionStatisticsReader statisticsReader,
-            ILogReader reader = null)
+            ILogReader reader)
         {
             _account = account;
             _blobClient = blobClient;
@@ -207,8 +208,7 @@ namespace Dashboard.ApiControllers
             string functionId, 
             [FromUri]PagingInfo pagingInfo,
             DateTime? start = null,
-            DateTime? end = null
-            )
+            DateTime? end = null)
         {
             if (end == null)
             {
@@ -219,12 +219,13 @@ namespace Dashboard.ApiControllers
                 start = end.Value.AddDays(-7);
             }
 
-            var entities = await _reader.GetAggregateStatsAsync(functionId, start.Value, end.Value);
+            var segment = await _reader.GetAggregateStatsAsync(functionId, start.Value, end.Value, null);
+            var entities = segment.Results;
 
             var result = Array.ConvertAll(entities, entity => new
             {
-                 StartBucket = entity.GetTimeBucket(),
-                 Start = entity.GetTime(),
+                 StartBucket = entity.TimeBucket,
+                 Start = entity.Time,
                  TotalPass = entity.TotalPass,
                  TotalFail = entity.TotalFail,
                  TotalRun = entity.TotalRun
@@ -249,9 +250,8 @@ namespace Dashboard.ApiControllers
                 start = end.Value.AddDays(-7);
             }
 
-            ActivationEvent[] entities = await _reader.GetActiveContainerCountOverTimeAsync(start.Value, end.Value);
-                        
-            return Ok(entities);
+            var segment = await _reader.GetActiveContainerTimelineAsync(start.Value, end.Value, null);
+            return Ok(segment);
         }
 
         [Route("api/functions/invocations/recent")]
