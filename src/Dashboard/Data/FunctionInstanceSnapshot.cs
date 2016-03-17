@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Text;
+using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Protocols;
 using Newtonsoft.Json;
 
@@ -45,6 +45,9 @@ namespace Dashboard.Data
 
         public DateTimeOffset? EndTime { get; set; }
 
+        // If specified, text output is provided in the string. Ignore the OutputBlob. 
+        public string InlineOutputText { get; set; }
+
         public LocalBlobDescriptor OutputBlob { get; set; }
 
         public LocalBlobDescriptor ParameterLogBlob { get; set; }
@@ -83,30 +86,8 @@ namespace Dashboard.Data
 
         private string BuildFunctionDisplayTitle()
         {
-            var name = new StringBuilder(FunctionShortName);
             IEnumerable<string> argumentValues = Arguments.Values.Select(v => v.Value);
-
-            string parametersDisplayText = String.Join(", ", argumentValues);
-            if (parametersDisplayText != null)
-            {
-                // Remove newlines to avoid 403/forbidden storage exceptions when saving display title to blob metadata
-                // for function indexes. Newlines may be present in JSON-formatted arguments.
-                parametersDisplayText = parametersDisplayText.Replace("\r\n", String.Empty);
-
-                name.Append(" (");
-                if (parametersDisplayText.Length > 20)
-                {
-                    name.Append(parametersDisplayText.Substring(0, 18))
-                        .Append(" ...");
-                }
-                else
-                {
-                    name.Append(parametersDisplayText);
-                }
-                name.Append(")");
-            }
-
-            return name.ToString();
+            return FunctionInstanceLogItem.BuildFunctionDisplayTitle(this.FunctionShortName, argumentValues);            
         }
     }
 }

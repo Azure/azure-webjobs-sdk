@@ -27,11 +27,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IBackgroundExceptionDispatcher _backgroundExceptionDispatcher;
         private readonly TimeSpan? _functionTimeout;
         private readonly TraceWriter _trace;
+        private readonly IAsyncCollector<FunctionInstanceLogEntry> _fastLogger;
 
         private HostOutputMessage _hostOutputMessage;
 
         public FunctionExecutor(IFunctionInstanceLogger functionInstanceLogger, IFunctionOutputLogger functionOutputLogger, 
-            IBackgroundExceptionDispatcher backgroundExceptionDispatcher, TraceWriter trace, TimeSpan? functionTimeout)
+            IBackgroundExceptionDispatcher backgroundExceptionDispatcher, TraceWriter trace, TimeSpan? functionTimeout,
+            IAsyncCollector<FunctionInstanceLogEntry> fastLogger = null)
         {
             if (functionInstanceLogger == null)
             {
@@ -58,6 +60,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _backgroundExceptionDispatcher = backgroundExceptionDispatcher;
             _trace = trace;
             _functionTimeout = functionTimeout;
+            _fastLogger = fastLogger;
         }
 
         public HostOutputMessage HostOutputMessage
@@ -75,9 +78,23 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             string functionStartedMessageId = null;
             TraceLevel functionTraceLevel = GetFunctionTraceLevel(functionInstance);
 
+            FunctionInstanceLogEntry fastItem = new FunctionInstanceLogEntry
+            {
+                FunctionInstanceId = functionStartedMessage.FunctionInstanceId,
+                ParentId = functionStartedMessage.ParentId,
+                FunctionName = functionStartedMessage.Function.ShortName,
+                TriggerReason = functionStartedMessage.ReasonDetails,
+                StartTime = functionStartedMessage.StartTime.DateTime
+            };
+            if (_fastLogger != null)
+            {
+                // Log started
+                await _fastLogger.AddAsync(fastItem);
+            }
+
             try
             {
-                functionStartedMessageId = await ExecuteWithLoggingAsync(functionInstance, functionStartedMessage, parameterLogCollector, functionTraceLevel, cancellationToken);
+                functionStartedMessageId = await ExecuteWithLoggingAsync(functionInstance, functionStartedMessage, fastItem, parameterLogCollector, functionTraceLevel, cancellationToken);
                 functionCompletedMessage = CreateCompletedMessage(functionStartedMessage);
             }
             catch (Exception exception)
@@ -114,6 +131,19 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 logCompletedCancellationToken = cancellationToken;
             }
+                        
+            if (_fastLogger != null)
+            {
+                // Log completed                
+                fastItem.EndTime = DateTime.UtcNow;
+                fastItem.Arguments = functionCompletedMessage.Arguments;
+                
+                if (functionCompletedMessage != null && functionCompletedMessage.Failure != null)
+                {
+                    fastItem.ErrorDetails = functionCompletedMessage.Failure.ExceptionDetails;
+                }
+                await _fastLogger.AddAsync(fastItem);
+            }
 
             if (functionCompletedMessage != null &&
                 ((functionTraceLevel >= TraceLevel.Info) || (functionCompletedMessage.Failure != null && functionTraceLevel >= TraceLevel.Error)))
@@ -143,7 +173,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             return functionTraceLevel;
         }
 
-        private async Task<string> ExecuteWithLoggingAsync(IFunctionInstance instance, FunctionStartedMessage message, 
+        private async Task<string> ExecuteWithLoggingAsync(IFunctionInstance instance, FunctionStartedMessage message,
+            FunctionInstanceLogEntry fastItem,
             IDictionary<string, ParameterLog> parameterLogCollector, TraceLevel functionTraceLevel, CancellationToken cancellationToken)
         {
             IFunctionOutputDefinition outputDefinition = null;
@@ -235,7 +266,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     // console output even if the function fails or was canceled.
                     if (outputLog != null)
                     {
-                        await outputLog.SaveAndCloseAsync(cancellationToken);
+                        await outputLog.SaveAndCloseAsync(fastItem, cancellationToken);
                     }
 
                     if (exceptionInfo != null)
