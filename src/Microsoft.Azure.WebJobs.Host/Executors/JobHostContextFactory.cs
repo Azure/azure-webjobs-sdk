@@ -87,7 +87,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             ISharedContextProvider sharedContextProvider = new SharedContextProvider();
 
             // Create a wrapper TraceWriter that delegates to both the user 
-            // TraceWriter specified on Config (if present), as well as to Console
+            // TraceWriters specified via config (if present), as well as to Console
             TraceWriter trace = new ConsoleTraceWriter(config.Tracing, consoleProvider.Out);
 
             // Register system services with the service container
@@ -163,7 +163,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                 if (functionIndexProvider == null)
                 {
-                    functionIndexProvider = new FunctionIndexProvider(typeLocator, triggerBindingProvider, bindingProvider, activator, functionExecutor, extensions, singletonManager);
+                    functionIndexProvider = new FunctionIndexProvider(typeLocator, triggerBindingProvider, bindingProvider, activator, functionExecutor, extensions, singletonManager, trace);
                 }
 
                 IFunctionIndex functions = await functionIndexProvider.GetAsync(combinedCancellationToken);
