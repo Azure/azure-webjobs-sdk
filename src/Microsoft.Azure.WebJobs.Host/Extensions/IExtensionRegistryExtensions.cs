@@ -8,6 +8,7 @@ using System.Reflection;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
@@ -23,6 +24,25 @@ namespace Microsoft.Azure.WebJobs.Host
                 typeof(IExtensionConfigProvider), 
                 typeof(IArgumentBindingProvider<>)
             };
+
+        /// <summary>
+        /// Regsiter a set of binding rules for a given type. The rules are applied in order, first one wins.  
+        /// An catch-all error binding is automatically placed at the end that will raise a binding error if no binder claims it. 
+        /// </summary>
+        /// <param name="registry">The registry instance.</param>
+        /// <param name="bindingProviders">binding rules for a parameter.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
+        public static void RegisterBindingRules<TAttribute>(this IExtensionRegistry registry, params IBindingProvider[] bindingProviders)
+            where TAttribute : Attribute
+        {
+            if (registry == null)
+            {
+                throw new ArgumentNullException("registry");
+            }
+
+            var all = new GenericCompositeBindingProvider<TAttribute>(bindingProviders);
+            registry.RegisterExtension<IBindingProvider>(all);
+        }
 
         /// <summary>
         /// Registers the specified instance. 
