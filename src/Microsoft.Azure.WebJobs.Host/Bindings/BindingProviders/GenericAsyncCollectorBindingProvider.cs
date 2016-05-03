@@ -9,7 +9,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
     // Bind Attribute --> IAsyncCollector<TMessage>, where TMessage is determined by the  user parameter type.
     // This skips the converter manager and instead dynamically allocates a generic IAsyncCollector<TMessage>
-    // of the properly TMessage type. 
+    // where TMessage matches the user parameter type. 
     internal class GenericAsyncCollectorBindingProvider<TAttribute, TConstructorArg> :
         IBindingProvider
         where TAttribute : Attribute

@@ -31,6 +31,10 @@ namespace Microsoft.Azure.WebJobs
         {
             return typeof(TSrc).FullName + "|" + typeof(TDest).FullName;
         }
+        private static string GetKey<TSrc, TDest, TAttribute>()
+        {
+            return typeof(TSrc).FullName + "|" + typeof(TDest).FullName + "|" + typeof(TAttribute).FullName;
+        }
 
         public void AddConverter<TSrc, TDest>(Func<TSrc, TDest> converter)
         {
@@ -43,25 +47,26 @@ namespace Microsoft.Azure.WebJobs
         public void AddConverter<TSrc, TDest, TAttribute>(Func<TSrc, TAttribute, TDest> converter)
             where TAttribute : Attribute
         {
-            string key = GetKey<TSrc, TDest>();
+            string key = GetKey<TSrc, TDest, TAttribute>();
             _funcsWithAttr[key] = converter;
         }
 
         private Func<TSrc, TAttribute, TDest> TryGetConverter<TSrc, TAttribute, TDest>()
             where TAttribute : Attribute
         {
-            string key = GetKey<TSrc, TDest>();
+            string key1 = GetKey<TSrc, TDest, TAttribute>();
 
             // First try specific that uses the TAttribute 
             object obj;
-            if (_funcsWithAttr.TryGetValue(key, out obj))
+            if (_funcsWithAttr.TryGetValue(key1, out obj))
             {
                 var func = (Func<TSrc, TAttribute, TDest>)obj;
                 return func;
             }
 
             // Fallback
-            if (_funcs.TryGetValue(key, out obj))
+            string key2 = GetKey<TSrc, TDest>();
+            if (_funcs.TryGetValue(key2, out obj))
             {
                 var func = (Func<TSrc, TDest>)obj;
                 return (TSrc src, TAttribute attr) => func(src);

@@ -143,6 +143,7 @@
     <Compile Include="CompositeTraceWriterTests.cs" />
     <Compile Include="ConfigurationUtilityTests.cs" />
     <Compile Include="ConsoleTraceWriterTests.cs" />
+    <Compile Include="ConverterManagerTests.cs" />
     <Compile Include="DefaultExtensionRegistryTests.cs" />
     <Compile Include="EmptyFunctionIndexProvider.cs" />
     <Compile Include="Executors\DefaultJobActivatorTests.cs" />
