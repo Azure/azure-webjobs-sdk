@@ -12,15 +12,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     internal class ExactTypeBindingProvider<TAttribute, TUserType> : IBindingProvider
         where TAttribute : Attribute
     {
-        private Func<TAttribute, Task<TUserType>> _buildFromAttr;
-        private INameResolver _nameResolver;
+        private readonly INameResolver _nameResolver;
+        private readonly Func<TAttribute, Task<TUserType>> _buildFromAttr;
         private readonly Func<TAttribute, ParameterInfo, INameResolver, Task<TAttribute>> _postResolveHook;
 
         public ExactTypeBindingProvider(
             INameResolver nameResolver,
             Func<TAttribute, Task<TUserType>> buildFromAttr,
-            Func<TAttribute, ParameterInfo, INameResolver, Task<TAttribute>> postResolveHook
-            )
+            Func<TAttribute, ParameterInfo, INameResolver, Task<TAttribute>> postResolveHook)
         {
             this._postResolveHook = postResolveHook;
             this._nameResolver = nameResolver;
@@ -66,10 +65,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return Task.FromResult<IBinding>(binding);
         }
 
-
-        class ExactBinding : BindingBase<TAttribute>
+        private class ExactBinding : BindingBase<TAttribute>
         {
-            internal Func<TAttribute, Task<TUserType>> _buildFromAttr;
+            private readonly Func<TAttribute, Task<TUserType>> _buildFromAttr;
 
             public ExactBinding(
                 AttributeCloner<TAttribute> cloner, 
@@ -82,7 +80,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
             protected override async Task<IValueProvider> BuildAsync(TAttribute attrResolved)
             {
-                string invokeString = _cloner.GetInvokeString(attrResolved);
+                string invokeString = Cloner.GetInvokeString(attrResolved);
                 var obj = await _buildFromAttr(attrResolved);
 
                 IValueProvider vp = new ConstantValueProvider(obj, typeof(TUserType), invokeString);

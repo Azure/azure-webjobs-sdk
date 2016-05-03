@@ -52,24 +52,6 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             return queueRules;
         }
 
-        // Queue attributes are paired with a separate [StorageAccount]. 
-        // Consolidate the information from both attributes into a single attribute.
-        internal sealed class ResolvedQueueAttribute : QueueAttribute
-        {
-            public ResolvedQueueAttribute(string queueName, IStorageQueueClient client)
-                : base(queueName)
-            {
-                this.Client = client;
-            }
-
-            internal IStorageQueueClient Client { get; private set; }
-
-            public IStorageQueue GetQueue()
-            {
-                return this.Client.GetQueueReference(this.QueueName);
-            }
-        }
-
         // Hook to apply hacky rules all at once. 
         private async Task<QueueAttribute> FixerUpper(QueueAttribute attrResolved, ParameterInfo parameter, INameResolver nameResolver)
         {
@@ -100,8 +82,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private ParameterDescriptor ToParameterDescriptorForCollector(QueueAttribute attr, ParameterInfo parameter, INameResolver nameResolver)
         {
             Task<IStorageAccount> t = Task.Run(() =>
-                _accountProvider.GetStorageAccountAsync(parameter, CancellationToken.None, nameResolver)
-           );
+                _accountProvider.GetStorageAccountAsync(parameter, CancellationToken.None, nameResolver));
             string accountName = t.GetAwaiter().GetResult().Credentials.AccountName;
 
             return new QueueParameterDescriptor
@@ -115,7 +96,6 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
         private static string NormalizeQueueName(QueueAttribute attribute, INameResolver nameResolver)
         {
-
             string queueName = attribute.QueueName;
             if (nameResolver != null)
             {
@@ -181,6 +161,24 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             var attr = (ResolvedQueueAttribute)attrResolved;
             var queue = attr.GetQueue();
             return new QueueAsyncCollector(queue, _messageEnqueuedWatcherGetter.Value);
+        }
+
+        // Queue attributes are paired with a separate [StorageAccount]. 
+        // Consolidate the information from both attributes into a single attribute.
+        internal sealed class ResolvedQueueAttribute : QueueAttribute
+        {
+            public ResolvedQueueAttribute(string queueName, IStorageQueueClient client)
+                : base(queueName)
+            {
+                this.Client = client;
+            }
+
+            internal IStorageQueueClient Client { get; private set; }
+
+            public IStorageQueue GetQueue()
+            {
+                return this.Client.GetQueueReference(this.QueueName);
+            }
         }
 
         // The core Async Collector for queueing messages. 

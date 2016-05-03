@@ -2,13 +2,10 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Linq;
-using System.Reflection;
-using Microsoft.Azure.WebJobs.Host.Bindings.Path;
 using System.Collections.Generic;
-using System.Text;
-using Newtonsoft.Json;
+using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Bindings.Path;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -25,15 +22,6 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         // Optional hook for post-processing the attribute. This is intended for legacy hack rules. 
         private readonly Func<TAttribute, Task<TAttribute>> _hook;
-
-        // If no name resolver is specified, then any %% becomes an error. 
-        class EmptyNameResolver : INameResolver
-        {
-            public string Resolve(string name)
-            {
-                return null;
-            }
-        }
 
         public AttributeCloner(
             TAttribute source, 
@@ -132,7 +120,6 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
             return attr;
         }
-
         
         private static IAttributeInvokeDescriptor<TAttribute> GetInvokeDescriptor(TAttribute attr)
         {
@@ -209,7 +196,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         {
             // Invoke ctor
             var ctorArgs = Array.ConvertAll(_bestCtorArgBuilder, func => func(bindingData));
-            var newAttr = (TAttribute) _bestCtor.Invoke(ctorArgs);
+            var newAttr = (TAttribute)_bestCtor.Invoke(ctorArgs);
 
             // Modify any settable properties 
             Type t = typeof(TAttribute);
@@ -235,6 +222,15 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 prop.SetValue(newAttr, objValue);
             }
             return newAttr;
+        }
+
+        // If no name resolver is specified, then any %% becomes an error. 
+        private class EmptyNameResolver : INameResolver
+        {
+            public string Resolve(string name)
+            {
+                return null;
+            }
         }
     }
 }

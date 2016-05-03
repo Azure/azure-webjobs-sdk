@@ -4,7 +4,6 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using System.Reflection;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -19,9 +18,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         public AsyncCollectorBinding(
             ParameterDescriptor param,
             Func<TAttribute, IValueProvider> argumentBuilder,
-            AttributeCloner<TAttribute> cloner
-            ) : base(cloner, param)
-
+            AttributeCloner<TAttribute> cloner) 
+            : base(cloner, param)
         {
             this._argumentBuilder = argumentBuilder;
         }

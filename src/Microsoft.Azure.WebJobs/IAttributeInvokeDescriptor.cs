@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs
         string ToInvokeString();
 
         /// <summary>
-        /// Hyrdate a resolved attribute from an invoke string which can then be used to create a binding. 
+        /// Hydrate a resolved attribute from an invoke string which can then be used to create a binding. 
         /// </summary>
         /// <param name="invokeString">String representation of this argument</param>
         /// <returns></returns>

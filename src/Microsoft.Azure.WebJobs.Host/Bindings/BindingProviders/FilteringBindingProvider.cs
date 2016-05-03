@@ -10,8 +10,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     // If the user parameter type passes the predicate, then chain to an inner an provider. 
     internal class FilteringBindingProvider : IBindingProvider
     {
-        Func<Type, bool> _predicate;
-        IBindingProvider _inner;
+        private readonly Func<Type, bool> _predicate;
+        private readonly IBindingProvider _inner;
 
         public FilteringBindingProvider(Func<Type, bool> predicate, IBindingProvider inner)
         {

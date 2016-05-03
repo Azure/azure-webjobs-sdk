@@ -8,23 +8,22 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-
     // Helper class for implementing IBinding with the attribute resolver pattern. 
     internal abstract class BindingBase<TAttribute> : IBinding
         where TAttribute : Attribute
     {
-        protected readonly AttributeCloner<TAttribute> _cloner;
+        protected readonly AttributeCloner<TAttribute> Cloner;
         private readonly ParameterDescriptor _param;
 
         public BindingBase(AttributeCloner<TAttribute> cloner, ParameterDescriptor param)
         {
-            _cloner = cloner;
+            Cloner = cloner;
             _param = param;
         }
 
         public BindingBase(AttributeCloner<TAttribute> cloner, ParameterInfo parameterInfo)
         {
-            _cloner = cloner;
+            Cloner = cloner;
             _param = new ParameterDescriptor
             {
                 Name = parameterInfo.Name,
@@ -47,7 +46,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         public async Task<IValueProvider> BindAsync(BindingContext context)
         {
-            var attrResolved = await _cloner.ResolveFromBindingData(context);
+            var attrResolved = await Cloner.ResolveFromBindingData(context);
             return await BuildAsync(attrResolved);
         }
 
@@ -58,10 +57,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 // Called when we invoke from dashboard. 
                 // str --> attribute --> obj 
-                var resolvedAttr =  await _cloner.ResolveFromInvokeString(str);
+                var resolvedAttr = await Cloner.ResolveFromInvokeString(str);
                 return await BuildAsync(resolvedAttr);
             }
-            else {
+            else
+            {
                 // Passed a direct object, such as JobHost.Call 
                 throw new NotImplementedException();
             }

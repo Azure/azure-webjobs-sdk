@@ -23,8 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             INameResolver nameResolver,
             IConverterManager converterManager,
             Type asyncCollectorType,
-            Func<TAttribute, TConstructorArg> constructorParameterBuilder
-            )
+            Func<TAttribute, TConstructorArg> constructorParameterBuilder)
         {
             this._nameResolver = nameResolver;
             this._converterManager = converterManager;
@@ -52,9 +51,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             // throws if can't infer the type. 
             Type typeMessage = TypeUtility.GetMessageTypeFromAsyncCollector(parameter.ParameterType);
 
-            var wrapper = WapperBase.New(
+            var wrapper = WrapperBase.New(
                 typeMessage, _asyncCollectorType, _constructorParameterBuilder, _nameResolver, _converterManager, parameter);
-
 
             IBinding binding = wrapper.CreateBinding();
             return Task.FromResult(binding);
@@ -63,41 +61,40 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         // Wrappers to help with binding to a dynamically typed IAsyncCollector<T>. 
         // TMessage is not known until runtime, so we need to dynamically create it. 
         // These inherit the generic args of the outer class. 
-        abstract class WapperBase
+        private abstract class WrapperBase
         {
-            protected Func<TAttribute, TConstructorArg> _constructorParameterBuilder;
-            protected INameResolver _nameResolver;
-            protected IConverterManager _converterManager;
-            protected ParameterInfo _parameter;
-            protected Type _asyncCollectorType;
+            protected Func<TAttribute, TConstructorArg> ConstructorParameterBuilder { get; private set; }
+            protected INameResolver NameResolver { get; private set; }
+            protected IConverterManager ConverterManager { get; private set; }
+            protected ParameterInfo Parameter { get; private set; }
+            protected Type AsyncCollectorType { get; private set; }
 
             public abstract IBinding CreateBinding();
 
-            internal static WapperBase New(
+            internal static WrapperBase New(
                 Type typeMessage,
                 Type asyncCollectorType,
                 Func<TAttribute, TConstructorArg> constructorParameterBuilder,
                 INameResolver nameResolver,
                 IConverterManager converterManager,
-                ParameterInfo parameter
-                )
+                ParameterInfo parameter)
             {
                 // These inherit the generic args of the outer class. 
                 var t = typeof(Wapper<>).MakeGenericType(typeof(TAttribute), typeof(TConstructorArg), typeMessage);
                 var obj = Activator.CreateInstance(t);
-                var obj2 = (WapperBase)obj;
+                var obj2 = (WrapperBase)obj;
 
-                obj2._constructorParameterBuilder = constructorParameterBuilder;
-                obj2._nameResolver = nameResolver;
-                obj2._converterManager = converterManager;
-                obj2._parameter = parameter;
-                obj2._asyncCollectorType = asyncCollectorType;
+                obj2.ConstructorParameterBuilder = constructorParameterBuilder;
+                obj2.NameResolver = nameResolver;
+                obj2.ConverterManager = converterManager;
+                obj2.Parameter = parameter;
+                obj2.AsyncCollectorType = asyncCollectorType;
 
                 return obj2;
             }
         }
 
-        class Wapper<TMessage> : WapperBase
+        private class Wapper<TMessage> : WrapperBase
         {
             // This is the builder function that gets passed to the core IAsyncCollector binders. 
             public IAsyncCollector<TMessage> BuildFromAttribute(TAttribute attribute)
@@ -106,10 +103,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 //   TConstructorArg ctorArg = _buildFromAttr(attribute);
                 //   IAsyncCollector<TMessage> collector = new MyCollector<TMessage>(ctorArg);
 
+                var ctorArg = ConstructorParameterBuilder(attribute);
 
-                var ctorArg = _constructorParameterBuilder(attribute);
-
-                var t = _asyncCollectorType.MakeGenericType(typeof(TMessage));
+                var t = AsyncCollectorType.MakeGenericType(typeof(TMessage));
                 var obj = Activator.CreateInstance(t, ctorArg);
                 var collector = (IAsyncCollector<TMessage>)obj;
                 return collector;
@@ -118,15 +114,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             public override IBinding CreateBinding()
             {
                 IBinding binding = BindingFactoryHelpers.BindCollector<TAttribute, TMessage>(
-                _parameter,
-                _nameResolver,
-                _converterManager,
+                Parameter,
+                NameResolver,
+                ConverterManager,
                 this.BuildFromAttribute, 
                 null); // $$$ add hook?
 
                 return binding;
             }
         }
-
     } // end class 
 }

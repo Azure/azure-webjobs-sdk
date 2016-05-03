@@ -1,10 +1,10 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host.Protocols;
 using System;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Protocols;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -25,8 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             IConverterManager converterManager,
             Func<TAttribute, IAsyncCollector<TMessage>> buildFromAttribute,
             Func<TAttribute, ParameterInfo, INameResolver, ParameterDescriptor> buildParamDescriptor = null,
-            Func<TAttribute, ParameterInfo, INameResolver, Task<TAttribute>> postResolveHook = null
-            )
+            Func<TAttribute, ParameterInfo, INameResolver, Task<TAttribute>> postResolveHook = null)
         {
             this._nameResolver = nameResolver;
             this._buildFromAttribute = buildFromAttribute;

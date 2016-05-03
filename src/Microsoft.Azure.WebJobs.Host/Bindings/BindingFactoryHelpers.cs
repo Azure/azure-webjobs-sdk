@@ -2,14 +2,11 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Globalization;
+using System.Collections;
 using System.Reflection;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Triggers;
-using Microsoft.Azure.WebJobs.Host.Bindings.Path;
-using System.Collections;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -80,11 +77,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// Create a binding rule to an IAsyncCollector`T, where the user parameter's type is resolved to a T via the ConverterManager.
         /// </summary>
         /// <typeparam name="TAttribute">Type of binding attribute</typeparam>
-        /// <typeparam name="TMessage">Core Message type, ie 'CloudQueueMessage'</typeparam>
+        /// <typeparam name="TMessage">Core Message type, such as 'CloudQueueMessage'</typeparam>
         /// <param name="parameter">the parameter being bound. The parameter should have a custom attribute of TAttribute on it.</param>
         /// <param name="nameResolver">a name resolver object for resolving %% pairs in the attribute</param>
         /// <param name="converterManager">a converter manager for converting types</param>
-        /// <param name="buildFromAttribute">a builder to create the IAsyncCollector`T from a 'resolved' version of the Tattribte on this parameter. </param>
+        /// <param name="buildFromAttribute">a builder to create the IAsyncCollector`T from a 'resolved' version of the TAttribute on this parameter. </param>
         /// <param name="buildParamDescriptor">an optional function to create a more specific ParameterDescriptor object to display in the dashboard.</param>
         /// <param name="hook">An optional post-resolve hook for advanced scenarios.</param>
         /// <returns></returns>
@@ -95,8 +92,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             IConverterManager converterManager,
             Func<TAttribute, IAsyncCollector<TMessage>> buildFromAttribute,
             Func<TAttribute, ParameterInfo, INameResolver, ParameterDescriptor> buildParamDescriptor = null,
-            Func<TAttribute, ParameterInfo, INameResolver, Task<TAttribute>> hook = null
-            )
+            Func<TAttribute, ParameterInfo, INameResolver, Task<TAttribute>> hook = null)
             where TAttribute : Attribute
         {
             if (parameter == null)
@@ -255,7 +251,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             IConverterManager cm,
             Func<TAttribute, IAsyncCollector<TMessage>> buildFromAttribute,
             AttributeCloner<TAttribute> cloner)
-            where TAttribute  : Attribute
+            where TAttribute : Attribute
         {
             // Other 
             Func<TMessageSrc, TAttribute, TMessage> convert = cm.GetConverter<TMessageSrc, TMessage, TAttribute>();
@@ -324,12 +320,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return argumentBuilder;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode", Justification = "Dynamic invoke" )]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode", Justification = "Dynamic invoke")]
         private static Func<TAttribute, IValueProvider> BuildICollectorArgument<TAttribute, TMessage, TMessageSrc>(
             IConverterManager cm,
             Func<TAttribute, IAsyncCollector<TMessage>> buildFromAttribute,
-            AttributeCloner<TAttribute> cloner
-            )
+            AttributeCloner<TAttribute> cloner)
             where TAttribute : Attribute
         {
             // Other 
@@ -367,8 +362,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         private static Func<TAttribute, IValueProvider> BuildIAsyncCollectorArgument<TAttribute, TMessage, TMessageSrc>(
                 IConverterManager cm,
                 Func<TAttribute, IAsyncCollector<TMessage>> buildFromAttribute,
-                AttributeCloner<TAttribute> cloner
-                )
+                AttributeCloner<TAttribute> cloner)
             where TAttribute : Attribute
         {
             Func<TMessageSrc, TAttribute, TMessage> convert = cm.GetConverter<TMessageSrc, TMessage, TAttribute>();
@@ -403,7 +397,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         // Helper to invoke and unwrap teh target exception. 
-        static TReturn MethodInvoke<TReturn>(MethodInfo method, params object[] args)
+        private static TReturn MethodInvoke<TReturn>(MethodInfo method, params object[] args)
         {
             try
             {

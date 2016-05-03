@@ -8,7 +8,6 @@ using System.Reflection;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Triggers;
-using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
@@ -26,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host
             };
 
         /// <summary>
-        /// Regsiter a set of binding rules for a given type. The rules are applied in order, first one wins.  
+        /// Register a set of binding rules for a given type. The rules are applied in order, first one wins.  
         /// An catch-all error binding is automatically placed at the end that will raise a binding error if no binder claims it. 
         /// </summary>
         /// <param name="registry">The registry instance.</param>

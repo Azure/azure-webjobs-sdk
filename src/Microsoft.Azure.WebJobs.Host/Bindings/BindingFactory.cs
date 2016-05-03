@@ -1,13 +1,13 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host.Listeners;
-using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.Azure.WebJobs.Host.Triggers;
 using System;
 using System.Globalization;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Azure.WebJobs.Host.Triggers;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -18,6 +18,17 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     {
         private readonly INameResolver _nameResolver;
         private readonly IConverterManager _converterManager;
+
+        /// <summary>
+        /// Constructor. 
+        /// </summary>
+        /// <param name="nameResolver">Name Resolver object for resolving %% tokens in a string.</param>
+        /// <param name="converterManager">Converter Manager object for resolving {} tokens in a string. </param>
+        public BindingFactory(INameResolver nameResolver, IConverterManager converterManager)
+        {
+            _nameResolver = nameResolver;
+            _converterManager = converterManager;
+        }
 
         /// <summary>
         /// Get the name resolver for resolving %% tokens. 
@@ -33,17 +44,6 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         public IConverterManager ConverterManager
         {
             get { return _converterManager; }
-        }
-
-        /// <summary>
-        /// Constructor. 
-        /// </summary>
-        /// <param name="nameResolver">Name Resolver object for resolving %% tokens in a string.</param>
-        /// <param name="converterManager">Converter Manager object for resolving {} tokens in a string. </param>
-        public BindingFactory(INameResolver nameResolver, IConverterManager converterManager)
-        {
-            _nameResolver = nameResolver;
-            _converterManager = converterManager;
         }
 
         /// <summary>
@@ -95,14 +95,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// Create a rule for binding a parameter to an <see cref="IAsyncCollector{T}"/> where T is the user parameter's type. 
         /// </summary>
         /// <typeparam name="TAttribute">type of binding attribute</typeparam>
-        /// <typeparam name="TConstructorArg"></typeparam>
-        /// <param name="asyncCollectorType">type that implements <see cref="IAsyncCollector{T}"/>. Must have a constructor with exactly 1 parameter of type TConstructorArg.</param>
+        /// <typeparam name="TConstructorArgument"></typeparam>
+        /// <param name="asyncCollectorType">type that implements <see cref="IAsyncCollector{T}"/>. Must have a constructor with exactly 1 parameter of type TConstructorArgument.</param>
         /// <param name="constructorParameterBuilder">builder function to create an instance of the collector's constructor parameter from a resolved attribute.</param>
         /// <returns></returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
-        public IBindingProvider BindToGenericAsyncCollector<TAttribute, TConstructorArg>(
+        public IBindingProvider BindToGenericAsyncCollector<TAttribute, TConstructorArgument>(
             Type asyncCollectorType, 
-            Func<TAttribute, TConstructorArg> constructorParameterBuilder)
+            Func<TAttribute, TConstructorArgument> constructorParameterBuilder)
             where TAttribute : Attribute
         {     
             if (asyncCollectorType == null)
@@ -130,16 +130,16 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     asyncCollectorType.FullName);
                 throw new InvalidOperationException(msg);
             }
-            var ctorInfo = asyncCollectorType.GetConstructor(new Type[] { typeof(TConstructorArg) });
+            var ctorInfo = asyncCollectorType.GetConstructor(new Type[] { typeof(TConstructorArgument) });
             if (ctorInfo == null)
             {
                 string msg = string.Format(CultureInfo.InvariantCulture, "Collector implementation type {0} must have a public constructor with exactly 2 parameters: {1}, {2}",
                     asyncCollectorType.FullName,
-                    typeof(TAttribute).Name, typeof(TConstructorArg).Name);
+                    typeof(TAttribute).Name, typeof(TConstructorArgument).Name);
                 throw new InvalidOperationException(msg);
             }
 
-            return new GenericAsyncCollectorBindingProvider<TAttribute, TConstructorArg>(
+            return new GenericAsyncCollectorBindingProvider<TAttribute, TConstructorArgument>(
                 _nameResolver, _converterManager, asyncCollectorType, constructorParameterBuilder);
         }
 

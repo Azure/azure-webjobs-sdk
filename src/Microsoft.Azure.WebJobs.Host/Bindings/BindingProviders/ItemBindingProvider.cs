@@ -1,7 +1,10 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the MIT License. See License.txt in the project root for license information.
+
+using System;
 using System.Reflection;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -11,7 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     internal class ItemBindingProvider<TAttribute> : IBindingProvider
         where TAttribute : Attribute
     {
-        private INameResolver _nameResolver;
+        private readonly INameResolver _nameResolver;
         private readonly Func<TAttribute, Type, Task<IValueBinder>> _builder;
 
         public ItemBindingProvider(
@@ -43,8 +46,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return Task.FromResult(binding);
         }
 
-
-        class Binding : BindingBase<TAttribute>
+        private class Binding : BindingBase<TAttribute>
         {
             private readonly Func<TAttribute, Type, Task<IValueBinder>> _builder;
             private readonly ParameterInfo _parameter;
@@ -52,8 +54,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             public Binding(
                     AttributeCloner<TAttribute> cloner,
                     Func<TAttribute, Type, Task<IValueBinder>> builder,
-                    ParameterInfo parameter
-                ) : base(cloner, parameter)
+                    ParameterInfo parameter) 
+                : base(cloner, parameter)
             {
                 this._builder = builder;
                 this._parameter = parameter;
@@ -61,16 +63,22 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
             protected override async Task<IValueProvider> BuildAsync(TAttribute attrResolved)
             {
-                string invokeString = _cloner.GetInvokeString(attrResolved);
+                string invokeString = Cloner.GetInvokeString(attrResolved);
                 IValueBinder valueBinder = await _builder(attrResolved, _parameter.ParameterType);
 
-                return new Wrapper { _inner = valueBinder, _invokeString = invokeString };
+                return new Wrapper(valueBinder, invokeString);
             }
 
-            class Wrapper : IValueBinder
+            private class Wrapper : IValueBinder
             {
-                public IValueBinder _inner;
-                public string _invokeString;
+                private readonly IValueBinder _inner;
+                private readonly string _invokeString;
+
+                public Wrapper(IValueBinder inner, string invokeString)
+                {
+                    _inner = inner;
+                    _invokeString = invokeString;
+                }
 
                 public Type Type
                 {

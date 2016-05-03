@@ -9,9 +9,9 @@ using Microsoft.Azure.WebJobs.Host.Bindings.Runtime;
 using Microsoft.Azure.WebJobs.Host.Bindings.StorageAccount;
 using Microsoft.Azure.WebJobs.Host.Blobs;
 using Microsoft.Azure.WebJobs.Host.Blobs.Bindings;
-using Microsoft.Azure.WebJobs.Host.Queues.Bindings;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Queues;
+using Microsoft.Azure.WebJobs.Host.Queues.Bindings;
 using Microsoft.Azure.WebJobs.Host.Tables;
 
 namespace Microsoft.Azure.WebJobs.Host.Indexers
@@ -23,8 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             IExtensionTypeLocator extensionTypeLocator,
             IContextGetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherGetter,
             IContextGetter<IBlobWrittenWatcher> blobWrittenWatcherGetter,
-            IExtensionRegistry extensions)
-            
+            IExtensionRegistry extensions)            
         {
             List<IBindingProvider> innerProviders = new List<IBindingProvider>();
 #if false
@@ -64,6 +63,4 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             return bindingProvider;
         }      
     }
-
-
 }

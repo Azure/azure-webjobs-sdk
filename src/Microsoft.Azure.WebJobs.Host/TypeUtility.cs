@@ -8,7 +8,6 @@ namespace Microsoft.Azure.WebJobs.Host
 {
     internal static class TypeUtility
     {
-
         /// <summary>
         /// Given a type that could be bound to IAsyncCollector, extract the TMessage
         /// </summary>

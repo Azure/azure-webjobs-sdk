@@ -2,11 +2,10 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Text;
 using Newtonsoft.Json;
-using System.Collections;
 
 namespace Microsoft.Azure.WebJobs
 {
@@ -47,7 +46,6 @@ namespace Microsoft.Azure.WebJobs
             string key = GetKey<TSrc, TDest>();
             _funcsWithAttr[key] = converter;
         }
-
 
         private Func<TSrc, TAttribute, TDest> TryGetConverter<TSrc, TAttribute, TDest>()
             where TAttribute : Attribute
