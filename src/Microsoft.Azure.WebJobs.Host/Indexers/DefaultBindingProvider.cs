@@ -29,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 #if false
             // Wire up new bindings 
             IConverterManager converterManager = new ConverterManager(); // $$$
-            var qh = new QueueRuleHelper(storageAccountProvider, messageEnqueuedWatcherGetter);
+            var qh = new QueueBindingRules(storageAccountProvider, messageEnqueuedWatcherGetter);
             var ruleQueueOutput = qh.BuildQueueRules(nameResolver, converterManager);
            
 #else

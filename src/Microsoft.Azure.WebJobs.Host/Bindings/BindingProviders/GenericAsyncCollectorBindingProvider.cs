@@ -118,7 +118,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 NameResolver,
                 ConverterManager,
                 this.BuildFromAttribute, 
-                null); // $$$ add hook?
+                null);
 
                 return binding;
             }

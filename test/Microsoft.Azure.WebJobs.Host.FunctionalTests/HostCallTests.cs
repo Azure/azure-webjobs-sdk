@@ -585,7 +585,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         [InlineData("FuncWithOutByteArray", TestQueueMessage)]
         [InlineData("FuncWithOutString", TestQueueMessage)]
         [InlineData("FuncWithICollector", TestQueueMessage)]
-        // [InlineData("FuncWithOutTNull", "null")] // $$$ wrong behavior 
         public void Queue_IfBoundToTypeAndQueueIsMissing_CreatesAndSends(string methodName, string expectedMessage)
         {
             // Arrange
@@ -634,6 +633,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         [InlineData("FuncWithOutCloudQueueMessageNull")]
         [InlineData("FuncWithOutByteArrayNull")]
         [InlineData("FuncWithOutStringNull")]
+        [InlineData("FuncWithOutTNull")]
         [InlineData("FuncWithICollectorNoop")]
         public void Queue_IfBoundToTypeAndQueueIsMissing_DoesNotCreate(string methodName)
         {

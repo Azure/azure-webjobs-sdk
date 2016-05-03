@@ -14,15 +14,18 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     {
         private readonly INameResolver _nameResolver;
         private readonly Func<TAttribute, Task<TUserType>> _buildFromAttr;
+        private readonly Func<TAttribute, ParameterInfo, INameResolver, ParameterDescriptor> _buildParameterDescriptor;
         private readonly Func<TAttribute, ParameterInfo, INameResolver, Task<TAttribute>> _postResolveHook;
 
         public ExactTypeBindingProvider(
             INameResolver nameResolver,
             Func<TAttribute, Task<TUserType>> buildFromAttr,
-            Func<TAttribute, ParameterInfo, INameResolver, Task<TAttribute>> postResolveHook)
+            Func<TAttribute, ParameterInfo, INameResolver, ParameterDescriptor> buildParameterDescriptor = null,
+            Func<TAttribute, ParameterInfo, INameResolver, Task<TAttribute>> postResolveHook = null)
         {
             this._postResolveHook = postResolveHook;
             this._nameResolver = nameResolver;
+            this._buildParameterDescriptor = buildParameterDescriptor;
             this._buildFromAttr = buildFromAttr;
         }
 
@@ -52,14 +55,22 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
 
             var cloner = new AttributeCloner<TAttribute>(attributeSource, _nameResolver, hookWrapper);
-            ParameterDescriptor param = new ParameterDescriptor
+            ParameterDescriptor param;
+            if (_buildParameterDescriptor != null)
             {
-                Name = parameter.Name,
-                DisplayHints = new ParameterDisplayHints
+                param = _buildParameterDescriptor(attributeSource, parameter, _nameResolver);
+            }
+            else
+            {
+                param = new ParameterDescriptor
                 {
-                    Description = "output"
-                }
-            };
+                    Name = parameter.Name,
+                    DisplayHints = new ParameterDisplayHints
+                    {
+                        Description = "output"
+                    }
+                };
+            }
 
             var binding = new ExactBinding(cloner, param, _buildFromAttr);
             return Task.FromResult<IBinding>(binding);

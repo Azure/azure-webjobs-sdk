@@ -43,8 +43,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             var bf = new BindingFactory(nameResolver, converterManager);
 
             var ruleQueueOutput = bf.BindToAsyncCollector<QueueAttribute, IStorageQueueMessage>(BuildFromQueueAttribute, ToParameterDescriptorForCollector, FixerUpper);
-            var ruleQueueClient = bf.BindToExactAsyncType<QueueAttribute, IStorageQueue>(BuildClientFromQueueAttributeAsync, FixerUpper);
-            var ruleQueueClient2 = bf.BindToExactAsyncType<QueueAttribute, CloudQueue>(BuildRealClientFromQueueAttributeAsync, FixerUpper);
+            var ruleQueueClient = bf.BindToExactAsyncType<QueueAttribute, IStorageQueue>(BuildClientFromQueueAttributeAsync, ToParameterDescriptorForCollector, FixerUpper);
+            var ruleQueueClient2 = bf.BindToExactAsyncType<QueueAttribute, CloudQueue>(BuildRealClientFromQueueAttributeAsync, ToParameterDescriptorForCollector, FixerUpper);
             var queueRules = new GenericCompositeBindingProvider<QueueAttribute>(
                 (attr) => ValidateQueueAttribute(attr, nameResolver),
                 ruleQueueClient, ruleQueueClient2, ruleQueueOutput);
