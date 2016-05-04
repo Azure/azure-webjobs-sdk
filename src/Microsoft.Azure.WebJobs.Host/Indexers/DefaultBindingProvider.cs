@@ -1,7 +1,6 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
 using System.Collections.Generic;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Bindings.Cancellation;
@@ -24,10 +23,21 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             IExtensionTypeLocator extensionTypeLocator,
             IContextGetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherGetter,
             IContextGetter<IBlobWrittenWatcher> blobWrittenWatcherGetter,
-            IExtensionRegistry extensions)
+            IExtensionRegistry extensions)            
         {
             List<IBindingProvider> innerProviders = new List<IBindingProvider>();
-            innerProviders.Add(new QueueAttributeBindingProvider(nameResolver, storageAccountProvider, messageEnqueuedWatcherGetter));
+#if false
+            // Wire up new bindings 
+            IConverterManager converterManager = new ConverterManager(); // $$$
+            var qh = new QueueBindingRules(storageAccountProvider, messageEnqueuedWatcherGetter);
+            var ruleQueueOutput = qh.BuildQueueRules(nameResolver, converterManager);
+           
+#else
+            // $$$ Use old bindings
+            var ruleQueueOutput = new QueueAttributeBindingProvider(nameResolver, storageAccountProvider, messageEnqueuedWatcherGetter);
+#endif
+            innerProviders.Add(ruleQueueOutput);
+
             innerProviders.Add(new BlobAttributeBindingProvider(nameResolver, storageAccountProvider, extensionTypeLocator, blobWrittenWatcherGetter));
             innerProviders.Add(new TableAttributeBindingProvider(nameResolver, storageAccountProvider, extensions));
 
@@ -51,6 +61,6 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             IBindingProvider bindingProvider = new CompositeBindingProvider(innerProviders);
             bindingProviderAccessor.SetValue(bindingProvider);
             return bindingProvider;
-        }
+        }      
     }
 }
