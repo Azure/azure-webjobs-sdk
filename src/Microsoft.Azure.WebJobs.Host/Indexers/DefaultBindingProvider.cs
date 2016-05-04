@@ -11,7 +11,6 @@ using Microsoft.Azure.WebJobs.Host.Blobs;
 using Microsoft.Azure.WebJobs.Host.Blobs.Bindings;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Queues;
-using Microsoft.Azure.WebJobs.Host.Queues.Bindings;
 using Microsoft.Azure.WebJobs.Host.Tables;
 
 namespace Microsoft.Azure.WebJobs.Host.Indexers
@@ -26,7 +25,11 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             IExtensionRegistry extensions)            
         {
             List<IBindingProvider> innerProviders = new List<IBindingProvider>();
-            var ruleQueueOutput = new QueueAttributeBindingProvider(nameResolver, storageAccountProvider, messageEnqueuedWatcherGetter);
+
+            // Wire up new bindings 
+            IConverterManager converterManager = new ConverterManager();
+            var queueHelper = new QueueBindingRules(storageAccountProvider, messageEnqueuedWatcherGetter);
+            var ruleQueueOutput = queueHelper.BuildQueueRules(nameResolver, converterManager);
             innerProviders.Add(ruleQueueOutput);
 
             innerProviders.Add(new BlobAttributeBindingProvider(nameResolver, storageAccountProvider, extensionTypeLocator, blobWrittenWatcherGetter));
