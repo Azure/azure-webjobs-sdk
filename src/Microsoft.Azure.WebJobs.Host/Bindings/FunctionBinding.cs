@@ -25,7 +25,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         {
             Dictionary<string, IValueProvider> results = new Dictionary<string, IValueProvider>();
 
-            BindingContext bindingContext = new BindingContext(context, null);
+            // Supplied bindings can be direct parameters or route parameters. 
+            IReadOnlyDictionary<string, object> routeParameters = (parameters != null) ? new Dictionary<string, object>(parameters) : null;
+            BindingContext bindingContext = new BindingContext(context, routeParameters);
 
             // bind Singleton if specified
             SingletonAttribute singletonAttribute = SingletonManager.GetFunctionSingletonOrNull(_descriptor.Method, isTriggered: false);
