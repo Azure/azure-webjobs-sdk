@@ -42,8 +42,43 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
+        // Invoke with binding data only, no parameters. 
         [Fact]
-        public async Task Test()
+        public async Task InvokeWithBindingData()
+        {           
+            string result = await Invoke(new { k1 = 100, k2 = 200 });
+            Assert.Equal("100-x;200-y;100", result);
+        }
+
+        // Providing a direct parameter takes precedence overbinding data
+        [Fact]
+        public async Task Parameter_Takes_Precedence()
+        {
+            string result = await Invoke(new { k1 = 100, k2 = 200, p1="override" });
+            Assert.Equal("override;200-y;100", result);
+        }
+
+        // Get an error when missing values. 
+        [Fact]
+        public async Task Missing()
+        {
+            try
+            {
+                string result = await Invoke(new { k1 = 100 });
+            }
+            catch (FunctionInvocationException e)
+            {
+                // There error should specifically be with p2. p1 and k1 binds ok since we supplied k1. 
+                var msg1 = "Exception binding parameter 'p2'";
+                Assert.Equal(msg1, e.InnerException.Message);
+
+                var msg2 = "No value for named parameter 'k2'.";
+                Assert.Equal(msg2, e.InnerException.InnerException.Message);
+            }            
+        }
+
+        // Helper to invoke the method with the given parameters
+        private async Task<string> Invoke(object arguments)
         {
             var activator = new FakeActivator();
             JobHostConfiguration config = new JobHostConfiguration()
@@ -61,11 +96,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             JobHost host = new JobHost(config);
 
             var method = typeof(Functions).GetMethod("Func");
-            await host.CallAsync(method, new { k1 = 100, k2 = 200 });
+            await host.CallAsync(method, arguments);
 
             var x = testInstance._sb.ToString();
 
-            Assert.Equal("100-x;200-y;100", x);
+            return x;
         }
     }
 }
