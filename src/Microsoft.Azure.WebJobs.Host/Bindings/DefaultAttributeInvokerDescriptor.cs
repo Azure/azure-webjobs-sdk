@@ -9,7 +9,10 @@ using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    // Helpers for providing default implementations of IAttributeInvokeDescriptor
+    // Helpers for providing default behavior for an IAttributeInvokeDescriptor that 
+    // convert between a TAttribute and a string representation (invoke string). 
+    // Properties with [AutoResolve] are the interesting ones to serialize and deserialize. 
+    // Assume any property without a [AutoResolve] attribute is read-only and so doesn't need to be included in the invoke string. 
     internal static class DefaultAttributeInvokerDescriptor<TAttribute>
         where TAttribute : Attribute
     {
@@ -36,10 +39,6 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return attr;
             }
         }
-
-        // Default implementation of IAttributeInvokeDescriptor which can be operate on any attribute and 
-        // follows basic conventions with a [ResolveProperty]. 
-        // Assume any property without a [ResolveProperty] attribute is read-only. 
 
         public static string ToInvokeString(TAttribute source)
         {
