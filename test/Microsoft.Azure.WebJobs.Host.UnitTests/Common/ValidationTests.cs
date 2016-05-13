@@ -117,10 +117,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 context.RegisterBindingRules<TestAttribute>(rule2Validator, rule1);
             }
 
-            private Task LocalValidator(TestAttribute attribute, Type parameterType)
+            private void LocalValidator(TestAttribute attribute, Type parameterType)
             {
                 attribute.ValidateAtIndexTime(parameterType);
-                return Task.FromResult(0);
             }
         }
 

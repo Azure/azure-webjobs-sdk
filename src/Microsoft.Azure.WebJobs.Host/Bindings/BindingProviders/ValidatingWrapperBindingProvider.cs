@@ -12,11 +12,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     internal class ValidatingWrapperBindingProvider<TAttribute> : IBindingProvider
         where TAttribute : Attribute
     {
-        private readonly Func<TAttribute, Type, Task> _validator;
+        private readonly Action<TAttribute, Type> _validator;
         private readonly IBindingProvider _inner;
         private readonly INameResolver _nameResolver;
 
-        public ValidatingWrapperBindingProvider(Func<TAttribute, Type, Task> validator, INameResolver nameResolver, IBindingProvider inner)
+        public ValidatingWrapperBindingProvider(Action<TAttribute, Type> validator, INameResolver nameResolver, IBindingProvider inner)
         {
             _validator = validator;
             _inner = inner;
@@ -41,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                 var cloner = new AttributeCloner<TAttribute>(attr, _nameResolver);
                 var attrNameResolved = cloner.GetNameResolvedAttribute();
-                await _validator(attrNameResolved, parameterType);
+                _validator(attrNameResolved, parameterType);
             }
 
             return binding;

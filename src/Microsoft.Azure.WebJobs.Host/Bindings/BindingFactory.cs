@@ -66,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// <param name="innerRule">Inner rule. </param>
         /// <returns></returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
-        public IBindingProvider AddValidator<TAttribute>(Func<TAttribute, Type, Task> validator, IBindingProvider innerRule)
+        public IBindingProvider AddValidator<TAttribute>(Action<TAttribute, Type> validator, IBindingProvider innerRule)
             where TAttribute : Attribute
         {
             return new ValidatingWrapperBindingProvider<TAttribute>(validator, this._nameResolver, innerRule);

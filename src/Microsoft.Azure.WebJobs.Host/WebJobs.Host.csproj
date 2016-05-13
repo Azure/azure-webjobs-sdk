@@ -367,7 +367,7 @@
     <Compile Include="Bindings\BindingBase.cs" />
     <Compile Include="Bindings\BindingFactory.cs" />
     <Compile Include="Bindings\BindingProviders\AsyncCollectorWithConverterManagerBindingProvider.cs" />
-    <Compile Include="Bindings\BindingProviders\CodeFile1.cs" />
+    <Compile Include="Bindings\BindingProviders\ValidatingWrapperBindingProvider.cs" />
     <Compile Include="Bindings\BindingProviders\FilteringBindingProvider.cs" />
     <Compile Include="Bindings\BindingProviders\GenericCompositeBindingProvider.cs" />
     <Compile Include="Bindings\BindingProviders\GenericAsyncCollectorBindingProvider.cs" />
