@@ -44,9 +44,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             var ruleQueueOutput = bf.BindToAsyncCollector<QueueAttribute, IStorageQueueMessage>(BuildFromQueueAttribute, ToParameterDescriptorForCollector, FixerUpper);
             var ruleQueueClient = bf.BindToExactAsyncType<QueueAttribute, IStorageQueue>(BuildClientFromQueueAttributeAsync, ToParameterDescriptorForCollector, FixerUpper);
             var ruleQueueClient2 = bf.BindToExactAsyncType<QueueAttribute, CloudQueue>(BuildRealClientFromQueueAttributeAsync, ToParameterDescriptorForCollector, FixerUpper);
+                        
             var queueRules = new GenericCompositeBindingProvider<QueueAttribute>(
-                (attr) => ValidateQueueAttribute(attr, nameResolver),
-                ruleQueueClient, ruleQueueClient2, ruleQueueOutput);
+                ValidateQueueAttribute, nameResolver, ruleQueueClient, ruleQueueClient2, ruleQueueOutput);
 
             return queueRules;
         }
@@ -106,9 +106,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         // This is a static validation (so only %% are resolved; not {} ) 
         // For runtime validation, the regular builder functions can do the resolution.
-        private static void ValidateQueueAttribute(QueueAttribute attribute, INameResolver nameResolver)
+        private static void ValidateQueueAttribute(QueueAttribute attribute, Type parameterType)
         {
-            string queueName = NormalizeQueueName(attribute, nameResolver);
+            string queueName = NormalizeQueueName(attribute, null);
             QueueClient.ValidateQueueName(queueName);
         }
 
