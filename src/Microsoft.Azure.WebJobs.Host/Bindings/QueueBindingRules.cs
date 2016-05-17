@@ -11,6 +11,7 @@ using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Queue;
+using System.IO;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -41,9 +42,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
             var bf = new BindingFactory(nameResolver, converterManager);
 
-            var ruleQueueOutput = bf.BindToAsyncCollector<QueueAttribute, IStorageQueueMessage>(BuildFromQueueAttribute, ToParameterDescriptorForCollector, FixerUpper);
-            var ruleQueueClient = bf.BindToExactAsyncType<QueueAttribute, IStorageQueue>(BuildClientFromQueueAttributeAsync, ToParameterDescriptorForCollector, FixerUpper);
-            var ruleQueueClient2 = bf.BindToExactAsyncType<QueueAttribute, CloudQueue>(BuildRealClientFromQueueAttributeAsync, ToParameterDescriptorForCollector, FixerUpper);
+            var ruleQueueOutput = bf.BindToAsyncCollector<QueueAttribute, IStorageQueueMessage>(BuildFromQueueAttribute, ToWriteParameterDescriptorForCollector, FixerUpper);
+            var ruleQueueClient = bf.BindToExactAsyncType<QueueAttribute, IStorageQueue>(BuildClientFromQueueAttributeAsync, ToReadWriteParameterDescriptorForCollector, FixerUpper);
+            var ruleQueueClient2 = bf.BindToExactAsyncType<QueueAttribute, CloudQueue>(BuildRealClientFromQueueAttributeAsync, ToReadWriteParameterDescriptorForCollector, FixerUpper);
                         
             var queueRules = new GenericCompositeBindingProvider<QueueAttribute>(
                 ValidateQueueAttribute, nameResolver, ruleQueueClient, ruleQueueClient2, ruleQueueOutput);
@@ -54,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         // Hook to apply hacky rules all at once. 
         private async Task<QueueAttribute> FixerUpper(QueueAttribute attrResolved, ParameterInfo parameter, INameResolver nameResolver)
         {
-            // Look for [Storage] attribute and squerrel aover 
+            // Look for [Storage] attribute and squirrel over 
             IStorageAccount account = await _accountProvider.GetStorageAccountAsync(parameter, CancellationToken.None, nameResolver);
             StorageClientFactoryContext clientFactoryContext = new StorageClientFactoryContext
             {
@@ -78,7 +79,19 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return new ResolvedQueueAttribute(queueName, client);
         }
 
-        private ParameterDescriptor ToParameterDescriptorForCollector(QueueAttribute attr, ParameterInfo parameter, INameResolver nameResolver)
+        // Cloudqueue version. Can technically read from it. Preserves compat with older SDK. 
+        private ParameterDescriptor ToReadWriteParameterDescriptorForCollector(QueueAttribute attr, ParameterInfo parameter, INameResolver nameResolver)
+        {
+            return ToParameterDescriptorForCollector(attr, parameter, nameResolver, FileAccess.ReadWrite);
+        }
+
+        // Asyncollector version. Write-only 
+        private ParameterDescriptor ToWriteParameterDescriptorForCollector(QueueAttribute attr, ParameterInfo parameter, INameResolver nameResolver)
+        {
+            return ToParameterDescriptorForCollector(attr, parameter, nameResolver, FileAccess.Write);
+        }
+
+        private ParameterDescriptor ToParameterDescriptorForCollector(QueueAttribute attr, ParameterInfo parameter, INameResolver nameResolver, FileAccess access)
         {
             Task<IStorageAccount> t = Task.Run(() =>
                 _accountProvider.GetStorageAccountAsync(parameter, CancellationToken.None, nameResolver));
@@ -89,7 +102,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 Name = parameter.Name,
                 AccountName = accountName,
                 QueueName = NormalizeQueueName(attr, nameResolver),
-                Access = System.IO.FileAccess.Write
+                Access = access
             };
         }
 
@@ -192,19 +205,19 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 this._messageEnqueuedWatcher = messageEnqueuedWatcher;
             }
 
-            public Task AddAsync(IStorageQueueMessage message, CancellationToken cancellationToken = default(CancellationToken))
+            public async Task AddAsync(IStorageQueueMessage message, CancellationToken cancellationToken = default(CancellationToken))
             {
                 if (message == null)
                 {
                     throw new InvalidOperationException("Cannot enqueue a null queue message instance.");
                 }
 
+                await _queue.AddMessageAndCreateIfNotExistsAsync(message, cancellationToken);
+
                 if (_messageEnqueuedWatcher != null)
                 {
                     _messageEnqueuedWatcher.Notify(_queue.Name);
                 }
-
-                return _queue.AddMessageAndCreateIfNotExistsAsync(message, cancellationToken);
             }
 
             public Task FlushAsync(CancellationToken cancellationToken = default(CancellationToken))
