@@ -47,6 +47,19 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         /// <summary>
+        /// Creating a type filter predicate around another rule. Filter doubles as a validator if it throws.  
+        /// </summary>
+        /// <param name="predicate">type predicate. Only apply inner rule if this predicate as applied to the user parameter type is true. </param>
+        /// <param name="innerRule">Inner rule. </param>
+        /// <returns></returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
+        public IBindingProvider AddFilter<TAttribute>(Func<TAttribute, Type, bool> predicate, IBindingProvider innerRule)
+            where TAttribute : Attribute
+        {
+            return new FilteringBindingProvider<TAttribute>(predicate, this._nameResolver, innerRule);
+        }
+
+        /// <summary>
         /// Creating a type filter predicate around another rule. 
         /// </summary>
         /// <param name="predicate">type predicate. Only apply inner rule if this predicate as applied to the user parameter type is true. </param>
@@ -55,7 +68,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         public IBindingProvider AddTypeFilter(Func<Type, bool> predicate, IBindingProvider innerRule)
         {
-            return new FilteringBindingProvider(predicate, innerRule);
+            return new FilteringBindingProvider<Attribute>((attr, parameterType) => predicate(parameterType), this._nameResolver, innerRule);
         }
 
         /// <summary>
@@ -79,7 +92,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// <typeparam name="TAttribute"></typeparam>
         /// <param name="builder"></param>
         /// <returns></returns>
-        public IBindingProvider BindToGenericItem<TAttribute>(Func<TAttribute, Type, Task<IValueBinder>> builder)
+        public IBindingProvider BindToGenericValueProvider<TAttribute>(Func<TAttribute, Type, Task<IValueBinder>> builder)
             where TAttribute : Attribute
         {
             return new ItemBindingProvider<TAttribute>(this._nameResolver, builder);
@@ -155,6 +168,19 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
             return new GenericAsyncCollectorBindingProvider<TAttribute, TConstructorArgument>(
                 _nameResolver,  asyncCollectorType, constructorParameterBuilder);
+        }
+
+        /// <summary>
+        /// Create a rule that binds to the user parameter type. This skips the converter manager. 
+        /// </summary>
+        /// <param name="builder">Builder function that takes (resolved attribute, user parameter type) and returns an object that is assigned to the user parameter type.</param>
+        /// <returns></returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "builder")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
+        public IBindingProvider BindToGenericItem<TAttribute>(Func<TAttribute, Type, Task<object>> builder)
+            where TAttribute : Attribute
+        {
+            return new GenericItemBindingProvider<TAttribute>(builder, this._nameResolver);
         }
 
         /// <summary>
