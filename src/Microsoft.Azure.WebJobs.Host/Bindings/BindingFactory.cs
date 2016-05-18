@@ -12,7 +12,7 @@ using Microsoft.Azure.WebJobs.Host.Triggers;
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
     /// <summary>
-    /// Helper class for producing binding rules. 
+    /// Helper class for creating some generally useful BindingProviders
     /// </summary>
     public class BindingFactory
     {
@@ -47,51 +47,51 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         /// <summary>
-        /// Creating a type filter predicate around another rule. Filter doubles as a validator if it throws.  
+        /// Creating a type filter predicate around another binding provider. Filter doubles as a validator if it throws.  
         /// </summary>
-        /// <param name="predicate">type predicate. Only apply inner rule if this predicate as applied to the user parameter type is true. </param>
-        /// <param name="innerRule">Inner rule. </param>
-        /// <returns></returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
-        public IBindingProvider AddFilter<TAttribute>(Func<TAttribute, Type, bool> predicate, IBindingProvider innerRule)
+        /// <param name="predicate">A predication function to determine whether to use the corresponding inner provider. 
+        /// The predicate is called once at indexing time and passed a non-resolved attribute. If it returns true, the inner provider is used to bind this parameter. It can throw an exception to signal an indexing error. </param>
+        /// <param name="innerProvider">Inner provider to use if the predicate returns true.</param>
+        /// <returns>A binding provider that applies these semantics.</returns>
+        public IBindingProvider AddFilter<TAttribute>(Func<TAttribute, Type, bool> predicate, IBindingProvider innerProvider)
             where TAttribute : Attribute
         {
-            return new FilteringBindingProvider<TAttribute>(predicate, this._nameResolver, innerRule);
+            return new FilteringBindingProvider<TAttribute>(predicate, this._nameResolver, innerProvider);
         }
 
         /// <summary>
-        /// Creating a type filter predicate around another rule. 
+        /// Creating a type filter predicate around another binding provider. 
         /// </summary>
-        /// <param name="predicate">type predicate. Only apply inner rule if this predicate as applied to the user parameter type is true. </param>
-        /// <param name="innerRule">Inner rule. </param>
-        /// <returns></returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
-        public IBindingProvider AddTypeFilter(Func<Type, bool> predicate, IBindingProvider innerRule)
+        /// <param name="predicate">type predicate. Only apply inner provider if this predicate as applied to the user parameter type is true. </param>
+        /// <param name="innerProvider">Inner provider to use if the predicate returns true.</param>
+        /// <returns>A binding provider that applies these semantics.</returns>
+        public IBindingProvider AddTypeFilter(Func<Type, bool> predicate, IBindingProvider innerProvider)
         {
-            return new FilteringBindingProvider<Attribute>((attr, parameterType) => predicate(parameterType), this._nameResolver, innerRule);
+            return new FilteringBindingProvider<Attribute>((attr, parameterType) => predicate(parameterType), this._nameResolver, innerProvider);
         }
 
         /// <summary>
-        /// Creating a validation predicate around another rule. 
-        /// The predicate is only run if the inner rule is applied. 
+        /// Creating a validation predicate around another binding provider. 
+        /// The predicate is only run if the inner binding is applied. 
         /// </summary>
-        /// <param name="validator">a validator function to invoke on the attribute before runtime. </param>
-        /// <param name="innerRule">Inner rule. </param>
-        /// <returns></returns>
+        /// <param name="validator">a validator function to invoke on the attribute during indexing. This is called at most once, 
+        /// and only if the inner provider returns a binding. </param>
+        /// <param name="innerProvider">Inner provider. This is always run.  </param>
+        /// <returns>A binding provider that applies these semantics.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
-        public IBindingProvider AddValidator<TAttribute>(Action<TAttribute, Type> validator, IBindingProvider innerRule)
+        public IBindingProvider AddValidator<TAttribute>(Action<TAttribute, Type> validator, IBindingProvider innerProvider)
             where TAttribute : Attribute
         {
-            return new ValidatingWrapperBindingProvider<TAttribute>(validator, this._nameResolver, innerRule);
+            return new ValidatingWrapperBindingProvider<TAttribute>(validator, this._nameResolver, innerProvider);
         }
 
         /// <summary>
-        /// Create a rule that returns an IValueBinder from a resolved attribute. IValueBinder will let you have an OnCompleted hook that 
+        /// Create a binding provider that returns an IValueBinder from a resolved attribute. IValueBinder will let you have an OnCompleted hook that 
         /// is invoked after the user function completes. 
         /// </summary>
-        /// <typeparam name="TAttribute"></typeparam>
-        /// <param name="builder"></param>
-        /// <returns></returns>
+        /// <typeparam name="TAttribute">type of binding attribute on the user's parameter.</typeparam>
+        /// <param name="builder">builder function to create a IValueBinder given a resolved attribute and the user parameter type. </param>
+        /// <returns>A binding provider that applies these semantics.</returns>
         public IBindingProvider BindToGenericValueProvider<TAttribute>(Func<TAttribute, Type, Task<IValueBinder>> builder)
             where TAttribute : Attribute
         {
@@ -99,15 +99,15 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         /// <summary>
-        /// Create a rule for binding a parameter to an <see cref="IAsyncCollector{TMEssage}"/>. 
+        /// Create a binding provider for binding a parameter to an <see cref="IAsyncCollector{TMEssage}"/>. 
         /// Use the <see cref="IConverterManager"/> to convert form the user's parameter type to the TMessage type. 
         /// </summary>
-        /// <typeparam name="TAttribute">type of binding attribute</typeparam>
+        /// <typeparam name="TAttribute">type of binding attribute on the user's parameter.</typeparam>
         /// <typeparam name="TMessage">'core type' for the IAsyncCollector.</typeparam>
         /// <param name="buildFromAttribute">function to allocate the collector object given a resolved instance of the attribute.</param>
-        /// <param name="postResolveHook"></param>
-        /// <param name="buildParameterDescriptor"></param>
-        /// <returns></returns>
+        /// <param name="buildParameterDescriptor">An optional function to create a specific ParameterDescriptor object for the dashboard. If missing, a default ParameterDescriptor is created. </param>
+        /// <param name="postResolveHook">an advanced hook for translating the attribute. </param>
+        /// <returns>A binding provider that applies these semantics.</returns>
         public IBindingProvider BindToAsyncCollector<TAttribute, TMessage>(
             Func<TAttribute, IAsyncCollector<TMessage>> buildFromAttribute, 
             Func<TAttribute, ParameterInfo, INameResolver, ParameterDescriptor> buildParameterDescriptor = null,
@@ -119,13 +119,13 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         /// <summary>
-        /// Create a rule for binding a parameter to an <see cref="IAsyncCollector{T}"/> where T is the user parameter's type. 
+        /// Create a binding provider for binding a parameter to an <see cref="IAsyncCollector{T}"/> where T is the user parameter's type. 
         /// </summary>
-        /// <typeparam name="TAttribute">type of binding attribute</typeparam>
-        /// <typeparam name="TConstructorArgument"></typeparam>
+        /// <typeparam name="TAttribute">type of binding attribute on the user's parameter.</typeparam>
+        /// <typeparam name="TConstructorArgument">The type of the constructor argument.</typeparam>
         /// <param name="asyncCollectorType">type that implements <see cref="IAsyncCollector{T}"/>. Must have a constructor with exactly 1 parameter of type TConstructorArgument.</param>
         /// <param name="constructorParameterBuilder">builder function to create an instance of the collector's constructor parameter from a resolved attribute.</param>
-        /// <returns></returns>
+        /// <returns>A binding provider that applies these semantics.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public IBindingProvider BindToGenericAsyncCollector<TAttribute, TConstructorArgument>(
             Type asyncCollectorType, 
@@ -146,7 +146,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 string msg = string.Format(CultureInfo.InvariantCulture, 
                     "Collector implementation type {0} should be a generic where the type will be resolved at runtime. " +
-                    "If you know the type at compile time, use a more specific binding rule.",
+                    "If you know the type at compile time, use a more specific binding provider.",
                   asyncCollectorType.FullName);
                 throw new InvalidOperationException(msg);
             }
@@ -171,12 +171,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         /// <summary>
-        /// Create a rule that binds to the user parameter type. This skips the converter manager. 
+        /// Create a binding provider that binds to the user parameter type. This skips the converter manager. 
         /// </summary>
         /// <param name="builder">Builder function that takes (resolved attribute, user parameter type) and returns an object that is assigned to the user parameter type.</param>
-        /// <returns></returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "builder")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
+        /// <returns>A binding provider that applies these semantics.</returns>
         public IBindingProvider BindToGenericItem<TAttribute>(Func<TAttribute, Type, Task<object>> builder)
             where TAttribute : Attribute
         {
@@ -184,12 +182,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         /// <summary>
-        /// Create a binding rule that binds the parameter to an specific instance of TUserType. 
+        /// Create a binding provider that binds the parameter to an specific instance of TUserType. 
         /// </summary>
-        /// <typeparam name="TAttribute">type of binding attribute</typeparam>
-        /// <typeparam name="TUserType"></typeparam>
+        /// <typeparam name="TAttribute">type of binding attribute on the user's parameter.</typeparam>
+        /// <typeparam name="TUserType">The exact type of the user's parameter that this will bind to.</typeparam>
         /// <param name="buildFromAttribute">builder function to create the object that will get passed to the user function.</param>
-        /// <returns></returns>
+        /// <returns>A binding provider that applies these semantics.</returns>
         public IBindingProvider BindToExactType<TAttribute, TUserType>(Func<TAttribute, TUserType> buildFromAttribute)
             where TAttribute : Attribute
         {
@@ -197,35 +195,35 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         /// <summary>
-        /// Create a binding rule that binds the parameter to an specific instance of TUserType. 
+        /// Create a binding provider that binds the parameter to an specific instance of TUserType. 
         /// </summary>
-        /// <typeparam name="TAttribute">type of binding attribute</typeparam>
-        /// <typeparam name="TUserType"></typeparam>
+        /// <typeparam name="TAttribute">type of binding attribute on the user's parameter.</typeparam>
+        /// <typeparam name="TUserType">The exact type of the user's parameter that this will bind to.</typeparam>
         /// <param name="buildFromAttribute">builder function to create the object that will get passed to the user function.</param>
-        /// <param name="buildParameterDescriptor"></param>
-        /// <param name="postResolveHook"></param>
-        /// <returns></returns>
+        /// <param name="buildParameterDescriptor">An optional function to create a specific ParameterDescriptor object for the dashboard. If missing, a default ParameterDescriptor is created. </param>
+        /// <param name="postResolveHook">an advanced hook for translating the attribute. </param>
+        /// <returns>A binding provider that applies these semantics.</returns>
         public IBindingProvider BindToExactAsyncType<TAttribute, TUserType>(
             Func<TAttribute, Task<TUserType>> buildFromAttribute,
             Func<TAttribute, ParameterInfo, INameResolver, ParameterDescriptor> buildParameterDescriptor = null,
             Func<TAttribute, ParameterInfo, INameResolver, Task<TAttribute>> postResolveHook = null)
             where TAttribute : Attribute
         {
-            var rule = new ExactTypeBindingProvider<TAttribute, TUserType>(_nameResolver, buildFromAttribute, buildParameterDescriptor, postResolveHook);
-            return rule;
+            var bindingProvider = new ExactTypeBindingProvider<TAttribute, TUserType>(_nameResolver, buildFromAttribute, buildParameterDescriptor, postResolveHook);
+            return bindingProvider;
         }
 
         /// <summary>
         /// Bind a  parameter to an IAsyncCollector. Use this for things that have discrete output items (like sending messages or writing table rows)
         /// This will add additional adapters to connect the user's parameter type to an IAsyncCollector. 
         /// </summary>
-        /// <typeparam name="TMessage"></typeparam>
-        /// <typeparam name="TTriggerValue"></typeparam>
+        /// <typeparam name="TMessage">'core type' for the IAsyncCollector.</typeparam>
+        /// <typeparam name="TTriggerValue">The type of the trigger object to pass to the listener.</typeparam>
         /// <param name="bindingStrategy">a strategy object that describes how to do the binding</param>
         /// <param name="parameter">the user's parameter being bound to</param>
         /// <param name="converterManager">the converter manager, used to convert between the user parameter's type and the underlying native types used by the trigger strategy</param>
         /// <param name="createListener">a function to create the underlying listener for this parameter</param>
-        /// <returns></returns>
+        /// <returns>A trigger binding</returns>
         public static ITriggerBinding GetTriggerBinding<TMessage, TTriggerValue>(
             ITriggerBindingStrategy<TMessage, TTriggerValue> bindingStrategy,
             ParameterInfo parameter,

@@ -4,10 +4,12 @@
 using System;
 using System.Reflection;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Protocols;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
+    // Binding provider that can bind to arbitrary user parameter. 
+    // It invokes the builder function and passes the resolved attribute and user parameter type. 
+    // The builder returns an object that is compatible with the user parameter. 
     internal class GenericItemBindingProvider<TAttribute> : IBindingProvider
         where TAttribute : Attribute
     {

@@ -40,9 +40,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             var attrNameResolved = cloner.GetNameResolvedAttribute();
 
             // This may do validation and throw too. 
-            bool useThisRule = _predicate(attrNameResolved, parametertype);
+            bool canBind = _predicate(attrNameResolved, parametertype);
 
-            if (!useThisRule)
+            if (!canBind)
             {
                 return Task.FromResult<IBinding>(null);
             }
