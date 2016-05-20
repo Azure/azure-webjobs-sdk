@@ -90,6 +90,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             Assert.Equal(typeof(Widget), BindingFactoryHelpers.GetAsyncCollectorCoreType(typeof(ICollector<Widget>)));
             Assert.Equal(typeof(Widget), BindingFactoryHelpers.GetAsyncCollectorCoreType(typeof(Widget).MakeByRefType()));
             Assert.Equal(typeof(Widget), BindingFactoryHelpers.GetAsyncCollectorCoreType(typeof(Widget[]).MakeByRefType()));
+
+            // Verify that 'out' takes precedence over generic. 
+            Assert.Equal(typeof(IFoo<Widget>), BindingFactoryHelpers.GetAsyncCollectorCoreType(typeof(IFoo<Widget>).MakeByRefType()));
+        }
+
+        // Random generic type to use in tests. 
+        interface IFoo<T>
+        {
         }
     }
 }
