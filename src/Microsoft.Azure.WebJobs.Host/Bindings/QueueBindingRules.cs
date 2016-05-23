@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,7 +12,6 @@ using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Queue;
-using System.IO;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -95,7 +95,13 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         {
             Task<IStorageAccount> t = Task.Run(() =>
                 _accountProvider.GetStorageAccountAsync(parameter, CancellationToken.None, nameResolver));
-            string accountName = t.GetAwaiter().GetResult().Credentials.AccountName;
+            IStorageAccount account = t.GetAwaiter().GetResult();
+            if (account == null)
+            {
+                throw new InvalidOperationException("Can't bind Queue since no storage account is set.");
+            }
+
+            string accountName = account.Credentials.AccountName;
 
             return new QueueParameterDescriptor
             {
@@ -119,7 +125,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         // This is a static validation (so only %% are resolved; not {} ) 
         // For runtime validation, the regular builder functions can do the resolution.
-        private static void ValidateQueueAttribute(QueueAttribute attribute, Type parameterType)
+        private void ValidateQueueAttribute(QueueAttribute attribute, Type parameterType)
         {
             string queueName = NormalizeQueueName(attribute, null);
             QueueClient.ValidateQueueName(queueName);
