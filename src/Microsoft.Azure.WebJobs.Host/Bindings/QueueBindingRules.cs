@@ -98,7 +98,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             IStorageAccount account = t.GetAwaiter().GetResult();
             if (account == null)
             {
-                throw new InvalidOperationException("Can't bind Queue since no storage account is set.");
+                throw new InvalidOperationException("Unable to bind Queue because no storage account has been configured.");
             }
 
             string accountName = account.Credentials.AccountName;
@@ -128,7 +128,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         private void ValidateQueueAttribute(QueueAttribute attribute, Type parameterType)
         {
             string queueName = NormalizeQueueName(attribute, null);
-            QueueClient.ValidateQueueName(queueName);
+
+            // Super hacky  $$$
+            if (!queueName.Contains("{")) 
+            {
+                QueueClient.ValidateQueueName(queueName);
+            }
         }
 
         private IStorageQueueMessage ConvertReal2CloudQueueMessage(CloudQueueMessage arg)
