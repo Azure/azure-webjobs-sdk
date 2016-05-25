@@ -138,7 +138,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         {
             string queueName = NormalizeQueueName(attribute, null);
 
-            // Super hacky  $$$
+            // Queue legacy behavior: if there are { }in the path, then defer validation until runtime. 
             if (!queueName.Contains("{")) 
             {
                 QueueClient.ValidateQueueName(queueName);
@@ -218,6 +218,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 // Azure Queues must be lowercase. 
                 // Legacy behavior: coerce name to lowercase to be nice. 
                 string queueName = this.QueueName.ToLowerInvariant();
+
+                QueueClient.ValidateQueueName(queueName);
+
                 return this.Client.GetQueueReference(queueName);
             }
         }
