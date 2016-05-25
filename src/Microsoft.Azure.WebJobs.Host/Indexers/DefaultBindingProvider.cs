@@ -28,8 +28,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
             // Wire up new bindings 
             IConverterManager converterManager = new ConverterManager();
-            var queueHelper = new QueueBindingRules(storageAccountProvider, messageEnqueuedWatcherGetter);
-            var ruleQueueOutput = queueHelper.BuildQueueRules(nameResolver, converterManager);
+            var ruleQueueOutput = QueueBindingProvider.Build(storageAccountProvider, messageEnqueuedWatcherGetter, nameResolver, converterManager);
             innerProviders.Add(ruleQueueOutput);
 
             innerProviders.Add(new BlobAttributeBindingProvider(nameResolver, storageAccountProvider, extensionTypeLocator, blobWrittenWatcherGetter));

@@ -17,43 +17,65 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
     // Write up bindinging rules for [Queue] attribute. 
     // This is fundemantentally an IAsyncCollector<IStorageQueueMessage>
-    internal class QueueBindingRules
+    internal class QueueBindingProvider
     {
+        // Fields that the various binding funcs need to close over. 
         private readonly IStorageAccountProvider _accountProvider;
         private readonly IContextGetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherGetter;
 
-        public QueueBindingRules(IStorageAccountProvider accountProvider, IContextGetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherGetter)
+        // Use the static Build method to create. 
+        // Constructor is just for capturing instance fields used in func closures. 
+        private QueueBindingProvider(
+               IStorageAccountProvider accountProvider,
+               IContextGetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherGetter)
         {
             _accountProvider = accountProvider;
             _messageEnqueuedWatcherGetter = messageEnqueuedWatcherGetter;
         }
 
-        public IBindingProvider BuildQueueRules(
+        public static IBindingProvider Build(
+            IStorageAccountProvider accountProvider,
+            IContextGetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherGetter,
+            INameResolver nameResolver,
+            IConverterManager converterManager)
+        {
+            var closure = new QueueBindingProvider(accountProvider, messageEnqueuedWatcherGetter);
+            var bindingProvider = closure.New(nameResolver, converterManager);
+            return bindingProvider;
+        }
+
+        // Helper to allocate a binding provider for [Queue].
+        // private instance method since it's refering to lambdas that close over the instance fields. 
+        private IBindingProvider New(
             INameResolver nameResolver,
             IConverterManager converterManager)
         {
             // IStorageQueueMessage is the core testing interface 
-            converterManager.AddConverter<byte[], IStorageQueueMessage, QueueAttribute>(ConvertByteArrayCloudQueueMessage);
-            converterManager.AddConverter<string, IStorageQueueMessage, QueueAttribute>(ConvertString2CloudQueueMessage);
-            converterManager.AddConverter<IStorageQueueMessage, string>(ConvertCloudQueueMessage2String);
-            converterManager.AddConverter<IStorageQueueMessage, byte[]>(ConvertCloudQueueMessage2ByteArray);
+            converterManager.AddConverter<byte[], IStorageQueueMessage, QueueAttribute>(ConvertByteArrayToCloudQueueMessage);
+            converterManager.AddConverter<IStorageQueueMessage, byte[]>(ConvertCloudQueueMessageToByteArray);
 
-            converterManager.AddConverter<CloudQueueMessage, IStorageQueueMessage>(ConvertReal2CloudQueueMessage);
+            converterManager.AddConverter<string, IStorageQueueMessage, QueueAttribute>(ConvertStringToCloudQueueMessage);
+            converterManager.AddConverter<IStorageQueueMessage, string>(ConvertCloudQueueMessageToString);
 
-            var bf = new BindingFactory(nameResolver, converterManager);
+            converterManager.AddConverter<CloudQueueMessage, IStorageQueueMessage>(ConvertToStorageQueueMessage);
 
-            var ruleQueueOutput = bf.BindToAsyncCollector<QueueAttribute, IStorageQueueMessage>(BuildFromQueueAttribute, ToWriteParameterDescriptorForCollector, FixerUpper);
-            var ruleQueueClient = bf.BindToExactAsyncType<QueueAttribute, IStorageQueue>(BuildClientFromQueueAttributeAsync, ToReadWriteParameterDescriptorForCollector, FixerUpper);
-            var ruleQueueClient2 = bf.BindToExactAsyncType<QueueAttribute, CloudQueue>(BuildRealClientFromQueueAttributeAsync, ToReadWriteParameterDescriptorForCollector, FixerUpper);
+            var bindingFactory = new BindingFactory(nameResolver, converterManager);
+
+            var bindAsyncCollector = bindingFactory.BindToAsyncCollector<QueueAttribute, IStorageQueueMessage>(BuildFromQueueAttribute, ToWriteParameterDescriptorForCollector, CollectAttributeInfo);
+            var bindClient = bindingFactory.BindToExactAsyncType<QueueAttribute, IStorageQueue>(BuildClientFromQueueAttributeAsync, ToReadWriteParameterDescriptorForCollector, CollectAttributeInfo);
+            var bindSdkClient = bindingFactory.BindToExactAsyncType<QueueAttribute, CloudQueue>(BuildRealClientFromQueueAttributeAsync, ToReadWriteParameterDescriptorForCollector, CollectAttributeInfo);
                         
-            var queueRules = new GenericCompositeBindingProvider<QueueAttribute>(
-                ValidateQueueAttribute, nameResolver, ruleQueueClient, ruleQueueClient2, ruleQueueOutput);
+            var bindingProvider = new GenericCompositeBindingProvider<QueueAttribute>(
+                ValidateQueueAttribute, nameResolver, bindClient, bindSdkClient, bindAsyncCollector);
 
-            return queueRules;
+            return bindingProvider;
         }
 
-        // Hook to apply hacky rules all at once. 
-        private async Task<QueueAttribute> FixerUpper(QueueAttribute attrResolved, ParameterInfo parameter, INameResolver nameResolver)
+        // [Queue] has some legacy behavior where the storage account can be specified outside of the [Queue] attribute. 
+        // The storage account is pulled from the ParameterInfo (which could pull in a [Storage] attribute on the container class)
+        // Resolve everything back down to a single attribute so we can use the binding helpers. 
+        // This pattern should be rare since other extensions can just keep everything directly on the primary attribute. 
+        private async Task<QueueAttribute> CollectAttributeInfo(QueueAttribute attrResolved, ParameterInfo parameter, INameResolver nameResolver)
         {
             // Look for [Storage] attribute and squirrel over 
             IStorageAccount account = await _accountProvider.GetStorageAccountAsync(parameter, CancellationToken.None, nameResolver);
@@ -62,21 +84,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 Parameter = parameter
             };
             IStorageQueueClient client = account.CreateQueueClient(clientFactoryContext);
-
-            // Create the queue if needed?
-            var queue = client.GetQueueReference(attrResolved.QueueName);
-            bool create = false;
-            if (create)
-            {
-                await queue.CreateIfNotExistsAsync(CancellationToken.None);
-            }
-
-            // Normalize and validate? 
-            string queueName = attrResolved.QueueName.ToLowerInvariant(); // must be lowercase. coerce here to be nice.
-            QueueClient.ValidateQueueName(queueName);
-
-            // Lowercase
-            return new ResolvedQueueAttribute(queueName, client);
+                    
+            return new ResolvedQueueAttribute(attrResolved.QueueName, client);
         }
 
         // Cloudqueue version. Can technically read from it. Preserves compat with older SDK. 
@@ -136,32 +145,32 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
         }
 
-        private IStorageQueueMessage ConvertReal2CloudQueueMessage(CloudQueueMessage arg)
+        private IStorageQueueMessage ConvertToStorageQueueMessage(CloudQueueMessage arg)
         {
             return new StorageQueueMessage(arg);
         }
 
-        private byte[] ConvertCloudQueueMessage2ByteArray(IStorageQueueMessage arg)
+        private byte[] ConvertCloudQueueMessageToByteArray(IStorageQueueMessage arg)
         {
             return arg.AsBytes;
         }
 
-        private string ConvertCloudQueueMessage2String(IStorageQueueMessage arg)
+        private string ConvertCloudQueueMessageToString(IStorageQueueMessage arg)
         {
             return arg.AsString;
         }
 
-        private IStorageQueueMessage ConvertByteArrayCloudQueueMessage(byte[] arg, QueueAttribute attrResolved)
+        private IStorageQueueMessage ConvertByteArrayToCloudQueueMessage(byte[] arg, QueueAttribute attrResolved)
         {
-            var attr = (ResolvedQueueAttribute)attrResolved;
-            var msg = attr.GetQueue().CreateMessage(arg);
+            IStorageQueue queue = GetQueue(attrResolved);
+            var msg = queue.CreateMessage(arg);
             return msg;
         }
 
-        private IStorageQueueMessage ConvertString2CloudQueueMessage(string arg, QueueAttribute attrResolved)
+        private IStorageQueueMessage ConvertStringToCloudQueueMessage(string arg, QueueAttribute attrResolved)
         {
-            var attr = (ResolvedQueueAttribute)attrResolved;
-            var msg = attr.GetQueue().CreateMessage(arg);
+            IStorageQueue queue = GetQueue(attrResolved);
+            var msg = queue.CreateMessage(arg);
             return msg;
         }
 
@@ -173,21 +182,27 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         private async Task<IStorageQueue> BuildClientFromQueueAttributeAsync(QueueAttribute attrResolved)
         {
-            var attr = (ResolvedQueueAttribute)attrResolved;
-            var queue = attr.GetQueue();
+            IStorageQueue queue = GetQueue(attrResolved);
             await queue.CreateIfNotExistsAsync(CancellationToken.None);
             return queue;
         }
 
         private IAsyncCollector<IStorageQueueMessage> BuildFromQueueAttribute(QueueAttribute attrResolved)
         {
-            var attr = (ResolvedQueueAttribute)attrResolved;
-            var queue = attr.GetQueue();
+            IStorageQueue queue = GetQueue(attrResolved);
             return new QueueAsyncCollector(queue, _messageEnqueuedWatcherGetter.Value);
+        }
+
+        private static IStorageQueue GetQueue(QueueAttribute attrResolved)
+        {
+            var attr = (ResolvedQueueAttribute)attrResolved;
+            IStorageQueue queue = attr.GetQueue();
+            return queue;
         }
 
         // Queue attributes are paired with a separate [StorageAccount]. 
         // Consolidate the information from both attributes into a single attribute.
+        // New extensions should just place everything in the attribute or the configuration and so shouldn't need to do this. 
         internal sealed class ResolvedQueueAttribute : QueueAttribute
         {
             public ResolvedQueueAttribute(string queueName, IStorageQueueClient client)
@@ -200,7 +215,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
             public IStorageQueue GetQueue()
             {
-                return this.Client.GetQueueReference(this.QueueName);
+                // Azure Queues must be lowercase. 
+                // Legacy behavior: coerce name to lowercase to be nice. 
+                string queueName = this.QueueName.ToLowerInvariant();
+                return this.Client.GetQueueReference(queueName);
             }
         }
 
