@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage.Table;
+using Microsoft.Azure.WebJobs.Logging.Internal;
 
 namespace Microsoft.Azure.WebJobs.Logging
 {
@@ -24,6 +25,37 @@ namespace Microsoft.Azure.WebJobs.Logging
             }
             table.CreateIfNotExists();
             this._instanceTable = table;
+        }
+
+        public Task<Tuple<DateTime,int>[]> GetVolumeAsync(DateTime startTime, DateTime endTime, int numberBuckets)        
+        {
+            var query = InstanceCountEntity.GetQuery(startTime, endTime);
+
+            IEnumerable<InstanceCountEntity> results = _instanceTable.ExecuteQuery(query);
+                        
+            int N = numberBuckets;
+            long startTicks = startTime.Ticks;
+            double bucketWidth = ((double)(endTime.Ticks - startTicks)) / N;
+
+            int[] values = new int[N];
+
+            foreach (var entity in results)
+            {
+                long ticks = entity.GetTicks();
+                long ticksFromStart = ticks - startTicks;
+                int idx = (int)(ticksFromStart / bucketWidth);
+
+                values[idx] += entity.Count * entity.Size;
+            }
+
+            Tuple<DateTime, int>[] chart = new Tuple<DateTime, int>[N];
+            for (int i = 0; i < N; i++)
+            {
+                var time = new DateTime((long) (startTicks + (i * bucketWidth)));
+                chart[i] = new Tuple<DateTime, int>(time, values[i]);
+            }
+
+            return Task.FromResult(chart);
         }
 
         public Task<Segment<IFunctionDefinition>> GetFunctionDefinitionsAsync(string continuationToken)

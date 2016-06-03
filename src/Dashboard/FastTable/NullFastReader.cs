@@ -34,5 +34,10 @@ namespace Dashboard
         {
             throw new NotImplementedException();
         }
+
+        public Task<Tuple<DateTime, int>[]> GetVolumeAsync(DateTime startTime, DateTime endTime, int numBuckets)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
