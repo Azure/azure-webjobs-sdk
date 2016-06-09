@@ -24,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal.FunctionalTests
 
             // Activity within single poll interval. 
             l.Increment(g1); // will start the timer. 
-            l.Increment(g1); // ignored, already staretd g1.                         
+            l.Increment(g1); // ignored, already started g1.                         
             l.Decrement(g1); // count is back to 0 before poll happens. 
             
             Assert.Equal(0, l._dict.Count); // Large poll, haven't written yet. 
@@ -36,6 +36,8 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal.FunctionalTests
             // We still picked up g1
             Assert.Equal(1, l._dict.Count);
             Assert.Equal(1, l._dict[100]);
+
+            Assert.Equal(1, l._totalActive); // duplicate g1 is only counted once
         }
 
         // Activity within a single polling interval. 
@@ -60,6 +62,8 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal.FunctionalTests
             // We still picked up g1
             Assert.Equal(1, l._dict.Count);
             Assert.Equal(1, l._dict[100]);
+
+            Assert.Equal(1, l._totalActive);
         }
 
         [Fact]
@@ -86,6 +90,7 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal.FunctionalTests
             Task[] tasks = Array.ConvertAll(Enumerable.Range(1, 10).ToArray(), _ => l.StopAsync());
             await Task.WhenAll(tasks);
 
+            Assert.Equal(1, l._totalActive);
             Assert.Equal(1, l._dict.Count);
             Assert.Equal(1, l._dict[101]);
         }
@@ -113,6 +118,7 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal.FunctionalTests
                 Assert.Equal(1, l._dict[i]);
                 c++;
             }
+            Assert.Equal(c, l._totalActive);
             Assert.Equal(c, l._dict.Count);
         }
 
@@ -145,7 +151,9 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal.FunctionalTests
 
             
             Assert.Equal(2, l._dict[200]); // max was g2, g3
-            
+
+            Assert.Equal(3, l._totalActive);
+
             Assert.Equal(2, l._dict[300]); // spill over from time-200
             Assert.Equal(3, l._dict.Count); 
         }
@@ -164,6 +172,8 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal.FunctionalTests
             l.Decrement(g1);
             l.Poll(40); // this will catch partial activity after 30
             l.Poll(41); // should be 0, so no entry 
+
+            Assert.Equal(1, l._totalActive);
 
             Assert.Equal(4, l._dict.Count);
             Assert.Equal(1, l._dict[10]);
@@ -186,17 +196,20 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal.FunctionalTests
             private readonly AutoResetEvent _eventFinishedWrite = new AutoResetEvent(false);
             public long _newTicks;
 
+            public int _totalActive;
+
             public TestLogger()
             {                
             }
 
             // Callback from background Poller thread. 
-            protected override Task WriteEntry(long ticks, int value)
+            protected override Task WriteEntry(long ticks, int currentActive, int totalThisPeriod)
             {
-                if (value > 0)
+                if (currentActive > 0)
                 {
-                    _dict.Add(ticks, value); // shouldn't exist yet. 
+                    _dict.Add(ticks, currentActive); // shouldn't exist yet. 
                 }
+                _totalActive += totalThisPeriod;
 
                 _eventFinishedWrite.Set(); // unblocks call to Poll() on main thread. 
 

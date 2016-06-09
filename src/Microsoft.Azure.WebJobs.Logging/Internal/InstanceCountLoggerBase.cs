@@ -21,6 +21,9 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
         // If we get 1000 functions that each take 1 ms,  a random sample may catch _outstandingCount.Count at 0 and miss the activity. 
         private int _maxCount;
 
+        // Total number of unique increments. 
+        private int _totalCount;
+
         private Worker _worker;
         
         object _lock = new object();
@@ -59,7 +62,11 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
                     _worker = Worker.Start(this);                    
                 }
 
-                _outstandingCount.Add(instanceId);
+                if (_outstandingCount.Add(instanceId))
+                {
+                    _totalCount++;
+                }
+
                 _maxCount = Math.Max(_maxCount, _outstandingCount.Count);
             }
         }
@@ -88,9 +95,10 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
         /// Called to write 
         /// </summary>
         /// <param name="ticks">time ticks returned via WaitOnPoll</param>
-        /// <param name="value">number of outstanding Increment calls. </param>
+        /// <param name="currentActive">number of outstanding Increment calls. </param>
+        /// <param name="totalThisPeriod">total number of unique Increment calls this period.</param>
         /// <returns></returns>
-        protected abstract Task WriteEntry(long ticks, int value);
+        protected abstract Task WriteEntry(long ticks, int currentActive, int totalThisPeriod);
 
         // Wrap cancellation token and task in a separate class so that StopAsync()  doesn't reccyle them. 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable")]
@@ -121,15 +129,19 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
                     long ticks = await _parent.WaitOnPoll(_cancel.Token);
 
                     int totalActiveFuncs;
+                    int totalThisPeriod;
                     lock (_parent._lock)
                     {
                         totalActiveFuncs = _parent._maxCount;
                         _parent._maxCount = _parent._outstandingCount.Count; // reset. 
+
+                        totalThisPeriod = _parent._totalCount;
+                        _parent._totalCount = 0;
                     }
 
                     try
                     {
-                        await _parent.WriteEntry(ticks, totalActiveFuncs);
+                        await _parent.WriteEntry(ticks, totalActiveFuncs, totalThisPeriod);
                     }
                     catch
                     {

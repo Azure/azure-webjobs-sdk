@@ -36,6 +36,21 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
         }
 
         ///
+        public long GetEndTicks()
+        {
+            var startTicks = GetTicks();
+            var endTime = new DateTime(startTicks).AddMilliseconds(this.DurationMilliseconds);
+            var endTicks = endTime.Ticks;
+            return endTicks;
+        }
+
+        /// 
+        public long GetDurationInTicks()
+        {
+            return TimeSpan.FromMilliseconds(DurationMilliseconds).Ticks;
+        }
+
+        ///
         public InstanceCountEntity(long ticks, string containerName)
         {
             int salt = Interlocked.Increment(ref _salt);
@@ -59,18 +74,23 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
         }
 
         /// <summary>
-        /// Number of inidividual instances run in this period
+        /// Number of individual instances active in this period
         /// </summary>
-        public int Count { get; set; }
+        public int CurrentActive { get; set; }
+
+        /// <summary>
+        /// Number of total instances started during this period
+        /// </summary>
+        public int TotalThisPeriod { get; set; }
 
         /// <summary>
         /// Size of the machine that these instances ran on.  
         /// </summary>
-        public int Size { get; set; }
+        public int MachineSize { get; set; }
 
         /// <summary>
         /// Polling duration in MS. 
         /// </summary>
-        public int Duration { get; set; }
+        public int DurationMilliseconds { get; set; }
     }
 }

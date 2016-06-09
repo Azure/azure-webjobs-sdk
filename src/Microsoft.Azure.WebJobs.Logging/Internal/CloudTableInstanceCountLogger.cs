@@ -37,17 +37,18 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
         }
 
         /// 
-        protected override async Task WriteEntry(long ticks, int value)
+        protected override async Task WriteEntry(long ticks, int currentActive, int totalThisPeriod)
         {
-            if (value == 0)
+            if (currentActive == 0 && totalThisPeriod == 0)
             {
-                return;
+                return; // skip logging if no activity 
             }
             var entity = new InstanceCountEntity(ticks, _containerName)
             {
-                Count = value,
-                Size = _containerSize,
-                Duration = (int) this.PollingInterval.TotalMilliseconds
+                CurrentActive = currentActive,
+                TotalThisPeriod = totalThisPeriod,
+                MachineSize = _containerSize,
+                DurationMilliseconds = (int) this.PollingInterval.TotalMilliseconds
             };
 
             TableOperation opInsert = TableOperation.Insert(entity);

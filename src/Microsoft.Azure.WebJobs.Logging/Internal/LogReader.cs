@@ -32,27 +32,18 @@ namespace Microsoft.Azure.WebJobs.Logging
             var query = InstanceCountEntity.GetQuery(startTime, endTime);
 
             IEnumerable<InstanceCountEntity> results = _instanceTable.ExecuteQuery(query);
-                        
-            int N = numberBuckets;
-            long startTicks = startTime.Ticks;
-            double bucketWidth = ((double)(endTime.Ticks - startTicks)) / N;
+            var rows = results.ToArray();
 
-            int[] values = new int[N];
-
-            foreach (var entity in results)
+            var data = ProjectionHelper.Work(rows, startTime.Ticks, endTime.Ticks, numberBuckets);
+            
+            // coerce data            
+            Tuple<DateTime, int>[] chart = new Tuple<DateTime, int>[numberBuckets];
+            for (int i = 0; i < numberBuckets; i++)
             {
-                long ticks = entity.GetTicks();
-                long ticksFromStart = ticks - startTicks;
-                int idx = (int)(ticksFromStart / bucketWidth);
-
-                values[idx] += entity.Count * entity.Size;
-            }
-
-            Tuple<DateTime, int>[] chart = new Tuple<DateTime, int>[N];
-            for (int i = 0; i < N; i++)
-            {
-                var time = new DateTime((long) (startTicks + (i * bucketWidth)));
-                chart[i] = new Tuple<DateTime, int>(time, values[i]);
+                var ticks = data[i].Item1;
+                var time = new DateTime(ticks);
+                double value = data[i].Item2;
+                chart[i] = new Tuple<DateTime, int>(time, (int) value);
             }
 
             return Task.FromResult(chart);
