@@ -44,8 +44,11 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
                 // low poll latency combined with network delay can be unpredictable.
                 var values = await reader.GetVolumeAsync(startTime, endTime, 1);
 
-                int total = (from value in values select value.Item2).Sum();
-                Assert.True(total > 0);
+                double totalVolume = (from value in values select value.Volume).Sum();
+                Assert.True(totalVolume > 0);
+
+                double totalInstance = (from value in values select value.InstanceCounts).Sum();
+                Assert.Equal(1, totalInstance);
             }
             finally
             {

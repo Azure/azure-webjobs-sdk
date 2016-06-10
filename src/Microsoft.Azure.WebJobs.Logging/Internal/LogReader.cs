@@ -27,23 +27,41 @@ namespace Microsoft.Azure.WebJobs.Logging
             this._instanceTable = table;
         }
 
-        public Task<Tuple<DateTime,int>[]> GetVolumeAsync(DateTime startTime, DateTime endTime, int numberBuckets)        
+        public Task<FunctionVolumeTimelineEntry[]> GetVolumeAsync(DateTime startTime, DateTime endTime, int numberBuckets)        
         {
             var query = InstanceCountEntity.GetQuery(startTime, endTime);
 
             IEnumerable<InstanceCountEntity> results = _instanceTable.ExecuteQuery(query);
             var rows = results.ToArray();
 
-            var data = ProjectionHelper.Work(rows, startTime.Ticks, endTime.Ticks, numberBuckets);
-            
+            var startTicks = startTime.Ticks;
+            var endTicks = endTime.Ticks;
+            var data = ProjectionHelper.Work(rows, startTicks, endTicks, numberBuckets);
+
+            int[] totalCounts = new int[numberBuckets];
+            double bucketWidthTicks = ((double)(endTicks - startTicks)) / numberBuckets;
+            foreach (var row in rows)
+            {
+                int idx = (int) ((row.GetTicks() - startTicks) / bucketWidthTicks);
+                if (idx >= 0 && idx < numberBuckets)
+                {
+                    totalCounts[idx] += row.TotalThisPeriod;
+                }
+            }
+
             // coerce data            
-            Tuple<DateTime, int>[] chart = new Tuple<DateTime, int>[numberBuckets];
+            var chart = new FunctionVolumeTimelineEntry[numberBuckets];
             for (int i = 0; i < numberBuckets; i++)
             {
                 var ticks = data[i].Item1;
                 var time = new DateTime(ticks);
                 double value = data[i].Item2;
-                chart[i] = new Tuple<DateTime, int>(time, (int) value);
+                chart[i] = new FunctionVolumeTimelineEntry
+                {
+                    Time = time,
+                    Volume = value,
+                    InstanceCounts = totalCounts[i]
+                };
             }
 
             return Task.FromResult(chart);

@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         /// <param name="numberBuckets">Size of the returned array</param>
         /// <returns>An array of (time, value) where value is the "# of function instance * size". 
         /// This can be readily graphed. </returns>
-        Task<Tuple<DateTime, int>[]> GetVolumeAsync(DateTime startTime, DateTime endTime, int numberBuckets);
+        Task<FunctionVolumeTimelineEntry[]> GetVolumeAsync(DateTime startTime, DateTime endTime, int numberBuckets);
 
         /// <summary>
         /// A "container" refers to a single VM that's running functions. A container can be identified by the machine name.

@@ -213,8 +213,9 @@ namespace Dashboard.ApiControllers
             // Return as parallel arrays since that's more efficient than an array of structs.
             var result = new
             {
-                Times = Array.ConvertAll(data, x => x.Item1),
-                Counts = Array.ConvertAll(data, x => x.Item2)
+                Times = Array.ConvertAll(data, x => x.Time),
+                Counts = Array.ConvertAll(data, x => x.Volume),
+                InstanceCounts = Array.ConvertAll(data, x => x.InstanceCounts)
             };
 
             return Ok(result);

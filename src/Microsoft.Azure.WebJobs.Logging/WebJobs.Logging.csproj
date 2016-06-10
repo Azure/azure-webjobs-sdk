@@ -89,6 +89,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ActivationEvent.cs" />
+    <Compile Include="FunctionVolumeTimelineEntry.cs" />
     <Compile Include="Entities\InstanceCountEntity.cs" />
     <Compile Include="FunctionInstanceStatus.cs" />
     <Compile Include="IFunctionDefinition.cs" />
