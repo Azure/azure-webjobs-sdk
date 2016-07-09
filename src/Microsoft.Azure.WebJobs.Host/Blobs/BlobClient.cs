@@ -65,7 +65,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
         }
 
         // See http://msdn.microsoft.com/en-us/library/windowsazure/dd135715.aspx.
-        // The fun part is that it is not fully correct - the \, [ and ] characters do fail anyway!
         public static bool IsValidBlobName(string blobName, out string errorMessage)
         {
             const string UnsafeCharactersMessage =
