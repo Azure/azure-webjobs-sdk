@@ -11,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
     internal static class BlobClient
     {
         // Tested against storage service on Jan 2014. All other unsafe and reserved characters work fine.
-        private static readonly char[] UnsafeBlobNameCharacters = { '\\', '[', ']' };
+        private static readonly char[] UnsafeBlobNameCharacters = { '\\' };
 
         public static string GetAccountName(IStorageBlobClient client)
         {
@@ -69,7 +69,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
         public static bool IsValidBlobName(string blobName, out string errorMessage)
         {
             const string UnsafeCharactersMessage =
-                "The given blob name '{0}' contain illegal characters. A blob name cannot the following characters: '\\', '[' and ']'.";
+                "The given blob name '{0}' contain illegal characters. A blob name cannot the following character(s): '\\'.";
             const string TooLongErrorMessage =
                 "The given blob name '{0}' is too long. A blob name must be at least one character long and cannot be more than 1,024 characters long.";
             const string TooShortErrorMessage =

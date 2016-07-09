@@ -110,7 +110,26 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
 
         public static bool IsValidAzureTableName(string tableName)
         {
-            return Regex.IsMatch(tableName, "^[A-Za-z][A-Za-z0-9]{2,62}$");
+            // Table Name Rules are summerized in this page https://msdn.microsoft.com/en-us/library/azure/dd179338.aspx
+            // Table names may contain only alphanumeric characters.
+            if (!Regex.IsMatch(tableName, "^[A-Za-z][A-Za-z0-9]{2,62}$"))
+            {
+                return false;
+            }
+
+            // Table names cannot begin with a numeric character.
+            if (Char.IsDigit(tableName[0]))
+            {
+                return false;
+            }
+
+            // Table names must be from 3 to 63 characters long
+            if (tableName.Length < 3 || tableName.Length > 63)
+            {
+                return false;
+            }
+
+            return true;
         }
 
         // Azure table partition key and row key values are restrictive, so sanity check upfront to give a useful error.
