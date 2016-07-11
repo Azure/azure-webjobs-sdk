@@ -10,7 +10,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
 {
     internal static class BlobClient
     {
-        // Tested against storage service on Jan 2014. All other unsafe and reserved characters work fine.
+        // Tested against storage service on July 2016. All other unsafe and reserved characters work fine.
         private static readonly char[] UnsafeBlobNameCharacters = { '\\' };
 
         public static string GetAccountName(IStorageBlobClient client)

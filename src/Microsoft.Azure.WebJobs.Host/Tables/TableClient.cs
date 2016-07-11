@@ -117,18 +117,6 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
                 return false;
             }
 
-            // Table names cannot begin with a numeric character.
-            if (Char.IsDigit(tableName[0]))
-            {
-                return false;
-            }
-
-            // Table names must be from 3 to 63 characters long
-            if (tableName.Length < 3 || tableName.Length > 63)
-            {
-                return false;
-            }
-
             return true;
         }
 
