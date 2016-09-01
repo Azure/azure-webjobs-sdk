@@ -43,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// <param name="partitionOptions">Optional <see cref="PartitionManagerOptions"/> to use to configure any EventProcessorHosts. </param>
         public EventHubConfiguration(
             EventProcessorOptions options, 
-            PartitionManagerOptions partitionOptions)
+            PartitionManagerOptions partitionOptions = null)
         {
             if (options == null)
             {

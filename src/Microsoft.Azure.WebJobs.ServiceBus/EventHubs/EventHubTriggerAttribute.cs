@@ -18,7 +18,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         public EventHubTriggerAttribute(string eventHubName)
         {
             this.EventHubName = eventHubName;
-            this.ConsumerGroup = Microsoft.ServiceBus.Messaging.EventHubConsumerGroup.DefaultGroupName;
         }
 
         /// <summary>

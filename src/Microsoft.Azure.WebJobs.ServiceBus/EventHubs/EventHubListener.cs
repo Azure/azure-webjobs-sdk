@@ -61,7 +61,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         {
             private readonly EventHubListener _parent;
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private static Task _done = Task.FromResult(0);
 
             public Listenter(EventHubListener parent)
             {
@@ -97,15 +96,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 {
                     int len = value.Events.Length;
 
-                    Task[] dispatches = new Task[len];
+                    List<Task> dispatches = new List<Task>();
                     for (int i = 0; i < len; i++)
                     {
-                        Task task;
                         if (_cts.IsCancellationRequested)
                         {
                             // If we stopped the listener, then we may lose the lease and be unable to checkpoint. 
                             // So skip running the rest of the batch. The new listener will pick it up. 
-                            task = _done;
+                            continue;
                         }
                         else
                         {
@@ -114,13 +112,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                                 ParentId = null,
                                 TriggerValue = value.GetSingleEventTriggerInput(i)
                             };
-                            task = this._parent._executor.TryExecuteAsync(input, _cts.Token);
+                            Task task = this._parent._executor.TryExecuteAsync(input, _cts.Token);
+                            dispatches.Add(task);
                         }
-                        dispatches[i] = task;
                     }
 
                     // Drain the whole batch before taking more work
-                    await Task.WhenAll(dispatches);
+                    if (dispatches.Count > 0)
+                    {
+                        await Task.WhenAll(dispatches);
+                    }
                 }
                 else
                 {

@@ -48,6 +48,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             string resolvedEventHubName = _nameResolver.ResolveWholeString(eventHubName);
 
             string consumerGroup = attribute.ConsumerGroup;
+            if (consumerGroup == null)
+            {
+                consumerGroup = Microsoft.ServiceBus.Messaging.EventHubConsumerGroup.DefaultGroupName;
+            }
             string resolvedConsumerGroup = _nameResolver.ResolveWholeString(consumerGroup);
 
             var eventHostListener = _eventHubConfig.GetEventProcessorHost(resolvedEventHubName, resolvedConsumerGroup);
