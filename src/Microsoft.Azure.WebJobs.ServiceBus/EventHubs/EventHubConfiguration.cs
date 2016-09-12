@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
@@ -230,12 +231,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                     sb.EntityPath = null; // need to remove to use with EventProcessorHost
                 }
 
-                EventProcessorHost host = new EventProcessorHost(
-                   eventProcessorHostName,
-                   actualPath,
-                   consumerGroup,
-                   sb.ToString(),
-                   storageConnectionString);
+                string @namespace = GetServiceBusNamespace(creds.EventHubConnectionString);
+                string containerName = EventHubLeaseFactory.GetContainerName(eventHubName, @namespace, storageConnectionString);
+
+                EventProcessorHost host = new EventProcessorHost( 
+                    hostName: eventProcessorHostName,
+                    eventHubPath: actualPath,
+                    consumerGroupName: consumerGroup,
+                    eventHubConnectionString: sb.ToString(), 
+                    storageConnectionString: storageConnectionString, 
+                    leaseContainerName: containerName);
 
                 if (_partitionOptions != null)
                 {
@@ -313,6 +318,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             var eventData = new EventData(Encoding.UTF8.GetBytes(input));
             return eventData;
         }
+
+        // Given an eventhub connection string, get the service bus namespace. 
+        private static string GetServiceBusNamespace(string connectionString)
+        {
+            var cx = new ServiceBusConnectionStringBuilder(connectionString);
+            return cx.Endpoints.First().Host.ToString();
+        }       
 
         // Hold credentials for a given eventHub name. 
         // Multiple consumer groups (and multiple listeners) on the same hub can share the same credentials. 

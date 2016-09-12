@@ -177,6 +177,7 @@
     <Compile Include="EventHubs\EventHubTriggerAttributeBindingProvider.cs" />
     <Compile Include="EventHubs\EventHubTriggerInputBindingStrategy.cs" />
     <Compile Include="EventHubs\IEventHubProvider.cs" />
+    <Compile Include="EventHubs\EventHubLeaseFactory.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="MessagingProvider.cs" />
     <Compile Include="Listeners\NamespaceManagerExtensions.cs" />
