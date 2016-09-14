@@ -3,6 +3,7 @@
 
 
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,9 +36,9 @@ namespace Microsoft.Azure.WebJobs.Logging
         object _lock = new object();
 
         // Track for batching. 
-        List<InstanceTableEntity> _instances = new List<InstanceTableEntity>();
-        List<RecentPerFuncEntity> _recents = new List<RecentPerFuncEntity>();
-        List<FunctionDefinitionEntity> _funcDefs = new List<FunctionDefinitionEntity>();
+        RowKeyCollection<InstanceTableEntity> _instances = new RowKeyCollection<InstanceTableEntity>();
+        RowKeyCollection<RecentPerFuncEntity> _recents = new RowKeyCollection<RecentPerFuncEntity>();
+        RowKeyCollection<FunctionDefinitionEntity> _funcDefs = new RowKeyCollection<FunctionDefinitionEntity>();
 
         Dictionary<string, TimelineAggregateEntity> _timespan = new Dictionary<string, TimelineAggregateEntity>();
 
@@ -161,33 +162,33 @@ namespace Microsoft.Azure.WebJobs.Logging
                     _funcDefs.Add(FunctionDefinitionEntity.New(item.FunctionName));
                 }
             }
-
-            if (!item.IsCompleted())
-            {
-                return;
-            }
-
+                   
+            // Both Start and Completed log here. Completed will overwrite a Start entry. 
             lock (_lock)
             {
                 _instances.Add(InstanceTableEntity.New(item));
                 _recents.Add(RecentPerFuncEntity.New(_containerName, item));
             }
 
-            // Time aggregate is flushed later. 
-            // Don't flush until we've moved onto the next interval. 
+            if (item.IsCompleted())
             {
-                var rowKey = TimelineAggregateEntity.RowKeyTimeInterval(item.FunctionName, item.StartTime, _uniqueId);
-
-                lock(_lock)
+                // For completed items, aggregate total passed and failed withing a time bucket. 
+                // Time aggregate is flushed later. 
+                // Don't flush until we've moved onto the next interval. 
                 {
-                    TimelineAggregateEntity x;
-                    if (!_timespan.TryGetValue(rowKey, out x))
+                    var rowKey = TimelineAggregateEntity.RowKeyTimeInterval(item.FunctionName, item.StartTime, _uniqueId);
+
+                    lock (_lock)
                     {
-                        // Can we flush the old counters?
-                        x = TimelineAggregateEntity.New(_containerName, item.FunctionName, item.StartTime, _uniqueId);
-                        _timespan[rowKey] = x;
+                        TimelineAggregateEntity x;
+                        if (!_timespan.TryGetValue(rowKey, out x))
+                        {
+                            // Can we flush the old counters?
+                            x = TimelineAggregateEntity.New(_containerName, item.FunctionName, item.StartTime, _uniqueId);
+                            _timespan[rowKey] = x;
+                        }
+                        Increment(item, x);
                     }
-                    Increment(item, x);
                 }
             }
 
@@ -329,6 +330,35 @@ namespace Microsoft.Azure.WebJobs.Logging
 
 
             await Task.WhenAll(t);
-        }    
+        }
+
+        // Collection where adding in the same RowKey replaces a previous entry with that keyl. 
+        // This is single-threaded. Caller must lock. 
+        private class RowKeyCollection<T> where T : TableEntity
+        {
+            // Ordering doesn't matter since azure tables will order them for us. 
+            private Dictionary<string, T> _map = new Dictionary<string, T>();
+
+            public void Add(T entry)
+            {                
+                string row = entry.RowKey;
+                _map[row] = entry;                
+            }
+
+            public int Count
+            {
+                get { return _map.Count; }
+            }
+
+            public T[] ToArray()
+            {
+                return _map.Values.ToArray();
+            }
+
+            public void Clear()
+            {
+                _map.Clear();
+            }
+        }
     }    
 }
