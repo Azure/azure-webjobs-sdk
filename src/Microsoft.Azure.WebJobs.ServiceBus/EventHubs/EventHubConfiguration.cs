@@ -38,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// Name of the blob container that the EventHostProcessor instances uses to coordinate load balancing listening on an event hub. 
         /// Each event hub gets its own blob prefix within the container. 
         /// </summary>
-        public const string LeaseContainerName = "AzureWebJobsEventHub";
+        public const string LeaseContainerName = "azure-webjobs-eventhub";
 
         /// <summary>
         /// default constructor. Callers can reference this without having any assembly references to service bus assemblies. 
