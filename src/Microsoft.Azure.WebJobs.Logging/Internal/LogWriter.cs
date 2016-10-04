@@ -25,8 +25,8 @@ namespace Microsoft.Azure.WebJobs.Logging
         private CancellationTokenSource _cancelBackgroundFlusher = null;
         private Task _backgroundFlusherTask = null;
 
-        // All writing goes to 1 table. 
-        private readonly CloudTable _instanceTable;
+        // Writes go to multiple tables, sharded by timestamp. 
+        private readonly IEpochTableProvider _tableLookup;
         private readonly string _containerName; // compute container (not Blob Container) that we're logging for. 
 
         private string _uniqueId = Guid.NewGuid().ToString();
@@ -47,18 +47,18 @@ namespace Microsoft.Azure.WebJobs.Logging
         static ContainerActiveLogger _container;
         CloudTableInstanceCountLogger _instanceLogger;
 
-        public LogWriter(string computerContainerName, CloudTable table)
+        public LogWriter(string computerContainerName, IEpochTableProvider tableLookup)
         {
             if (computerContainerName == null)
             {
                 throw new ArgumentNullException("computerContainerName");
             }
-            if (table == null)
+            if (tableLookup == null)
             {
-                throw new ArgumentNullException("table");
+                throw new ArgumentNullException("tableLookup");
             }
             this._containerName = computerContainerName;         
-            this._instanceTable = table;
+            this._tableLookup = tableLookup;
         }
 
         // Background flusher. 
@@ -134,13 +134,13 @@ namespace Microsoft.Azure.WebJobs.Logging
                 {
                     StartBackgroundFlusher();
                     if (_container == null)
-                    {
-                        _container = new ContainerActiveLogger(_containerName, _instanceTable);
+                    {                        
+                        _container = new ContainerActiveLogger(_containerName, _tableLookup);
                     }
                     if (_instanceLogger == null)
                     {
-                        int size = GetContainerSize();
-                        _instanceLogger = new CloudTableInstanceCountLogger(_containerName, _instanceTable, size);
+                        int size = GetContainerSize();                        
+                        _instanceLogger = new CloudTableInstanceCountLogger(_containerName, _tableLookup, size);
                     }
                 }
                 if (item.IsCompleted())
@@ -231,9 +231,9 @@ namespace Microsoft.Azure.WebJobs.Logging
         // Could flush on a timer. 
         private async Task FlushIntancesAsync(bool always)
         {
-            InstanceTableEntity[] x1;
-            RecentPerFuncEntity[] x2;
-            FunctionDefinitionEntity[] x3;
+            InstanceTableEntity[] instances;
+            RecentPerFuncEntity[] recentInvokes;
+            FunctionDefinitionEntity[] functionDefinitions;
 
             lock (_lock)
             {
@@ -245,16 +245,16 @@ namespace Microsoft.Azure.WebJobs.Logging
                     } 
                 }
 
-                x1 = _instances.ToArray();
-                x2 = _recents.ToArray();
-                x3 = _funcDefs.ToArray();
+                instances = _instances.ToArray();
+                recentInvokes = _recents.ToArray();
+                functionDefinitions = _funcDefs.ToArray();
                 _instances.Clear();
                 _recents.Clear();
                 _funcDefs.Clear();
             }
-            Task t1 = WriteBatchAsync(x1);
-            Task t2 = WriteBatchAsync(x2);
-            Task t3 = WriteBatchAsync(x3);
+            Task t1 = WriteBatchAsync(instances);
+            Task t2 = WriteBatchAsync(recentInvokes);
+            Task t3 = WriteBatchAsync(functionDefinitions);
             await Task.WhenAll(t1, t2, t3);
         }
 
@@ -298,14 +298,15 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         // Limit of 100 per batch. 
         // Parallel uploads. 
-        private async Task WriteBatchAsync<T>(IEnumerable<T> e1) where T : TableEntity
+        private async Task WriteBatchAsync<T>(IEnumerable<T> e1) where T : TableEntity, IEntityWithEpoch
         {            
             HashSet<string> rowKeys = new HashSet<string>();
 
             int batchSize = 90;
 
-            TableBatchOperation batch = new TableBatchOperation();
-
+            Dictionary<string, TableBatchOperation> batches = new Dictionary<string, TableBatchOperation>();
+            Dictionary<string, CloudTable> tables = new Dictionary<string, CloudTable>();
+            
             List<Task> t = new List<Task>();
 
             foreach (var e in e1)
@@ -315,18 +316,37 @@ namespace Microsoft.Azure.WebJobs.Logging
                     // Already present
                 }
 
+                var epoch = e.GetEpoch();
+                var instanceTable = this._tableLookup.GetTableForEpoch(epoch);
+                TableBatchOperation batch;
+                if (!batches.TryGetValue(instanceTable.Name, out batch))
+                {
+                    tables[instanceTable.Name] = instanceTable;
+                    batch = new TableBatchOperation();
+                    batches[instanceTable.Name] = batch;
+                }
+
                 batch.InsertOrReplace(e);
                 if (batch.Count >= batchSize)
                 {
-                    Task tUpload = _instanceTable.SafeExecuteAsync(batch);
+                    Task tUpload = instanceTable.SafeExecuteAsync(batch);
                     t.Add(tUpload);
+
                     batch = new TableBatchOperation();
+                    batches[instanceTable.Name] = batch;
                 }
             }
-            if (batch.Count > 0)
+
+            foreach (var kv in batches)
             {
-                Task tUpload = _instanceTable.SafeExecuteAsync(batch);
-                t.Add(tUpload);
+                var tableName = kv.Key;
+                var instanceTable = tables[tableName];
+                var batch = kv.Value;
+                if (batch.Count > 0)
+                {
+                    Task tUpload = instanceTable.SafeExecuteAsync(batch);
+                    t.Add(tUpload);
+                }
             }
 
 
@@ -335,7 +355,7 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         // Collection where adding in the same RowKey replaces a previous entry with that key. 
         // This is single-threaded. Caller must lock. 
-        // All entities in this collection must be within the same partition. 
+        // All entities in this collection must have unique row keys across the partition and tables.
         private class EntityCollection<T>  : IEnumerable<T> where T : TableEntity 
         {
             // Ordering doesn't matter since azure tables will order them for us. 

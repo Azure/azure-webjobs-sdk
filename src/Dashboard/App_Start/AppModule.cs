@@ -50,17 +50,14 @@ namespace Dashboard
             CloudTableClient tableClient = account.CreateCloudTableClient();
             CloudBlobClient blobClient = account.CreateCloudBlobClient();
 
-            builder.RegisterInstance(account).As<CloudStorageAccount>();            
-            builder.RegisterInstance(blobClient).As<CloudBlobClient>();
+            var provider = GetNewLoggerTableProvider(tableClient);
 
-            CloudTable logTable = TryGetLogTable(tableClient);
-
-            if (logTable != null)
+            if (provider != null)
             {
                 context.DisableInvoke = true;
 
                 // fast table reader.                 
-                var reader = LogFactory.NewReader(logTable);
+                var reader = LogFactory.NewReader(provider);
                 builder.RegisterInstance(reader).As<ILogReader>();
 
                 var s = new FastTableReader(reader);
@@ -134,46 +131,37 @@ namespace Dashboard
             }
         }
 
-        // Get a fast log table name 
+        // Get a fast log table name. Returns a table name prefix if 
         // OR return null to use traditional logging. 
-        private static CloudTable TryGetLogTable(CloudTableClient tableClient)
-        {
-            string logTableName = ConfigurationManager.AppSettings[FunctionLogTableAppSettingName];
-            if (string.IsNullOrWhiteSpace(logTableName))
+        private static IEpochTableProvider GetNewLoggerTableProvider(CloudTableClient tableClient)
+        {         
+            string logTablePrefix = ConfigurationManager.AppSettings[FunctionLogTableAppSettingName];
+            if (string.IsNullOrWhiteSpace(logTablePrefix))
             {
-                // Check for default name
-                string defaultName = LogFactory.DefaultLogTableName;
-                var table = tableClient.GetTableReference(defaultName);
-
                 var ver = ConfigurationManager.AppSettings[FunctionExtensionVersionAppSettingName];
-                if (!string.IsNullOrWhiteSpace(ver))
+                if (string.IsNullOrWhiteSpace(ver))
                 {
-                    if (string.Equals(ver, FunctionExtensionVersionDisabled, StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Explicitly set to old mode. 
-                        return null;
-                    }
-                    else
-                    {
-                        // Appsetting specifically opts us in. Use fast-tables.
-                        table.CreateIfNotExists();
-                        return table;
-                    }
+                    // No Func appsetting, this is using sdk-style older logging. 
+                    return null;
                 }
 
-                if (table.Exists())
+                if (string.Equals(ver, FunctionExtensionVersionDisabled, StringComparison.OrdinalIgnoreCase))
                 {
-                    return table;
+                    // Explicitly set to old mode. 
+                    return null;
                 }
+
+                // This is the common case for Azure Functions. 
+                // No prefix, so use the default. 
+                var provider = LogFactory.NewTableProvider(tableClient);
+                return provider;
             }
             else
             {
                 // Name is explicitly supplied in an appsetting. Definitely using the fast tables. 
-                var logTable = tableClient.GetTableReference(logTableName);
-                return logTable;
-            }
-
-            return null;
+                var provider = LogFactory.NewTableProvider(tableClient, logTablePrefix);
+                return provider;
+            }           
         }
 
         private static DashboardAccountContext TryCreateAccount()
