@@ -1,21 +1,20 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
 using System.Configuration;
+using System.Web.Http;
 using Autofac;
-using Dashboard.Data;
 using Xunit;
 
-
-namespace Dashboard.UnitTests.Data
+namespace Dashboard.UnitTests
 {
     public class AutoFacTests
     {
         private const string FunctionLogTableAppSettingName = "AzureWebJobsLogTableName";
 
+        // Test everything is registered in both modes. 
         [Theory]
-        [InlineData(FunctionLogTableAppSettingName, "logTestTable123")] // USe fast logging 
+        [InlineData(FunctionLogTableAppSettingName, "logTestTable123")] // Use fast logging 
         [InlineData(FunctionLogTableAppSettingName, null)] // use classic SDK logging
         public void RegistrationTest(string appsetting, string value)
         {
@@ -24,7 +23,7 @@ namespace Dashboard.UnitTests.Data
             {
                 ConfigurationManager.AppSettings[appsetting] = value;
 
-                var container = MvcApplication.BuildContainer();
+                var container = MvcApplication.BuildContainer(new HttpConfiguration());
 
                 // Verify we can create all the API & MVC controller classes. 
                 // This is really testing that all dependencies are properly registered 
@@ -39,6 +38,6 @@ namespace Dashboard.UnitTests.Data
             {
                 ConfigurationManager.AppSettings[appsetting] = oldSetting;
             }
-        }
+        }    
     }
 }

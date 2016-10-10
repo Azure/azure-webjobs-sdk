@@ -27,8 +27,12 @@ namespace Dashboard
             return type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
         }
 
-        public static IContainer BuildContainer()
+        public static IContainer BuildContainer(HttpConfiguration config)
         {
+            if (config == null)
+            {
+                throw new ArgumentNullException("config");
+            }
             ContainerBuilder builder = new ContainerBuilder();
             AppModule.Load(builder);
 
@@ -40,8 +44,7 @@ namespace Dashboard
 
             // Set MVC and WebApi resolved to AutoFac. 
             DependencyResolver.SetResolver(new AutofacDependencyResolver(container));
-
-            var config = GlobalConfiguration.Configuration;
+                        
             config.DependencyResolver = new AutofacWebApiDependencyResolver(container);
 
             return container;
@@ -49,7 +52,7 @@ namespace Dashboard
 
         protected void Application_Start()
         {
-            var container = BuildContainer();
+            var container = BuildContainer(GlobalConfiguration.Configuration);
 
             GlobalConfiguration.Configure(WebApiConfig.Register);
             AreaRegistration.RegisterAllAreas();
