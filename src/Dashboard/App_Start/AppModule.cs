@@ -47,8 +47,10 @@ namespace Dashboard
                 return;
             }
 
+            builder.RegisterInstance(account).As<CloudStorageAccount>();
+            builder.RegisterInstance(account.CreateCloudBlobClient()).As<CloudBlobClient>();
+
             CloudTableClient tableClient = account.CreateCloudTableClient();
-            CloudBlobClient blobClient = account.CreateCloudBlobClient();
 
             var provider = GetNewLoggerTableProvider(tableClient);
 
