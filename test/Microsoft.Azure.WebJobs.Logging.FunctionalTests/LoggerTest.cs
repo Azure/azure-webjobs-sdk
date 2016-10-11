@@ -14,7 +14,7 @@ using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
 {
-    public class LoggerTest : IDisposable, IEpochTableProvider
+    public class LoggerTest : IDisposable, ILogTableProvider
     {
         static string CommonFuncName1 = "gamma";
 
@@ -218,8 +218,8 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
             await Verify(reader, Before(times[1]), Before(times[3]), logs[2], logs[1]);
 
             // Now... delete the middle table; and verify the other data is still there. 
-            IEpochTableProvider provider = this;
-            var table = provider.NewTable("00038"); 
+            ILogTableProvider provider = this;
+            var table = provider.GetTable("00038"); 
             Assert.True(table.Exists());
             table.Delete();
 
@@ -567,7 +567,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
             await writer.AddAsync(item); // end 
         }
 
-        CloudTable IEpochTableProvider.NewTable(string suffix)
+        CloudTable ILogTableProvider.GetTable(string suffix)
         {
             lock(_tables)
             {
@@ -581,7 +581,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
 
 
          // List all tables that we may have handed out. 
-        async Task<CloudTable[]> IEpochTableProvider.ListTablesAsync()
+        async Task<CloudTable[]> ILogTableProvider.ListTablesAsync()
         {
             var tableClient = GetTableClient();
             var tables = tableClient.ListTables(_tableNamePrefix).ToArray();

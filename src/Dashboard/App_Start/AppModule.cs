@@ -135,7 +135,7 @@ namespace Dashboard
 
         // Get a fast log table name. Returns a table name prefix if 
         // OR return null to use traditional logging. 
-        private static IEpochTableProvider GetNewLoggerTableProvider(CloudTableClient tableClient)
+        private static ILogTableProvider GetNewLoggerTableProvider(CloudTableClient tableClient)
         {         
             string logTablePrefix = ConfigurationManager.AppSettings[FunctionLogTableAppSettingName];
             if (string.IsNullOrWhiteSpace(logTablePrefix))

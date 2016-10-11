@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         // Track functionInstanceGuids (instead of just a single integer counter) in case we missed an event or double reported an event. 
         private HashSet<Guid> _outstandingCount = new HashSet<Guid>();
-        private readonly IEpochTableProvider _tableLookup;
+        private readonly ILogTableProvider _tableLookup;
         private readonly string _containerName;
 
         private bool _recent; // For catching quick functions
@@ -28,7 +28,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         private CancellationTokenSource _cancel = null;
         private Task _scanner;
 
-        public ContainerActiveLogger(string containerName, IEpochTableProvider tableLookup)
+        public ContainerActiveLogger(string containerName, ILogTableProvider tableLookup)
         {
             this._tableLookup = tableLookup;
             this._containerName = containerName;

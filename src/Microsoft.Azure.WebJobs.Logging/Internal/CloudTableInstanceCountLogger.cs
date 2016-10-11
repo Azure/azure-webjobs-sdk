@@ -13,7 +13,7 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
     /// </summary>
     public class CloudTableInstanceCountLogger : InstanceCountLoggerBase
     {
-        private readonly IEpochTableProvider _tableLookup;
+        private readonly ILogTableProvider _tableLookup;
         private readonly string _containerName;
 
         private readonly int _containerSize;
@@ -27,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
         }
 
         ///
-        public CloudTableInstanceCountLogger(string containerName, IEpochTableProvider tableLookup, int containerSize)
+        public CloudTableInstanceCountLogger(string containerName, ILogTableProvider tableLookup, int containerSize)
         {
             // Default polling interval
             this.PollingInterval = TimeSpan.FromSeconds(60);

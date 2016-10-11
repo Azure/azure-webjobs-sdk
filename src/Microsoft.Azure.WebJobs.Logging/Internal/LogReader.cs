@@ -16,9 +16,9 @@ namespace Microsoft.Azure.WebJobs.Logging
     internal class LogReader : ILogReader
     {
         // All writing goes to 1 table. 
-        private readonly IEpochTableProvider _tableLookup;
+        private readonly ILogTableProvider _tableLookup;
 
-        public LogReader(IEpochTableProvider tableLookup)
+        public LogReader(ILogTableProvider tableLookup)
         {
             if (tableLookup == null)
             {
@@ -193,15 +193,15 @@ namespace Microsoft.Azure.WebJobs.Logging
         // Helper to run queries which can span multiple tables.         
         private class EpochTableIterator
         {
-            private readonly IEpochTableProvider _tableLookup;
+            private readonly ILogTableProvider _tableLookup;
             private Dictionary<long, CloudTable> _tables; // map of epoch to physical tables.
 
-            public EpochTableIterator(IEpochTableProvider tableLookup)
+            public EpochTableIterator(ILogTableProvider tableLookup)
             {
                 _tableLookup = tableLookup;
             }
             
-            private static async Task<Dictionary<long, CloudTable>> InitAsync(IEpochTableProvider tableLookup)
+            private static async Task<Dictionary<long, CloudTable>> InitAsync(ILogTableProvider tableLookup)
             {
                 Dictionary<long, CloudTable> d = new Dictionary<long, CloudTable>();
 

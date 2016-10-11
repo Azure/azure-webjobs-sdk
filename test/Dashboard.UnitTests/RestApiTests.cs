@@ -99,7 +99,7 @@ namespace Dashboard.UnitTests
         {
             private const string FunctionLogTableAppSettingName = "AzureWebJobsLogTableName";
 
-            private IEpochTableProvider _provider;
+            private ILogTableProvider _provider;
 
             public HttpClient Client { get; private set; }
             public string Endpoint { get; private set; }
@@ -149,7 +149,7 @@ namespace Dashboard.UnitTests
 
             // Write logs. Return what we wrote. 
             // This is baseline data. REader will verify against it exactly. This helps in aggressively catching subtle breaking changes. 
-            private async Task<FunctionInstanceLogItem[]> WriteTestLoggingDataAsync(IEpochTableProvider provider)
+            private async Task<FunctionInstanceLogItem[]> WriteTestLoggingDataAsync(ILogTableProvider provider)
             {
                 ILogWriter writer = LogFactory.NewWriter("c1", provider);
 

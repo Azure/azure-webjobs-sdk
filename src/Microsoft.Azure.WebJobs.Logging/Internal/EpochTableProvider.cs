@@ -10,7 +10,7 @@ using Microsoft.WindowsAzure.Storage.Table;
 namespace Microsoft.Azure.WebJobs.Logging
 {
     // Default table provider for logging 
-    internal class EpochTableProvider : IEpochTableProvider
+    internal class EpochTableProvider : ILogTableProvider
     {
         private readonly CloudTableClient _tableClient;
         private readonly string _tableNamePrefix;
@@ -30,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.Logging
             _tableClient = tableClient;
         }
 
-        public CloudTable NewTable(string suffix)
+        public CloudTable GetTable(string suffix)
         {
             var tableName = _tableNamePrefix + suffix;
             var table = _tableClient.GetTableReference(tableName);

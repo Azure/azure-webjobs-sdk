@@ -26,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         private Task _backgroundFlusherTask = null;
 
         // Writes go to multiple tables, sharded by timestamp. 
-        private readonly IEpochTableProvider _tableLookup;
+        private readonly ILogTableProvider _tableLookup;
         private readonly string _containerName; // compute container (not Blob Container) that we're logging for. 
 
         private string _uniqueId = Guid.NewGuid().ToString();
@@ -47,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         static ContainerActiveLogger _container;
         CloudTableInstanceCountLogger _instanceLogger;
 
-        public LogWriter(string computerContainerName, IEpochTableProvider tableLookup)
+        public LogWriter(string computerContainerName, ILogTableProvider tableLookup)
         {
             if (computerContainerName == null)
             {

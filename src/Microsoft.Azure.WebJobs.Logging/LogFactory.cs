@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         /// </summary>
         /// <param name="tableLookup"></param>
         /// <returns></returns>
-        public static ILogReader NewReader(IEpochTableProvider tableLookup)
+        public static ILogReader NewReader(ILogTableProvider tableLookup)
         {
             return new LogReader(tableLookup);
         }
@@ -29,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         /// Passed a string suffix (which will consist of valid Azure table characters). 
         /// This must be a deterministic (replayable) function.</param>
         /// <returns></returns>
-        public static ILogWriter NewWriter(string computerContainerName, IEpochTableProvider tableLookup)
+        public static ILogWriter NewWriter(string computerContainerName, ILogTableProvider tableLookup)
         {
             return new LogWriter(computerContainerName, tableLookup);
         }
@@ -39,7 +39,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         /// </summary>
         /// <param name="tableClient">storage client for where to generate tables</param>
         /// <param name="tableNamePrefix">prefix for tables to generate. This should be a valid azure table name.</param>
-        public static IEpochTableProvider NewTableProvider(CloudTableClient tableClient, string tableNamePrefix = LogFactory.DefaultLogTableName)
+        public static ILogTableProvider NewTableProvider(CloudTableClient tableClient, string tableNamePrefix = LogFactory.DefaultLogTableName)
         {
             return new EpochTableProvider(tableClient, tableNamePrefix);
         }

@@ -63,16 +63,16 @@ namespace Microsoft.Azure.WebJobs.Logging
             return ts;
         }
 
-        public static CloudTable GetTableForEpoch(this IEpochTableProvider tableLookup, DateTime epoch)
+        public static CloudTable GetTableForEpoch(this ILogTableProvider tableLookup, DateTime epoch)
         {
             // Epoch(DateTime.MaxValue) is 94146, still a 5 digit number. 
             var ts = GetEpochNumber(epoch);
             string suffix = string.Format(CultureInfo.InvariantCulture, "{0:D5}", ts);
-            var table = tableLookup.NewTable(suffix);
+            var table = tableLookup.GetTable(suffix);
             return table;
         }
 
-        public static CloudTable GetTableForEpoch(this IEpochTableProvider tableLookup, long timeBucket)
+        public static CloudTable GetTableForEpoch(this ILogTableProvider tableLookup, long timeBucket)
         {
             var time = ConvertToDateTime(timeBucket);
             return tableLookup.GetTableForEpoch(time);
