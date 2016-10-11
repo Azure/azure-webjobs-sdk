@@ -219,7 +219,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
 
             // Now... delete the middle table; and verify the other data is still there. 
             ILogTableProvider provider = this;
-            var table = provider.GetTable("00038"); 
+            var table = provider.GetTable("201204"); 
             Assert.True(table.Exists());
             table.Delete();
 

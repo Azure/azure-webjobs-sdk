@@ -30,11 +30,12 @@ namespace Microsoft.Azure.WebJobs.Logging
             return min;
         }
 
-        // USed to compute epoch. 
+        // Used to compute epoch. 
         const long ticksBaseline = 633663648000000000L;
         const long ticksPerMonth = 26785144663987L;
-
-        public static DateTime CommonEpoch = new DateTime(0, DateTimeKind.Utc);
+        
+        public static DateTime CommonEpoch = new DateTime(0, DateTimeKind.Utc); // maps to epoch 0 
+        public static string CommonEpochSuffix = "common";
 
         public static long GetEpochNumberFromTable(CloudTable table)
         {
@@ -52,22 +53,30 @@ namespace Microsoft.Azure.WebJobs.Logging
             return -1;
         }
 
-        // Epoch must be positive. 
-        public static long GetEpochNumber(DateTime epoch)
+        // Epoch must be positive, orderd integers.
+        // Use YYYYMM 
+        private static long GetEpochNumber(DateTime epoch)
         {
-            var ts = (epoch.Ticks - ticksBaseline) / ticksPerMonth;
-            if (ts < 0)
-            {
-                ts = 0;
-            }
-            return ts;
+            var year = epoch.Year; // 4 digit
+            var month = epoch.Month; // 1..12
+
+            int i = year * 100 + month;
+            return i;
         }
 
         public static CloudTable GetTableForEpoch(this ILogTableProvider tableLookup, DateTime epoch)
         {
             // Epoch(DateTime.MaxValue) is 94146, still a 5 digit number. 
-            var ts = GetEpochNumber(epoch);
-            string suffix = string.Format(CultureInfo.InvariantCulture, "{0:D5}", ts);
+            string suffix;
+            if (epoch == CommonEpoch)
+            {
+                suffix = CommonEpochSuffix;
+            }
+            else
+            {
+                var ts = GetEpochNumber(epoch);
+                suffix = string.Format(CultureInfo.InvariantCulture, "{0:D5}", ts);
+            }
             var table = tableLookup.GetTable(suffix);
             return table;
         }
