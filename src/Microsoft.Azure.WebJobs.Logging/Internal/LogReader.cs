@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.Logging
     // Create a reader. 
     internal class LogReader : ILogReader
     {
-        // All writing goes to 1 table. 
+        // Writes go to table storage. They're split across tables based on their date. 
         private readonly ILogTableProvider _tableLookup;
 
         public LogReader(ILogTableProvider tableLookup)
@@ -31,7 +31,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         {
             var query = InstanceCountEntity.GetQuery(startTime, endTime);
             
-            var iter = new EpochTableIterator(_tableLookup);
+            var iter = await EpochTableIterator.NewAsync(_tableLookup);
             var results = await iter.SafeExecuteQuerySegmentedAsync<InstanceCountEntity>(query, startTime, endTime);
             
             InstanceCountEntity[] rows = results.Results;
@@ -71,7 +71,7 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         public async Task<Segment<IFunctionDefinition>> GetFunctionDefinitionsAsync(string continuationToken)
         {
-            var instanceTable = _tableLookup.GetTableForEpoch(TimeBucket.CommonEpoch);
+            var instanceTable = _tableLookup.GetTableForDateTime(TimeBucket.CommonEpoch);
             var query = TableScheme.GetRowsInPartition<FunctionDefinitionEntity>(TableScheme.FuncDefIndexPK);
             var results = await instanceTable.SafeExecuteQueryAsync(query);
 
@@ -125,7 +125,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         {
             var query = ContainerActiveEntity.GetQuery(start, end);
 
-            var iter = new EpochTableIterator(_tableLookup);
+            var iter = await EpochTableIterator.NewAsync(_tableLookup);
             var segment = await iter.SafeExecuteQuerySegmentedAsync<ContainerActiveEntity>(
                 query, start, end);
 
@@ -168,7 +168,7 @@ namespace Microsoft.Azure.WebJobs.Logging
                 throw new ArgumentOutOfRangeException("start");
             }
 
-            var iter = new EpochTableIterator(_tableLookup);
+            var iter = await EpochTableIterator.NewAsync(_tableLookup);
 
             var rangeQuery = TimelineAggregateEntity.GetQuery(functionName, start, end);
 
@@ -184,7 +184,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         {
             TableQuery<RecentPerFuncEntity> rangeQuery = RecentPerFuncEntity.GetRecentFunctionsQuery(queryParams);
 
-            var iter = new EpochTableIterator(_tableLookup);
+            var iter = await EpochTableIterator.NewAsync(_tableLookup);
             var results = await iter.SafeExecuteQuerySegmentedAsync<RecentPerFuncEntity>(rangeQuery, queryParams.Start, queryParams.End);
 
             return results.As<IRecentFunctionEntry>();
@@ -193,17 +193,16 @@ namespace Microsoft.Azure.WebJobs.Logging
         // Helper to run queries which can span multiple tables.         
         private class EpochTableIterator
         {
-            private readonly ILogTableProvider _tableLookup;
-            private Dictionary<long, CloudTable> _tables; // map of epoch to physical tables.
+            private readonly Dictionary<long, CloudTable> _tables; // map of epoch to physical tables.
 
-            public EpochTableIterator(ILogTableProvider tableLookup)
+            private EpochTableIterator(Dictionary<long, CloudTable> tables)
             {
-                _tableLookup = tableLookup;
+                _tables = tables;
             }
             
-            private static async Task<Dictionary<long, CloudTable>> InitAsync(ILogTableProvider tableLookup)
+            public static async Task<EpochTableIterator> NewAsync(ILogTableProvider tableLookup)
             {
-                Dictionary<long, CloudTable> d = new Dictionary<long, CloudTable>();
+                Dictionary <long, CloudTable> d = new Dictionary<long, CloudTable>();
 
                 var tables = await tableLookup.ListTablesAsync();
 
@@ -212,7 +211,7 @@ namespace Microsoft.Azure.WebJobs.Logging
                     var epoch = TimeBucket.GetEpochNumberFromTable(table);
                     d[epoch] = table;
                 }
-                return d;
+                return new EpochTableIterator(d);
             }
 
             // Given an epoch, find the next one in physicalEpochs that it would fall into, using reverse-chronological order.              
@@ -224,16 +223,9 @@ namespace Microsoft.Azure.WebJobs.Logging
                 // start at most recent epoch and work backwards 
                 for (var i = physicalEpochs.Length - 1; i >= 0; i--)
                 {
-
-                    if (epoch > physicalEpochs[i])
+                    if (epoch >= physicalEpochs[i])
                     {
-                        epoch = physicalEpochs[i];
-                        return epoch;
-                    }
-
-                    if (epoch == physicalEpochs[i])
-                    {
-                        return epoch;
+                        return physicalEpochs[i];
                     }
                 }
 
@@ -275,8 +267,6 @@ namespace Microsoft.Azure.WebJobs.Logging
                 string continuationToken
                 ) where TElement : ITableEntity, new()
             {
-                _tables = await InitAsync(_tableLookup);
-
                 // Shrink to phsyical. 
                 var epochs = _tables.Keys.ToArray();
                 if (epochs.Length == 0)

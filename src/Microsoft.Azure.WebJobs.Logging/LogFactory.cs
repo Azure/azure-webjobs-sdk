@@ -13,25 +13,23 @@ namespace Microsoft.Azure.WebJobs.Logging
         /// <summary>
         /// Get a reader that reads from the given table. 
         /// </summary>
-        /// <param name="tableLookup"></param>
+        /// <param name="logTableProvider">callback interface to retrieve logging tables</param>
         /// <returns></returns>
-        public static ILogReader NewReader(ILogTableProvider tableLookup)
+        public static ILogReader NewReader(ILogTableProvider logTableProvider)
         {
-            return new LogReader(tableLookup);
+            return new LogReader(logTableProvider);
         }
 
         /// <summary>
-        /// Create a new writer for the given compute container name that writes to the given table.
-        /// Multiple compute instances can write to the same table simultaneously without interference. 
+        /// Create a new log writer. 
+        /// Pass in machineName to facilitate multiple compute instances writing to the same table simultaneously without interference. 
         /// </summary>
-        /// <param name="computerContainerName">name of the compute container. Likley %COMPUTERNAME%. </param>
-        /// <param name="tableLookup">underlying azure storage table to write to. 
-        /// Passed a string suffix (which will consist of valid Azure table characters). 
-        /// This must be a deterministic (replayable) function.</param>
+        /// <param name="machineName">name of the compute container. Likely %COMPUTERNAME%. </param>
+        /// <param name="logTableProvider">callback interface that gets invoked to get azure tables to write logging to.</param>
         /// <returns></returns>
-        public static ILogWriter NewWriter(string computerContainerName, ILogTableProvider tableLookup)
+        public static ILogWriter NewWriter(string machineName, ILogTableProvider logTableProvider)
         {
-            return new LogWriter(computerContainerName, tableLookup);
+            return new LogWriter(machineName, logTableProvider);
         }
 
         /// <summary>
@@ -39,9 +37,9 @@ namespace Microsoft.Azure.WebJobs.Logging
         /// </summary>
         /// <param name="tableClient">storage client for where to generate tables</param>
         /// <param name="tableNamePrefix">prefix for tables to generate. This should be a valid azure table name.</param>
-        public static ILogTableProvider NewTableProvider(CloudTableClient tableClient, string tableNamePrefix = LogFactory.DefaultLogTableName)
+        public static ILogTableProvider NewLogTableProvider(CloudTableClient tableClient, string tableNamePrefix = LogFactory.DefaultLogTableName)
         {
-            return new EpochTableProvider(tableClient, tableNamePrefix);
+            return new DefaultLogTableProvider(tableClient, tableNamePrefix);
         }
 
         /// <summary>

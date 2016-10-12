@@ -7,14 +7,15 @@ using Microsoft.WindowsAzure.Storage.Table;
 namespace Microsoft.Azure.WebJobs.Logging
 {
     /// <summary>
-    /// Logs are stored across multiple tables to aide in purging old logs.  
+    /// Callback interface for returning azure tables used for logging. Logs are split across multiple tables based on timestamp. 
     /// </summary>
     public interface ILogTableProvider
     {
         /// <summary>
-        /// Return a table with the given suffix. The logging will create this table if it doesn't exist.
+        /// Return a table with the given suffix. 
+        /// The table does not need to exist yet. The logging client that calls this method will create the table if it doesn't exist. 
         /// </summary>
-        /// <param name="suffix">Suffix will be legal table name characters. </param>
+        /// <param name="suffix">The suffix to use for the log table name. This will container only legal table name characters.</param>
         CloudTable GetTable(string suffix);
 
         /// <summary>

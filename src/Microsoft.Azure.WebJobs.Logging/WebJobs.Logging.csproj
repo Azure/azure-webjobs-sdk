@@ -98,7 +98,7 @@
     <Compile Include="ILogTableProvider.cs" />
     <Compile Include="IFunctionDefinition.cs" />
     <Compile Include="IFunctionInstanceBaseEntry.cs" />
-    <Compile Include="Internal\EpochTableProvider.cs" />
+    <Compile Include="Internal\DefaultLogTableProvider.cs" />
     <Compile Include="Internal\IEntityWithEpoch.cs" />
     <Compile Include="Internal\ProjectionHelper.cs" />
     <Compile Include="Internal\CloudTableInstanceCountLogger.cs" />

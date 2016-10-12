@@ -132,7 +132,7 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         private Task<ContainerActiveEntity> TryGetAsync(long timeBucket)
         {
-            var instanceTable = _tableLookup.GetTableForEpoch(timeBucket);
+            var instanceTable = _tableLookup.GetTableForTimeBucket(timeBucket);
             return ContainerActiveEntity.LookupAsync(instanceTable, timeBucket, _containerName);
         }
 
@@ -140,7 +140,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         {
             TableOperation insertOperation = TableOperation.InsertOrReplace(prevEntry);
             
-            var instanceTable = _tableLookup.GetTableForEpoch(prevEntry.StartTime);
+            var instanceTable = _tableLookup.GetTableForDateTime(prevEntry.StartTime);
 
             // Execute the insert operation.
             return instanceTable.SafeExecuteAsync(insertOperation);

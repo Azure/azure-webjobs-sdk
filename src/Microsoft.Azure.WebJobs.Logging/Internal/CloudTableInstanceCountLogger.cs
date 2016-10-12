@@ -54,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
 
             TableOperation opInsert = TableOperation.Insert(entity);
 
-            var instanceTable = _tableLookup.GetTableForEpoch(new DateTime(ticks, DateTimeKind.Utc));
+            var instanceTable = _tableLookup.GetTableForDateTime(new DateTime(ticks, DateTimeKind.Utc));
             await instanceTable.SafeExecuteAsync(opInsert);
         }
 

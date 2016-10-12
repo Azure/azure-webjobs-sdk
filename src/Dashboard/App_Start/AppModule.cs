@@ -52,14 +52,14 @@ namespace Dashboard
 
             CloudTableClient tableClient = account.CreateCloudTableClient();
 
-            var provider = GetNewLoggerTableProvider(tableClient);
+            var tableProvider = GetNewLoggerTableProvider(tableClient);
 
-            if (provider != null)
+            if (tableProvider != null)
             {
                 context.DisableInvoke = true;
 
                 // fast table reader.                 
-                var reader = LogFactory.NewReader(provider);
+                var reader = LogFactory.NewReader(tableProvider);
                 builder.RegisterInstance(reader).As<ILogReader>();
 
                 var s = new FastTableReader(reader);
@@ -133,8 +133,9 @@ namespace Dashboard
             }
         }
 
-        // Get a fast log table name. Returns a table name prefix if 
-        // OR return null to use traditional logging. 
+        // Determine which logging mode. 
+        // 1. Fast logging (tables) - return a default provider for the given storage account. 
+        // 2. traditional slower logging (blob) - return null. 
         private static ILogTableProvider GetNewLoggerTableProvider(CloudTableClient tableClient)
         {         
             string logTablePrefix = ConfigurationManager.AppSettings[FunctionLogTableAppSettingName];
@@ -155,13 +156,13 @@ namespace Dashboard
 
                 // This is the common case for Azure Functions. 
                 // No prefix, so use the default. 
-                var provider = LogFactory.NewTableProvider(tableClient);
+                var provider = LogFactory.NewLogTableProvider(tableClient);
                 return provider;
             }
             else
             {
                 // Name is explicitly supplied in an appsetting. Definitely using the fast tables. 
-                var provider = LogFactory.NewTableProvider(tableClient, logTablePrefix);
+                var provider = LogFactory.NewLogTableProvider(tableClient, logTablePrefix);
                 return provider;
             }           
         }

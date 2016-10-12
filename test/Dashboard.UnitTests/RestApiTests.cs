@@ -115,10 +115,10 @@ namespace Dashboard.UnitTests
 
             public async Task Init()
             {
-                var tableClient = GetNewLoggingTable();                
+                var tableClient = GetNewLoggingTableClient();                
                 var tablePrefix = "logtesZZ" + Guid.NewGuid().ToString("n");
                 ConfigurationManager.AppSettings[FunctionLogTableAppSettingName] = tablePrefix; // tell dashboard to use it
-                _provider = LogFactory.NewTableProvider(tableClient, tablePrefix);
+                _provider = LogFactory.NewLogTableProvider(tableClient, tablePrefix);
                 this.Data = await WriteTestLoggingDataAsync(_provider);
 
                 var config = new HttpConfiguration();
@@ -141,10 +141,8 @@ namespace Dashboard.UnitTests
             private async Task DisposeAsync()
             {
                 var tables = await _provider.ListTablesAsync();
-                foreach (var table in tables)
-                {
-                    await table.DeleteIfExistsAsync();
-                }
+                Task[] tasks = Array.ConvertAll(tables, table => table.DeleteIfExistsAsync());
+                await Task.WhenAll(tasks);                
             }
 
             // Write logs. Return what we wrote. 
@@ -176,7 +174,7 @@ namespace Dashboard.UnitTests
                 return list.ToArray();
             }
 
-            CloudTableClient GetNewLoggingTable()
+            CloudTableClient GetNewLoggingTableClient()
             {
                 string storageString = "AzureWebJobsDashboard";
                 var acs = Environment.GetEnvironmentVariable(storageString);

@@ -10,12 +10,12 @@ using Microsoft.WindowsAzure.Storage.Table;
 namespace Microsoft.Azure.WebJobs.Logging
 {
     // Default table provider for logging 
-    internal class EpochTableProvider : ILogTableProvider
+    internal class DefaultLogTableProvider : ILogTableProvider
     {
         private readonly CloudTableClient _tableClient;
         private readonly string _tableNamePrefix;
 
-        public EpochTableProvider(CloudTableClient tableClient, string tableNamePrefix = LogFactory.DefaultLogTableName)
+        public DefaultLogTableProvider(CloudTableClient tableClient, string tableNamePrefix = LogFactory.DefaultLogTableName)
         {
             if (tableClient == null)
             {
@@ -42,17 +42,13 @@ namespace Microsoft.Azure.WebJobs.Logging
         {
             List<CloudTable> list = new List<CloudTable>();
             TableContinuationToken continuationToken = null;
-            while (true)
+            do
             {
                 var segment = await _tableClient.ListTablesSegmentedAsync(_tableNamePrefix, continuationToken, CancellationToken.None);
                 list.AddRange(segment.Results);
-
-                if (segment.ContinuationToken == null)
-                {
-                    break;
-                }
                 continuationToken = segment.ContinuationToken;
             }
+            while (continuationToken != null);
 
             return list.ToArray();
         }

@@ -26,8 +26,8 @@ namespace Microsoft.Azure.WebJobs.Logging
         private Task _backgroundFlusherTask = null;
 
         // Writes go to multiple tables, sharded by timestamp. 
-        private readonly ILogTableProvider _tableLookup;
-        private readonly string _containerName; // compute container (not Blob Container) that we're logging for. 
+        private readonly ILogTableProvider _logTableProvider;
+        private readonly string _machineName; // compute container (not Blob Container) that we're logging for. 
 
         private string _uniqueId = Guid.NewGuid().ToString();
 
@@ -47,18 +47,18 @@ namespace Microsoft.Azure.WebJobs.Logging
         static ContainerActiveLogger _container;
         CloudTableInstanceCountLogger _instanceLogger;
 
-        public LogWriter(string computerContainerName, ILogTableProvider tableLookup)
+        public LogWriter(string machineName, ILogTableProvider logTableProvider)
         {
-            if (computerContainerName == null)
+            if (machineName == null)
             {
-                throw new ArgumentNullException("computerContainerName");
+                throw new ArgumentNullException("machineName");
             }
-            if (tableLookup == null)
+            if (logTableProvider == null)
             {
-                throw new ArgumentNullException("tableLookup");
+                throw new ArgumentNullException("logTableProvider");
             }
-            this._containerName = computerContainerName;         
-            this._tableLookup = tableLookup;
+            this._machineName = machineName;         
+            this._logTableProvider = logTableProvider;
         }
 
         // Background flusher. 
@@ -135,12 +135,12 @@ namespace Microsoft.Azure.WebJobs.Logging
                     StartBackgroundFlusher();
                     if (_container == null)
                     {                        
-                        _container = new ContainerActiveLogger(_containerName, _tableLookup);
+                        _container = new ContainerActiveLogger(_machineName, _logTableProvider);
                     }
                     if (_instanceLogger == null)
                     {
                         int size = GetContainerSize();                        
-                        _instanceLogger = new CloudTableInstanceCountLogger(_containerName, _tableLookup, size);
+                        _instanceLogger = new CloudTableInstanceCountLogger(_machineName, _logTableProvider, size);
                     }
                 }
                 if (item.IsCompleted())
@@ -167,7 +167,7 @@ namespace Microsoft.Azure.WebJobs.Logging
             lock (_lock)
             {
                 _instances.Add(InstanceTableEntity.New(item));
-                _recents.Add(RecentPerFuncEntity.New(_containerName, item));
+                _recents.Add(RecentPerFuncEntity.New(_machineName, item));
             }
 
             if (item.IsCompleted())
@@ -176,7 +176,7 @@ namespace Microsoft.Azure.WebJobs.Logging
                 // Time aggregate is flushed later. 
                 // Don't flush until we've moved onto the next interval. 
                 {
-                    var newEntity = TimelineAggregateEntity.New(_containerName, item.FunctionName, item.StartTime, _uniqueId);
+                    var newEntity = TimelineAggregateEntity.New(_machineName, item.FunctionName, item.StartTime, _uniqueId);
                     lock (_lock)
                     {
                         // If we already have an entity at this time slot (specified by rowkey), then use that so that 
@@ -317,7 +317,7 @@ namespace Microsoft.Azure.WebJobs.Logging
                 }
 
                 var epoch = e.GetEpoch();
-                var instanceTable = this._tableLookup.GetTableForEpoch(epoch);
+                var instanceTable = this._logTableProvider.GetTableForDateTime(epoch);
                 TableBatchOperation batch;
                 if (!batches.TryGetValue(instanceTable.Name, out batch))
                 {
