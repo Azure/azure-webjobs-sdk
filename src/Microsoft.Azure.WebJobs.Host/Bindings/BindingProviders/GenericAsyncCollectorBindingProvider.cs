@@ -137,20 +137,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         // The GenericAsyncCollector is already instantiated against the user type, so no conversions should be needed. 
         private class IdentityConverterManager : IConverterManager
         {
-            public void AddConverter<TSource, TDestination>(Func<TSource, TDestination> converter)
+            public void AddConverter<TSource, TDestination, TAttribute1>(FuncConverter<TSource, TAttribute1, TDestination> converter) where TAttribute1 : Attribute
             {
                 throw new NotImplementedException();
-            }
-
-            public void AddConverter<TSource, TDestination, TAttribute1>(Func<TSource, TAttribute1, TDestination> converter) where TAttribute1 : Attribute
-            {
-                throw new NotImplementedException();
-            }
-
-            public void AddConverterWithContext<TSource, TDestination, TAttribute1>(Func<TSource, TAttribute1, ValueBindingContext, TDestination> converter) where TAttribute1 : Attribute
-            {
-                throw new NotImplementedException();
-            }
+            }   
 
             public FuncConverter<TSource, TAttribute1, TDestination> GetConverter<TSource, TDestination, TAttribute1>() where TAttribute1 : Attribute
             {

@@ -15,8 +15,7 @@ namespace Microsoft.Azure.WebJobs
     {
         // Map from <TSrc,TDest> to a converter function. 
         private Dictionary<string, object> _funcsWithAttr = new Dictionary<string, object>();
-        private Dictionary<string, object> _funcs = new Dictionary<string, object>();
-
+        
         public ConverterManager()
         {
             this.AddConverter<byte[], string>(DefaultByteArray2String);
@@ -28,55 +27,38 @@ namespace Microsoft.Azure.WebJobs
             return str;
         }
 
-        private static string GetKey<TSrc, TDest>()
-        {
-            return typeof(TSrc).FullName + "|" + typeof(TDest).FullName;
-        }
         private static string GetKey<TSrc, TDest, TAttribute>()
         {
             return typeof(TSrc).FullName + "|" + typeof(TDest).FullName + "|" + typeof(TAttribute).FullName;
         }
 
-        public void AddConverter<TSrc, TDest>(Func<TSrc, TDest> converter)
-        {
-            string key = GetKey<TSrc, TDest>();
-            _funcs[key] = converter;            
-        }
-
-        public void AddConverter<TSrc, TDest, TAttribute>(Func<TSrc, TAttribute, TDest> converter)
+        public void AddConverter<TSrc, TDest, TAttribute>(FuncConverter<TSrc, TAttribute, TDest> converter)
             where TAttribute : Attribute
-        {
-            Func<TSrc, TAttribute, ValueBindingContext, TDest> func = (src, attr, context) => converter(src, attr);
-            AddConverterWithContext(func);
-        }
-
-        public void AddConverterWithContext<TSrc, TDest, TAttribute>(Func<TSrc, TAttribute, ValueBindingContext, TDest> converter)
-            where TAttribute : Attribute
-        {
-            // $$$
+        {           
             string key = GetKey<TSrc, TDest, TAttribute>();
-            _funcsWithAttr[key] = converter;
+            _funcsWithAttr[key] = converter;            
         }
 
+        // Return null if not found. 
         private FuncConverter<TSrc, TAttribute, TDest> TryGetConverter<TSrc, TAttribute, TDest>()
             where TAttribute : Attribute
         {
-            string key1 = GetKey<TSrc, TDest, TAttribute>();
-
-            // First try specific that uses the TAttribute 
             object obj;
+
+            // First lookup specificially for TAttribute. 
+            string key1 = GetKey<TSrc, TDest, TAttribute>();
             if (_funcsWithAttr.TryGetValue(key1, out obj))
             {
                 var func = (FuncConverter<TSrc, TAttribute, TDest>)obj;
                 return func;
             }
-
-            // Fallback
-            string key2 = GetKey<TSrc, TDest>();
-            if (_funcs.TryGetValue(key2, out obj))
+                // No specific case, lookup in the general purpose case. 
+            string key2 = GetKey<TSrc, TDest, Attribute>();
+            if (_funcsWithAttr.TryGetValue(key2, out obj))
             {
-                var func = (Func<TSrc, TDest>)obj;
-                return (TSrc src, TAttribute attr, ValueBindingContext context) => func(src);
+                var func1 = (FuncConverter<TSrc, Attribute, TDest>)obj;
+                FuncConverter<TSrc, TAttribute, TDest> func2 = (src, attr, context) => func1(src, null, context);
+                return func2;
             }
 
             return null;

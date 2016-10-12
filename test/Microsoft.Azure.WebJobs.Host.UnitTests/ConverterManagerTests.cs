@@ -51,7 +51,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Guid instance = Guid.NewGuid();
             var testContext = new ValueBindingContext(new FunctionBindingContext(instance, CancellationToken.None, null), CancellationToken.None);
 
-            cm.AddConverterWithContext((object obj, Attribute attr, ValueBindingContext ctx) => {
+            cm.AddConverter((object obj, Attribute attr, ValueBindingContext ctx) => {
                 Assert.Same(ctx, testContext);
                 var result = JObject.FromObject(obj);
                 result["$"] = ctx.FunctionInstanceId;

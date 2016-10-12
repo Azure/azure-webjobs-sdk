@@ -142,6 +142,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "DefaultNameResolver",
                 "FunctionInstanceLogEntry",
                 "IConverterManager",
+                "IConverterManagerExtensions",
+                "FuncConverter`3",
                 "BindingFactory",
                 "ITriggerBindingStrategy`2",
                 "ConnectionStringNames",

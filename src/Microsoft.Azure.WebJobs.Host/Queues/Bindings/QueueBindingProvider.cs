@@ -55,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
             converterManager.AddConverter<byte[], IStorageQueueMessage, QueueAttribute>(ConvertByteArrayToCloudQueueMessage);
             converterManager.AddConverter<IStorageQueueMessage, byte[]>(ConvertCloudQueueMessageToByteArray);
 
-            converterManager.AddConverterWithContext<object, JObject, QueueAttribute>(SerializeToJobject);
+            converterManager.AddConverter<object, JObject, QueueAttribute>(SerializeToJobject);
             converterManager.AddConverter<string, IStorageQueueMessage, QueueAttribute>(ConvertStringToCloudQueueMessage);
             converterManager.AddConverter<IStorageQueueMessage, string>(ConvertCloudQueueMessageToString);
 
@@ -73,7 +73,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
             return bindingProvider;
         }
 
-        // $$$
+        // Hook JObject serialization to so we can stamp the object with a causality marker. 
         private static JObject SerializeToJobject(object input, QueueAttribute attrResolved, ValueBindingContext context)
         {
             JObject objectToken = JObject.FromObject(input, JsonSerialization.Serializer);
