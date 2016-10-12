@@ -388,7 +388,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             where TAttribute : Attribute
         {
             // Other 
-            Func<TMessageSrc, TAttribute, ValueBindingContext, TMessage> convert = cm.GetConverter<TMessageSrc, TMessage, TAttribute>();
+            var convert = cm.GetConverter<TMessageSrc, TMessage, TAttribute>();
             FuncArgumentBuilder<TAttribute> argumentBuilder = (attrResolved, context) =>
             {
                 IAsyncCollector<TMessage> raw = buildFromAttribute(attrResolved);
@@ -424,7 +424,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             where TAttribute : Attribute
         {
             // Other 
-            Func<TMessageSrc, TAttribute, ValueBindingContext, TMessage> convert = cm.GetConverter<TMessageSrc, TMessage, TAttribute>();
+            var convert = cm.GetConverter<TMessageSrc, TMessage, TAttribute>();
             if (convert == null)
             {
                 return null;
@@ -462,7 +462,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             where TAttribute : Attribute
         {
             // Other 
-            Func<TMessageSrc, TAttribute, ValueBindingContext, TMessage> convert = cm.GetConverter<TMessageSrc, TMessage, TAttribute>();
+            var convert = cm.GetConverter<TMessageSrc, TMessage, TAttribute>();
             if (convert == null)
             {
                 ThrowMissingConversionError(typeof(TMessageSrc));
@@ -499,7 +499,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 AttributeCloner<TAttribute> cloner)
             where TAttribute : Attribute
         {
-            Func<TMessageSrc, TAttribute, ValueBindingContext, TMessage> convert = cm.GetConverter<TMessageSrc, TMessage, TAttribute>();
+            var convert = cm.GetConverter<TMessageSrc, TMessage, TAttribute>();
             if (convert == null)
             {
                 ThrowMissingConversionError(typeof(TMessageSrc));

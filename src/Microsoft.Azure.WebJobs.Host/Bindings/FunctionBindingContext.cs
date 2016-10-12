@@ -10,6 +10,19 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     internal delegate IValueProvider FuncArgumentBuilder<TAttribute>(TAttribute attribute, ValueBindingContext context);
 
     /// <summary>
+    /// Converter  $$$
+    /// </summary>
+    /// <typeparam name="TSource"></typeparam>
+    /// <typeparam name="TAttribute"></typeparam>
+    /// <typeparam name="TDestination"></typeparam>
+    /// <param name="src"></param>
+    /// <param name="attribute"></param>
+    /// <param name="context"></param>
+    /// <returns></returns>
+    public delegate TDestination FuncConverter<TSource, TAttribute, TDestination>(TSource src, TAttribute attribute, ValueBindingContext context)
+            where TAttribute : Attribute;
+
+    /// <summary>
     /// Provides binding context for all bind operations scoped to a particular
     /// function invocation.
     /// </summary>

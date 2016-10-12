@@ -25,7 +25,7 @@ namespace Microsoft.Azure.WebJobs
         /// <typeparam name="TDestination">Destination type.</typeparam>
         /// <typeparam name="TAttribute">Attribute on the binding. </typeparam>
         /// <returns>a converter function; or null if no converter is available.</returns>
-        Func<TSource, TAttribute, ValueBindingContext, TDestination> GetConverter<TSource, TDestination, TAttribute>()
+        FuncConverter<TSource, TAttribute, TDestination> GetConverter<TSource, TDestination, TAttribute>()
             where TAttribute : Attribute;
 
         /// <summary>

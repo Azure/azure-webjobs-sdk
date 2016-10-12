@@ -152,7 +152,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 throw new NotImplementedException();
             }
 
-            public Func<TSource, TAttribute1, ValueBindingContext, TDestination> GetConverter<TSource, TDestination, TAttribute1>() where TAttribute1 : Attribute
+            public FuncConverter<TSource, TAttribute1, TDestination> GetConverter<TSource, TDestination, TAttribute1>() where TAttribute1 : Attribute
             {
                 if (typeof(TSource) != typeof(TDestination))
                 {

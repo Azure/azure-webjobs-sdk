@@ -12,12 +12,12 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
     internal class CustomTriggerArgumentBinding<TMessage, TTriggerValue, TUserType> : 
         SimpleTriggerArgumentBinding<TMessage, TTriggerValue>
     {
-        private readonly Func<TMessage, Attribute, ValueBindingContext, TUserType> _converter;
+        private readonly FuncConverter<TMessage, Attribute, TUserType> _converter;
 
         public CustomTriggerArgumentBinding(
             ITriggerBindingStrategy<TMessage, TTriggerValue> bindingStrategy, 
             IConverterManager converterManager,
-            Func<TMessage, Attribute, ValueBindingContext, TUserType> converter) :
+            FuncConverter<TMessage, Attribute, TUserType> converter) :
             base(bindingStrategy, converterManager)
         {
             if (converter == null)

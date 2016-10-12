@@ -12,13 +12,13 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         where TAttribute : Attribute
     {
         private readonly IAsyncCollector<TDest> _inner;
-        private readonly Func<TSrc, TAttribute, ValueBindingContext, TDest> _convert;
+        private readonly FuncConverter<TSrc, TAttribute, TDest> _convert;
         private readonly TAttribute _attrResolved;
         private readonly ValueBindingContext _context;
 
         public TypedAsyncCollectorAdapter(
-            IAsyncCollector<TDest> inner, 
-            Func<TSrc, TAttribute, ValueBindingContext, TDest> convert, 
+            IAsyncCollector<TDest> inner,
+            FuncConverter<TSrc, TAttribute, TDest> convert, 
             TAttribute attrResolved,
             ValueBindingContext context)
         {

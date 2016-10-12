@@ -10,8 +10,6 @@ using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs
 {
-    internal delegate TDest FuncConverter<TSrc, TAttribute, TDest>(TSrc src, TAttribute attribute, ValueBindingContext context);
-
     // Concrete implementation of IConverterManager
     internal class ConverterManager : IConverterManager
     {
@@ -60,7 +58,7 @@ namespace Microsoft.Azure.WebJobs
             _funcsWithAttr[key] = converter;
         }
 
-        private Func<TSrc, TAttribute, ValueBindingContext, TDest> TryGetConverter<TSrc, TAttribute, TDest>()
+        private FuncConverter<TSrc, TAttribute, TDest> TryGetConverter<TSrc, TAttribute, TDest>()
             where TAttribute : Attribute
         {
             string key1 = GetKey<TSrc, TDest, TAttribute>();
@@ -69,7 +67,7 @@ namespace Microsoft.Azure.WebJobs
             object obj;
             if (_funcsWithAttr.TryGetValue(key1, out obj))
             {
-                var func = (Func<TSrc, TAttribute, ValueBindingContext, TDest>)obj;
+                var func = (FuncConverter<TSrc, TAttribute, TDest>)obj;
                 return func;
             }
 
@@ -84,7 +82,7 @@ namespace Microsoft.Azure.WebJobs
             return null;
         }
 
-        public Func<TSrc, TAttribute, ValueBindingContext, TDest> GetConverter<TSrc, TDest, TAttribute>()
+        public FuncConverter<TSrc, TAttribute, TDest> GetConverter<TSrc, TDest, TAttribute>()
             where TAttribute : Attribute
         {
             // Give precedence to exact matches.
