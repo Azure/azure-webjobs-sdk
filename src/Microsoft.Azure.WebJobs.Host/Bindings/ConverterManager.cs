@@ -5,10 +5,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
-using Newtonsoft.Json;
+using Microsoft.Azure.WebJobs.Host.Bindings;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs
 {
+    internal delegate TDest FuncConverter<TSrc, TAttribute, TDest>(TSrc src, TAttribute attribute, ValueBindingContext context);
+
     // Concrete implementation of IConverterManager
     internal class ConverterManager : IConverterManager
     {
@@ -39,19 +42,25 @@ namespace Microsoft.Azure.WebJobs
         public void AddConverter<TSrc, TDest>(Func<TSrc, TDest> converter)
         {
             string key = GetKey<TSrc, TDest>();
-            _funcs[key] = converter;
-            //Func<TSrc, Attribute, TDest> wrapper = (src, attr) => converter(src);
-            //this.AddConverter(wrapper);
+            _funcs[key] = converter;            
         }
 
         public void AddConverter<TSrc, TDest, TAttribute>(Func<TSrc, TAttribute, TDest> converter)
             where TAttribute : Attribute
         {
+            Func<TSrc, TAttribute, ValueBindingContext, TDest> func = (src, attr, context) => converter(src, attr);
+            AddConverterWithContext(func);
+        }
+
+        public void AddConverterWithContext<TSrc, TDest, TAttribute>(Func<TSrc, TAttribute, ValueBindingContext, TDest> converter)
+            where TAttribute : Attribute
+        {
+            // $$$
             string key = GetKey<TSrc, TDest, TAttribute>();
             _funcsWithAttr[key] = converter;
         }
 
-        private Func<TSrc, TAttribute, TDest> TryGetConverter<TSrc, TAttribute, TDest>()
+        private Func<TSrc, TAttribute, ValueBindingContext, TDest> TryGetConverter<TSrc, TAttribute, TDest>()
             where TAttribute : Attribute
         {
             string key1 = GetKey<TSrc, TDest, TAttribute>();
@@ -60,7 +69,7 @@ namespace Microsoft.Azure.WebJobs
             object obj;
             if (_funcsWithAttr.TryGetValue(key1, out obj))
             {
-                var func = (Func<TSrc, TAttribute, TDest>)obj;
+                var func = (Func<TSrc, TAttribute, ValueBindingContext, TDest>)obj;
                 return func;
             }
 
@@ -69,20 +78,20 @@ namespace Microsoft.Azure.WebJobs
             if (_funcs.TryGetValue(key2, out obj))
             {
                 var func = (Func<TSrc, TDest>)obj;
-                return (TSrc src, TAttribute attr) => func(src);
+                return (TSrc src, TAttribute attr, ValueBindingContext context) => func(src);
             }
 
             return null;
         }
 
-        public Func<TSrc, TAttribute, TDest> GetConverter<TSrc, TDest, TAttribute>()
+        public Func<TSrc, TAttribute, ValueBindingContext, TDest> GetConverter<TSrc, TDest, TAttribute>()
             where TAttribute : Attribute
         {
             // Give precedence to exact matches.
             // this lets callers override any other rules (like JSON binding) 
 
             // TSrc --> TDest
-            Func<TSrc, TAttribute, TDest> exactMatch = TryGetConverter<TSrc, TAttribute, TDest>();
+            var exactMatch = TryGetConverter<TSrc, TAttribute, TDest>();
             if (exactMatch != null)
             {
                 return exactMatch;
@@ -90,12 +99,12 @@ namespace Microsoft.Azure.WebJobs
 
             // Object --> TDest
             // Catch all for any conversion to TDest
-            Func<object, TAttribute, TDest> objConversion = TryGetConverter<object, TAttribute, TDest>();
+            var objConversion = TryGetConverter<object, TAttribute, TDest>();
             if (objConversion != null)
             {
-                return (src, attr) =>
+                return (src, attr, context) =>
                 {
-                    var result = objConversion(src, attr);
+                    var result = objConversion(src, attr, context);
                     return result;
                 };
             }
@@ -103,7 +112,7 @@ namespace Microsoft.Azure.WebJobs
             // Inheritence (also covers idempotency)
             if (typeof(TDest).IsAssignableFrom(typeof(TSrc)))
             {
-                return (src, attr) =>
+                return (src, attr, context) =>
                 {
                     object obj = (object)src;
                     return (TDest)obj;
@@ -111,7 +120,7 @@ namespace Microsoft.Azure.WebJobs
             }
 
             // string --> TDest
-            Func<string, TAttribute, TDest> fromString = TryGetConverter<string, TAttribute, TDest>();
+            var fromString = TryGetConverter<string, TAttribute, TDest>();
             if (fromString == null)
             {
                 return null;
@@ -120,9 +129,9 @@ namespace Microsoft.Azure.WebJobs
             // String --> TDest
             if (typeof(TSrc) == typeof(string))
             {
-                return (src, attr) =>
+                return (src, attr, context) =>
                 {
-                    var result = fromString((string)(object)src, attr);
+                    var result = fromString((string)(object)src, attr, context);
                     return result;
                 };
             }
@@ -133,13 +142,13 @@ namespace Microsoft.Azure.WebJobs
             // Byte[] --[builtin]--> String --> TDest
             if (typeof(TSrc) == typeof(byte[]))
             {
-                Func<byte[], TAttribute, string> bytes2string = TryGetConverter<byte[], TAttribute, string>();
+                var bytes2string = TryGetConverter<byte[], TAttribute, string>();
 
-                return (src, attr) =>
+                return (src, attr, context) =>
                 {
                     byte[] bytes = (byte[])(object)src;
-                    string str = bytes2string(bytes, attr);
-                    var result = fromString(str, attr);
+                    string str = bytes2string(bytes, attr, context);
+                    var result = fromString(str, attr, context);
                     return result;
                 };
             }
@@ -152,12 +161,19 @@ namespace Microsoft.Azure.WebJobs
             {
                 return null;
             }
-            
-            // TSrc --[Json]--> string --> TDest
-            return (src, attr) =>
+
+            var funcJobj = TryGetConverter<object, TAttribute, JObject>();
+            if (funcJobj == null)
             {
-                string json = JsonConvert.SerializeObject(src);
-                TDest obj = fromString(json, attr);
+                funcJobj = (object obj, TAttribute attr, ValueBindingContext context) => JObject.FromObject(obj);
+            }
+
+            // TSrc --[Json]--> string --> TDest
+            return (src, attr, context) =>
+            {
+                JObject jobj = funcJobj((object)src, attr, context);
+                string json = jobj.ToString();
+                TDest obj = fromString(json, attr, context);
                 return obj;
             };
         }

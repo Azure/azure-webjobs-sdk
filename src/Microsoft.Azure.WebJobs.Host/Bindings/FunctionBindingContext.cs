@@ -6,6 +6,9 @@ using System.Threading;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
+    // $$$
+    internal delegate IValueProvider FuncArgumentBuilder<TAttribute>(TAttribute attribute, ValueBindingContext context);
+
     /// <summary>
     /// Provides binding context for all bind operations scoped to a particular
     /// function invocation.

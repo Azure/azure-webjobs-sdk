@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Diagnostics.CodeAnalysis;
+using Microsoft.Azure.WebJobs.Host.Bindings;
 
 namespace Microsoft.Azure.WebJobs
 {
@@ -25,7 +25,7 @@ namespace Microsoft.Azure.WebJobs
         /// <typeparam name="TDestination">Destination type.</typeparam>
         /// <typeparam name="TAttribute">Attribute on the binding. </typeparam>
         /// <returns>a converter function; or null if no converter is available.</returns>
-        Func<TSource, TAttribute, TDestination> GetConverter<TSource, TDestination, TAttribute>()
+        Func<TSource, TAttribute, ValueBindingContext, TDestination> GetConverter<TSource, TDestination, TAttribute>()
             where TAttribute : Attribute;
 
         /// <summary>
@@ -46,6 +46,16 @@ namespace Microsoft.Azure.WebJobs
         /// <typeparam name="TAttribute">Attribute on the binding. </typeparam>
         /// <param name="converter">A function to convert from the source to the destination type.</param>
         void AddConverter<TSource, TDestination, TAttribute>(Func<TSource, TAttribute, TDestination> converter)
+            where TAttribute : Attribute;
+
+        /// <summary>
+        /// $$$
+        /// </summary>
+        /// <typeparam name="TSource"></typeparam>
+        /// <typeparam name="TDestination"></typeparam>
+        /// <typeparam name="TAttribute"></typeparam>
+        /// <param name="converter"></param>
+        void AddConverterWithContext<TSource, TDestination, TAttribute>(Func<TSource, TAttribute, ValueBindingContext, TDestination> converter)
             where TAttribute : Attribute;
     }
 }
