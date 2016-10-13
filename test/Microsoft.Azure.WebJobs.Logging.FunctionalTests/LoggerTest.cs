@@ -33,7 +33,6 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
             }
         }
 
-
         // End-2-end test that function instance counter can write to tables 
         [Fact] 
         public async Task FunctionInstance()

@@ -101,13 +101,13 @@ namespace Microsoft.Azure.WebJobs.Logging
                 // Execute the retrieve operation.
                 TableResult retrievedResult = await instanceTable.SafeExecuteAsync(retrieveOperation);
 
-                var x = (InstanceTableEntity)retrievedResult.Result;
+                var entity = (InstanceTableEntity)retrievedResult.Result;
 
-                if (x == null)
+                if (entity == null)
                 {
                     return null;
                 }
-                return x.ToFunctionLogItem();
+                return entity.ToFunctionLogItem();
             });
 
             FunctionInstanceLogItem[] results = await Task.WhenAll(taskLookups);

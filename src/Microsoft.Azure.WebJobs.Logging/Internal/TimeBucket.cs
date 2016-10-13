@@ -46,7 +46,7 @@ namespace Microsoft.Azure.WebJobs.Logging
             {
                 return -1;
             }
-            string suffix = tableName.Substring(tableName.Length - 5, 5);
+            string suffix = tableName.Substring(tableName.Length - 6, 6);
             long epoch;
             if (long.TryParse(suffix, out epoch))
             {
