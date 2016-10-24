@@ -1,7 +1,6 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -29,6 +28,8 @@ namespace Microsoft.Azure.WebJobs.Logging
         private readonly ILogTableProvider _logTableProvider;
         private readonly string _machineName; // compute container (not Blob Container) that we're logging for. 
 
+        private readonly string _hostName; 
+
         private string _uniqueId = Guid.NewGuid().ToString();
 
         // If there's a new function, then write it's definition. 
@@ -47,7 +48,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         static ContainerActiveLogger _container;
         CloudTableInstanceCountLogger _instanceLogger;
 
-        public LogWriter(string machineName, ILogTableProvider logTableProvider)
+        public LogWriter(string hostName, string machineName, ILogTableProvider logTableProvider)
         {
             if (machineName == null)
             {
@@ -57,6 +58,11 @@ namespace Microsoft.Azure.WebJobs.Logging
             {
                 throw new ArgumentNullException("logTableProvider");
             }
+            if (hostName == null)
+            {
+                throw new ArgumentNullException("hostName");
+            }
+            this._hostName = hostName;
             this._machineName = machineName;         
             this._logTableProvider = logTableProvider;
         }
@@ -128,6 +134,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         public async Task AddAsync(FunctionInstanceLogItem item, CancellationToken cancellationToken = default(CancellationToken))
         {
             item.Validate();
+            item.FunctionId = FunctionId.Build(this._hostName, item.FunctionName);
 
             {
                 lock(_lock)
@@ -159,7 +166,7 @@ namespace Microsoft.Azure.WebJobs.Logging
             {
                 if (_seenFunctions.Add(item.FunctionName))
                 {
-                    _funcDefs.Add(FunctionDefinitionEntity.New(item.FunctionName));
+                    _funcDefs.Add(FunctionDefinitionEntity.New(item.FunctionId, item.FunctionName));
                 }
             }
                    
@@ -176,7 +183,7 @@ namespace Microsoft.Azure.WebJobs.Logging
                 // Time aggregate is flushed later. 
                 // Don't flush until we've moved onto the next interval. 
                 {
-                    var newEntity = TimelineAggregateEntity.New(_machineName, item.FunctionName, item.StartTime, _uniqueId);
+                    var newEntity = TimelineAggregateEntity.New(_machineName, item.FunctionId, item.StartTime, _uniqueId);
                     lock (_lock)
                     {
                         // If we already have an entity at this time slot (specified by rowkey), then use that so that 

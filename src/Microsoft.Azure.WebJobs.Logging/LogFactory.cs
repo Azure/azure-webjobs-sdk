@@ -24,12 +24,13 @@ namespace Microsoft.Azure.WebJobs.Logging
         /// Create a new log writer. 
         /// Pass in machineName to facilitate multiple compute instances writing to the same table simultaneously without interference. 
         /// </summary>
+        /// <param name="hostName">name of host. Multiple hosts can share a single set of azure tables. Logging is scoped per-host.</param>
         /// <param name="machineName">name of the compute container. Likely %COMPUTERNAME%. </param>
         /// <param name="logTableProvider">callback interface that gets invoked to get azure tables to write logging to.</param>
         /// <returns></returns>
-        public static ILogWriter NewWriter(string machineName, ILogTableProvider logTableProvider)
+        public static ILogWriter NewWriter(string hostName, string machineName, ILogTableProvider logTableProvider)
         {
-            return new LogWriter(machineName, logTableProvider);
+            return new LogWriter(hostName, machineName, logTableProvider);
         }
 
         /// <summary>
