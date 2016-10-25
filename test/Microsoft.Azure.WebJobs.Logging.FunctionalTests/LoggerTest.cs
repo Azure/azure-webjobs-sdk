@@ -95,7 +95,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
 
             var segmentRecent = await reader.GetRecentFunctionInstancesAsync(new RecentFunctionQuery
             {
-                FunctionId = FunctionId.DangerousFromString("abc"),
+                FunctionId = FunctionId.Parse("abc"),
                 Start = DateTime.MinValue,
                 End = DateTime.MaxValue,
                 MaximumResults = 1000

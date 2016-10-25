@@ -37,7 +37,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         {
             get
             {
-                return FunctionId.DangerousFromString(this.RowKey);
+                return FunctionId.Parse(this.RowKey);
             }
         }
         

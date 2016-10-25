@@ -12,7 +12,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
         public void Operators()
         {
             var f1 = FunctionId.Build("h1", "FFF1");
-            var f2 = FunctionId.Build("h1", "fff1");
+            var f2 = FunctionId.Build("H1", "fff1"); // different casing. 
 
             Assert.Equal("h1-fff1", f2.ToString());
 
@@ -38,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
         public void Direct()
         {
             string str = "ab-def%:x$";
-            var f = FunctionId.DangerousFromString(str);
+            var f = FunctionId.Parse(str);
                         
             Assert.Equal(str, f.ToString());
         }

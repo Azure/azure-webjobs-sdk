@@ -82,7 +82,7 @@ namespace Dashboard.Data
 
         FunctionStatistics IFunctionStatisticsReader.Lookup(string functionId)
         {
-            var theTask = Task.Run(() => LookupAsync(FunctionId.DangerousFromString(functionId)));
+            var theTask = Task.Run(() => LookupAsync(FunctionId.Parse(functionId)));
             var retVal = theTask.GetAwaiter().GetResult();
             return retVal;
         }
@@ -163,7 +163,7 @@ namespace Dashboard.Data
                 functionIds,
                 functionId => _reader.GetRecentFunctionInstancesAsync(new RecentFunctionQuery
                 {
-                    FunctionId = FunctionId.DangerousFromString(functionId),
+                    FunctionId = FunctionId.Parse(functionId),
                     MaximumResults = maximumResults,
                     Start = DateTime.MinValue, 
                     End = endTime                    
@@ -213,7 +213,7 @@ namespace Dashboard.Data
 
         IResultSegment<RecentInvocationEntry> IRecentInvocationIndexByFunctionReader.Read(string functionId, int maximumResults, string continuationToken)
         {
-            var theTask = Task.Run(() => Read3Async(FunctionId.DangerousFromString(functionId), maximumResults, continuationToken));
+            var theTask = Task.Run(() => Read3Async(FunctionId.Parse(functionId), maximumResults, continuationToken));
             var retVal = theTask.GetAwaiter().GetResult();
             return retVal;
         }

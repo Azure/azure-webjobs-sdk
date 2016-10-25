@@ -242,7 +242,7 @@ namespace Dashboard.ApiControllers
                 return BadRequest();
             }
 
-            var segment = await _reader.GetAggregateStatsAsync(FunctionId.DangerousFromString(functionId), start.Value, end.Value, null);
+            var segment = await _reader.GetAggregateStatsAsync(FunctionId.Parse(functionId), start.Value, end.Value, null);
             var entities = segment.Results;
 
             var result = Array.ConvertAll(entities, entity => new

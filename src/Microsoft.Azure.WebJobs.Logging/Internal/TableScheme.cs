@@ -18,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         internal const string TimelineAggregatePK = "T2"; // TimelineAggregateEntity
         internal const string RecentFuncIndexPK = "R2"; // RecentPerFuncEntity
         internal const string ContainerActivePK = "C"; // ContainerActiveEntity
-        internal const string FuncDefIndexPK = "FD2"; // FunctionDefinitionEntity x
+        internal const string FuncDefIndexPK = "FD2"; // FunctionDefinitionEntity
         internal const string InstanceCountPK = "IA"; // InstanceCountEntity
 
         internal static string GetPartitionKey(string prefix, string hostName)

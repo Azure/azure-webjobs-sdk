@@ -37,9 +37,9 @@ namespace Microsoft.Azure.WebJobs.Logging
         /// Build directly from a string. This skips escaping and should only be used by the reader for interop. 
         /// This is the direct inverse of ToString().
         /// </summary>
-        /// <param name="value">raw value from a previos ToString() call. </param>
+        /// <param name="value">raw value from a previous ToString() call. </param>
         /// <returns></returns>
-        public static FunctionId DangerousFromString(string value)
+        public static FunctionId Parse(string value)
         {
             return new FunctionId { Value = value };
         }
@@ -56,7 +56,7 @@ namespace Microsoft.Azure.WebJobs.Logging
                 TableScheme.NormalizeFunctionName(hostName),
                 "-",
                 TableScheme.NormalizeFunctionName(functionName));
-            return DangerousFromString(value);
+            return Parse(value);
         }
 
         /// <summary>
