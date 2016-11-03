@@ -8,6 +8,7 @@ using System.Globalization;
 using System.Linq;
 using Microsoft.Azure.WebJobs.Host.Storage.Table;
 using Microsoft.Azure.WebJobs.Host.Tables;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.WindowsAzure.Storage.Table;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles

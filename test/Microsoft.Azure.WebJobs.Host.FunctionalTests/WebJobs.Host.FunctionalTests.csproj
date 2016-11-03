@@ -97,7 +97,6 @@
     <Compile Include="TestDoubles\MemoryCloudBlockBlobStream.cs" />
     <Compile Include="TestDoubles\MemoryTableStore.cs" />
     <Compile Include="TestDoubles\MemoryQueueStore.cs" />
-    <Compile Include="TestDoubles\StorageExceptionFactory.cs" />
     <Compile Include="TestDoubles\StrictEncodings.cs" />
     <Compile Include="TestDoubles\ExpectInstanceFailureTaskFunctionInstanceLogger.cs" />
     <Compile Include="TestDoubles\ExpectInstanceSuccessTaskFunctionInstanceLogger.cs" />

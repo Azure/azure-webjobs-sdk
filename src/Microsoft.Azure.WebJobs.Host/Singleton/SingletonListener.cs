@@ -39,7 +39,8 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             // When recovery is enabled, we don't do retries on the individual lock attempts,
             // since retries are being done outside
             bool recoveryEnabled = _singletonConfig.ListenerLockRecoveryPollingInterval != TimeSpan.MaxValue;
-            _lockHandle = await _singletonManager.TryLockAsync(_lockId, null, _attribute, cancellationToken, retry: !recoveryEnabled);
+            _lockHandle = await _singletonManager.TryLockAsync(_lockId, null, _attribute, _innerListener as ISingletonRenewalMonitor, OnLeaseConflictAsync,
+                cancellationToken, retry: !recoveryEnabled);
 
             if (_lockHandle == null)
             {
@@ -63,6 +64,12 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             _isListening = true;
         }
 
+        internal async Task OnLeaseConflictAsync()
+        {
+            await StopAsync(CancellationToken.None);
+            await StartAsync(CancellationToken.None);
+        }
+
         public async Task StopAsync(CancellationToken cancellationToken)
         {
             if (LockTimer != null)
@@ -76,7 +83,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             {
                 await _innerListener.StopAsync(cancellationToken);
                 _isListening = false;
-            } 
+            }
         }
 
         public void Cancel()
@@ -110,7 +117,8 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 
         internal async Task TryAcquireLock()
         {
-            _lockHandle = await _singletonManager.TryLockAsync(_lockId, null, _attribute, CancellationToken.None, retry: false);
+            _lockHandle = await _singletonManager.TryLockAsync(_lockId, null, _attribute, _innerListener as ISingletonRenewalMonitor,
+                OnLeaseConflictAsync, CancellationToken.None, retry: false);
 
             if (_lockHandle != null)
             {
@@ -120,7 +128,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                     LockTimer.Dispose();
                     LockTimer = null;
                 }
-                
+
                 await _innerListener.StartAsync(CancellationToken.None);
 
                 _isListening = true;

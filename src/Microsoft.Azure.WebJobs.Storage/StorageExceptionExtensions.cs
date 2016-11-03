@@ -7,6 +7,7 @@ using Microsoft.WindowsAzure.Storage;
 #if PUBLICSTORAGE
 namespace Microsoft.Azure.WebJobs.Storage
 #else
+
 namespace Microsoft.Azure.WebJobs.Host.Storage
 #endif
 {
@@ -15,6 +16,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
     [CLSCompliant(false)]
     public static class StorageExceptionExtensions
 #else
+
     internal static class StorageExceptionExtensions
 #endif
     {
@@ -743,6 +745,23 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
             }
 
             return extendedInformation.ErrorCode == "LeaseLost";
+        }
+
+        /// <summary>
+        /// Returns the <see cref="StorageExtendedErrorInformation"/>, or null.
+        /// </summary>
+        /// <param name="exception">The storage exception.</param>
+        /// <returns>The <see cref="StorageExtendedErrorInformation"/> or null</returns>
+        public static string GetErrorCode(this StorageException exception)
+        {
+            StorageExtendedErrorInformation extendedInformation = exception.RequestInformation.ExtendedErrorInformation;
+
+            if (extendedInformation == null)
+            {
+                return null;
+            }
+
+            return extendedInformation.ErrorCode;
         }
     }
 }

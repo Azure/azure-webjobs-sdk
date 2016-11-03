@@ -79,7 +79,7 @@ namespace Microsoft.Azure.WebJobs.Host
         {
             AcquireStartTime = DateTime.UtcNow;
 
-            _lockHandle = await _singletonManager.LockAsync(_lockId, _functionInstanceId, _attribute, cancellationToken);
+            _lockHandle = await _singletonManager.LockAsync(_lockId, _functionInstanceId, _attribute, null, cancellationToken);
 
             AcquireEndTime = DateTime.UtcNow;
             IsHeld = true;

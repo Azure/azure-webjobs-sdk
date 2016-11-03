@@ -195,6 +195,7 @@
     <Compile Include="Queues\QueueProcessorFactoryContextTests.cs" />
     <Compile Include="Singleton\SingletonConfigurationTests.cs" />
     <Compile Include="Singleton\SingletonListenerTests.cs" />
+    <Compile Include="Singleton\SingletonLockHandleTests.cs" />
     <Compile Include="Singleton\SingletonLockTests.cs" />
     <Compile Include="Singleton\SingletonManagerTests.cs" />
     <Compile Include="Singleton\SingletonValueProviderTests.cs" />

@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Microsoft.Azure.WebJobs.Host.Storage.Blob;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Shared.Protocol;
@@ -131,7 +132,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
                 token.NextMarker = filteredResult.Last().Name;
                 return new StorageBlobResultSegment(token, results);
             }
-
 
             return new StorageBlobResultSegment(null, results);
         }
