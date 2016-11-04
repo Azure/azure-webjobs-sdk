@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings.Path;
 using Microsoft.Azure.WebJobs.Host.Indexers;
+using Microsoft.Azure.WebJobs.Host.Timers;
 
 namespace Microsoft.Azure.WebJobs.Host.Listeners
 {
@@ -22,13 +23,16 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         private readonly IJobActivator _activator;
         private readonly INameResolver _nameResolver;
         private readonly TraceWriter _trace;
+        private readonly IWebJobsExceptionHandler _exceptionHandler;
 
-        public HostListenerFactory(IEnumerable<IFunctionDefinition> functionDefinitions, SingletonManager singletonManager, IJobActivator activator, INameResolver nameResolver, TraceWriter trace)
+        public HostListenerFactory(IEnumerable<IFunctionDefinition> functionDefinitions, SingletonManager singletonManager, IJobActivator activator, 
+            INameResolver nameResolver, IWebJobsExceptionHandler exceptionHandler, TraceWriter trace)
         {
             _functionDefinitions = functionDefinitions;
             _singletonManager = singletonManager;
             _activator = activator;
             _nameResolver = nameResolver;
+            _exceptionHandler = exceptionHandler;
             _trace = trace;
         }
 
@@ -58,7 +62,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                 SingletonAttribute singletonAttribute = SingletonManager.GetListenerSingletonOrNull(listener.GetType(), method);
                 if (singletonAttribute != null)
                 {
-                    listener = new SingletonListener(method, singletonAttribute, _singletonManager, listener);
+                    listener = new SingletonListener(method, singletonAttribute, _singletonManager, listener, _exceptionHandler, _trace);
                 }
 
                 listeners.Add(listener);
@@ -132,7 +136,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 
             if (methodInfo == null || methodInfo.ReturnType != typeof(bool))
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, 
+                throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
                     "Type '{0}' must declare a method 'IsDisabled' returning bool and taking a single parameter of Type MethodInfo.", providerType.Name));
             }
 

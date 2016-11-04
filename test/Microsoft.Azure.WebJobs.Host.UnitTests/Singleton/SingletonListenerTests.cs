@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Net;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -41,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             _mockSingletonManager = new Mock<SingletonManager>(MockBehavior.Strict, null, null, null, null, new FixedHostIdProvider(TestHostId), null);
             _mockSingletonManager.SetupGet(p => p.Config).Returns(_config);
             _mockInnerListener = new Mock<IListener>(MockBehavior.Strict);
-            _listener = new SingletonListener(_methodInfo, _attribute, _mockSingletonManager.Object, _mockInnerListener.Object);
+            _listener = new SingletonListener(_methodInfo, _attribute, _mockSingletonManager.Object, _mockInnerListener.Object, new TestTraceWriter(TraceLevel.Info));
             _lockId = SingletonManager.FormatLockId(_methodInfo, SingletonScope.Function, TestHostId, _attribute.ScopeId) + ".Listener";
         }
 
@@ -295,7 +294,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             SingletonManager manager = new SingletonManager(accountProvider, null, singletonConfig, trace, new FixedHostIdProvider("testhostid"));
             manager.MinimumLeaseRenewalInterval = TimeSpan.FromMilliseconds(250);
-            SingletonListener listener = new SingletonListener(_methodInfo, _attribute, manager, _mockInnerListener.Object);
+            SingletonListener listener = new SingletonListener(_methodInfo, _attribute, manager, _mockInnerListener.Object, new TestTraceWriter(TraceLevel.Info));
 
             await listener.StartAsync(cancellationToken);
 

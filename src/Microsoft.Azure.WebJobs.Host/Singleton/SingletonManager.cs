@@ -111,6 +111,7 @@ namespace Microsoft.Azure.WebJobs.Host
             IStorageBlockBlob lockBlob = lockDirectory.GetBlockBlobReference(lockId);
             TimeSpan lockPeriod = GetLockPeriod(attribute, _config);
             string leaseId = await TryAcquireLeaseAsync(lockBlob, lockPeriod, cancellationToken);
+            DateTime lockTime = DateTime.UtcNow;
             if (string.IsNullOrEmpty(leaseId) && retry)
             {
                 // Someone else has the lease. Continue trying to periodically get the lease for
@@ -144,7 +145,12 @@ namespace Microsoft.Azure.WebJobs.Host
             TimeSpan normalUpdateInterval = new TimeSpan(lockPeriod.Ticks / 2);
             IDelayStrategy speedupStrategy = new LinearSpeedupStrategy(normalUpdateInterval, MinimumLeaseRenewalInterval);
 
-            SingletonLockHandle lockHandle = new SingletonLockHandle(lockBlob, leaseId, lockId, speedupStrategy, leaseConflictCallback, renewalMonitor, _trace);
+            SingletonLockHandle lockHandle = new SingletonLockHandle(lockBlob, leaseId, lockId, lockPeriod, speedupStrategy, leaseConflictCallback, renewalMonitor, _trace);
+
+            if (renewalMonitor != null)
+            {
+                await renewalMonitor.OnRenewalAsync(lockTime, lockPeriod, cancellationToken);
+            }
 
             // start the renewal timer, which ensures that we maintain our lease until
             // the lock is released
@@ -249,7 +255,7 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 Mode = SingletonMode.Listener
             };
-            return new SingletonListener(null, singletonAttribute, this, innerListener);
+            return new SingletonListener(null, singletonAttribute, this, innerListener, _exceptionHandler, _trace);
         }
 
         public static SingletonAttribute GetListenerSingletonOrNull(Type listenerType, MethodInfo method)

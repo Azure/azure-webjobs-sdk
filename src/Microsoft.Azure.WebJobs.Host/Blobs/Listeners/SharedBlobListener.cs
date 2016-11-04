@@ -13,8 +13,9 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {
     internal sealed class SharedBlobListener : ISharedListener
     {
+        private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IBlobListenerStrategy _strategy;
-        private readonly ITaskSeriesTimer _timer;
+        private ITaskSeriesTimer _timer;
 
         private bool _started;
         private bool _disposed;
@@ -22,9 +23,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         public SharedBlobListener(string hostId, IStorageAccount storageAccount,
             IWebJobsExceptionHandler exceptionHandler)
         {
+            _exceptionHandler = exceptionHandler;
             _strategy = CreateStrategy(hostId, storageAccount);
-            // Start the first iteration immediately.
-            _timer = new TaskSeriesTimer(_strategy, exceptionHandler, initialWait: Task.Delay(0));
         }
 
         public IBlobWrittenWatcher BlobWritterWatcher
@@ -48,6 +48,15 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         {
             if (!_started)
             {
+                // Dispose any existing timer, which can occur on a restart of the listener.
+                if (_timer != null)
+                {
+                    _timer.Dispose();
+                }
+
+                // Start the first iteration immediately.
+                _timer = new TaskSeriesTimer(_strategy, _exceptionHandler, initialWait: Task.Delay(0));
+
                 _timer.Start();
                 _strategy.Start();
                 _started = true;
