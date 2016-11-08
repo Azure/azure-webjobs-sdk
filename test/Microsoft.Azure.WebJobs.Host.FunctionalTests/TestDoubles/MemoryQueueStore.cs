@@ -5,6 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.WindowsAzure.Storage.Queue;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
@@ -54,6 +55,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
         {
             private readonly ConcurrentQueue<MutableStorageQueueMessage> _visibleMessages =
                 new ConcurrentQueue<MutableStorageQueueMessage>();
+
             private readonly ConcurrentDictionary<string, MutableStorageQueueMessage> _invisibleMessages =
                 new ConcurrentDictionary<string, MutableStorageQueueMessage>();
 

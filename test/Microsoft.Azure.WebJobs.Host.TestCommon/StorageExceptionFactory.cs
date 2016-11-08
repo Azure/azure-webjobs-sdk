@@ -6,9 +6,9 @@ using System.Xml;
 using System.Xml.Linq;
 using Microsoft.WindowsAzure.Storage;
 
-namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
+namespace Microsoft.Azure.WebJobs.Host.TestCommon
 {
-    internal static class StorageExceptionFactory
+    public static class StorageExceptionFactory
     {
         public static StorageException Create(int httpStatusCode)
         {

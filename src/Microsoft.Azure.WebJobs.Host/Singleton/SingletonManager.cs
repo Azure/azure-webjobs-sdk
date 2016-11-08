@@ -29,7 +29,10 @@ namespace Microsoft.Azure.WebJobs.Host
     {
         internal const string FunctionInstanceMetadataKey = "FunctionInstance";
         private readonly INameResolver _nameResolver;
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")]
         private readonly IWebJobsExceptionHandler _exceptionHandler;
+
         private readonly SingletonConfiguration _config;
         private readonly IStorageAccountProvider _accountProvider;
         private ConcurrentDictionary<string, IStorageBlobDirectory> _lockDirectoryMap = new ConcurrentDictionary<string, IStorageBlobDirectory>(StringComparer.OrdinalIgnoreCase);
@@ -74,8 +77,8 @@ namespace Microsoft.Azure.WebJobs.Host
         }
 
         // for testing
-        internal TimeSpan MinimumLeaseRenewalInterval 
-        { 
+        internal TimeSpan MinimumLeaseRenewalInterval
+        {
             get
             {
                 return _minimumLeaseRenewalInterval;
@@ -86,14 +89,14 @@ namespace Microsoft.Azure.WebJobs.Host
             }
         }
 
-        public async virtual Task<object> LockAsync(string lockId, string functionInstanceId, SingletonAttribute attribute, CancellationToken cancellationToken)
+        public async virtual Task<object> LockAsync(string lockId, string functionInstanceId, SingletonAttribute attribute, ISingletonRenewalMonitor renewalMonitor, CancellationToken cancellationToken)
         {
-            object lockHandle = await TryLockAsync(lockId, functionInstanceId, attribute, cancellationToken);
+            object lockHandle = await TryLockAsync(lockId, functionInstanceId, attribute, renewalMonitor, null, cancellationToken);
 
             if (lockHandle == null)
             {
-                TimeSpan acquisitionTimeout = attribute.LockAcquisitionTimeout != null 
-                    ? TimeSpan.FromSeconds(attribute.LockAcquisitionTimeout.Value) : 
+                TimeSpan acquisitionTimeout = attribute.LockAcquisitionTimeout != null
+                    ? TimeSpan.FromSeconds(attribute.LockAcquisitionTimeout.Value) :
                     _config.LockAcquisitionTimeout;
                 throw new TimeoutException(string.Format("Unable to acquire singleton lock blob lease for blob '{0}' (timeout of {1} exceeded).", lockId, acquisitionTimeout.ToString("g")));
             }
@@ -101,14 +104,14 @@ namespace Microsoft.Azure.WebJobs.Host
             return lockHandle;
         }
 
-        public async virtual Task<object> TryLockAsync(string lockId, string functionInstanceId, SingletonAttribute attribute, CancellationToken cancellationToken, bool retry = true)
+        public async virtual Task<object> TryLockAsync(string lockId, string functionInstanceId, SingletonAttribute attribute, ISingletonRenewalMonitor renewalMonitor,
+            Func<Task> leaseConflictCallback, CancellationToken cancellationToken, bool retry = true)
         {
-            _trace.Verbose(string.Format(CultureInfo.InvariantCulture, "Waiting for Singleton lock ({0})", lockId), source: TraceSource.Execution);
-
             IStorageBlobDirectory lockDirectory = GetLockDirectory(attribute.Account);
             IStorageBlockBlob lockBlob = lockDirectory.GetBlockBlobReference(lockId);
             TimeSpan lockPeriod = GetLockPeriod(attribute, _config);
             string leaseId = await TryAcquireLeaseAsync(lockBlob, lockPeriod, cancellationToken);
+            DateTime lockTime = DateTime.UtcNow;
             if (string.IsNullOrEmpty(leaseId) && retry)
             {
                 // Someone else has the lease. Continue trying to periodically get the lease for
@@ -128,7 +131,6 @@ namespace Microsoft.Azure.WebJobs.Host
 
             if (string.IsNullOrEmpty(leaseId))
             {
-                _trace.Verbose(string.Format(CultureInfo.InvariantCulture, "Unable to acquire Singleton lock ({0}).", lockId), source: TraceSource.Execution);
                 return null;
             }
 
@@ -139,17 +141,20 @@ namespace Microsoft.Azure.WebJobs.Host
                 await WriteLeaseBlobMetadata(lockBlob, leaseId, functionInstanceId, cancellationToken);
             }
 
-            SingletonLockHandle lockHandle = new SingletonLockHandle
+            // renew the lease when it is halfway to expiring
+            TimeSpan normalUpdateInterval = new TimeSpan(lockPeriod.Ticks / 2);
+            IDelayStrategy speedupStrategy = new LinearSpeedupStrategy(normalUpdateInterval, MinimumLeaseRenewalInterval);
+
+            SingletonLockHandle lockHandle = new SingletonLockHandle(lockBlob, leaseId, lockId, lockPeriod, speedupStrategy, leaseConflictCallback, renewalMonitor, _trace);
+
+            if (renewalMonitor != null)
             {
-                LeaseId = leaseId,
-                LockId = lockId,
-                Blob = lockBlob,
-                LeaseRenewalTimer = CreateLeaseRenewalTimer(lockBlob, leaseId, lockId, lockPeriod, _exceptionHandler)
-            };
+                await renewalMonitor.OnRenewalAsync(lockTime, lockPeriod, cancellationToken);
+            }
 
             // start the renewal timer, which ensures that we maintain our lease until
             // the lock is released
-            lockHandle.LeaseRenewalTimer.Start();
+            lockHandle.StartTimer();
 
             return lockHandle;
         }
@@ -157,11 +162,7 @@ namespace Microsoft.Azure.WebJobs.Host
         public async virtual Task ReleaseLockAsync(object lockHandle, CancellationToken cancellationToken)
         {
             SingletonLockHandle singletonLockHandle = (SingletonLockHandle)lockHandle;
-
-            if (singletonLockHandle.LeaseRenewalTimer != null)
-            {
-                await singletonLockHandle.LeaseRenewalTimer.StopAsync(cancellationToken);
-            }
+            singletonLockHandle.StopTimer();
 
             await ReleaseLeaseAsync(singletonLockHandle.Blob, singletonLockHandle.LeaseId, cancellationToken);
 
@@ -254,7 +255,7 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 Mode = SingletonMode.Listener
             };
-            return new SingletonListener(null, singletonAttribute, this, innerListener);
+            return new SingletonListener(null, singletonAttribute, this, innerListener, _exceptionHandler, _trace);
         }
 
         public static SingletonAttribute GetListenerSingletonOrNull(Type listenerType, MethodInfo method)
@@ -343,17 +344,6 @@ namespace Microsoft.Azure.WebJobs.Host
         {
             return attribute.Mode == SingletonMode.Listener ?
                     config.ListenerLockPeriod : config.LockPeriod;
-        }
-
-        private ITaskSeriesTimer CreateLeaseRenewalTimer(IStorageBlockBlob leaseBlob, string leaseId, string lockId, TimeSpan leasePeriod, 
-            IWebJobsExceptionHandler exceptionHandler)
-        {
-            // renew the lease when it is halfway to expiring   
-            TimeSpan normalUpdateInterval = new TimeSpan(leasePeriod.Ticks / 2);
-
-            IDelayStrategy speedupStrategy = new LinearSpeedupStrategy(normalUpdateInterval, MinimumLeaseRenewalInterval);
-            ITaskSeriesCommand command = new RenewLeaseCommand(leaseBlob, leaseId, lockId, speedupStrategy, _trace);
-            return new TaskSeriesTimer(command, exceptionHandler, Task.Delay(normalUpdateInterval));
         }
 
         private async Task<string> TryAcquireLeaseAsync(IStorageBlockBlob blob, TimeSpan leasePeriod, CancellationToken cancellationToken)
@@ -465,7 +455,7 @@ namespace Microsoft.Azure.WebJobs.Host
                     {
                         isContainerNotFoundException = true;
                     }
-                    else if (exception.RequestInformation.HttpStatusCode == 409 || 
+                    else if (exception.RequestInformation.HttpStatusCode == 409 ||
                              exception.RequestInformation.HttpStatusCode == 412)
                     {
                         // The blob already exists, or is leased by someone else
@@ -533,67 +523,6 @@ namespace Microsoft.Azure.WebJobs.Host
                 {
                     throw;
                 }
-            }
-        }
-
-        internal class SingletonLockHandle
-        {
-            public string LeaseId { get; set; }
-            public string LockId { get; set; }
-            public IStorageBlockBlob Blob { get; set; }
-            public ITaskSeriesTimer LeaseRenewalTimer { get; set; }
-        }
-
-        internal class RenewLeaseCommand : ITaskSeriesCommand
-        {
-            private readonly IStorageBlockBlob _leaseBlob;
-            private readonly string _leaseId;
-            private readonly string _lockId;
-            private readonly IDelayStrategy _speedupStrategy;
-            private readonly TraceWriter _trace;
-
-            public RenewLeaseCommand(IStorageBlockBlob leaseBlob, string leaseId, string lockId, IDelayStrategy speedupStrategy, TraceWriter trace)
-            {
-                _leaseBlob = leaseBlob;
-                _leaseId = leaseId;
-                _lockId = lockId;
-                _speedupStrategy = speedupStrategy;
-                _trace = trace;
-            }
-
-            public async Task<TaskSeriesCommandResult> ExecuteAsync(CancellationToken cancellationToken)
-            {
-                TimeSpan delay;
-
-                try
-                {
-                    _trace.Verbose(string.Format(CultureInfo.InvariantCulture, "Renewing Singleton lock ({0})", _lockId), source: TraceSource.Execution);
-
-                    AccessCondition condition = new AccessCondition
-                    {
-                        LeaseId = _leaseId
-                    };
-                    await _leaseBlob.RenewLeaseAsync(condition, null, null, cancellationToken);
-
-                    // The next execution should occur after a normal delay.
-                    delay = _speedupStrategy.GetNextDelay(executionSucceeded: true);
-                }
-                catch (StorageException exception)
-                {
-                    if (exception.IsServerSideError())
-                    {
-                        // The next execution should occur more quickly (try to renew the lease before it expires).
-                        delay = _speedupStrategy.GetNextDelay(executionSucceeded: false);
-                    }
-                    else
-                    {
-                        // If we've lost the lease or cannot restablish it, we want to fail any
-                        // in progress function execution
-                        throw;
-                    }
-                }
-
-                return new TaskSeriesCommandResult(wait: Task.Delay(delay));
             }
         }
     }
