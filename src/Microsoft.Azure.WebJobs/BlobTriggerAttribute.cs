@@ -52,5 +52,21 @@ namespace Microsoft.Azure.WebJobs
         {
             get { return _blobPath; }
         }
+
+        /// <summary>
+        /// Alternative json description
+        /// </summary>
+        private class BlobTriggerAttributeMetadata : AttributeMetadata
+        {
+            /// <summary>
+            /// Corresponds to BlobPath
+            /// </summary>
+            public string Path { get; set; }
+
+            public override Attribute GetAttribute()
+            {
+                return new BlobTriggerAttribute(this.Path);
+            }
+        }
     }
 }

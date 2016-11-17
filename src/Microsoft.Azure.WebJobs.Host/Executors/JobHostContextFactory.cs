@@ -127,6 +127,15 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 bindingProvider = DefaultBindingProvider.Create(nameResolver, converterManager, storageAccountProvider, extensionTypeLocator, messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor, extensions);
             }
 
+            {
+                config.AddService(triggerBindingProvider);
+                var x2 = bindingProvider as IBindingProviderX;
+                if (x2 != null)
+                {
+                    config.AddService(x2); // $$$ 
+                }
+            }
+
             bool hasFastTableHook = config.GetService<IAsyncCollector<FunctionInstanceLogEntry>>() != null;
             bool noDashboardStorage = config.DashboardConnectionString == null;
             if (hasFastTableHook && noDashboardStorage)

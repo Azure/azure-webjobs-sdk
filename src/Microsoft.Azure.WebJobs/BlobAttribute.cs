@@ -84,5 +84,15 @@ namespace Microsoft.Azure.WebJobs
         {
             get { return _access; }
         }
+
+        private class BlobAttributeMetadata : AttributeMetadata
+        {
+            public string Path { get; set; }
+
+            public override Attribute GetAttribute()
+            {
+                return new BlobAttribute(this.Path, this.Direction);
+            }
+        }
     }
 }
