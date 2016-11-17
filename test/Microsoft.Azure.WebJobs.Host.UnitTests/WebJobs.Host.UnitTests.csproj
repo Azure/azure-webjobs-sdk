@@ -115,6 +115,7 @@
     <Compile Include="..\Common\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="AssemblyInfo.cs" />
     <Compile Include="Bindings\BindingDataPathHelperTests.cs" />
     <Compile Include="Bindings\Data\DataBindingFunctionalTests.cs" />
     <Compile Include="Bindings\Data\DataBindingProviderTests.cs" />

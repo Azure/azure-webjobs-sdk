@@ -47,6 +47,7 @@
     <Compile Include="..\Common\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="AssemblyInfo.cs" />
     <Compile Include="AutoFacTests.cs" />
     <Compile Include="Data\AccountProviderTests.cs" />
     <Compile Include="Data\ConnectionStringProviderTests.cs" />

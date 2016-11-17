@@ -101,6 +101,7 @@
     <Compile Include="..\Common\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="AssemblyInfo.cs" />
     <Compile Include="AsyncCancellationEndToEndTests.cs" />
     <Compile Include="AsyncChainEndToEndTests.cs" />
     <Compile Include="BlobBindingEndToEndTests.cs" />

@@ -49,6 +49,7 @@
     <Compile Include="..\Common\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="AssemblyInfo.cs" />
     <Compile Include="BinderTests.cs" />
     <Compile Include="Blobs\Listeners\BlobNotificationStrategyExtensions.cs" />
     <Compile Include="Blobs\Listeners\ScanBlobScanLogHybridPollingStrategyTests.cs" />

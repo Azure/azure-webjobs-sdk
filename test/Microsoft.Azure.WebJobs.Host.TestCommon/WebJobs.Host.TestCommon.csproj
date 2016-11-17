@@ -117,6 +117,7 @@
     <Compile Include="NullFunctionOutputLoggerProvider.cs" />
     <Compile Include="NullFunctionInstanceLoggerProvider.cs" />
     <Compile Include="NullHostInstanceLoggerProvider.cs" />
+    <Compile Include="SyncContextTestFramework.cs" />
     <Compile Include="TestHelpers.cs" />
     <Compile Include="TestJobHostContextFactory.cs" />
     <Compile Include="TestTraceWriter.cs" />
