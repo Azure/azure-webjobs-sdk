@@ -34,6 +34,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
         private readonly ISharedContextProvider _sharedContextProvider;
         private readonly SingletonManager _singletonManager;
         private readonly TraceWriter _trace;
+        private readonly string _hostInstanceId;
 
         public BlobTriggerAttributeBindingProvider(INameResolver nameResolver,
             IStorageAccountProvider accountProvider,
@@ -45,7 +46,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             IContextSetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherSetter,
             ISharedContextProvider sharedContextProvider,
             SingletonManager singletonManager,
-            TraceWriter trace)
+            TraceWriter trace,
+            string hostInstanceId)
         {
             if (accountProvider == null)
             {
@@ -97,6 +99,11 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
                 throw new ArgumentNullException("trace");
             }
 
+            if (hostInstanceId == null)
+            {
+                throw new ArgumentNullException("hostInstanceId");
+            }
+
             _nameResolver = nameResolver;
             _accountProvider = accountProvider;
             _provider = CreateProvider(extensionTypeLocator.GetCloudBlobStreamBinderTypes());
@@ -108,6 +115,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             _sharedContextProvider = sharedContextProvider;
             _singletonManager = singletonManager;
             _trace = trace;
+            _hostInstanceId = hostInstanceId;
         }
 
         private static IBlobArgumentBindingProvider CreateProvider(IEnumerable<Type> cloudBlobStreamBinderTypes)
@@ -164,7 +172,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
 
             ITriggerBinding binding = new BlobTriggerBinding(parameter, argumentBinding, hostAccount, dataAccount, path,
                 _hostIdProvider, _queueConfiguration, _exceptionHandler, _blobWrittenWatcherSetter,
-                _messageEnqueuedWatcherSetter, _sharedContextProvider, _singletonManager, _trace);
+                _messageEnqueuedWatcherSetter, _sharedContextProvider, _singletonManager, _trace, _hostInstanceId);
 
             return binding;
         }

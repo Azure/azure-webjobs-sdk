@@ -35,7 +35,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             SingletonManager.SingletonLockHandle handle = new SingletonManager.SingletonLockHandle();
 
             Mock<SingletonManager> mockSingletonManager = new Mock<SingletonManager>(MockBehavior.Strict);
-            mockSingletonManager.Setup(p => p.LockAsync(TestLockId, TestInstanceId, attribute, cancellationToken)).ReturnsAsync(handle);
+            mockSingletonManager.Setup(p => p.LockAsync(TestLockId, null, TestInstanceId, attribute, cancellationToken)).ReturnsAsync(handle);
 
             SingletonLock singletonLock = new SingletonLock(TestLockId, TestInstanceId, attribute, mockSingletonManager.Object);
 
@@ -55,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             SingletonManager.SingletonLockHandle handle = new SingletonManager.SingletonLockHandle();
 
             Mock<SingletonManager> mockSingletonManager = new Mock<SingletonManager>(MockBehavior.Strict);
-            mockSingletonManager.Setup(p => p.LockAsync(TestLockId, TestInstanceId, attribute, cancellationToken)).ReturnsAsync(handle);
+            mockSingletonManager.Setup(p => p.LockAsync(TestLockId, null, TestInstanceId, attribute, cancellationToken)).ReturnsAsync(handle);
             mockSingletonManager.Setup(p => p.ReleaseLockAsync(handle, cancellationToken)).Returns(Task.FromResult(true));
 
             SingletonLock singletonLock = new SingletonLock(TestLockId, TestInstanceId, attribute, mockSingletonManager.Object);

@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Globalization;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Executors;
@@ -26,6 +27,7 @@ namespace Microsoft.Azure.WebJobs
         private readonly ConcurrentDictionary<Type, object> _services = new ConcurrentDictionary<Type, object>();
         private IJobHostContextFactory _contextFactory;
         private string _hostId;
+        private string _hostInstanceId;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JobHostConfiguration"/> class.
@@ -120,6 +122,31 @@ namespace Microsoft.Azure.WebJobs
                 }
 
                 _hostId = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the host instance ID. If not explicitly set, the ID is based on the current machine name.
+        /// </summary>
+        public string HostInstanceId
+        {
+            get
+            {
+                if (_hostInstanceId == null)
+                {
+                    _hostInstanceId = Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID")
+                        ?? Environment.MachineName.GetHashCode().ToString("X", CultureInfo.InvariantCulture).PadLeft(32, '0');
+
+                    _hostInstanceId = _hostInstanceId.Substring(0, 32).ToLowerInvariant();
+                }
+
+                return _hostInstanceId;
+            }
+
+            // for testing
+            internal set
+            {
+                _hostInstanceId = value;
             }
         }
 
@@ -282,7 +309,6 @@ namespace Microsoft.Azure.WebJobs
         {
             Tracing.ConsoleLevel = TraceLevel.Verbose;
             Queues.MaxPollingInterval = TimeSpan.FromSeconds(2);
-            Singleton.ListenerLockPeriod = TimeSpan.FromSeconds(15);
 
             UsingDevelopmentSettings = true;
         }

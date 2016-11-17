@@ -50,7 +50,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             return Task.FromResult(0);
         }
 
-        private void Trace(TraceLevel level, Guid hostInstanceId, FunctionDescriptor descriptor, Guid functionId, string message, string source, Exception exception = null)
+        private void Trace(TraceLevel level, string hostInstanceId, FunctionDescriptor descriptor, Guid functionId, string message, string source, Exception exception = null)
         {
             TraceEvent traceEvent = new TraceEvent(level, message, source, exception);
             traceEvent.AddFunctionInstanceDetails(hostInstanceId, descriptor, functionId);

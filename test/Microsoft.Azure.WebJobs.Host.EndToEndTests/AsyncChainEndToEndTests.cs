@@ -219,7 +219,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 {
                     Assert.Equal(3, traceEvent.Properties.Count);
 
-                    Assert.IsType<Guid>(traceEvent.Properties["MS_HostInstanceId"]);
+                    Assert.IsType<string>(traceEvent.Properties["MS_HostInstanceId"]);
                     Assert.IsType<Guid>(traceEvent.Properties["MS_FunctionInvocationId"]);
 
                     if (startedOrEndedMessage)

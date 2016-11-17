@@ -14,9 +14,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     {
         private TraceWriter _innerWriter;
         private IFunctionInstance _instance;
-        private Guid _hostInstanceId;
+        private string _hostInstanceId;
 
-        public FunctionInstanceTraceWriter(IFunctionInstance instance, Guid hostInstanceId, TraceWriter innerWriter, TraceLevel level)
+        public FunctionInstanceTraceWriter(IFunctionInstance instance, string hostInstanceId, TraceWriter innerWriter, TraceLevel level)
             : base(level)
         {
             _innerWriter = innerWriter;

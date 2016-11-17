@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Diagnostics;
 using System.Threading;
 using Microsoft.Azure.WebJobs.Host.Blobs;
@@ -65,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             var triggerBindingProvider = DefaultTriggerBindingProvider.Create(
                     nameResolver, storageAccountProvider, extensionTypeLocator, hostIdProvider, queueConfiguration,
                     exceptionHandler, messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor,
-                    sharedContextProvider, extensions, singletonManager, new TestTraceWriter(TraceLevel.Verbose));
+                    sharedContextProvider, extensions, singletonManager, new TestTraceWriter(TraceLevel.Verbose), Guid.NewGuid().ToString());
 
             var bindingProvider = DefaultBindingProvider.Create(nameResolver, storageAccountProvider, extensionTypeLocator,
                         messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor, extensions);

@@ -22,14 +22,16 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         private readonly IJobActivator _activator;
         private readonly INameResolver _nameResolver;
         private readonly TraceWriter _trace;
+        private readonly string _hostInstanceId;
 
-        public HostListenerFactory(IEnumerable<IFunctionDefinition> functionDefinitions, SingletonManager singletonManager, IJobActivator activator, INameResolver nameResolver, TraceWriter trace)
+        public HostListenerFactory(IEnumerable<IFunctionDefinition> functionDefinitions, SingletonManager singletonManager, IJobActivator activator, INameResolver nameResolver, TraceWriter trace, string hostInstanceId)
         {
             _functionDefinitions = functionDefinitions;
             _singletonManager = singletonManager;
             _activator = activator;
             _nameResolver = nameResolver;
             _trace = trace;
+            _hostInstanceId = hostInstanceId;
         }
 
         public async Task<IListener> CreateAsync(CancellationToken cancellationToken)
@@ -58,7 +60,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                 SingletonAttribute singletonAttribute = SingletonManager.GetListenerSingletonOrNull(listener.GetType(), method);
                 if (singletonAttribute != null)
                 {
-                    listener = new SingletonListener(method, singletonAttribute, _singletonManager, listener, _trace);
+                    listener = new SingletonListener(method, singletonAttribute, _singletonManager, listener, _hostInstanceId, _trace);
                 }
 
                 listeners.Add(listener);
@@ -132,7 +134,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 
             if (methodInfo == null || methodInfo.ReturnType != typeof(bool))
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, 
+                throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
                     "Type '{0}' must declare a method 'IsDisabled' returning bool and taking a single parameter of Type MethodInfo.", providerType.Name));
             }
 

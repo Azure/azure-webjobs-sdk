@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var instance = new FunctionInstance(Guid.NewGuid(), null, ExecutionReason.AutomaticTrigger, null, null, descriptor);
             var writer = new TestTraceWriter(TraceLevel.Info);
             var functionTraceLevel = TraceLevel.Info;
-            var hostInstanceId = Guid.NewGuid();
+            var hostInstanceId = Guid.NewGuid().ToString();
 
             var instanceWriter = new FunctionInstanceTraceWriter(instance, hostInstanceId, writer, functionTraceLevel);
 

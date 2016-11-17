@@ -55,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
 
             // Create the composite listener - this will fail if any of the
             // function definitions indicate that they are not disabled
-            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, DefaultJobActivator.Instance, null, traceWriter);
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, DefaultJobActivator.Instance, null, traceWriter, Guid.NewGuid().ToString());
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 
             Assert.Equal(1, traceWriter.Traces.Count);

@@ -20,13 +20,15 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         private string _lockId;
         private object _lockHandle;
         private bool _isListening;
+        private string _hostInstanceId;
 
-        public SingletonListener(MethodInfo method, SingletonAttribute attribute, SingletonManager singletonManager, IListener innerListener, TraceWriter trace)
+        public SingletonListener(MethodInfo method, SingletonAttribute attribute, SingletonManager singletonManager, IListener innerListener, string hostInstanceId, TraceWriter trace)
         {
             _attribute = attribute;
             _singletonManager = singletonManager;
             _singletonConfig = _singletonManager.Config;
             _innerListener = innerListener;
+            _hostInstanceId = hostInstanceId;
 
             string boundScopeId = _singletonManager.GetBoundScopeId(_attribute.ScopeId);
             _lockId = singletonManager.FormatLockId(method, _attribute.Scope, boundScopeId);
@@ -43,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             // When recovery is enabled, we don't do retries on the individual lock attempts,
             // since retries are being done outside
             bool recoveryEnabled = _singletonConfig.ListenerLockRecoveryPollingInterval != TimeSpan.MaxValue;
-            _lockHandle = await _singletonManager.TryLockAsync(_lockId, null, _attribute, cancellationToken, retry: !recoveryEnabled);
+            _lockHandle = await _singletonManager.TryLockAsync(_lockId, _hostInstanceId, null, _attribute, cancellationToken, retry: !recoveryEnabled);
 
             if (_lockHandle == null)
             {
@@ -116,7 +118,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 
         internal async Task TryAcquireLock()
         {
-            _lockHandle = await _singletonManager.TryLockAsync(_lockId, null, _attribute, CancellationToken.None, retry: false);
+            _lockHandle = await _singletonManager.TryLockAsync(_lockId, _hostInstanceId, null, _attribute, CancellationToken.None, retry: false);
 
             if (_lockHandle != null)
             {

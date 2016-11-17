@@ -17,7 +17,7 @@ namespace Dashboard.Data
 
         public Guid Id { get; set; }
 
-        public Guid HostInstanceId { get; set; }
+        public string HostInstanceId { get; set; }
 
         public string InstanceQueueName { get; set; }
 

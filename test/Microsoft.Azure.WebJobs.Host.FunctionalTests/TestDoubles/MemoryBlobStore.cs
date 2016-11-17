@@ -18,9 +18,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
         private readonly ConcurrentDictionary<string, Container> _items = new ConcurrentDictionary<string, Container>();
         private ServiceProperties _properties = new ServiceProperties(new LoggingProperties(), new MetricsProperties(), new MetricsProperties(), new CorsProperties());
 
-        public string AcquireLease(string containerName, string blobName, TimeSpan? leaseTime)
+        public string AcquireLease(string containerName, string blobName, TimeSpan? leaseTime, string proposedLeaseId = null)
         {
-            return _items[containerName].AcquireLease(blobName, leaseTime);
+            return _items[containerName].AcquireLease(blobName, leaseTime, proposedLeaseId);
         }
 
         public void CreateIfNotExists(string containerName)
@@ -258,7 +258,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
         {
             private readonly ConcurrentDictionary<string, Blob> _items = new ConcurrentDictionary<string, Blob>();
 
-            public string AcquireLease(string blobName, TimeSpan? leaseTime)
+            public string AcquireLease(string blobName, TimeSpan? leaseTime, string proposedLeaseId)
             {
                 if (!Exists(blobName))
                 {
@@ -269,7 +269,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
                     throw new StorageException(result, "Blob does not exist", null);
                 }
 
-                return _items[blobName].AcquireLease(leaseTime);
+                return _items[blobName].AcquireLease(leaseTime, proposedLeaseId);
             }
 
             public bool Exists(string blobName)
@@ -361,7 +361,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
             {
                 if (_items.ContainsKey(blobName))
                 {
-                    _items[blobName].ThrowIfLeased();
+                    _items[blobName].ThrowIfLeased(null);
                 }
 
                 return new MemoryCloudBlockBlobStream((bytes) => _items[blobName] =
@@ -382,7 +382,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
 
                 if (_items.ContainsKey(blobName))
                 {
-                    _items[blobName].ThrowIfLeased();
+                    _items[blobName].ThrowIfLeased(null);
                 }
 
                 return new MemoryCloudPageBlobStream((bytes) => _items[blobName] =
@@ -393,7 +393,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
             {
                 if (_items.ContainsKey(blobName))
                 {
-                    _items[blobName].ThrowIfLeased();
+                    _items[blobName].ThrowIfLeased(null);
                 }
 
                 return new MemoryCloudAppendBlobStream((bytes) => _items[blobName] =
@@ -420,7 +420,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
 
                 if (leaseId == null)
                 {
-                    existing.ThrowIfLeased();
+                    existing.ThrowIfLeased(null);
                 }
                 else
                 {
@@ -487,11 +487,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
                 get { return _metadata; }
             }
 
-            public string AcquireLease(TimeSpan? leaseTime)
+            public string AcquireLease(TimeSpan? leaseTime, string proposedLeaseId)
             {
-                ThrowIfLeased();
+                ThrowIfLeased(proposedLeaseId);
 
-                string leaseId = Guid.NewGuid().ToString();
+                string leaseId = proposedLeaseId ?? Guid.NewGuid().ToString();
                 LeaseId = leaseId;
 
                 if (leaseTime.HasValue)
@@ -522,11 +522,13 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
                 LeaseExpires = null;
             }
 
-            public void ThrowIfLeased()
+            public void ThrowIfLeased(string proposedLeaseId)
             {
                 if (LeaseId != null)
                 {
-                    if (!LeaseExpires.HasValue || LeaseExpires.Value > DateTime.UtcNow)
+                    if ((!LeaseExpires.HasValue ||
+                        LeaseExpires.Value > DateTime.UtcNow)
+                        && proposedLeaseId != LeaseId)
                     {
                         RequestResult result = new RequestResult
                         {

@@ -30,7 +30,7 @@ namespace Dashboard.UnitTests.Indexers
             FunctionStartedMessage message = new FunctionStartedMessage
             {
                 FunctionInstanceId = Guid.NewGuid(),
-                HostInstanceId = Guid.NewGuid(),
+                HostInstanceId = Guid.NewGuid().ToString(),
                 InstanceQueueName = "InstanceQueueName",
                 Reason = ExecutionReason.AutomaticTrigger,
                 ReasonDetails = "A trigger fired!",

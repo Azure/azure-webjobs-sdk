@@ -67,7 +67,7 @@ namespace Dashboard.ViewModels
         public TimeSpan? Duration { get; set; }
         public string ExceptionMessage { get; set; }
         public string ExceptionType { get; set; }
-        public Guid HostInstanceId { get; set; }
+        public string HostInstanceId { get; set; }
         public string InstanceQueueName { get; set; }
         public bool IsFinal()
         {

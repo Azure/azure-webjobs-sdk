@@ -33,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                     ShortName = "TestJob"
                 },
                 ReasonDetails = "TestReason",
-                HostInstanceId = Guid.NewGuid(),
+                HostInstanceId = Guid.NewGuid().ToString(),
                 FunctionInstanceId = Guid.NewGuid()
             };
 
@@ -63,7 +63,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             {
                 Function = descriptor,
                 FunctionInstanceId = Guid.NewGuid(),
-                HostInstanceId = Guid.NewGuid()
+                HostInstanceId = Guid.NewGuid().ToString()
             };
 
             Exception ex = new Exception("Kaboom!");
@@ -72,7 +72,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Function = descriptor,
                 Failure = new FunctionFailure { Exception = ex },
                 FunctionInstanceId = new Guid("8d71c9e3-e809-4cfb-bb78-48ae25c7d26d"),
-                HostInstanceId = Guid.NewGuid()
+                HostInstanceId = Guid.NewGuid().ToString()
             };
 
             await _logger.LogFunctionCompletedAsync(successMessage, CancellationToken.None);

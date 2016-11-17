@@ -79,7 +79,8 @@ namespace Microsoft.Azure.WebJobs.Host
         {
             AcquireStartTime = DateTime.UtcNow;
 
-            _lockHandle = await _singletonManager.LockAsync(_lockId, _functionInstanceId, _attribute, cancellationToken);
+            // do not send a proposed lease id with function-level Singletons
+            _lockHandle = await _singletonManager.LockAsync(_lockId, null, _functionInstanceId, _attribute, cancellationToken);
 
             AcquireEndTime = DateTime.UtcNow;
             IsHeld = true;

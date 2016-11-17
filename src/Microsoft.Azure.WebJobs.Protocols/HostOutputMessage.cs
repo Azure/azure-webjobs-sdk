@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
         protected const string MessageTypeKeyName = "MessageType";
 
         /// <summary>Gets or sets the host instance ID.</summary>
-        public Guid HostInstanceId { get; set; }
+        public string HostInstanceId { get; set; }
 
         /// <summary>Gets or sets a short, non-unique name for the host suitable for display purposes.</summary>
         public string HostDisplayName { get; set; }

@@ -148,7 +148,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             JobHostConfiguration configuration = new JobHostConfiguration();
 
             ExceptionAssert.ThrowsArgumentNull(() => configuration.JobActivator = null, "value");
-        }      
+        }
 
         [Fact]
         public void GetService_IExtensionRegistry_ReturnsDefaultRegistry()
@@ -300,7 +300,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.True(config.UsingDevelopmentSettings);
             Assert.Equal(TraceLevel.Verbose, config.Tracing.ConsoleLevel);
             Assert.Equal(TimeSpan.FromSeconds(2), config.Queues.MaxPollingInterval);
-            Assert.Equal(TimeSpan.FromSeconds(15), config.Singleton.ListenerLockPeriod);
 
             Environment.SetEnvironmentVariable(Constants.EnvironmentSettingName, prev);
         }
