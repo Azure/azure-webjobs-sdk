@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Net;
 using Microsoft.WindowsAzure.Storage;
 
 #if PUBLICSTORAGE
@@ -10,6 +11,7 @@ namespace Microsoft.Azure.WebJobs.Storage
 namespace Microsoft.Azure.WebJobs.Host.Storage
 #endif
 {
+
     /// <summary>Provides extension methods for the <see cref="StorageException"/> class.</summary>
 #if PUBLICSTORAGE
     [CLSCompliant(false)]
@@ -40,19 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            if (result.HttpStatusCode != 400)
-            {
-                return false;
-            }
-
-            StorageExtendedErrorInformation extendedInformation = result.ExtendedErrorInformation;
-
-            if (extendedInformation == null)
-            {
-                return false;
-            }
-
-            return extendedInformation.ErrorCode == "PopReceiptMismatch";
+            return result.HttpStatusCode == (int)HttpStatusCode.BadRequest;
         }
 
         /// <summary>Determines whether the exception is due to a 409 Conflict error.</summary>
@@ -74,7 +64,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            return result.HttpStatusCode == 409;
+            return result.HttpStatusCode == (int)HttpStatusCode.Conflict;
         }
 
         /// <summary>
@@ -99,19 +89,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            if (result.HttpStatusCode != 409)
-            {
-                return false;
-            }
-
-            StorageExtendedErrorInformation extendedInformation = result.ExtendedErrorInformation;
-
-            if (extendedInformation == null)
-            {
-                return false;
-            }
-
-            return extendedInformation.ErrorCode == "BlobAlreadyExists";
+            return result.HttpStatusCode == (int)HttpStatusCode.Conflict;
         }
 
         /// <summary>
@@ -136,19 +114,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            if (result.HttpStatusCode != 409)
-            {
-                return false;
-            }
-
-            StorageExtendedErrorInformation extendedInformation = result.ExtendedErrorInformation;
-
-            if (extendedInformation == null)
-            {
-                return false;
-            }
-
-            return extendedInformation.ErrorCode == "LeaseAlreadyPresent";
+            return result.HttpStatusCode == (int)HttpStatusCode.Conflict;
         }
 
         /// <summary>
@@ -174,19 +140,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            if (result.HttpStatusCode != 409)
-            {
-                return false;
-            }
-
-            StorageExtendedErrorInformation extendedInformation = result.ExtendedErrorInformation;
-
-            if (extendedInformation == null)
-            {
-                return false;
-            }
-
-            return extendedInformation.ErrorCode == "LeaseIdMismatchWithLeaseOperation";
+            return result.HttpStatusCode == (int)HttpStatusCode.Conflict;
         }
 
         /// <summary>
@@ -211,19 +165,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            if (result.HttpStatusCode != 409)
-            {
-                return false;
-            }
-
-            StorageExtendedErrorInformation extendedInformation = result.ExtendedErrorInformation;
-
-            if (extendedInformation == null)
-            {
-                return false;
-            }
-
-            return extendedInformation.ErrorCode == "QueueBeingDeleted";
+            return result.HttpStatusCode == (int)HttpStatusCode.Conflict;
         }
 
         /// <summary>
@@ -249,19 +191,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            if (result.HttpStatusCode != 409)
-            {
-                return false;
-            }
-
-            StorageExtendedErrorInformation extendedInformation = result.ExtendedErrorInformation;
-
-            if (extendedInformation == null)
-            {
-                return false;
-            }
-
-            return extendedInformation.ErrorCode == "QueueBeingDeleted";
+            return result.HttpStatusCode == (int)HttpStatusCode.Conflict;
         }
 
         /// <summary>
@@ -286,19 +216,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            if (result.HttpStatusCode != 409)
-            {
-                return false;
-            }
-
-            StorageExtendedErrorInformation extendedInformation = result.ExtendedErrorInformation;
-
-            if (extendedInformation == null)
-            {
-                return false;
-            }
-
-            return extendedInformation.ErrorCode == "QueueDisabled";
+            return result.HttpStatusCode == (int)HttpStatusCode.Conflict;
         }
 
         /// <summary>Determines whether the exception is due to a 404 Not Found error.</summary>
@@ -320,7 +238,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            return result.HttpStatusCode == 404;
+            return result.HttpStatusCode == (int)HttpStatusCode.NotFound;
         }
 
         /// <summary>
@@ -345,19 +263,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            if (result.HttpStatusCode != 404)
-            {
-                return false;
-            }
-
-            StorageExtendedErrorInformation extendedInformation = result.ExtendedErrorInformation;
-
-            if (extendedInformation == null)
-            {
-                return false;
-            }
-
-            return extendedInformation.ErrorCode == "BlobNotFound";
+            return result.HttpStatusCode == (int)HttpStatusCode.NotFound;
         }
 
         /// <summary>
@@ -382,19 +288,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            if (result.HttpStatusCode != 404)
-            {
-                return false;
-            }
-
-            StorageExtendedErrorInformation extendedInformation = result.ExtendedErrorInformation;
-
-            if (extendedInformation == null)
-            {
-                return false;
-            }
-
-            return extendedInformation.ErrorCode == "ContainerNotFound";
+            return result.HttpStatusCode == (int)HttpStatusCode.NotFound;
         }
 
         /// <summary>
@@ -419,19 +313,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            if (result.HttpStatusCode != 404)
-            {
-                return false;
-            }
-
-            StorageExtendedErrorInformation extendedInformation = result.ExtendedErrorInformation;
-
-            if (extendedInformation == null)
-            {
-                return false;
-            }
-
-            return extendedInformation.ErrorCode == "TableNotFound";
+            return result.HttpStatusCode == (int)HttpStatusCode.NotFound;
         }
 
         /// <summary>
@@ -457,20 +339,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            if (result.HttpStatusCode != 404)
-            {
-                return false;
-            }
-
-            StorageExtendedErrorInformation extendedInformation = result.ExtendedErrorInformation;
-
-            if (extendedInformation == null)
-            {
-                return false;
-            }
-
-            string errorCode = extendedInformation.ErrorCode;
-            return errorCode == "BlobNotFound" || errorCode == "ContainerNotFound";
+            return result.HttpStatusCode == (int)HttpStatusCode.NotFound;
         }
 
         /// <summary>
@@ -496,20 +365,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            if (result.HttpStatusCode != 404)
-            {
-                return false;
-            }
-
-            StorageExtendedErrorInformation extendedInformation = result.ExtendedErrorInformation;
-
-            if (extendedInformation == null)
-            {
-                return false;
-            }
-
-            string errorCode = extendedInformation.ErrorCode;
-            return errorCode == "MessageNotFound" || errorCode == "QueueNotFound";
+            return result.HttpStatusCode == (int)HttpStatusCode.NotFound;
         }
 
         /// <summary>
@@ -534,19 +390,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            if (result.HttpStatusCode != 404)
-            {
-                return false;
-            }
-
-            StorageExtendedErrorInformation extendedInformation = result.ExtendedErrorInformation;
-
-            if (extendedInformation == null)
-            {
-                return false;
-            }
-
-            return extendedInformation.ErrorCode == "MessageNotFound";
+            return result.HttpStatusCode == (int)HttpStatusCode.NotFound;
         }
 
         /// <summary>
@@ -571,19 +415,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            if (result.HttpStatusCode != 404)
-            {
-                return false;
-            }
-
-            StorageExtendedErrorInformation extendedInformation = result.ExtendedErrorInformation;
-
-            if (extendedInformation == null)
-            {
-                return false;
-            }
-
-            return extendedInformation.ErrorCode == "QueueNotFound";
+            return result.HttpStatusCode == (int)HttpStatusCode.NotFound;
         }
 
         /// <summary>Determines whether the exception occurred despite a 200 OK response.</summary>
@@ -606,7 +438,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            return result.HttpStatusCode == 200;
+            return result.HttpStatusCode == (int)HttpStatusCode.OK;
         }
 
         /// <summary>Determines whether the exception is due to a 412 Precondition Failed error.</summary>
@@ -629,7 +461,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            return result.HttpStatusCode == 412;
+            return result.HttpStatusCode == (int)HttpStatusCode.PreconditionFailed;
         }
 
         /// <summary>
@@ -655,19 +487,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            if (result.HttpStatusCode != 412)
-            {
-                return false;
-            }
-
-            StorageExtendedErrorInformation extendedInformation = result.ExtendedErrorInformation;
-
-            if (extendedInformation == null)
-            {
-                return false;
-            }
-
-            return extendedInformation.ErrorCode == "ConditionNotMet";
+            return result.HttpStatusCode == (int)HttpStatusCode.PreconditionFailed;
         }
 
         /// <summary>
@@ -693,19 +513,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            if (result.HttpStatusCode != 412)
-            {
-                return false;
-            }
-
-            StorageExtendedErrorInformation extendedInformation = result.ExtendedErrorInformation;
-
-            if (extendedInformation == null)
-            {
-                return false;
-            }
-
-            return extendedInformation.ErrorCode == "LeaseIdMissing";
+            return result.HttpStatusCode == (int)HttpStatusCode.PreconditionFailed;
         }
 
         /// <summary>
@@ -730,19 +538,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return false;
             }
 
-            if (result.HttpStatusCode != 412)
-            {
-                return false;
-            }
-
-            StorageExtendedErrorInformation extendedInformation = result.ExtendedErrorInformation;
-
-            if (extendedInformation == null)
-            {
-                return false;
-            }
-
-            return extendedInformation.ErrorCode == "LeaseLost";
+            return result.HttpStatusCode == (int)HttpStatusCode.PreconditionFailed;
         }
     }
 }

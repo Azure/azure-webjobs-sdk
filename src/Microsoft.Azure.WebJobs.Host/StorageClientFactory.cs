@@ -5,6 +5,7 @@ using System;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.WindowsAzure.Storage.RetryPolicies;
 using Microsoft.WindowsAzure.Storage.Table;
 
 namespace Microsoft.Azure.WebJobs.Host
@@ -30,7 +31,10 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 throw new ArgumentNullException("context");
             }
-            return context.Account.CreateCloudBlobClient();
+
+            CloudBlobClient client = context.Account.CreateCloudBlobClient();
+            client.DefaultRequestOptions.RetryPolicy = new ExponentialRetry(TimeSpan.FromSeconds(5), 5);
+            return client;
         }
 
         /// <summary>
@@ -44,7 +48,10 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 throw new ArgumentNullException("context");
             }
-            return context.Account.CreateCloudTableClient();
+
+            CloudTableClient client = context.Account.CreateCloudTableClient();
+            client.DefaultRequestOptions.RetryPolicy = new ExponentialRetry(TimeSpan.FromSeconds(5), 5);
+            return client;
         }
 
         /// <summary>
@@ -58,7 +65,10 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 throw new ArgumentNullException("context");
             }
-            return context.Account.CreateCloudQueueClient();
+
+            CloudQueueClient client = context.Account.CreateCloudQueueClient();
+            client.DefaultRequestOptions.RetryPolicy = new ExponentialRetry(TimeSpan.FromSeconds(5), 5);
+            return client;
         }
     }
 }
