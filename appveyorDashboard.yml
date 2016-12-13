@@ -1,0 +1,15 @@
+install:
+  - git clone https://github.com/azure/azure-webjobs-sdk-dashboard-tests %APPVEYOR_BUILD_FOLDER%\dashboard-tests
+  - ps: '& ${env:APPVEYOR_BUILD_FOLDER}\dashboard-tests\SetupAppveyor.ps1'
+
+build_script:
+  - msbuild WebJobs.proj /t:Build /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+  - msbuild ./dashboard-tests/Dashboard.proj /t:BuildFunctionalTest /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" /p:OutputPath=%APPVEYOR_BUILD_FOLDER%\bin
+
+test_script:
+# appveyor hangs if child processes are running & testeasy fails to properly dispose iis servers
+  - appveyorDashboardTest.cmd
+
+# if you need to rdp into build machine to investigate
+# init:
+#   - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
