@@ -20,8 +20,8 @@ namespace Dashboard.UnitTests.Indexers
                 Id = "FunctionId",
                 FullName = "FullName",
                 ShortName = "ShortName",
-                Parameters = new ParameterDescriptor[] 
-                { 
+                Parameters = new ParameterDescriptor[]
+                {
                     new ParameterDescriptor { Name = "param1" },
                     new ParameterDescriptor { Name = "param2" }
                 }
@@ -30,7 +30,7 @@ namespace Dashboard.UnitTests.Indexers
             FunctionStartedMessage message = new FunctionStartedMessage
             {
                 FunctionInstanceId = Guid.NewGuid(),
-                HostInstanceId = Guid.NewGuid().ToString(),
+                HostInstanceId = Guid.NewGuid(),
                 InstanceQueueName = "InstanceQueueName",
                 Reason = ExecutionReason.AutomaticTrigger,
                 ReasonDetails = "A trigger fired!",
@@ -43,7 +43,7 @@ namespace Dashboard.UnitTests.Indexers
                 },
                 SharedQueueName = "SharedQueueName",
                 Function = function,
-                Arguments = new Dictionary<string, string> 
+                Arguments = new Dictionary<string, string>
                 {
                     { "param1", "foo" },
                     { "param2", "bar" }
@@ -91,7 +91,7 @@ namespace Dashboard.UnitTests.Indexers
         {
             FunctionInstanceSnapshot message = new FunctionInstanceSnapshot
             {
-                Arguments = new Dictionary<string, FunctionInstanceArgument> 
+                Arguments = new Dictionary<string, FunctionInstanceArgument>
                 {
                     { "message", new FunctionInstanceArgument() { Value = argumentValue } }
                 },
@@ -101,7 +101,7 @@ namespace Dashboard.UnitTests.Indexers
 
             Assert.Equal(expectedDisplayTitle, displayTitle);
             Assert.DoesNotContain("\r", displayTitle);
-            Assert.DoesNotContain("\n", displayTitle);        
+            Assert.DoesNotContain("\n", displayTitle);
         }
     }
 }

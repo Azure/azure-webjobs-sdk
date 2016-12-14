@@ -17,7 +17,7 @@ namespace Dashboard.Data
 
         public Guid Id { get; set; }
 
-        public string HostInstanceId { get; set; }
+        public Guid HostInstanceId { get; set; }
 
         public string InstanceQueueName { get; set; }
 
@@ -91,7 +91,7 @@ namespace Dashboard.Data
         private string BuildFunctionDisplayTitle()
         {
             IEnumerable<string> argumentValues = Arguments.Values.Select(v => v.Value);
-            return FunctionInstanceLogItem.BuildFunctionDisplayTitle(this.FunctionShortName, argumentValues);            
+            return FunctionInstanceLogItem.BuildFunctionDisplayTitle(this.FunctionShortName, argumentValues);
         }
     }
 }

@@ -27,7 +27,7 @@ namespace Microsoft.Azure.WebJobs
         private readonly ConcurrentDictionary<Type, object> _services = new ConcurrentDictionary<Type, object>();
         private IJobHostContextFactory _contextFactory;
         private string _hostId;
-        private string _hostInstanceId;
+        private string _hostMachineId;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JobHostConfiguration"/> class.
@@ -126,27 +126,27 @@ namespace Microsoft.Azure.WebJobs
         }
 
         /// <summary>
-        /// Gets or sets the host instance ID. If not explicitly set, the ID is based on the current machine name.
+        /// Gets the host machine ID. All host instances on the same machine will have the same HostMachineId.
         /// </summary>
-        public string HostInstanceId
+        public string HostMachineId
         {
             get
             {
-                if (_hostInstanceId == null)
+                if (_hostMachineId == null)
                 {
-                    _hostInstanceId = Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID")
+                    _hostMachineId = Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID")
                         ?? Environment.MachineName.GetHashCode().ToString("X", CultureInfo.InvariantCulture).PadLeft(32, '0');
 
-                    _hostInstanceId = _hostInstanceId.Substring(0, 32).ToLowerInvariant();
+                    _hostMachineId = _hostMachineId.Substring(0, 32).ToLowerInvariant();
                 }
 
-                return _hostInstanceId;
+                return _hostMachineId;
             }
 
             // for testing
             internal set
             {
-                _hostInstanceId = value;
+                _hostMachineId = value;
             }
         }
 

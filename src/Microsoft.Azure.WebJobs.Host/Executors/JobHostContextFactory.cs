@@ -118,7 +118,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             IExtensionRegistry extensions = config.GetExtensions();
             ITriggerBindingProvider triggerBindingProvider = DefaultTriggerBindingProvider.Create(nameResolver,
                 storageAccountProvider, extensionTypeLocator, hostIdProvider, queueConfiguration, exceptionHandler,
-                messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor, sharedContextProvider, extensions, singletonManager, trace, config.HostInstanceId);
+                messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor, sharedContextProvider, extensions, singletonManager, trace, config.HostMachineId);
 
             if (bindingProvider == null)
             {
@@ -165,7 +165,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
 
                 IFunctionIndex functions = await functionIndexProvider.GetAsync(combinedCancellationToken);
-                IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), singletonManager, activator, nameResolver, trace, config.HostInstanceId);
+                IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), singletonManager, activator, nameResolver, trace, config.HostMachineId);
 
                 IFunctionExecutor hostCallExecutor;
                 IListener listener;
@@ -198,7 +198,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         queueConfiguration, exceptionHandler, trace, functions,
                         functionInstanceLogger, functionExecutor);
 
-                    string instanceQueueName = HostQueueNames.GetHostQueueName(config.HostInstanceId);
+                    // We need an id that is unique per invocation of the host. This is used by the Dashboard
+                    // to send messages to a specific instance (and track if it has aborted them previously).
+                    Guid hostInstanceId = Guid.NewGuid();
+                    string instanceQueueName = HostQueueNames.GetHostQueueName(hostInstanceId.ToString("N"));
                     IStorageQueue instanceQueue = dashboardQueueClient.GetQueueReference(instanceQueueName);
                     IListenerFactory instanceQueueListenerFactory = new HostMessageListenerFactory(instanceQueue,
                         queueConfiguration, exceptionHandler, trace, functions,
@@ -208,7 +211,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     {
                         SharedContainerName = HostContainerNames.Hosts,
                         SharedDirectoryName = HostDirectoryNames.Heartbeats + "/" + hostId,
-                        InstanceBlobName = config.HostInstanceId,
+                        InstanceBlobName = hostInstanceId.ToString("N"),
                         ExpirationInSeconds = (int)HeartbeatIntervals.ExpirationInterval.TotalSeconds
                     };
 
@@ -223,7 +226,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                     hostOutputMessage = new DataOnlyHostOutputMessage
                     {
-                        HostInstanceId = config.HostInstanceId,
+                        HostInstanceId = hostInstanceId,
                         HostDisplayName = displayName,
                         SharedQueueName = sharedQueueName,
                         InstanceQueueName = instanceQueueName,

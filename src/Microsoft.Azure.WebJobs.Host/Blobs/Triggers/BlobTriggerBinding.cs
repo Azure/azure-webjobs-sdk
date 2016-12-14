@@ -40,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
         private readonly IAsyncObjectToTypeConverter<IStorageBlob> _converter;
         private readonly IReadOnlyDictionary<string, Type> _bindingDataContract;
         private readonly SingletonManager _singletonManager;
-        private readonly string _hostInstanceId;
+        private readonly string _hostMachineId;
 
         public BlobTriggerBinding(ParameterInfo parameter,
             IArgumentBinding<IStorageBlob> argumentBinding,
@@ -55,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             ISharedContextProvider sharedContextProvider,
             SingletonManager singletonManager,
             TraceWriter trace,
-            string hostInstanceId)
+            string hostMachineId)
         {
             if (parameter == null)
             {
@@ -122,9 +122,9 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
                 throw new ArgumentNullException("trace");
             }
 
-            if (hostInstanceId == null)
+            if (hostMachineId == null)
             {
-                throw new ArgumentNullException("hostInstanceId");
+                throw new ArgumentNullException("hostMachineId");
             }
 
             _parameter = parameter;
@@ -148,7 +148,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             _trace = trace;
             _converter = CreateConverter(_blobClient);
             _bindingDataContract = CreateBindingDataContract(path);
-            _hostInstanceId = hostInstanceId;
+            _hostMachineId = hostMachineId;
         }
 
         public Type TriggerValueType
@@ -242,7 +242,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             var factory = new BlobListenerFactory(_hostIdProvider, _queueConfiguration,
                 _exceptionHandler, _blobWrittenWatcherSetter, _messageEnqueuedWatcherSetter,
                 _sharedContextProvider, _trace, context.Descriptor.Id, _hostAccount, _dataAccount,
-                container, _path, context.Executor, _singletonManager, _hostInstanceId);
+                container, _path, context.Executor, _singletonManager, _hostMachineId);
 
             return factory.CreateAsync(context.CancellationToken);
         }

@@ -32,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private readonly IBlobPathSource _input;
         private readonly ITriggeredFunctionExecutor _executor;
         private readonly SingletonManager _singletonManager;
-        private readonly string _hostInstanceId;
+        private readonly string _hostMachineId;
 
         public BlobListenerFactory(IHostIdProvider hostIdProvider,
             IQueueConfiguration queueConfiguration,
@@ -48,7 +48,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             IBlobPathSource input,
             ITriggeredFunctionExecutor executor,
             SingletonManager singletonManager,
-            string hostInstanceId)
+            string hostMachineId)
         {
             if (hostIdProvider == null)
             {
@@ -115,9 +115,9 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 throw new ArgumentNullException("singletonManager");
             }
 
-            if (hostInstanceId == null)
+            if (hostMachineId == null)
             {
-                throw new ArgumentNullException("hostInstanceId");
+                throw new ArgumentNullException("hostMachineId");
             }
 
             _hostIdProvider = hostIdProvider;
@@ -134,7 +134,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             _input = input;
             _executor = executor;
             _singletonManager = singletonManager;
-            _hostInstanceId = hostInstanceId;
+            _hostMachineId = hostMachineId;
         }
 
         public async Task<IListener> CreateAsync(CancellationToken cancellationToken)
@@ -182,7 +182,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 // want a single instance of the blob poll/scan logic to be running
                 // across host instances
                 var singletonBlobListener = _singletonManager.CreateHostSingletonListener(
-                    new BlobListener(sharedBlobListener), SingletonBlobListenerScopeId, _hostInstanceId);
+                    new BlobListener(sharedBlobListener), SingletonBlobListenerScopeId, _hostMachineId);
                 _sharedContextProvider.SetValue(SingletonBlobListenerScopeId, true);
 
                 return new CompositeListener(singletonBlobListener, queueListener);

@@ -22,16 +22,16 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         private readonly IJobActivator _activator;
         private readonly INameResolver _nameResolver;
         private readonly TraceWriter _trace;
-        private readonly string _hostInstanceId;
+        private readonly string _hostMachineId;
 
-        public HostListenerFactory(IEnumerable<IFunctionDefinition> functionDefinitions, SingletonManager singletonManager, IJobActivator activator, INameResolver nameResolver, TraceWriter trace, string hostInstanceId)
+        public HostListenerFactory(IEnumerable<IFunctionDefinition> functionDefinitions, SingletonManager singletonManager, IJobActivator activator, INameResolver nameResolver, TraceWriter trace, string hostMachineId)
         {
             _functionDefinitions = functionDefinitions;
             _singletonManager = singletonManager;
             _activator = activator;
             _nameResolver = nameResolver;
             _trace = trace;
-            _hostInstanceId = hostInstanceId;
+            _hostMachineId = hostMachineId;
         }
 
         public async Task<IListener> CreateAsync(CancellationToken cancellationToken)
@@ -60,7 +60,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                 SingletonAttribute singletonAttribute = SingletonManager.GetListenerSingletonOrNull(listener.GetType(), method);
                 if (singletonAttribute != null)
                 {
-                    listener = new SingletonListener(method, singletonAttribute, _singletonManager, listener, _hostInstanceId, _trace);
+                    listener = new SingletonListener(method, singletonAttribute, _singletonManager, listener, _hostMachineId, _trace);
                 }
 
                 listeners.Add(listener);

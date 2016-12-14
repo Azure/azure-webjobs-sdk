@@ -636,8 +636,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 HostId = TestHostId,
                 NameResolver = _resolver,
                 TypeLocator = new FakeTypeLocator(typeof(TestJobs)),
-                JobActivator = activator,
-                HostInstanceId = instanceId ?? Guid.NewGuid().ToString()
+                JobActivator = activator,                
+                HostMachineId = instanceId ?? Guid.NewGuid().ToString()
             };
             config.Queues.MaxPollingInterval = TimeSpan.FromSeconds(2);
             config.Singleton.LockAcquisitionTimeout = TimeSpan.FromSeconds(10);
