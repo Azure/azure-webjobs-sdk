@@ -34,7 +34,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
         private readonly ISharedContextProvider _sharedContextProvider;
         private readonly SingletonManager _singletonManager;
         private readonly TraceWriter _trace;
-        private readonly string _hostMachineId;
+        private readonly Guid _hostMachineId;
 
         public BlobTriggerAttributeBindingProvider(INameResolver nameResolver,
             IStorageAccountProvider accountProvider,
@@ -47,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             ISharedContextProvider sharedContextProvider,
             SingletonManager singletonManager,
             TraceWriter trace,
-            string hostMachineId)
+            Guid hostMachineId)
         {
             if (accountProvider == null)
             {

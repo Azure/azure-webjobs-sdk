@@ -2,6 +2,9 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using Dashboard.Data;
 using Microsoft.Azure.WebJobs.Protocols;
 using Newtonsoft.Json;
@@ -27,7 +30,7 @@ namespace Dashboard.ViewModels
             }
 
             Status = snapshot.GetStatusWithHeartbeat(heartbeatIsValid);
-
+            
             switch (Status)
             {
                 case FunctionInstanceStatus.Running:

@@ -22,9 +22,9 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         private readonly IJobActivator _activator;
         private readonly INameResolver _nameResolver;
         private readonly TraceWriter _trace;
-        private readonly string _hostMachineId;
+        private readonly Guid _hostMachineId;
 
-        public HostListenerFactory(IEnumerable<IFunctionDefinition> functionDefinitions, SingletonManager singletonManager, IJobActivator activator, INameResolver nameResolver, TraceWriter trace, string hostMachineId)
+        public HostListenerFactory(IEnumerable<IFunctionDefinition> functionDefinitions, SingletonManager singletonManager, IJobActivator activator, INameResolver nameResolver, TraceWriter trace, Guid hostMachineId)
         {
             _functionDefinitions = functionDefinitions;
             _singletonManager = singletonManager;

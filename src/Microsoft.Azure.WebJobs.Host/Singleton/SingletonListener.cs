@@ -20,9 +20,9 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         private string _lockId;
         private object _lockHandle;
         private bool _isListening;
-        private string _hostMachineId;
+        private Guid _hostMachineId;
 
-        public SingletonListener(MethodInfo method, SingletonAttribute attribute, SingletonManager singletonManager, IListener innerListener, string hostMachineId, TraceWriter trace)
+        public SingletonListener(MethodInfo method, SingletonAttribute attribute, SingletonManager singletonManager, IListener innerListener, Guid hostMachineId, TraceWriter trace)
         {
             _attribute = attribute;
             _singletonManager = singletonManager;

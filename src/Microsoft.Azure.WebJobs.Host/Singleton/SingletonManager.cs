@@ -86,7 +86,7 @@ namespace Microsoft.Azure.WebJobs.Host
             }
         }
 
-        public async virtual Task<object> LockAsync(string lockId, string proposedLeaseId, string functionInstanceId, SingletonAttribute attribute, CancellationToken cancellationToken)
+        public async virtual Task<object> LockAsync(string lockId, Guid? proposedLeaseId, string functionInstanceId, SingletonAttribute attribute, CancellationToken cancellationToken)
         {
             object lockHandle = await TryLockAsync(lockId, proposedLeaseId, functionInstanceId, attribute, cancellationToken);
 
@@ -101,7 +101,7 @@ namespace Microsoft.Azure.WebJobs.Host
             return lockHandle;
         }
 
-        public async virtual Task<object> TryLockAsync(string lockId, string proposedLeaseId, string functionInstanceId, SingletonAttribute attribute, CancellationToken cancellationToken, bool retry = true)
+        public async virtual Task<object> TryLockAsync(string lockId, Guid? proposedLeaseId, string functionInstanceId, SingletonAttribute attribute, CancellationToken cancellationToken, bool retry = true)
         {
             IStorageBlobDirectory lockDirectory = GetLockDirectory(attribute.Account);
             IStorageBlockBlob lockBlob = lockDirectory.GetBlockBlobReference(lockId);
@@ -246,7 +246,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="scopeId">The scope ID to use.</param>
         /// <param name="proposedLeaseId">The proposed lease id.</param>
         /// <returns>The singleton listener.</returns>
-        public SingletonListener CreateHostSingletonListener(IListener innerListener, string scopeId, string proposedLeaseId)
+        public SingletonListener CreateHostSingletonListener(IListener innerListener, string scopeId, Guid proposedLeaseId)
         {
             SingletonAttribute singletonAttribute = new SingletonAttribute(scopeId, SingletonScope.Host)
             {
@@ -356,14 +356,14 @@ namespace Microsoft.Azure.WebJobs.Host
             return new TaskSeriesTimer(command, exceptionHandler, Task.Delay(normalUpdateInterval));
         }
 
-        private async Task<string> TryAcquireLeaseAsync(IStorageBlockBlob blob, string proposedLeaseId, TimeSpan leasePeriod, CancellationToken cancellationToken)
+        private static async Task<string> TryAcquireLeaseAsync(IStorageBlockBlob blob, Guid? proposedLeaseId, TimeSpan leasePeriod, CancellationToken cancellationToken)
         {
             bool blobDoesNotExist = false;
             try
             {
                 // Optimistically try to acquire the lease. The blob may not yet
                 // exist. If it doesn't we handle the 404, create it, and retry below
-                return await blob.AcquireLeaseAsync(leasePeriod, proposedLeaseId, cancellationToken);
+                return await blob.AcquireLeaseAsync(leasePeriod, proposedLeaseId?.ToString(), cancellationToken);
             }
             catch (StorageException exception)
             {
@@ -394,7 +394,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
                 try
                 {
-                    return await blob.AcquireLeaseAsync(leasePeriod, proposedLeaseId, cancellationToken);
+                    return await blob.AcquireLeaseAsync(leasePeriod, proposedLeaseId?.ToString(), cancellationToken);
                 }
                 catch (StorageException exception)
                 {

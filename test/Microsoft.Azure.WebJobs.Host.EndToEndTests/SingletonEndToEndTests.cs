@@ -126,10 +126,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task SingletonListener_UsesProposedLeaseId()
         {
-            string instanceId1 = Guid.NewGuid().ToString().ToLowerInvariant();
+            Guid instanceId1 = Guid.NewGuid();
             JobHost host1 = CreateTestJobHost(1, instanceId1);
 
-            string instanceId2 = Guid.NewGuid().ToString().ToLowerInvariant();
+            Guid instanceId2 = Guid.NewGuid();
             JobHost host2 = CreateTestJobHost(2, instanceId2);
 
             MethodInfo singletonListenerAndFunctionMethod = typeof(TestJobs).GetMethod("SingletonTriggerJob_SingletonListener");
@@ -139,7 +139,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             CloudBlobDirectory lockDirectory = _lockDirectory;
             CloudBlockBlob lockBlob = lockDirectory.GetBlockBlobReference(lockId);
             await lockBlob.UploadTextAsync(string.Empty);
-            var leaseId = await lockBlob.AcquireLeaseAsync(TimeSpan.FromSeconds(15), instanceId1);
+            var leaseId = await lockBlob.AcquireLeaseAsync(TimeSpan.FromSeconds(15), instanceId1.ToString());
 
             await host1.StartAsync();
             await host2.StartAsync();
@@ -627,7 +627,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
-        private JobHost CreateTestJobHost(int hostId, string instanceId = null)
+        private JobHost CreateTestJobHost(int hostId, Guid? instanceId = null)
         {
             TestJobActivator activator = new TestJobActivator(hostId);
 
@@ -636,8 +636,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 HostId = TestHostId,
                 NameResolver = _resolver,
                 TypeLocator = new FakeTypeLocator(typeof(TestJobs)),
-                JobActivator = activator,                
-                HostMachineId = instanceId ?? Guid.NewGuid().ToString()
+                JobActivator = activator,
+                HostMachineId = instanceId ?? Guid.NewGuid()
             };
             config.Queues.MaxPollingInterval = TimeSpan.FromSeconds(2);
             config.Singleton.LockAcquisitionTimeout = TimeSpan.FromSeconds(10);

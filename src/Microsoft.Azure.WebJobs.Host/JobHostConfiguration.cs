@@ -27,7 +27,6 @@ namespace Microsoft.Azure.WebJobs
         private readonly ConcurrentDictionary<Type, object> _services = new ConcurrentDictionary<Type, object>();
         private IJobHostContextFactory _contextFactory;
         private string _hostId;
-        private string _hostMachineId;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JobHostConfiguration"/> class.
@@ -72,6 +71,11 @@ namespace Microsoft.Azure.WebJobs
 
             string value = ConfigurationUtility.GetSettingFromConfigOrEnvironment(Constants.EnvironmentSettingName);
             IsDevelopment = string.Compare(Constants.DevelopmentEnvironmentValue, value, StringComparison.OrdinalIgnoreCase) == 0;
+
+            // Initialize the HostMachineId. This can be changed later, before the host starts.
+            string machineIdString = Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID")
+                ?? Environment.MachineName.GetHashCode().ToString("X", CultureInfo.InvariantCulture).PadLeft(32, '0');
+            HostMachineId = Guid.Parse(machineIdString.Substring(0, 32).ToLowerInvariant());
         }
 
         /// <summary>
@@ -128,27 +132,7 @@ namespace Microsoft.Azure.WebJobs
         /// <summary>
         /// Gets the host machine ID. All host instances on the same machine will have the same HostMachineId.
         /// </summary>
-        public string HostMachineId
-        {
-            get
-            {
-                if (_hostMachineId == null)
-                {
-                    _hostMachineId = Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID")
-                        ?? Environment.MachineName.GetHashCode().ToString("X", CultureInfo.InvariantCulture).PadLeft(32, '0');
-
-                    _hostMachineId = _hostMachineId.Substring(0, 32).ToLowerInvariant();
-                }
-
-                return _hostMachineId;
-            }
-
-            // for testing
-            internal set
-            {
-                _hostMachineId = value;
-            }
-        }
+        public Guid HostMachineId { get; set; }
 
         /// <summary>Gets or sets the job activator.</summary>
         /// <remarks>The job activator creates instances of job classes when calling instance methods.</remarks>

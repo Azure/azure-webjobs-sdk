@@ -45,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 storageAccountProvider, extensionTypeLocator,
                 new FixedHostIdProvider("test"), new SimpleQueueConfiguration(maxDequeueCount: 5),
                 exceptionHandler, messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor,
-                sharedContextProvider, new DefaultExtensionRegistry(), singletonManager, logger, Guid.NewGuid().ToString());
+                sharedContextProvider, new DefaultExtensionRegistry(), singletonManager, logger, Guid.NewGuid());
             IBindingProvider bindingProvider = DefaultBindingProvider.Create(nameResolver, storageAccountProvider,
                 extensionTypeLocator, messageEnqueuedWatcherAccessor,
                 blobWrittenWatcherAccessor, new DefaultExtensionRegistry());

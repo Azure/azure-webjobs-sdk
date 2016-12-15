@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         private readonly SingletonListener _listener;
         private readonly SingletonAttribute _attribute;
         private readonly string _lockId;
-        private readonly string _proposedLeaseId;
+        private readonly Guid _proposedLeaseId;
 
         public SingletonListenerTests()
         {
@@ -36,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             _mockSingletonManager = new Mock<SingletonManager>(MockBehavior.Strict, null, null, null, null, new FixedHostIdProvider(TestHostId), null);
             _mockSingletonManager.SetupGet(p => p.Config).Returns(_config);
             _mockInnerListener = new Mock<IListener>(MockBehavior.Strict);
-            _proposedLeaseId = Guid.NewGuid().ToString();
+            _proposedLeaseId = Guid.NewGuid();
             _listener = new SingletonListener(methodInfo, _attribute, _mockSingletonManager.Object, _mockInnerListener.Object, _proposedLeaseId, new TestTraceWriter(TraceLevel.Verbose));
             _lockId = SingletonManager.FormatLockId(methodInfo, SingletonScope.Function, TestHostId, _attribute.ScopeId) + ".Listener";
         }

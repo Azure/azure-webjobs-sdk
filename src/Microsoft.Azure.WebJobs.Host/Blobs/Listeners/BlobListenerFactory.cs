@@ -32,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private readonly IBlobPathSource _input;
         private readonly ITriggeredFunctionExecutor _executor;
         private readonly SingletonManager _singletonManager;
-        private readonly string _hostMachineId;
+        private readonly Guid _hostMachineId;
 
         public BlobListenerFactory(IHostIdProvider hostIdProvider,
             IQueueConfiguration queueConfiguration,
@@ -48,7 +48,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             IBlobPathSource input,
             ITriggeredFunctionExecutor executor,
             SingletonManager singletonManager,
-            string hostMachineId)
+            Guid hostMachineId)
         {
             if (hostIdProvider == null)
             {

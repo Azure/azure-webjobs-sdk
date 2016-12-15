@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Collections.Generic;
 using Microsoft.Azure.WebJobs.Host.Blobs;
 using Microsoft.Azure.WebJobs.Host.Blobs.Triggers;
@@ -27,7 +28,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             IExtensionRegistry extensions,
             SingletonManager singletonManager,
             TraceWriter trace,
-            string hostMachineId)
+            Guid hostMachineId)
         {
             List<ITriggerBindingProvider> innerProviders = new List<ITriggerBindingProvider>();
             innerProviders.Add(new QueueTriggerAttributeBindingProvider(nameResolver, storageAccountProvider,

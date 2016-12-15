@@ -40,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
         private readonly IAsyncObjectToTypeConverter<IStorageBlob> _converter;
         private readonly IReadOnlyDictionary<string, Type> _bindingDataContract;
         private readonly SingletonManager _singletonManager;
-        private readonly string _hostMachineId;
+        private readonly Guid _hostMachineId;
 
         public BlobTriggerBinding(ParameterInfo parameter,
             IArgumentBinding<IStorageBlob> argumentBinding,
@@ -55,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             ISharedContextProvider sharedContextProvider,
             SingletonManager singletonManager,
             TraceWriter trace,
-            string hostMachineId)
+            Guid hostMachineId)
         {
             if (parameter == null)
             {
