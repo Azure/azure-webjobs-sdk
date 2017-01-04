@@ -122,7 +122,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             _mockStorageBlob.Setup(p => p.ReleaseLeaseAsync(It.Is<AccessCondition>(q => q.LeaseId == TestLeaseId), null, null, cancellationToken)).Returns(Task.FromResult(true));
 
             SingletonAttribute attribute = new SingletonAttribute();
-            SingletonManager.SingletonLockHandle lockHandle = (SingletonManager.SingletonLockHandle)await _singletonManager.TryLockAsync(TestLockId, TestInstanceId, attribute, cancellationToken);
+            SingletonManager.SingletonLockHandle lockHandle = (SingletonManager.SingletonLockHandle)await _singletonManager.TryLockAsync(TestLockId, null, TestInstanceId, attribute, cancellationToken);
 
             Assert.Same(_mockStorageBlob.Object, lockHandle.Blob);
             Assert.Equal(TestLeaseId, lockHandle.LeaseId);
@@ -148,7 +148,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
                 }).Returns(Task.FromResult(true));
 
             SingletonAttribute attribute = new SingletonAttribute();
-            SingletonManager.SingletonLockHandle lockHandle = (SingletonManager.SingletonLockHandle)await _singletonManager.TryLockAsync(TestLockId, TestInstanceId, attribute, cancellationToken);
+            SingletonManager.SingletonLockHandle lockHandle = (SingletonManager.SingletonLockHandle)await _singletonManager.TryLockAsync(TestLockId, null, TestInstanceId, attribute, cancellationToken);
 
             Assert.Same(_mockStorageBlob.Object, lockHandle.Blob);
             Assert.Equal(TestLeaseId, lockHandle.LeaseId);
@@ -194,7 +194,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             });
 
             SingletonAttribute attribute = new SingletonAttribute();
-            SingletonManager.SingletonLockHandle lockHandle = (SingletonManager.SingletonLockHandle)await _singletonManager.TryLockAsync(TestLockId, TestInstanceId, attribute, cancellationToken);
+            SingletonManager.SingletonLockHandle lockHandle = (SingletonManager.SingletonLockHandle)await _singletonManager.TryLockAsync(TestLockId, null, TestInstanceId, attribute, cancellationToken);
 
             Assert.NotNull(lockHandle);
             Assert.Equal(TestLeaseId, lockHandle.LeaseId);
@@ -219,7 +219,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             SingletonAttribute attribute = new SingletonAttribute();
             SingletonManager.SingletonLockHandle lockHandle = (SingletonManager.SingletonLockHandle)
-                await _singletonManager.TryLockAsync(TestLockId, TestInstanceId, attribute, cancellationToken, retry: false);
+                await _singletonManager.TryLockAsync(TestLockId, null, TestInstanceId, attribute, cancellationToken, retry: false);
 
             Assert.Null(lockHandle);
             Assert.Equal(1, count);
@@ -243,7 +243,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
                 });
 
             SingletonAttribute attribute = new SingletonAttribute();
-            TimeoutException exception = await Assert.ThrowsAsync<TimeoutException>(async () => await _singletonManager.LockAsync(TestLockId, TestInstanceId, attribute, cancellationToken));
+            TimeoutException exception = await Assert.ThrowsAsync<TimeoutException>(async () => await _singletonManager.LockAsync(TestLockId, null, TestInstanceId, attribute, cancellationToken));
 
             int expectedRetryCount = (int)(_singletonConfig.LockAcquisitionTimeout.TotalMilliseconds / _singletonConfig.LockAcquisitionPollingInterval.TotalMilliseconds);
             Assert.Equal(expectedRetryCount, count - 1);

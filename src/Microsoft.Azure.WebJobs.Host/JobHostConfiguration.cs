@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Globalization;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Executors;
@@ -70,6 +71,11 @@ namespace Microsoft.Azure.WebJobs
 
             string value = ConfigurationUtility.GetSettingFromConfigOrEnvironment(Constants.EnvironmentSettingName);
             IsDevelopment = string.Compare(Constants.DevelopmentEnvironmentValue, value, StringComparison.OrdinalIgnoreCase) == 0;
+
+            // Initialize the HostMachineId. This can be changed later, before the host starts.
+            string machineIdString = Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID")
+                ?? Environment.MachineName.GetHashCode().ToString("X", CultureInfo.InvariantCulture).PadLeft(32, '0');
+            HostMachineId = Guid.Parse(machineIdString.Substring(0, 32).ToLowerInvariant());
         }
 
         /// <summary>
@@ -122,6 +128,11 @@ namespace Microsoft.Azure.WebJobs
                 _hostId = value;
             }
         }
+
+        /// <summary>
+        /// Gets the host machine ID. All host instances on the same machine will have the same HostMachineId.
+        /// </summary>
+        public Guid HostMachineId { get; set; }
 
         /// <summary>Gets or sets the job activator.</summary>
         /// <remarks>The job activator creates instances of job classes when calling instance methods.</remarks>
@@ -282,7 +293,6 @@ namespace Microsoft.Azure.WebJobs
         {
             Tracing.ConsoleLevel = TraceLevel.Verbose;
             Queues.MaxPollingInterval = TimeSpan.FromSeconds(2);
-            Singleton.ListenerLockPeriod = TimeSpan.FromSeconds(15);
 
             UsingDevelopmentSettings = true;
         }

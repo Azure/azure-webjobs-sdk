@@ -79,11 +79,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
         public Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId,
             CancellationToken cancellationToken)
         {
-            if (proposedLeaseId != null)
-            {
-                throw new NotImplementedException();
-            }
-
             string leaseId = _store.AcquireLease(_containerName, _blobName, leaseTime);
             return Task.FromResult(leaseId);
         }
