@@ -395,6 +395,7 @@
     <Compile Include="Blobs\Listeners\StorageBlobScanInfoManager.cs" />
     <Compile Include="Blobs\StorageBlobToCloudAppendBlobConverter.cs" />
     <Compile Include="DefaultNameResolver.cs" />
+    <Compile Include="DefaultParameterResolver.cs" />
     <Compile Include="Executors\FunctionInstanceTraceWriter.cs" />
     <Compile Include="Extensions\ExceptionExtensions.cs" />
     <Compile Include="FuncConverter.cs" />

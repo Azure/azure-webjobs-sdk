@@ -69,6 +69,9 @@
     <Compile Include="IBinder.cs" />
     <Compile Include="BlobAttribute.cs" />
     <Compile Include="ICollector.cs" />
+    <Compile Include="ParameterResolverContext.cs" />
+    <Compile Include="TableFilterParameterResolver.cs" />
+    <Compile Include="ParameterResolver.cs" />
     <Compile Include="QueueAttribute.cs" />
     <Compile Include="QueueTriggerAttribute.cs" />
     <Compile Include="SingletonAttribute.cs" />

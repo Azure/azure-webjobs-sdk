@@ -10,23 +10,17 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
     /// </summary>
     internal struct BindingTemplateToken
     {
-        private readonly string _value;
-        private readonly bool _isParameter;
-
-        public BindingTemplateToken(string value, bool isParameter)
+        public BindingTemplateToken(string value, bool isParameter = false, int index = -1)
         {
-            _value = value;
-            _isParameter = isParameter;
+            Value = value;
+            IsParameter = isParameter;
+            Index = index;
         }
 
-        public string Value 
-        { 
-            get { return _value; } 
-        }
+        public string Value { get; private set; }
 
-        public bool IsParameter 
-        { 
-            get { return _isParameter; } 
-        }
+        public bool IsParameter { get; private set; }
+
+        public int Index { get; private set; }
     }
 }

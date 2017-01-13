@@ -11,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
         public Collection<TraceEvent> Traces = new Collection<TraceEvent>();
         private object _syncLock = new object();
 
-        public TestTraceWriter(TraceLevel level) : base(level)
+        public TestTraceWriter(TraceLevel level = TraceLevel.Verbose) : base(level)
         {
         }
 

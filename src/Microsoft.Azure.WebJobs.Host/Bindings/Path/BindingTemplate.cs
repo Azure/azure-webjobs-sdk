@@ -20,8 +20,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
         private readonly string _pattern;
         private readonly IReadOnlyList<BindingTemplateToken> _tokens;
         private readonly bool _ignoreCase;
+        private readonly ParameterResolver _parameterResolver;
 
-        internal BindingTemplate(string pattern, IReadOnlyList<BindingTemplateToken> tokens, bool ignoreCase = false)
+        internal BindingTemplate(string pattern, IReadOnlyList<BindingTemplateToken> tokens, bool ignoreCase = false, ParameterResolver parameterResolver = null)
         {
             if (pattern == null)
             {
@@ -36,6 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
             _pattern = pattern;
             _tokens = tokens;
             _ignoreCase = ignoreCase;
+            _parameterResolver = parameterResolver ?? new DefaultParameterResolver();
         }
 
         /// <summary>
@@ -66,14 +68,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
         /// A factory method to parse input template string and construct a binding template instance using
         /// parsed tokens sequence.
         /// </summary>
-        /// <param name="input">A binding template string in a format supported by <see cref="BindingTemplateParser"/>.
-        /// </param>
+        /// <param name="input">A binding template string in a format supported by <see cref="BindingTemplateParser"/></param>
+        /// <param name="parameterResolver">The optional <see cref="ParameterResolver"/> to use when resolving parameter values.</param>
         /// <param name="ignoreCase">True if matching should be case insensitive.</param>
         /// <returns>Valid ready-to-use instance of <see cref="BindingTemplate"/>.</returns>
-        public static BindingTemplate FromString(string input, bool ignoreCase = false)
+        public static BindingTemplate FromString(string input, bool ignoreCase = false, ParameterResolver parameterResolver = null)
         {
             IReadOnlyList<BindingTemplateToken> tokens = BindingTemplateParser.ParseTemplate(input);
-            return new BindingTemplate(input, tokens, ignoreCase);
+            return new BindingTemplate(input, tokens, ignoreCase: ignoreCase, parameterResolver: parameterResolver);
         }
 
         /// <summary>
@@ -86,8 +88,36 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
         /// </exception>
         public string Bind(IReadOnlyDictionary<string, string> parameters)
         {
-            StringBuilder builder = new StringBuilder();
+            return BindCore(parameters);
+        }
 
+        /// <summary>
+        /// Resolves original parameterized template into a string by replacing parameters with values provided by
+        /// the specified <see cref="BindingContext"/>.
+        /// </summary>
+        /// <param name="bindingContext">The <see cref="BindingContext"/> to use.</param>
+        /// <returns>Resolved string if succeeded.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when required parameter value is not available.
+        /// </exception>
+        public string Bind(BindingContext bindingContext)
+        {
+            if (bindingContext == null)
+            {
+                throw new ArgumentNullException(nameof(bindingContext));
+            }
+
+            if (bindingContext.BindingData == null || !ParameterNames.Any())
+            {
+                return Pattern;
+            }
+
+            var convertedParameters = BindingDataPathHelper.ConvertParameters(bindingContext.BindingData);
+
+            return BindCore(convertedParameters, bindingContext);
+        }
+
+        private string BindCore(IReadOnlyDictionary<string, string> parameters, BindingContext bindingContext = null)
+        {
             if (_ignoreCase && parameters != null)
             {
                 // convert to a case insensitive dictionary
@@ -99,28 +129,26 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
                 parameters = caseInsensitive;
             }
 
+            StringBuilder builder = new StringBuilder();
             foreach (BindingTemplateToken token in Tokens)
             {
                 if (token.IsParameter)
                 {
-                    string value;
-                    BindingParameterResolver resolver = null;
-                    if (parameters != null && parameters.TryGetValue(token.Value, out value))
+                    var resolverContext = new ParameterResolverContext
                     {
-                        // parameter is resolved from binding data
-                        builder.Append(value);
-                    }
-                    else if (BindingParameterResolver.TryGetResolver(token.Value, out resolver))
-                    {
-                        // parameter maps to one of the built-in system binding
-                        // parameters (e.g. rand-guid, datetime, etc.)
-                        value = resolver.Resolve(token.Value);
-                        builder.Append(value);
-                    }
-                    else
+                        ParameterIndex = token.Index,
+                        ParameterName = token.Value,
+                        Template = _pattern,
+                        BindingData = parameters,
+                        Properties = bindingContext?.Properties
+                    };
+
+                    if (!_parameterResolver.TryResolve(resolverContext))
                     {
                         throw new InvalidOperationException(String.Format(CultureInfo.CurrentCulture, "No value for named parameter '{0}'.", token.Value));
                     }
+
+                    builder.Append(resolverContext.Value);
                 }
                 else
                 {
