@@ -119,7 +119,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
                     {
                         case "escape":
                             string value = Char.ToString(namedGroup.Value[0]);
-                            yield return new BindingTemplateToken(value, isParameter: false);
+                            yield return new BindingTemplateToken(value);
                             break;
                         case "parameter":
                             if (String.IsNullOrEmpty(namedGroup.Value))
@@ -134,10 +134,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
                                     "Invalid template '{0}'. The parameter name '{1}' is invalid.",
                                     input, namedGroup.Value));
                             }
-                            yield return new BindingTemplateToken(namedGroup.Value, isParameter: true);
+                            yield return new BindingTemplateToken(namedGroup.Value, isParameter: true, index: m.Index);
                             break;
                         case "literal":
-                            yield return new BindingTemplateToken(namedGroup.Value, isParameter: false);
+                            yield return new BindingTemplateToken(namedGroup.Value);
                             break;
                         case "unbalanced":
                             throw new FormatException(String.Format(

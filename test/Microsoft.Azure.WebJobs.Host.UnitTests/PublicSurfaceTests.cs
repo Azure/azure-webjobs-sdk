@@ -126,7 +126,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "StorageAccountAttribute",
                 "DisableAttribute",
                 "TimeoutAttribute",
-                "TraceLevelAttribute"
+                "TraceLevelAttribute",
+                "ParameterResolver",
+                "ParameterResolverContext",
+                "TableFilterParameterResolver"
             };
 
             AssertPublicTypes(expected, assembly);
@@ -209,7 +212,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IWebJobsExceptionHandler",
                 "WebJobsExceptionHandler",
                 "FunctionTimeoutException",
-                "PoisonMessageEventArgs"
+                "PoisonMessageEventArgs",
+                "DefaultParameterResolver"
             };
 
             AssertPublicTypes(expected, assembly);

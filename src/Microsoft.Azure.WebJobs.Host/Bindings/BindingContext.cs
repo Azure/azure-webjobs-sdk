@@ -14,6 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     {
         private readonly FunctionBindingContext _functionContext;
         private readonly IReadOnlyDictionary<string, object> _bindingData;
+        private readonly IDictionary<string, object> _properties;
         private readonly CancellationToken _cancellationToken;
 
         private AmbientBindingContext _ambientContext;
@@ -35,6 +36,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             _bindingData = bindingData;
             _functionContext = valueContext.FunctionContext;
             _cancellationToken = valueContext.CancellationToken;
+            _properties = new Dictionary<string, object>();
         }
 
         internal BindingContext(AmbientBindingContext ambientContext, CancellationToken cancellationToken)
@@ -48,6 +50,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             _functionContext = ambientContext.FunctionContext;
             _bindingData = ambientContext.BindingData;
             _cancellationToken = cancellationToken;
+            _properties = new Dictionary<string, object>();
         }
 
         /// <summary>
@@ -80,6 +83,18 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         public IReadOnlyDictionary<string, object> BindingData
         {
             get { return _bindingData; }
+        }
+
+        /// <summary>
+        /// Gets the set of property values for the current bind operation.
+        /// </summary>
+        /// <remarks>
+        /// Bindings can add arbitrary values to this collection as needed to
+        /// flow state around.
+        /// </remarks>
+        public IDictionary<string, object> Properties
+        {
+            get { return _properties; }
         }
 
         /// <summary>

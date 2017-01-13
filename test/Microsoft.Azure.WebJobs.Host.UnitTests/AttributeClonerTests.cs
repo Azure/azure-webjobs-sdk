@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Moq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
@@ -118,8 +119,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             var cloner = new AttributeCloner<Attr2>(attr, GetBindingContract("p1", "p2"));
 
-            Attr2 attrResolved = cloner.ResolveFromBindings(new Dictionary<string, object> {
-                { "p1", "v1" }, { "p2", "v2" }});
+            var functionBindingContext = new FunctionBindingContext(Guid.NewGuid(), CancellationToken.None, new TestTraceWriter());
+            var valueBindingContext = new ValueBindingContext(functionBindingContext, CancellationToken.None);
+            var bindingData = new Dictionary<string, object>
+            {
+                { "p1", "v1" },
+                { "p2", "v2" }
+            };
+            var bindingContext = new BindingContext(valueBindingContext, bindingData);
+            Attr2 attrResolved = cloner.ResolveFromBindings(bindingContext);
 
             Assert.Equal("v1", attrResolved.ResolvedProp1);
             Assert.Equal("v2", attrResolved.ResolvedProp2);

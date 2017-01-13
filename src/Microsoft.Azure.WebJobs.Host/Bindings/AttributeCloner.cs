@@ -16,16 +16,17 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         where TAttribute : Attribute
     {
         private readonly TAttribute _source;
+        private readonly ParameterResolver _parameterResolver;
 
         // Which constructor do we invoke to instantiate the new attribute?
         // The attribute is configured through a) constructor arguments, b) settable properties.
         private readonly ConstructorInfo _bestCtor;
 
         // Compute the arguments to pass to the chosen constructor. Arguments are based on binding data.
-        private readonly Func<IReadOnlyDictionary<string, object>, object>[] _bestCtorArgBuilder;
+        private readonly Func<BindingContext, object>[] _bestCtorArgBuilder;
 
         // Compute the values to apply to Settable properties on newly created attribute.
-        private readonly Action<TAttribute, IReadOnlyDictionary<string, object>>[] _setProperties;
+        private readonly Action<TAttribute, BindingContext>[] _setProperties;
 
         // Optional hook for post-processing the attribute. This is intended for legacy hack rules.
         private readonly Func<TAttribute, Task<TAttribute>> _hook;
@@ -34,10 +35,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             TAttribute source,
             IReadOnlyDictionary<string, Type> bindingDataContract,
             INameResolver nameResolver = null,
-            Func<TAttribute, Task<TAttribute>> hook = null)
+            Func<TAttribute, Task<TAttribute>> hook = null,
+            ParameterResolver parameterResolver = null)
         {
             _hook = hook;
             nameResolver = nameResolver ?? new EmptyNameResolver();
+            _parameterResolver = parameterResolver ?? new DefaultParameterResolver();
             _source = source;
 
             Type t = typeof(TAttribute);
@@ -61,7 +64,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 var ps = ctor.GetParameters();
                 int len = ps.Length;
 
-                var getArgFuncs = new Func<IReadOnlyDictionary<string, object>, object>[len];
+                var getArgFuncs = new Func<BindingContext, object>[len];
 
                 bool hasAllParameters = true;
                 for (int i = 0; i < len; i++)
@@ -78,12 +81,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     if (TryCreateAutoResolveBindingTemplate(propInfo, nameResolver, out template))
                     {
                         template.ValidateContractCompatibility(bindingDataContract);
-                        getArgFuncs[i] = (bindingData) => TemplateBind(template, bindingData);
+                        getArgFuncs[i] = (bindingContext) => TemplateBind(template, bindingContext);
                     }
                     else
                     {
                         var propValue = propInfo.GetValue(_source);
-                        getArgFuncs[i] = (bindingData) => propValue;
+                        getArgFuncs[i] = (bindingContext) => propValue;
                     }
                 }
 
@@ -91,7 +94,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 {
                     if (len > longestMatch)
                     {
-                        var setProperties = new List<Action<TAttribute, IReadOnlyDictionary<string, object>>>();
+                        var setProperties = new List<Action<TAttribute, BindingContext>>();
 
                         // Record properties too.
                         foreach (var prop in t.GetProperties(BindingFlags.Instance | BindingFlags.Public))
@@ -105,12 +108,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                             if (TryCreateAutoResolveBindingTemplate(prop, nameResolver, out template))
                             {
                                 template.ValidateContractCompatibility(bindingDataContract);
-                                setProperties.Add((newAttr, bindingData) => prop.SetValue(newAttr, TemplateBind(template, bindingData)));
+                                setProperties.Add((newAttr, bindingContext) => prop.SetValue(newAttr, TemplateBind(template, bindingContext)));
                             }
                             else
                             {
                                 var objValue = prop.GetValue(_source);
-                                setProperties.Add((newAttr, bindingData) => prop.SetValue(newAttr, objValue));
+                                setProperties.Add((newAttr, bindingContext) => prop.SetValue(newAttr, objValue));
                             }
                         }
 
@@ -139,9 +142,34 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return false;
             }
 
-            template = BindingTemplate.FromString(resolvedValue);
+            var parameterResolver = GetParameterResolver(propInfo);
+            template = BindingTemplate.FromString(resolvedValue, parameterResolver: parameterResolver);
 
             return true;
+        }
+
+        internal ParameterResolver GetParameterResolver(PropertyInfo propInfo)
+        {
+            // default the resolver
+            ParameterResolver parameterResolver = _parameterResolver;
+
+            // check to see if the resolve attribute declares a custom resolver type,
+            // and if so, instantiate it
+            var autoResolveAttribute = propInfo.GetCustomAttribute<AutoResolveAttribute>();
+            if (autoResolveAttribute != null && autoResolveAttribute.Resolver != null)
+            {
+                var ctor = autoResolveAttribute.Resolver.GetConstructor(new Type[] { typeof(ParameterResolver) });
+                if (ctor != null)
+                {
+                    parameterResolver = (ParameterResolver)Activator.CreateInstance(autoResolveAttribute.Resolver, new object[] { parameterResolver });
+                }
+                else
+                {
+                    parameterResolver = (ParameterResolver)Activator.CreateInstance(autoResolveAttribute.Resolver);
+                }
+            }
+
+            return parameterResolver;
         }
 
         internal static bool TryAutoResolveValue(TAttribute attribute, PropertyInfo propInfo, INameResolver nameResolver, out string resolvedValue)
@@ -184,13 +212,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return true;
         }
 
-        private static string TemplateBind(BindingTemplate template, IReadOnlyDictionary<string, object> bindingData)
+        private static string TemplateBind(BindingTemplate template, BindingContext bindingContext)
         {
-            if (bindingData == null)
+            if (bindingContext?.BindingData == null)
             {
                 return template.Pattern;
             }
-            return template.Bind(bindingData);
+
+            return template.Bind(bindingContext);
         }
 
         // Get a attribute with %% resolved, but not runtime {} resolved.
@@ -236,9 +265,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return attr;
         }
 
-        public async Task<TAttribute> ResolveFromBindingDataAsync(BindingContext ctx)
+        public async Task<TAttribute> ResolveFromBindingDataAsync(BindingContext bindingContext)
         {
-            var attr = ResolveFromBindings(ctx.BindingData);
+            if (bindingContext == null)
+            {
+                throw new ArgumentNullException(nameof(bindingContext));
+            }
+
+            var attr = ResolveFromBindings(bindingContext);
             if (_hook != null)
             {
                 attr = await _hook(attr);
@@ -297,15 +331,15 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return newAttr;
         }
 
-        internal TAttribute ResolveFromBindings(IReadOnlyDictionary<string, object> bindingData)
+        internal TAttribute ResolveFromBindings(BindingContext bindingContext)
         {
             // Invoke ctor
-            var ctorArgs = Array.ConvertAll(_bestCtorArgBuilder, func => func(bindingData));
+            var ctorArgs = Array.ConvertAll(_bestCtorArgBuilder, func => func(bindingContext));
             var newAttr = (TAttribute)_bestCtor.Invoke(ctorArgs);
 
             foreach (var setProp in _setProperties)
             {
-                setProp(newAttr, bindingData);
+                setProp(newAttr, bindingContext);
             }
 
             return newAttr;

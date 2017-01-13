@@ -26,5 +26,10 @@ namespace Microsoft.Azure.WebJobs
         /// Default value is true.
         /// </summary>
         public bool AllowTokens { get; set; }
+
+        /// <summary>
+        /// Gets or sets the <see cref="ParameterResolver"/> to use for the target property.
+        /// </summary>
+        public Type Resolver { get; set; }
     }
 }

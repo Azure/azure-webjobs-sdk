@@ -14,6 +14,7 @@ using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
@@ -48,9 +49,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private RandomNameResolver _resolver;
 
+        private static object TestResult;
+
         public AzureStorageEndToEndTests(TestFixture fixture)
         {
             _storageAccount = fixture.StorageAccount;
+            TestResult = null;
         }
 
         /// <summary>
@@ -143,6 +147,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             e2edone = "done";
         }
 
+        [NoAutomaticTrigger]
+        public static void TableWithFilter(
+            [QueueTrigger("test")] Person person,
+            [Table(TableName, Filter = "(Age gt {Age}) and (Location eq '{Location}')")] JArray results)
+        {
+            TestResult = results;
+        }
+
         /// <summary>
         /// Notifies the completion of the scenario
         /// </summary>
@@ -183,6 +195,76 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         public void AzureStorageEndToEndFast()
         {
             EndToEndTest(uploadBlobBeforeHostStart: true);
+        }
+
+        [Fact]
+        public async Task TableFilterTest()
+        {
+            // Reinitialize the name resolver to avoid conflicts
+            _resolver = new RandomNameResolver();
+
+            JobHostConfiguration hostConfig = new JobHostConfiguration()
+            {
+                NameResolver = _resolver,
+                TypeLocator = new FakeTypeLocator(
+                    this.GetType(),
+                    typeof(BlobToCustomObjectBinder))
+            };
+
+            // write test entities
+            string testTableName = _resolver.ResolveInString(TableName);
+            CloudTableClient tableClient = _storageAccount.CreateCloudTableClient();
+            CloudTable table = tableClient.GetTableReference(testTableName);
+            await table.CreateIfNotExistsAsync();
+            var operation = new TableBatchOperation();
+            operation.Insert(new Person
+            {
+                PartitionKey = "1",
+                RowKey = "1",
+                Name = "Lary",
+                Age = 20,
+                Location = "Seattle"
+            });
+            operation.Insert(new Person
+            {
+                PartitionKey = "1",
+                RowKey = "2",
+                Name = "Moe",
+                Age = 35,
+                Location = "Seattle"
+            });
+            operation.Insert(new Person
+            {
+                PartitionKey = "1",
+                RowKey = "3",
+                Name = "Curly",
+                Age = 45,
+                Location = "Texas"
+            });
+            await table.ExecuteBatchAsync(operation);
+
+            JobHost host = new JobHost(hostConfig);
+            var methodInfo = this.GetType().GetMethod("TableWithFilter", BindingFlags.Public | BindingFlags.Static);
+            var input = new Person { Age = 25, Location = "Seattle" };
+            string json = JsonConvert.SerializeObject(input);
+            var arguments = new { person = json };
+            await host.CallAsync(methodInfo, arguments);
+
+            // wait for test results to appear
+            await TestHelpers.Await(() => TestResult != null);
+
+            JArray results = (JArray)TestResult;
+            Assert.Equal(1, results.Count);
+
+            // make an invalid OData query and verify call fails
+            input = new Person { Age = 25, Location = "x' or Location ne 'x" };
+            json = JsonConvert.SerializeObject(input);
+            arguments = new { person = json };
+            var ex = await Assert.ThrowsAsync<FunctionInvocationException>(async () =>
+            {
+                await host.CallAsync(methodInfo, arguments);
+            });
+            Assert.Equal("An invalid parameter value was specified for filter parameter 'Location'", ex.InnerException.InnerException.Message);
         }
 
         private void EndToEndTest(bool uploadBlobBeforeHostStart)
@@ -372,11 +454,18 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.Equal("after", result.Properties["Text"].StringValue);
         }
 
-        private class CustomTableEntity : TableEntity
+        public class CustomTableEntity : TableEntity
         {
             public string Text { get; set; }
 
             public int Number { get; set; }
+        }
+
+        public class Person : TableEntity
+        {
+            public int Age { get; set; }
+            public string Location { get; set; }
+            public string Name { get; set; }
         }
 
         public class TestFixture : IDisposable
