@@ -5,8 +5,10 @@ using System;
 
 namespace Microsoft.Azure.WebJobs
 {
-    /// <summary>Provides extension methods for the <see cref="IBinder"/> interface.</summary>
-    public static class BinderExtensions
+    /// <summary>
+    /// Provides extension methods for the <see cref="IBinder"/> interface.
+    /// </summary>
+    public static class IBinderExtensions
     {
         /// <summary>Binds the specified attribute.</summary>
         /// <typeparam name="T">The type to which to bind.</typeparam>
