@@ -91,7 +91,7 @@ namespace Microsoft.Azure.WebJobs
         /// <summary>
         /// Allow arbitrary table filter. RowKey should be null. 
         /// </summary>
-        [AutoResolve]
+        [AutoResolve(FormatterPolicy = typeof(ODataFormatterPolicy))]
         public string Filter
         {
             get; set;

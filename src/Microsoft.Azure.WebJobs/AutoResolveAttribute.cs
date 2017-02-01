@@ -26,5 +26,10 @@ namespace Microsoft.Azure.WebJobs
         /// Default value is true.
         /// </summary>
         public bool AllowTokens { get; set; }
+
+        /// <summary>
+        /// Optional property to set a format policy for {key} pairs. 
+        /// </summary>
+        public Type FormatterPolicy { get; set; }
     }
 }

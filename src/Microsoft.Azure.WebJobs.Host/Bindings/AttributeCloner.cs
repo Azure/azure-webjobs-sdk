@@ -327,19 +327,34 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             // Expand on [AutoResolve] property to make this pluggable, 
             public static ResolutionPolicy GetPolicy(PropertyInfo propInfo)
             {
-                if (propInfo.DeclaringType == typeof(TableAttribute) && propInfo.Name == "Filter")
+                AutoResolveAttribute attr = propInfo.GetCustomAttribute<AutoResolveAttribute>();
+                if (attr != null)
                 {
-                    return new TableFilterResolutionPolicy();
+                    var formatterType = attr.FormatterPolicy;
+
+                    if (formatterType != null)
+                    {
+                        if (formatterType == typeof(ODataFormatterPolicy))
+                        {
+                            return new OdataFilterResolutionPolicy();
+                        }
+
+                        if (!typeof(ResolutionPolicy).IsAssignableFrom(formatterType))
+                        {
+                            throw new InvalidOperationException($"Formatter Policy on {propInfo.Name} must derive from {typeof(ResolutionPolicy).Name} and can't be of type {formatterType.Name}.");
+                        }
+
+                        var obj = Activator.CreateInstance(formatterType);
+                        return (ResolutionPolicy)obj;
+                    }
                 }
-                else
-                {
-                    return new ResolutionPolicy();
-                }
+
+                return new ResolutionPolicy();                
             }
         }
 
         // Table.Filter's { } resolution does OData escaping. 
-        private class TableFilterResolutionPolicy : ResolutionPolicy
+        private class OdataFilterResolutionPolicy : ResolutionPolicy
         {
             protected override string TemplateBindWorker(BindingTemplate template, IReadOnlyDictionary<string, object> bindingData)
             {
