@@ -12,6 +12,8 @@ namespace Microsoft.Azure.WebJobs.Host
 {
     internal static class TypeUtility
     {
+        private static readonly MethodInfo ConverterMethod = typeof(TypeUtility).GetMethod("HasConverterWorker", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+
         internal static string GetFriendlyName(Type type)
         {
             if (TypeUtility.IsNullable(type))
@@ -115,6 +117,21 @@ namespace Microsoft.Azure.WebJobs.Host
         public static bool IsAsyncVoid(MethodInfo methodInfo)
         {
             return IsAsync(methodInfo) && (methodInfo.ReturnType == typeof(void));
+        }
+                
+        private static bool HasConverterWorker<TAttribute, TSrc, TDest>(IConverterManager converterManager)
+            where TAttribute : Attribute
+        {
+            var func = converterManager.GetConverter<TSrc, TDest, TAttribute>();
+            return func != null;
+        }
+
+        public static bool HasConverter<TAttribute>(IConverterManager converterManager, Type typeSource, Type typeDest)
+            where TAttribute : Attribute
+        {
+            var method = ConverterMethod.MakeGenericMethod(typeof(TAttribute), typeSource, typeDest);
+            var result = method.Invoke(null, new object[] { converterManager });
+            return (bool)result;
         }
     }
 }
