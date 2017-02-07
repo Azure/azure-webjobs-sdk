@@ -138,7 +138,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         // TType - specified in the rule. 
-        // TMessage - extracted from the user's parameter. 
+        // TMessage - element type of the IAsyncCollector<> we matched to.  
         private class ExactBinding<TMessage> : BindingBase<TAttribute>
         {
             private readonly Func<object, object> _buildFromAttribute;

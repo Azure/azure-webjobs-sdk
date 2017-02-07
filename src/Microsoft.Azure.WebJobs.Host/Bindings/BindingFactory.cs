@@ -105,13 +105,28 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// <typeparam name="TMessage">element type of the IAsyncCollector.</typeparam>
         /// <param name="buildFromAttribute">Function to allocate the collector object given a resolved instance of the attribute.</param>
         /// <returns>A binding provider that applies these semantics.</returns>
-        public IBindingProvider BindToAsyncCollector<TAttribute, TMessage>(
+        public IBindingProvider BindToCollector<TAttribute, TMessage>(
             Func<TAttribute, IAsyncCollector<TMessage>> buildFromAttribute)
             where TAttribute : Attribute
         {
             var converter = new DelegateAdapterCollectorBuilder<TAttribute, TMessage> { BuildFromAttribute = buildFromAttribute };
             var pm = PatternMatcher.New(converter);
             return new AsyncCollectorBindingProvider<TAttribute, TMessage>(this._nameResolver, this._converterManager, pm);
+        }
+
+        /// <summary>
+        /// Create a binding provider for binding a parameter to an <see cref="IAsyncCollector{TType}"/>. 
+        /// </summary>
+        /// <typeparam name="TAttribute">Type of binding attribute on the user's parameter.</typeparam>
+        /// <typeparam name="TType">'core type' for the IAsyncCollector. This can be an OpenType and allow resolving against generics.</typeparam>
+        /// <param name="builderInstance">builder object that converts from the attribute to an AsyncCollector. </param>
+        /// <returns></returns>
+        public IBindingProvider BindToCollector<TAttribute, TType>(            
+            IConverter<TAttribute, IAsyncCollector<TType>> builderInstance)
+            where TAttribute : Attribute
+        {
+            var pm = PatternMatcher.New(builderInstance);
+            return new AsyncCollectorBindingProvider<TAttribute, TType>(this._nameResolver, this._converterManager, pm);
         }
 
         /// <summary>
@@ -134,11 +149,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         /// <summary>
-        /// General rule for binding to an input type for a given attribute. 
+        /// General rule for binding to an generic input type for a given attribute. 
         /// </summary>
         /// <typeparam name="TAttribute">Type of binding attribute on the user's parameter.</typeparam>
         /// <typeparam name="TType">The user type must be compatible with this type for the binding to apply.</typeparam>
-        /// <param name="builderType">A class with builder methods on it. This will get instantiated to perform the builder rule.</param>
+        /// <param name="builderType">A that implements IConverter for the target parameter. 
+        /// This will get instantiated with the appropriate generic args to perform the builder rule.</param>
         /// <param name="constructorArgs">constructor arguments to pass to the typeBuilder instantiation. This can be used 
         /// to flow state (like configuration, secrets, etc) from the configuration to the specific binding</param>
         /// <returns>A binding rule.</returns>
@@ -152,14 +168,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         /// <summary>
-        /// General rule for binding to an input type for a given attribute. 
+        /// General rule for binding to an concrete input type for a given attribute. 
         /// </summary>
         /// <typeparam name="TAttribute">Type of binding attribute on the user's parameter.</typeparam>
         /// <typeparam name="TType">The user type must be compatible with this type for the binding to apply.</typeparam>
         /// <param name="builderInstance">Instance with converter methods on it.</param>
         /// <returns>A binding rule.</returns>
         public IBindingProvider BindToInput<TAttribute, TType>(
-            object builderInstance)
+            IConverter<TAttribute, TType> builderInstance)
             where TAttribute : Attribute
         {
             var pm = PatternMatcher.New(builderInstance);
