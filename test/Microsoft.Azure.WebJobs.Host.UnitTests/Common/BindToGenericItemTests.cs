@@ -187,6 +187,59 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             }
         }
 
+        // Test binding to object with an explicit converter. 
+        [Fact]
+        public void TestExplicitObjectConverter()
+        {
+            TestWorker<ConfigExplicitObjectConverter>();
+        }
+
+        public class ConfigExplicitObjectConverter : IExtensionConfigProvider, ITest<ConfigExplicitObjectConverter>, 
+            IConverter<AlphaType, object>
+        {
+            public void Initialize(ExtensionConfigContext context)
+            {
+                var bf = context.Config.BindingFactory;
+
+                var cm = bf.ConverterManager;
+                // Have an explicit converter to object. 
+                cm.AddConverter<AlphaType, object, TestAttribute>(this);
+
+                var rule1 = bf.BindToInput<TestAttribute, AlphaType>(typeof(GeneralBuilder<>));
+                context.RegisterBindingRules<TestAttribute>(rule1);
+            }
+
+            public void Test(TestJobHost<ConfigExplicitObjectConverter> host)
+            {
+                // normal case
+                host.Call("Func", new { k = 1 });
+                Assert.Equal("GeneralBuilder_AlphaType(1)", _log);
+
+                // use 1st rule with explicit converter
+                host.Call("FuncObject", new { k = 1 });
+                Assert.Equal("Alpha2Obj(GeneralBuilder_AlphaType(1))", _log);
+            }
+
+            string _log;
+
+            // builds AlphaDerivedType, and then applies an implicit inheritence converter.
+            public void Func([Test("{k}")] AlphaType w)
+            {
+                _log = w._value;
+            }
+
+            // Invokes a converter 
+            public void FuncObject([Test("{k}")] object w)
+            {                
+                _log = w.ToString();
+            }
+
+            object IConverter<AlphaType, object>.Convert(AlphaType input)
+            {
+                return $"Alpha2Obj({input._value})"; 
+            }
+        }
+
         // Test binding to object. 
         [Fact]
         public void TestObjectInheritence()
