@@ -11,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
     // General rule for binding parameters to an AsyncCollector. 
     // Supports the various flavors like IAsyncCollector, ICollector, out T, out T[]. 
-    internal class AsyncCollectorBindingProvider<TAttribute, TType> : FluidBindingProvider<TAttribute>, IBindingProvider
+    internal class AsyncCollectorBindingProvider<TAttribute, TType> : FluentBindingProvider<TAttribute>, IBindingProvider
         where TAttribute : Attribute
     {
         private readonly INameResolver _nameResolver;
@@ -61,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         // Parse the signature to determine which mode this is. 
         // Can also check with converter manager to disambiguate some cases. 
-        private BindingMode GetMode(ParameterInfo parameter)
+        private CollectorBindingPattern GetMode(ParameterInfo parameter)
         {
             Type parameterType = parameter.ParameterType;
             if (parameterType.IsGenericType)
@@ -71,11 +71,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                 if (genericType == typeof(IAsyncCollector<>))
                 {
-                    return new BindingMode(Mode.IAsyncCollector, elementType);
+                    return new CollectorBindingPattern(Mode.IAsyncCollector, elementType);
                 }
                 else if (genericType == typeof(ICollector<>))
                 {
-                    return new BindingMode(Mode.ICollector, elementType);
+                    return new CollectorBindingPattern(Mode.ICollector, elementType);
                 }
 
                 // A different interface. Let another rule try it. 
@@ -88,25 +88,25 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 // If there's an explicit "byte[] --> TMessage" converter, then that takes precedence.                 
                 // Else, bind over an array of "byte --> TMessage" converters 
                 Type elementType = parameter.ParameterType.GetElementType();
-                bool hasConverter = TypeUtility.HasConverter<TAttribute>(this._converterManager, elementType, typeof(TType));
+                bool hasConverter = this._converterManager.HasConverter<TAttribute>(elementType, typeof(TType));
                 if (hasConverter)
                 {
                     // out T, where T might be an array 
-                    return new BindingMode(Mode.OutSingle, elementType);
+                    return new CollectorBindingPattern(Mode.OutSingle, elementType);
                 }
 
                 if (elementType.IsArray)
                 {
                     // out T[]
                     var messageType = elementType.GetElementType();
-                    return new BindingMode(Mode.OutArray, messageType);
+                    return new CollectorBindingPattern(Mode.OutArray, messageType);
                 }
 
-                var checker = ConverterManager.GetTypeValidator<TType>();
-                if (checker.IsMatch(elementType))
+                var validator = ConverterManager.GetTypeValidator<TType>();
+                if (validator.IsMatch(elementType))
                 {
                     // out T, t is not an array 
-                    return new BindingMode(Mode.OutSingle, elementType);                    
+                    return new CollectorBindingPattern(Mode.OutSingle, elementType);                    
                 }
 
                 // For out-param ,we don't expect another rule to claim it. So give some rich errors on mismatch.
@@ -126,9 +126,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         // Represent the different possible flavors for binding to an async collector
-        private class BindingMode
+        private class CollectorBindingPattern
         {
-            public BindingMode(Mode mode, Type elementType)
+            public CollectorBindingPattern(Mode mode, Type elementType)
             {
                 this.Mode = mode;
                 this.ElementType = elementType;
@@ -162,8 +162,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 AsyncCollectorBindingProvider<TAttribute, TType> parent,
                 Mode mode,
                 BindingProviderContext context)
-            {
-                var cm = parent._converterManager;
+            {                
                 var patternMatcher = parent._patternMatcher;
 
                 var parameter = context.Parameter;
@@ -174,8 +173,6 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 {
                     hookWrapper = (attrResolved) => parent.PostResolveHook(attrResolved, parameter, parent._nameResolver);
                 }
-
-                var cloner = new AttributeCloner<TAttribute>(attributeSource, context.BindingDataContract, parent._nameResolver, hookWrapper);
 
                 Func<object, object> buildFromAttribute;
                 FuncConverter<TMessage, TAttribute, TType> converter = null;
@@ -191,10 +188,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 }
                 else
                 {
+                    var converterManager = parent._converterManager;
+
                     // Try with a converter
                     // Find a builder for :   TAttribute --> TType
                     // and then couple with a converter:  TType --> TParameterType
-                    converter = cm.GetConverter<TMessage, TType, TAttribute>();
+                    converter = converterManager.GetConverter<TMessage, TType, TAttribute>();
                     if (converter == null)
                     {
                         // Preserves legacy behavior. This means we can only have 1 async collector.
@@ -223,11 +222,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                         Name = parameter.Name,
                         DisplayHints = new ParameterDisplayHints
                         {
-                            Description = "input"
+                            Description = "output"
                         }
                     };
                 }
 
+                var cloner = new AttributeCloner<TAttribute>(attributeSource, context.BindingDataContract, parent._nameResolver, hookWrapper);
                 return new ExactBinding<TMessage>(cloner, param, mode, buildFromAttribute, converter);
             }
 
@@ -258,10 +258,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 if (_converter != null)
                 {
                     // Apply a converter
-                    var collector2 = (IAsyncCollector<TType>)obj;
+                    var innerCollector = (IAsyncCollector<TType>)obj;
 
                     collector = new TypedAsyncCollectorAdapter<TMessage, TType, TAttribute>(
-                                collector2, _converter, attrResolved, context);
+                                innerCollector, _converter, attrResolved, context);
                 }
                 else
                 {
@@ -275,18 +275,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             // Get a ValueProvider that's in the right mode. 
             private static IValueProvider CoerceValueProvider(Mode mode, string invokeString, IAsyncCollector<TMessage> collector)
             {
-                IValueProvider vp;
-
                 switch (mode)
                 {
                     case Mode.IAsyncCollector:
-                        vp = new AsyncCollectorValueProvider<IAsyncCollector<TMessage>, TMessage>(collector, collector, invokeString);
-                        return vp;
+                        return new AsyncCollectorValueProvider<IAsyncCollector<TMessage>, TMessage>(collector, collector, invokeString);
 
                     case Mode.ICollector:
                         ICollector<TMessage> syncCollector = new SyncAsyncCollectorAdapter<TMessage>(collector);
-                        vp = new AsyncCollectorValueProvider<ICollector<TMessage>, TMessage>(syncCollector, collector, invokeString);
-                        return vp;
+                        return new AsyncCollectorValueProvider<ICollector<TMessage>, TMessage>(syncCollector, collector, invokeString);
 
                     case Mode.OutArray:
                         return new OutArrayValueProvider<TMessage>(collector, invokeString);

@@ -115,9 +115,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         // Track items that are queued. 
         public List<object> _items;
         public string _prefix; // from attribute, to test attribute automatic resolution. 
-
-        //public Func<FakeQueueAttribute, Type, bool> Filter;
-
+                
         public FakeQueueTypedClient()
         {
             _items = new List<object>();
