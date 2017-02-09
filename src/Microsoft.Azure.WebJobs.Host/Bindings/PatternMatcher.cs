@@ -157,6 +157,13 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 }
                 else if (type.ContainsGenericParameters)
                 {
+                    // T[] 
+                    if (type.IsArray)
+                    {
+                        var elementType = type.GetElementType();
+                        var resolved = ResolveGenerics(elementType, genericArgs);
+                        return resolved.MakeArrayType();
+                    }
                     // eg, IEnumerable<T>, IConverter<int, T>
                     // Must decompose to the generic definition, resolve each arg, and build back up. 
 
@@ -215,6 +222,21 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 string name = openType.Name;
                 return AddGenericArg(genericArgs, name, specificType);
+            }
+
+            // T[]
+            if (openType.IsArray && specificType.IsArray)
+            {
+                var elementType = openType.GetElementType();
+                var specificElementType = specificType.GetElementType();
+                if (elementType.IsGenericParameter)
+                {
+                    if (!AddGenericArg(genericArgs, elementType.Name, specificElementType))
+                    {
+                        return false;
+                    }
+                    return true;
+                }
             }
 
             // IFoo<T>, IFoo<string> 
