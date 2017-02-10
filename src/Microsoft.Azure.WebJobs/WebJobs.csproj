@@ -62,6 +62,7 @@
     <Compile Include="BlobTriggerAttribute.cs" />
     <Compile Include="BinderExtensions.cs" />
     <Compile Include="DisableAttribute.cs" />
+    <Compile Include="FormatterPolicy.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="IAsyncCollector.cs" />
     <Compile Include="IAttributeInvokeDescriptor.cs" />
