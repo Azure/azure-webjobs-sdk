@@ -11,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host
 {    
     // Internal Extension methods for setting backwards compatibility hooks on certain bindings. 
     // This keeps the hooks out of the public surface. 
-    internal static class FluidBindingProviderExtensions
+    internal static class FluentBindingProviderExtensions
     {
         public static IBindingProvider SetPostResolveHook<TAttribute>(
             this IBindingProvider binder,
