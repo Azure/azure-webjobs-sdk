@@ -156,6 +156,7 @@
     <Compile Include="Bindings\ServiceBusAttributeBindingProvider.cs" />
     <Compile Include="Bindings\StringToBrokeredMessageConverter.cs" />
     <Compile Include="Bindings\UserTypeToBrokeredMessageConverter.cs" />
+    <Compile Include="Class1.cs" />
     <Compile Include="EventHubs\EventHubAttribute.cs" />
     <Compile Include="EventHubs\EventHubTriggerAttribute.cs" />
     <Compile Include="EventHubs\EventHubTriggerInput.cs" />

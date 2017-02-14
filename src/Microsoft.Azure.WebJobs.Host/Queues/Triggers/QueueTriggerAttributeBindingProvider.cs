@@ -2,8 +2,10 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Storage;
@@ -14,7 +16,7 @@ using Microsoft.WindowsAzure.Storage.Queue;
 
 namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
 {
-    internal class QueueTriggerAttributeBindingProvider : ITriggerBindingProvider
+    internal class QueueTriggerAttributeBindingProvider : ITriggerBindingProvider, IBindingProviderX
     {
         private static readonly IQueueTriggerArgumentBindingProvider InnerProvider =
             new CompositeArgumentBindingProvider(
@@ -132,6 +134,27 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             }
 
             return _nameResolver.ResolveWholeString(queueName);
+        }
+
+        public Type GetDefaultType(FileAccess access, Cardinality cardinality, DataType dataType, Attribute attr)
+        {
+            // $$$ trigger attr ?
+            if (attr.GetType() != typeof(QueueAttribute)) 
+            {
+                return null;
+            }
+            if (access == FileAccess.Read)
+            {
+                if (dataType == DataType.Binary)
+                {
+                    return typeof(byte[]);
+                }
+                else if (dataType == DataType.String)
+                {
+                    return typeof(string);
+                }
+            }
+            return null;
         }
     }
 }

@@ -8,6 +8,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     /// <summary>
     /// Setup an 'trigger' on a parameter to listen on events from an event hub. 
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1019:DefineAccessorsForAttributeArguments")]
     [AttributeUsage(AttributeTargets.Parameter)]
     public sealed class EventHubTriggerAttribute : Attribute
     {
@@ -23,11 +24,31 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// <summary>
         /// Name of the event hub. 
         /// </summary>
+        [AutoResolve]
         public string EventHubName { get; private set; }
 
         /// <summary>
         /// Optional Name of the consumer group. If missing, then use the default name, "$Default"
         /// </summary>
         public string ConsumerGroup { get; set; }
+
+        /// <summary>
+        /// Optional - the app setting for the the connection string.
+        /// If missing, then get this from the EventHubConfiguration. 
+        /// </summary>
+        [AutoResolve(AllowTokens = false)]
+        public string Connection { get; set; }
+
+        private class EventHubTriggerAttributeMetadata : AttributeMetadata
+        {
+            public string Path { get; set; }
+            public string ConsumerGroup { get; set; }
+            public string Connection { get; set; }
+
+            public override Attribute GetAttribute()
+            {
+                return new EventHubTriggerAttribute(Path) { ConsumerGroup = ConsumerGroup, Connection = Connection };
+            }
+        }
     }
 }

@@ -29,9 +29,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         private readonly Dictionary<string, ReceiverCreds> _receiverCreds = new Dictionary<string, ReceiverCreds>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, EventProcessorHost> _explicitlyProvidedHosts = new Dictionary<string, EventProcessorHost>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly EventProcessorOptions _options;
         private readonly PartitionManagerOptions _partitionOptions; // optional, used to create EventProcessorHost
 
+        private readonly EventProcessorOptions _options;
         private string _defaultStorageString; // set to JobHostConfig.StorageConnectionString
 
         /// <summary>
@@ -200,7 +200,19 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 StorageConnectionString = storageConnectionString
             };
         }
-        
+
+        internal EventHubClient GetEventHubClient(EventHubAttribute attribute)
+        {
+            EventHubClient client;
+            if (_senders.TryGetValue(attribute.EventHubName, out client))
+            {
+                return client;
+            }
+
+            this.AddSender(attribute.EventHubName, attribute.Connection);
+            return this.GetEventHubClient(attribute.EventHubName);
+        }
+
         internal EventHubClient GetEventHubClient(string eventHubName)
         {
             EventHubClient client;
@@ -392,7 +404,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
         private IAsyncCollector<EventData> BuildFromAttribute(EventHubAttribute attribute)
         {
-            EventHubClient client = this.GetEventHubClient(attribute.EventHubName);
+            EventHubClient client = this.GetEventHubClient(attribute);
             return new EventHubAsyncCollector(client);
         }
 
@@ -419,7 +431,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             var eventData = new EventData(Encoding.UTF8.GetBytes(input));
             return eventData;
         }
-
+   
         // Hold credentials for a given eventHub name. 
         // Multiple consumer groups (and multiple listeners) on the same hub can share the same credentials. 
         private class ReceiverCreds

@@ -8,6 +8,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     /// <summary>
     /// Setup an 'output' binding to an EventHub. This can be any output type compatible with an IAsyncCollector.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1019:DefineAccessorsForAttributeArguments")]
     [AttributeUsage(AttributeTargets.Parameter)]
     public sealed class EventHubAttribute : Attribute
     {
@@ -25,5 +26,23 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// </summary>
         [AutoResolve]
         public string EventHubName { get; private set; }
+        
+        /// <summary>
+        /// Optional - the app setting for the the connection string.
+        /// If missing, then get this from the EventHubConfiguration. 
+        /// </summary>
+        [AutoResolve(AllowTokens = false)]
+        public string Connection { get; set; }
+
+        private class EventHubTriggerAttributeMetadata : AttributeMetadata
+        {
+            public string Path { get; set; }
+            public string Connection { get; set; }
+
+            public override Attribute GetAttribute()
+            {
+                return new EventHubAttribute(Path) { Connection = Connection };
+            }
+        }
     }    
 }

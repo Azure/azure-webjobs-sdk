@@ -9,7 +9,7 @@ namespace Microsoft.Azure.WebJobs
     /// Place this on binding attributes properties to tell the binders that that the property contains
     /// {key} or "%setting%" segments that should be automatically resolved.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Property)]
+    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter)]
     public sealed class AutoResolveAttribute : Attribute
     {
         /// <summary>

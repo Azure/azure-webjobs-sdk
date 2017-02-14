@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 
@@ -9,7 +10,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
     // Useful for extension  that need some special case type restriction. 
     // If the user parameter type passes the predicate, then chain to an inner an provider. 
-    internal class FilteringBindingProvider<TAttribute> : IBindingProvider
+    internal class FilteringBindingProvider<TAttribute> : IBindingProvider, IBindingProviderX
         where TAttribute : Attribute
     {
         private readonly Func<TAttribute, Type, bool> _predicate;
@@ -47,6 +48,24 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return Task.FromResult<IBinding>(null);
             }
             return _inner.TryCreateAsync(context);
+        }
+
+        public Type GetDefaultType(FileAccess access, Cardinality cardinality, DataType dataType, Attribute attr)
+        {
+            var inner2 = _inner as IBindingProviderX;
+            if (inner2 != null)
+            {
+                TAttribute attr2 = attr as TAttribute;
+                if (attr2 != null)
+                {
+                    if (_predicate(attr2, typeof(Object)))
+                    {
+                        var type = inner2.GetDefaultType(access, cardinality, dataType, attr);
+                        return type;
+                    }
+                }
+            }
+            return null;
         }
     }
 }

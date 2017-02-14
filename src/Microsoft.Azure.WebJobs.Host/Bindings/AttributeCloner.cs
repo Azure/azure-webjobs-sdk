@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings.Path;
 using Microsoft.Azure.WebJobs.Host.Tables;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -163,6 +164,20 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return false;
             }
 
+            resolvedValue = ApplyNameResolver(nameResolver, propInfo, attr, originalValue);
+            return true;
+        }
+
+        // Apply the name resolver to originalValue. Behavior is controlled by resolver attribute. 
+        private static string ApplyNameResolver(INameResolver nameResolver, PropertyInfo propInfo, AutoResolveAttribute attr, string originalValue)
+        {
+            if (attr == null)
+            {
+                return originalValue;
+            }
+
+            string resolvedValue;
+
             if (!attr.AllowTokens)
             {
                 resolvedValue = nameResolver.Resolve(originalValue);
@@ -184,8 +199,96 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 resolvedValue = nameResolver.ResolveWholeString(originalValue);
             }
 
-            return true;
-        }        
+            return resolvedValue;
+        }
+
+        private static object ApplyNameResolver(INameResolver nameResolver, PropertyInfo propInfo, AutoResolveAttribute attr, JToken originalValue, Type type)
+        {
+            var obj = originalValue.ToObject(type);
+            if (type == typeof(string))
+            {
+                return ApplyNameResolver(nameResolver, propInfo, attr, obj.ToString());
+            }
+            else
+            {
+                return obj;
+            }
+        }
+
+        // $$$ Merge this with other methods on this class. 
+        public static TAttribute CreateDirect(JObject properties, INameResolver resolver)
+        {
+            Type t = typeof(TAttribute);
+
+            ConstructorInfo bestCtor = null;
+            int longestMatch = -1;
+            object[] ctorArgs = null;
+
+            // Pick the ctor with the longest parameter list where all parameters are matched.
+            var ctors = t.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+            foreach (var ctor in ctors)
+            {
+                var ps = ctor.GetParameters();
+                int len = ps.Length;
+
+                List<object> possibleCtorArgs = new List<object>();
+
+                bool hasAllParameters = true;
+                for (int i = 0; i < len; i++)
+                {
+                    var p = ps[i];
+
+                    JToken token;
+                    if (!properties.TryGetValue(p.Name, StringComparison.OrdinalIgnoreCase, out token))
+                    {
+                        // Missing a parameter for this ctor; try the next one. 
+                        hasAllParameters = false;
+                        break;
+                    }
+                    else
+                    {
+                        var attr = p.GetCustomAttribute<AutoResolveAttribute>();
+                        var obj = ApplyNameResolver(resolver, null, attr, token, p.ParameterType);
+                        possibleCtorArgs.Add(obj);
+                    }
+                }
+
+                if (hasAllParameters)
+                {
+                    if (len > longestMatch)
+                    {
+                        bestCtor = ctor;
+                        ctorArgs = possibleCtorArgs.ToArray();
+                        longestMatch = len;
+                    }
+                }
+            }
+
+            if (bestCtor == null)
+            {
+                // error!!!
+                throw new InvalidOperationException("Can't figure out which ctor to call.");
+            }
+
+            // Apply writeable properties. 
+            var newAttr = (TAttribute)bestCtor.Invoke(ctorArgs);
+
+            foreach (var prop in t.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+            {
+                if (prop.CanWrite)
+                {
+                    JToken token;
+                    if (properties.TryGetValue(prop.Name, StringComparison.OrdinalIgnoreCase, out token))
+                    {
+                        var attr = prop.GetCustomAttribute<AutoResolveAttribute>();
+                        var obj = ApplyNameResolver(resolver, null, attr, token, prop.PropertyType);
+                        prop.SetValue(newAttr, obj);
+                    }
+                }
+            }
+
+            return newAttr;
+        }
 
         // Get a attribute with %% resolved, but not runtime {} resolved.
         public TAttribute GetNameResolvedAttribute()
