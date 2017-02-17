@@ -275,6 +275,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             // Get a ValueProvider that's in the right mode. 
             private static IValueProvider CoerceValueProvider(Mode mode, string invokeString, IAsyncCollector<TMessage> collector)
             {
+                // Provide consistent buffering semantics. 
+                collector = new BufferedIAsyncCollector<TMessage>(collector);
+
                 switch (mode)
                 {
                     case Mode.IAsyncCollector:

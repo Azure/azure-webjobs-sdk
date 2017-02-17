@@ -5,6 +5,7 @@ using System;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Newtonsoft.Json;
@@ -26,7 +27,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             [JsonIgnore]
             public string Bonus { get; set; }
         }
-
 
         public class ErrorProgram
         {
@@ -149,6 +149,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             public static void SendAsyncCollectorString([FakeQueue] IAsyncCollector<string> collector)
             {
+                Assert.IsType<BufferedIAsyncCollector<string>>(collector);
+
                 collector.AddAsync("first").Wait();
                 collector.AddAsync("second").Wait();
             }
@@ -171,7 +173,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                     new Payload { val1 = 100 },
                     new Payload { val1 = 200 }
                 };
-            }
+            }           
         }
 
         [Fact]
