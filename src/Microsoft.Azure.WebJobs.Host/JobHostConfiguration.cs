@@ -325,16 +325,6 @@ namespace Microsoft.Azure.WebJobs
         }
 
         /// <summary>
-        /// $$$ Don't check this in - just used to test 
-        /// </summary>
-        /// <returns></returns>
-        public IBindingProvider GetBindingProvider()
-        {
-            var ctx = this.DoStaticInitialization();
-            return ctx.GetService<IBindingProvider>();
-        }
-
-        /// <summary>
         /// Adds the specified service instance, replacing any existing service.
         /// </summary>
         /// <param name="serviceType">The service type</param>

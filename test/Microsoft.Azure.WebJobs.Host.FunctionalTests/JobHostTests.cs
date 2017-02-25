@@ -3,6 +3,8 @@
 
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Bindings;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
@@ -20,7 +22,8 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var config = TestHelpers.NewConfig(account);
             
             // Can do the static init. Get the binders. 
-            var provider = config.GetBindingProvider();
+            var ctx = config.DoStaticInitialization();
+            var provider = ctx.GetService<IBindingProvider>();
 
             var attr = new BlobAttribute("container/path", FileAccess.Read);
             var result1 = await ScriptHelpers.CanBindAsync(provider, attr, typeof(TextReader));
@@ -30,6 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Assert.False(result2);
 
             // Can now set type locator and types, do indexing, and run. 
+            // Important that we're able to set this *after* we've queried the binding graph. 
             config.TypeLocator = new FakeTypeLocator(typeof(ProgramSimple));
 
             var expected = "123";
