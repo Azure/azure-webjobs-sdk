@@ -29,12 +29,5 @@ namespace SampleHost
         {
             Console.WriteLine("Processed message: " + message);
         }
-
-        [NoAutomaticTrigger]
-        public static void QueueOutput(
-         [Queue("test")] ICollector<string> q)
-        {
-            q.Add("test1");
-        }
     }
 }
