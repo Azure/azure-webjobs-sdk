@@ -21,8 +21,6 @@ namespace Microsoft.Azure.WebJobs
     {
         private static readonly IConsoleProvider ConsoleProvider = new DefaultConsoleProvider();
 
-        // In some legacy cases, JobHostConfiguration specifically exposes properties on the derived object 
-        // (and not on the core interface in the _services collection).  
         private readonly DefaultStorageAccountProvider _storageAccountProvider;
         private readonly JobHostQueuesConfiguration _queueConfiguration = new JobHostQueuesConfiguration();
         private readonly JobHostBlobsConfiguration _blobsConfiguration = new JobHostBlobsConfiguration();

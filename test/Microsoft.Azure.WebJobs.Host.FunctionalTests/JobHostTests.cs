@@ -22,7 +22,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var config = TestHelpers.NewConfig(account);
             
             // Can do the static init. Get the binders. 
-            var ctx = config.DoStaticInitialization();
+            var ctx = config.CreateStaticServices();
             var provider = ctx.GetService<IBindingProvider>();
 
             var attr = new BlobAttribute("container/path", FileAccess.Read);
