@@ -12,6 +12,7 @@ using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.WindowsAzure.Storage;
 
@@ -36,7 +37,7 @@ namespace Microsoft.Azure.WebJobs
         private Task<JobHostContext> _contextTask;
         private bool _contextTaskInitialized;
         private object _contextTaskLock = new object();
-                
+
         private JobHostContext _context;
         private IListener _listener;
         private object _contextLock = new object();
@@ -160,6 +161,12 @@ namespace Microsoft.Azure.WebJobs
             if (fastLogger != null)
             {
                 await fastLogger.FlushAsync(cancellationToken);
+            }
+
+            IAsyncCollector<FunctionResultLog> aggregator = _context.Aggregator;
+            if (aggregator != null)
+            {
+                await aggregator.FlushAsync(cancellationToken);
             }
 
             _context.Trace.Info("Job host stopped", Host.TraceSource.Host);
@@ -321,7 +328,7 @@ namespace Microsoft.Azure.WebJobs
         }
 
         private async Task<JobHostContext> CreateContextAndLogHostStartedAsync(CancellationToken cancellationToken)
-        {            
+        {
             JobHostContext context = await _config.CreateAndLogHostStartedAsync(this, _shutdownTokenSource.Token, cancellationToken);
 
             lock (_contextLock)

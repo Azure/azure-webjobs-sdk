@@ -5,6 +5,7 @@ using System;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Loggers;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
@@ -17,6 +18,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IListener _listener;
         private readonly TraceWriter _trace;
         private readonly IAsyncCollector<FunctionInstanceLogEntry> _fastLogger; // optional
+        private readonly ILoggerFactory _loggerFactory;
+        private readonly IFunctionResultAggregator _aggregator;
 
         private bool _disposed;
 
@@ -24,13 +27,17 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             IFunctionExecutor executor,
             IListener listener,
             TraceWriter trace,
-            IAsyncCollector<FunctionInstanceLogEntry> fastLogger = null)
+            IAsyncCollector<FunctionInstanceLogEntry> fastLogger = null,
+            ILoggerFactory loggerFactory = null,
+            IFunctionResultAggregator aggregator = null)
         {
             _functionLookup = functionLookup;
             _executor = executor;
             _listener = listener;
             _trace = trace;
             _fastLogger = fastLogger;
+            _loggerFactory = loggerFactory;
+            _aggregator = aggregator;
         }
 
         public TraceWriter Trace
@@ -75,6 +82,24 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 ThrowIfDisposed();
                 return _fastLogger;
+            }
+        }
+
+        public ILoggerFactory LoggerFactory
+        {
+            get
+            {
+                ThrowIfDisposed();
+                return _loggerFactory;
+            }
+        }
+
+        public IFunctionResultAggregator Aggregator
+        {
+            get
+            {
+                ThrowIfDisposed();
+                return _aggregator;
             }
         }
 

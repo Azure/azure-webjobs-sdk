@@ -24,6 +24,7 @@ using Microsoft.Azure.WebJobs.Host.Storage.Blob;
 using Microsoft.Azure.WebJobs.Host.Storage.Queue;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
@@ -32,9 +33,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         // Do full initialization (both static and runtime). 
         // This can be called multiple times on a config. 
         public static async Task<JobHostContext> CreateAndLogHostStartedAsync(
-            this JobHostConfiguration config, 
-            JobHost host, 
-            CancellationToken shutdownToken, 
+            this JobHostConfiguration config,
+            JobHost host,
+            CancellationToken shutdownToken,
             CancellationToken cancellationToken)
         {
             JobHostContext context = await config.CreateJobHostContextAsync(host, shutdownToken, cancellationToken);
@@ -94,6 +95,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             ContextAccessor<IBlobWrittenWatcher> blobWrittenWatcherAccessor = new ContextAccessor<IBlobWrittenWatcher>();
             ISharedContextProvider sharedContextProvider = new SharedContextProvider();
 
+            ILoggerFactory loggerFactory = config.GetService<ILoggerFactory>();
+
             // Create a wrapper TraceWriter that delegates to both the user 
             // TraceWriters specified via config (if present), as well as to Console
             TraceWriter trace = new ConsoleTraceWriter(config.Tracing, consoleProvider.Out);
@@ -120,7 +123,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             if (bindingProvider == null)
             {
-                bindingProvider = DefaultBindingProvider.Create(nameResolver, converterManager, storageAccountProvider, extensionTypeLocator, messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor, extensions);
+                bindingProvider = DefaultBindingProvider.Create(nameResolver, converterManager, loggerFactory, storageAccountProvider, extensionTypeLocator, messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor, extensions);
                 services.AddService<IBindingProvider>(bindingProvider);
             }
 
@@ -145,12 +148,17 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             INameResolver nameResolver = services.GetService<INameResolver>();
             IExtensionRegistry extensions = services.GetExtensions();
             IStorageAccountProvider storageAccountProvider = services.GetService<IStorageAccountProvider>();
+            ILoggerFactory loggerFactory = services.GetService<ILoggerFactory>();
+
+            // We need to pass the logger factory to the aggregator constructor. If we want to allow this to be replaced, 
+            // we can expose a factory at a later date.
+            IFunctionResultAggregator aggregator = null;
 
             IQueueConfiguration queueConfiguration = services.GetService<IQueueConfiguration>();
             var blobsConfiguration = config.Blobs;
 
             TraceWriter trace = services.GetService<TraceWriter>();
-            IAsyncCollector<FunctionInstanceLogEntry> fastLogger = services.GetService<IAsyncCollector<FunctionInstanceLogEntry>>();                               
+            IAsyncCollector<FunctionInstanceLogEntry> fastLogger = services.GetService<IAsyncCollector<FunctionInstanceLogEntry>>();
             IWebJobsExceptionHandler exceptionHandler = services.GetService<IWebJobsExceptionHandler>();
 
             if (exceptionHandler != null)
@@ -193,12 +201,18 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 IStorageAccount dashboardAccount = await storageAccountProvider.GetDashboardAccountAsync(combinedCancellationToken);
 
                 IHostInstanceLogger hostInstanceLogger = await hostInstanceLoggerProvider.GetAsync(combinedCancellationToken);
-                IFunctionInstanceLogger functionInstanceLogger = await functionInstanceLoggerProvider.GetAsync(combinedCancellationToken);                
+                IFunctionInstanceLogger functionInstanceLogger = await functionInstanceLoggerProvider.GetAsync(combinedCancellationToken);
                 IFunctionOutputLogger functionOutputLogger = await functionOutputLoggerProvider.GetAsync(combinedCancellationToken);
 
                 if (functionExecutor == null)
                 {
-                    functionExecutor = new FunctionExecutor(functionInstanceLogger, functionOutputLogger, exceptionHandler, trace, fastLogger);
+                    if (loggerFactory != null && config.Aggregator != null && config.Aggregator.IsEnabled)
+                    {
+                        // If we want to allow this to be replaceable, may need a factory that we'd call here.
+                        aggregator = new FunctionResultAggregator(config.Aggregator.BatchSize, config.Aggregator.FlushTimeout, loggerFactory);
+                    }
+
+                    functionExecutor = new FunctionExecutor(functionInstanceLogger, functionOutputLogger, exceptionHandler, trace, fastLogger, loggerFactory, aggregator);
                     services.AddService(functionExecutor);
                 }
 
@@ -316,7 +330,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     trace.Info(functionsTrace.ToString(), Host.TraceSource.Indexing);
                 }
 
-                return new JobHostContext(functions, hostCallExecutor, listener, trace, fastLogger);
+                return new JobHostContext(functions, hostCallExecutor, listener, trace, fastLogger, loggerFactory, aggregator);
             }
         }
 
