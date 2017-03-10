@@ -47,14 +47,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 new FixedHostIdProvider("test"), new SimpleQueueConfiguration(maxDequeueCount: 5), blobsConfiguration,
                 exceptionHandler, messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor,
                 sharedContextProvider, new DefaultExtensionRegistry(), singletonManager, logger);
-            IBindingProvider bindingProvider = DefaultBindingProvider.Create(nameResolver, null, storageAccountProvider,
+            IBindingProvider bindingProvider = DefaultBindingProvider.Create(nameResolver, null, null, storageAccountProvider,
                 extensionTypeLocator, messageEnqueuedWatcherAccessor,
                 blobWrittenWatcherAccessor, new DefaultExtensionRegistry());
 
             IFunctionOutputLoggerProvider outputLoggerProvider = new NullFunctionOutputLoggerProvider();
             IFunctionOutputLogger outputLogger = outputLoggerProvider.GetAsync(CancellationToken.None).Result;
 
-            IFunctionExecutor executor = new FunctionExecutor(new NullFunctionInstanceLogger(), outputLogger, exceptionHandler, logger);
+            IFunctionExecutor executor = new FunctionExecutor(new NullFunctionInstanceLogger(), outputLogger, exceptionHandler, logger, null, null);
 
             if (extensionRegistry == null)
             {

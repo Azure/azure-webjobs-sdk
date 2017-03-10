@@ -26,7 +26,7 @@ namespace Microsoft.Azure.WebJobs
         private readonly JobHostBlobsConfiguration _blobsConfiguration = new JobHostBlobsConfiguration();
         private readonly JobHostTraceConfiguration _traceConfiguration = new JobHostTraceConfiguration();
         private readonly ConcurrentDictionary<Type, object> _services = new ConcurrentDictionary<Type, object>();
-        
+
         private string _hostId;
 
         /// <summary>
@@ -55,6 +55,7 @@ namespace Microsoft.Azure.WebJobs
             }
 
             Singleton = new SingletonConfiguration();
+            Aggregator = new AggregatorConfiguration();
 
             // add our built in services here
             IExtensionRegistry extensions = new DefaultExtensionRegistry();
@@ -73,8 +74,8 @@ namespace Microsoft.Azure.WebJobs
             AddService<IConverterManager>(converterManager);
             AddService<IWebJobsExceptionHandler>(exceptionHandler);
 
-            string value = ConfigurationUtility.GetSettingFromConfigOrEnvironment(Constants.EnvironmentSettingName);
-            IsDevelopment = string.Compare(Constants.DevelopmentEnvironmentValue, value, StringComparison.OrdinalIgnoreCase) == 0;
+            string value = ConfigurationUtility.GetSettingFromConfigOrEnvironment(Host.Constants.EnvironmentSettingName);
+            IsDevelopment = string.Compare(Host.Constants.DevelopmentEnvironmentValue, value, StringComparison.OrdinalIgnoreCase) == 0;
         }
 
         /// <summary>
@@ -244,6 +245,15 @@ namespace Microsoft.Azure.WebJobs
         /// Gets the configuration used by <see cref="SingletonAttribute"/>.
         /// </summary>
         public SingletonConfiguration Singleton
+        {
+            get;
+            private set;
+        }
+
+        /// <summary>
+        /// Gets the configuration used by the logging aggregator.
+        /// </summary>
+        public AggregatorConfiguration Aggregator
         {
             get;
             private set;

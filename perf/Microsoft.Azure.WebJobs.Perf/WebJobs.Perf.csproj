@@ -10,10 +10,11 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Microsoft.Azure.WebJobs.Perf</RootNamespace>
     <AssemblyName>Microsoft.Azure.WebJobs.Perf</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -82,6 +83,7 @@
     </Reference>
     <Reference Include="xunit.abstractions, Version=2.0.0.0, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
       <HintPath>..\..\packages\xunit.abstractions.2.0.0\lib\net35\xunit.abstractions.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="xunit.core, Version=2.1.0.3179, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
       <HintPath>..\..\packages\xunit.extensibility.core.2.1.0\lib\dotnet\xunit.core.dll</HintPath>
@@ -106,11 +108,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <None Include="packages.config" />
     <None Include="FunctionChainingPerfTestGenerator.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>FunctionChainingPerfTestGenerator.generated.cs</LastGenOutput>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />

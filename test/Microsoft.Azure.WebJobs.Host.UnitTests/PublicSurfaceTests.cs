@@ -216,7 +216,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "RecoverableException",
                 "FunctionException",
                 "FunctionListenerException",
-                "ExceptionFormatter"
+                "ExceptionFormatter",
+                "AggregatorConfiguration",
+                "AppInsightsLoggerExtensions",
+                "FilterBuilder",
+                "LoggingCategories"
             };
 
             AssertPublicTypes(expected, assembly);

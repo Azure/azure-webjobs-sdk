@@ -16,6 +16,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
@@ -27,11 +28,16 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly TraceWriter _trace;
         private readonly IAsyncCollector<FunctionInstanceLogEntry> _fastLogger;
+        private readonly ILogger _logger;
+        private readonly ILogger _resultsLogger;
+
+        private readonly IFunctionResultAggregator _aggregator;
 
         private HostOutputMessage _hostOutputMessage;
 
         public FunctionExecutor(IFunctionInstanceLogger functionInstanceLogger, IFunctionOutputLogger functionOutputLogger,
-            IWebJobsExceptionHandler exceptionHandler, TraceWriter trace, IAsyncCollector<FunctionInstanceLogEntry> fastLogger = null)
+                IWebJobsExceptionHandler exceptionHandler, TraceWriter trace, IAsyncCollector<FunctionInstanceLogEntry> fastLogger = null,
+                ILoggerFactory loggerFactory = null, IFunctionResultAggregator aggregator = null)
         {
             if (functionInstanceLogger == null)
             {
@@ -58,6 +64,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _exceptionHandler = exceptionHandler;
             _trace = trace;
             _fastLogger = fastLogger;
+            _logger = loggerFactory?.CreateLogger(LoggingCategories.Executor);
+            _resultsLogger = loggerFactory?.CreateLogger(LoggingCategories.Results);
+            _aggregator = aggregator;
         }
 
         public HostOutputMessage HostOutputMessage
@@ -86,7 +95,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             try
             {
-                functionStartedMessageId = await ExecuteWithLoggingAsync(functionInstance, functionStartedMessage, fastItem, parameterLogCollector, functionTraceLevel, cancellationToken);
+                using (_logger?.BeginScope(CreateLogScope(functionInstance.Id, functionInstance.FunctionDescriptor.ShortName)))
+                {
+                    functionStartedMessageId = await ExecuteWithLoggingAsync(functionInstance, functionStartedMessage, fastItem, parameterLogCollector, functionTraceLevel, cancellationToken);
+                }
                 functionCompletedMessage = CreateCompletedMessage(functionStartedMessage);
             }
             catch (Exception exception)
@@ -142,6 +154,24 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 await _fastLogger.AddAsync(fastItem);
             }
 
+            // log result
+            fastItem.EndTime = DateTime.UtcNow;
+            fastItem.Arguments = functionCompletedMessage.Arguments;
+
+            using (_resultsLogger?.BeginScope(CreateLogScope(functionInstance.Id, functionInstance.FunctionDescriptor.ShortName)))
+            {
+                _resultsLogger?.LogFunctionResult(fastItem, exceptionInfo?.SourceException);
+            }
+
+            _aggregator?.AddAsync(new FunctionResultLog
+            {
+                Name = fastItem.FunctionName,
+                DurationInMilliseconds = (int)(fastItem.EndTime.Value - fastItem.StartTime).TotalMilliseconds,
+                StartTime = new DateTimeOffset(fastItem.StartTime, TimeSpan.Zero),
+                EndTime = new DateTimeOffset(fastItem.EndTime.Value, TimeSpan.Zero),
+                Success = exceptionInfo == null
+            });
+
             if (functionCompletedMessage != null &&
                 ((functionTraceLevel >= TraceLevel.Info) || (functionCompletedMessage.Failure != null && functionTraceLevel >= TraceLevel.Error)))
             {
@@ -159,6 +189,15 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
 
             return exceptionInfo != null ? new ExceptionDispatchInfoDelayedException(exceptionInfo) : null;
+        }
+
+        private static IDictionary<string, object> CreateLogScope(Guid invocationId, string functionName)
+        {
+            return new Dictionary<string, object>
+            {
+                [ScopeKeys.FunctionInvocationId] = invocationId,
+                [ScopeKeys.FunctionName] = functionName
+            };
         }
 
         internal static async Task HandleExceptionAsync(MethodInfo method, ExceptionDispatchInfo exceptionInfo, IWebJobsExceptionHandler exceptionHandler)
@@ -546,7 +585,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 try
                 {
                     await InvokeAsync(invoker, invokeParameters, timeoutTokenSource, functionCancellationTokenSource,
-                        throwOnTimeout, timerInterval, instance);
+                    throwOnTimeout, timerInterval, instance);
                 }
                 finally
                 {
@@ -594,6 +633,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 await singleton.ReleaseAsync(functionCancellationTokenSource.Token);
             }
+        }
+
+        internal static bool LogError(Exception ex, ILogger logger)
+        {
+            logger.LogError(new EventId(), ex, "Error invoking function");
+            return false;
         }
 
         internal static async Task InvokeAsync(IFunctionInvoker invoker, object[] invokeParameters, CancellationTokenSource timeoutTokenSource,
