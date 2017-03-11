@@ -46,23 +46,6 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
                 new PocoEntityArgumentBindingProvider()); // Supports all types; must come after other providers
         }
 
-        // [Table] has some pre-existing behavior where the storage account can be specified outside of the [Table] attribute. 
-        // The storage account is pulled from the ParameterInfo (which could pull in a [Storage] attribute on the container class)
-        // Resolve everything back down to a single attribute so we can use the binding helpers. 
-        // This pattern should be rare since other extensions can just keep everything directly on the primary attribute. 
-        private async Task<TableAttribute> CollectAttributeInfo(TableAttribute attrResolved, ParameterInfo parameter, INameResolver nameResolver)
-        {
-            // Look for [Storage] attribute and squirrel over 
-            IStorageAccount account = await _accountProvider.GetStorageAccountAsync(parameter, CancellationToken.None, nameResolver);
-            StorageClientFactoryContext clientFactoryContext = new StorageClientFactoryContext
-            {
-                Parameter = parameter
-            };
-            IStorageTableClient client = account.CreateTableClient(clientFactoryContext);
-
-            return new ResolvedTableAttribute(attrResolved, client);
-        }
-
         public static IBindingProvider Build(INameResolver nameResolver, IConverterManager converterManager, IStorageAccountProvider accountProvider, IExtensionRegistry extensions)
         {
             var original = new TableAttributeBindingProvider(nameResolver, accountProvider, extensions);
@@ -76,20 +59,17 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
             var bindingFactory = new BindingFactory(nameResolver, converterManager);
 
             // Includes converter manager, which provides access to IQueryable<ITableEntity>
-            var bindToExactCloudTable = bindingFactory.BindToInput<TableAttribute, CloudTable>(typeof(JObjectBuilder))
-                .SetPostResolveHook<TableAttribute>(original.ToParameterDescriptorForCollector, original.CollectAttributeInfo);
+            var bindToExactCloudTable = bindingFactory.BindToInput<TableAttribute, CloudTable>(typeof(JObjectBuilder), original)
+                .SetPostResolveHook<TableAttribute>(original.ToParameterDescriptorForCollector);
 
-            var bindToExactTestCloudTable = bindingFactory.BindToInput<TableAttribute, IStorageTable>(typeof(JObjectBuilder))
-                .SetPostResolveHook<TableAttribute>(original.ToParameterDescriptorForCollector, original.CollectAttributeInfo);
+            var bindToExactTestCloudTable = bindingFactory.BindToInput<TableAttribute, IStorageTable>(typeof(JObjectBuilder), original)
+                .SetPostResolveHook<TableAttribute>(original.ToParameterDescriptorForCollector);
 
-            var bindAsyncCollector = bindingFactory.BindToCollector<TableAttribute, ITableEntity>(original.BuildFromTableAttribute)
-                .SetPostResolveHook<TableAttribute>(null, original.CollectAttributeInfo);
+            var bindAsyncCollector = bindingFactory.BindToCollector<TableAttribute, ITableEntity>(original.BuildFromTableAttribute);
 
-            var bindToJobject = bindingFactory.BindToInput<TableAttribute, JObject>(typeof(JObjectBuilder))
-                .SetPostResolveHook<TableAttribute>(null, original.CollectAttributeInfo);
+            var bindToJobject = bindingFactory.BindToInput<TableAttribute, JObject>(typeof(JObjectBuilder), original);
 
-            var bindToJArray = bindingFactory.BindToInput<TableAttribute, JArray>(typeof(JObjectBuilder))
-                .SetPostResolveHook<TableAttribute>(null, original.CollectAttributeInfo);
+            var bindToJArray = bindingFactory.BindToInput<TableAttribute, JArray>(typeof(JObjectBuilder), original);
 
             var bindingProvider = new GenericCompositeBindingProvider<TableAttribute>(
                 ValidateAttribute, nameResolver,
@@ -115,7 +95,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
         private ParameterDescriptor ToParameterDescriptorForCollector(TableAttribute attribute, ParameterInfo parameter, INameResolver nameResolver)
         {
             Task<IStorageAccount> t = Task.Run(() =>
-                _accountProvider.GetStorageAccountAsync(parameter, CancellationToken.None, nameResolver));
+                _accountProvider.GetStorageAccountAsync(attribute, CancellationToken.None, nameResolver));
             IStorageAccount account = t.GetAwaiter().GetResult();
             string accountName = account.Credentials.AccountName;
 
@@ -146,9 +126,10 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
         }
 
         // Get the storage table from the attribute.
-        private static IStorageTable GetTable(TableAttribute attribute)
-        {
-            var tableClient = ((ResolvedTableAttribute)attribute).Client;                           
+        private IStorageTable GetTable(TableAttribute attribute)
+        {                        
+            IStorageAccount account = Task.Run(() => this._accountProvider.GetStorageAccountAsync(attribute, CancellationToken.None, this._nameResolver)).GetAwaiter().GetResult();
+            IStorageTableClient tableClient = account.CreateTableClient();
             IStorageTable table = tableClient.GetTableReference(attribute.TableName);
             return table;
         }
@@ -162,7 +143,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
         public async Task<IBinding> TryCreateAsync(BindingProviderContext context)
         {
             ParameterInfo parameter = context.Parameter;
-            TableAttribute tableAttribute = parameter.GetCustomAttribute<TableAttribute>(inherit: false);
+            TableAttribute tableAttribute = TypeUtility.GetAttr<TableAttribute>(parameter);
 
             if (tableAttribute == null)
             {
@@ -170,7 +151,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
             }
 
             string tableName = Resolve(tableAttribute.TableName);
-            IStorageAccount account = await _accountProvider.GetStorageAccountAsync(context.Parameter, context.CancellationToken, _nameResolver);
+            IStorageAccount account = await _accountProvider.GetStorageAccountAsync(tableAttribute, context.CancellationToken, _nameResolver);
             // requires storage account with table support
             account.AssertTypeOneOf(StorageAccountType.GeneralPurpose);
 
@@ -309,22 +290,6 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
             }
         }
 
-        // Table attributes can optionally be paired with a separate [StorageAccount]. 
-        // Consolidate the information from both attributes into a single attribute.
-        // New extensions should just place everything in the attribute or the configuration and so shouldn't need to do this. 
-        internal sealed class ResolvedTableAttribute : TableAttribute
-        {
-            public ResolvedTableAttribute(TableAttribute inner, IStorageTableClient client)
-                : base(inner.TableName, inner.PartitionKey, inner.RowKey)
-            {
-                this.Take = inner.Take;
-                this.Filter = inner.Filter;
-                this.Client = client;
-            }
-
-            internal IStorageTableClient Client { get; private set; }
-        }
-
         // IStorageTable --> IQueryable<T>
         // ConverterManager's pattern matcher will figure out TElement. 
         private class TableToIQueryableConverter<TElement> : 
@@ -390,15 +355,21 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
             IAsyncConverter<TableAttribute, JObject>,
             IAsyncConverter<TableAttribute, JArray>
         {
+            private readonly TableAttributeBindingProvider _parent;
+            public JObjectBuilder(TableAttributeBindingProvider parent)
+            {
+                _parent = parent;
+            }
+
             IStorageTable IConverter<TableAttribute, IStorageTable>.Convert(TableAttribute attribute)
             {
-                IStorageTable table = GetTable(attribute);
+                IStorageTable table = _parent.GetTable(attribute);
                 return table;
             }
 
             async Task<CloudTable> IAsyncConverter<TableAttribute, CloudTable>.ConvertAsync(TableAttribute attribute, CancellationToken cancellation)
             {
-                IStorageTable table = GetTable(attribute);
+                IStorageTable table = _parent.GetTable(attribute);
                 await table.CreateIfNotExistsAsync(CancellationToken.None);
 
                 var sdkTable = table.SdkObject;
@@ -407,7 +378,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
 
             async Task<JObject> IAsyncConverter<TableAttribute, JObject>.ConvertAsync(TableAttribute attribute, CancellationToken cancellation)
             {
-                IStorageTable table = GetTable(attribute);
+                IStorageTable table = _parent.GetTable(attribute);
 
                 IStorageTableOperation retrieve = table.CreateRetrieveOperation<DynamicTableEntity>(
                   attribute.PartitionKey, attribute.RowKey);
@@ -428,7 +399,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
             // Used as an alternative to binding to IQueryable.
             async Task<JArray> IAsyncConverter<TableAttribute, JArray>.ConvertAsync(TableAttribute attribute, CancellationToken cancellation)
             {
-                var table = GetTable(attribute).SdkObject;
+                var table = _parent.GetTable(attribute).SdkObject;
 
                 string finalQuery = attribute.Filter;
                 if (!string.IsNullOrEmpty(attribute.PartitionKey))

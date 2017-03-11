@@ -45,14 +45,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             ValidateStorageAccount(account, connectionStringName);
             return account;
         }
-        public static async Task<IStorageAccount> GetStorageAccountAsync(this IStorageAccountProvider provider, ParameterInfo parameter, CancellationToken cancellationToken, INameResolver nameResolver = null)
-        {
-            if (provider == null)
-            {
-                throw new ArgumentNullException("provider");
-            }
 
-            string connectionStringName = GetAccountOverrideOrNull(parameter);
+        public static Task<IStorageAccount> GetStorageAccountAsync(this IStorageAccountProvider provider, StorageAccountAttribute attribute, CancellationToken cancellationToken, INameResolver nameResolver)
+        {
+            return provider.GetStorageAccountAsync(attribute.Account, cancellationToken, nameResolver);
+        }
+
+        public static async Task<IStorageAccount> GetStorageAccountAsync(this IStorageAccountProvider provider, string connectionStringName, CancellationToken cancellationToken, INameResolver nameResolver = null)
+        {
             if (string.IsNullOrEmpty(connectionStringName))
             {
                 connectionStringName = ConnectionStringNames.Storage;
@@ -79,20 +79,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 string message = StorageAccountParser.FormatParseAccountErrorMessage(StorageAccountParseResult.MissingOrEmptyConnectionStringError, connectionStringName);
                 throw new InvalidOperationException(message);
             }
-        }
-
-        /// <summary>
-        /// Walk from the parameter up to the containing type, looking for a
-        /// <see cref="StorageAccountAttribute"/>. If found, return the account.
-        /// </summary>
-        internal static string GetAccountOverrideOrNull(ParameterInfo parameter)
-        {
-            StorageAccountAttribute attribute = TypeUtility.GetHierarchicalAttributeOrNull<StorageAccountAttribute>(parameter);
-            if (attribute != null)
-            {
-                return attribute.Account;
-            }
-            return null;
         }
     }
 }

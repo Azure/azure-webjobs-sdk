@@ -178,7 +178,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             output = input;
         }
 
-
         public static void QueueToQueue_DifferentAccounts_PrimaryToSecondary(
             [QueueTrigger(Input)] string input,
             [Queue(Output), StorageAccount(Secondary)] out string output)

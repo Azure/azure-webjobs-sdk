@@ -98,6 +98,68 @@ namespace Microsoft.Azure.WebJobs.Host
             return null;
         }
 
+        // $$$
+        internal static TAttribute GetAttr<TAttribute>(ParameterInfo parameter) where TAttribute : Attribute
+        {
+            TAttribute attributeSource = parameter.GetCustomAttribute<TAttribute>(inherit: false);
+
+            // Walk hierachy.
+            // It's possible attribute is not on the parameter but is still on the something 
+            // higher up in the hiearchy
+            ICustomAttributeProvider provider = parameter;
+
+            while (provider != null)
+            {
+                var attrs = provider.GetCustomAttributes(typeof(Attribute), false);
+                foreach (var attr in attrs)
+                {
+                    if (attributeSource == null)
+                    {
+                        attributeSource = attr as TAttribute;
+                        continue;
+                    }
+
+                    if (attr.GetType().IsAssignableFrom(typeof(TAttribute)))
+                    {
+                        // Merge properties. Give precedence to "closest" one. 
+                        foreach (var prop in attr.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public))
+                        {
+                            if (prop.CanRead && prop.CanWrite)
+                            {
+                                var currentValue = prop.GetValue(attributeSource);
+                                if (currentValue == null)
+                                {
+                                    var value = prop.GetValue(attr);
+                                    prop.SetValue(attributeSource, value);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                provider = GetParent(provider);
+            }
+
+            return attributeSource;
+        }
+
+        private static ICustomAttributeProvider GetParent(ICustomAttributeProvider x)
+        {
+            ParameterInfo p = x as ParameterInfo;
+            if (p != null)
+            {
+                return p.Member as MethodInfo;
+            }
+
+            MethodInfo m = x as MethodInfo;
+            if (m != null)
+            {
+                return m.DeclaringType;
+            }
+
+            return null;
+        }
+
         public static bool IsAsync(MethodInfo methodInfo)
         {
             if (methodInfo == null)

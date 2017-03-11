@@ -51,7 +51,7 @@ namespace Microsoft.Azure.WebJobs
     [SuppressMessage("Microsoft.Design", "CA1019:DefineAccessorsForAttributeArguments", Justification = "There is an accessor for FileAccess")]
     [AttributeUsage(AttributeTargets.Parameter)]
     [DebuggerDisplay("{BlobPath,nq}")]
-    public sealed class BlobAttribute : Attribute
+    public sealed class BlobAttribute : StorageAccountAttribute
     {
         private readonly string _blobPath;
         private readonly FileAccess? _access;

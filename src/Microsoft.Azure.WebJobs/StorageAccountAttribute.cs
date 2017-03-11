@@ -13,7 +13,7 @@ namespace Microsoft.Azure.WebJobs
     /// is in that order.
     /// </remarks>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Parameter)]
-    public sealed class StorageAccountAttribute : Attribute
+    public class StorageAccountAttribute : Attribute
     {
         /// <summary>
         /// Constructs a new instance.
@@ -33,8 +33,15 @@ namespace Microsoft.Azure.WebJobs
         }
 
         /// <summary>
+        /// Use public setting property. 
+        /// </summary>
+        protected StorageAccountAttribute()
+        {
+        }
+
+        /// <summary>
         /// Gets the name of the Azure Storage connection string to use.
         /// </summary>
-        public string Account { get; private set; }
+        public string Account { get; protected set; }
     }
 }
