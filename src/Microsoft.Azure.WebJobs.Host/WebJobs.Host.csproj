@@ -396,6 +396,7 @@
     <Compile Include="Bindings\DefaultResolutionPolicy.cs" />
     <Compile Include="Bindings\IResolutionPolicy.cs" />
     <Compile Include="Bindings\Runtime\Binder.cs" />
+    <Compile Include="Bindings\Runtime\BinderExtensions.cs" />
     <Compile Include="Blobs\Listeners\IBlobScanInfoManager.cs" />
     <Compile Include="Blobs\Listeners\StorageBlobScanInfoManager.cs" />
     <Compile Include="Blobs\StorageBlobToCloudAppendBlobConverter.cs" />

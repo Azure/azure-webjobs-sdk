@@ -108,7 +108,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
                 "IAttributeInvokeDescriptor`1",
                 "AutoResolveAttribute",
-                "BinderExtensions",
+                "IBinderExtensions",
                 "BlobAttribute",
                 "BlobTriggerAttribute",
                 "IBinder",
@@ -208,6 +208,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "BindingTemplateExtensions",
                 "FunctionIndexingException",
                 "Binder",
+                "BinderExtensions",
                 "IWebJobsExceptionHandler",
                 "WebJobsExceptionHandler",
                 "FunctionTimeoutException",
