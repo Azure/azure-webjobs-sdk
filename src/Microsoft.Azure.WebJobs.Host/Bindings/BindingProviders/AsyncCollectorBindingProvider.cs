@@ -166,7 +166,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 var patternMatcher = parent._patternMatcher;
 
                 var parameter = context.Parameter;
-                TAttribute attributeSource = parameter.GetCustomAttribute<TAttribute>(inherit: false);
+                TAttribute attributeSource = TypeUtility.GetAttr<TAttribute>(parameter);
 
                 Func<TAttribute, Task<TAttribute>> hookWrapper = null;
                 if (parent.PostResolveHook != null)

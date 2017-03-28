@@ -21,7 +21,7 @@ namespace Microsoft.Azure.WebJobs
     /// </remarks>
     [AttributeUsage(AttributeTargets.Parameter)]
     [DebuggerDisplay("{QueueName,nq}")]
-    public sealed class QueueTriggerAttribute : Attribute
+    public sealed class QueueTriggerAttribute : StorageAccountAttribute
     {
         private readonly string _queueName;
 

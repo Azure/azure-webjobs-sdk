@@ -26,7 +26,7 @@ namespace Microsoft.Azure.WebJobs
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1813:AvoidUnsealedAttributes")]
     [AttributeUsage(AttributeTargets.Parameter)]
     [DebuggerDisplay("{QueueName,nq}")]
-    public class QueueAttribute : Attribute
+    public class QueueAttribute : StorageAccountAttribute
     {
         private readonly string _queueName;
 

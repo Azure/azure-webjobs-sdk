@@ -208,23 +208,42 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         }
 
         [Fact]
+        public void MultipleAttributes_SingleLevel()
+        {
+            foreach (var methodName in new string[] { "MultipleParams1", "MultipleParams2" })
+            {
+                MethodInfo method = typeof(AccountOverrides).GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance);
+                ParameterInfo parameter = method.GetParameters().Single(p => p.Name == "s");
+                var attr = TypeUtility.GetAttr<OtherAttr>(parameter);
+                Assert.Equal("abc", attr.Account);
+                Assert.Equal("Param", attr.Param);
+            }
+        }
+
+        static string GetAccountOverrideOrNull(ParameterInfo parameter)
+        {
+            var attr = TypeUtility.GetAttr<StorageAccountAttribute>(parameter);
+            return attr.Account;
+        }
+
+        [Fact]
         public void StorageAccountOverrides_MultipleLevels()
         {
             // param level
             MethodInfo method = typeof(AccountOverrides).GetMethod("ParamOverride", BindingFlags.NonPublic | BindingFlags.Instance);
             ParameterInfo parameter = method.GetParameters().Single(p => p.Name == "s");
-            string account = StorageAccountProviderExtensions.GetAccountOverrideOrNull(parameter);
+            string account = GetAccountOverrideOrNull(parameter);
             Assert.Equal("param", account);
 
             // method level
             method = typeof(AccountOverrides).GetMethod("MethodOverride", BindingFlags.NonPublic | BindingFlags.Instance);
             parameter = method.GetParameters().Single(p => p.Name == "s");
-            account = StorageAccountProviderExtensions.GetAccountOverrideOrNull(parameter);
+            account = GetAccountOverrideOrNull(parameter);
             Assert.Equal("method", account);
 
             method = typeof(AccountOverrides).GetMethod("ClassOverride", BindingFlags.NonPublic | BindingFlags.Instance);
             parameter = method.GetParameters().Single(p => p.Name == "s");
-            account = StorageAccountProviderExtensions.GetAccountOverrideOrNull(parameter);
+            account = GetAccountOverrideOrNull(parameter);
             Assert.Equal("class", account);
         }
 
@@ -341,6 +360,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             private void ParamOverride([StorageAccount("param")] string s)
             {
             }
+                        
+            private void MultipleParams1([OtherAttr(Param ="abc"), StorageAccount("param") ] string s)
+            {
+            }
+
+            private void MultipleParams2([StorageAccount("param"), OtherAttr(Param = "abc")] string s)
+            {
+            }
 
             [StorageAccount("method")]
             private void MethodOverride(string s)
@@ -350,6 +377,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             private void ClassOverride(string s)
             {
             }
+        }
+
+        public class OtherAttr : StorageAccountAttribute
+        {
+            public string Param { get; set; }
         }
     }
 }
