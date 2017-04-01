@@ -114,7 +114,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             IExtensionRegistry extensions = services.GetExtensions();
             ITriggerBindingProvider triggerBindingProvider = DefaultTriggerBindingProvider.Create(nameResolver,
-                storageAccountProvider, extensionTypeLocator, hostIdProvider, queueConfiguration, blobsConfiguration, exceptionHandler,
+                storageAccountProvider, extensionTypeLocator, hostIdProvider, queueConfiguration, blobsConfiguration,
                 messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor, sharedContextProvider, extensions, singletonManager, trace);
             services.AddService<ITriggerBindingProvider>(triggerBindingProvider);
 
@@ -204,7 +204,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                 if (functionIndexProvider == null)
                 {
-                    functionIndexProvider = new FunctionIndexProvider(services.GetService<ITypeLocator>(), triggerBindingProvider, bindingProvider, activator, functionExecutor, extensions, singletonManager, trace);
+                    functionIndexProvider = new FunctionIndexProvider(services.GetService<ITypeLocator>(), triggerBindingProvider, bindingProvider, activator, functionExecutor, extensions, singletonManager, trace, exceptionHandler);
 
                     // Important to set this so that the func we passed to DynamicHostIdProvider can pick it up. 
                     services.AddService<IFunctionIndexProvider>(functionIndexProvider);

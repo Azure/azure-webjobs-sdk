@@ -3,7 +3,6 @@
 
 using System;
 using System.Globalization;
-using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;

@@ -403,6 +403,7 @@
     <Compile Include="DefaultNameResolver.cs" />
     <Compile Include="Diagnostics\ExceptionFormatter.cs" />
     <Compile Include="Executors\FunctionInstanceTraceWriter.cs" />
+    <Compile Include="Extensions\IWebJobsExceptionHandlerExtensions.cs" />
     <Compile Include="FuncConverter.cs" />
     <Compile Include="FunctionTimeoutException.cs" />
     <Compile Include="Exceptions\RecoverableException.cs" />
@@ -435,6 +436,7 @@
     <Compile Include="Bindings\ODataFilterResolutionPolicy.cs" />
     <Compile Include="Tables\TableFilterFormatter.cs" />
     <Compile Include="Listeners\FunctionListenerException.cs" />
+    <Compile Include="Triggers\FunctionExceptionHandler.cs" />
     <Compile Include="Triggers\StrategyTriggerBinding.cs" />
     <Compile Include="Bindings\ConstantValueProvider.cs" />
     <Compile Include="Bindings\ConverterManager.cs" />

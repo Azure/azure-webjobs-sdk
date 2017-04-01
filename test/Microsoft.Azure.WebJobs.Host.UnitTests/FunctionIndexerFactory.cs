@@ -45,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             ITriggerBindingProvider triggerBindingProvider = DefaultTriggerBindingProvider.Create(nameResolver,
                 storageAccountProvider, extensionTypeLocator,
                 new FixedHostIdProvider("test"), new SimpleQueueConfiguration(maxDequeueCount: 5), blobsConfiguration,
-                exceptionHandler, messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor,
+                messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor,
                 sharedContextProvider, new DefaultExtensionRegistry(), singletonManager, logger);
             IBindingProvider bindingProvider = DefaultBindingProvider.Create(nameResolver, null, storageAccountProvider,
                 extensionTypeLocator, messageEnqueuedWatcherAccessor,
@@ -61,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 extensionRegistry = new DefaultExtensionRegistry();
             }
 
-            return new FunctionIndexer(triggerBindingProvider, bindingProvider, DefaultJobActivator.Instance, executor, extensionRegistry, new SingletonManager(), logger);
+            return new FunctionIndexer(triggerBindingProvider, bindingProvider, DefaultJobActivator.Instance, executor, extensionRegistry, new SingletonManager(), logger, new WebJobsExceptionHandler());
         }
     }
 }

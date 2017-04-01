@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Converters;
@@ -108,23 +109,38 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             return new TriggerData(triggerData.ValueProvider, bindingData);
         }
 
-        public Task<IListener> CreateListenerAsync(ListenerFactoryContext context)
+        internal static async Task<string> GetQueuePathAsync(string queue, ServiceBusAccount account, AccessRights access, CancellationToken token)
+        {
+            if (access == AccessRights.Manage)
+            {
+                await account.NamespaceManager.CreateQueueIfNotExistsAsync(queue, token);
+            }
+            return queue;
+        }
+
+        internal static async Task<string> GetSubscriptionPathAsync(string topic, string subscription, ServiceBusAccount account, AccessRights access, CancellationToken token)
+        {
+            if (access == AccessRights.Manage)
+            {
+                await account.NamespaceManager.CreateTopicIfNotExistsAsync(topic, token);
+                await account.NamespaceManager.CreateSubscriptionIfNotExistsAsync(topic, subscription, token);
+            }
+            return SubscriptionClient.FormatSubscriptionPath(topic, subscription);
+        }
+
+        public async Task<IListener> CreateListenerAsync(ListenerFactoryContext context)
         {
             if (context == null)
             {
                 throw new ArgumentNullException("context");
             }
 
-            IListenerFactory factory = null;
-            if (_queueName != null)
-            {
-                factory = new ServiceBusQueueListenerFactory(_account, _queueName, context.Executor, _accessRights, _config);
-            }
-            else
-            {
-                factory = new ServiceBusSubscriptionListenerFactory(_account, _topicName, _subscriptionName, context.Executor, _accessRights, _config);
-            }
-            return factory.CreateAsync(context.CancellationToken);
+            string entityPath = _queueName != null ?
+                await GetQueuePathAsync(_queueName, _account, _accessRights, context.CancellationToken) :
+                await GetSubscriptionPathAsync(_topicName, _subscriptionName, _account, _accessRights, context.CancellationToken);
+
+            ServiceBusTriggerExecutor triggerExecutor = new ServiceBusTriggerExecutor(context.Executor);
+            return new ServiceBusListener(_account.MessagingFactory, entityPath, triggerExecutor, _config, context.ExceptionHandler);
         }
 
         internal static IReadOnlyDictionary<string, Type> CreateBindingDataContract(IReadOnlyDictionary<string, Type> argumentBindingContract)

@@ -23,7 +23,6 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
         private readonly ITriggerDataArgumentBinding<IStorageQueueMessage> _argumentBinding;
         private readonly IReadOnlyDictionary<string, Type> _bindingDataContract;
         private readonly IQueueConfiguration _queueConfiguration;
-        private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IContextSetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherSetter;
         private readonly ISharedContextProvider _sharedContextProvider;
         private readonly TraceWriter _trace;
@@ -33,7 +32,6 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             IStorageQueue queue,
             ITriggerDataArgumentBinding<IStorageQueueMessage> argumentBinding,
             IQueueConfiguration queueConfiguration,
-            IWebJobsExceptionHandler exceptionHandler,
             IContextSetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherSetter,
             ISharedContextProvider sharedContextProvider,
             TraceWriter trace)
@@ -51,11 +49,6 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             if (queueConfiguration == null)
             {
                 throw new ArgumentNullException("queueConfiguration");
-            }
-
-            if (exceptionHandler == null)
-            {
-                throw new ArgumentNullException("exceptionHandler");
             }
 
             if (messageEnqueuedWatcherSetter == null)
@@ -78,7 +71,6 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             _argumentBinding = argumentBinding;
             _bindingDataContract = CreateBindingDataContract(argumentBinding.BindingDataContract);
             _queueConfiguration = queueConfiguration;
-            _exceptionHandler = exceptionHandler;
             _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter;
             _sharedContextProvider = sharedContextProvider;
             _trace = trace;
@@ -156,7 +148,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
                 throw new ArgumentNullException("context");
             }
 
-            var factory = new QueueListenerFactory(_queue, _queueConfiguration, _exceptionHandler, 
+            var factory = new QueueListenerFactory(_queue, _queueConfiguration, context.ExceptionHandler, 
                     _messageEnqueuedWatcherSetter, _sharedContextProvider, _trace, context.Executor);
 
             return factory.CreateAsync(context.CancellationToken);
