@@ -214,6 +214,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "FunctionIndexingException",
                 "Binder",
                 "IWebJobsExceptionHandler",
+                "IWebJobsExceptionHandlerExtensions",
                 "WebJobsExceptionHandler",
                 "FunctionTimeoutException",
                 "PoisonMessageEventArgs",

@@ -180,8 +180,6 @@
     <Compile Include="Listeners\NamespaceManagerExtensions.cs" />
     <Compile Include="Listeners\ServiceBusListener.cs" />
     <Compile Include="MessageProcessor.cs" />
-    <Compile Include="Listeners\ServiceBusSubscriptionListenerFactory.cs" />
-    <Compile Include="Listeners\ServiceBusQueueListenerFactory.cs" />
     <Compile Include="ServiceBusAccount.cs" />
     <Compile Include="Bindings\ServiceBusEntity.cs" />
     <Compile Include="Bindings\StringToServiceBusEntityConverter.cs" />

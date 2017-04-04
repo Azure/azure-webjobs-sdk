@@ -33,7 +33,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
         private readonly IHostIdProvider _hostIdProvider;
         private readonly IQueueConfiguration _queueConfiguration;
         private readonly JobHostBlobsConfiguration _blobsConfiguration;
-        private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IContextSetter<IBlobWrittenWatcher> _blobWrittenWatcherSetter;
         private readonly IContextSetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherSetter;
         private readonly ISharedContextProvider _sharedContextProvider;
@@ -50,7 +49,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             IHostIdProvider hostIdProvider,
             IQueueConfiguration queueConfiguration,
             JobHostBlobsConfiguration blobsConfiguration,
-            IWebJobsExceptionHandler exceptionHandler,
             IContextSetter<IBlobWrittenWatcher> blobWrittenWatcherSetter,
             IContextSetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherSetter,
             ISharedContextProvider sharedContextProvider,
@@ -97,11 +95,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
                 throw new ArgumentNullException("blobsConfiguration");
             }
 
-            if (exceptionHandler == null)
-            {
-                throw new ArgumentNullException("exceptionHandler");
-            }
-
             if (blobWrittenWatcherSetter == null)
             {
                 throw new ArgumentNullException("blobWrittenWatcherSetter");
@@ -141,7 +134,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             _hostIdProvider = hostIdProvider;
             _queueConfiguration = queueConfiguration;
             _blobsConfiguration = blobsConfiguration;
-            _exceptionHandler = exceptionHandler;
             _blobWrittenWatcherSetter = blobWrittenWatcherSetter;
             _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter;
             _sharedContextProvider = sharedContextProvider;
@@ -264,7 +256,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             IStorageBlobContainer container = _blobClient.GetContainerReference(_path.ContainerNamePattern);
 
             var factory = new BlobListenerFactory(_hostIdProvider, _queueConfiguration, _blobsConfiguration,
-                _exceptionHandler, _blobWrittenWatcherSetter, _messageEnqueuedWatcherSetter,
+                context.ExceptionHandler, _blobWrittenWatcherSetter, _messageEnqueuedWatcherSetter,
                 _sharedContextProvider, _trace, context.Descriptor.Id, _hostAccount, _dataAccount, container, _path, context.Executor, _singletonManager);
 
             return factory.CreateAsync(context.CancellationToken);

@@ -30,9 +30,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             Mock<IStorageQueue> queueMock = new Mock<IStorageQueue>(MockBehavior.Strict);
             queueMock.Setup(q => q.Name).Returns("queueName");
             IStorageQueue queue = queueMock.Object;
-            IWebJobsExceptionHandler exceptionHandler = new WebJobsExceptionHandler();
             _binding = new QueueTriggerBinding("parameterName", queue, argumentBinding,
-                new Mock<IQueueConfiguration>(MockBehavior.Strict).Object, exceptionHandler,
+                new Mock<IQueueConfiguration>(MockBehavior.Strict).Object,
                 new Mock<IContextSetter<IMessageEnqueuedWatcher>>(MockBehavior.Strict).Object,
                 new SharedContextProvider(), new TestTraceWriter(TraceLevel.Verbose));
         }

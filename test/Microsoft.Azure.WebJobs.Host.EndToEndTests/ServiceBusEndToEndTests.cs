@@ -13,6 +13,9 @@ using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
 using Xunit;
+using Microsoft.Azure.WebJobs.Host.Timers;
+using System.Runtime.ExceptionServices;
+using System.Collections.Generic;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
@@ -149,7 +152,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 JobHostConfiguration config = new JobHostConfiguration()
                 {
                     NameResolver = _nameResolver,
-                    TypeLocator = new FakeTypeLocator(typeof(ServiceBusTestJobs))
+                    TypeLocator = new FakeTypeLocator(typeof(ServiceBusTestJobs)),
                 };
                 config.Tracing.Tracers.Add(trace);
                 config.UseServiceBus(_serviceBusConfig);
@@ -169,13 +172,48 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [Fact]
+        public async Task WebJobsExceptionHandler_Catches_IfMessageProcessorThrows()
+        {
+            try
+            {
+                TestTraceWriter trace = new TestTraceWriter(TraceLevel.Info);
+                _serviceBusConfig = new ServiceBusConfiguration();
+                _serviceBusConfig.MessagingProvider = new CustomMessagingProvider(_serviceBusConfig, trace, throws: true);
+
+                JobHostConfiguration config = new JobHostConfiguration()
+                {
+                    NameResolver = _nameResolver,
+                    TypeLocator = new FakeTypeLocator(typeof(ServiceBusTestJobs)),
+                };
+                config.Tracing.Tracers.Add(trace);
+                config.UseServiceBus(_serviceBusConfig);
+                var exceptionHandler = new CapturingExceptionHandler();
+                config.AddService<IWebJobsExceptionHandler>(exceptionHandler);
+                JobHost host = new JobHost(config);
+
+                Task result =  ServiceBusEndToEndInternal(typeof(ServiceBusTestJobs), host: host);
+                await TestHelpers.Await(() => exceptionHandler.exceptions.Count > 0);
+
+                var exception = exceptionHandler.exceptions
+                    .Select(e => e.SourceException as FunctionInvocationException)
+                    .First();
+
+                Assert.Equal("throwing message processor", exception.Message);
+                Assert.Equal("ServiceBusTestJobs.SBQueue2SBQueue", exception.MethodName);
+            }
+            finally
+            {
+                Cleanup();
+            }
+        }
+
+        [Fact]
         public async Task MultipleAccountTest()
         {
             try
             {
                 TestTraceWriter trace = new TestTraceWriter(TraceLevel.Info);
                 _serviceBusConfig = new ServiceBusConfiguration();
-                _serviceBusConfig.MessagingProvider = new CustomMessagingProvider(_serviceBusConfig, trace);
 
                 JobHostConfiguration config = new JobHostConfiguration()
                 {
@@ -513,16 +551,38 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
+        private class CapturingExceptionHandler : IWebJobsExceptionHandler
+        {
+            public List<ExceptionDispatchInfo> exceptions = new List<ExceptionDispatchInfo>();
+
+            public void Initialize(JobHost host)
+            {
+            }
+
+            public Task OnTimeoutExceptionAsync(ExceptionDispatchInfo exceptionInfo, TimeSpan timeoutGracePeriod)
+            {
+                return Task.CompletedTask;
+            }
+
+            public Task OnUnhandledExceptionAsync(ExceptionDispatchInfo exceptionInfo)
+            {
+                exceptions.Add(exceptionInfo);
+                return Task.CompletedTask;
+            }
+        }
+
         private class CustomMessagingProvider : MessagingProvider
         {
             private readonly ServiceBusConfiguration _config;
             private readonly TraceWriter _trace;
+            private readonly bool _throws;
 
-            public CustomMessagingProvider(ServiceBusConfiguration config, TraceWriter trace)
+            public CustomMessagingProvider(ServiceBusConfiguration config, TraceWriter trace, bool throws = false)
                 : base(config)
             {
                 _config = config;
                 _trace = trace;
+                _throws = throws;
             }
 
             public override MessageProcessor CreateMessageProcessor(string entityPath)
@@ -534,7 +594,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     AutoRenewTimeout = TimeSpan.FromMinutes(1)
                 };
 
-                return new CustomMessageProcessor(messageOptions, _trace);
+                if (_throws)
+                {
+                    return new ThrowingMessageProcessor(messageOptions);
+                }
+                else
+                {
+                    return new CustomMessageProcessor(messageOptions, _trace);
+                }
             }
 
             public override MessagingFactory CreateMessagingFactory(string entityPath, string connectionStringName = null)
@@ -552,6 +619,19 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             public override NamespaceManager CreateNamespaceManager(string connectionStringName = null)
             {
                 return base.CreateNamespaceManager(connectionStringName);
+            }
+
+            private class ThrowingMessageProcessor: MessageProcessor
+            {
+                public ThrowingMessageProcessor(OnMessageOptions messageOptions): base(messageOptions)
+                {
+                }
+
+                public override async Task<bool> BeginProcessingMessageAsync(BrokeredMessage message, CancellationToken cancellationToken)
+                {
+                    await message.CompleteAsync();
+                    throw new Exception("throwing message processor");
+                }
             }
 
             private class CustomMessageProcessor : MessageProcessor

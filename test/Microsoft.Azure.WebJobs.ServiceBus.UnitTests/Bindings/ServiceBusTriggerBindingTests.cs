@@ -8,6 +8,9 @@ using System.Text;
 using Microsoft.Azure.WebJobs.ServiceBus.Triggers;
 using Microsoft.ServiceBus.Messaging;
 using Xunit;
+using System.Threading.Tasks;
+using System.Threading;
+using Microsoft.Azure.WebJobs.Host.Listeners;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
 {
@@ -75,6 +78,40 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
             Assert.Equal(9, bindingData.Count);
             Assert.Equal("override", bindingData["ReplyTo"]);
             Assert.Equal(123, bindingData["NewProperty"]);
+        }
+
+        [Theory]
+        [InlineData(AccessRights.Listen)]
+        [InlineData(AccessRights.Send)]
+        [InlineData(AccessRights.Manage)]
+        public async Task CreateAsync_AccessRightsNotManage_DoesNotCreatQueue(AccessRights accessRights)
+        {
+            Func<Task<string>> action = async () => await ServiceBusTriggerBinding.GetQueuePathAsync("queue", new ServiceBusAccount(), accessRights, CancellationToken.None);
+            if (accessRights == AccessRights.Manage)
+            {
+                await Assert.ThrowsAsync<NullReferenceException>(action);
+            }
+            else
+            {
+                Assert.Equal("queue", await action());
+            }
+        }
+
+        [Theory]
+        [InlineData(AccessRights.Listen)]
+        [InlineData(AccessRights.Send)]
+        [InlineData(AccessRights.Manage)]
+        public async Task CreateAsync_AccessRightsNotManage_DoesNotCreateTopicOrSubscription(AccessRights accessRights)
+        {
+            Func<Task<string>> action = async () => await ServiceBusTriggerBinding.GetSubscriptionPathAsync("topic", "sub", new ServiceBusAccount(), accessRights, CancellationToken.None);
+            if (accessRights == AccessRights.Manage)
+            {
+                await Assert.ThrowsAsync<NullReferenceException>(action);
+            }
+            else
+            {
+                Assert.Equal("topic/Subscriptions/sub", await action());
+            }
         }
     }
 }

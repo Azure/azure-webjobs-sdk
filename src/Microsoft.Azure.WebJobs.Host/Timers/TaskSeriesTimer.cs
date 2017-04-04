@@ -21,9 +21,8 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
         private Task _run;
         private bool _disposed;
 
-        public TaskSeriesTimer(ITaskSeriesCommand command, IWebJobsExceptionHandler exceptionHandler,
-            Task initialWait)
-        {
+        public TaskSeriesTimer(ITaskSeriesCommand command, IWebJobsExceptionHandler exceptionHandler, Task initialWait)
+        { 
             if (command == null)
             {
                 throw new ArgumentNullException("command");
@@ -158,7 +157,7 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
                 // Immediately report any unhandled exception from this background task.
                 // (Don't capture the exception as a fault of this Task; that would delay any exception reporting until
                 // Stop is called, which might never happen.)
-                _exceptionHandler.OnUnhandledExceptionAsync(ExceptionDispatchInfo.Capture(exception)).GetAwaiter().GetResult();
+                _exceptionHandler.Capture(exception);
             }
         }
 

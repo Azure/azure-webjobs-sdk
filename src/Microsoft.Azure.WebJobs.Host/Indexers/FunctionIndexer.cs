@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
@@ -13,6 +14,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings.Invoke;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 
 namespace Microsoft.Azure.WebJobs.Host.Indexers
@@ -28,8 +30,9 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly HashSet<Assembly> _jobAttributeAssemblies;
         private readonly SingletonManager _singletonManager;
         private readonly TraceWriter _trace;
+        private readonly IWebJobsExceptionHandler _handler;
 
-        public FunctionIndexer(ITriggerBindingProvider triggerBindingProvider, IBindingProvider bindingProvider, IJobActivator activator, IFunctionExecutor executor, IExtensionRegistry extensions, SingletonManager singletonManager, TraceWriter trace)
+        public FunctionIndexer(ITriggerBindingProvider triggerBindingProvider, IBindingProvider bindingProvider, IJobActivator activator, IFunctionExecutor executor, IExtensionRegistry extensions, SingletonManager singletonManager, TraceWriter trace, IWebJobsExceptionHandler handler)
         {
             if (triggerBindingProvider == null)
             {
@@ -66,6 +69,11 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 throw new ArgumentNullException("trace");
             }
 
+            if (handler == null)
+            {
+                throw new ArgumentNullException(nameof(handler));
+            }
+
             _triggerBindingProvider = triggerBindingProvider;
             _bindingProvider = bindingProvider;
             _activator = activator;
@@ -73,6 +81,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _singletonManager = singletonManager;
             _jobAttributeAssemblies = GetJobAttributeAssemblies(extensions);
             _trace = trace;
+            _handler = handler;
         }
 
         public async Task IndexTypeAsync(Type type, IFunctionIndexCollector index, CancellationToken cancellationToken)
@@ -299,7 +308,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             ITriggeredFunctionBinding<TTriggerValue> functionBinding = new TriggeredFunctionBinding<TTriggerValue>(descriptor, parameterName, triggerBinding, nonTriggerBindings, _singletonManager);
             ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory = new TriggeredFunctionInstanceFactory<TTriggerValue>(functionBinding, invoker, descriptor);
             ITriggeredFunctionExecutor triggerExecutor = new TriggeredFunctionExecutor<TTriggerValue>(descriptor, _executor, instanceFactory);
-            IListenerFactory listenerFactory = new ListenerFactory(descriptor, triggerExecutor, triggerBinding);
+            IListenerFactory listenerFactory = new ListenerFactory(descriptor, triggerExecutor, triggerBinding, _handler);
 
             return new FunctionDefinition(descriptor, instanceFactory, listenerFactory);
         }
@@ -338,17 +347,19 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             private readonly FunctionDescriptor _descriptor;
             private readonly ITriggeredFunctionExecutor _executor;
             private readonly ITriggerBinding _binding;
+            private readonly IWebJobsExceptionHandler _handler;
 
-            public ListenerFactory(FunctionDescriptor descriptor, ITriggeredFunctionExecutor executor, ITriggerBinding binding)
+            public ListenerFactory(FunctionDescriptor descriptor, ITriggeredFunctionExecutor executor, ITriggerBinding binding, IWebJobsExceptionHandler handler)
             {
                 _descriptor = descriptor;
                 _executor = executor;
                 _binding = binding;
+                _handler = new FunctionExceptionHandler(descriptor, handler);
             }
 
             public Task<IListener> CreateAsync(CancellationToken cancellationToken)
             {
-                ListenerFactoryContext context = new ListenerFactoryContext(_descriptor, _executor, cancellationToken);
+                ListenerFactoryContext context = new ListenerFactoryContext(_descriptor, _executor, _handler, cancellationToken);
                 return _binding.CreateListenerAsync(context);
             }
         }

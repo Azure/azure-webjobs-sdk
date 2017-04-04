@@ -3,11 +3,12 @@
 
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.ServiceBus.Messaging;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
@@ -20,11 +21,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         private readonly ServiceBusTriggerExecutor _triggerExecutor;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly MessageProcessor _messageProcessor;
+        private readonly IWebJobsExceptionHandler _handler;
 
         private MessageReceiver _receiver;
         private bool _disposed;
 
-        public ServiceBusListener(MessagingFactory messagingFactory, string entityPath, ServiceBusTriggerExecutor triggerExecutor, ServiceBusConfiguration config)
+        public ServiceBusListener(MessagingFactory messagingFactory, string entityPath, ServiceBusTriggerExecutor triggerExecutor, ServiceBusConfiguration config, IWebJobsExceptionHandler handler)
         {
             _messagingFactory = messagingFactory;
             _entityPath = entityPath;
@@ -32,6 +34,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             _cancellationTokenSource = new CancellationTokenSource();
             _messagingProvider = config.MessagingProvider;
             _messageProcessor = config.MessagingProvider.CreateMessageProcessor(entityPath);
+            _handler = handler;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -51,9 +54,32 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             cancellationToken.ThrowIfCancellationRequested();
 
             _receiver = _messagingProvider.CreateMessageReceiver(_messagingFactory, _entityPath);
-            _receiver.OnMessageAsync(ProcessMessageAsync, _messageProcessor.MessageOptions);
+            var cloned = CloneMessageOptions(_messageProcessor.MessageOptions);
+            cloned.ExceptionReceived += (sender, args) => _handler.Capture(args.Exception);
+            _receiver.OnMessageAsync(ProcessMessageAsync, cloned);
 
             return Task.FromResult(0);
+        }
+
+        internal static OnMessageOptions CloneMessageOptions(OnMessageOptions original)
+        {
+            var clone = new OnMessageOptions()
+            {
+                AutoComplete = original.AutoComplete,
+                AutoRenewTimeout = original.AutoRenewTimeout,
+                MaxConcurrentCalls = original.MaxConcurrentCalls
+            };
+            var field = typeof(OnMessageOptions).GetField("ExceptionReceived", BindingFlags.Instance | BindingFlags.NonPublic);
+            var eventHandler = field.GetValue(original) as Delegate;
+            if (eventHandler != null)
+            {
+                foreach (var subscriber in eventHandler.GetInvocationList())
+                {
+                    clone.ExceptionReceived += subscriber as EventHandler<ExceptionReceivedEventArgs>;
+                }
+            }
+
+            return clone;
         }
 
         public Task StopAsync(CancellationToken cancellationToken)

@@ -27,7 +27,6 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
         private readonly INameResolver _nameResolver;
         private readonly IStorageAccountProvider _accountProvider;
         private readonly IQueueConfiguration _queueConfiguration;
-        private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IContextSetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherSetter;
         private readonly ISharedContextProvider _sharedContextProvider;
         private readonly TraceWriter _trace;
@@ -35,7 +34,6 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
         public QueueTriggerAttributeBindingProvider(INameResolver nameResolver,
             IStorageAccountProvider accountProvider,
             IQueueConfiguration queueConfiguration,
-            IWebJobsExceptionHandler exceptionHandler,
             IContextSetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherSetter,
             ISharedContextProvider sharedContextProvider,
             TraceWriter trace)
@@ -48,11 +46,6 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             if (queueConfiguration == null)
             {
                 throw new ArgumentNullException("queueConfiguration");
-            }
-
-            if (exceptionHandler == null)
-            {
-                throw new ArgumentNullException("exceptionHandler");
             }
 
             if (messageEnqueuedWatcherSetter == null)
@@ -73,7 +66,6 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             _nameResolver = nameResolver;
             _accountProvider = accountProvider;
             _queueConfiguration = queueConfiguration;
-            _exceptionHandler = exceptionHandler;
             _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter;
             _sharedContextProvider = sharedContextProvider;
             _trace = trace;
@@ -112,7 +104,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             IStorageQueue queue = client.GetQueueReference(queueName);
 
             ITriggerBinding binding = new QueueTriggerBinding(parameter.Name, queue, argumentBinding,
-                _queueConfiguration, _exceptionHandler, _messageEnqueuedWatcherSetter,
+                _queueConfiguration, _messageEnqueuedWatcherSetter,
                 _sharedContextProvider, _trace);
             return binding;
         }

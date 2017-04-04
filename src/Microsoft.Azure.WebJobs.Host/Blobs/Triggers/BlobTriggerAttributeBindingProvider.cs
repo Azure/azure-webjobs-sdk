@@ -29,7 +29,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
         private readonly IHostIdProvider _hostIdProvider;
         private readonly IQueueConfiguration _queueConfiguration;
         private readonly JobHostBlobsConfiguration _blobsConfiguration;
-        private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IContextSetter<IBlobWrittenWatcher> _blobWrittenWatcherSetter;
         private readonly IContextSetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherSetter;
         private readonly ISharedContextProvider _sharedContextProvider;
@@ -42,7 +41,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             IHostIdProvider hostIdProvider,
             IQueueConfiguration queueConfiguration,
             JobHostBlobsConfiguration blobsConfiguration,
-            IWebJobsExceptionHandler exceptionHandler,
             IContextSetter<IBlobWrittenWatcher> blobWrittenWatcherSetter,
             IContextSetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherSetter,
             ISharedContextProvider sharedContextProvider,
@@ -72,11 +70,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             if (blobsConfiguration == null)
             {
                 throw new ArgumentNullException("blobsConfiguration");
-            }
-
-            if (exceptionHandler == null)
-            {
-                throw new ArgumentNullException("exceptionHandler");
             }
 
             if (blobWrittenWatcherSetter == null)
@@ -110,7 +103,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             _hostIdProvider = hostIdProvider;
             _queueConfiguration = queueConfiguration;
             _blobsConfiguration = blobsConfiguration;
-            _exceptionHandler = exceptionHandler;
             _blobWrittenWatcherSetter = blobWrittenWatcherSetter;
             _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter;
             _sharedContextProvider = sharedContextProvider;
@@ -171,7 +163,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             dataAccount.AssertTypeOneOf(StorageAccountType.GeneralPurpose, StorageAccountType.BlobOnly);
 
             ITriggerBinding binding = new BlobTriggerBinding(parameter, argumentBinding, hostAccount, dataAccount, path,
-                _hostIdProvider, _queueConfiguration, _blobsConfiguration, _exceptionHandler, _blobWrittenWatcherSetter,
+                _hostIdProvider, _queueConfiguration, _blobsConfiguration, _blobWrittenWatcherSetter,
                 _messageEnqueuedWatcherSetter, _sharedContextProvider, _singletonManager, _trace);
 
             return binding;

@@ -1,11 +1,12 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System.Diagnostics;
+using System;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.ServiceBus.Listeners;
 using Microsoft.ServiceBus.Messaging;
 using Moq;
@@ -42,7 +43,36 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
                 .Returns(_mockMessageProcessor.Object);
 
             ServiceBusTriggerExecutor triggerExecutor = new ServiceBusTriggerExecutor(_mockExecutor.Object);
-            _listener = new ServiceBusListener(_messagingFactory, _entityPath, triggerExecutor, config);
+            _listener = new ServiceBusListener(_messagingFactory, _entityPath, triggerExecutor, config, null);
+        }
+
+        [Fact]
+        public void CloneOnMessageOptions_Succeeds()
+        {
+            var originalSubscriberHandled = false;
+            var cloneSubscriberHandled = false;
+
+            var opts = new OnMessageOptions()
+            {
+                AutoComplete = true,
+                AutoRenewTimeout = TimeSpan.FromDays(1),
+                MaxConcurrentCalls = 15
+            };
+            opts.ExceptionReceived += (sender, args) => { originalSubscriberHandled = true; };
+
+            var cloned = ServiceBusListener.CloneMessageOptions(opts);
+
+            cloned.ExceptionReceived += (sender, args) => { cloneSubscriberHandled = true; };
+
+            Assert.Equal(true, cloned.AutoComplete);
+            Assert.Equal(TimeSpan.FromDays(1), cloned.AutoRenewTimeout);
+            Assert.Equal(15, cloned.MaxConcurrentCalls);
+
+            var field = typeof(OnMessageOptions).GetField("ExceptionReceived", BindingFlags.Instance | BindingFlags.NonPublic);
+            var eventHandler = field.GetValue(cloned) as Delegate;
+            eventHandler.DynamicInvoke(null, null);
+            Assert.True(originalSubscriberHandled);
+            Assert.True(cloneSubscriberHandled);
         }
 
         [Fact]
