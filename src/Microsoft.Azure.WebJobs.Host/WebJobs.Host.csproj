@@ -376,6 +376,7 @@
     </Compile>
     <Compile Include="AzureStorageDeploymentValidator.cs" />
     <Compile Include="Bindings\AmbientBindingContext.cs" />
+    <Compile Include="Bindings\AsyncCollector\BufferedIAsyncCollector.cs" />
     <Compile Include="Bindings\AttributeCloner.cs" />
     <Compile Include="Bindings\BindingBase.cs" />
     <Compile Include="Bindings\BindingFactory.cs" />
