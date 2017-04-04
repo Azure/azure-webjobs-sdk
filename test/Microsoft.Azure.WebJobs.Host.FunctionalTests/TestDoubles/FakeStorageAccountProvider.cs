@@ -18,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
         {
             IStorageAccount account;
 
-            if (connectionStringName == ConnectionStringNames.Storage)
+            if (connectionStringName == ConnectionStringNames.Storage || connectionStringName == ConnectionStringNames.Lease)
             {
                 account = StorageAccount;
             }

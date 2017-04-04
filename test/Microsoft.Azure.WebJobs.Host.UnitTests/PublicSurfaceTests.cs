@@ -226,7 +226,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "RecoverableException",
                 "FunctionException",
                 "FunctionListenerException",
-                "ExceptionFormatter"
+                "ExceptionFormatter",
+                "ILeaseProxy",
+                "LeaseDefinition",
+                "LeaseException",
+                "LeaseFailureReason",
+                "LeaseInformation",
             };
 
             AssertPublicTypes(expected, assembly);
