@@ -157,7 +157,7 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
                 // Immediately report any unhandled exception from this background task.
                 // (Don't capture the exception as a fault of this Task; that would delay any exception reporting until
                 // Stop is called, which might never happen.)
-                _exceptionHandler.Capture(exception);
+                await _exceptionHandler.HandleAsync(exception);
             }
         }
 

@@ -55,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
 
             _receiver = _messagingProvider.CreateMessageReceiver(_messagingFactory, _entityPath);
             var cloned = CloneMessageOptions(_messageProcessor.MessageOptions);
-            cloned.ExceptionReceived += (sender, args) => _handler.Capture(args.Exception);
+            cloned.ExceptionReceived += (sender, args) => _handler.HandleAsync(args.Exception).GetAwaiter().GetResult();
             _receiver.OnMessageAsync(ProcessMessageAsync, cloned);
 
             return Task.FromResult(0);

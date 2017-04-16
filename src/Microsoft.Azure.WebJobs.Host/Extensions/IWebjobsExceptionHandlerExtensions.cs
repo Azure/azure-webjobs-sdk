@@ -3,6 +3,7 @@
 
 using System;
 using System.Runtime.ExceptionServices;
+using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Timers
 {
@@ -12,14 +13,14 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
     public static class IWebJobsExceptionHandlerExtensions
     {
         /// <summary>
-        /// Captures the exception and synchronously runs OnUnhandledExceptionAsync
+        /// Captures the exception and runs OnUnhandledExceptionAsync
         /// </summary>
         /// <param name="handler"></param>
         /// <param name="e"></param>
-        public static void Capture(this IWebJobsExceptionHandler handler, Exception e)
+        public static Task HandleAsync(this IWebJobsExceptionHandler handler, Exception e)
         {
             var info = ExceptionDispatchInfo.Capture(e);
-            handler?.OnUnhandledExceptionAsync(info).GetAwaiter().GetResult();
+            return handler?.OnUnhandledExceptionAsync(info) ?? Task.CompletedTask;
         }
     }
 }
