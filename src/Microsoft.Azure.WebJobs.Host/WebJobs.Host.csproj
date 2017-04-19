@@ -414,7 +414,15 @@
     <Compile Include="FuncConverter.cs" />
     <Compile Include="FunctionTimeoutException.cs" />
     <Compile Include="Exceptions\RecoverableException.cs" />
+    <Compile Include="Lease\ILeaseProxy.cs" />
     <Compile Include="JobHostBlobsConfiguration.cs" />
+    <Compile Include="Lease\BlobLeaseProxy.cs" />
+    <Compile Include="Lease\LeaseDefinition.cs" />
+    <Compile Include="Lease\LeaseInformation.cs" />
+    <Compile Include="Lease\LeaseException.cs" />
+    <Compile Include="Lease\LeaseFailureReason.cs" />
+    <Compile Include="Lease\LeaseFactory.cs" />
+    <Compile Include="Lease\SqlLeaseProxy.cs" />
     <Compile Include="Listeners\FunctionListener.cs" />
     <Compile Include="Loggers\TraceEventExtensions.cs" />
     <Compile Include="Exceptions\FunctionException.cs" />
