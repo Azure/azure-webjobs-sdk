@@ -17,6 +17,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
 
         TimeSpan VisibilityTimeout { get; }
 
+        int DeleteRetryCount { get; }
+
         IQueueProcessorFactory QueueProcessorFactory { get; }
     }
 }

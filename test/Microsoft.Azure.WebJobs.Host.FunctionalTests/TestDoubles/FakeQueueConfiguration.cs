@@ -56,6 +56,14 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
                 return _queueProcessorFactory;
             }
         }
+        
+        public int DeleteRetryCount
+        {
+            get
+            {
+                return 0;
+            }
+        }
 
         private class FakeQueueProcessorFactory : DefaultQueueProcessorFactory
         {

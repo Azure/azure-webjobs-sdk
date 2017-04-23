@@ -21,11 +21,14 @@ namespace Microsoft.Azure.WebJobs.Host
         // the runtime error message the user would receive from the SDK otherwise is not as helpful.
         private const int MaxBatchSize = 32;
 
+        private const int DefaultRetryCount = 0;
+
         private int _batchSize = DefaultBatchSize;
         private int _newBatchThreshold;
         private TimeSpan _maxPollingInterval = QueuePollingIntervals.DefaultMaximum;
         private TimeSpan _visibilityTimeout = TimeSpan.Zero;
         private int _maxDequeueCount = DefaultMaxDequeueCount;
+        private int _deleteRetryCount = DefaultRetryCount;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JobHostQueuesConfiguration"/> class.
@@ -64,14 +67,14 @@ namespace Microsoft.Azure.WebJobs.Host
         /// </summary>
         public int NewBatchThreshold
         {
-            get 
-            { 
+            get
+            {
                 if (_newBatchThreshold == -1)
                 {
                     // if this hasn't been set explicitly, default it
                     return _batchSize / 2;
                 }
-                return _newBatchThreshold; 
+                return _newBatchThreshold;
             }
 
             set
@@ -84,7 +87,7 @@ namespace Microsoft.Azure.WebJobs.Host
                 _newBatchThreshold = value;
             }
         }
-         
+
         /// <summary>
         /// Gets or sets the longest period of time to wait before checking for a message to arrive when a queue remains
         /// empty.
@@ -172,10 +175,28 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <see cref="QueueProcessor"/> instances that will be used to process messages.
         /// </summary>
         [CLSCompliant(false)]
-        public IQueueProcessorFactory QueueProcessorFactory 
-        { 
-            get; 
-            set; 
+        public IQueueProcessorFactory QueueProcessorFactory
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// Get's or sets the delete retry count
+        /// In some cases a queue may be unavailable temporarily. Retrying in some cases can
+        /// reduce the chance that a successfully processed message can return to the queue.
+        /// The default is 0
+        /// </summary>
+        public int DeleteRetryCount
+        {
+            get
+            {
+                return _deleteRetryCount;
+            }
+            set
+            {
+                _deleteRetryCount = value;
+            }
         }
     }
 }

@@ -50,5 +50,12 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                 return new DefaultQueueProcessorFactory();
             }
         }
+        public int DeleteRetryCount
+        {
+            get
+            {
+                return 0;
+            }
+        }
     }
 }
