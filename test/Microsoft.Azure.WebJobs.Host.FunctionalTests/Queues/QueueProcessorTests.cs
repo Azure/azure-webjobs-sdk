@@ -11,6 +11,7 @@ using Microsoft.Azure.WebJobs.Host.Storage.Queue;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.WindowsAzure.Storage.Auth;
 using Moq;
 using Xunit;
 
@@ -24,12 +25,14 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private QueueProcessor _processor;
         private TraceWriter _trace;
         private JobHostQueuesConfiguration _queuesConfig;
+        private StorageCredentials _queueCredentials;
 
         public QueueProcessorTests(TestFixture fixture)
         {
             _trace = new TestTraceWriter(TraceLevel.Verbose);
             _queue = fixture.Queue;
             _poisonQueue = fixture.PoisonQueue;
+            _queueCredentials = fixture.QueueClient.Credentials;
 
             _queuesConfig = new JobHostQueuesConfiguration();
             QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, _trace, null, _queuesConfig);
@@ -148,6 +151,32 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             var delta = message.NextVisibleTime - DateTime.UtcNow;
             Assert.True(delta.Value.TotalMinutes > 4);
+        }
+
+        [Fact]
+        public async Task DeleteMessageWithRetry()
+        {
+            int retryCount = 3;
+            var queuesConfig = new JobHostQueuesConfiguration
+            {
+                DeleteRetryCount = retryCount
+            };
+
+            CloudQueueWithDeleteCounter retryQueue = new CloudQueueWithDeleteCounter(_queue.StorageUri,_queueCredentials);
+            QueueProcessorFactoryContext qpfc = new QueueProcessorFactoryContext(retryQueue, _trace, null, queuesConfig, _poisonQueue);
+            QueueProcessor localProcessor = new QueueProcessor(qpfc);
+            string messageContent = Guid.NewGuid().ToString();
+            CloudQueueMessage cqm = new CloudQueueMessage(messageContent);
+            await retryQueue.AddMessageAsync(cqm);
+            var functionResult = new FunctionResult(true);
+            cqm = await retryQueue.GetMessageAsync();
+            // removing with _queue to avoid affecting the count
+            await _queue.DeleteMessageAsync(cqm,CancellationToken.None);
+
+            await localProcessor.CompleteProcessingMessageAsync(cqm, functionResult, CancellationToken.None);
+            // retryQueue.DeleteCount should be equal to the initial attempt plus 3 retries(RetryCount+1)
+            Assert.Equal(retryCount+1,retryQueue.DeleteCount);
+            
         }
 
         public class TestFixture : IDisposable

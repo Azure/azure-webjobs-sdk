@@ -205,13 +205,12 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
         protected virtual async Task DeleteMessageAsync(CloudQueueMessage message, CancellationToken cancellationToken)
         {
             int retries = 0;
-            bool complete = false;
-            while (!complete)
+            while (true)
             {
                 try
                 {
                     await _queue.DeleteMessageAsync(message, cancellationToken);
-                    complete = true;
+                    return;
                 }
                 catch (StorageException exception)
                 {
@@ -220,8 +219,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
                     {
                         // If someone else took over the message; let them delete it.
                         string msg = string.Format(CultureInfo.InvariantCulture, $"Message ID:{0} did not have a matching PopReceipt", message.Id);
-                        _logger.LogDebug(msg);
-                        complete = true;
+                        _logger?.LogDebug(msg);
+                        return;
                     }
                     else if (exception.IsNotFoundMessageOrQueueNotFound() ||
                              exception.IsConflictQueueBeingDeletedOrDisabled())
@@ -230,14 +229,14 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
                         {
                             retries++;
                             string msg = string.Format(CultureInfo.InvariantCulture, $"Message ID:{0} failed to delete. Retry {1}", message.Id, retries);
-                            _logger.LogDebug(msg);
+                            _logger?.LogDebug(msg);
                             Thread.Sleep(RetryWait);
                         }
                         else
                         {
-                            complete = true;
                             string msg = string.Format(CultureInfo.InvariantCulture, $"Message ID:{0} failed to delete, retry limit reached. Could result in duplicate");
-                            _logger.LogDebug(msg);
+                            _logger?.LogDebug(msg);
+                            return;
                         } 
                     }
                     else
