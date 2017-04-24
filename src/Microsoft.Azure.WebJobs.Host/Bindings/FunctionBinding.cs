@@ -26,11 +26,18 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         internal static BindingContext NewBindingContext(
             ValueBindingContext context, 
             IReadOnlyDictionary<string, object> existingBindingData,  
-            IDictionary<string, object> parameters)
+            IDictionary<string, object> parameters,
+            SysBindingData sysBindingData)
         {
             // if bindingData was a mutable dictionary, we could just add it. 
             // But since it's read-only, must create a new one. 
             Dictionary<string, object> bindingData = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+            if (sysBindingData != null)
+            {
+                bindingData[SysBindingData.Name] = sysBindingData;
+            }
+
             if (existingBindingData != null)
             {
                 foreach (var kv in existingBindingData)
@@ -55,7 +62,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             Dictionary<string, IValueProvider> results = new Dictionary<string, IValueProvider>();
 
             // Supplied bindings can be direct parameters or route parameters. 
-            BindingContext bindingContext = NewBindingContext(context, null, parameters);
+            BindingContext bindingContext = NewBindingContext(context, null, parameters, sysBindingData);
 
             // bind Singleton if specified
             SingletonAttribute singletonAttribute = SingletonManager.GetFunctionSingletonOrNull(_descriptor, isTriggered: false);
