@@ -6,10 +6,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings.Path;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
-{
+{    
     using BindingData = IReadOnlyDictionary<string, object>;
     using BindingDataContract = IReadOnlyDictionary<string, System.Type>;
     // Func to transform Attribute,BindingData into value for cloned attribute property/constructor arg
@@ -34,21 +35,31 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         // Compute the values to apply to Settable properties on newly created attribute.
         private readonly Action<TAttribute, BindingData>[] _propertySetters;
 
-        // Optional hook for post-processing the attribute. This is intended for legacy hack rules.
-        private readonly Func<TAttribute, Task<TAttribute>> _hook;
-
         private readonly Dictionary<PropertyInfo, AutoResolveAttribute> _autoResolves = new Dictionary<PropertyInfo, AutoResolveAttribute>();
 
         private static readonly BindingFlags Flags = BindingFlags.Instance | BindingFlags.Public;
 
+        private readonly string _methodName;
+
         public AttributeCloner(
             TAttribute source,
             BindingDataContract bindingDataContract,
-            INameResolver nameResolver = null,
-            Func<TAttribute, Task<TAttribute>> hook = null)
+            INameResolver nameResolver) : this(source, bindingDataContract, ClonerContext.New(nameResolver))
         {
-            _hook = hook;
-            nameResolver = nameResolver ?? new EmptyNameResolver();
+        }
+
+        public AttributeCloner(
+            TAttribute source,
+            BindingDataContract bindingDataContract,
+            ClonerContext context = null)
+        {
+            if (context == null)
+            {
+                context = new ClonerContext();
+            }
+            _methodName = context.MethodName;
+
+            var nameResolver = context.GetResolverOrDefault();
             _source = source;
 
             Type attributeType = typeof(TAttribute);
@@ -107,10 +118,21 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return GetAppSettingResolver((string)originalValue, appSettingAttr, nameResolver, propInfo);
             }
             // try to resolve with auto resolve ({...}, %...%)
-            if (autoResolveAttr != null && originalValue != null)
+            if (autoResolveAttr != null)
             {
-                _autoResolves[propInfo] = autoResolveAttr;
-                return GetTemplateResolver((string)originalValue, autoResolveAttr, nameResolver, propInfo, contract);
+                if (autoResolveAttr.Default == DefaultResolveValue.MemberName)
+                {
+                    if (originalValue == null || string.IsNullOrWhiteSpace(originalValue.ToString()))
+                    {                      
+                        return (newAttr, bindingData) => _methodName;
+                    } 
+                }
+
+                if (originalValue != null)
+                {
+                    _autoResolves[propInfo] = autoResolveAttr;
+                    return GetTemplateResolver((string)originalValue, autoResolveAttr, nameResolver, propInfo, contract);
+                }
             }
             // resolve the original value
             return (newAttr, bindingData) => originalValue;
@@ -169,7 +191,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return invokeString;
         }
 
-        public async Task<TAttribute> ResolveFromInvokeStringAsync(string invokeString)
+        public TAttribute ResolveFromInvokeString(string invokeString)
         {
             TAttribute attr;
             var resolver = _source as IAttributeInvokeDescriptor<TAttribute>;
@@ -181,20 +203,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 attr = resolver.FromInvokeString(invokeString);
             }
-            if (_hook != null)
-            {
-                attr = await _hook(attr);
-            }
             return attr;
         }
 
-        public async Task<TAttribute> ResolveFromBindingDataAsync(BindingContext ctx)
+        public TAttribute ResolveFromBindingData(BindingContext ctx)
         {
             var attr = ResolveFromBindings(ctx.BindingData);
-            if (_hook != null)
-            {
-                attr = await _hook(attr);
-            }
             return attr;
         }
 
@@ -295,12 +309,6 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
             // return the default policy                        
             return new DefaultResolutionPolicy();
-        }
-
-        // If no name resolver is specified, then any %% becomes an error.
-        private class EmptyNameResolver : INameResolver
-        {
-            public string Resolve(string name) => null;
         }
     }
 }

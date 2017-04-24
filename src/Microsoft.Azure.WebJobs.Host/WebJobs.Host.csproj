@@ -493,6 +493,7 @@
     <Compile Include="Bindings\BindingProviders\GenericCompositeBindingProvider.cs" />
     <Compile Include="Bindings\BindingProviders\ItemBindingProvider.cs" />
     <Compile Include="Bindings\BindingProviders\ValidatingWrapperBindingProvider.cs" />
+    <Compile Include="Bindings\ClonerContext.cs" />
     <Compile Include="Bindings\DefaultAttributeInvokerDescriptor.cs" />
     <Compile Include="Bindings\FuncArgumentBuilder.cs" />
     <Compile Include="Bindings\IArgumentBindingProvider.cs" />

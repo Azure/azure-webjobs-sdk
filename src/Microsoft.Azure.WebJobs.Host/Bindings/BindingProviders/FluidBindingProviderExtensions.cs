@@ -15,12 +15,10 @@ namespace Microsoft.Azure.WebJobs.Host
     {
         public static IBindingProvider SetPostResolveHook<TAttribute>(
             this IBindingProvider binder,
-            Func<TAttribute, ParameterInfo, INameResolver, ParameterDescriptor> buildParameterDescriptor = null,
-            Func<TAttribute, ParameterInfo, INameResolver, Task<TAttribute>> postResolveHook = null)
+            Func<TAttribute, ParameterInfo, INameResolver, ParameterDescriptor> buildParameterDescriptor = null)
         {
             var fluidBinder = (FluentBindingProvider<TAttribute>)binder;
-
-            fluidBinder.PostResolveHook = postResolveHook;
+                        
             fluidBinder.BuildParameterDescriptor = buildParameterDescriptor;
             return binder;
         }
