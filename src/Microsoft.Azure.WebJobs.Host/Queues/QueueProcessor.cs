@@ -218,26 +218,30 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
                     if (exception.IsBadRequestPopReceiptMismatch())
                     {
                         // If someone else took over the message; let them delete it.
-                        string msg = string.Format(CultureInfo.InvariantCulture, $"Message ID:{0} did not have a matching PopReceipt", message.Id);
+                        string msg = string.Format(CultureInfo.InvariantCulture, "Message ID:{0} did not have a matching PopReceipt", message.Id);
                         _logger?.LogDebug(msg);
                         return;
                     }
                     else if (exception.IsNotFoundMessageOrQueueNotFound() ||
                              exception.IsConflictQueueBeingDeletedOrDisabled())
                     {
+                        string msg = string.Format(CultureInfo.InvariantCulture, "MessageID:{0} missing message or queue", message.Id);
+                    }
+                    else if (exception.IsServiceUnavailable())
+                    {
                         if (retries < DeleteRetryCount)
                         {
                             retries++;
-                            string msg = string.Format(CultureInfo.InvariantCulture, $"Message ID:{0} failed to delete. Retry {1}", message.Id, retries);
+                            string msg = string.Format(CultureInfo.InvariantCulture, "MessageID:{0} failed to delete due to service unavailable. Retry{1}", message.Id, retries);
                             _logger?.LogDebug(msg);
                             Thread.Sleep(RetryWait);
                         }
                         else
                         {
-                            string msg = string.Format(CultureInfo.InvariantCulture, $"Message ID:{0} failed to delete, retry limit reached. Could result in duplicate");
-                            _logger?.LogDebug(msg);
+                            retries++;
+                            string msg = string.Format(CultureInfo.InvariantCulture, "MessageID:{0} failed to delete due to service unavailable. RetryLimit Reached. Could result in duplicates", message.Id, retries);
                             return;
-                        } 
+                        }
                     }
                     else
                     {

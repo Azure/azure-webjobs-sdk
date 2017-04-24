@@ -167,10 +167,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             QueueProcessor localProcessor = new QueueProcessor(qpfc);
             string messageContent = Guid.NewGuid().ToString();
             CloudQueueMessage cqm = new CloudQueueMessage(messageContent);
-            await retryQueue.AddMessageAsync(cqm);
+            // Delete Message from queue and avoid  test exception
+            await _queue.AddMessageAsync(cqm);
             var functionResult = new FunctionResult(true);
             cqm = await retryQueue.GetMessageAsync();
-            // removing with _queue to avoid affecting the count
             await _queue.DeleteMessageAsync(cqm,CancellationToken.None);
 
             await localProcessor.CompleteProcessingMessageAsync(cqm, functionResult, CancellationToken.None);

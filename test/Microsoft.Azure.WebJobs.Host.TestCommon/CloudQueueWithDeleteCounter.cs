@@ -20,8 +20,12 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
         public async override Task DeleteMessageAsync(CloudQueueMessage message, CancellationToken token)
         {
             DeleteCount++;
-            await base.DeleteMessageAsync(message,token);
-            return;
+            await Task.Delay(1);
+            //simulate 503
+            RequestResult rr = new RequestResult();
+            rr.HttpStatusCode = 503;
+            throw new StorageException(rr,"Fake Exception",new Exception());
+            
         }
 
     }
