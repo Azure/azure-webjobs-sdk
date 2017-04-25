@@ -41,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 throw new ArgumentNullException("provider");
             }
 
-            connectionStringName = string.IsNullOrWhiteSpace(connectionStringName) ? ConnectionStringNames.Storage : connectionStringName;
+            connectionStringName = string.IsNullOrEmpty(connectionStringName) ? ConnectionStringNames.Storage : connectionStringName;
 
             if (nameResolver != null)
             {
