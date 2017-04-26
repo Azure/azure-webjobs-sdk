@@ -142,15 +142,15 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
                 _stopWaitingTaskSource = new TaskCompletionSource<object>();
             }
 
-            if (!await _queue.ExistsAsync(cancellationToken))
-            {
-                // Back off when no message is available.
-                return CreateBackoffResult();
-            }
-
             IEnumerable<IStorageQueueMessage> batch;
             try
             {
+                if (!await _queue.ExistsAsync(cancellationToken))
+                {
+                    // Back off when no message is available.
+                    return CreateBackoffResult();
+                }
+
                 batch = await _queue.GetMessagesAsync(_queueProcessor.BatchSize,
                     _visibilityTimeout,
                     options: null,
@@ -163,7 +163,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
                     exception.IsConflictQueueBeingDeletedOrDisabled() ||
                     exception.IsServerSideError())
                 {
-                    // Back off when no message is available.
+                    // Back off when no message is available, or when
+                    // transient errors occur
                     return CreateBackoffResult();
                 }
                 else
@@ -178,7 +179,6 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             }
 
             bool foundMessage = false;
-
             foreach (IStorageQueueMessage message in batch)
             {
                 if (message == null)
