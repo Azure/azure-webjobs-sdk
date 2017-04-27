@@ -14,23 +14,23 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     /// <summary>
     ///  Context passed to <see cref="AutoResolveAttribute"/> to aide in resolution. 
     /// </summary>
-    internal class ClonerContext
+    internal class AttributeClonerContext
     {
         public string MethodName { get; set; }
 
         public INameResolver NameResolver { get; set; }
 
-        public static ClonerContext New(INameResolver resolver)
+        public static AttributeClonerContext New(INameResolver resolver)
         {
-            return new ClonerContext
+            return new AttributeClonerContext
             {
                 NameResolver = resolver,
             };
         }
 
-        public static ClonerContext New(INameResolver resolver, ParameterInfo parameter)
+        public static AttributeClonerContext New(INameResolver resolver, ParameterInfo parameter)
         {
-            return new ClonerContext
+            return new AttributeClonerContext
             {
                  NameResolver = resolver,
                  MethodName = parameter.Member.Name

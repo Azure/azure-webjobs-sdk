@@ -141,7 +141,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 var parameter = context.Parameter;
                 var attributeSource = TypeUtility.GetResolvedAttribute<TAttribute>(parameter);
 
-                var clonerCtx = ClonerContext.New(parent._nameResolver, context.Parameter);
+                var clonerCtx = AttributeClonerContext.New(parent._nameResolver, context.Parameter);
                 var cloner = new AttributeCloner<TAttribute>(attributeSource, context.BindingDataContract, clonerCtx);
 
                 Func<object, object> buildFromAttribute;

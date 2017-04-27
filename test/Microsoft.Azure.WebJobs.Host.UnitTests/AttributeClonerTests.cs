@@ -69,7 +69,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         // Test with DefaultValue.MemberName
         public class Attr5 : Attribute
         {
-            [AutoResolve(Default = DefaultResolveValue.MemberName)]
+            [AutoResolve(Default = AutoResolveValue.MethodName)]
             public string AutoResolve { get; set; }
         }
 
@@ -403,7 +403,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             };
             var ctx = GetCtx(values);
 
-            var clonerCtx = new ClonerContext { NameResolver = nameResolver, MethodName = "MyMethod" };
+            var clonerCtx = new AttributeClonerContext { NameResolver = nameResolver, MethodName = "MyMethod" };
             var cloner = new AttributeCloner<Attr5>(attr, GetBindingContract(values), clonerCtx);
 
             var attr2 = cloner.ResolveFromBindingData(ctx);

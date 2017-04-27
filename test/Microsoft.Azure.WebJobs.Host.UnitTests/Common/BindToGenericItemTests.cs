@@ -600,7 +600,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         // A test attribute for binding.  
         public class Test2Attribute : Attribute
         {
-            [AutoResolve(Default = DefaultResolveValue.MemberName)]
+            [AutoResolve(Default = AutoResolveValue.MethodName)]
             public string Path { get; set; }
         }
 

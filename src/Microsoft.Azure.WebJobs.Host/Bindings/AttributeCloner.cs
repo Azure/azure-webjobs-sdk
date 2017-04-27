@@ -39,25 +39,25 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         private static readonly BindingFlags Flags = BindingFlags.Instance | BindingFlags.Public;
 
-        private readonly string _methodName;
+        private readonly AttributeClonerContext _context;
 
         public AttributeCloner(
             TAttribute source,
             BindingDataContract bindingDataContract,
-            INameResolver nameResolver) : this(source, bindingDataContract, ClonerContext.New(nameResolver))
+            INameResolver nameResolver) : this(source, bindingDataContract, AttributeClonerContext.New(nameResolver))
         {
         }
 
         public AttributeCloner(
             TAttribute source,
             BindingDataContract bindingDataContract,
-            ClonerContext context = null)
+            AttributeClonerContext context = null)
         {
             if (context == null)
             {
-                context = new ClonerContext();
+                context = new AttributeClonerContext();
             }
-            _methodName = context.MethodName;
+            _context = context;
 
             var nameResolver = context.GetResolverOrDefault();
             _source = source;
@@ -120,18 +120,20 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             // try to resolve with auto resolve ({...}, %...%)
             if (autoResolveAttr != null)
             {
-                if (autoResolveAttr.Default == DefaultResolveValue.MemberName)
-                {
-                    if (originalValue == null || string.IsNullOrWhiteSpace(originalValue.ToString()))
-                    {                      
-                        return (newAttr, bindingData) => _methodName;
-                    } 
-                }
-
                 if (originalValue != null)
                 {
                     _autoResolves[propInfo] = autoResolveAttr;
                     return GetTemplateResolver((string)originalValue, autoResolveAttr, nameResolver, propInfo, contract);
+                }
+                else
+                {
+                    if (autoResolveAttr.Default == AutoResolveValue.MethodName)
+                    {
+                        if (string.IsNullOrWhiteSpace(originalValue.ToString()))
+                        {
+                            return (newAttr, bindingData) => _context.MethodName;
+                        }
+                    }
                 }
             }
             // resolve the original value

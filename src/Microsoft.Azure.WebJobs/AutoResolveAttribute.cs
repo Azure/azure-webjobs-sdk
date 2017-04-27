@@ -30,6 +30,6 @@ namespace Microsoft.Azure.WebJobs
         /// <summary>
         /// If this is empty, then specify a default. 
         /// </summary>
-        public DefaultResolveValue Default { get; set; } = DefaultResolveValue.None;
+        public AutoResolveValue Default { get; set; } = AutoResolveValue.None;
     }
 }
