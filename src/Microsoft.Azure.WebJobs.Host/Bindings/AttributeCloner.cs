@@ -120,21 +120,25 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             // try to resolve with auto resolve ({...}, %...%)
             if (autoResolveAttr != null)
             {
+                if (propInfo.PropertyType != typeof(string))
+                {
+                    throw new InvalidOperationException($"Property '{propInfo.Name}' with AutoResolve must be type string.");
+                }
+                var str = (string)originalValue;
+
+                if (autoResolveAttr.Default == AutoResolveValue.MethodName)
+                {
+                    if (string.IsNullOrWhiteSpace(str))
+                    {
+                        return (newAttr, bindingData) => _context.MethodName;
+                    }
+                }
+
                 if (originalValue != null)
                 {
                     _autoResolves[propInfo] = autoResolveAttr;
-                    return GetTemplateResolver((string)originalValue, autoResolveAttr, nameResolver, propInfo, contract);
-                }
-                else
-                {
-                    if (autoResolveAttr.Default == AutoResolveValue.MethodName)
-                    {
-                        if (string.IsNullOrWhiteSpace(originalValue.ToString()))
-                        {
-                            return (newAttr, bindingData) => _context.MethodName;
-                        }
-                    }
-                }
+                    return GetTemplateResolver(str, autoResolveAttr, nameResolver, propInfo, contract);
+                }                
             }
             // resolve the original value
             return (newAttr, bindingData) => originalValue;

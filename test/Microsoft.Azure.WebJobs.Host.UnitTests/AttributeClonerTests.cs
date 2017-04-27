@@ -81,6 +81,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             public string Required { get; set; }
         }
 
+        public class InvalidNonStringAutoResolve : Attribute
+        {
+            // AutoResolve must be string 
+            [AutoResolve]
+            public bool Required { get; set; }
+        }
+
         public class AttributeWithResolutionPolicy : Attribute
         {
             [AutoResolve(ResolutionPolicyType = typeof(TestResolutionPolicy))]
@@ -379,6 +386,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.Equal("Property 'Required' cannot be annotated with both AppSetting and AutoResolve.", exc.Message);
         }
 
+        [Fact]
+        public void AttributeCloner_Throws_IfAutoResolveIsNotString()
+        {
+            var a = new InvalidNonStringAutoResolve();
+            var exc = Assert.Throws<InvalidOperationException>(() => new AttributeCloner<InvalidNonStringAutoResolve>(a, EmptyContract));
+            Assert.Equal("Property 'Required' with AutoResolve must be type string.", exc.Message);
+        }
+        
         // Default to MethodName  kicks in if the (pre-resolved) value is null. 
         [Theory]
         [InlineData(null, "MyMethod")]
