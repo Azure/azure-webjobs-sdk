@@ -115,6 +115,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "BinderExtensions",
                 "BlobAttribute",
                 "BlobTriggerAttribute",
+                "AutoResolveValue",
                 "IBinder",
                 "IAsyncCollector`1",
                 "ICollector`1",
