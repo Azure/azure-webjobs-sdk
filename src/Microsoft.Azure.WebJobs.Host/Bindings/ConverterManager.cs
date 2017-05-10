@@ -157,6 +157,13 @@ namespace Microsoft.Azure.WebJobs
             // Rewriter rule for generics so customers can say: IEnumerable<OpenType> 
             if (t.IsGenericType)
             {
+                if (t.IsArray)
+                {
+                    var elementType = t.GetElementType();
+                    var innerType = GetTypeValidator(elementType);
+                    return new ArrayOpenType(innerType);
+                }
+
                 var outerType = t.GetGenericTypeDefinition();
                 Type[] args = t.GetGenericArguments();
                 if (args.Length == 1)
@@ -595,6 +602,29 @@ namespace Microsoft.Azure.WebJobs
             internal override string GetDisplayName()
             {
                 return _inner.GetDisplayName() + "[]";
+            }
+        }
+
+        // Matches any T[] 
+        private class ArrayOpenType : OpenType
+        {
+            private readonly OpenType _inner;
+            public ArrayOpenType(OpenType inner)
+            {
+                _inner = inner;
+            }
+            public override bool IsMatch(Type type)
+            {
+                if (type == null)
+                {
+                    throw new ArgumentNullException(nameof(type));
+                }
+                if (type.IsArray)
+                {
+                    var elementType = type.GetElementType();
+                    return _inner.IsMatch(elementType);
+                }
+                return false;
             }
         }
     } // end class ConverterManager
