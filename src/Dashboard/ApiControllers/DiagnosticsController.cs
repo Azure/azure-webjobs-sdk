@@ -7,6 +7,7 @@ using Dashboard.Data;
 using Dashboard.Data.Logs;
 using Dashboard.ViewModels;
 using Microsoft.Azure.WebJobs.Protocols;
+using Dashboard.Indexers;
 
 namespace Dashboard.ApiControllers
 {
