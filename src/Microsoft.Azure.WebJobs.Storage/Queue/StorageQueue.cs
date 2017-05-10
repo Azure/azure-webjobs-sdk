@@ -95,6 +95,16 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Queue
         public Task<IEnumerable<IStorageQueueMessage>> GetMessagesAsync(int messageCount, TimeSpan? visibilityTimeout,
             QueueRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
+            // Add WebJobs to user agent to make it easier to collect usage information from Storage telemetry
+            if (operationContext == null)
+            {
+                operationContext = new OperationContext();
+            }
+            operationContext.SendingRequest += (sender, e) =>
+            {
+                e.Request.UserAgent += "-WebJobsQueue";
+            };
+
             Task<IEnumerable<CloudQueueMessage>> innerTask = _sdk.GetMessagesAsync(messageCount,
                 visibilityTimeout, options, operationContext, cancellationToken);
             return GetMessagesAsyncCore(innerTask);

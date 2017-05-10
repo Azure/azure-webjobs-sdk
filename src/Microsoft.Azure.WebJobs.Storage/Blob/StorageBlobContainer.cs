@@ -127,6 +127,15 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Blob
             BlobListingDetails blobListingDetails, int? maxResults, BlobContinuationToken currentToken,
             BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
+            // Add WebJobs to user agent to make it easier to collect usage information from Storage telemetry
+            if (operationContext == null)
+            {
+                operationContext = new OperationContext();
+            }
+            operationContext.SendingRequest += (sender, e) =>
+            {
+                e.Request.UserAgent += "-WebJobsBlob";
+            };
             Task<BlobResultSegment> sdkTask = _sdk.ListBlobsSegmentedAsync(prefix, useFlatBlobListing,
                 blobListingDetails, maxResults, currentToken, options, operationContext, cancellationToken);
             return ListBlobsSegmentedAsyncCore(sdkTask);
