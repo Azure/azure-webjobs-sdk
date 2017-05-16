@@ -40,8 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return Task.FromResult<IBinding>(null);
             }
 
-            var clonerCtx = AttributeClonerContext.New(_nameResolver, context.Parameter);
-            var cloner = new AttributeCloner<TAttribute>(attributeSource, context.BindingDataContract, clonerCtx);
+            var cloner = new AttributeCloner<TAttribute>(attributeSource, context.BindingDataContract, _nameResolver);
 
             IBinding binding = new Binding(cloner, _builder, parameter);
             return Task.FromResult(binding);

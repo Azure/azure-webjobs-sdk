@@ -310,8 +310,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     };
                 }
 
-                var clonerCtx = AttributeClonerContext.New(parent._nameResolver, context.Parameter);
-                var cloner = new AttributeCloner<TAttribute>(attributeSource, context.BindingDataContract, clonerCtx);
+                var cloner = new AttributeCloner<TAttribute>(attributeSource, context.BindingDataContract, parent._nameResolver);
                 return new ExactBinding<TMessage>(cloner, param, mode, buildFromAttribute, converter);
             }
 

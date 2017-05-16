@@ -39,8 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 Type parameterType = context.Parameter.ParameterType;
                 var attr = context.Parameter.GetCustomAttribute<TAttribute>();
 
-                var clonerCtx = AttributeClonerContext.New(_nameResolver, context.Parameter);
-                var cloner = new AttributeCloner<TAttribute>(attr, context.BindingDataContract, clonerCtx);
+                var cloner = new AttributeCloner<TAttribute>(attr, context.BindingDataContract, _nameResolver);
                 var attrNameResolved = cloner.GetNameResolvedAttribute();
                 _validator(attrNameResolved, parameterType);
             }

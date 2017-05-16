@@ -65,7 +65,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 {
                     if (string.Equals(parameterName, SysBindingData.Name, StringComparison.OrdinalIgnoreCase))
                     {
-                        continue; // $$$
+                        continue;
                     }
                     if (BindingParameterResolver.IsSystemParameter(parameterName))
                     {

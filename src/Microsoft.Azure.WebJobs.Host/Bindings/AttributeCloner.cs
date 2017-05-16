@@ -39,27 +39,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         private static readonly BindingFlags Flags = BindingFlags.Instance | BindingFlags.Public;
 
-        private readonly AttributeClonerContext _context;
-
         internal AttributeCloner(
             TAttribute source,
             BindingDataContract bindingDataContract,
-            INameResolver nameResolver) : this(source, bindingDataContract, AttributeClonerContext.New(nameResolver))
+            INameResolver nameResolver = null)
         {
-        }
-
-        public AttributeCloner(
-            TAttribute source,
-            BindingDataContract bindingDataContract,
-            AttributeClonerContext context = null)
-        {
-            if (context == null)
-            {
-                context = new AttributeClonerContext();
-            }
-            _context = context;
-
-            var nameResolver = context.NameResolver;
+            nameResolver = nameResolver ?? new EmptyNameResolver();
             _source = source;
 
             Type attributeType = typeof(TAttribute);
@@ -130,7 +115,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 {
                     if (autoResolveAttr.Default != null)
                     {
-                        return GetBuiltinTemplateResolver(autoResolveAttr.Default);
+                        return GetBuiltinTemplateResolver(autoResolveAttr.Default, nameResolver);
                     }
                 }                
 
@@ -146,21 +131,13 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         // Resolve for AutoResolve.Default templates. 
         // These only have access to the {sys} builtin variable and don't get access to trigger binding data. 
-        internal BindingDataResolver GetBuiltinTemplateResolver(string originalValue)
+        internal static BindingDataResolver GetBuiltinTemplateResolver(string originalValue, INameResolver nameResolver)
         {
-            string resolvedValue = this._context.NameResolver.ResolveWholeString(originalValue);
+            string resolvedValue = nameResolver.ResolveWholeString(originalValue);
 
             var template = BindingTemplate.FromString(resolvedValue);
 
-            // Enforces we're not referring to other data from the trigger. 
-            try
-            {
-                template.ValidateContractCompatibility(SysBindingData.DefaultSysContract);
-            }
-            catch (InvalidOperationException e)
-            {
-                throw new InvalidOperationException($"Default contract can only refer to the '{SysBindingData.Name}' binding data: " + e.Message);
-            }
+            SysBindingData.ValidateStaticContract(template);
 
             // Ignore trigger provided bindindData and use the sys binding data. 
             return (newAttr, bindingData) => template.Bind(SysBindingData.GetSysBindingData(bindingData));
@@ -337,6 +314,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
             // return the default policy                        
             return new DefaultResolutionPolicy();
+        }
+
+        // If no name resolver is specified, then any %% becomes an error.
+        private class EmptyNameResolver : INameResolver
+        {
+            public string Resolve(string name) => null;
         }
     }
 }
