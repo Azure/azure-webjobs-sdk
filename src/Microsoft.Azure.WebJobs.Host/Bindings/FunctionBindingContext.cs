@@ -3,6 +3,7 @@
 
 using System;
 using System.Threading;
+using Microsoft.Azure.WebJobs.Host.Protocols;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -22,17 +23,24 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// <param name="functionInstanceId">The instance ID of the function being bound to.</param>
         /// <param name="functionCancellationToken">The <see cref="CancellationToken"/> to use.</param>
         /// <param name="trace">The trace writer.</param>
-        /// <param name="methodName">name of the current function. This will be returned via <see cref="SysBindingData.MethodName"/>  </param>
+        /// <param name="functionDescriptor">Current function being executed. This will influence properties on the <see cref="SysBindingData.MethodName"/>  </param>
         public FunctionBindingContext(
             Guid functionInstanceId, 
             CancellationToken functionCancellationToken, 
             TraceWriter trace,
-            string methodName = null)
+            FunctionDescriptor functionDescriptor = null)
         {
             _functionInstanceId = functionInstanceId;
             _functionCancellationToken = functionCancellationToken;
             _trace = trace;
-            this.MethodName = methodName;
+            if (functionDescriptor != null)
+            {
+                var methodInfo = functionDescriptor.Method;
+                if (methodInfo != null)
+                {
+                    this.MethodName = methodInfo.Name;
+                }
+            }
         }
 
         /// <summary>
@@ -60,7 +68,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         /// <summary>
-        /// The name of the current function. 
+        /// The short name of the current function. 
         /// </summary>
         public string MethodName { get; private set; }
     }
