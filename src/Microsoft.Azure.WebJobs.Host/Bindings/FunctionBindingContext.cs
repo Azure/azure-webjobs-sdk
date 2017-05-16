@@ -22,11 +22,17 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// <param name="functionInstanceId">The instance ID of the function being bound to.</param>
         /// <param name="functionCancellationToken">The <see cref="CancellationToken"/> to use.</param>
         /// <param name="trace">The trace writer.</param>
-        public FunctionBindingContext(Guid functionInstanceId, CancellationToken functionCancellationToken, TraceWriter trace)
+        /// <param name="methodName">name of the current function. This will be returned via <see cref="SysBindingData.MethodName"/>  </param>
+        public FunctionBindingContext(
+            Guid functionInstanceId, 
+            CancellationToken functionCancellationToken, 
+            TraceWriter trace,
+            string methodName = null)
         {
             _functionInstanceId = functionInstanceId;
             _functionCancellationToken = functionCancellationToken;
             _trace = trace;
+            this.MethodName = methodName;
         }
 
         /// <summary>
@@ -52,5 +58,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         {
             get { return _trace; }
         }
+
+        /// <summary>
+        /// The name of the current function. 
+        /// </summary>
+        public string MethodName { get; private set; }
     }
 }

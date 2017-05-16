@@ -16,6 +16,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     /// </summary>
     internal class AttributeClonerContext
     {
+        public AttributeClonerContext()
+        {
+            this.NameResolver = new EmptyNameResolver();
+        }
+
         public string MethodName { get; set; }
 
         public INameResolver NameResolver { get; set; }
@@ -24,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         {
             return new AttributeClonerContext
             {
-                NameResolver = resolver,
+                NameResolver = resolver ?? new EmptyNameResolver(),
             };
         }
 
@@ -32,14 +37,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         {
             return new AttributeClonerContext
             {
-                 NameResolver = resolver,
-                 MethodName = parameter.Member.Name
+                NameResolver = resolver ?? new EmptyNameResolver(),
+                MethodName = parameter.Member.Name
             };
-        }
-        public INameResolver GetResolverOrDefault()
-        {
-            return NameResolver ?? new EmptyNameResolver();
-        }
+        }      
 
         // If no name resolver is specified, then any %% becomes an error.
         private class EmptyNameResolver : INameResolver

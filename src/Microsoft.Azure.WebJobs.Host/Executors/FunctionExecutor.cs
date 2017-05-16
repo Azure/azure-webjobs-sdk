@@ -233,7 +233,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     TraceWriter traceWriter = new CompositeTraceWriter(functionTraceWriter, functionOutputTextWriter, functionTraceLevel);
 
                     // Must bind before logging (bound invoke string is included in log message).
-                    FunctionBindingContext functionContext = new FunctionBindingContext(instance.Id, functionCancellationTokenSource.Token, traceWriter);
+                    var methodName = instance.FunctionDescriptor.ShortName;
+                    FunctionBindingContext functionContext = new FunctionBindingContext(
+                        instance.Id, 
+                        functionCancellationTokenSource.Token, 
+                        traceWriter,
+                        methodName);
                     var valueBindingContext = new ValueBindingContext(functionContext, cancellationToken);
                     var parameters = await instance.BindingSource.BindAsync(valueBindingContext);
 

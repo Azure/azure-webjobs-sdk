@@ -73,6 +73,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             public string AutoResolve { get; set; }
         }
 
+
+        // Test with DefaultValue.MemberName
+        public class BadDefaultAttr : Attribute
+        {
+            // Default can't access instance binding data (x). 
+            [AutoResolve(Default = "{sys.MethodName}-{x}")]
+            public string AutoResolve { get; set; }
+        }
+
         public class InvalidAnnotation: Attribute
         {
             // only one of appsetting/autoresolve allowed
@@ -408,6 +417,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [InlineData("{value}", "123")]
         [InlineData("%empty2%", "")]
         [InlineData("%value2%", "456")]
+        [InlineData("foo-{sys.MethodName}", "foo-MyMethod")]
         public void DefaultMethodName(string propValue, string expectedValue)
         {
             Attr5 attr = new Attr5 { AutoResolve = propValue }; // Pick method name
@@ -421,13 +431,45 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 { "empty", "" },
                 { "value", "123" }
             };
-            var ctx = GetCtx(values);
+            new SysBindingData
+            {
+                MethodName = "MyMethod"
+            }.AddToBindingData(values);
 
-            var clonerCtx = new AttributeClonerContext { NameResolver = nameResolver, MethodName = "MyMethod" };
-            var cloner = new AttributeCloner<Attr5>(attr, GetBindingContract(values), clonerCtx);
+            var ctx = GetCtx(values);
+                        
+            var cloner = new AttributeCloner<Attr5>(attr, GetBindingContract(values), nameResolver);
 
             var attr2 = cloner.ResolveFromBindingData(ctx);
             Assert.Equal(expectedValue, attr2.AutoResolve);            
+        }
+
+        // Default can't access instance binding data. 
+        [Fact]
+        public void DefaultCantAccessInstanceData()
+        {
+            var attr = new BadDefaultAttr(); // use default value, which is bad. 
+
+            Dictionary<string, object> values = new Dictionary<string, object>()
+            {
+                { "x", "123" },
+                { SysBindingData.Name, new SysBindingData
+                {
+                     MethodName = "MyMethod"
+                } }
+            };
+            var ctx = GetCtx(values);
+
+            try
+            {
+                new AttributeCloner<BadDefaultAttr>(attr, GetBindingContract(values));
+                Assert.False(true);
+            }
+            catch (InvalidOperationException e)
+            {
+                // Verify message. 
+                Assert.True(e.Message.StartsWith("Default contract can only refer to the 'sys' binding data: "));
+            }            
         }
 
         [Fact]

@@ -59,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
             _context = context;
 
-            var nameResolver = context.GetResolverOrDefault();
+            var nameResolver = context.NameResolver;
             _source = source;
 
             Type attributeType = typeof(TAttribute);
@@ -153,24 +153,17 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             var template = BindingTemplate.FromString(resolvedValue);
 
             // Enforces we're not referring to other data from the trigger. 
-            template.ValidateContractCompatibility(SysBindingData.DefaultSysContract);
-
-            SysBindingData sys = GetCurrentSysBindingData();
-            var sysBindingData = new Dictionary<string, object>
+            try
             {
-                { "sys", sys }
-            };
+                template.ValidateContractCompatibility(SysBindingData.DefaultSysContract);
+            }
+            catch (InvalidOperationException e)
+            {
+                throw new InvalidOperationException($"Default contract can only refer to the '{SysBindingData.Name}' binding data: " + e.Message);
+            }
 
             // Ignore trigger provided bindindData and use the sys binding data. 
-            return (newAttr, bindingData) => template.Bind(sysBindingData);
-        }
-
-        private SysBindingData GetCurrentSysBindingData()
-        {
-            return new SysBindingData
-            {
-                MethodName = this._context.MethodName
-            };
+            return (newAttr, bindingData) => template.Bind(SysBindingData.GetSysBindingData(bindingData));
         }
 
         // AutoResolve

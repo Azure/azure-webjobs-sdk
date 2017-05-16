@@ -26,18 +26,15 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         internal static BindingContext NewBindingContext(
             ValueBindingContext context, 
             IReadOnlyDictionary<string, object> existingBindingData,  
-            IDictionary<string, object> parameters,
-            SysBindingData sysBindingData)
+            IDictionary<string, object> parameters)
         {
             // if bindingData was a mutable dictionary, we could just add it. 
             // But since it's read-only, must create a new one. 
             Dictionary<string, object> bindingData = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
-            if (sysBindingData != null)
-            {
-                bindingData[SysBindingData.Name] = sysBindingData;
-            }
-
+            var funcContext = context.FunctionContext;
+            var methodName = funcContext.MethodName;
+            
             if (existingBindingData != null)
             {
                 foreach (var kv in existingBindingData)
@@ -52,7 +49,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     bindingData[kv.Key] = kv.Value;
                 }
             }
-            
+
+            // Add 'sys' binding data. 
+            var sysBindingData = new SysBindingData
+            {
+                MethodName = methodName
+            };
+            sysBindingData.AddToBindingData(bindingData);
+
             BindingContext bindingContext = new BindingContext(context, bindingData);
             return bindingContext;
         }
@@ -62,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             Dictionary<string, IValueProvider> results = new Dictionary<string, IValueProvider>();
 
             // Supplied bindings can be direct parameters or route parameters. 
-            BindingContext bindingContext = NewBindingContext(context, null, parameters, sysBindingData);
+            BindingContext bindingContext = NewBindingContext(context, null, parameters);
 
             // bind Singleton if specified
             SingletonAttribute singletonAttribute = SingletonManager.GetFunctionSingletonOrNull(_descriptor, isTriggered: false);
