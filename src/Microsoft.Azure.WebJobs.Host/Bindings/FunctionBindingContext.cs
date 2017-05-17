@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// <param name="functionInstanceId">The instance ID of the function being bound to.</param>
         /// <param name="functionCancellationToken">The <see cref="CancellationToken"/> to use.</param>
         /// <param name="trace">The trace writer.</param>
-        /// <param name="functionDescriptor">Current function being executed. This will influence properties on the <see cref="SysBindingData.MethodName"/>  </param>
+        /// <param name="functionDescriptor">Current function being executed. This will influence properties on the <see cref="SystemBindingData.MethodName"/>  </param>
         public FunctionBindingContext(
             Guid functionInstanceId, 
             CancellationToken functionCancellationToken, 
@@ -33,14 +33,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             _functionInstanceId = functionInstanceId;
             _functionCancellationToken = functionCancellationToken;
             _trace = trace;
-            if (functionDescriptor != null)
-            {
-                var methodInfo = functionDescriptor.Method;
-                if (methodInfo != null)
-                {
-                    this.MethodName = methodInfo.Name;
-                }
-            }
+
+            this.MethodName = functionDescriptor?.Method?.Name;
         }
 
         /// <summary>

@@ -63,7 +63,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 foreach (string parameterName in parameterNames)
                 {
-                    if (string.Equals(parameterName, SysBindingData.Name, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(parameterName, SystemBindingData.Name, StringComparison.OrdinalIgnoreCase))
                     {
                         continue;
                     }

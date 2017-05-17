@@ -405,7 +405,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             var a = new InvalidNonStringAutoResolve();
             var exc = Assert.Throws<InvalidOperationException>(() => new AttributeCloner<InvalidNonStringAutoResolve>(a, EmptyContract));
-            Assert.Equal("Property 'Required' with AutoResolve must be type string.", exc.Message);
+            Assert.Equal("AutoResolve or AppSetting property 'Required' must be of type string.", exc.Message);
         }
         
         // Default to MethodName  kicks in if the (pre-resolved) value is null. 
@@ -431,7 +431,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 { "empty", "" },
                 { "value", "123" }
             };
-            new SysBindingData
+            new SystemBindingData
             {
                 MethodName = "MyMethod"
             }.AddToBindingData(values);
@@ -453,7 +453,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Dictionary<string, object> values = new Dictionary<string, object>()
             {
                 { "x", "123" },
-                { SysBindingData.Name, new SysBindingData
+                { SystemBindingData.Name, new SystemBindingData
                 {
                      MethodName = "MyMethod"
                 } }

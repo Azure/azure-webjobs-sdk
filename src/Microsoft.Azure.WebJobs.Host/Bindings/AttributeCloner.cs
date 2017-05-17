@@ -91,69 +91,58 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             object originalValue = propInfo.GetValue(_source);
             AppSettingAttribute appSettingAttr = propInfo.GetCustomAttribute<AppSettingAttribute>();
             AutoResolveAttribute autoResolveAttr = propInfo.GetCustomAttribute<AutoResolveAttribute>();
-            
+
+            if (appSettingAttr == null && autoResolveAttr == null)
+            {
+                // No special attributes, treat as literal. 
+                return (newAttr, bindingData) => originalValue;
+            }
+
             if (appSettingAttr != null && autoResolveAttr != null)
             {
                 throw new InvalidOperationException($"Property '{propInfo.Name}' cannot be annotated with both AppSetting and AutoResolve.");
             }
 
+            // attributes only work on string properties. 
+            if (propInfo.PropertyType != typeof(string))
+            {
+                throw new InvalidOperationException($"AutoResolve or AppSetting property '{propInfo.Name}' must be of type string.");
+            }
+            var str = (string)originalValue;
+
             // first try to resolve with app setting
             if (appSettingAttr != null)
             {
-                return GetAppSettingResolver((string)originalValue, appSettingAttr, nameResolver, propInfo);
+                return GetAppSettingResolver(str, appSettingAttr, nameResolver, propInfo);
             }
+
+            // Must have an [AutoResolve]
             // try to resolve with auto resolve ({...}, %...%)
-            if (autoResolveAttr != null)
+            return GetAutoResolveResolver(str, autoResolveAttr, nameResolver, propInfo, contract);            
+        }
+
+        // Apply AutoResolve attribute 
+        internal BindingDataResolver GetAutoResolveResolver(string originalValue, AutoResolveAttribute autoResolveAttr, INameResolver nameResolver, PropertyInfo propInfo, BindingDataContract contract)
+        {
+            if (string.IsNullOrWhiteSpace(originalValue))
             {
-                if (propInfo.PropertyType != typeof(string))
+                if (autoResolveAttr.Default != null)
                 {
-                    throw new InvalidOperationException($"Property '{propInfo.Name}' with AutoResolve must be type string.");
+                    return GetBuiltinTemplateResolver(autoResolveAttr.Default, nameResolver);
                 }
-                var str = (string)originalValue;
-
-                if (string.IsNullOrWhiteSpace(str))
+                else
                 {
-                    if (autoResolveAttr.Default != null)
-                    {
-                        return GetBuiltinTemplateResolver(autoResolveAttr.Default, nameResolver);
-                    }
-                }                
-
-                if (originalValue != null)
-                {
-                    _autoResolves[propInfo] = autoResolveAttr;
-                    return GetTemplateResolver(str, autoResolveAttr, nameResolver, propInfo, contract);
-                }                
+                    return (newAttr, bindingData) => originalValue;
+                }
             }
-            // resolve the original value
-            return (newAttr, bindingData) => originalValue;
+            else
+            {
+                _autoResolves[propInfo] = autoResolveAttr;
+                return GetTemplateResolver(originalValue, autoResolveAttr, nameResolver, propInfo, contract);
+            }
         }
 
-        // Resolve for AutoResolve.Default templates. 
-        // These only have access to the {sys} builtin variable and don't get access to trigger binding data. 
-        internal static BindingDataResolver GetBuiltinTemplateResolver(string originalValue, INameResolver nameResolver)
-        {
-            string resolvedValue = nameResolver.ResolveWholeString(originalValue);
-
-            var template = BindingTemplate.FromString(resolvedValue);
-
-            SysBindingData.ValidateStaticContract(template);
-
-            // Ignore trigger provided bindindData and use the sys binding data. 
-            return (newAttr, bindingData) => template.Bind(SysBindingData.GetSysBindingData(bindingData));
-        }
-
-        // AutoResolve
-        internal static BindingDataResolver GetTemplateResolver(string originalValue, AutoResolveAttribute attr, INameResolver nameResolver, PropertyInfo propInfo, BindingDataContract contract)
-        {
-            string resolvedValue = nameResolver.ResolveWholeString(originalValue);
-            var template = BindingTemplate.FromString(resolvedValue);
-            IResolutionPolicy policy = GetPolicy(attr.ResolutionPolicyType, propInfo);
-            template.ValidateContractCompatibility(contract);
-            return (newAttr, bindingData) => TemplateBind(policy, propInfo, newAttr, template, bindingData);
-        }
-
-        // AppSetting
+        // Apply AppSetting attribute. 
         internal static BindingDataResolver GetAppSettingResolver(string originalValue, AppSettingAttribute attr, INameResolver nameResolver, PropertyInfo propInfo)
         {
             string appSettingName = originalValue ?? attr.Default;
@@ -170,6 +159,30 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 throw new InvalidOperationException($"Unable to resolve value for property '{propInfo.DeclaringType.Name}.{propInfo.Name}'.");
             }
             return (newAttr, bindingData) => resolvedValue;
+        }
+
+        // Resolve for AutoResolve.Default templates. 
+        // These only have access to the {sys} builtin variable and don't get access to trigger binding data. 
+        internal static BindingDataResolver GetBuiltinTemplateResolver(string originalValue, INameResolver nameResolver)
+        {
+            string resolvedValue = nameResolver.ResolveWholeString(originalValue);
+
+            var template = BindingTemplate.FromString(resolvedValue);
+
+            SystemBindingData.ValidateStaticContract(template);
+
+            // Ignore trigger provided bindindData and use the sys binding data. 
+            return (newAttr, bindingData) => template.Bind(SystemBindingData.GetSysBindingData(bindingData));
+        }
+
+        // AutoResolve
+        internal static BindingDataResolver GetTemplateResolver(string originalValue, AutoResolveAttribute attr, INameResolver nameResolver, PropertyInfo propInfo, BindingDataContract contract)
+        {
+            string resolvedValue = nameResolver.ResolveWholeString(originalValue);
+            var template = BindingTemplate.FromString(resolvedValue);
+            IResolutionPolicy policy = GetPolicy(attr.ResolutionPolicyType, propInfo);
+            template.ValidateContractCompatibility(contract);
+            return (newAttr, bindingData) => TemplateBind(policy, propInfo, newAttr, template, bindingData);
         }
 
         // Get a attribute with %% resolved, but not runtime {} resolved.

@@ -14,18 +14,18 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     /// <remarks>
     /// It's expected this class is created and added to the binding data. 
     /// </remarks>
-    internal class SysBindingData
+    internal class SystemBindingData
     {
-        // The name for this binding in the binding expressions. 
+        // The public name for this binding in the binding expressions. 
         public const string Name = "sys";
 
-        // A name that can't be overwritten by the user that we cna place in the binding data dictionary
-        // and use to unambiguously retrieve this later. 
-        private const string InternalName = "$sys";
+        // An internal name for this binding that uses characters that gaurantee it can't be overwritten by a user. 
+        // This ensures that we can always unambiguously retrieve this later. 
+        private const string InternalKeyName = "$sys";
 
         private static readonly IReadOnlyDictionary<string, Type> DefaultSysContract = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
         {
-            { Name, typeof(SysBindingData) }
+            { Name, typeof(SystemBindingData) }
         };
 
         /// <summary>
@@ -52,31 +52,31 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         {            
             try
             {
-                template.ValidateContractCompatibility(SysBindingData.DefaultSysContract);
+                template.ValidateContractCompatibility(SystemBindingData.DefaultSysContract);
             }
             catch (InvalidOperationException e)
             {
-                throw new InvalidOperationException($"Default contract can only refer to the '{SysBindingData.Name}' binding data: " + e.Message);
+                throw new InvalidOperationException($"Default contract can only refer to the '{SystemBindingData.Name}' binding data: " + e.Message);
             }
         }
 
         internal void AddToBindingData(Dictionary<string, object> bindingData)
         {
             // User data takes precedence, so if 'sys' already exists, add via the internal name. 
-            string sysName = bindingData.ContainsKey(SysBindingData.Name) ? SysBindingData.InternalName : SysBindingData.Name;            
+            string sysName = bindingData.ContainsKey(SystemBindingData.Name) ? SystemBindingData.InternalKeyName : SystemBindingData.Name;            
             bindingData[sysName] = this;
         }
 
-        internal static SysBindingData GetFromData(IReadOnlyDictionary<string, object> bindingData)
+        internal static SystemBindingData GetFromData(IReadOnlyDictionary<string, object> bindingData)
         {
             object val;
-            if (bindingData.TryGetValue(InternalName, out val))
+            if (bindingData.TryGetValue(InternalKeyName, out val))
             {
-                return val as SysBindingData;
+                return val as SystemBindingData;
             }
             if (bindingData.TryGetValue(Name, out val))
             {
-                return val as SysBindingData;
+                return val as SystemBindingData;
             }
             return null;
         }

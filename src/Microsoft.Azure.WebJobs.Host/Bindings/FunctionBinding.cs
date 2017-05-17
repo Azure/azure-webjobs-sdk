@@ -51,7 +51,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
 
             // Add 'sys' binding data. 
-            var sysBindingData = new SysBindingData
+            var sysBindingData = new SystemBindingData
             {
                 MethodName = methodName
             };
