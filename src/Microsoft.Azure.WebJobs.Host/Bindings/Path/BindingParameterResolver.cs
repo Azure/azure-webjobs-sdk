@@ -12,6 +12,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
     /// Support for adding built-in values to binding data. 
     /// Don't add new resolvers here. Instead, add it to <see cref="SystemBindingData"/>
     /// </summary>
+    [Obsolete("Use SystemBindingData instead")]
     internal abstract class BindingParameterResolver
     {
         private static Collection<BindingParameterResolver> _resolvers;
