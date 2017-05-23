@@ -12,6 +12,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Path
     {
         [Theory]
         [InlineData("rand-guid", true)]
+        [InlineData("guid", true)]
         [InlineData("RAND-GUID", true)]
         [InlineData("datetime", true)]
         [InlineData("foobar", false)]
@@ -43,6 +44,35 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Path
             Assert.Equal(0, resolvedValue.Count(p => p == '-'));
 
             resolvedValue = resolver.Resolve("rand-guid:B");
+            Assert.Equal(38, resolvedValue.Length);
+            Assert.Equal(4, resolvedValue.Count(p => p == '-'));
+            Assert.True(resolvedValue.StartsWith("{"));
+            Assert.True(resolvedValue.EndsWith("}"));
+        }
+
+        [Fact]
+        public void GuidResolver_ReturnsExpectedValue()
+        {
+            BindingParameterResolver resolver = null;
+            BindingParameterResolver.TryGetResolver("guid", out resolver);
+
+            string resolvedValue = resolver.Resolve("guid");
+            Assert.Equal(36, resolvedValue.Length);
+            Assert.Equal(4, resolvedValue.Count(p => p == '-'));
+
+            resolvedValue = resolver.Resolve("guid:");  // no format
+            Assert.Equal(36, resolvedValue.Length);
+            Assert.Equal(4, resolvedValue.Count(p => p == '-'));
+
+            resolvedValue = resolver.Resolve("guid:D");
+            Assert.Equal(36, resolvedValue.Length);
+            Assert.Equal(4, resolvedValue.Count(p => p == '-'));
+
+            resolvedValue = resolver.Resolve("guid:N");
+            Assert.Equal(32, resolvedValue.Length);
+            Assert.Equal(0, resolvedValue.Count(p => p == '-'));
+
+            resolvedValue = resolver.Resolve("guid:B");
             Assert.Equal(38, resolvedValue.Length);
             Assert.Equal(4, resolvedValue.Count(p => p == '-'));
             Assert.True(resolvedValue.StartsWith("{"));

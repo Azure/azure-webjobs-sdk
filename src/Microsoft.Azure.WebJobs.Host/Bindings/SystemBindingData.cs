@@ -19,7 +19,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         // The public name for this binding in the binding expressions. 
         public const string Name = "sys";
 
-        // An internal name for this binding that uses characters that gaurantee it can't be overwritten by a user. 
+        // An internal name for this binding that uses characters that guarantee it can't be overwritten by a user. 
         // This is never seen by the user. 
         // This ensures that we can always unambiguously retrieve this later. 
         private const string InternalKeyName = "$sys";
@@ -36,14 +36,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         public string MethodName { get; set; }
 
         /// <summary>
-        /// Get the current UTC date. 
+        /// Get the current UTC date. This returns the current value each time it is called.
         /// </summary>
-        public DateTime UtcNow => DateTime.UtcNow;
+        public DateTime DateTime => DateTime.UtcNow;
 
         /// <summary>
         /// Return a new random guid. This create a new guid each time it's called.
         /// </summary>
-        public Guid RandGuid => Guid.NewGuid();  
+        public Guid Guid => Guid.NewGuid();  
 
         // Given a full bindingData, create a binding data with just the system object .
         // This can be used when resolving default contracts that shouldn't be using an instance binding data. 
