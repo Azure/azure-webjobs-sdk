@@ -16,8 +16,14 @@ namespace SampleHost
 
         public override Task OnExecutingAsync(FunctionExecutedContext actionContext, CancellationToken cancellationToken)
         {
-            Console.Write(testMessage);
+            Console.WriteLine("Before: " + testMessage);
             return base.OnExecutingAsync(actionContext, cancellationToken);
+        }
+
+        public override Task OnActionExecuted(FunctionExecutedContext actionExecutedContext, CancellationToken cancellationToken)
+        {
+            Console.WriteLine("After: " + testMessage);
+            return base.OnActionExecuted(actionExecutedContext, cancellationToken);
         }
     }
 }
