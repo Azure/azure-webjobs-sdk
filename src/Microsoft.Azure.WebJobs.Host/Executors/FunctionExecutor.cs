@@ -644,6 +644,16 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
 
             await invokeTask;
+
+            // Where the invocation filter attribute functionality is currently temporarily placed
+            var functionMethod = instance.FunctionDescriptor.Method;
+            var invokeFilter = functionMethod.GetCustomAttribute<InvocationFilterAttribute>();
+            if (invokeFilter != null)
+            {
+                var dummyContext = new FunctionExecutedContext();
+                var dummyCancellationToken = new CancellationToken();
+                await invokeFilter.OnActionExecuted(dummyContext, dummyCancellationToken);
+            }
         }
 
         /// <summary>
