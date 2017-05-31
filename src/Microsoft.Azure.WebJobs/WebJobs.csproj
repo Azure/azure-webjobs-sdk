@@ -65,6 +65,7 @@
     <Compile Include="BinderExtensions.cs" />
     <Compile Include="ConnectionProviderAttribute.cs" />
     <Compile Include="DisableAttribute.cs" />
+    <Compile Include="FunctionExecutedContext.cs" />
     <Compile Include="FunctionNameAttribute.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="IAsyncCollector.cs" />
@@ -73,6 +74,7 @@
     <Compile Include="IBinder.cs" />
     <Compile Include="BlobAttribute.cs" />
     <Compile Include="ICollector.cs" />
+    <Compile Include="InvocationFilterAttribute.cs" />
     <Compile Include="QueueAttribute.cs" />
     <Compile Include="QueueTriggerAttribute.cs" />
     <Compile Include="ODataFilterResolutionPolicy.cs" />

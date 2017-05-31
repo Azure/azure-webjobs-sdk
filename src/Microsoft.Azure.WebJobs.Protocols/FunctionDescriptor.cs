@@ -28,6 +28,9 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
         /// <summary>Gets or sets the display name of the function.</summary>
         public string ShortName { get; set; }
 
+        /// <summary>Gets or sets the filters of the function.</summary>
+        public string Filters { get; set; }
+
         /// <summary>Gets or sets the function's parameters.</summary>
         public IEnumerable<ParameterDescriptor> Parameters { get; set; }
 

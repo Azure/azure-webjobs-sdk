@@ -539,6 +539,16 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 delayedBindingException.Throw();
             }
 
+            // Where the invocation filter attribute functionality is currently temporarily placed
+            var functionMethod = instance.FunctionDescriptor.Method;
+            var invokeFilter = functionMethod.GetCustomAttribute<InvocationFilterAttribute>();
+            if (invokeFilter != null)
+            {
+                var dummyContext = new FunctionExecutedContext();
+                var dummyCancellationToken = new CancellationToken();
+                await invokeFilter.OnExecutingAsync(dummyContext, dummyCancellationToken);
+            }
+
             // if the function is a Singleton, aquire the lock
             SingletonLock singleton = await GetSingletonLockAsync(parameters);
             if (singleton != null)
