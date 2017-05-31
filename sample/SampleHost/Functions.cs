@@ -24,6 +24,7 @@ namespace SampleHost
             Console.WriteLine($"Poison blob: {container}/{blobName}");
         }
 
+        [TestLoggingFilter("I actually work! - InvocationFilter 0.1")]
         public static void QueueTrigger(
             [QueueTrigger("test")] string message)
         {
