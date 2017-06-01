@@ -18,7 +18,7 @@ namespace Microsoft.Azure.WebJobs
         /// <param name="actionContext"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public virtual Task OnExecutingAsync(FunctionExecutedContext actionContext, CancellationToken cancellationToken)
+        public virtual Task OnExecutingAsync(Object actionContext, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
@@ -29,7 +29,7 @@ namespace Microsoft.Azure.WebJobs
         /// <param name="actionExecutedContext"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public virtual Task OnActionExecuted(FunctionExecutedContext actionExecutedContext, CancellationToken cancellationToken)
+        public virtual Task OnActionExecuted(Object actionExecutedContext, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }

@@ -491,7 +491,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             var invokeFilter = functionMethod.GetCustomAttribute<InvocationFilterAttribute>();
             if (invokeFilter != null)
             {
-                var functionContext = new FunctionExecutedContext(instance.FunctionDescriptor.Id, instance.FunctionDescriptor.FullName);
+                var functionContext = new FunctionExecutedContext(instance.Id, instance.FunctionDescriptor.FullName, instance.FunctionDescriptor.Parameters, logger);
                 var cancellationToken = functionCancellationTokenSource.Token;
                 await invokeFilter.OnExecutingAsync(functionContext, cancellationToken);
             }
@@ -531,6 +531,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 await singleton.ReleaseAsync(functionCancellationTokenSource.Token);
             }
+
+            // Where the invocation filter attribute functionality is currently temporarily placed
+            if (invokeFilter != null)
+            {
+                var functionContext = new FunctionExecutedContext(instance.Id, instance.FunctionDescriptor.FullName, instance.FunctionDescriptor.Parameters, logger);
+                var cancellationToken = functionCancellationTokenSource.Token;
+                await invokeFilter.OnActionExecuted(functionContext, cancellationToken);
+            }
         }
 
         internal static async Task InvokeAsync(IFunctionInvoker invoker, ParameterHelper parameterHelper, CancellationTokenSource timeoutTokenSource,
@@ -562,16 +570,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
 
             await invokeTask;
-
-            // Where the invocation filter attribute functionality is currently temporarily placed
-            var functionMethod = instance.FunctionDescriptor.Method;
-            var invokeFilter = functionMethod.GetCustomAttribute<InvocationFilterAttribute>();
-            if (invokeFilter != null)
-            {
-                var functionContext = new FunctionExecutedContext(instance.FunctionDescriptor.Id, instance.FunctionDescriptor.FullName);
-                var cancellationToken = functionCancellationTokenSource.Token;
-                await invokeFilter.OnActionExecuted(functionContext, cancellationToken);
-            }
         }
 
         /// <summary>
