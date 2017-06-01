@@ -55,6 +55,7 @@
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="BlobMetadataKeys.cs" />
+    <Compile Include="FunctionExecutedContext.cs" />
     <Compile Include="FunctionStatusMessage.cs" />
     <Compile Include="JTokenExtensions.cs" />
     <Compile Include="ParameterDisplayHints.cs" />

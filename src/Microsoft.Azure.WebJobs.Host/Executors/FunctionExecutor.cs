@@ -544,9 +544,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             var invokeFilter = functionMethod.GetCustomAttribute<InvocationFilterAttribute>();
             if (invokeFilter != null)
             {
-                var dummyContext = new FunctionExecutedContext();
-                var dummyCancellationToken = new CancellationToken();
-                await invokeFilter.OnExecutingAsync(dummyContext, dummyCancellationToken);
+                var functionContext = new FunctionExecutedContext(instance.FunctionDescriptor.Id, instance.FunctionDescriptor.FullName);
+                var cancellationToken = functionCancellationTokenSource.Token;
+                await invokeFilter.OnExecutingAsync(functionContext, cancellationToken);
             }
 
             // if the function is a Singleton, aquire the lock
@@ -650,9 +650,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             var invokeFilter = functionMethod.GetCustomAttribute<InvocationFilterAttribute>();
             if (invokeFilter != null)
             {
-                var dummyContext = new FunctionExecutedContext();
-                var dummyCancellationToken = new CancellationToken();
-                await invokeFilter.OnActionExecuted(dummyContext, dummyCancellationToken);
+                var functionContext = new FunctionExecutedContext(instance.FunctionDescriptor.Id, instance.FunctionDescriptor.FullName);
+                var cancellationToken = functionCancellationTokenSource.Token;
+                await invokeFilter.OnActionExecuted(functionContext, cancellationToken);
             }
         }
 
