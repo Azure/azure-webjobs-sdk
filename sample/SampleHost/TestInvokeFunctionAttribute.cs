@@ -1,7 +1,8 @@
-﻿using Microsoft.Azure.WebJobs;
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using System.Threading;
+using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Host;
 
 namespace SampleHost
 {
@@ -14,7 +15,7 @@ namespace SampleHost
             this.functionNameToInvoke = functionNameToInvoke;
         }
 
-        public override Task OnExecutingAsync(FunctionExecutedContext actionContext, CancellationToken cancellationToken)
+        public override Task OnExecutingAsync(Object actionContext, CancellationToken cancellationToken)
         {
 
             return base.OnExecutingAsync(actionContext, cancellationToken);

@@ -65,7 +65,6 @@
     <Compile Include="BinderExtensions.cs" />
     <Compile Include="ConnectionProviderAttribute.cs" />
     <Compile Include="DisableAttribute.cs" />
-    <Compile Include="FunctionExecutedContext.cs" />
     <Compile Include="FunctionNameAttribute.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="IAsyncCollector.cs" />
