@@ -1,31 +1,28 @@
 ﻿// FunctionExecutedContext.cs
 
 using System;
-using System.Collections.Generic;
-using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.Azure.WebJobs.Host
+namespace Microsoft.Azure.WebJobs
 {
     /// <summary>
     /// The context for an executed function. This needs to be expanded on later.
     /// </summary>
-    public class FunctionExecutedContext
+    [CLSCompliant(false)]
+    public class FunctionExecutingContext
     {
-#pragma warning disable CS3001 // Argument type is not CLS-compliant
         /// <summary>
         /// Constructor to set the context
         /// </summary>
         /// <param name="id"></param>
         /// <param name="fullName"></param>
-        /// <param name="parameters"></param>
+        /// <param name="arguments"></param>
         /// <param name="logger"></param>
-        public FunctionExecutedContext(Guid id, string fullName, IEnumerable<ParameterDescriptor> parameters, ILogger logger)
-#pragma warning restore CS3001 // Argument type is not CLS-compliant
+        public FunctionExecutingContext(Guid id, string fullName, object[] arguments, ILogger logger)
         {
             Id = id;
             FullName = fullName;
-            Parameters = parameters;
+            Arguments = arguments;
             Logger = logger;
         }
 
@@ -38,13 +35,11 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <summary>
         /// Gets or sets the parameters of the function
         /// </summary>
-        public IEnumerable<ParameterDescriptor> Parameters { get; set; }
-
-#pragma warning disable CS3003 // Type is not CLS-compliant
+        public object[] Arguments { get; set; }
+        
         /// <summary>
         /// Gets or sets the logger of the function
         /// </summary>
         public ILogger Logger { get; set; }
-#pragma warning restore CS3003 // Type is not CLS-compliant
     }
 }
