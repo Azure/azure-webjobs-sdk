@@ -1,15 +1,13 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the MIT License. See License.txt in the project root for license information.
+﻿// InvocationFilterAttribute.cs
 
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 
-namespace Microsoft.Azure.WebJobs.Host
+namespace Microsoft.Azure.WebJobs
 {
     /// <summary>
-    /// This is the definition for the function filter attribute
+    /// This is the first iteration for the Invocation Filter Attribute
     /// </summary>
     [CLSCompliant(false)]
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = true, AllowMultiple = false)]
@@ -32,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="executedContext"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public virtual Task OnExecutedAsync(FunctionExecutedContext executedContext, CancellationToken cancellationToken)
+        public virtual Task OnActionExecuted(FunctionExecutedContext executedContext, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }

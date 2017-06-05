@@ -15,7 +15,7 @@ namespace SampleHost
             this.functionNameToInvoke = functionNameToInvoke;
         }
 
-        public override Task OnExecutingAsync(Object actionContext, CancellationToken cancellationToken)
+        public override Task OnExecutingAsync(FunctionExecutingContext actionContext, CancellationToken cancellationToken)
         {
 
             return base.OnExecutingAsync(actionContext, cancellationToken);
