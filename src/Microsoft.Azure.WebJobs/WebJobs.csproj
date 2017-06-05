@@ -73,7 +73,6 @@
     <Compile Include="IBinder.cs" />
     <Compile Include="BlobAttribute.cs" />
     <Compile Include="ICollector.cs" />
-    <Compile Include="InvocationFilterAttribute.cs" />
     <Compile Include="QueueAttribute.cs" />
     <Compile Include="QueueTriggerAttribute.cs" />
     <Compile Include="ODataFilterResolutionPolicy.cs" />
