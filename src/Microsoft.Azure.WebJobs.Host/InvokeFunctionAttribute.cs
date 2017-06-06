@@ -1,4 +1,7 @@
-﻿using System;
+﻿// InvokeFunctionAttribute.cs
+
+using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host
@@ -7,27 +10,28 @@ namespace Microsoft.Azure.WebJobs.Host
     /// This is the first iteration of the InvokeFunctionAttribute
     /// </summary>
     [CLSCompliant(false)]
-    public class InvokeFunctionAttribute : InvocationFilterAttribute
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = true, AllowMultiple = false)]
+    public sealed class InvokeFunctionAttribute : InvocationFilterAttribute
     {
-        /// <summary>
-        /// This is the function name to invoke
-        /// </summary>
-        public string functionNameToInvoke;
-
         /// <summary>
         /// When this attribute is used, take the name of the function to invoke
         /// </summary>
         /// <param name="functionNameToInvoke"></param>
         public InvokeFunctionAttribute(string functionNameToInvoke)
         {
-            this.functionNameToInvoke = functionNameToInvoke;
+            FunctionNameToInvoke = functionNameToInvoke;
         }
 
         /// <summary>
-        /// The function that actually invokes the seperate function
+        /// This is the function name to invoke
+        /// </summary>
+        public string FunctionNameToInvoke { get; }
+
+        /// <summary>
+        /// Call the requested function
         /// </summary>
         /// <returns></returns>
-        private Task invokeFunction()
+        public override Task OnPreFunctionInvocation(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
