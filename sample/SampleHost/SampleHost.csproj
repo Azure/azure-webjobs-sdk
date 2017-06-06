@@ -149,7 +149,6 @@
     <Compile Include="Functions.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TestInvokeFunctionAttribute.cs" />
     <Compile Include="TestLoggingFilter.cs" />
   </ItemGroup>
   <ItemGroup>
