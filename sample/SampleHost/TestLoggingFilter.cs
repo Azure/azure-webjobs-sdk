@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
+using Microsoft.Azure.WebJobs.Host;
 
 namespace SampleHost
 {
