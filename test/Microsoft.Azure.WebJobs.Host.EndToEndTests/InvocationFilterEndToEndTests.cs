@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [Fact]
-        public async Task TestInvocationFilters()
+        public async Task TestInvocationLoggingFilter()
         {
             var method = typeof(TestFunctions).GetMethod("UseLoggingFilter", BindingFlags.Public | BindingFlags.Static);
 
@@ -45,6 +46,32 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("Test Executed!")));
         }
 
+        [Fact]
+        public async Task TestInvocationUserAuthenticationFilter()
+        {
+            var method = typeof(TestFunctions).GetMethod("UseUserAuthorizationFilter", BindingFlags.Public | BindingFlags.Static);
+
+            await _host.CallAsync(method, new { input = "Testing 123" });
+            await Task.Delay(1000);
+
+            // Validate the before and after logging was passed
+            var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Executor).Single();
+            Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("This is an authorized user!")));
+        }
+
+        [Fact]
+        public async Task TestInvocationFalseUserAuthenticationFilter()
+        {
+            var method = typeof(TestFunctions).GetMethod("TestFalseUserAuthorizationFilter", BindingFlags.Public | BindingFlags.Static);
+
+            await _host.CallAsync(method, new { input = "Testing 123" });
+            await Task.Delay(1000);
+
+            // Validate the before and after logging was passed
+            var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Executor).Single();
+            Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("This is an unauthorized user!")));
+        }
+
         public class TestFunctions
         {
             [NoAutomaticTrigger]
@@ -55,8 +82,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
 
             [NoAutomaticTrigger]
-            [TestAuthorizationFilter]
-            public static void UseValidationFilter(string input, ILogger logger)
+            [TestUserAuthorizationFilter( AllowedUsers = "Admin")]
+            public static void UseUserAuthorizationFilter(string input, ILogger logger)
+            {
+                logger.LogInformation("Test function invoked!");
+            }
+
+            [NoAutomaticTrigger]
+            [TestUserAuthorizationFilter(AllowedUsers = "Dave")]
+            public static void TestFalseUserAuthorizationFilter(string input, ILogger logger)
             {
                 logger.LogInformation("Test function invoked!");
             }
@@ -77,11 +111,21 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
-        public class TestAuthorizationFilter : InvocationFilterAttribute
+        public class TestUserAuthorizationFilter : InvocationFilterAttribute
         {
+            public string AllowedUsers { get; set; }
+
             public override Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
             {
                 executingContext.Logger.LogInformation("Test Executing!");
+
+                if (!AllowedUsers.Contains("Admin"))
+                {
+                    executingContext.Logger.LogInformation("This is an unauthorized user!");
+                    // throw new Exception("Not Allowing Unauthorized Users!");
+                }
+
+                executingContext.Logger.LogInformation("This is an authorized user!");
 
                 return Task.CompletedTask;
             }
