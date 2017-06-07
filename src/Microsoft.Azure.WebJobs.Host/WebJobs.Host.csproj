@@ -530,6 +530,8 @@
     <Compile Include="Blobs\Listeners\ContainerScanInfo.cs" />
     <Compile Include="Blobs\Listeners\ScanBlobScanLogHybridPollingStrategy.cs" />
     <Compile Include="Config\ExtensionConfigContextExtensions.cs" />
+    <Compile Include="Singleton\Class1.cs" />
+    <Compile Include="Singleton\ISingletonManager.cs" />
     <Compile Include="Storage\IStorageAccountExtensions.cs" />
     <Compile Include="Storage\StorageAccountType.cs" />
     <Compile Include="Queues\PoisonQueueMessageEventArgs.cs" />

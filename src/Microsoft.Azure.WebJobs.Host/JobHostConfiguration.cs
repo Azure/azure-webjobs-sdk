@@ -84,6 +84,8 @@ namespace Microsoft.Azure.WebJobs
             AddService<IWebJobsExceptionHandler>(exceptionHandler);
             AddService<IFunctionResultAggregatorFactory>(new FunctionResultAggregatorFactory());
 
+            AddService<ISingletonManager>(new DefaultSingletonManager(_storageAccountProvider));
+
             string value = ConfigurationUtility.GetSettingFromConfigOrEnvironment(Host.Constants.EnvironmentSettingName);
             IsDevelopment = string.Compare(Host.Constants.DevelopmentEnvironmentValue, value, StringComparison.OrdinalIgnoreCase) == 0;
         }
