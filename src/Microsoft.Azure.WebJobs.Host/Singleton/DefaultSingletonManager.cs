@@ -27,7 +27,6 @@ namespace Microsoft.Azure.WebJobs.Host
         private readonly TraceWriter _trace;
         private readonly ILogger _logger;
 
-        private readonly SingletonConfiguration _config;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         
         private TimeSpan _minimumLeaseRenewalInterval = TimeSpan.FromSeconds(1);
@@ -35,13 +34,11 @@ namespace Microsoft.Azure.WebJobs.Host
         public DefaultSingletonManager(
             IStorageAccountProvider accountProvider,
             IWebJobsExceptionHandler exceptionHandler, 
-            SingletonConfiguration config,
             TraceWriter trace,
             ILogger logger)
         {
             _accountProvider = accountProvider;
             _exceptionHandler = exceptionHandler;
-            _config = config;
             _trace = trace;
             _logger = logger;
         }
@@ -71,9 +68,9 @@ namespace Microsoft.Azure.WebJobs.Host
             await ReleaseLeaseAsync(singletonLockHandle.Blob, singletonLockHandle.LeaseId, cancellationToken);
         }
 
-        public async virtual Task<string> GetLockOwnerAsync(SingletonAttribute attribute, string lockId, CancellationToken cancellationToken)
+        public async virtual Task<string> GetLockOwnerAsync(string account, string lockId, CancellationToken cancellationToken)
         {
-            IStorageBlobDirectory lockDirectory = GetLockDirectory(attribute.Account);
+            IStorageBlobDirectory lockDirectory = GetLockDirectory(account);
             IStorageBlockBlob lockBlob = lockDirectory.GetBlockBlobReference(lockId);
 
             await ReadLeaseBlobMetadata(lockBlob, cancellationToken);
@@ -93,14 +90,14 @@ namespace Microsoft.Azure.WebJobs.Host
         }
 
         public async Task<ISingletonLock> TryLockAsync(
+            string account,
             string lockId,
             string lockOwnerId,
-            SingletonAttribute attribute,
+            TimeSpan lockPeriod,
             CancellationToken cancellationToken)
         {
-            IStorageBlobDirectory lockDirectory = GetLockDirectory(attribute.Account);
+            IStorageBlobDirectory lockDirectory = GetLockDirectory(account);
             IStorageBlockBlob lockBlob = lockDirectory.GetBlockBlobReference(lockId);
-            TimeSpan lockPeriod = GetLockPeriod(attribute, _config);
             string leaseId = await TryAcquireLeaseAsync(lockBlob, lockPeriod, cancellationToken);
 
             if (string.IsNullOrEmpty(leaseId))
@@ -126,12 +123,6 @@ namespace Microsoft.Azure.WebJobs.Host
             lockHandle.LeaseRenewalTimer.Start();
 
             return lockHandle;
-        }
-
-        internal static TimeSpan GetLockPeriod(SingletonAttribute attribute, SingletonConfiguration config)
-        {
-            return attribute.Mode == SingletonMode.Listener ?
-                    config.ListenerLockPeriod : config.LockPeriod;
         }
 
         internal IStorageBlobDirectory GetLockDirectory(string accountName)

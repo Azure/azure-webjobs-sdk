@@ -93,9 +93,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             loggerFactory.AddProvider(_loggerProvider);
 
             var logger = loggerFactory?.CreateLogger(LogCategories.Singleton);
-            _core = new DefaultSingletonManager(_mockAccountProvider.Object, _mockExceptionDispatcher.Object, _singletonConfig, _trace, logger);
+            _core = new DefaultSingletonManager(_mockAccountProvider.Object, _mockExceptionDispatcher.Object, _trace, logger);
 
-            _singletonManager = new SingletonManager(_core, _singletonConfig, _trace, logger, loggerFactory, new FixedHostIdProvider(TestHostId), _nameResolver);
+            _singletonManager = new SingletonManager(_core, _singletonConfig, _trace, loggerFactory, new FixedHostIdProvider(TestHostId), _nameResolver);
 
             _core.MinimumLeaseRenewalInterval = TimeSpan.FromMilliseconds(250);
         }
@@ -357,7 +357,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         {
             Mock<IHostIdProvider> mockHostIdProvider = new Mock<IHostIdProvider>(MockBehavior.Strict);
             mockHostIdProvider.Setup(p => p.GetHostIdAsync(CancellationToken.None)).ReturnsAsync(TestHostId);
-            SingletonManager singletonManager = new SingletonManager(null, null, null, null, null, mockHostIdProvider.Object);
+            SingletonManager singletonManager = new SingletonManager(null, null, null, null, mockHostIdProvider.Object);
 
             Assert.Equal(TestHostId, singletonManager.HostId);
             Assert.Equal(TestHostId, singletonManager.HostId);
@@ -518,11 +518,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
                 ListenerLockPeriod = TimeSpan.FromSeconds(17)
             };
 
-            TimeSpan value = DefaultSingletonManager.GetLockPeriod(attribute, config);
+            TimeSpan value = SingletonManager.GetLockPeriod(attribute, config);
             Assert.Equal(config.ListenerLockPeriod, value);
 
             attribute.Mode = SingletonMode.Function;
-            value = DefaultSingletonManager.GetLockPeriod(attribute, config);
+            value = SingletonManager.GetLockPeriod(attribute, config);
             Assert.Equal(config.LockPeriod, value);
         }
 

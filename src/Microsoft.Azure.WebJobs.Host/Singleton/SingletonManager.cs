@@ -39,14 +39,14 @@ namespace Microsoft.Azure.WebJobs.Host
         }
 
         public SingletonManager(ISingletonManager core, SingletonConfiguration config,
-            TraceWriter trace, ILogger logger, ILoggerFactory loggerFactory, IHostIdProvider hostIdProvider, INameResolver nameResolver = null)
+            TraceWriter trace, ILoggerFactory loggerFactory, IHostIdProvider hostIdProvider, INameResolver nameResolver = null)
         {
             _core = core;
             _nameResolver = nameResolver;
             _config = config;
             _trace = trace;
             _loggerFactory = loggerFactory;
-            _logger = logger;
+            _logger = _loggerFactory?.CreateLogger(LogCategories.Singleton);
             _hostIdProvider = hostIdProvider;
         }
 
@@ -87,7 +87,8 @@ namespace Microsoft.Azure.WebJobs.Host
 
         public async virtual Task<object> TryLockAsync(string lockId, string functionInstanceId, SingletonAttribute attribute, CancellationToken cancellationToken, bool retry = true)
         {
-            object handle = await _core.TryLockAsync(lockId, functionInstanceId, attribute, cancellationToken);
+            TimeSpan lockPeriod = GetLockPeriod(attribute, _config);
+            object handle = await _core.TryLockAsync(attribute.Account, lockId, functionInstanceId, lockPeriod, cancellationToken);
 
             if ((handle == null) && retry)
             {
@@ -102,7 +103,7 @@ namespace Microsoft.Azure.WebJobs.Host
                 {
                     await Task.Delay(_config.LockAcquisitionPollingInterval);
                     timeWaited += _config.LockAcquisitionPollingInterval;
-                    handle = await _core.TryLockAsync(lockId, functionInstanceId, attribute, cancellationToken);
+                    handle = await _core.TryLockAsync(attribute.Account, lockId, functionInstanceId, lockPeriod, cancellationToken);
                 }
             }
 
@@ -114,6 +115,12 @@ namespace Microsoft.Azure.WebJobs.Host
             }
 
             return handle;
+        }
+
+        internal static TimeSpan GetLockPeriod(SingletonAttribute attribute, SingletonConfiguration config)
+        {
+            return attribute.Mode == SingletonMode.Listener ?
+                    config.ListenerLockPeriod : config.LockPeriod;
         }
 
         public async virtual Task ReleaseLockAsync(object lockHandle, CancellationToken cancellationToken)
@@ -255,7 +262,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
         public async virtual Task<string> GetLockOwnerAsync(SingletonAttribute attribute, string lockId, CancellationToken cancellationToken)
         {
-            return await _core.GetLockOwnerAsync(attribute, lockId, cancellationToken);
+            return await _core.GetLockOwnerAsync(attribute.Account, lockId, cancellationToken);
         }
     }
 }

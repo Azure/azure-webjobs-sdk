@@ -131,7 +131,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     core = new DefaultSingletonManager(
                         storageAccountProvider,
                         exceptionHandler,
-                        config.Singleton,
                         trace,
                         logger);
                     services.AddService<ISingletonManager>(core);
@@ -141,7 +140,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     core,                     
                     config.Singleton, 
                     trace,
-                    logger,
                     config.LoggerFactory, 
                     hostIdProvider, 
                     services.GetService<INameResolver>());

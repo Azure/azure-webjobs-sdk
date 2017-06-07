@@ -142,6 +142,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                 typeof(IHostIdProvider),
                 typeof(IQueueConfiguration),
                 typeof(IExtensionRegistry),
+                typeof(ISingletonManager),
                 typeof(IFunctionIndexProvider) // set to unit test indexing. 
             };
 
