@@ -15,9 +15,9 @@ namespace Microsoft.Azure.WebJobs.Host
     /// The default implementation of this is based on blob leases. 
     /// 1. Account can be null or it may be a storage account name intended for <see cref="IStorageAccountProvider"/>. 
     /// 2. lockId has the same naming restrictions as blobs. 
-    /// 3. For distributed locks, this implementation is responsible for renewing the locks and setting <see cref="ISingletonLock.LeaseLost"/> if the lock can't be renewed. 
+    /// 3. For distributed locks, this implementation is responsible for renewing the locks and setting <see cref="IDistributedLock.LeaseLost"/> if the lock can't be renewed. 
     /// </remarks>    
-    internal interface ISingletonManager
+    public interface IDistributedLockManager
     {
         /// <summary>
         /// Try to acquire a lock specified by (account, lockId).                 
@@ -28,7 +28,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="lockPeriod">As this period nears expiry, the lock will be automatically renewed.</param>
         /// <param name="cancellationToken"></param>
         /// <returns>null if can't acquire the lock. This is common if somebody else holds it.</returns>
-        Task<ISingletonLock> TryLockAsync(
+        Task<IDistributedLock> TryLockAsync(
             string account,
             string lockId, 
             string lockOwnerId,
@@ -54,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         Task ReleaseLockAsync(
-            ISingletonLock lockHandle, 
+            IDistributedLock lockHandle, 
             CancellationToken cancellationToken);
     }
 }

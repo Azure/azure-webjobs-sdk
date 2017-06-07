@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 {
-    using SingletonLockHandle = DefaultSingletonManager.SingletonLockHandle;
+    using SingletonLockHandle = BlobLeaseDistributedLockManager.SingletonLockHandle;
     public class SingletonListenerTests
     {
         private readonly string TestHostId = "testhostid";

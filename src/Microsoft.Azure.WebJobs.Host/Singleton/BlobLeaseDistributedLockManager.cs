@@ -17,7 +17,8 @@ using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
-    internal class DefaultSingletonManager : ISingletonManager
+    // Provides a blob-leased based implementation 
+    internal class BlobLeaseDistributedLockManager : IDistributedLockManager
     {
         internal const string FunctionInstanceMetadataKey = "FunctionInstance";
 
@@ -31,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host
         
         private TimeSpan _minimumLeaseRenewalInterval = TimeSpan.FromSeconds(1);
 
-        public DefaultSingletonManager(
+        public BlobLeaseDistributedLockManager(
             IStorageAccountProvider accountProvider,
             IWebJobsExceptionHandler exceptionHandler, 
             TraceWriter trace,
@@ -56,7 +57,7 @@ namespace Microsoft.Azure.WebJobs.Host
             }
         }
 
-        public async Task ReleaseLockAsync(ISingletonLock lockHandle, CancellationToken cancellationToken)
+        public async Task ReleaseLockAsync(IDistributedLock lockHandle, CancellationToken cancellationToken)
         {
             SingletonLockHandle singletonLockHandle = (SingletonLockHandle)lockHandle;
 
@@ -89,7 +90,7 @@ namespace Microsoft.Azure.WebJobs.Host
             return owner;
         }
 
-        public async Task<ISingletonLock> TryLockAsync(
+        public async Task<IDistributedLock> TryLockAsync(
             string account,
             string lockId,
             string lockOwnerId,
@@ -114,10 +115,10 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 LeaseId = leaseId,
                 LockId = lockId,
-                Blob = lockBlob,
-                LeaseRenewalTimer = CreateLeaseRenewalTimer(lockBlob, leaseId, lockId, lockPeriod, _exceptionHandler)
+                Blob = lockBlob
             };
-
+            lockHandle.LeaseRenewalTimer = CreateLeaseRenewalTimer(lockBlob, leaseId, lockId, lockPeriod, _exceptionHandler, lockHandle);
+            
             // start the renewal timer, which ensures that we maintain our lease until
             // the lock is released
             lockHandle.LeaseRenewalTimer.Start();
@@ -241,13 +242,13 @@ namespace Microsoft.Azure.WebJobs.Host
         }
 
         private ITaskSeriesTimer CreateLeaseRenewalTimer(IStorageBlockBlob leaseBlob, string leaseId, string lockId, TimeSpan leasePeriod,
-            IWebJobsExceptionHandler exceptionHandler)
+            IWebJobsExceptionHandler exceptionHandler, SingletonLockHandle lockHandle)
         {
             // renew the lease when it is halfway to expiring   
             TimeSpan normalUpdateInterval = new TimeSpan(leasePeriod.Ticks / 2);
 
             IDelayStrategy speedupStrategy = new LinearSpeedupStrategy(normalUpdateInterval, MinimumLeaseRenewalInterval);
-            ITaskSeriesCommand command = new RenewLeaseCommand(leaseBlob, leaseId, lockId, speedupStrategy, _trace, _logger, leasePeriod);
+            ITaskSeriesCommand command = new RenewLeaseCommand(leaseBlob, leaseId, lockId, speedupStrategy, _trace, _logger, leasePeriod, lockHandle);
             return new TaskSeriesTimer(command, exceptionHandler, Task.Delay(normalUpdateInterval));
         }
 
@@ -339,7 +340,7 @@ namespace Microsoft.Azure.WebJobs.Host
             }
         }
 
-        internal class SingletonLockHandle : ISingletonLock
+        internal class SingletonLockHandle : IDistributedLock
         {
             private readonly TaskCompletionSource<bool> _lockLost = new TaskCompletionSource<bool>();
 
@@ -348,7 +349,12 @@ namespace Microsoft.Azure.WebJobs.Host
             public IStorageBlockBlob Blob { get; set; }
             public ITaskSeriesTimer LeaseRenewalTimer { get; set; }
 
-            public Task LeaseLost => _lockLost.Task;                        
+            public Task LeaseLost => _lockLost.Task;
+
+            internal void NotifyLostLease()
+            {
+                _lockLost.SetResult(true);
+            }
         }
 
         internal class RenewLeaseCommand : ITaskSeriesCommand
@@ -359,12 +365,13 @@ namespace Microsoft.Azure.WebJobs.Host
             private readonly IDelayStrategy _speedupStrategy;
             private readonly TraceWriter _trace;
             private readonly ILogger _logger;
+            private readonly SingletonLockHandle _lockHandle;
             private DateTimeOffset _lastRenewal;
             private TimeSpan _lastRenewalLatency;
             private TimeSpan _leasePeriod;
-
+            
             public RenewLeaseCommand(IStorageBlockBlob leaseBlob, string leaseId, string lockId, IDelayStrategy speedupStrategy, TraceWriter trace,
-                ILogger logger, TimeSpan leasePeriod)
+                ILogger logger, TimeSpan leasePeriod, SingletonLockHandle lockHandle)
             {
                 _lastRenewal = DateTimeOffset.UtcNow;
                 _leaseBlob = leaseBlob;
@@ -374,6 +381,7 @@ namespace Microsoft.Azure.WebJobs.Host
                 _trace = trace;
                 _logger = logger;
                 _leasePeriod = leasePeriod;
+                _lockHandle = lockHandle;
             }
 
             public async Task<TaskSeriesCommandResult> ExecuteAsync(CancellationToken cancellationToken)
@@ -403,7 +411,7 @@ namespace Microsoft.Azure.WebJobs.Host
                         string msg = string.Format(CultureInfo.InvariantCulture, "Singleton lock renewal failed for blob '{0}' with error code {1}. Retry renewal in {2} milliseconds.",
                             _lockId, FormatErrorCode(exception), delay.TotalMilliseconds);
                         _trace.Warning(msg, source: TraceSource.Execution);
-                        _logger?.LogWarning(msg);
+                        _logger?.LogWarning(msg);                        
                     }
                     else
                     {
@@ -417,6 +425,8 @@ namespace Microsoft.Azure.WebJobs.Host
                             _lockId, FormatErrorCode(exception), lastRenewalFormatted, millisecondsSinceLastSuccess, lastRenewalMilliseconds, leasePeriodMilliseconds);
                         _trace.Error(msg);
                         _logger?.LogError(msg);
+
+                        _lockHandle.NotifyLostLease();
 
                         // If we've lost the lease or cannot re-establish it, we want to fail any
                         // in progress function execution

@@ -46,7 +46,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         }
 
 
-        internal class FakeSingletonManager : ISingletonManager
+        internal class FakeSingletonManager : IDistributedLockManager
         {
             Dictionary<string, FakeLock> _locks = new Dictionary<string, FakeLock>();
 
@@ -55,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
                 return Task.FromResult<string>(null);
             }
 
-            public Task ReleaseLockAsync(ISingletonLock lockHandle, CancellationToken cancellationToken)
+            public Task ReleaseLockAsync(IDistributedLock lockHandle, CancellationToken cancellationToken)
             {
                 FakeLock x = (FakeLock)lockHandle;
                 lock (_locks)
@@ -65,7 +65,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
                 return Task.CompletedTask;
             }
 
-            public Task<ISingletonLock> TryLockAsync(string account, string lockId, string lockOwnerId, TimeSpan lockPeriod, CancellationToken cancellationToken)
+            public Task<IDistributedLock> TryLockAsync(string account, string lockId, string lockOwnerId, TimeSpan lockPeriod, CancellationToken cancellationToken)
             {
                 FakeLock entry = null;
                 lock (_locks)
@@ -80,10 +80,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
                         _locks[lockId] = entry;
                     }
                 }
-                return Task.FromResult<ISingletonLock>(entry);
+                return Task.FromResult<IDistributedLock>(entry);
             }
 
-            class FakeLock : ISingletonLock
+            class FakeLock : IDistributedLock
             {
                 public string LockId { get; set; }
                 public string LockOwnerId { get; set; }
