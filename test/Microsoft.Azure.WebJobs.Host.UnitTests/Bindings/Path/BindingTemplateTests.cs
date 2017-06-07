@@ -334,7 +334,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Path
 
             foreach (var format in new string[] { "N", "D", "B", "P", "X", "" })
             {
-
                 BindingTemplate template = BindingTemplate.FromString(@"{g:" + format + "}");       
 
                 string expected = g.ToString(format, CultureInfo.InvariantCulture);
@@ -352,7 +351,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Path
                 {
                     { "dt",dt }
                 };
-
 
             var format = "YYYYMMdd";
             BindingTemplate template = BindingTemplate.FromString(@"{dt:" + format + "}");

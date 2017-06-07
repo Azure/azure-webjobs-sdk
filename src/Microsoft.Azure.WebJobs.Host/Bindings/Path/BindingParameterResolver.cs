@@ -21,6 +21,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
         {
             // create the static set of built in system resolvers
             _resolvers = new Collection<BindingParameterResolver>();
+            _resolvers.Add(new GuidResolver());
             _resolvers.Add(new RandGuidResolver());
             _resolvers.Add(new DateTimeResolver());
         }
@@ -74,8 +75,26 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
             return null;
         }
 
-        // This is an alias for 'sys.randguid'
-        private class RandGuidResolver : BindingParameterResolver
+        // This is an alias for 'sys.guid'
+        private class GuidResolver : BindingParameterResolver
+        {
+            public override string Name
+            {
+                get
+                {
+                    return "guid";
+                }
+            }
+
+            public override string Resolve(string value)
+            {
+                string format = GetFormatOrNull(value);
+                var val = new SystemBindingData().Guid;
+                return BindingDataPathHelper.ConvertParameterValueToString(val, format);                
+            }
+        }
+
+        private class RandGuidResolver : GuidResolver
         {
             public override string Name
             {
@@ -84,18 +103,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
                     return "rand-guid";
                 }
             }
-
-            public override string Resolve(string value)
-            {
-                string format = GetFormatOrNull(value);
-                var val = new SystemBindingData().RandGuid;
-                return BindingDataPathHelper.ConvertParameterValueToString(val, format);                
-            }
         }
 
-        // This can't be aliases to 'sys.UtcNow' because
-        // 'sys.UtcNow' always resolves to DateTime.UtcNow. 
-        // But 'datetime' may either resolve to user bidning data or to DateTime.UtcNow.        
         private class DateTimeResolver : BindingParameterResolver
         {
             public override string Name
@@ -109,7 +118,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
             public override string Resolve(string value)
             {
                 string format = GetFormatOrNull(value);
-                var val = new SystemBindingData().UtcNow;
+                var val = new SystemBindingData().DateTime;
                 return BindingDataPathHelper.ConvertParameterValueToString(val, format);
             }
         }
