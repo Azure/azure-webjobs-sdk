@@ -123,10 +123,28 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             if (singletonManager == null)
             {
-                var ix = new DefaultSingletonManager(storageAccountProvider, exceptionHandler, config.Singleton, trace, config.LoggerFactory, hostIdProvider, services.GetService<INameResolver>());
+                var logger = config.LoggerFactory?.CreateLogger(LogCategories.Singleton);
 
+                ISingletonManager core = services.GetService<ISingletonManager>();
+                if (core == null)
+                {
+                    core = new DefaultSingletonManager(
+                        storageAccountProvider,
+                        exceptionHandler,
+                        config.Singleton,
+                        trace,
+                        logger);
+                    services.AddService<ISingletonManager>(core);
+                }
 
-                singletonManager = new SingletonManager(storageAccountProvider, exceptionHandler, config.Singleton, trace, config.LoggerFactory, hostIdProvider, services.GetService<INameResolver>());
+                singletonManager = new SingletonManager(
+                    core,                     
+                    config.Singleton, 
+                    trace,
+                    logger,
+                    config.LoggerFactory, 
+                    hostIdProvider, 
+                    services.GetService<INameResolver>());
                 services.AddService<SingletonManager>(singletonManager);
             }
 

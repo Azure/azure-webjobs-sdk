@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
-    interface ISingletonLock
+    internal interface ISingletonLock
     {
         string LockId { get; set; }
 

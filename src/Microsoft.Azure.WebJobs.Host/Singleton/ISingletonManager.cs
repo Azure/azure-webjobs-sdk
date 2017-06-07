@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
-    interface ISingletonManager
+    internal interface ISingletonManager
     {
         // Attribute has scope, account, 
         // Returns null if not acquired. 
@@ -18,8 +18,7 @@ namespace Microsoft.Azure.WebJobs.Host
             string lockId,  // which blob we try to acquire , incorporates SingleAttribute.Scope
             string lockOwnerId,  // for diagnostics, marker string for who owns the lock (functionInstanceId)
             SingletonAttribute attribute, // provides config (ignores scope) 
-            CancellationToken cancellationToken
-            );
+            CancellationToken cancellationToken);
 
         Task<string> GetLockOwnerAsync(
             SingletonAttribute attribute, 

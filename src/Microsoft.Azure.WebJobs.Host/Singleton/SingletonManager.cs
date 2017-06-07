@@ -24,31 +24,29 @@ namespace Microsoft.Azure.WebJobs.Host
     internal class SingletonManager
     {        
         private readonly INameResolver _nameResolver;
-        private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly SingletonConfiguration _config;        
         private readonly ILogger _logger;
         private readonly ILoggerFactory _loggerFactory;
-        
+        private readonly ISingletonManager _core;
+
         private TraceWriter _trace;
         private IHostIdProvider _hostIdProvider;
         private string _hostId;
-        private readonly ISingletonManager _core;
 
         // For mock testing only
         internal SingletonManager()
         {
         }
 
-        public SingletonManager(ISingletonManager core, IWebJobsExceptionHandler exceptionHandler, SingletonConfiguration config,
-            TraceWriter trace, ILoggerFactory loggerFactory, IHostIdProvider hostIdProvider, INameResolver nameResolver = null)
+        public SingletonManager(ISingletonManager core, SingletonConfiguration config,
+            TraceWriter trace, ILogger logger, ILoggerFactory loggerFactory, IHostIdProvider hostIdProvider, INameResolver nameResolver = null)
         {
             _core = core;
             _nameResolver = nameResolver;
-            _exceptionHandler = exceptionHandler;
             _config = config;
             _trace = trace;
             _loggerFactory = loggerFactory;
-            _logger = _loggerFactory?.CreateLogger(LogCategories.Singleton);
+            _logger = logger;
             _hostIdProvider = hostIdProvider;
         }
 
