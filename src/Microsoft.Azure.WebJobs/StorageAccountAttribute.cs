@@ -18,8 +18,9 @@ namespace Microsoft.Azure.WebJobs
         /// <summary>
         /// Constructs a new instance.
         /// </summary>
-        /// <param name="account">A string value indicating the Azure Storage connection string to use. This
-        /// string should be in one of the following formats. These checks will be applied in order and the
+        /// <param name="account">A string value indicating the Azure Storage connection string to use. 
+        /// If using Azure Functions, this string should be the name of an app setting.
+        /// If using Azure WebJobs, this string should be in one of the following formats. These checks will be applied in order and the
         /// first match wins.
         /// - The name of an "AzureWebJobs" prefixed app setting or connection string name. E.g., if your setting
         ///   name is "AzureWebJobsMyStorage", you can specify "MyStorage" here.
