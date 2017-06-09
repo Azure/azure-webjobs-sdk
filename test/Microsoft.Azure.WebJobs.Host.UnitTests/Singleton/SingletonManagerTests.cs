@@ -34,7 +34,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             return handle.GetInnerHandle();
         }
 
-        public static SingletonLockHandle GetInnerHandle(this LockWrapper handle)
+        public static SingletonLockHandle GetInnerHandle(this LockHandle handle)
         {
             if (handle == null)
             {
@@ -158,7 +158,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             _mockStorageBlob.Setup(p => p.ReleaseLeaseAsync(It.Is<AccessCondition>(q => q.LeaseId == TestLeaseId), null, null, cancellationToken)).Returns(Task.FromResult(true));
 
             SingletonAttribute attribute = new SingletonAttribute();
-            LockWrapper lockHandle = await _singletonManager.TryLockAsync(TestLockId, TestInstanceId, attribute, cancellationToken);
+            LockHandle lockHandle = await _singletonManager.TryLockAsync(TestLockId, TestInstanceId, attribute, cancellationToken);
             var innerHandle = lockHandle.GetInnerHandle();
 
             Assert.Same(_mockStorageBlob.Object, innerHandle.Blob);
@@ -307,7 +307,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             _mockStorageBlob.Setup(p => p.ReleaseLeaseAsync(It.Is<AccessCondition>(q => q.LeaseId == TestLeaseId), null, null, cancellationToken)).Returns(Task.FromResult(true));
 
-            var handle = new LockWrapper(
+            var handle = new LockHandle(
                 new SingletonLockHandle
                 {
                     Blob = _mockStorageBlob.Object,

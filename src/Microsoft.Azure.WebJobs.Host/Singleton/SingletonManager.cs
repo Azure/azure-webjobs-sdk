@@ -87,9 +87,9 @@ namespace Microsoft.Azure.WebJobs.Host
             }
         }
 
-        public async virtual Task<LockWrapper> LockAsync(string lockId, string functionInstanceId, SingletonAttribute attribute, CancellationToken cancellationToken)
+        public async virtual Task<LockHandle> LockAsync(string lockId, string functionInstanceId, SingletonAttribute attribute, CancellationToken cancellationToken)
         {
-            LockWrapper lockHandle = await TryLockAsync(lockId, functionInstanceId, attribute, cancellationToken);
+            LockHandle lockHandle = await TryLockAsync(lockId, functionInstanceId, attribute, cancellationToken);
 
             if (lockHandle == null)
             {
@@ -102,7 +102,7 @@ namespace Microsoft.Azure.WebJobs.Host
             return lockHandle;
         }
 
-        public async virtual Task<LockWrapper> TryLockAsync(string lockId, string functionInstanceId, SingletonAttribute attribute, CancellationToken cancellationToken, bool retry = true)
+        public async virtual Task<LockHandle> TryLockAsync(string lockId, string functionInstanceId, SingletonAttribute attribute, CancellationToken cancellationToken, bool retry = true)
         {
             TimeSpan lockPeriod = GetLockPeriod(attribute, _config);
             IDistributedLock handle = await _lockManager.TryLockAsync(attribute.Account, lockId, functionInstanceId, lockPeriod, cancellationToken);
@@ -139,7 +139,7 @@ namespace Microsoft.Azure.WebJobs.Host
             _trace.Verbose(msg, source: TraceSource.Execution);
             _logger?.LogDebug(msg);
 
-            return new LockWrapper(handle, renewal);
+            return new LockHandle(handle, renewal);
         }
 
         private ITaskSeriesTimer CreateLeaseRenewalTimer(TimeSpan leasePeriod, IDistributedLock lockHandle)
@@ -158,7 +158,7 @@ namespace Microsoft.Azure.WebJobs.Host
                     config.ListenerLockPeriod : config.LockPeriod;
         }
 
-        public async virtual Task ReleaseLockAsync(LockWrapper handle, CancellationToken cancellationToken)
+        public async virtual Task ReleaseLockAsync(LockHandle handle, CancellationToken cancellationToken)
         {
             if (handle.LeaseRenewalTimer != null)
             {

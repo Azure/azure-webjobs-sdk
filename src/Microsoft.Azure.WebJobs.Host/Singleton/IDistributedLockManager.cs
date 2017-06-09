@@ -9,7 +9,7 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 namespace Microsoft.Azure.WebJobs.Host
 {
     /// <summary>
-    /// Manage distributed locks. A lock is specified by (account, lockId). 
+    /// Manage distributed lock. A lock is specified by (account, lockId). 
     /// </summary>
     /// <remarks>
     /// The default implementation of this is based on blob leases. 
@@ -40,7 +40,8 @@ namespace Microsoft.Azure.WebJobs.Host
         /// </summary>
         /// <param name="lockHandle"></param>
         /// <param name="cancellationToken"></param>
-        /// <returns>A hint used for determining the next time delay in calling Renew.  </returns>
+        /// <returns>A hint used for determining the next time delay in calling Renew. 
+        /// True means the next execution should occur at a normal delay. False means the next execution should occur quickly; use this in network error cases.   </returns>
         /// <remarks>
         /// If this throws an exception, the lease is cancelled. 
         /// </remarks>

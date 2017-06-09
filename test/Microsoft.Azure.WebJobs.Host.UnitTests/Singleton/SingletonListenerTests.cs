@@ -45,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         public async Task StartAsync_StartsListener_WhenLockAcquired()
         {
             CancellationToken cancellationToken = new CancellationToken();
-            var lockHandle = new LockWrapper(new SingletonLockHandle(), null);
+            var lockHandle = new LockHandle(new SingletonLockHandle(), null);
             _mockSingletonManager.Setup(p => p.TryLockAsync(_lockId, null, _attribute, cancellationToken, false))
                 .ReturnsAsync(lockHandle);
             _mockInnerListener.Setup(p => p.StartAsync(cancellationToken)).Returns(Task.FromResult(true));
@@ -63,7 +63,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         {
             CancellationToken cancellationToken = new CancellationToken();
             _mockSingletonManager.Setup(p => p.TryLockAsync(_lockId, null, _attribute, cancellationToken, false))
-                .ReturnsAsync((LockWrapper)null);
+                .ReturnsAsync((LockHandle)null);
 
             await _listener.StartAsync(cancellationToken);
 
@@ -85,7 +85,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             CancellationToken cancellationToken = new CancellationToken();
             _mockSingletonManager.Setup(p => p.TryLockAsync(_lockId, null, _attribute, cancellationToken, true))
-                .ReturnsAsync((LockWrapper)null);
+                .ReturnsAsync((LockHandle)null);
 
             await _listener.StartAsync(cancellationToken);
 
@@ -104,7 +104,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             };
             _listener.LockTimer.Start();
 
-            LockWrapper lockHandle = new LockWrapper(new SingletonLockHandle(), null);
+            LockHandle lockHandle = new LockHandle(new SingletonLockHandle(), null);
             _mockSingletonManager.Setup(p => p.TryLockAsync(_lockId, null, _attribute, CancellationToken.None, false))
                 .ReturnsAsync(lockHandle);
 
@@ -125,7 +125,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             _listener.LockTimer.Start();
 
             _mockSingletonManager.Setup(p => p.TryLockAsync(_lockId, null, _attribute, CancellationToken.None, false))
-                .ReturnsAsync((LockWrapper)null);
+                .ReturnsAsync((LockHandle)null);
 
             Assert.True(_listener.LockTimer.Enabled);
 
@@ -146,7 +146,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         {
             CancellationToken cancellationToken = new CancellationToken();
             _mockSingletonManager.Setup(p => p.TryLockAsync(_lockId, null, _attribute, cancellationToken, false))
-                .ReturnsAsync((LockWrapper)null);
+                .ReturnsAsync((LockHandle)null);
 
             await _listener.StartAsync(cancellationToken);
 
@@ -164,7 +164,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         public async Task StopAsync_WhenLockAcquired_ReleasesLock_AndStopsListener()
         {
             CancellationToken cancellationToken = new CancellationToken();
-            var lockHandle = new LockWrapper(new SingletonLockHandle(), null);
+            var lockHandle = new LockHandle(new SingletonLockHandle(), null);
             _mockSingletonManager.Setup(p => p.TryLockAsync(_lockId, null, _attribute, cancellationToken, false))
                 .ReturnsAsync(lockHandle);
             _mockInnerListener.Setup(p => p.StartAsync(cancellationToken)).Returns(Task.FromResult(true));
@@ -213,7 +213,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         public async Task Dispose_WhenLockAcquired_ReleasesLock()
         {
             CancellationToken cancellationToken = new CancellationToken();
-            var lockHandle = new LockWrapper(new SingletonLockHandle(), null);
+            var lockHandle = new LockHandle(new SingletonLockHandle(), null);
             _mockSingletonManager.Setup(p => p.TryLockAsync(_lockId, null, _attribute, cancellationToken, false))
                 .ReturnsAsync(lockHandle);
             _mockInnerListener.Setup(p => p.StartAsync(cancellationToken)).Returns(Task.FromResult(true));

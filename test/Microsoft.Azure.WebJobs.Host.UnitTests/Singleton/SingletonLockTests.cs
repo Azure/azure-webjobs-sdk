@@ -34,7 +34,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         {
             CancellationToken cancellationToken = new CancellationToken();
             SingletonAttribute attribute = new SingletonAttribute();
-            var handle = new LockWrapper(new SingletonLockHandle(), null);
+            var handle = new LockHandle(new SingletonLockHandle(), null);
 
             Mock<SingletonManager> mockSingletonManager = new Mock<SingletonManager>(MockBehavior.Strict);
             mockSingletonManager.Setup(p => p.LockAsync(TestLockId, TestInstanceId, attribute, cancellationToken)).ReturnsAsync(handle);
@@ -54,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         {
             CancellationToken cancellationToken = new CancellationToken();
             SingletonAttribute attribute = new SingletonAttribute();
-            var handle = new LockWrapper(new SingletonLockHandle(), null);
+            var handle = new LockHandle(new SingletonLockHandle(), null);
 
             Mock<SingletonManager> mockSingletonManager = new Mock<SingletonManager>(MockBehavior.Strict);
             mockSingletonManager.Setup(p => p.LockAsync(TestLockId, TestInstanceId, attribute, cancellationToken)).ReturnsAsync(handle);
