@@ -8,6 +8,7 @@ namespace Microsoft.Azure.WebJobs.Host
 {
     /// <summary>
     /// Configuration options governing the lock functionality of <see cref="SingletonAttribute"/>.
+    /// These results are passed to <see cref="IDistributedLockManager"/>
     /// </summary>
     public sealed class SingletonConfiguration
     {

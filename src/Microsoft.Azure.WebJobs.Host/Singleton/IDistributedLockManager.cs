@@ -36,7 +36,20 @@ namespace Microsoft.Azure.WebJobs.Host
             CancellationToken cancellationToken);
 
         /// <summary>
+        /// Called by the client to renew the lease. The timing internals here are determined by <see cref="SingletonConfiguration"/>
+        /// </summary>
+        /// <param name="lockHandle"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns>A hint used for determining the next time delay in calling Renew.  </returns>
+        /// <remarks>
+        /// If this throws an exception, the lease is cancelled. 
+        /// </remarks>
+        Task<bool> RenewAsync(IDistributedLock lockHandle, CancellationToken cancellationToken);
+
+        /// <summary>
         /// Get the owner for a given lock or null if not held. 
+        /// This is used for diagnostics. The lock owner can change immediately after this function returned, so callers 
+        /// can't be guaranteed the owner still the same. 
         /// </summary>
         /// <param name="account"></param>
         /// <param name="lockId"></param>

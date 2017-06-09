@@ -28,10 +28,13 @@ namespace Microsoft.Azure.WebJobs.Host
         private readonly ILogger _logger;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IDistributedLockManager _lockManager;
+        private readonly IWebJobsExceptionHandler _exceptionHandler;
 
         private TraceWriter _trace;
         private IHostIdProvider _hostIdProvider;
         private string _hostId;
+
+        private TimeSpan _minimumLeaseRenewalInterval = TimeSpan.FromSeconds(1);
 
         // For mock testing only
         internal SingletonManager()
@@ -39,15 +42,29 @@ namespace Microsoft.Azure.WebJobs.Host
         }
 
         public SingletonManager(IDistributedLockManager lockManager, SingletonConfiguration config,
-            TraceWriter trace, ILoggerFactory loggerFactory, IHostIdProvider hostIdProvider, INameResolver nameResolver = null)
+            TraceWriter trace, IWebJobsExceptionHandler exceptionHandler, ILoggerFactory loggerFactory, IHostIdProvider hostIdProvider, INameResolver nameResolver = null)
         {
             _lockManager = lockManager;
             _nameResolver = nameResolver;
             _config = config;
             _trace = trace;
             _loggerFactory = loggerFactory;
+            _exceptionHandler = exceptionHandler;
             _logger = _loggerFactory?.CreateLogger(LogCategories.Singleton);
             _hostIdProvider = hostIdProvider;
+        }
+
+        // for testing
+        internal TimeSpan MinimumLeaseRenewalInterval
+        {
+            get
+            {
+                return _minimumLeaseRenewalInterval;
+            }
+            set
+            {
+                _minimumLeaseRenewalInterval = value;
+            }
         }
 
         internal virtual SingletonConfiguration Config
@@ -70,9 +87,9 @@ namespace Microsoft.Azure.WebJobs.Host
             }
         }
 
-        public async virtual Task<object> LockAsync(string lockId, string functionInstanceId, SingletonAttribute attribute, CancellationToken cancellationToken)
+        public async virtual Task<LockWrapper> LockAsync(string lockId, string functionInstanceId, SingletonAttribute attribute, CancellationToken cancellationToken)
         {
-            object lockHandle = await TryLockAsync(lockId, functionInstanceId, attribute, cancellationToken);
+            LockWrapper lockHandle = await TryLockAsync(lockId, functionInstanceId, attribute, cancellationToken);
 
             if (lockHandle == null)
             {
@@ -85,10 +102,10 @@ namespace Microsoft.Azure.WebJobs.Host
             return lockHandle;
         }
 
-        public async virtual Task<object> TryLockAsync(string lockId, string functionInstanceId, SingletonAttribute attribute, CancellationToken cancellationToken, bool retry = true)
+        public async virtual Task<LockWrapper> TryLockAsync(string lockId, string functionInstanceId, SingletonAttribute attribute, CancellationToken cancellationToken, bool retry = true)
         {
             TimeSpan lockPeriod = GetLockPeriod(attribute, _config);
-            object handle = await _lockManager.TryLockAsync(attribute.Account, lockId, functionInstanceId, lockPeriod, cancellationToken);
+            IDistributedLock handle = await _lockManager.TryLockAsync(attribute.Account, lockId, functionInstanceId, lockPeriod, cancellationToken);
 
             if ((handle == null) && retry)
             {
@@ -107,14 +124,32 @@ namespace Microsoft.Azure.WebJobs.Host
                 }
             }
 
-            if (handle != null)
+            if (handle == null)
             {
-                string msg = string.Format(CultureInfo.InvariantCulture, "Singleton lock acquired ({0})", lockId);
-                _trace.Verbose(msg, source: TraceSource.Execution);
-                _logger?.LogDebug(msg);
+                return null;
             }
 
-            return handle;
+            var renewal = CreateLeaseRenewalTimer(lockPeriod, handle);
+
+            // start the renewal timer, which ensures that we maintain our lease until
+            // the lock is released
+            renewal.Start();
+
+            string msg = string.Format(CultureInfo.InvariantCulture, "Singleton lock acquired ({0})", lockId);
+            _trace.Verbose(msg, source: TraceSource.Execution);
+            _logger?.LogDebug(msg);
+
+            return new LockWrapper(handle, renewal);
+        }
+
+        private ITaskSeriesTimer CreateLeaseRenewalTimer(TimeSpan leasePeriod, IDistributedLock lockHandle)
+        {
+            // renew the lease when it is halfway to expiring   
+            TimeSpan normalUpdateInterval = new TimeSpan(leasePeriod.Ticks / 2);
+
+            IDelayStrategy speedupStrategy = new LinearSpeedupStrategy(normalUpdateInterval, MinimumLeaseRenewalInterval);
+            ITaskSeriesCommand command = new RenewLeaseCommand(this._lockManager, lockHandle, speedupStrategy);
+            return new TaskSeriesTimer(command, this._exceptionHandler, Task.Delay(normalUpdateInterval));
         }
 
         internal static TimeSpan GetLockPeriod(SingletonAttribute attribute, SingletonConfiguration config)
@@ -123,12 +158,16 @@ namespace Microsoft.Azure.WebJobs.Host
                     config.ListenerLockPeriod : config.LockPeriod;
         }
 
-        public async virtual Task ReleaseLockAsync(object lockHandle, CancellationToken cancellationToken)
+        public async virtual Task ReleaseLockAsync(LockWrapper handle, CancellationToken cancellationToken)
         {
-            IDistributedLock handle = (IDistributedLock)lockHandle;
-            await _lockManager.ReleaseLockAsync(handle, cancellationToken);
+            if (handle.LeaseRenewalTimer != null)
+            {
+                await handle.LeaseRenewalTimer.StopAsync(cancellationToken);
+            }
+                        
+            await _lockManager.ReleaseLockAsync(handle.InnerLock, cancellationToken);
 
-            string msg = string.Format(CultureInfo.InvariantCulture, "Singleton lock released ({0})", handle.LockId);
+            string msg = string.Format(CultureInfo.InvariantCulture, "Singleton lock released ({0})", handle.InnerLock.LockId);
             _trace.Verbose(msg, source: TraceSource.Execution);
             _logger?.LogDebug(msg);
         }
@@ -263,6 +302,29 @@ namespace Microsoft.Azure.WebJobs.Host
         public async virtual Task<string> GetLockOwnerAsync(SingletonAttribute attribute, string lockId, CancellationToken cancellationToken)
         {
             return await _lockManager.GetLockOwnerAsync(attribute.Account, lockId, cancellationToken);
+        }
+
+        internal class RenewLeaseCommand : ITaskSeriesCommand
+        {
+            private readonly IDistributedLockManager _lockManager;
+            private readonly IDistributedLock _lock;
+            private readonly IDelayStrategy _speedupStrategy;
+
+            public RenewLeaseCommand(IDistributedLockManager lockManager, IDistributedLock @lock, IDelayStrategy speedupStrategy)
+            {
+                _lock = @lock;
+                _lockManager = lockManager;
+                _speedupStrategy = speedupStrategy;
+            }
+
+            public async Task<TaskSeriesCommandResult> ExecuteAsync(CancellationToken cancellationToken)
+            {                
+                // Exceptions wil propagate 
+                bool executionSucceeded = await _lockManager.RenewAsync(_lock, cancellationToken);
+
+                TimeSpan delay = _speedupStrategy.GetNextDelay(executionSucceeded: true);
+                return new TaskSeriesCommandResult(wait: Task.Delay(delay));                
+            }
         }
     }
 }

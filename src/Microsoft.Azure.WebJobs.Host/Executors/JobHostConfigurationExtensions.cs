@@ -130,7 +130,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 {
                     lockManager = new BlobLeaseDistributedLockManager(
                         storageAccountProvider,
-                        exceptionHandler,
                         trace,
                         logger);
                     services.AddService<IDistributedLockManager>(lockManager);
@@ -140,6 +139,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     lockManager,                     
                     config.Singleton, 
                     trace,
+                    exceptionHandler,
                     config.LoggerFactory, 
                     hostIdProvider, 
                     services.GetService<INameResolver>());

@@ -65,6 +65,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
                 return Task.CompletedTask;
             }
 
+            public Task<bool> RenewAsync(IDistributedLock lockHandle, CancellationToken cancellationToken)
+            {
+                return Task.FromResult(true);
+            }
+
             public Task<IDistributedLock> TryLockAsync(string account, string lockId, string lockOwnerId, TimeSpan lockPeriod, CancellationToken cancellationToken)
             {
                 FakeLock entry = null;
