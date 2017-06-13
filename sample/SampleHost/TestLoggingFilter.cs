@@ -18,16 +18,16 @@ namespace SampleHost
             this.testMessage2 = testMessage2;
         }
 
-        public override Task OnPreFunctionInvocation(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
+        public override Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
         {
             Console.WriteLine(testMessage);
-            return base.OnPreFunctionInvocation(executingContext, cancellationToken);
+            return base.OnExecutingAsync(executingContext, cancellationToken);
         }
 
-        public override Task OnPostFunctionInvocation(FunctionExecutedContext executedContext, CancellationToken cancellationToken)
+        public override Task OnExecutedAsync(FunctionExecutedContext executedContext, CancellationToken cancellationToken)
         {
             Console.WriteLine(testMessage2);
-            return base.OnPostFunctionInvocation(executedContext, cancellationToken);
+            return base.OnExecutedAsync(executedContext, cancellationToken);
         }
     }
 }

@@ -85,6 +85,14 @@ namespace Microsoft.Azure.WebJobs
             _stoppingTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_shutdownTokenSource.Token);
         }
 
+        /// <summary>
+        /// Gets the JobHostConfiguration of this JobHost
+        /// </summary>
+        public JobHostConfiguration Configuration
+        {
+            get { return _config; }
+        }
+
         // Test hook only.
         internal IListener Listener
         {

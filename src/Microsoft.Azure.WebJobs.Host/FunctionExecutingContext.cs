@@ -1,15 +1,16 @@
 ﻿// FunctionExecutedContext.cs
 
 using System;
+using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.Azure.WebJobs
+namespace Microsoft.Azure.WebJobs.Host
 {
     /// <summary>
     /// The context for an executed function. This needs to be expanded on later.
     /// </summary>
     [CLSCompliant(false)]
-    public class FunctionExecutingContext
+    public class FunctionExecutingContext : FunctionInvocationContext
     {
         /// <summary>
         /// Constructor to set the context
@@ -18,28 +19,22 @@ namespace Microsoft.Azure.WebJobs
         /// <param name="fullName"></param>
         /// <param name="arguments"></param>
         /// <param name="logger"></param>
-        public FunctionExecutingContext(Guid id, string fullName, object[] arguments, ILogger logger)
+        public FunctionExecutingContext(Guid id, string fullName, object[] arguments, ILogger logger) :
+            base(id, fullName, arguments, logger)
         {
-            Id = id;
-            FullName = fullName;
-            Arguments = arguments;
-            Logger = logger;
         }
 
-        /// <summary>Gets or sets the ID of the function.</summary>
-        public Guid Id { get; set; }
-
-        /// <summary>Gets or sets the fully qualified name of the function.</summary>
-        public string FullName { get; set; }
-
         /// <summary>
-        /// Gets or sets the parameters of the function
+        /// Constructor to set the context
         /// </summary>
-        public object[] Arguments { get; set; }
-        
-        /// <summary>
-        /// Gets or sets the logger of the function
-        /// </summary>
-        public ILogger Logger { get; set; }
+        /// <param name="id"></param>
+        /// <param name="fullName"></param>
+        /// <param name="arguments"></param>
+        /// <param name="logger"></param>
+        /// <param name="host"></param>
+        public FunctionExecutingContext(Guid id, string fullName, object[] arguments, ILogger logger, JobHost host) :
+            base(id, fullName, arguments, logger, host)
+        {
+        }
     }
 }
