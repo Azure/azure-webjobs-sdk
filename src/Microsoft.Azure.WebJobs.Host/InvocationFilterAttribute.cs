@@ -3,6 +3,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
@@ -19,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="executingContext"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public virtual Task OnPreFunctionInvocation(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
+        public virtual Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
@@ -30,7 +31,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="executedContext"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public virtual Task OnPostFunctionInvocation(FunctionExecutedContext executedContext, CancellationToken cancellationToken)
+        public virtual Task OnExecutedAsync(FunctionExecutedContext executedContext, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
