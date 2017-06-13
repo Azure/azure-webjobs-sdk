@@ -12,6 +12,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings.Path;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Xunit;
 using Microsoft.Azure.WebJobs.Description;
+using System.ComponentModel.DataAnnotations;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
@@ -138,6 +139,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
                 throw new NotImplementedException();
             }
+        }
+
+        [Binding]
+        public class ValidationTestAttribute : Attribute
+        {
+            [RegularExpression("a+")]
+            [AutoResolve]
+            public string Value { get; set; }
+
         }
 
         // Helper to easily generate a fixed binding contract.
@@ -608,6 +618,74 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => AttributeCloner<AttributeWithResolutionPolicy>.GetPolicy(attr.ResolutionPolicyType, propInfo));
 
             Assert.Equal($"The {nameof(AutoResolveAttribute.ResolutionPolicyType)} on {nameof(AttributeWithResolutionPolicy.PropWithConstructorlessPolicy)} must derive from {typeof(IResolutionPolicy).Name} and have a default constructor.", ex.Message);
+        }
+
+        [Fact]
+        public void Validation_Late()
+        {
+            // with { } , can't determine if it's valid until after resolution. 
+            ValidationTestAttribute attr = new ValidationTestAttribute { Value = "a{name}" };
+
+            // Can't fail yet. 
+            var cloner = new AttributeCloner<ValidationTestAttribute>(attr, GetBindingContract("name"));
+
+            // Valid 
+            {
+                Dictionary<string, object> values = new Dictionary<string, object>()
+                {
+                    { "name", "aa" },  // Ok 
+                };
+                var ctx = GetCtx(values);
+                
+                var attr2 = cloner.ResolveFromBindingData(ctx);
+                Assert.Equal("aaa", attr2.Value);
+            }
+
+            // Invalid 
+            {
+                Dictionary<string, object> values = new Dictionary<string, object>()
+                {
+                    { "name", "b" },  // regex failure 
+                };
+                var ctx = GetCtx(values);
+
+                Assert.Throws<InvalidOperationException>(() =>
+                       cloner.ResolveFromBindingData(ctx));                
+            }
+        }
+
+        [Fact]
+        public void Validation_Early_Succeed()
+        {
+            // No { }, so we can determine validity immediately 
+            ValidationTestAttribute attr = new ValidationTestAttribute { Value = "aaa" };
+
+            Dictionary<string, object> values = new Dictionary<string, object>()
+            {
+                { "name", "green" },
+            };
+            var ctx = GetCtx(values);
+
+            var cloner = new AttributeCloner<ValidationTestAttribute>(attr, GetBindingContract("name"));
+            var attr2 = cloner.ResolveFromBindingData(ctx);
+
+            Assert.Equal("aaa", attr2.Value);
+        }
+
+        [Fact]
+        public void Validation_Early_Fail()
+        {
+            // No { }, so we can determine validity immediately 
+            ValidationTestAttribute attr = new ValidationTestAttribute { Value = "bbb" };
+
+            Dictionary<string, object> values = new Dictionary<string, object>()
+            {
+                { "name", "green" },
+            };
+            var ctx = GetCtx(values);
+
+            Assert.Throws<InvalidOperationException>(() =>
+              new AttributeCloner<ValidationTestAttribute>(attr, GetBindingContract("name")));
         }
 
         private static BindingContext GetCtx(IReadOnlyDictionary<string, object> values)

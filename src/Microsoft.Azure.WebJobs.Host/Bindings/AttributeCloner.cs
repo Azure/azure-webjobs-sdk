@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -91,9 +92,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             object originalValue = propInfo.GetValue(_source);
             AppSettingAttribute appSettingAttr = propInfo.GetCustomAttribute<AppSettingAttribute>();
             AutoResolveAttribute autoResolveAttr = propInfo.GetCustomAttribute<AutoResolveAttribute>();
-
+                        
             if (appSettingAttr == null && autoResolveAttr == null)
             {
+                RunValidateAttributes(originalValue, propInfo);
+
                 // No special attributes, treat as literal. 
                 return (newAttr, bindingData) => originalValue;
             }
@@ -128,10 +131,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 if (autoResolveAttr.Default != null)
                 {
-                    return GetBuiltinTemplateResolver(autoResolveAttr.Default, nameResolver);
+                    return GetBuiltinTemplateResolver(autoResolveAttr.Default, nameResolver, propInfo);
                 }
                 else
                 {
+                    RunValidateAttributes(originalValue, propInfo);
                     return (newAttr, bindingData) => originalValue;
                 }
             }
@@ -149,6 +153,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             string resolvedValue = string.IsNullOrEmpty(appSettingName) ?
                 originalValue : nameResolver.Resolve(appSettingName);
 
+            // valdiate after the %% is substituted. 
+            RunValidateAttributes(resolvedValue, propInfo);
+
             // If a value is non-null and cannot be found, we throw to match the behavior
             // when %% values are not found in ResolveWholeString below.
             if (resolvedValue == null && originalValue != null)
@@ -161,18 +168,49 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return (newAttr, bindingData) => resolvedValue;
         }
 
+        // Run validition. This needs to be run at different stages. 
+        // In general, run as early as possible. If there are { } tokens, then we can't run until runtime.
+        // But if there are no { }, we can run statically. 
+        // If there's no [AutoResolve], [AppSettings], then we can run immediately.
+        private static void RunValidateAttributes(object value, PropertyInfo propInfo)
+        {
+            var attrs = propInfo.GetCustomAttributes<ValidationAttribute>();
+
+            foreach (var attr in attrs)
+            {
+                try
+                {
+                    attr.Validate(value, propInfo.Name);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"'{propInfo.Name}' can't be '{value}': {e.Message}");
+                }
+            }
+        }
+
         // Resolve for AutoResolve.Default templates. 
         // These only have access to the {sys} builtin variable and don't get access to trigger binding data. 
-        internal static BindingDataResolver GetBuiltinTemplateResolver(string originalValue, INameResolver nameResolver)
+        internal static BindingDataResolver GetBuiltinTemplateResolver(string originalValue, INameResolver nameResolver, PropertyInfo propInfo)
         {
             string resolvedValue = nameResolver.ResolveWholeString(originalValue);
 
             var template = BindingTemplate.FromString(resolvedValue);
+            if (!template.ParameterNames.Any())
+            {
+                // No { } tokens, bind eagerly up front. 
+                RunValidateAttributes(originalValue, propInfo);
+            }
 
             SystemBindingData.ValidateStaticContract(template);
 
             // For static default contracts, we only have access to the built in binding data. 
-            return (newAttr, bindingData) => template.Bind(SystemBindingData.GetSystemBindingData(bindingData));
+            return (newAttr, bindingData) =>
+            {
+                var newValue = template.Bind(SystemBindingData.GetSystemBindingData(bindingData));
+                RunValidateAttributes(newValue, propInfo);
+                return newValue;
+            };
         }
 
         // AutoResolve
@@ -180,6 +218,13 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         {
             string resolvedValue = nameResolver.ResolveWholeString(originalValue);
             var template = BindingTemplate.FromString(resolvedValue);
+
+            if (!template.ParameterNames.Any())
+            {
+                // No { } tokens, bind eagerly up front. 
+                RunValidateAttributes(originalValue, propInfo);
+            }
+
             IResolutionPolicy policy = GetPolicy(attr.ResolutionPolicyType, propInfo);
             template.ValidateContractCompatibility(contract);
             return (newAttr, bindingData) => TemplateBind(policy, propInfo, newAttr, template, bindingData);
@@ -292,10 +337,13 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         {
             if (bindingData == null)
             {
+                RunValidateAttributes(template?.Pattern, prop);
                 return template?.Pattern;
             }
 
-            return policy.TemplateBind(prop, attr, template, bindingData);
+            var newValue = policy.TemplateBind(prop, attr, template, bindingData);
+            RunValidateAttributes(newValue, prop);
+            return newValue;
         }
 
         internal static IResolutionPolicy GetPolicy(Type formatterType, PropertyInfo propInfo)
