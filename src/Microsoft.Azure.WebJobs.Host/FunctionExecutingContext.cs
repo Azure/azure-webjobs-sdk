@@ -19,7 +19,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="fullName"></param>
         /// <param name="arguments"></param>
         /// <param name="logger"></param>
-        public FunctionExecutingContext(Guid id, string fullName, object[] arguments, ILogger logger) :
+        public FunctionExecutingContext(Guid id, string fullName, IReadOnlyDictionary<string, object> arguments, ILogger logger) :
             base(id, fullName, arguments, logger)
         {
         }
@@ -32,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="arguments"></param>
         /// <param name="logger"></param>
         /// <param name="host"></param>
-        public FunctionExecutingContext(Guid id, string fullName, object[] arguments, ILogger logger, JobHost host) :
+        public FunctionExecutingContext(Guid id, string fullName, IReadOnlyDictionary<string, object> arguments, ILogger logger, JobHost host) :
             base(id, fullName, arguments, logger, host)
         {
         }

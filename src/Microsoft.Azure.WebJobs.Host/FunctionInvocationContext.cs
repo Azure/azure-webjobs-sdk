@@ -11,12 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host
     /// </summary>
     [CLSCompliant(false)]
     public abstract class FunctionInvocationContext
-    {
-        /// <summary>
-        /// Arguments from the function
-        /// </summary>
-        private object[] arguments;
-
+    { 
         /// <summary>
         /// Constructor to set the context
         /// </summary>
@@ -24,11 +19,11 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="fullName"></param>
         /// <param name="arguments"></param>
         /// <param name="logger"></param>
-        protected FunctionInvocationContext(Guid id, string fullName, object[] arguments, ILogger logger)
+        protected FunctionInvocationContext(Guid id, string fullName, IReadOnlyDictionary<string, object> arguments, ILogger logger)
         {
             Id = id;
             FullName = fullName;
-            SetArguments(arguments);
+            Arguments = arguments;
             Logger = logger;
         }
 
@@ -40,11 +35,11 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="arguments"></param>
         /// <param name="logger"></param>
         /// <param name="host"></param>
-        protected FunctionInvocationContext(Guid id, string fullName, object[] arguments, ILogger logger, JobHost host)
+        protected FunctionInvocationContext(Guid id, string fullName, IReadOnlyDictionary<string, object> arguments, ILogger logger, JobHost host)
         {
             Id = id;
             FullName = fullName;
-            SetArguments(arguments);
+            Arguments = arguments;
             Logger = logger;
             Host = host;
         }
@@ -54,6 +49,11 @@ namespace Microsoft.Azure.WebJobs.Host
 
         /// <summary>Gets or sets the fully qualified name of the function.</summary>
         public string FullName { get; set; }
+        
+        /// <summary>
+        /// Arguments from the function
+        /// </summary>
+        public IReadOnlyDictionary<string, object> Arguments { get; set; }
 
         /// <summary>
         /// Gets or sets the logger of the function
@@ -64,23 +64,5 @@ namespace Microsoft.Azure.WebJobs.Host
         /// Gets or sets the host of the function
         /// </summary>
         internal JobHost Host { get; set; }
-
-        /// <summary>
-        /// Get the function arguments
-        /// </summary>
-        /// <returns></returns>
-        public object[] GetArguments()
-        {
-            return arguments;
-        }
-
-        /// <summary>
-        /// Set the function arguments
-        /// </summary>
-        /// <param name="value"></param>
-        public void SetArguments(object[] value)
-        {
-            arguments = value;
-        }
     }
 }

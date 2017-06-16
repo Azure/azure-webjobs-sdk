@@ -21,7 +21,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="arguments"></param>
         /// <param name="logger"></param>
         /// <param name="result"></param>
-        public FunctionExecutedContext(Guid id, string fullName, object[] arguments, ILogger logger, FunctionResult result) :
+        public FunctionExecutedContext(Guid id, string fullName, IReadOnlyDictionary<string, object> arguments, ILogger logger, FunctionResult result) :
             base(id, fullName, arguments, logger)
         {
             Result = result;

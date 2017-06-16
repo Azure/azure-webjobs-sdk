@@ -1,6 +1,10 @@
 ﻿// InvokeFunctionAttribute.cs
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -11,44 +15,82 @@ namespace Microsoft.Azure.WebJobs.Host
     /// This is the first iteration of the InvokeFunctionAttribute
     /// </summary>
     [CLSCompliant(false)]
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = true, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = true, AllowMultiple = true)]
     public sealed class InvokeFunctionFilterAttribute : InvocationFilterAttribute
     {
         /// <summary>
         /// When this attribute is used, take the name of the function to invoke
         /// </summary>
-        /// <param name="functionName"></param>
-        public InvokeFunctionFilterAttribute(string functionName)
+        /// <param name="executingFilter"></param>
+        /// <param name="executedFilter"></param>
+        public InvokeFunctionFilterAttribute(string executingFilter = null, string executedFilter = null)
         {
-            FunctionName = functionName;
+            ExecutingFilter = executingFilter;
+            ExecutedFilter = executedFilter;
         }
 
         /// <summary>
-        /// This is the function name to invoke
+        /// Executing filter
         /// </summary>
-        public string FunctionName { get; }
+        public string ExecutingFilter { get; }
+
+        /// <summary>
+        /// Executed filter
+        /// </summary>
+        public string ExecutedFilter { get; }
 
         /// <summary>
         /// Call the requested function
         /// </summary>
         /// <returns></returns>
-        public override Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
+        public override async Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
         {
             if (executingContext == null)
             {
                 throw new ArgumentNullException("executingContext");
             }
-
-            executingContext.Logger.LogInformation("Executing function: " + FunctionName);
-            executingContext.Logger.LogInformation(executingContext.GetArguments().ToString());
-
+            
             // TODO: Implement invoke function logic
+            if (!string.IsNullOrEmpty(ExecutingFilter))
+            {
+                IReadOnlyDictionary<string, object> paramaters = executingContext.Arguments;
+                JobHost host = executingContext.Host;
+                MethodInfo methodInfo = null;
 
-            // object[] paramaters = executingContext.GetArguments();
-            // JobHost host = executingContext.Host;
-            // await host.CallAsync(FunctionName, cancellationToken);
+                foreach (var type in host.Configuration.TypeLocator.GetTypes())
+                {
+                    methodInfo = type.GetMethods().SingleOrDefault(p => string.Compare(p.Name, ExecutingFilter, StringComparison.OrdinalIgnoreCase) == 0);
+                    // methodInfo = type.GetMethod(ExecutingFilter, new Type[] { typeof(FunctionExecutingContext) });
+                }
 
-            return Task.CompletedTask;
+                if (methodInfo != null)
+                {
+                    executingContext.Logger.LogInformation("Executing function from filter...");
+
+                    var parameterName = methodInfo.GetParameters()[0].Name;
+                    Dictionary<string, object> parameters = new Dictionary<string, object>();
+                    parameters.Add(parameterName, executingContext);
+
+                    try
+                    {
+                        await host.CallAsync(methodInfo, parameters, cancellationToken);
+                    }
+                    catch
+                    {
+                    }
+
+                    // function executed
+                    executingContext.Logger.LogInformation("Executed function: " + ExecutingFilter);
+                }
+                else
+                {
+                    // TODO: @Hamza add error handling
+                }
+            }
+            else
+            {
+                await base.OnExecutingAsync(executingContext, cancellationToken);
+            }
         }
     }
 }
