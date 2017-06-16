@@ -60,7 +60,6 @@ namespace Microsoft.Azure.WebJobs.Host
                 foreach (var type in host.Configuration.TypeLocator.GetTypes())
                 {
                     methodInfo = type.GetMethods().SingleOrDefault(p => string.Compare(p.Name, ExecutingFilter, StringComparison.OrdinalIgnoreCase) == 0);
-                    // methodInfo = type.GetMethod(ExecutingFilter, new Type[] { typeof(FunctionExecutingContext) });
                 }
 
                 if (methodInfo != null)
@@ -75,8 +74,9 @@ namespace Microsoft.Azure.WebJobs.Host
                     {
                         await host.CallAsync(methodInfo, parameters, cancellationToken);
                     }
-                    catch
+                    catch (Exception e)
                     {
+                        executingContext.Logger.LogInformation(e.ToDetails());
                     }
 
                     // function executed

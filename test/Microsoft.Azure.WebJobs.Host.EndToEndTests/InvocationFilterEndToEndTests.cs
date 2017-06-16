@@ -203,11 +203,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await _host.CallAsync(method, new { input = testValue });
             await Task.Delay(1000);
 
-            // validate the function is invoking
-            //var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Executor).Single();
-            //Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("Executing function from filter...")));
-
-            // TODO: Read blob for the guid
+            // Read blob for the guid
             var blobReference = _fixture.OutputContainer.GetBlobReference("filterTest");
             await TestHelpers.Await(() =>
             {
