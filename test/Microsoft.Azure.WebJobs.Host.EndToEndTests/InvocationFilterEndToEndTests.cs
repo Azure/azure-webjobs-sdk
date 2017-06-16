@@ -1,26 +1,42 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.WindowsAzure.Storage.Table;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
-    public class InvocationFilterEndToEndTests
+    public class InvocationFilterEndToEndTests : IClassFixture<InvocationFilterEndToEndTests.TestFixture>
     {
         private JobHostConfiguration _config;
         private JobHost _host;
 
+        private const string TestArtifactPrefix = "e2etestmultiaccount";
+        private const string Input = TestArtifactPrefix + "-input-%rnd%";
+        private const string Output = TestArtifactPrefix + "-output-%rnd%";
+        private const string InputTableName = TestArtifactPrefix + "tableinput%rnd%";
+        private const string OutputTableName = TestArtifactPrefix + "tableinput%rnd%";
+        private const string TestData = "﻿TestData";
+        private const string Secondary = "SecondaryStorage";
+        private readonly TestFixture _fixture;
+        
         private readonly TestLoggerProvider _loggerProvider = new TestLoggerProvider();
 
-        public InvocationFilterEndToEndTests()
+        public InvocationFilterEndToEndTests(TestFixture fixture)
         {
             _config = new JobHostConfiguration()
             {
@@ -33,6 +49,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _config.Aggregator.IsEnabled = false; // makes validation easier
             _config.TypeLocator = new FakeTypeLocator(typeof(TestFunctions));
             _host = new JobHost(_config);
+            _fixture = fixture;
         }
 
         [Fact]
@@ -181,12 +198,33 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             var method = typeof(TestFunctions).GetMethod("TestInvokeFunctionFilter", BindingFlags.Public | BindingFlags.Static);
 
-            await _host.CallAsync(method, new { input = "Testing 123" });
+            string testValue = Guid.NewGuid().ToString();
+
+            await _host.CallAsync(method, new { input = testValue });
             await Task.Delay(1000);
 
             // validate the function is invoking
-            var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Executor).Single();
-            Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("Executing function: ")));
+            //var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Executor).Single();
+            //Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("Executing function from filter...")));
+
+            // TODO: Read blob for the guid
+            var blobReference = _fixture.OutputContainer.GetBlobReference("filterTest");
+            await TestHelpers.Await(() =>
+            {
+                return blobReference.Exists();
+            });
+            
+            string data;
+            using (var memoryStream = new MemoryStream())
+            {
+                blobReference.DownloadToStream(memoryStream);
+                memoryStream.Position = 0;
+                using (var reader = new StreamReader(memoryStream, Encoding.Unicode))
+                {
+                    data = reader.ReadToEnd();
+                }
+            }
+            Assert.Equal(testValue, data);
         }
 
         public class TestFunctions
@@ -240,12 +278,19 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 logger.LogInformation("Test function invoked!");
                 throw new Exception("Testing function fail");
             }
-
+            
             [NoAutomaticTrigger]
             [InvokeFunctionFilter("MyFunction")]
             public static void TestInvokeFunctionFilter(string input, ILogger logger)
             {
                 logger.LogInformation("Test function invoked!");
+            }
+
+            [NoAutomaticTrigger]
+            public static void MyFunction(FunctionExecutingContext executingContext, [Blob("test/filterTest")] out string blob)
+            {
+                blob = (string)executingContext.Arguments["input"];
+                executingContext.Logger.LogInformation("MyFunction invoked!");
             }
         }
 
@@ -287,18 +332,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             public HttpRequestMessage httpRequestToValidate { get; set; }
 
-            public HTTPRequestFilter()
-            {
-            }
-
             public override Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
             {
                 executingContext.Logger.LogInformation("Test executing!");
-                
-                object[] arguments = executingContext.GetArguments();
+
+                IReadOnlyDictionary<string, object> arguments = executingContext.Arguments;
+                var testValues = string.Join(",", arguments.Values.ToArray());
 
                 // Check headers (I'm sure there's a better way to check this
-                if(arguments[0].ToString().Contains("Header"))
+                if (testValues.Contains("Headers"))
                 {
                     executingContext.Logger.LogInformation("Found the header!");
                     // Perform a validation on the headers
@@ -348,6 +390,60 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 executedContext.Logger.LogInformation(executedContext.Result.Exception.ToString());
 
                 return Task.CompletedTask;
+            }
+        }
+
+        private class TestNameResolver : RandomNameResolver
+
+        {
+            public override string Resolve(string name)
+            {
+                if (name == "test_account")
+                {
+                    return "SecondaryStorage";
+                }
+                return base.Resolve(name);
+            }
+        }
+
+        public class TestFixture : IDisposable
+        {
+            public TestFixture()
+            {
+                RandomNameResolver nameResolver = new TestNameResolver();
+                JobHostConfiguration hostConfiguration = new JobHostConfiguration()
+                {
+                    NameResolver = nameResolver,
+                    TypeLocator = new FakeTypeLocator(typeof(MultipleStorageAccountsEndToEndTests)),
+                };
+                Config = hostConfiguration;
+
+                var account = CloudStorageAccount.Parse(hostConfiguration.StorageConnectionString);
+
+                CloudBlobClient blobClient1 = account.CreateCloudBlobClient();
+                OutputContainer = blobClient1.GetContainerReference("test");
+
+                Host = new JobHost(hostConfiguration);
+                Host.Start();
+            }
+
+            public JobHost Host
+            {
+                get;
+                private set;
+            }
+
+            public JobHostConfiguration Config
+            {
+                get;
+                private set;
+            }
+
+            public CloudBlobContainer OutputContainer { get; private set; }
+
+            public void Dispose()
+            {
+                ((IDisposable)Host).Dispose();
             }
         }
     }
