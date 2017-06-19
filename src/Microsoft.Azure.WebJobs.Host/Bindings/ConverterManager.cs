@@ -438,6 +438,38 @@ namespace Microsoft.Azure.WebJobs
             };
         }
 
+        // $$$ Serialize form any poco. 
+        internal class PocoOpenType : OpenType
+        {
+            public override bool IsMatch(Type type)
+            {
+                if (type == null)
+                {
+                    throw new ArgumentNullException(nameof(type));
+                }
+                // $$$ Should have the same check above. 
+                if (type.IsPrimitive)
+                {
+                    return false;
+                }
+                if (type.FullName == "System.Object")
+                {
+                    return false;
+                }
+                if (type.GetInterface("System.IEnumerable`1") != null)
+                {
+                    return false;
+                }
+
+                return true;
+            }
+
+            internal override string GetDisplayName()
+            {
+                return "Poco";
+            }
+        }
+
         // List of open converters. Since these are not exact type matches, need to search through and determine the match. 
         private class Entry
         {
@@ -477,9 +509,49 @@ namespace Microsoft.Azure.WebJobs
             }
         }
 
+        internal class AssignableToOpenType : OpenType
+        {
+            private readonly Type _targetType;
+
+            public AssignableToOpenType(Type targetType)
+            {
+                _targetType = targetType;
+            }
+
+            public override bool IsMatch(Type type)
+            {
+                if (type == null)
+                {
+                    throw new ArgumentNullException(nameof(type));
+                }
+                if (ExactMatch.TypeToString(type) == ExactMatch.TypeToString(_targetType))
+                {
+                    return true;
+                }
+
+                // What if types are in different type universes?
+                // Type is a concrete type. 
+                if (_targetType.IsInterface)
+                {
+                    var iface = type.GetInterface(_targetType.FullName);
+                    return iface != null;
+                }
+                // $$$ Check base types. 
+
+                // Fake types? 
+                return false;
+            }
+
+            // $$$ Use C# covariance? 
+            internal override string GetDisplayName()
+            {
+                return "+" + ExactMatch.TypeToString(_targetType);
+            }
+        }
+
         // Match a generic type with 1 generic arg. 
         // like IEnumerable<T>,  IQueryable<T>, etc. 
-        private class SingleGenericArgOpenType : OpenType
+        internal class SingleGenericArgOpenType : OpenType
         {
             private readonly OpenType _inner;
             private readonly Type _outerType;
@@ -496,8 +568,12 @@ namespace Microsoft.Azure.WebJobs
                 {
                     throw new ArgumentNullException("type");
                 }
-                if (type.IsGenericType &&
-                    type.GetGenericTypeDefinition() == _outerType)
+
+                // $$$ Need to compare across type-systems. 
+                // GetGenericTypeDefinition() on type definitions return s'T' 
+                //if (type.IsGenericType &&  type.GetGenericTypeDefinition() == _outerType) $$$
+                if (type.IsGenericType && 
+                    (type.GetGenericTypeDefinition().FullName == _outerType.FullName))
                 {
                     var args = type.GetGenericArguments();
 
@@ -535,7 +611,22 @@ namespace Microsoft.Azure.WebJobs
 
             public override bool IsMatch(Type type)
             {
-                return type == _type;
+                if (type == null)
+                {
+                    throw new ArgumentNullException(nameof(type));
+                }
+                if (type == _type)
+                {
+                    return true;
+                }
+
+                // For tooling, may have have full type identity. 
+                // if (type.Name == _type.Name && type.Namespace == _type.Namespace) $$$
+                if (TypeToString(type) == TypeToString(_type))
+                {
+                    return true;
+                }
+                return false;
             }
 
             internal override string GetDisplayName()
@@ -548,6 +639,11 @@ namespace Microsoft.Azure.WebJobs
                 {
                     var element = t.GetElementType();
                     return "out " + TypeToString(element);
+                }
+                if (t.IsArray)
+                {
+                    var element = t.GetElementType();
+                    return TypeToString(element) + "[]";
                 }
                 if (t.IsGenericType)
                 {
@@ -574,7 +670,7 @@ namespace Microsoft.Azure.WebJobs
         }
 
         // Matches any T[] 
-        private class ArrayOpenType : OpenType
+        internal class ArrayOpenType : OpenType
         {
             private readonly OpenType _inner;
             public ArrayOpenType(OpenType inner)
@@ -598,6 +694,34 @@ namespace Microsoft.Azure.WebJobs
             internal override string GetDisplayName()
             {
                 return _inner.GetDisplayName() + "[]";
+            }
+        }
+
+        // Matches any T& 
+        internal class ByRefOpenType : OpenType
+        {
+            private readonly OpenType _inner;
+            public ByRefOpenType(OpenType inner)
+            {
+                _inner = inner;
+            }
+            public override bool IsMatch(Type type)
+            {
+                if (type == null)
+                {
+                    throw new ArgumentNullException(nameof(type));
+                }
+                if (type.IsByRef)
+                {
+                    var elementType = type.GetElementType();
+                    return _inner.IsMatch(elementType);
+                }
+                return false;
+            }
+
+            internal override string GetDisplayName()
+            {
+                return _inner.GetDisplayName() + "&";
             }
         }
     } // end class ConverterManager

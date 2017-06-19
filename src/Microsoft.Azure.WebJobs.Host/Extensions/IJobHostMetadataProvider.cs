@@ -60,5 +60,13 @@ namespace Microsoft.Azure.WebJobs.Host
         /// </summary>
         /// <param name="output">The <see cref="TextWriter"/> to write the graph to.</param>
         void DebugDumpGraph(TextWriter output);
+
+        /// <summary>
+        /// Can we bind to the given type? IF true, return null.  Else, return an array of errors. 
+        /// </summary>
+        /// <param name="attribute">an (possibly unresolved) attribute</param>
+        /// <param name="type">the target type to bind to</param>
+        /// <returns></returns>
+        string[] CheckBindingErrors(Attribute attribute, Type type);
     }
 }

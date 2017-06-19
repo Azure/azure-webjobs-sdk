@@ -146,10 +146,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return types.Where(type => type != null).ToArray();
         }
 
-        private static void AddRulesForType(Type type, List<BindingRule> rules)
+        private static void AddRulesForType(OpenType target, Type type, List<BindingRule> rules)
         {
             var typeIAC = typeof(IAsyncCollector<>).MakeGenericType(type);
-
+            
             Type intermediateType = null;
             if (type != typeof(TType))
             {
@@ -157,50 +157,72 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 intermediateType = typeof(IAsyncCollector<TType>);
             }
 
+            // $$$ IsAssignable 
+            // IAsyncCollector<ITableEntity>  vs IAsyncCollector<MyTableEntity>
+            // IAsyncCollector<T>
             rules.Add(
                 new BindingRule
                 {
                     SourceAttribute = typeof(TAttribute),
                     Converters = MakeArray(intermediateType),
-                    UserType = new ConverterManager.ExactMatch(typeIAC)
+                    UserType = new ConverterManager.SingleGenericArgOpenType(
+                        typeof(IAsyncCollector<>), target)
+                    // new ConverterManager.ExactMatch(typeIAC)
                 });
 
+            // ICollector<T>
             rules.Add(
                   new BindingRule
                   {
                       SourceAttribute = typeof(TAttribute),
                       Converters = MakeArray(intermediateType, typeIAC),                      
-                      UserType = new ConverterManager.ExactMatch(typeof(ICollector<>).MakeGenericType(type))
+                      UserType = new ConverterManager.SingleGenericArgOpenType(
+                        typeof(ICollector<>), target)
                   });
 
+            // out T
             rules.Add(
                   new BindingRule
                   {
                       SourceAttribute = typeof(TAttribute),
                       Converters = MakeArray(intermediateType, typeIAC),
-                      UserType = new ConverterManager.ExactMatch(type.MakeByRefType())
+                      UserType = new ConverterManager.ByRefOpenType(
+                         target)
                   });
 
+            // out T[]
             rules.Add(
                   new BindingRule
                   {
                       SourceAttribute = typeof(TAttribute),
                       Converters = MakeArray(intermediateType, typeIAC),
-                      UserType = new ConverterManager.ExactMatch(type.MakeArrayType().MakeByRefType())
+                      UserType = new ConverterManager.ByRefOpenType(
+                          new ConverterManager.ArrayOpenType(
+                         target))
                   });
         }
 
         public IEnumerable<BindingRule> GetRules()
         {
             var rules = new List<BindingRule>();
-            AddRulesForType(typeof(TType), rules);
+            var target3 = new ConverterManager.AssignableToOpenType(typeof(TType));
+            AddRulesForType(target3, typeof(TType), rules);
                         
             var cm = (ConverterManager)_converterManager;
-            var types = cm.GetPossibleSourceTypesFromDestination(typeof(TAttribute), typeof(TType));
+            Type[] types = cm.GetPossibleSourceTypesFromDestination(typeof(TAttribute), typeof(TType));
                         
             foreach (var type in types)
             {
-                AddRulesForType(type, rules);
+                var target = new ConverterManager.AssignableToOpenType(type);
+                AddRulesForType(target, type, rules);
+
+                // $$$ Coupled to converter manager. 
+                // If there's a string-->TDest converter, 
+                if (type == typeof(string))
+                {
+                    var target2 = new ConverterManager.PocoOpenType();
+                    AddRulesForType(target2, type, rules);
+                }
             }
 
             return rules;

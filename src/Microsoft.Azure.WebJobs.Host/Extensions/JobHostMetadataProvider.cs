@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
@@ -259,6 +260,122 @@ namespace Microsoft.Azure.WebJobs.Host
                 output.Write(rule.UserType.GetDisplayName());
                 output.WriteLine();
             }          
+        }
+
+        private static bool ApplyFilter(Attribute attribute, string filter)
+        {
+            if (filter == null)
+            {
+                return true;
+            }
+
+            var t = attribute.GetType();
+
+            // $$$
+            // ({0} == null)
+            // ({0} != null)
+            var parts = filter.Split(new string[] { " && " }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var part in parts)
+            {
+                int idxSpace = part.IndexOf(' ');
+                var name = part.Substring(1, idxSpace - 1);
+
+                var prop = t.GetProperty(name, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+                var val = prop.GetValue(attribute);
+
+                if (part.EndsWith(" == Read)", StringComparison.OrdinalIgnoreCase))
+                {
+                    if ((val == null) || ((FileAccess)val != FileAccess.Read))
+                    {
+                        return false;
+                    }
+                }
+                if (part.EndsWith(" == Write)", StringComparison.OrdinalIgnoreCase))
+                {
+                    if ((val == null) || ((FileAccess)val != FileAccess.Write))
+                    {
+                        return false;
+                    }
+                }
+
+                if (part.EndsWith(" == null)", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (val != null)
+                    {
+                        return false;
+                    }
+                }
+                if (part.EndsWith("!= null)", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (val == null)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        public string[] CheckBindingErrors(Attribute attribute, Type targetType)
+        {
+            if (attribute == null)
+            {
+                throw new ArgumentNullException(nameof(attribute));
+            }
+            if (targetType == null)
+            {
+                throw new ArgumentNullException(nameof(targetType));
+            }
+            var providers = this._root;
+
+            HashSet<string> possible = new HashSet<string>();
+            
+            IBindingRuleProvider root = (IBindingRuleProvider)providers;
+            foreach (var rule in root.GetRules())
+            {
+                var attr = rule.SourceAttribute;
+
+                bool attrMatch = attr.FullName == attribute.GetType().FullName;
+                bool typeMatch = rule.UserType.IsMatch(targetType);
+                bool filterMatch = attrMatch && ApplyFilter(attribute, rule.Filter);
+                
+                if (attrMatch && filterMatch && typeMatch)
+                {
+                    // Success!
+                    return null;
+                }
+
+                // Doesn't match. Add a possible hint about what would match. 
+                if (typeMatch)
+                {
+                    if (attrMatch)
+                    {
+                        // Filter misatch 
+                        possible.Add($"set {rule.Filter}");
+                    }
+                    else
+                    {
+                        // Possibly use another attribute to bind to this type?
+                        possible.Add($"try [{attr.FullName}]");                        
+                    }
+                }
+                else
+                {
+                    if (filterMatch && attrMatch)
+                    {
+                        possible.Add(rule.UserType.GetDisplayName());
+                    }
+                    else
+                    {
+                        // Rule is too unrelated 
+                    }
+                }
+            }
+
+            var x = possible.ToArray();
+            Array.Sort(x);
+            return x;
         }
 
         private void AddTypesFromGraph(IBindingRuleProvider root)

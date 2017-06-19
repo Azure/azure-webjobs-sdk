@@ -154,20 +154,53 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             foreach (var type in new Type[]
             {
                 typeof(Stream),
-                typeof(TextReader),
-                typeof(TextWriter),
                 typeof(ICloudBlob),
                 typeof(CloudBlockBlob),
                 typeof(CloudPageBlob),
-                typeof(CloudAppendBlob),
+                typeof(CloudAppendBlob),                
+            })
+            {
+                yield return new BindingRule
+                {
+                    SourceAttribute = typeof(BlobAttribute),
+                    UserType = new ConverterManager.ExactMatch(type)
+                };
+            }
+
+            // Read 
+            foreach (var filter in new string[]
+            {
+                "(access == Read)",
+                "(access == null)", // Not write 
+            })
+            {
+                foreach (var type in new Type[]
+                {
+                typeof(TextReader),
                 typeof(string),
-                typeof(byte[]),
+                typeof(byte[])
+                })
+                {
+                    yield return new BindingRule
+                    {
+                        Filter = filter,
+                        SourceAttribute = typeof(BlobAttribute),
+                        UserType = new ConverterManager.ExactMatch(type)
+                    };
+                }
+            }
+
+            // Write 
+            foreach (var type in new Type[]
+            {
+                typeof(TextWriter),
                 typeof(string).MakeByRefType(),
                 typeof(byte[]).MakeByRefType()
             })
             {
                 yield return new BindingRule
                 {
+                    Filter = "(access == Write)",
                     SourceAttribute = typeof(BlobAttribute),
                     UserType = new ConverterManager.ExactMatch(type)
                 };

@@ -8,13 +8,29 @@ using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    internal class AttributeCloner
-    {        
-        // This is separate from AttributeCloner<T>  since:
-        // - this does not need to resolve any { } , %%. Those will be resolved later. 
-        // - this method is not generic. 
+    /// <summary>
+    /// Helpers for creating attributes 
+    /// </summary>
+    public static class AttributeCloner
+    {
+        /// <summary>
+        /// This is separate from AttributeCloner`T  since:
+        /// - this does not need to resolve any { } , %%. Those will be resolved later. 
+        /// - this method is not generic. 
+        /// </summary>
+        /// <param name="attributeType">type of attribute to create</param>
+        /// <param name="properties">argument dictionary</param>
+        /// <returns></returns>
         public static Attribute CreateDirect(Type attributeType, JObject properties)
         {
+            if (attributeType == null)
+            {
+                throw new ArgumentNullException(nameof(attributeType));
+            }
+            if (properties == null)
+            {
+                throw new ArgumentNullException(nameof(properties));
+            }
             Type t = attributeType;
 
             ConstructorInfo bestCtor = null;
