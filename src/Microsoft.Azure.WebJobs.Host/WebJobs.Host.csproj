@@ -490,6 +490,7 @@
     <Compile Include="Diagnostics\ExceptionFormatter.cs" />
     <Compile Include="Executors\CompositeFunctionEventCollector.cs" />
     <Compile Include="Executors\FunctionInstanceTraceWriter.cs" />
+    <Compile Include="Executors\ITriggeredFunctionExecutorWithHook.cs" />
     <Compile Include="Extensions\CloudQueueMessageExtensions.cs" />
     <Compile Include="Extensions\IJobHostMetadataProvider.cs" />
     <Compile Include="Extensions\JobHostMetadataProvider.cs" />
