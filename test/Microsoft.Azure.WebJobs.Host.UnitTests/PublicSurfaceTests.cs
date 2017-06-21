@@ -232,7 +232,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "LogCategoryFilter",
                 "LogCategories",
                 "LoggingKeys",
-                "ScopeKeys"
+                "ScopeKeys",
+                "IDistributedLockManager",
+                "IDistributedLock"
             };
 
             AssertPublicTypes(expected, assembly);

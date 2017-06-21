@@ -123,7 +123,26 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             if (singletonManager == null)
             {
-                singletonManager = new SingletonManager(storageAccountProvider, exceptionHandler, config.Singleton, trace, config.LoggerFactory, hostIdProvider, services.GetService<INameResolver>());
+                var logger = config.LoggerFactory?.CreateLogger(LogCategories.Singleton);
+
+                IDistributedLockManager lockManager = services.GetService<IDistributedLockManager>();
+                if (lockManager == null)
+                {
+                    lockManager = new BlobLeaseDistributedLockManager(
+                        storageAccountProvider,
+                        trace,
+                        logger);
+                    services.AddService<IDistributedLockManager>(lockManager);
+                }
+
+                singletonManager = new SingletonManager(
+                    lockManager,                     
+                    config.Singleton, 
+                    trace,
+                    exceptionHandler,
+                    config.LoggerFactory, 
+                    hostIdProvider, 
+                    services.GetService<INameResolver>());
                 services.AddService<SingletonManager>(singletonManager);
             }
 
