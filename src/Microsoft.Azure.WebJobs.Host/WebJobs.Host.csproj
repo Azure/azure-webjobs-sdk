@@ -489,9 +489,14 @@
     <Compile Include="DefaultNameResolver.cs" />
     <Compile Include="Diagnostics\ExceptionFormatter.cs" />
     <Compile Include="Executors\CompositeFunctionEventCollector.cs" />
+<<<<<<< HEAD
     <Compile Include="FunctionInvocationContext.cs" />
     <Compile Include="FunctionExecutingContext.cs" />
     <Compile Include="FunctionExecutedContext.cs" />
+=======
+    <Compile Include="Executors\FunctionInstanceFactoryContext.cs" />
+    <Compile Include="Executors\FunctionInstanceFactoryContextOfT.cs" />
+>>>>>>> refs/remotes/Azure/dev
     <Compile Include="Executors\FunctionInstanceTraceWriter.cs" />
     <Compile Include="Extensions\CloudQueueMessageExtensions.cs" />
     <Compile Include="Extensions\IJobHostMetadataProvider.cs" />
