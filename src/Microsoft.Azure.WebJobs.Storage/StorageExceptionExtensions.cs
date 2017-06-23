@@ -746,6 +746,30 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
         }
 
         /// <summary>
+        /// Determines if the error code is related to a 503 service unavailable this can transient so needs to be retried
+        /// </summary>
+        /// <param name="exception" > The storage exception </param>
+        /// <returns>
+        /// <see langword="true"/> if the exception is equal to a 503; otherwise <see langword="false"/> 
+        /// </returns> 
+        public static bool IsServiceUnavailable(this StorageException exception)
+        {
+            if (exception == null)
+            {
+                throw new ArgumentNullException("exception");
+            }
+
+            RequestResult result = exception.RequestInformation;
+
+            if (result == null)
+            {
+                return false;
+            }
+
+            return result.HttpStatusCode == 503;
+        }
+
+        /// <summary>
         /// Returns the status code from the storage exception, or null.
         /// </summary>
         /// <param name="exception">The storage exception.</param>

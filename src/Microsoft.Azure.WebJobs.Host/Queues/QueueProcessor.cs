@@ -29,6 +29,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
         private readonly TraceWriter _trace;
         private readonly ILogger _logger;
 
+        private const int RetryWait = 20;
+
         /// <summary>
         /// Constructs a new instance.
         /// </summary>
@@ -50,6 +52,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
             NewBatchThreshold = context.NewBatchThreshold;
             VisibilityTimeout = context.VisibilityTimeout;
             MaxPollingInterval = context.MaxPollingInterval;
+            DeleteRetryCount = context.DeleteRetryCount;
         }
 
         /// <summary>
@@ -83,6 +86,11 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
         /// for messages that fail processing.
         /// </summary>
         public TimeSpan VisibilityTimeout { get; protected set; }
+
+        /// <summary>
+        /// Gets or set the retry count for message deletion
+        /// </summary>
+        public int DeleteRetryCount { get; protected set; }
 
         /// <summary>
         /// This method is called when there is a new message to process, before the job function is invoked.
@@ -205,27 +213,49 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
         /// <returns></returns>
         protected virtual async Task DeleteMessageAsync(CloudQueueMessage message, CancellationToken cancellationToken)
         {
-            try
+            int retries = 0;
+            while (true)
             {
-                await _queue.DeleteMessageAsync(message, cancellationToken);
-            }
-            catch (StorageException exception)
-            {
-                // For consistency, the exceptions handled here should match UpdateQueueMessageVisibilityCommand.
-                if (exception.IsBadRequestPopReceiptMismatch())
+                try
                 {
-                    // If someone else took over the message; let them delete it.
+                    await _queue.DeleteMessageAsync(message, cancellationToken);
                     return;
                 }
-                else if (exception.IsNotFoundMessageOrQueueNotFound() ||
-                         exception.IsConflictQueueBeingDeletedOrDisabled())
+                catch (StorageException exception)
                 {
-                    // The message or queue is gone, or the queue is down; no need to delete the message.
-                    return;
-                }
-                else
-                {
-                    throw;
+                    // For consistency, the exceptions handled here should match UpdateQueueMessageVisibilityCommand.
+                    if (exception.IsBadRequestPopReceiptMismatch())
+                    {
+                        // If someone else took over the message; let them delete it.
+                        string msg = string.Format(CultureInfo.InvariantCulture, "Message ID:{0} did not have a matching PopReceipt", message.Id);
+                        _logger?.LogDebug(msg);
+                        return;
+                    }
+                    else if (exception.IsNotFoundMessageOrQueueNotFound() ||
+                             exception.IsConflictQueueBeingDeletedOrDisabled())
+                    {
+                        string msg = string.Format(CultureInfo.InvariantCulture, "MessageID:{0} missing message or queue", message.Id);
+                    }
+                    else if (exception.IsServiceUnavailable())
+                    {
+                        if (retries < DeleteRetryCount)
+                        {
+                            retries++;
+                            string msg = string.Format(CultureInfo.InvariantCulture, "MessageID:{0} failed to delete due to service unavailable. Retry{1}", message.Id, retries);
+                            _logger?.LogDebug(msg);
+                            Thread.Sleep(RetryWait);
+                        }
+                        else
+                        {
+                            retries++;
+                            string msg = string.Format(CultureInfo.InvariantCulture, "MessageID:{0} failed to delete due to service unavailable. RetryLimit Reached. Could result in duplicates", message.Id, retries);
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        throw;
+                    }
                 }
             }
         }

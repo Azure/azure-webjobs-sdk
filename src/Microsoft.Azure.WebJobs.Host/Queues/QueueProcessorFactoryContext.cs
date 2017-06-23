@@ -55,6 +55,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
             NewBatchThreshold = queueConfiguration.NewBatchThreshold;
             VisibilityTimeout = queueConfiguration.VisibilityTimeout;
             MaxPollingInterval = queueConfiguration.MaxPollingInterval;
+            DeleteRetryCount = queueConfiguration.DeleteRetryCount;
         }
 
         /// <summary>
@@ -105,5 +106,10 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
         /// fail processing.
         /// </summary>
         public TimeSpan VisibilityTimeout { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of retries for deleting the message
+        /// </summary>
+        public int DeleteRetryCount { get; set; }
     }
 }
