@@ -31,11 +31,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IAsyncCollector<FunctionInstanceLogEntry> _functionEventCollector;
         private readonly ILogger _logger;
         private readonly ILogger _resultsLogger;
+        private readonly JobHost _host;
 
         private HostOutputMessage _hostOutputMessage;
 
         public FunctionExecutor(IFunctionInstanceLogger functionInstanceLogger, IFunctionOutputLogger functionOutputLogger,
-                IWebJobsExceptionHandler exceptionHandler, TraceWriter trace, IAsyncCollector<FunctionInstanceLogEntry> functionEventCollector = null,
+                IWebJobsExceptionHandler exceptionHandler, TraceWriter trace, JobHost host = null, IAsyncCollector<FunctionInstanceLogEntry> functionEventCollector = null,
                 ILoggerFactory loggerFactory = null)
         {
             if (functionInstanceLogger == null)
@@ -58,6 +59,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 throw new ArgumentNullException("trace");
             }
 
+            if (host == null)
+            {
+                throw new ArgumentNullException("host");
+            }
+
             _functionInstanceLogger = functionInstanceLogger;
             _functionOutputLogger = functionOutputLogger;
             _exceptionHandler = exceptionHandler;
@@ -65,6 +71,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _functionEventCollector = functionEventCollector;
             _logger = loggerFactory?.CreateLogger(LogCategories.Executor);
             _resultsLogger = loggerFactory?.CreateLogger(LogCategories.Results);
+            _host = host;
         }
 
         public HostOutputMessage HostOutputMessage
@@ -477,7 +484,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             try
             {
-                await ExecuteWithWatchersAsync(instance, parameters, trace, logger, functionCancellationTokenSource);
+                await ExecuteWithWatchersAsync(instance, parameters, trace, logger, functionCancellationTokenSource, _host);
 
                 if (updateParameterLogTimer != null)
                 {
@@ -522,7 +529,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             IReadOnlyDictionary<string, IValueProvider> parameters,
             TraceWriter traceWriter,
             ILogger logger,
-            CancellationTokenSource functionCancellationTokenSource)
+            CancellationTokenSource functionCancellationTokenSource,
+            JobHost host = null)
         {
             IFunctionInvoker invoker = instance.Invoker;
             IReadOnlyList<string> parameterNames = invoker.ParameterNames;
@@ -556,8 +564,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 TimeSpan timerInterval = timer == null ? TimeSpan.MinValue : TimeSpan.FromMilliseconds(timer.Interval);
                 try
                 {
-                    await InvokeAsync(invoker, invokeParameters, timeoutTokenSource, functionCancellationTokenSource,
-                    throwOnTimeout, timerInterval, instance);
+                    await InvokeAsync(invoker, invokeParameters, timeoutTokenSource, functionCancellationTokenSource, throwOnTimeout, timerInterval, instance, logger, host, parameterNames);
                 }
                 finally
                 {
@@ -608,7 +615,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         }
 
         internal static async Task InvokeAsync(IFunctionInvoker invoker, object[] invokeParameters, CancellationTokenSource timeoutTokenSource,
-            CancellationTokenSource functionCancellationTokenSource, bool throwOnTimeout, TimeSpan timerInterval, IFunctionInstance instance)
+            CancellationTokenSource functionCancellationTokenSource, bool throwOnTimeout, TimeSpan timerInterval, IFunctionInstance instance, ILogger logger, JobHost host = null, IReadOnlyList<string> parameterNames = null)
         {
             // There are three ways the function can complete:
             //   1. The invokeTask itself completes first.
@@ -617,6 +624,48 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             //   3. A timeout fires.
             //      a. If throwOnTimeout, we throw the FunctionTimeoutException.
             //      b. If !throwOnTimeout, wait for the task to complete.
+
+            // Where the invocation filter attribute functionality is currently temporarily placed
+            var functionMethod = instance.FunctionDescriptor.Method;
+            var invokeFilter = functionMethod.GetCustomAttribute<InvocationFilterAttribute>();
+            
+            var parameters = new Dictionary<string, object>();
+            string[] pnames = parameterNames.ToArray<string>();
+
+            for (var i = 0; i < invokeParameters.Length; i++)
+            {
+                parameters.Add(pnames[i], invokeParameters[i]);
+            }
+
+            if (invokeFilter != null)
+            {
+                var functionExecutingContext = new FunctionExecutingContext(instance.Id, instance.FunctionDescriptor.FullName, parameters, logger, host);
+                var cancellationToken = functionCancellationTokenSource.Token;
+                try
+                {
+                    await invokeFilter.OnExecutingAsync(functionExecutingContext, cancellationToken);
+                }
+                catch (Exception e)
+                {
+                    logger.LogInformation(e.ToDetails());
+                }
+            }
+
+            // Where invoke function is currently placed
+            var invokeFunction = functionMethod.GetCustomAttribute<InvokeFunctionFilterAttribute>();
+            if (invokeFunction != null)
+            {
+                var functionContext = new FunctionExecutingContext(instance.Id, instance.FunctionDescriptor.FullName, parameters, logger, host);
+                var cancellationToken = functionCancellationTokenSource.Token;
+                try
+                {
+                    await invokeFunction.OnExecutingAsync(functionContext, cancellationToken);
+                }
+                catch (Exception e)
+                {
+                    logger.LogInformation(e.ToDetails());
+                }
+            }
 
             // Start the invokeTask.
             Task invokeTask = invoker.InvokeAsync(invokeParameters);
@@ -633,7 +682,35 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 await TryHandleTimeoutAsync(invokeTask, CancellationToken.None, throwOnTimeout, timeoutTokenSource.Token, timerInterval, instance, null);
             }
 
-            await invokeTask;
+            FunctionResult functionResult = null;
+
+            try
+            {
+                await invokeTask;
+                functionResult = new FunctionResult(true);
+            }
+            catch (Exception ex)
+            {
+                functionResult = new FunctionResult(ex);
+                throw;
+            }
+            finally
+            {
+                // Where the invocation filter attribute functionality is currently placed
+                if (invokeFilter != null)
+                {
+                    var functionExecutingContext = new FunctionExecutedContext(instance.Id, instance.FunctionDescriptor.FullName, parameters, logger, functionResult);
+                    var cancellationToken = functionCancellationTokenSource.Token;
+                    try
+                    {
+                        await invokeFilter.OnExecutedAsync(functionExecutingContext, cancellationToken);
+                    }
+                    catch (Exception e)
+                    {
+                        logger.LogInformation(e.ToDetails());
+                    }
+                }
+            }
         }
 
         /// <summary>

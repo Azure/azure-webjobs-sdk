@@ -23,7 +23,7 @@ namespace SampleHost
 
             Console.WriteLine($"Poison blob: {container}/{blobName}");
         }
-
+        
         public static void QueueTrigger(
             [QueueTrigger("test")] string message)
         {
