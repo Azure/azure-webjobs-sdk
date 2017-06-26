@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host
@@ -49,47 +50,54 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 throw new ArgumentNullException("executingContext");
             }
-            
-            // TODO: Implement invoke function logic
+
+            executingContext.Logger.LogInformation("Executing function from filter...");
+
+            Dictionary<string, object> invokeArguments = new Dictionary<string, object>();
+            invokeArguments.Add(executingContext.ToString(), executingContext);
+
             if (!string.IsNullOrEmpty(ExecutingFilter))
             {
-                IReadOnlyDictionary<string, object> paramaters = executingContext.Arguments;
-                JobHost host = executingContext.Host;
-                MethodInfo methodInfo = null;
-
-                foreach (var type in host.Configuration.TypeLocator.GetTypes())
+                try
                 {
-                    methodInfo = type.GetMethods().SingleOrDefault(p => string.Compare(p.Name, ExecutingFilter, StringComparison.OrdinalIgnoreCase) == 0);
+                    await executingContext.MethodInvoker.InvokeAsync(ExecutingFilter, invokeArguments, cancellationToken);
                 }
-
-                if (methodInfo != null)
+                catch (Exception e)
                 {
-                    executingContext.Logger.LogInformation("Executing function from filter...");
-
-                    var parameterName = methodInfo.GetParameters()[0].Name;
-                    Dictionary<string, object> parameters = new Dictionary<string, object>();
-                    parameters.Add(parameterName, executingContext);
-
-                    try
-                    {
-                        await host.CallAsync(methodInfo, parameters, cancellationToken);
-                    }
-                    catch (Exception e)
-                    {
-                        executingContext.Logger.LogInformation(e.ToDetails());
-                    }
-
-                    // function executed
-                    executingContext.Logger.LogInformation("Executed function: " + ExecutingFilter);
-                }
-                else
-                {
-                    // TODO: @Hamza add error handling
+                    executingContext.Logger.LogInformation(e.ToDetails());
                 }
             }
             else
             {
                 await base.OnExecutingAsync(executingContext, cancellationToken);
+            }
+        }
+
+        /// <summary>
+        /// Call the requested function
+        /// </summary>
+        /// <returns></returns>
+        public override async Task OnExecutedAsync(FunctionExecutedContext executedContext, CancellationToken cancellationToken)
+        {
+            if (executedContext == null)
+            {
+                throw new ArgumentNullException("executingContext");
+            }
+
+            if (!string.IsNullOrEmpty(ExecutedFilter))
+            {
+                try
+                {
+                    await executedContext.MethodInvoker.InvokeAsync(ExecutedFilter, executedContext.Arguments, cancellationToken);
+                }
+                catch (Exception e)
+                {
+                    executedContext.Logger.LogInformation(e.ToDetails());
+                }
+            }
+            else
+            {
+                await base.OnExecutedAsync(executedContext, cancellationToken);
             }
         }
     }

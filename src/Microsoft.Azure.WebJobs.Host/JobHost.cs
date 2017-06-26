@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -446,13 +447,24 @@ namespace Microsoft.Azure.WebJobs
         /// <summary>
         /// Method to invoke a new method
         /// </summary>
-        /// <param name="method"></param>
+        /// <param name="methodName"></param>
         /// <param name="parameters"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public Task JobInvokeAsync(string method, IDictionary<string, object> parameters, CancellationToken cancellationToken)
+        Task IJobMethodInvoker.InvokeAsync(string methodName, IReadOnlyDictionary<string, object> parameters, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            MethodInfo methodInfo = null;
+
+            foreach (var type in Configuration.TypeLocator.GetTypes())
+            {
+                methodInfo = type.GetMethod(methodName);
+                if (methodInfo != null)
+                {
+                    break;
+                }
+            }
+
+            return CallAsync(methodInfo, parameters, cancellationToken);
         }
     }
 }

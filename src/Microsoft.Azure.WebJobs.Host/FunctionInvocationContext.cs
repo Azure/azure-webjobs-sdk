@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host
@@ -19,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="fullName"></param>
         /// <param name="arguments"></param>
         /// <param name="logger"></param>
-        protected FunctionInvocationContext(Guid id, string fullName, IReadOnlyDictionary<string, object> arguments, ILogger logger)
+        internal FunctionInvocationContext(Guid id, string fullName, IReadOnlyDictionary<string, object> arguments, ILogger logger)
         {
             Id = id;
             FullName = fullName;
@@ -34,14 +35,14 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="fullName"></param>
         /// <param name="arguments"></param>
         /// <param name="logger"></param>
-        /// <param name="host"></param>
-        protected FunctionInvocationContext(Guid id, string fullName, IReadOnlyDictionary<string, object> arguments, ILogger logger, JobHost host)
+        /// <param name="methodInvoker"></param>
+        internal FunctionInvocationContext(Guid id, string fullName, IReadOnlyDictionary<string, object> arguments, ILogger logger, IJobMethodInvoker methodInvoker)
         {
             Id = id;
             FullName = fullName;
             Arguments = arguments;
             Logger = logger;
-            Host = host;
+            MethodInvoker = methodInvoker;
         }
 
         /// <summary>Gets or sets the ID of the function.</summary>
@@ -61,8 +62,8 @@ namespace Microsoft.Azure.WebJobs.Host
         public ILogger Logger { get; set; }
 
         /// <summary>
-        /// Gets or sets the host of the function
+        /// Gets or sets the method invoker of the JobHost
         /// </summary>
-        internal JobHost Host { get; set; }
+        internal IJobMethodInvoker MethodInvoker { get; set; }
     }
 }

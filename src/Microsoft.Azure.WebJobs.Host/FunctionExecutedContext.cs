@@ -21,10 +21,26 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="arguments"></param>
         /// <param name="logger"></param>
         /// <param name="result"></param>
-        public FunctionExecutedContext(Guid id, string fullName, IReadOnlyDictionary<string, object> arguments, ILogger logger, FunctionResult result) :
+        internal FunctionExecutedContext(Guid id, string fullName, IReadOnlyDictionary<string, object> arguments, ILogger logger, FunctionResult result) :
             base(id, fullName, arguments, logger)
         {
             Result = result;
+        }
+
+        /// <summary>
+        /// Constructor to set the context
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="fullName"></param>
+        /// <param name="arguments"></param>
+        /// <param name="logger"></param>
+        /// <param name="result"></param>
+        /// <param name="methodInvoker"></param>
+        internal FunctionExecutedContext(Guid id, string fullName, IReadOnlyDictionary<string, object> arguments, ILogger logger, FunctionResult result, IJobMethodInvoker methodInvoker) :
+            base(id, fullName, arguments, logger, methodInvoker)
+        {
+            Result = result;
+            MethodInvoker = methodInvoker;
         }
 
         /// <summary>
