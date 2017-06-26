@@ -8,6 +8,8 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
@@ -218,6 +220,36 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.Equal(testValue, data);
         }
 
+        [Fact]
+        public async Task TestMultipleInvokeFunctionFilters()
+        {
+            var method = typeof(TestFunctions).GetMethod("TestMultipleInvokeFunctionFilters", BindingFlags.Public | BindingFlags.Static);
+
+            string testValue = Guid.NewGuid().ToString();
+
+            await _host.CallAsync(method, new { input = testValue });
+            await Task.Delay(1000);
+
+            // Read blob for the guid
+            var blobReference = _fixture.OutputContainer.GetBlobReference("filterTest");
+            await TestHelpers.Await(() =>
+            {
+                return blobReference.Exists();
+            });
+
+            string data;
+            using (var memoryStream = new MemoryStream())
+            {
+                blobReference.DownloadToStream(memoryStream);
+                memoryStream.Position = 0;
+                using (var reader = new StreamReader(memoryStream, Encoding.Unicode))
+                {
+                    data = reader.ReadToEnd();
+                }
+            }
+            Assert.Equal(testValue, data);
+        }
+
         public class TestFunctions
         {
             [NoAutomaticTrigger]
@@ -273,6 +305,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             [NoAutomaticTrigger]
             [InvokeFunctionFilter("MyFunction")]
             public static void TestInvokeFunctionFilter(string input, ILogger logger)
+            {
+                logger.LogInformation("Test function invoked!");
+            }
+
+            [NoAutomaticTrigger]
+            [InvokeFunctionFilter(executingFilter: "MyFunction")]
+            [InvokeFunctionFilter(executedFilter: "MyFunction")]
+            public static void TestMultipleInvokeFunctionFilters(string input, ILogger logger)
             {
                 logger.LogInformation("Test function invoked!");
             }

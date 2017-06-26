@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host
@@ -19,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="fullName"></param>
         /// <param name="arguments"></param>
         /// <param name="logger"></param>
-        public FunctionExecutingContext(Guid id, string fullName, IReadOnlyDictionary<string, object> arguments, ILogger logger) :
+        internal FunctionExecutingContext(Guid id, string fullName, IReadOnlyDictionary<string, object> arguments, ILogger logger) :
             base(id, fullName, arguments, logger)
         {
         }
@@ -31,9 +32,9 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="fullName"></param>
         /// <param name="arguments"></param>
         /// <param name="logger"></param>
-        /// <param name="host"></param>
-        public FunctionExecutingContext(Guid id, string fullName, IReadOnlyDictionary<string, object> arguments, ILogger logger, JobHost host) :
-            base(id, fullName, arguments, logger, host)
+        /// <param name="methodInvoker"></param>
+        internal FunctionExecutingContext(Guid id, string fullName, IReadOnlyDictionary<string, object> arguments, ILogger logger, IJobMethodInvoker methodInvoker) :
+            base(id, fullName, arguments, logger, methodInvoker)
         {
         }
     }
