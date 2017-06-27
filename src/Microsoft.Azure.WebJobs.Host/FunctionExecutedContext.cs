@@ -19,18 +19,18 @@ namespace Microsoft.Azure.WebJobs.Host
         /// Constructor to set the context
         /// </summary>
         /// <param name="id"></param>
-        /// <param name="fullName"></param>
+        /// <param name="name"></param>
         /// <param name="arguments"></param>
         /// <param name="logger"></param>
         /// <param name="result"></param>
-        internal FunctionExecutedContext(Guid id, string fullName, IReadOnlyDictionary<string, object> arguments, ILogger logger, FunctionResult result) :
-            base(id, fullName, arguments, logger)
+        internal FunctionExecutedContext(Guid id, string name, IReadOnlyDictionary<string, object> arguments, ILogger logger, FunctionResult result) :
+            base(id, name, arguments, logger)
         {
             Result = result;
         }
 
         /// <summary>
-        /// Make sure the final result is logged
+        /// Gets or sets the function result
         /// </summary>
         public FunctionResult Result { get; set; }
     }
