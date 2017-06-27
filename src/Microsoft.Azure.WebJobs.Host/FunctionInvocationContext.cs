@@ -18,13 +18,13 @@ namespace Microsoft.Azure.WebJobs.Host
         /// Constructor to set the context
         /// </summary>
         /// <param name="id"></param>
-        /// <param name="fullName"></param>
+        /// <param name="name"></param>
         /// <param name="arguments"></param>
         /// <param name="logger"></param>
-        internal FunctionInvocationContext(Guid id, string fullName, IReadOnlyDictionary<string, object> arguments, ILogger logger)
+        internal FunctionInvocationContext(Guid id, string name, IReadOnlyDictionary<string, object> arguments, ILogger logger)
         {
             Id = id;
-            FullName = fullName;
+            Name = name;
             Arguments = arguments;
             Logger = logger;
         }
@@ -32,13 +32,18 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <summary>Gets or sets the ID of the function.</summary>
         public Guid Id { get; set; }
 
-        /// <summary>Gets or sets the fully qualified name of the function.</summary>
-        public string FullName { get; set; }
+        /// <summary>Gets or sets the name of the function.</summary>
+        public string Name { get; set; }
         
         /// <summary>
         /// Arguments from the function
         /// </summary>
         public IReadOnlyDictionary<string, object> Arguments { get; set; }
+
+        /// <summary>
+        /// User properties
+        /// </summary>
+        public IDictionary<string, object> Properties { get;  }
 
         /// <summary>
         /// Gets or sets the logger of the function

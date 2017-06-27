@@ -19,11 +19,11 @@ namespace Microsoft.Azure.WebJobs.Host
         /// Constructor to set the context
         /// </summary>
         /// <param name="id"></param>
-        /// <param name="fullName"></param>
+        /// <param name="name"></param>
         /// <param name="arguments"></param>
         /// <param name="logger"></param>
-        internal FunctionExecutingContext(Guid id, string fullName, IReadOnlyDictionary<string, object> arguments, ILogger logger) :
-            base(id, fullName, arguments, logger)
+        internal FunctionExecutingContext(Guid id, string name, IReadOnlyDictionary<string, object> arguments, ILogger logger) :
+            base(id, name, arguments, logger)
         {
         }
     }
