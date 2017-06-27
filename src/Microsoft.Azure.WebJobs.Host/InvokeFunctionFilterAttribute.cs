@@ -1,19 +1,18 @@
-﻿// InvokeFunctionAttribute.cs
+﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
     /// <summary>
-    /// This is the first iteration of the InvokeFunctionAttribute
+    /// An invocation filter that invokes job methods
     /// </summary>
     [CLSCompliant(false)]
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = true, AllowMultiple = true)]
@@ -41,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host
         public string ExecutedFilter { get; }
 
         /// <summary>
-        /// Call the requested function
+        /// Call the requested job method before the main function call
         /// </summary>
         /// <returns></returns>
         public override async Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
@@ -50,17 +49,14 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 throw new ArgumentNullException("executingContext");
             }
-
-            executingContext.Logger.LogInformation("Executing function from filter...");
-
-            Dictionary<string, object> invokeArguments = new Dictionary<string, object>();
-            invokeArguments.Add(executingContext.ToString(), executingContext);
-
+            
             if (!string.IsNullOrEmpty(ExecutingFilter))
             {
+                executingContext.Logger.LogInformation("Executing Function Filter '" + ExecutingFilter + "'");
+
                 try
                 {
-                    await executingContext.MethodInvoker.InvokeAsync(ExecutingFilter, invokeArguments, cancellationToken);
+                    await InvokeJobFunctionAsync(executingContext, cancellationToken);
                 }
                 catch (Exception e)
                 {
@@ -74,7 +70,7 @@ namespace Microsoft.Azure.WebJobs.Host
         }
 
         /// <summary>
-        /// Call the requested function
+        /// Call the requested job method after the main function call
         /// </summary>
         /// <returns></returns>
         public override async Task OnExecutedAsync(FunctionExecutedContext executedContext, CancellationToken cancellationToken)
@@ -86,9 +82,11 @@ namespace Microsoft.Azure.WebJobs.Host
 
             if (!string.IsNullOrEmpty(ExecutedFilter))
             {
+                executedContext.Logger.LogInformation("Executing Function Filter '" + ExecutedFilter + "'");
+
                 try
                 {
-                    await executedContext.MethodInvoker.InvokeAsync(ExecutedFilter, executedContext.Arguments, cancellationToken);
+                    await InvokeJobFunctionAsync(executedContext, cancellationToken);
                 }
                 catch (Exception e)
                 {
@@ -99,6 +97,26 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 await base.OnExecutedAsync(executedContext, cancellationToken);
             }
+        }
+
+        internal async Task InvokeJobFunctionAsync<TContext>(TContext context, CancellationToken cancellationToken) where TContext : FunctionInvocationContext
+        {
+            MethodInfo methodInfo = null;
+
+            foreach (var type in context.Config.TypeLocator.GetTypes())
+            {
+                methodInfo = type.GetMethod(ExecutingFilter);
+                if (methodInfo != null)
+                {
+                    break;
+                }
+            }
+
+            IDictionary<string, object> invokeArguments = new Dictionary<string, object>();
+            string parameterName = methodInfo.GetParameters().SingleOrDefault(p => p.ParameterType == typeof(TContext)).Name;
+            invokeArguments.Add(parameterName, context);
+
+            await context.JobHost.CallAsync(methodInfo, invokeArguments, cancellationToken);
         }
     }
 }

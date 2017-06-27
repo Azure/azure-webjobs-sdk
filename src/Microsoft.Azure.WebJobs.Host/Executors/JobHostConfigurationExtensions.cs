@@ -251,8 +251,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                 if (functionExecutor == null)
                 {
-                    IJobMethodInvoker methodInvoker = host;
-                    functionExecutor = new FunctionExecutor(functionInstanceLogger, functionOutputLogger, exceptionHandler, trace, methodInvoker, functionEventCollector, loggerFactory);
+                    functionExecutor = new FunctionExecutor(functionInstanceLogger, functionOutputLogger, exceptionHandler, trace, host, config, functionEventCollector, loggerFactory);
                     services.AddService(functionExecutor);
                 }
 
