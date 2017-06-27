@@ -11,6 +11,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 {
     internal interface IJobMethodInvoker
     {
-        Task InvokeAsync(string methodName, IReadOnlyDictionary<string, object> parameters, CancellationToken cancellationToken);
+        Task InvokeAsync(MethodInfo methodInfo, IReadOnlyDictionary<string, object> parameters, CancellationToken cancellationToken);
+
+        MethodInfo GetMethodInfoForInvoke(string methodName);
     }
 }

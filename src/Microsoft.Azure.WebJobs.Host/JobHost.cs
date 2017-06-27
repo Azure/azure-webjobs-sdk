@@ -25,7 +25,7 @@ namespace Microsoft.Azure.WebJobs
     /// A <see cref="JobHost"/> is the execution container for jobs. Once started, the
     /// <see cref="JobHost"/> will manage and run job functions when they are triggered.
     /// </summary>
-    public class JobHost : IDisposable, IJobMethodInvoker
+    public class JobHost : IDisposable
     {
         private const int StateNotStarted = 0;
         private const int StateStarting = 1;
@@ -94,14 +94,6 @@ namespace Microsoft.Azure.WebJobs
             _shutdownTokenSource = new CancellationTokenSource();
             _shutdownWatcher = WebJobsShutdownWatcher.Create(_shutdownTokenSource);
             _stoppingTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_shutdownTokenSource.Token);
-        }
-
-        /// <summary>
-        /// Gets the JobHostConfiguration of this JobHost
-        /// </summary>
-        public JobHostConfiguration Configuration
-        {
-            get { return _config; }
         }
 
         // Test hook only.
@@ -442,29 +434,6 @@ namespace Microsoft.Azure.WebJobs
                 PopulateStaticServices();
                 return _services;
             }
-        }
-        
-        /// <summary>
-        /// Method to invoke a new method
-        /// </summary>
-        /// <param name="methodName"></param>
-        /// <param name="parameters"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        Task IJobMethodInvoker.InvokeAsync(string methodName, IReadOnlyDictionary<string, object> parameters, CancellationToken cancellationToken)
-        {
-            MethodInfo methodInfo = null;
-
-            foreach (var type in Configuration.TypeLocator.GetTypes())
-            {
-                methodInfo = type.GetMethod(methodName);
-                if (methodInfo != null)
-                {
-                    break;
-                }
-            }
-
-            return CallAsync(methodInfo, parameters, cancellationToken);
         }
     }
 }

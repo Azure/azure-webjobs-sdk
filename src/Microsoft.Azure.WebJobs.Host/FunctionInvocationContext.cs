@@ -1,4 +1,5 @@
-﻿// FunctionContext.cs
+﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
 using System.Collections.Generic;
@@ -28,23 +29,6 @@ namespace Microsoft.Azure.WebJobs.Host
             Logger = logger;
         }
 
-        /// <summary>
-        /// Constructor to set the context with the JobHost
-        /// </summary>
-        /// <param name="id"></param>
-        /// <param name="fullName"></param>
-        /// <param name="arguments"></param>
-        /// <param name="logger"></param>
-        /// <param name="methodInvoker"></param>
-        internal FunctionInvocationContext(Guid id, string fullName, IReadOnlyDictionary<string, object> arguments, ILogger logger, IJobMethodInvoker methodInvoker)
-        {
-            Id = id;
-            FullName = fullName;
-            Arguments = arguments;
-            Logger = logger;
-            MethodInvoker = methodInvoker;
-        }
-
         /// <summary>Gets or sets the ID of the function.</summary>
         public Guid Id { get; set; }
 
@@ -64,6 +48,11 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <summary>
         /// Gets or sets the method invoker of the JobHost
         /// </summary>
-        internal IJobMethodInvoker MethodInvoker { get; set; }
+        internal JobHost JobHost { get; set; }
+
+        /// <summary>
+        /// Gets or sets the method invoker of the JobHost
+        /// </summary>
+        internal JobHostConfiguration Config { get; set; }
     }
 }
