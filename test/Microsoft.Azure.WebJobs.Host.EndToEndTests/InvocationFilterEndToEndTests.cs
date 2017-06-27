@@ -248,6 +248,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 }
             }
             Assert.Equal(testValue, data);
+
+            // double check that the filter was exdecuted twice
+            var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Executor).Single();
+            Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("Test executing!")));
+            Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("Test executed!")));
         }
 
         public class TestFunctions
