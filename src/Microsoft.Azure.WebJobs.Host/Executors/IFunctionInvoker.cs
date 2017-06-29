@@ -8,6 +8,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 {
     internal interface IFunctionInvoker
     {
+        object Instance { get; }
+
         IReadOnlyList<string> ParameterNames { get; }
 
         // The cancellation token, if any, is provided along with the other arguments.

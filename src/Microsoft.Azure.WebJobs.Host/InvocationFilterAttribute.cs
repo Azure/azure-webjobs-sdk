@@ -13,7 +13,7 @@ namespace Microsoft.Azure.WebJobs.Host
     /// </summary>
     [CLSCompliant(false)]
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = true, AllowMultiple = false)]
-    public abstract class InvocationFilterAttribute : Attribute
+    public abstract class InvocationFilterAttribute : Attribute, IFunctionInvocationFilter
     {
         /// <summary>
         /// Tasks here should execute before the actual function is executed
