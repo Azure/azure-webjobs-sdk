@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 namespace Microsoft.Azure.WebJobs.Host
 {
     /// <summary>
-    /// The context for an executed function
+    /// The context describing a function that's about to be executed after the main function
     /// </summary>
     [CLSCompliant(false)]
     public class FunctionExecutedContext : FunctionInvocationContext
@@ -18,13 +18,13 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <summary>
         /// Constructor to set the context
         /// </summary>
-        /// <param name="id"></param>
+        /// <param name="functionInstanceId"></param>
         /// <param name="name"></param>
         /// <param name="arguments"></param>
         /// <param name="logger"></param>
         /// <param name="result"></param>
-        internal FunctionExecutedContext(Guid id, string name, IReadOnlyDictionary<string, object> arguments, ILogger logger, FunctionResult result) :
-            base(id, name, arguments, logger)
+        internal FunctionExecutedContext(Guid functionInstanceId, string name, IReadOnlyDictionary<string, object> arguments, ILogger logger, FunctionResult result) :
+            base(functionInstanceId, name, arguments, logger)
         {
             Result = result;
         }

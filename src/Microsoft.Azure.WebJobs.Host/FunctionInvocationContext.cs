@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace Microsoft.Azure.WebJobs.Host
 {
     /// <summary>
-    /// The context for an executed function. This needs to be expanded on later.
+    /// The context describing a function that's about to be executed
     /// </summary>
     [CLSCompliant(false)]
     public abstract class FunctionInvocationContext
@@ -17,20 +17,20 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <summary>
         /// Constructor to set the context
         /// </summary>
-        /// <param name="id"></param>
+        /// <param name="functionInstanceId"></param>
         /// <param name="name"></param>
         /// <param name="arguments"></param>
         /// <param name="logger"></param>
-        internal FunctionInvocationContext(Guid id, string name, IReadOnlyDictionary<string, object> arguments, ILogger logger)
+        internal FunctionInvocationContext(Guid functionInstanceId, string name, IReadOnlyDictionary<string, object> arguments, ILogger logger)
         {
-            Id = id;
+            FunctionInstanceId = functionInstanceId;
             Name = name;
             Arguments = arguments;
             Logger = logger;
         }
 
-        /// <summary>Gets or sets the ID of the function.</summary>
-        public Guid Id { get; set; }
+        /// <summary>Gets or sets the ID of the function instance.</summary>
+        public Guid FunctionInstanceId { get; }
 
         /// <summary>Gets or sets the name of the function.</summary>
         public string Name { get; set; }
@@ -51,12 +51,12 @@ namespace Microsoft.Azure.WebJobs.Host
         public ILogger Logger { get; set; }
 
         /// <summary>
-        /// Gets or sets the method invoker of the JobHost
+        /// Gets or sets the JobHost
         /// </summary>
         internal JobHost JobHost { get; set; }
 
         /// <summary>
-        /// Gets or sets the method invoker of the JobHost
+        /// Gets or sets the configuration for the JobHost
         /// </summary>
         internal JobHostConfiguration Config { get; set; }
     }

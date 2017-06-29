@@ -16,7 +16,7 @@ namespace Microsoft.Azure.WebJobs.Host
     /// </summary>
     [CLSCompliant(false)]
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = true, AllowMultiple = true)]
-    public sealed class InvokeFunctionFilterAttribute : InvocationFilterAttribute
+    public sealed class InvokeFunctionFilterAttribute : InvocationFilterAttribute, IFunctionInvocationFilter
     {
         /// <summary>
         /// When this attribute is used, take the name of the function to invoke
