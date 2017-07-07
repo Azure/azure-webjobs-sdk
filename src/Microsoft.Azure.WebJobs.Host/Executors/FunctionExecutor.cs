@@ -88,10 +88,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 ParentId = functionStartedMessage.ParentId,
                 FunctionName = functionStartedMessage.Function.ShortName,
                 TriggerReason = functionStartedMessage.ReasonDetails,
-                StartTime = functionStartedMessage.StartTime.DateTime
+                StartTime = functionStartedMessage.StartTime.DateTime,
+                Properties = new Dictionary<string, object>()
             };
 
-            Stopwatch sw = Stopwatch.StartNew();
+            await this.NotifyPreBindAsync(fastItem);
+                        
             try
             {
                 using (_logger?.BeginFunctionScope(functionInstance))
@@ -135,29 +137,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 logCompletedCancellationToken = cancellationToken;
             }
 
-            // log result
-            sw.Stop();
-            fastItem.EndTime = DateTime.UtcNow;
-            fastItem.Duration = sw.Elapsed;
-            fastItem.Arguments = functionCompletedMessage.Arguments;
-
-            if (_functionEventCollector != null)
-            {
-                // Log completed
-                if (exceptionInfo != null)
-                {
-                    var ex = exceptionInfo.SourceException;
-                    if (ex.InnerException != null)
-                    {
-                        ex = ex.InnerException;
-                    }
-                    fastItem.ErrorDetails = ex.Message;
-                }
-                await _functionEventCollector.AddAsync(fastItem);
-            }
+            await NotifyCompleteAsync(fastItem, functionCompletedMessage.Arguments, exceptionInfo);
+          
             using (_resultsLogger?.BeginFunctionScope(functionInstance))
             {
-                _resultsLogger?.LogFunctionResult(functionInstance.FunctionDescriptor.Method.Name, fastItem, sw.Elapsed, exceptionInfo?.SourceException);
+                _resultsLogger?.LogFunctionResult(functionInstance.FunctionDescriptor.Method.Name, fastItem, fastItem.LiveTimer.Elapsed, exceptionInfo?.SourceException);
             }
 
             if (functionCompletedMessage != null &&
@@ -254,8 +238,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         if (_functionEventCollector != null)
                         {
                             // Log started
-                            fastItem.Arguments = message.Arguments;
-                            await _functionEventCollector.AddAsync(fastItem);
+                            await NotifyPostBindAsync(fastItem, message.Arguments);
                         }
 
                         try
@@ -670,7 +653,61 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 ParameterLogBlob = startedMessage.ParameterLogBlob
             };
         }
-                
+
+        // Called very early when function is started; before arguments are bound. 
+        private Task NotifyPreBindAsync(FunctionInstanceLogEntry fastItem)
+        {
+            fastItem.LiveTimer = Stopwatch.StartNew();
+
+            if (_functionEventCollector == null)
+            {
+                return Task.CompletedTask;
+            }            
+
+            // Log pre-bind event. 
+            return _functionEventCollector.AddAsync(fastItem);
+        }
+
+        // Called before function body is executed; after arguments are bound. 
+        private Task NotifyPostBindAsync(FunctionInstanceLogEntry fastItem, IDictionary<string, string> arguments)
+        {
+            if (_functionEventCollector == null)
+            {
+                return Task.CompletedTask;
+            }
+            // Log post-bind event. 
+            fastItem.Arguments = arguments;
+            return _functionEventCollector.AddAsync(fastItem);
+        }
+
+        // Called after function completes. 
+        private Task NotifyCompleteAsync(FunctionInstanceLogEntry fastItem, IDictionary<string, string> arguments, ExceptionDispatchInfo exceptionInfo)
+        {
+            fastItem.LiveTimer.Stop();
+
+            if (_functionEventCollector == null)
+            {
+                return Task.CompletedTask;
+            }
+
+            // log result            
+            fastItem.EndTime = DateTime.UtcNow;
+            fastItem.Duration = fastItem.LiveTimer.Elapsed;
+            fastItem.Arguments = arguments;
+
+            // Log completed
+            if (exceptionInfo != null)
+            {
+                var ex = exceptionInfo.SourceException;
+                if (ex.InnerException != null)
+                {
+                    ex = ex.InnerException;
+                }
+                fastItem.ErrorDetails = ex.Message;
+            }
+            return _functionEventCollector.AddAsync(fastItem);
+        }
+
         // Handle various phases of parameter building and logging.
         // The paramerter phases are: 
         //  1. Initial binding data from the trigger. 

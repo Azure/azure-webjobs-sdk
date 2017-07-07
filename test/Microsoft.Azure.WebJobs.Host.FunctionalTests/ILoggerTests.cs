@@ -90,7 +90,13 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var mockAggregator = new Mock<IAsyncCollector<FunctionInstanceLogEntry>>(MockBehavior.Strict);
             mockAggregator
                 .Setup(a => a.AddAsync(It.IsAny<FunctionInstanceLogEntry>(), It.IsAny<CancellationToken>()))
-                .Callback<FunctionInstanceLogEntry, CancellationToken>((l, t) => addCalls++)
+                .Callback<FunctionInstanceLogEntry, CancellationToken>((l, t) =>
+                {
+                    if (l.IsCompleted)
+                    {
+                        addCalls++; // The default aggregator will ingore the 'Function started' calls.
+                    }
+                })
                 .Returns(Task.CompletedTask);
             mockAggregator
                 .Setup(a => a.FlushAsync(It.IsAny<CancellationToken>()))
@@ -124,7 +130,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             // Add will be called 5 times. The default aggregator will ingore the 
             // 'Function started' calls.
-            Assert.Equal(10, addCalls);
+            Assert.Equal(5, addCalls);
 
             // Flush is called on host stop
             Assert.Equal(1, flushCalls);
