@@ -11,7 +11,6 @@ namespace Microsoft.Azure.WebJobs.Host
     /// <summary>
     /// The context describing a function that's about to be executed
     /// </summary>
-    [CLSCompliant(false)]
     public abstract class FunctionInvocationContext
     { 
         /// <summary>
@@ -29,7 +28,7 @@ namespace Microsoft.Azure.WebJobs.Host
             Logger = logger;
         }
 
-        /// <summary>Gets or sets the ID of the function instance.</summary>
+        /// <summary>Gets the ID of the function instance.</summary>
         public Guid FunctionInstanceId { get; }
 
         /// <summary>Gets or sets the name of the function.</summary>

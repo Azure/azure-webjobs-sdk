@@ -13,7 +13,6 @@ namespace Microsoft.Azure.WebJobs.Host
     /// <summary>
     /// An interface for invoking function filters
     /// </summary>
-    [CLSCompliant(false)]
     public interface IFunctionInvocationFilter
     {
         /// <summary>

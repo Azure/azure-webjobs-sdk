@@ -14,7 +14,6 @@ namespace Microsoft.Azure.WebJobs.Host
     /// <summary>
     /// An invocation filter that invokes job methods
     /// </summary>
-    [CLSCompliant(false)]
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = true, AllowMultiple = true)]
     public sealed class InvokeFunctionFilterAttribute : InvocationFilterAttribute, IFunctionInvocationFilter
     {
@@ -56,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
                 try
                 {
-                    await InvokeJobFunctionAsync(executingContext, cancellationToken);
+                    await InvokeJobFunctionAsync(ExecutingFilter, executingContext, cancellationToken);
                 }
                 catch (Exception e)
                 {
@@ -86,7 +85,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
                 try
                 {
-                    await InvokeJobFunctionAsync(executedContext, cancellationToken);
+                    await InvokeJobFunctionAsync(ExecutedFilter, executedContext, cancellationToken);
                 }
                 catch (Exception e)
                 {
@@ -99,18 +98,25 @@ namespace Microsoft.Azure.WebJobs.Host
             }
         }
 
-        internal async Task InvokeJobFunctionAsync<TContext>(TContext context, CancellationToken cancellationToken) where TContext : FunctionInvocationContext
+        internal async Task InvokeJobFunctionAsync<TContext>(string methodName, TContext context, CancellationToken cancellationToken) where TContext : FunctionInvocationContext
         {
             MethodInfo methodInfo = null;
 
             foreach (var type in context.Config.TypeLocator.GetTypes())
             {
-                methodInfo = type.GetMethod(ExecutingFilter);
+                if (methodName != null)
+                {
+                    methodInfo = type.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+                }
+
                 if (methodInfo != null)
                 {
                     break;
                 }
             }
+
+            // If it is null, this means that we need to look for the methodinfo from the class
+            // TODO: Implement class level methodinfo onExecuting/onExecuted invocation
 
             IDictionary<string, object> invokeArguments = new Dictionary<string, object>();
             string parameterName = methodInfo.GetParameters().SingleOrDefault(p => p.ParameterType == typeof(TContext)).Name;

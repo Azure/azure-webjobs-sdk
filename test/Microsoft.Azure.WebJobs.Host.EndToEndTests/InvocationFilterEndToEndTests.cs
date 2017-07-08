@@ -30,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private const string TestData = "﻿TestData";
         private const string Secondary = "SecondaryStorage";
         private readonly TestFixture _fixture;
-        
+
         private readonly TestLoggerProvider _loggerProvider = new TestLoggerProvider();
 
         public InvocationFilterEndToEndTests(TestFixture fixture)
@@ -44,7 +44,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             loggerFactory.AddProvider(_loggerProvider);
             _config.LoggerFactory = loggerFactory;
             _config.Aggregator.IsEnabled = false; // makes validation easier
-            _config.TypeLocator = new FakeTypeLocator(typeof(TestFunctions));
+            _config.TypeLocator = new FakeTypeLocator(typeof(TestFunctions), typeof(TestFunctionsInClass), typeof(ClassWithFunctionToTest), typeof(TestClassInterface));
             _host = new JobHost(_config);
             _fixture = fixture;
         }
@@ -137,7 +137,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 await _host.CallAsync(method, new { input = "Testing 123" });
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 var message = e.Message;
             }
@@ -193,7 +193,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task TestInvokeFunctionFilter()
         {
-            var method = typeof(TestFunctions).GetMethod("TestInvokeFunctionFilter", BindingFlags.Public | BindingFlags.Static);
+            var method = typeof(TestFunctions).GetMethod("TestInvokeFunctionFilter", BindingFlags.Public | BindingFlags.Instance);
 
             string testValue = Guid.NewGuid().ToString();
 
@@ -206,7 +206,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 return blobReference.Exists();
             });
-            
+
             string data;
             using (var memoryStream = new MemoryStream())
             {
@@ -223,15 +223,24 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task TestMultipleInvokeFunctionFilters()
         {
-            var method = typeof(TestFunctions).GetMethod("TestMultipleInvokeFunctionFilters", BindingFlags.Public | BindingFlags.Static);
+            var method = typeof(TestFunctions).GetMethod("TestMultipleInvokeFunctionFilters", BindingFlags.Public | BindingFlags.Instance);
 
             string testValue = Guid.NewGuid().ToString();
+            string testValue2 = Guid.NewGuid().ToString();
+            string[] testValues = new string[2] {testValue, testValue2};
 
-            await _host.CallAsync(method, new { input = testValue });
+
+            await _host.CallAsync(method, new { input = testValues });
             await Task.Delay(1000);
 
-            // Read blob for the guid
+            // Read both blobs for the guid
             var blobReference = _fixture.OutputContainer.GetBlobReference("filterTest");
+            await TestHelpers.Await(() =>
+            {
+                return blobReference.Exists();
+            });
+
+            var blobReference2 = _fixture.OutputContainer.GetBlobReference("filterTest2");
             await TestHelpers.Await(() =>
             {
                 return blobReference.Exists();
@@ -249,11 +258,51 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
             Assert.Equal(testValue, data);
 
+            using (var memoryStream = new MemoryStream())
+            {
+                blobReference2.DownloadToStream(memoryStream);
+                memoryStream.Position = 0;
+                using (var reader = new StreamReader(memoryStream, Encoding.Unicode))
+                {
+                    data = reader.ReadToEnd();
+                }
+            }
+            Assert.Equal(testValue2, data);
+
             // double check that the filter was exdecuted twice
             var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Executor).Single();
-            Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("Test executing!")));
-            Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("Test executed!")));
+            Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("MyFirstFunction invoked!")));
+            Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("MySecondFunction invoked!")));
         }
+
+        // TODO: Fix class attribute filter invocation (This test should work but keeps timing out. Uncomment it to try it.)
+        //[Fact]
+        //public async Task TestClassAttributeFilter()
+        //{
+        //    var method = typeof(TestFunctionsInClass).GetMethod("TestAnotherFunction", BindingFlags.Public | BindingFlags.Static);
+
+        //    await _host.CallAsync(method, new { input = "Testing 123" });
+        //    await Task.Delay(1000);
+
+        //    // double check that the correct filters were called
+        //    var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Executor).Single();
+        //    Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("AnotherFunction invoked!")));
+        //}
+
+        // TODO: Implement interface on class functionality
+        //[Fact]
+        //public async Task TestInterfaceOnClass()
+        //{
+        //    var method = typeof(TestClassInterface).GetMethod("TestInterface", BindingFlags.Public | BindingFlags.Instance);
+
+        //    await _host.CallAsync(method, new { input = "Testing 123" });
+        //    await Task.Delay(1000);
+
+        //    // double check that the correct filters were called
+        //    var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Executor).Single();
+        //    Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("Class.OnExecutingAsync invoked!")));
+        //    Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("Class.OnExecutedAsync invoked!")));
+        //}
 
         public class TestFunctions
         {
@@ -309,24 +358,87 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             
             [NoAutomaticTrigger]
             [InvokeFunctionFilter("MyFunction")]
-            public static void TestInvokeFunctionFilter(string input, ILogger logger)
+            public void TestInvokeFunctionFilter(string input, ILogger logger)
             {
                 logger.LogInformation("Test function invoked!");
             }
 
             [NoAutomaticTrigger]
-            [InvokeFunctionFilter(executingFilter: "MyFunction")]
-            [InvokeFunctionFilter(executedFilter: "MyFunction")]
-            public static void TestMultipleInvokeFunctionFilters(string input, ILogger logger)
+            [InvokeFunctionFilter(executingFilter: "MyFirstFunction")]
+            [InvokeFunctionFilter(executedFilter: "MySecondFunction")]
+            public void TestMultipleInvokeFunctionFilters(string[] input, ILogger logger)
             {
                 logger.LogInformation("Test function invoked!");
             }
 
             [NoAutomaticTrigger]
-            public static void MyFunction(FunctionExecutingContext executingContext, [Blob("test/filterTest")] out string blob)
+            public void MyFunction(FunctionExecutingContext executingContext, [Blob("test/filterTest")] out string blob)
             {
                 blob = (string)executingContext.Arguments["input"];
                 executingContext.Logger.LogInformation("MyFunction invoked!");
+            }
+
+            [NoAutomaticTrigger]
+            public static void MyFirstFunction(FunctionExecutingContext executingContext, [Blob("test/filterTest")] out string blob)
+            {
+                string[] stringArrayToUse = executingContext.Arguments["input"] as string[];
+                blob = stringArrayToUse[0];
+                executingContext.Logger.LogInformation("MyFirstFunction invoked!");
+            }
+
+            [NoAutomaticTrigger]
+            public static void MySecondFunction(FunctionExecutedContext executedContext, [Blob("test/filterTest2")] out string blob)
+            {
+                string[] stringArrayToUse = executedContext.Arguments["input"] as string[];
+                blob = stringArrayToUse[1];
+                executedContext.Logger.LogInformation("MySecondFunction invoked!");
+            }
+        }
+
+        [InvokeFunctionFilter(executingFilter: "AnotherFunction")]
+        public static class TestFunctionsInClass
+        {
+            [NoAutomaticTrigger]
+            public static void TestAnotherFunction(string input, ILogger logger)
+            {
+                logger.LogInformation("TestAnotherFunction invoked!");
+            }
+
+            [NoAutomaticTrigger]
+            public static void AnotherFunction(FunctionExecutingContext executingContext)
+            {
+                executingContext.Logger.LogInformation("AnotherFunction invoked!");
+            }
+        }
+
+        public static class ClassWithFunctionToTest
+        {
+            [NoAutomaticTrigger]
+            public static void AnotherFunction(FunctionExecutingContext executingContext)
+            {
+                executingContext.Logger.LogInformation("AnotherFunction invoked!");
+            }
+        }
+
+        public class TestClassInterface : IFunctionInvocationFilter
+        {
+            [NoAutomaticTrigger]
+            [InvokeFunctionFilter(executingFilter: "TestClassInterface")]
+            public void TestInterface(string input, ILogger logger)
+            {
+                logger.LogInformation("TestInterface invoked!");
+            }
+
+            public Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
+            {
+                executingContext.Logger.LogInformation("Class.OnExecutingAsync invoked!");
+                return Task.CompletedTask;
+            }
+
+            public Task OnExecutedAsync(FunctionExecutedContext executedContext, CancellationToken cancellationToken)
+            {
+                executedContext.Logger.LogInformation("Class.OnExecutedAsync invoked!");
+                return Task.CompletedTask;
             }
         }
 
