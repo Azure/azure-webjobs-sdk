@@ -12,7 +12,6 @@ namespace Microsoft.Azure.WebJobs.Host
     /// <summary>
     /// The context describing a function that's about to be executed
     /// </summary>
-    [CLSCompliant(false)]
     public class FunctionExecutingContext : FunctionInvocationContext
     {
         /// <summary>

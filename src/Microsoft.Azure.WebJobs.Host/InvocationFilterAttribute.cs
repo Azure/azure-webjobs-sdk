@@ -11,7 +11,6 @@ namespace Microsoft.Azure.WebJobs.Host
     /// <summary>
     /// This is the definition for the function filter attribute
     /// </summary>
-    [CLSCompliant(false)]
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = true, AllowMultiple = false)]
     public abstract class InvocationFilterAttribute : Attribute, IFunctionInvocationFilter
     {
