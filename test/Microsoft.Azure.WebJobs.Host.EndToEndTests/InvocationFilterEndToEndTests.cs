@@ -518,7 +518,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
     public class HTTPRequestFilter : InvocationFilterAttribute
     {
-        public HttpRequestMessage httpRequestToValidate { get; set; }
+        public HttpRequestMessage HttpRequestToValidate { get; set; }
 
         public override Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
         {
