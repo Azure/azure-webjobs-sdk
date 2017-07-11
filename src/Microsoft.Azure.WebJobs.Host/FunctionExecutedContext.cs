@@ -10,20 +10,21 @@ using Microsoft.Extensions.Logging;
 namespace Microsoft.Azure.WebJobs.Host
 {
     /// <summary>
-    /// The context for an executed function
+    /// Context class for IFunctionInvocationFilter.OnExecutedAsync <see cref="IFunctionInvocationFilter"/>>
     /// </summary>
     public class FunctionExecutedContext : FunctionInvocationContext
     {
         /// <summary>
         /// Constructor to set the context
         /// </summary>
-        /// <param name="id"></param>
-        /// <param name="name"></param>
-        /// <param name="arguments"></param>
-        /// <param name="logger"></param>
+        /// <param name="functionInstanceId"><see cref="FunctionInvocationContext"/></param>
+        /// <param name="functionName"><see cref="FunctionInvocationContext"/></param>
+        /// <param name="arguments"><see cref="FunctionInvocationContext"/></param>
+        /// <param name="properties"><see cref="FunctionInvocationContext"/></param>
+        /// <param name="logger"><see cref="FunctionInvocationContext"/>></param>
         /// <param name="result"></param>
-        internal FunctionExecutedContext(Guid id, string name, IReadOnlyDictionary<string, object> arguments, ILogger logger, FunctionResult result) :
-            base(id, name, arguments, logger)
+        internal FunctionExecutedContext(Guid functionInstanceId, string functionName, Dictionary<string, object> arguments, Dictionary<string, object> properties, ILogger logger, FunctionResult result) :
+            base(functionInstanceId, functionName, arguments, properties, logger)
         {
             Result = result;
         }

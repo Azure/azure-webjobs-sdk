@@ -9,13 +9,13 @@ using Microsoft.Extensions.Logging;
 namespace Microsoft.Azure.WebJobs.Host
 {
     /// <summary>
-    /// This is the definition for the function filter attribute
+    /// Base class for declarative function invocation filters
     /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = true, AllowMultiple = false)]
     public abstract class InvocationFilterAttribute : Attribute, IFunctionInvocationFilter
     {
         /// <summary>
-        /// Tasks here should execute before the actual function is executed
+        /// Method invoked before the target function is called
         /// </summary>
         /// <param name="executingContext"></param>
         /// <param name="cancellationToken"></param>
@@ -26,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.Host
         }
 
         /// <summary>
-        /// Tasks here should execute after the actual function is executed
+        /// Method invoked after the target function is called
         /// </summary>
         /// <param name="executedContext"></param>
         /// <param name="cancellationToken"></param>
