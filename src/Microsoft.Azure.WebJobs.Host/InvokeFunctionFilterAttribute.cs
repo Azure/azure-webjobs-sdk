@@ -84,7 +84,7 @@ namespace Microsoft.Azure.WebJobs.Host
             }
         }
 
-        internal async Task InvokeJobFunctionAsync<TContext>(string methodName, TContext context, CancellationToken cancellationToken) where TContext : FunctionInvocationContext
+        internal static async Task InvokeJobFunctionAsync<TContext>(string methodName, TContext context, CancellationToken cancellationToken) where TContext : FunctionInvocationContext
         {
             MethodInfo methodInfo = null;
 
