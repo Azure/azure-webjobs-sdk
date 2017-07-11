@@ -17,7 +17,7 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
-    public class InvocationFilterEndToEndTests : IClassFixture<InvocationFilterEndToEndTests.TestFixture>
+    public class InvocationFilterEndToEndTests : IClassFixture<TestFixture>
     {
         private JobHostConfiguration _config;
         private JobHost _host;
@@ -44,7 +44,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             loggerFactory.AddProvider(_loggerProvider);
             _config.LoggerFactory = loggerFactory;
             _config.Aggregator.IsEnabled = false; // makes validation easier
-            _config.TypeLocator = new FakeTypeLocator(typeof(TestFunctions), typeof(TestFunctionsInClass), typeof(ClassWithFunctionToTest), typeof(TestClassInterface));
+            _config.TypeLocator = new FakeTypeLocator(typeof(StandardFilterTests), typeof(TestFunctionsInClass), typeof(ClassWithFunctionToTest), typeof(TestClassInterface));
             _host = new JobHost(_config);
             _fixture = fixture;
         }
@@ -52,7 +52,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task TestInvocationLoggingFilter()
         {
-            var method = typeof(TestFunctions).GetMethod("UseLoggingFilter", BindingFlags.Public | BindingFlags.Static);
+            var method = typeof(StandardFilterTests).GetMethod("UseLoggingFilter", BindingFlags.Public | BindingFlags.Static);
 
             await _host.CallAsync(method, new { input = "Testing 123" });
             await Task.Delay(1000);
@@ -66,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task TestInvocationUserAuthenticationFilter()
         {
-            var method = typeof(TestFunctions).GetMethod("UseUserAuthorizationFilter", BindingFlags.Public | BindingFlags.Static);
+            var method = typeof(StandardFilterTests).GetMethod("UseUserAuthorizationFilter", BindingFlags.Public | BindingFlags.Static);
 
             await _host.CallAsync(method, new { input = "Testing 123" });
             await Task.Delay(1000);
@@ -79,7 +79,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task TestHTTPRequestFilter()
         {
-            var method = typeof(TestFunctions).GetMethod("UseHTTPRequestFilter", BindingFlags.Public | BindingFlags.Static);
+            var method = typeof(StandardFilterTests).GetMethod("UseHTTPRequestFilter", BindingFlags.Public | BindingFlags.Static);
             HttpRequestMessage testHttpMessage = new HttpRequestMessage();
 
             await _host.CallAsync(method, new { input = "Testing 123", req = testHttpMessage });
@@ -95,7 +95,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             TestTraceWriter trace = new TestTraceWriter(TraceLevel.Verbose);
             _config.Tracing.Tracers.Add(trace);
-            var method = typeof(TestFunctions).GetMethod("TestFalseUserAuthorizationFilter", BindingFlags.Public | BindingFlags.Static);
+            var method = typeof(StandardFilterTests).GetMethod("TestFalseUserAuthorizationFilter", BindingFlags.Public | BindingFlags.Static);
 
             try
             {
@@ -113,7 +113,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             TestTraceWriter trace = new TestTraceWriter(TraceLevel.Verbose);
             _config.Tracing.Tracers.Add(trace);
-            var method = typeof(TestFunctions).GetMethod("TestFailingPreFilter", BindingFlags.Public | BindingFlags.Static);
+            var method = typeof(StandardFilterTests).GetMethod("TestFailingPreFilter", BindingFlags.Public | BindingFlags.Static);
 
             try
             {
@@ -131,7 +131,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             TestTraceWriter trace = new TestTraceWriter(TraceLevel.Verbose);
             _config.Tracing.Tracers.Add(trace);
-            var method = typeof(TestFunctions).GetMethod("TestFailingPostFilter", BindingFlags.Public | BindingFlags.Static);
+            var method = typeof(StandardFilterTests).GetMethod("TestFailingPostFilter", BindingFlags.Public | BindingFlags.Static);
 
             try
             {
@@ -152,7 +152,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             TestTraceWriter trace = new TestTraceWriter(TraceLevel.Verbose);
             _config.Tracing.Tracers.Add(trace);
-            var method = typeof(TestFunctions).GetMethod("TestFailingFunctionFilter", BindingFlags.Public | BindingFlags.Static);
+            var method = typeof(StandardFilterTests).GetMethod("TestFailingFunctionFilter", BindingFlags.Public | BindingFlags.Static);
 
             try
             {
@@ -193,7 +193,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task TestInvokeFunctionFilter()
         {
-            var method = typeof(TestFunctions).GetMethod("TestInvokeFunctionFilter", BindingFlags.Public | BindingFlags.Instance);
+            var method = typeof(StandardFilterTests).GetMethod("TestInvokeFunctionFilter", BindingFlags.Public | BindingFlags.Instance);
 
             string testValue = Guid.NewGuid().ToString();
 
@@ -221,9 +221,34 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [Fact]
+        public async Task TestPassingPropertiesInContext()
+        {
+            var method = typeof(StandardFilterTests).GetMethod("TestPropertiesInFunctionFilter", BindingFlags.Public | BindingFlags.Instance);
+            string[] temp = { "passedProperty1" };
+
+            await _host.CallAsync(method, new { input = temp });
+            await Task.Delay(1000);
+
+            var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Executor).Single();
+            Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("filters!")));
+        }
+
+        [Fact]
+        public async Task TestOrderOfExecution()
+        {
+            var method = typeof(StandardFilterTests).GetMethod("TestOrderWithFunctionFilters", BindingFlags.Public | BindingFlags.Static);
+
+            await _host.CallAsync(method, new { input = "test" });
+            await Task.Delay(1000);
+
+            var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Executor).Single();
+            Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("12")));
+        }
+
+        [Fact]
         public async Task TestMultipleInvokeFunctionFilters()
         {
-            var method = typeof(TestFunctions).GetMethod("TestMultipleInvokeFunctionFilters", BindingFlags.Public | BindingFlags.Instance);
+            var method = typeof(StandardFilterTests).GetMethod("TestMultipleInvokeFunctionFilters", BindingFlags.Public | BindingFlags.Instance);
 
             string testValue = Guid.NewGuid().ToString();
             string testValue2 = Guid.NewGuid().ToString();
@@ -274,325 +299,338 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("MyFirstFunction invoked!")));
             Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("MySecondFunction invoked!")));
         }
+    }
 
-        // TODO: Fix class attribute filter invocation (This test should work but keeps timing out. Uncomment it to try it.)
-        //[Fact]
-        //public async Task TestClassAttributeFilter()
-        //{
-        //    var method = typeof(TestFunctionsInClass).GetMethod("TestAnotherFunction", BindingFlags.Public | BindingFlags.Static);
-
-        //    await _host.CallAsync(method, new { input = "Testing 123" });
-        //    await Task.Delay(1000);
-
-        //    // double check that the correct filters were called
-        //    var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Executor).Single();
-        //    Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("AnotherFunction invoked!")));
-        //}
-
-        // TODO: Implement interface on class functionality
-        //[Fact]
-        //public async Task TestInterfaceOnClass()
-        //{
-        //    var method = typeof(TestClassInterface).GetMethod("TestInterface", BindingFlags.Public | BindingFlags.Instance);
-
-        //    await _host.CallAsync(method, new { input = "Testing 123" });
-        //    await Task.Delay(1000);
-
-        //    // double check that the correct filters were called
-        //    var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Executor).Single();
-        //    Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("Class.OnExecutingAsync invoked!")));
-        //    Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("Class.OnExecutedAsync invoked!")));
-        //}
-
-        public class TestFunctions
+    public class StandardFilterTests
+    {
+        [NoAutomaticTrigger]
+        [TestLoggingFilter]
+        public static void UseLoggingFilter(string input, ILogger logger)
         {
-            [NoAutomaticTrigger]
-            [TestLoggingFilter]
-            public static void UseLoggingFilter(string input, ILogger logger)
-            {
-                logger.LogInformation("Test function invoked!");
-            }
+            logger.LogInformation("Test function invoked!");
+        }
 
-            [NoAutomaticTrigger]
-            [TestUserAuthorizationFilter( AllowedUsers = "Admin")]
-            public static void UseUserAuthorizationFilter(string input, ILogger logger)
-            {
-                logger.LogInformation("Test function invoked!");
-            }
+        [NoAutomaticTrigger]
+        [TestUserAuthorizationFilter( AllowedUsers = "Admin")]
+        public static void UseUserAuthorizationFilter(string input, ILogger logger)
+        {
+            logger.LogInformation("Test function invoked!");
+        }
 
-            [NoAutomaticTrigger]
-            [HTTPRequestFilter]
-            public static void UseHTTPRequestFilter(HttpRequestMessage req, string input, ILogger logger)
-            {
-                logger.LogInformation("Test function invoked!");
-            }
+        [NoAutomaticTrigger]
+        [HTTPRequestFilter]
+        public static void UseHTTPRequestFilter(HttpRequestMessage req, string input, ILogger logger)
+        {
+            logger.LogInformation("Test function invoked!");
+        }
 
-            [NoAutomaticTrigger]
-            [TestUserAuthorizationFilter(AllowedUsers = "Dave")]
-            public static void TestFalseUserAuthorizationFilter(string input, ILogger logger)
-            {
-                logger.LogInformation("Test function invoked!");
-            }
+        [NoAutomaticTrigger]
+        [TestUserAuthorizationFilter(AllowedUsers = "Dave")]
+        public static void TestFalseUserAuthorizationFilter(string input, ILogger logger)
+        {
+            logger.LogInformation("Test function invoked!");
+        }
 
-            [NoAutomaticTrigger]
-            [TestFailingFilter(true)]
-            public static void TestFailingPreFilter(string input, ILogger logger)
-            {
-                logger.LogInformation("Test function invoked!");
-            }
+        [NoAutomaticTrigger]
+        [TestFailingFilter(true)]
+        public static void TestFailingPreFilter(string input, ILogger logger)
+        {
+            logger.LogInformation("Test function invoked!");
+        }
 
-            [NoAutomaticTrigger]
-            [TestFailingFilter]
-            public static void TestFailingPostFilter(string input, ILogger logger)
-            {
-                logger.LogInformation("Test function invoked!");
-            }
+        [NoAutomaticTrigger]
+        [TestFailingFilter]
+        public static void TestFailingPostFilter(string input, ILogger logger)
+        {
+            logger.LogInformation("Test function invoked!");
+        }
 
-            [NoAutomaticTrigger]
-            [TestFailingFunctionFilter]
-            public static void TestFailingFunctionFilter(string input, ILogger logger)
-            {
-                logger.LogInformation("Test function invoked!");
-                throw new Exception("Testing function fail");
-            }
+        [NoAutomaticTrigger]
+        [TestFailingFunctionFilter]
+        public static void TestFailingFunctionFilter(string input, ILogger logger)
+        {
+            logger.LogInformation("Test function invoked!");
+            throw new Exception("Testing function fail");
+        }
             
-            [NoAutomaticTrigger]
-            [InvokeFunctionFilter("MyFunction")]
-            public void TestInvokeFunctionFilter(string input, ILogger logger)
-            {
-                logger.LogInformation("Test function invoked!");
-            }
-
-            [NoAutomaticTrigger]
-            [InvokeFunctionFilter(executingFilter: "MyFirstFunction")]
-            [InvokeFunctionFilter(executedFilter: "MySecondFunction")]
-            public void TestMultipleInvokeFunctionFilters(string[] input, ILogger logger)
-            {
-                logger.LogInformation("Test function invoked!");
-            }
-
-            [NoAutomaticTrigger]
-            public void MyFunction(FunctionExecutingContext executingContext, [Blob("test/filterTest")] out string blob)
-            {
-                blob = (string)executingContext.Arguments["input"];
-                executingContext.Logger.LogInformation("MyFunction invoked!");
-            }
-
-            [NoAutomaticTrigger]
-            public static void MyFirstFunction(FunctionExecutingContext executingContext, [Blob("test/filterTest")] out string blob)
-            {
-                string[] stringArrayToUse = executingContext.Arguments["input"] as string[];
-                blob = stringArrayToUse[0];
-                executingContext.Logger.LogInformation("MyFirstFunction invoked!");
-            }
-
-            [NoAutomaticTrigger]
-            public static void MySecondFunction(FunctionExecutedContext executedContext, [Blob("test/filterTest2")] out string blob)
-            {
-                string[] stringArrayToUse = executedContext.Arguments["input"] as string[];
-                blob = stringArrayToUse[1];
-                executedContext.Logger.LogInformation("MySecondFunction invoked!");
-            }
+        [NoAutomaticTrigger]
+        [InvokeFunctionFilter("MyFunction")]
+        public void TestInvokeFunctionFilter(string input, ILogger logger)
+        {
+            logger.LogInformation("Test function invoked!");
         }
 
-        [InvokeFunctionFilter(executingFilter: "AnotherFunction")]
-        public static class TestFunctionsInClass
+        [NoAutomaticTrigger]
+        [InvokeFunctionFilter(executingFilter: "MyFirstFunction")]
+        [InvokeFunctionFilter(executedFilter: "MySecondFunction")]
+        public void TestMultipleInvokeFunctionFilters(string[] input, ILogger logger)
         {
-            [NoAutomaticTrigger]
-            public static void TestAnotherFunction(string input, ILogger logger)
-            {
-                logger.LogInformation("TestAnotherFunction invoked!");
-            }
-
-            [NoAutomaticTrigger]
-            public static void AnotherFunction(FunctionExecutingContext executingContext)
-            {
-                executingContext.Logger.LogInformation("AnotherFunction invoked!");
-            }
+            logger.LogInformation("Test function invoked!");
         }
 
-        public static class ClassWithFunctionToTest
+        [NoAutomaticTrigger]
+        public void MyFunction(FunctionExecutingContext executingContext, [Blob("test/filterTest")] out string blob)
         {
-            [NoAutomaticTrigger]
-            public static void AnotherFunction(FunctionExecutingContext executingContext)
-            {
-                executingContext.Logger.LogInformation("AnotherFunction invoked!");
-            }
+            blob = (string)executingContext.Arguments["input"];
+            executingContext.Logger.LogInformation("MyFunction invoked!");
         }
 
-        public class TestClassInterface : IFunctionInvocationFilter
+        [NoAutomaticTrigger]
+        public static void MyFirstFunction(FunctionExecutingContext executingContext, [Blob("test/filterTest")] out string blob)
         {
-            [NoAutomaticTrigger]
-            [InvokeFunctionFilter(executingFilter: "TestClassInterface")]
-            public void TestInterface(string input, ILogger logger)
-            {
-                logger.LogInformation("TestInterface invoked!");
-            }
-
-            public Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
-            {
-                executingContext.Logger.LogInformation("Class.OnExecutingAsync invoked!");
-                return Task.CompletedTask;
-            }
-
-            public Task OnExecutedAsync(FunctionExecutedContext executedContext, CancellationToken cancellationToken)
-            {
-                executedContext.Logger.LogInformation("Class.OnExecutedAsync invoked!");
-                return Task.CompletedTask;
-            }
+            string[] stringArrayToUse = executingContext.Arguments["input"] as string[];
+            blob = stringArrayToUse[0];
+            executingContext.Logger.LogInformation("MyFirstFunction invoked!");
         }
 
-        public class TestLoggingFilter : InvocationFilterAttribute
+        [NoAutomaticTrigger]
+        public static void MySecondFunction(FunctionExecutedContext executedContext, [Blob("test/filterTest2")] out string blob)
         {
-            public override Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
-            {
-                executingContext.Logger.LogInformation("Test executing!");
-                return Task.CompletedTask;
-            }
-
-            public override Task OnExecutedAsync(FunctionExecutedContext executedContext, CancellationToken cancellationToken)
-            {
-                executedContext.Logger.LogInformation("Test executed!");
-                return Task.CompletedTask;
-            }
+            string[] stringArrayToUse = executedContext.Arguments["input"] as string[];
+            blob = stringArrayToUse[1];
+            executedContext.Logger.LogInformation("MySecondFunction invoked!");
         }
 
-        public class TestUserAuthorizationFilter : InvocationFilterAttribute
+        [NoAutomaticTrigger]
+        [InvokeFunctionFilter(executingFilter: "PassProperty", executedFilter: "CatchProperty")]
+        public void TestPropertiesInFunctionFilter(string[] input, ILogger logger)
         {
-            public string AllowedUsers { get; set; }
-
-            public override Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
-            {
-                executingContext.Logger.LogInformation("Test executing!");
-
-                if (!AllowedUsers.Contains("Admin"))
-                {
-                    executingContext.Logger.LogInformation("This is an unauthorized user!");
-                    throw new Exception("Not Allowing Unauthorized Users!");
-                }
-
-                executingContext.Logger.LogInformation("This is an authorized user!");
-                return Task.CompletedTask;
-            }
         }
 
-        public class HTTPRequestFilter : InvocationFilterAttribute
+        [NoAutomaticTrigger]
+        public static void PassProperty(FunctionExecutingContext executingContext)
         {
-            public HttpRequestMessage httpRequestToValidate { get; set; }
-
-            public override Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
-            {
-                executingContext.Logger.LogInformation("Test executing!");
-
-                IReadOnlyDictionary<string, object> arguments = executingContext.Arguments;
-                var testValues = string.Join(",", arguments.Values.ToArray());
-
-                // Check headers (I'm sure there's a better way to check this
-                if (testValues.Contains("Headers"))
-                {
-                    executingContext.Logger.LogInformation("Found the header!");
-                    // Perform a validation on the headers
-                }
-
-                return Task.CompletedTask;
-            }
+            // Add the property to pass
+            executingContext.Properties.Add("fakeproperty", "filters!");
+            executingContext.Logger.LogInformation("Property was added to context");
         }
 
-        public class TestFailingFilter : InvocationFilterAttribute
+        [NoAutomaticTrigger]
+        public static void CatchProperty(FunctionExecutedContext executedContext)
         {
-            bool failPreInvocation = false;
+            // Read the passed property
+            executedContext.Logger.LogInformation((string)executedContext.Properties["fakeproperty"]);
+            executedContext.Logger.LogInformation("Property from context was logged");
+        }
 
-            public TestFailingFilter(bool input = false)
+        [NoAutomaticTrigger]
+        [InvokeFunctionFilter(executingFilter: "AddToPropertyFirst", executedFilter: "AddToPropertyLast")]
+        public static void TestOrderWithFunctionFilters(string input, ILogger logger)
+        {
+        }
+
+        [NoAutomaticTrigger]
+        public static void AddToPropertyFirst(FunctionExecutingContext executingContext)
+        {
+            // Add the property to pass
+            executingContext.Properties.Add("fakeproperty", "1");
+            executingContext.Logger.LogInformation("Property was added to context");
+        }
+
+        [NoAutomaticTrigger]
+        public static void AddToPropertyLast(FunctionExecutedContext executedContext)
+        {
+
+            executedContext.Logger.LogInformation((string)executedContext.Properties["fakeproperty"] + "2");
+            executedContext.Logger.LogInformation("Property from context was edited");
+        }
+    }
+
+    public static class TestFunctionsInClass
+    {
+        [NoAutomaticTrigger]
+        public static void TestAnotherFunction(string input, ILogger logger)
+        {
+            logger.LogInformation("TestAnotherFunction invoked!");
+        }
+
+        [NoAutomaticTrigger]
+        public static void AnotherFunction(FunctionExecutingContext executingContext)
+        {
+            executingContext.Logger.LogInformation("AnotherFunction invoked!");
+        }
+    }
+
+    public static class ClassWithFunctionToTest
+    {
+        [NoAutomaticTrigger]
+        public static void AnotherFunction(FunctionExecutingContext executingContext)
+        {
+            executingContext.Logger.LogInformation("AnotherFunction invoked!");
+        }
+    }
+
+    public class TestClassInterface : IFunctionInvocationFilter
+    {
+        [NoAutomaticTrigger]
+        [InvokeFunctionFilter(executingFilter: "TestClassInterface")]
+        public void TestInterface(string input, ILogger logger)
+        {
+            logger.LogInformation("TestInterface invoked!");
+        }
+
+        public Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
+        {
+            executingContext.Logger.LogInformation("Class.OnExecutingAsync invoked!");
+            return Task.CompletedTask;
+        }
+
+        public Task OnExecutedAsync(FunctionExecutedContext executedContext, CancellationToken cancellationToken)
+        {
+            executedContext.Logger.LogInformation("Class.OnExecutedAsync invoked!");
+            return Task.CompletedTask;
+        }
+    }
+
+    public class TestLoggingFilter : InvocationFilterAttribute
+    {
+        public override Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
+        {
+            executingContext.Logger.LogInformation("Test executing!");
+            return Task.CompletedTask;
+        }
+
+        public override Task OnExecutedAsync(FunctionExecutedContext executedContext, CancellationToken cancellationToken)
+        {
+            executedContext.Logger.LogInformation("Test executed!");
+            return Task.CompletedTask;
+        }
+    }
+
+    public class TestUserAuthorizationFilter : InvocationFilterAttribute
+    {
+        public string AllowedUsers { get; set; }
+
+        public override Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
+        {
+            executingContext.Logger.LogInformation("Test executing!");
+
+            if (!AllowedUsers.Contains("Admin"))
             {
-                failPreInvocation = input;
+                executingContext.Logger.LogInformation("This is an unauthorized user!");
+                throw new Exception("Not Allowing Unauthorized Users!");
             }
 
-            public override Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
-            {
-                if ( failPreInvocation == true )
-                {
-                    executingContext.Logger.LogInformation("Failing pre invocation!");
-                    throw new Exception("Failing on purpose!");
-                }
+            executingContext.Logger.LogInformation("This is an authorized user!");
+            return Task.CompletedTask;
+        }
+    }
 
-                return Task.CompletedTask;
+    public class HTTPRequestFilter : InvocationFilterAttribute
+    {
+        public HttpRequestMessage httpRequestToValidate { get; set; }
+
+        public override Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
+        {
+            executingContext.Logger.LogInformation("Test executing!");
+
+            IReadOnlyDictionary<string, object> arguments = executingContext.Arguments;
+            var testValues = string.Join(",", arguments.Values.ToArray());
+
+            // Check headers (I'm sure there's a better way to check this
+            if (testValues.Contains("Headers"))
+            {
+                executingContext.Logger.LogInformation("Found the header!");
+                // Perform a validation on the headers
             }
 
-            public override Task OnExecutedAsync(FunctionExecutedContext executedContext, CancellationToken cancellationToken)
-            {
-                if (failPreInvocation == true)
-                {
-                    return Task.CompletedTask;
-                }
+            return Task.CompletedTask;
+        }
+    }
 
-                executedContext.Logger.LogInformation("Failing post invocation!");
+    public class TestFailingFilter : InvocationFilterAttribute
+    {
+        bool failPreInvocation = false;
+
+        public TestFailingFilter(bool input = false)
+        {
+            failPreInvocation = input;
+        }
+
+        public override Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
+        {
+            if ( failPreInvocation == true )
+            {
+                executingContext.Logger.LogInformation("Failing pre invocation!");
                 throw new Exception("Failing on purpose!");
             }
+
+            return Task.CompletedTask;
         }
 
-        public class TestFailingFunctionFilter : InvocationFilterAttribute
+        public override Task OnExecutedAsync(FunctionExecutedContext executedContext, CancellationToken cancellationToken)
         {
-            public override Task OnExecutedAsync(FunctionExecutedContext executedContext, CancellationToken cancellationToken)
+            if (failPreInvocation == true)
             {
-                executedContext.Logger.LogInformation("The function failed!");
-                executedContext.Logger.LogInformation(executedContext.Result.Exception.ToString());
-
                 return Task.CompletedTask;
             }
+
+            executedContext.Logger.LogInformation("Failing post invocation!");
+            throw new Exception("Failing on purpose!");
+        }
+    }
+
+    public class TestFailingFunctionFilter : InvocationFilterAttribute
+    {
+        public override Task OnExecutedAsync(FunctionExecutedContext executedContext, CancellationToken cancellationToken)
+        {
+            executedContext.Logger.LogInformation("The function failed!");
+            executedContext.Logger.LogInformation(executedContext.Result.Exception.ToString());
+
+            return Task.CompletedTask;
+        }
+    }
+
+    internal class TestNameResolver : RandomNameResolver
+    {
+        public override string Resolve(string name)
+        {
+            if (name == "test_account")
+            {
+                return "SecondaryStorage";
+            }
+            return base.Resolve(name);
+        }
+    }
+
+    public class TestFixture : IDisposable
+    {
+        public TestFixture()
+        {
+            RandomNameResolver nameResolver = new TestNameResolver();
+            JobHostConfiguration hostConfiguration = new JobHostConfiguration()
+            {
+                NameResolver = nameResolver,
+                TypeLocator = new FakeTypeLocator(typeof(MultipleStorageAccountsEndToEndTests)),
+            };
+            Config = hostConfiguration;
+
+            var account = CloudStorageAccount.Parse(hostConfiguration.StorageConnectionString);
+
+            CloudBlobClient blobClient1 = account.CreateCloudBlobClient();
+            OutputContainer = blobClient1.GetContainerReference("test");
+
+            Host = new JobHost(hostConfiguration);
+            Host.Start();
         }
 
-        private class TestNameResolver : RandomNameResolver
-
+        public JobHost Host
         {
-            public override string Resolve(string name)
-            {
-                if (name == "test_account")
-                {
-                    return "SecondaryStorage";
-                }
-                return base.Resolve(name);
-            }
+            get;
+            private set;
         }
 
-        public class TestFixture : IDisposable
+        public JobHostConfiguration Config
         {
-            public TestFixture()
-            {
-                RandomNameResolver nameResolver = new TestNameResolver();
-                JobHostConfiguration hostConfiguration = new JobHostConfiguration()
-                {
-                    NameResolver = nameResolver,
-                    TypeLocator = new FakeTypeLocator(typeof(MultipleStorageAccountsEndToEndTests)),
-                };
-                Config = hostConfiguration;
+            get;
+            private set;
+        }
 
-                var account = CloudStorageAccount.Parse(hostConfiguration.StorageConnectionString);
+        public CloudBlobContainer OutputContainer { get; private set; }
 
-                CloudBlobClient blobClient1 = account.CreateCloudBlobClient();
-                OutputContainer = blobClient1.GetContainerReference("test");
-
-                Host = new JobHost(hostConfiguration);
-                Host.Start();
-            }
-
-            public JobHost Host
-            {
-                get;
-                private set;
-            }
-
-            public JobHostConfiguration Config
-            {
-                get;
-                private set;
-            }
-
-            public CloudBlobContainer OutputContainer { get; private set; }
-
-            public void Dispose()
-            {
-                ((IDisposable)Host).Dispose();
-            }
+        public void Dispose()
+        {
+            ((IDisposable)Host).Dispose();
         }
     }
 }

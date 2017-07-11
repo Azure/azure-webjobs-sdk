@@ -236,6 +236,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "ScopeKeys",
                 "IDistributedLockManager",
                 "IDistributedLock"
+                "FunctionExecutingContext",
+                "FunctionExecutedContext",
+                "FunctionInvocationContext",
+                "IFunctionInvocationFilter",
+                "InvocationFilterAttribute",
+                "InvokeFunctionFilterAttribute"
             };
 
             AssertPublicTypes(expected, assembly);

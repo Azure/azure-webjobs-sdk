@@ -15,13 +15,13 @@ namespace Microsoft.Azure.WebJobs.Host
     /// An invocation filter that invokes job methods
     /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = true, AllowMultiple = true)]
-    public sealed class InvokeFunctionFilterAttribute : InvocationFilterAttribute, IFunctionInvocationFilter
+    public sealed class InvokeFunctionFilterAttribute : InvocationFilterAttribute
     {
         /// <summary>
-        /// When this attribute is used, take the name of the function to invoke
+        /// Constructs a new instance
         /// </summary>
-        /// <param name="executingFilter"></param>
-        /// <param name="executedFilter"></param>
+        /// <param name="executingFilter">The name of the function to execute before the target function is called</param>
+        /// <param name="executedFilter">The name of the function to execute after the target function is called</param>
         public InvokeFunctionFilterAttribute(string executingFilter = null, string executedFilter = null)
         {
             ExecutingFilter = executingFilter;
@@ -29,17 +29,17 @@ namespace Microsoft.Azure.WebJobs.Host
         }
 
         /// <summary>
-        /// Executing filter
+        /// The name of the function to execute before the target function is called
         /// </summary>
         public string ExecutingFilter { get; }
 
         /// <summary>
-        /// Executed filter
+        /// The name of the function to execute after the target function is called
         /// </summary>
         public string ExecutedFilter { get; }
 
         /// <summary>
-        /// Call the requested job method before the main function call
+        /// Method invoked before the target function is called
         /// </summary>
         /// <returns></returns>
         public override async Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
@@ -52,15 +52,8 @@ namespace Microsoft.Azure.WebJobs.Host
             if (!string.IsNullOrEmpty(ExecutingFilter))
             {
                 executingContext.Logger.LogInformation("Executing Function Filter '" + ExecutingFilter + "'");
-
-                try
-                {
-                    await InvokeJobFunctionAsync(ExecutingFilter, executingContext, cancellationToken);
-                }
-                catch (Exception e)
-                {
-                    executingContext.Logger.LogInformation(e.ToDetails());
-                }
+                
+                await InvokeJobFunctionAsync(ExecutingFilter, executingContext, cancellationToken);
             }
             else
             {
@@ -69,7 +62,7 @@ namespace Microsoft.Azure.WebJobs.Host
         }
 
         /// <summary>
-        /// Call the requested job method after the main function call
+        /// Method invoked after the target function is called
         /// </summary>
         /// <returns></returns>
         public override async Task OnExecutedAsync(FunctionExecutedContext executedContext, CancellationToken cancellationToken)
@@ -82,15 +75,8 @@ namespace Microsoft.Azure.WebJobs.Host
             if (!string.IsNullOrEmpty(ExecutedFilter))
             {
                 executedContext.Logger.LogInformation("Executing Function Filter '" + ExecutedFilter + "'");
-
-                try
-                {
-                    await InvokeJobFunctionAsync(ExecutedFilter, executedContext, cancellationToken);
-                }
-                catch (Exception e)
-                {
-                    executedContext.Logger.LogInformation(e.ToDetails());
-                }
+                
+                await InvokeJobFunctionAsync(ExecutedFilter, executedContext, cancellationToken);
             }
             else
             {
@@ -118,8 +104,13 @@ namespace Microsoft.Azure.WebJobs.Host
             // If it is null, this means that we need to look for the methodinfo from the class
             // TODO: Implement class level methodinfo onExecuting/onExecuted invocation
 
+            if (methodInfo == null)
+            {
+                throw new InvalidOperationException("Incorrect method signature for invocation filter '{methodName}'.");
+            }
+
             IDictionary<string, object> invokeArguments = new Dictionary<string, object>();
-            string parameterName = methodInfo.GetParameters().SingleOrDefault(p => p.ParameterType == typeof(TContext)).Name;
+            string parameterName = methodInfo.GetParameters().SingleOrDefault(p => p.ParameterType.IsAssignableFrom(typeof(TContext))).Name;
             invokeArguments.Add(parameterName, context);
 
             await context.JobHost.CallAsync(methodInfo, invokeArguments, cancellationToken);
