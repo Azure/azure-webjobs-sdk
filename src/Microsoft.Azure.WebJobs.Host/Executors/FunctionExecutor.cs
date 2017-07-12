@@ -82,17 +82,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             string functionStartedMessageId = null;
             TraceLevel functionTraceLevel = functionInstance.FunctionDescriptor.TraceLevel;
 
-            FunctionInstanceLogEntry fastItem = new FunctionInstanceLogEntry
-            {
-                FunctionInstanceId = functionStartedMessage.FunctionInstanceId,
-                ParentId = functionStartedMessage.ParentId,
-                FunctionName = functionStartedMessage.Function.ShortName,
-                TriggerReason = functionStartedMessage.ReasonDetails,
-                StartTime = functionStartedMessage.StartTime.DateTime,
-                Properties = new Dictionary<string, object>()
-            };
-
-            await this.NotifyPreBindAsync(fastItem);
+            FunctionInstanceLogEntry fastItem = await this.NotifyPreBindAsync(functionStartedMessage);
                         
             try
             {
@@ -655,17 +645,26 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         }
 
         // Called very early when function is started; before arguments are bound. 
-        private Task NotifyPreBindAsync(FunctionInstanceLogEntry fastItem)
+        private async Task<FunctionInstanceLogEntry> NotifyPreBindAsync(FunctionStartedMessage functionStartedMessage)
         {
-            fastItem.LiveTimer = Stopwatch.StartNew();
-
-            if (_functionEventCollector == null)
+            FunctionInstanceLogEntry fastItem = new FunctionInstanceLogEntry
             {
-                return Task.CompletedTask;
-            }            
+                FunctionInstanceId = functionStartedMessage.FunctionInstanceId,
+                ParentId = functionStartedMessage.ParentId,
+                FunctionName = functionStartedMessage.Function.ShortName,
+                TriggerReason = functionStartedMessage.ReasonDetails,
+                StartTime = functionStartedMessage.StartTime.DateTime,
+                Properties = new Dictionary<string, object>(),
+                LiveTimer = Stopwatch.StartNew()
+            };
+            Debug.Assert(fastItem.IsStart);
 
-            // Log pre-bind event. 
-            return _functionEventCollector.AddAsync(fastItem);
+            if (_functionEventCollector != null)
+            {
+                // Log pre-bind event. 
+                await _functionEventCollector.AddAsync(fastItem);
+            }
+            return fastItem;
         }
 
         // Called before function body is executed; after arguments are bound. 
@@ -677,6 +676,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
             // Log post-bind event. 
             fastItem.Arguments = arguments;
+            Debug.Assert(fastItem.IsPostBind);
             return _functionEventCollector.AddAsync(fastItem);
         }
 
@@ -694,6 +694,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             fastItem.EndTime = DateTime.UtcNow;
             fastItem.Duration = fastItem.LiveTimer.Elapsed;
             fastItem.Arguments = arguments;
+
+            Debug.Assert(fastItem.IsCompleted);
 
             // Log completed
             if (exceptionInfo != null)

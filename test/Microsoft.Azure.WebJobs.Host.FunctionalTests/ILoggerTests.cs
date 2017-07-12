@@ -110,8 +110,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             config.AddService<IFunctionResultAggregatorFactory>(mockFactory.Object);
 
+            const int N = 5;
             config.Aggregator.IsEnabled = true;
-            config.Aggregator.BatchSize = 5;
+            config.Aggregator.BatchSize = N;
             config.Aggregator.FlushTimeout = TimeSpan.FromSeconds(1);
 
             using (JobHost host = new JobHost(config))
@@ -120,7 +121,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
                 var method = typeof(ILoggerFunctions).GetMethod(nameof(ILoggerFunctions.TraceWriterWithILoggerFactory));
 
-                for (int i = 0; i < 5; i++)
+                for (int i = 0; i < N; i++)
                 {
                     host.Call(method);
                 }
@@ -128,9 +129,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 host.Stop();
             }
 
-            // Add will be called 5 times. The default aggregator will ingore the 
-            // 'Function started' calls.
-            Assert.Equal(5, addCalls);
+            Assert.Equal(N, addCalls);
 
             // Flush is called on host stop
             Assert.Equal(1, flushCalls);

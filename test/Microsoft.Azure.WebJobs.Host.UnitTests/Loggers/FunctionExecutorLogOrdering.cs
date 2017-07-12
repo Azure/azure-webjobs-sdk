@@ -65,6 +65,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             public Task AddAsync(FunctionInstanceLogEntry item, CancellationToken cancellationToken = default(CancellationToken))
             {
+                // Assert flags are exclusive and exactly 1 is set. 
+                int count = (item.IsStart ? 1 : 0) + (item.IsPostBind ? 1 : 0) + (item.IsCompleted ? 1 : 0);
+                Assert.Equal(1, count);
+
                 if (item.IsStart)
                 {
                     Assert.Null(item.EndTime);
@@ -73,34 +77,34 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                     Assert.False(item.Properties.ContainsKey(key));
                     item.Properties[key] = 1;
                 }
-                else
+                else if (item.IsPostBind)
                 {
-                    if (item.IsPostBind)
+                    var x = (int)item.Properties[key];
+                    Assert.Equal(1, x); // Verify state is carried over
+
+                    // this is still called in failure case; but hte Error message may not be set yet until the complete event. 
+                    Assert.Null(item.ErrorDetails);
+
+                    _log.Append(PostBindLog);
+                }
+                else if (item.IsCompleted)
+                {
+                    var x = (int)item.Properties[key];
+                    Assert.Equal(1, x); // Verify state is carried over
+
+                    if (item.ErrorDetails == null)
                     {
-                        var x = (int) item.Properties[key];
-                        Assert.Equal(1, x); // Verify state is carried over
-
-                        // this is still called in failure case; but hte Error message may not be set yet until the complete event. 
-                        Assert.Null(item.ErrorDetails); 
-
-                        _log.Append(PostBindLog);
+                        _log.Append(CompletedLog);
                     }
                     else
                     {
-                        Assert.True(item.IsCompleted);
-
-                        var x = (int)item.Properties[key];
-                        Assert.Equal(1, x); // Verify state is carried over
-
-                        if (item.ErrorDetails == null)
-                        {
-                            _log.Append(CompletedLog);
-                        }
-                        else
-                        {
-                            _log.Append(CompletedFailLog);
-                        }
+                        _log.Append(CompletedFailLog);
                     }
+                }
+                else
+                {
+                    _log.Append("Bad flags");
+                    throw new InvalidOperationException("Illegal flag combination");
                 }
 
                 return Task.CompletedTask;

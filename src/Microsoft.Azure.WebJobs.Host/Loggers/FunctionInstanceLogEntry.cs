@@ -76,12 +76,12 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
         /// <summary>
         /// Function has just started. This is before arguments are bound. 
         /// </summary>
-        public bool IsStart => this.Arguments == null;
+        public bool IsStart => !IsCompleted && this.Arguments == null;
 
         /// <summary>
         /// Function has bound the arguments but the the body is not yet invoked. 
         /// </summary>
-        public bool IsPostBind => !this.EndTime.HasValue && this.Arguments != null;
+        public bool IsPostBind => !IsCompleted && this.Arguments != null;
 
         /// <summary>
         /// Function has completed and run body. See <see cref="ErrorDetails"/> to determine if this was success of failure. 
