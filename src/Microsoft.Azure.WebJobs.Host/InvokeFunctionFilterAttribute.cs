@@ -43,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host
         {
             if (executingContext == null)
             {
-                throw new ArgumentNullException("executingContext");
+                throw new ArgumentNullException(nameof(executingContext));
             }
             
             if (!string.IsNullOrEmpty(ExecutingFilter))
@@ -63,7 +63,7 @@ namespace Microsoft.Azure.WebJobs.Host
         {
             if (executedContext == null)
             {
-                throw new ArgumentNullException("executingContext");
+                throw new ArgumentNullException(nameof(executedContext));
             }
 
             if (!string.IsNullOrEmpty(ExecutedFilter))
