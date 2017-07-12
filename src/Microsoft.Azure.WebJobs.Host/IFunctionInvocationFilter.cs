@@ -19,7 +19,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// Method invoked before the target function is called
         /// </summary>
         /// <param name="executingContext">The context</param>
-        /// <param name="cancellationToken">The cancellations token</param>
+        /// <param name="cancellationToken">The cancellation token</param>
         /// <returns></returns>
         Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken);
 
