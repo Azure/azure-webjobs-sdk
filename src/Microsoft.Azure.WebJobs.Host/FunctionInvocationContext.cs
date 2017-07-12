@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host
@@ -21,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="arguments">The arguments for the function</param>
         /// <param name="properties">User set properties</param>
         /// <param name="logger">The logger for logging information</param>
-        internal FunctionInvocationContext(Guid functionInstanceId, string functionName, Dictionary<string, object> arguments, Dictionary<string, object> properties, ILogger logger)
+        protected FunctionInvocationContext(Guid functionInstanceId, string functionName, Dictionary<string, object> arguments, Dictionary<string, object> properties, ILogger logger)
         {
             FunctionInstanceId = functionInstanceId;
             FunctionName = functionName;

@@ -4,7 +4,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
@@ -14,23 +13,13 @@ namespace Microsoft.Azure.WebJobs.Host
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = true, AllowMultiple = false)]
     public abstract class InvocationFilterAttribute : Attribute, IFunctionInvocationFilter
     {
-        /// <summary>
-        /// Method invoked before the target function is called
-        /// </summary>
-        /// <param name="executingContext"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
+        /// <inheritdoc/>
         public virtual Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
-        /// <summary>
-        /// Method invoked after the target function is called
-        /// </summary>
-        /// <param name="executedContext"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
+        /// <inheritdoc/>
         public virtual Task OnExecutedAsync(FunctionExecutedContext executedContext, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
