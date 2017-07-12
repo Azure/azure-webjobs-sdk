@@ -165,29 +165,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Executor).Single();
             Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("Testing function fail")));
-
-            string expectedName = $"{method.DeclaringType.FullName}.{method.Name}";
-
-            // Validate TraceWriter
-            // We expect 3 error messages total
-            TraceEvent[] traceErrors = trace.Traces.Where(p => p.Level == TraceLevel.Error).ToArray();
-            Assert.Equal(3, traceErrors.Length);
-
-            // Ensure that all errors include the same exception, with function
-            // invocation details           
-            FunctionInvocationException functionException = traceErrors.First().Exception as FunctionInvocationException;
-            Assert.NotNull(functionException);
-            Assert.NotEqual(Guid.Empty, functionException.InstanceId);
-            Assert.Equal(expectedName, functionException.MethodName);
-            Assert.True(traceErrors.All(p => functionException == p.Exception));
-
-            // Validate Logger
-            // Logger only writes out a single log message (which includes the Exception).        
-            logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Results).Single();
-            var logMessage = logger.LogMessages.Single();
-            var loggerException = logMessage.Exception as FunctionException;
-            Assert.NotNull(loggerException);
-            Assert.Equal(expectedName, loggerException.MethodName);
+            Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("The function failed!")));
         }
 
         [Fact]

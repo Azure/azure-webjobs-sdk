@@ -3,14 +3,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Reflection;
-using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
     /// <summary>
-    /// Context class for IFunctionInvocationFilter.OnExecutingAsync <see cref="IFunctionInvocationFilter"/>>
+    /// Context class for <see cref="IFunctionInvocationFilter.OnExecutingAsync"/>>
     /// </summary>
     public class FunctionExecutingContext : FunctionInvocationContext
     {

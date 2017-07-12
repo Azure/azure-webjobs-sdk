@@ -38,10 +38,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// </summary>
         public string ExecutedFilter { get; }
 
-        /// <summary>
-        /// Method invoked before the target function is called
-        /// </summary>
-        /// <returns></returns>
+        /// <inheritdoc/>
         public override async Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
         {
             if (executingContext == null)
@@ -61,10 +58,7 @@ namespace Microsoft.Azure.WebJobs.Host
             }
         }
 
-        /// <summary>
-        /// Method invoked after the target function is called
-        /// </summary>
-        /// <returns></returns>
+        /// <inheritdoc/>
         public override async Task OnExecutedAsync(FunctionExecutedContext executedContext, CancellationToken cancellationToken)
         {
             if (executedContext == null)
@@ -100,9 +94,6 @@ namespace Microsoft.Azure.WebJobs.Host
                     break;
                 }
             }
-
-            // If it is null, this means that we need to look for the methodinfo from the class
-            // TODO: Implement class level methodinfo onExecuting/onExecuted invocation
 
             if (methodInfo == null)
             {
