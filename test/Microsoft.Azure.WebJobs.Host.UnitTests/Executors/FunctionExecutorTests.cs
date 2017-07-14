@@ -256,7 +256,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             timeoutSource.CancelAfter(1000);
 
             await FunctionExecutor.InvokeAsync(mockInvoker.Object, NewArgs(parameters), timeoutSource, shutdownSource,
-                throwOnTimeout, TimeSpan.MinValue, null, null);
+                throwOnTimeout, TimeSpan.MinValue, _mockFunctionInstance.Object, null);
 
             Assert.True(called);
         }

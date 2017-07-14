@@ -102,6 +102,12 @@ namespace Microsoft.Azure.WebJobs.Host
 
             IDictionary<string, object> invokeArguments = new Dictionary<string, object>();
             string parameterName = methodInfo.GetParameters().SingleOrDefault(p => p.ParameterType.IsAssignableFrom(typeof(TContext))).Name;
+
+            if (parameterName == null)
+            {
+                throw new InvalidOperationException("Incorrect method signature for invocation filter '{methodName}'.");
+            }
+
             invokeArguments.Add(parameterName, context);
 
             await context.JobHost.CallAsync(methodInfo, invokeArguments, cancellationToken);
