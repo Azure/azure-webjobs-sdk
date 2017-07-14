@@ -17,11 +17,11 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <summary>
         /// Constructor to set the context
         /// </summary>
-        /// <param name="functionInstanceId"><see cref="FunctionInvocationContext"/></param>
-        /// <param name="functionName"><see cref="FunctionInvocationContext"/></param>
-        /// <param name="arguments"><see cref="FunctionInvocationContext"/></param>
-        /// <param name="properties"><see cref="FunctionInvocationContext"/></param>
-        /// <param name="logger"><see cref="FunctionInvocationContext"/>></param>
+        /// <param name="functionInstanceId">The function instance id</param>
+        /// <param name="functionName">The function name</param>
+        /// <param name="arguments">The arguments for the function</param>
+        /// <param name="properties">User set properties</param>
+        /// <param name="logger">The logger for logging information</param>
         /// <param name="result"></param>
         internal FunctionExecutedContext(Guid functionInstanceId, string functionName, Dictionary<string, object> arguments, Dictionary<string, object> properties, ILogger logger, FunctionResult result) :
             base(functionInstanceId, functionName, arguments, properties, logger)
