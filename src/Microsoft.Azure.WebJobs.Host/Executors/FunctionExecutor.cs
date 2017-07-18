@@ -590,7 +590,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         /// <param name="throwOnTimeout">True if the method should throw an OperationCanceledException if it times out.</param>
         /// <param name="timeoutToken">The token to watch. If it is canceled, taskToTimeout has timed out.</param>
         /// <param name="timeoutInterval">The timeout period. Used only in the exception message.</param>
-        /// <param name="instance">The function instance. Used only in the exceptionMessage</param>
+        /// <param name="instance">The function instance. Used only in the exceptiogit snMessage</param>
         /// <param name="onTimeout">A callback to be executed if a timeout occurs.</param>
         /// <returns>True if a timeout occurred. Otherwise, false.</returns>
         private static async Task<bool> TryHandleTimeoutAsync(Task invokeTask, CancellationToken shutdownToken, bool throwOnTimeout, CancellationToken timeoutToken,

@@ -19,22 +19,6 @@
     <Compile Include="..\Common\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="ApplicationInsightsEndToEndTests.cs" />
-    <Compile Include="AsyncCancellationEndToEndTests.cs" />
-    <Compile Include="AsyncChainEndToEndTests.cs" />
-    <Compile Include="BlobBindingEndToEndTests.cs" />
-    <Compile Include="BlobToCustomObjectBinder.cs" />
-    <Compile Include="CustomObject.cs" />
-    <Compile Include="AzureStorageEndToEndTests.cs" />
-    <Compile Include="EventHubEndToEndTests.cs" />
-    <Compile Include="InvocationFilterEndToEndTests.cs" />
-    <Compile Include="LeaseExpirationTests.cs" />
-    <Compile Include="MultipleStorageAccountsEndToEndTests.cs" />
-    <Compile Include="ParallelExecutionTests.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ServiceBusEndToEndTests.cs" />
-    <Compile Include="BlobTriggerEndToEndTests.cs" />
-    <Compile Include="SingletonEndToEndTests.cs" />
   </ItemGroup>
 
   <ItemGroup>
