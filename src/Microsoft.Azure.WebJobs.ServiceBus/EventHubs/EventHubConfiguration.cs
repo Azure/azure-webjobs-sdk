@@ -36,6 +36,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         private TraceWriter _trace;
         private int _batchCheckpointFrequency = 1;
 
+        private bool _usePartitionKeyOrdering = false;
+
         /// <summary>
         /// Name of the blob container that the EventHostProcessor instances uses to coordinate load balancing listening on an event hub. 
         /// Each event hub gets its own blob prefix within the container. 
@@ -87,6 +89,25 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                     throw new InvalidOperationException("Batch checkpoint frequency must be larger than 0.");
                 }
                 _batchCheckpointFrequency = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the partition key ordering of messages. Default is false.
+        /// </summary>
+        public string PartitionKeyOrdering
+        {
+            get
+            {
+                return _usePartitionKeyOrdering.ToString();
+            }
+
+            set
+            {
+                if (!Boolean.TryParse(value, out _usePartitionKeyOrdering))
+                {
+                    throw new InvalidOperationException("Partition key ordering setting must be set to true or false.");
+                }
             }
         }
 

@@ -90,7 +90,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                     await Task.WhenAll(dispatches);
                 }
 
-                _trace.Info($"Event hub batch listener: Single dispatch: Dispatched {dispatchCount} messages.");
+                _trace.Info($"Event hub unordered listener: Single dispatch: Dispatched {dispatchCount} messages.");
             }
             else
             {
@@ -103,7 +103,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 };
 
                 FunctionResult result = await _executor.TryExecuteAsync(input, CancellationToken.None);
-                _trace.Info($"Event hub batch listener: Batch dispatch: Dispatched {value.Events.Length} messages.");
+                _trace.Info($"Event hub unordered listener: Batch dispatch: Dispatched {value.Events.Length} messages.");
             }
 
             bool hasEvents = false;
@@ -126,7 +126,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 await _checkpoint(context);
             }
 
-            _trace.Info($"Event hub batch listener: Checkpointed {messageCount} messages.");
+            _trace.Info($"Event hub unordered listener: Checkpointed {messageCount} messages.");
         } // end class EventHubBatchListener
 
         public void Dispose()
@@ -138,7 +138,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         {
             if (batchCheckpointFrequency <= 0)
             {
-                throw new InvalidOperationException("Batch listener checkpoint frequency must be larger than 0.");
+                throw new InvalidOperationException("Unordered listener checkpoint frequency must be larger than 0.");
             }
             else if (batchCheckpointFrequency == 1)
             {

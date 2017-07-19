@@ -24,34 +24,36 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         private readonly EventHubDispatcher _dispatcher;
         private readonly TraceWriter _trace;
         private readonly Func<PartitionContext, Task> _checkpoint;
+        private readonly int _orderedEventSlotCount;
 
         /// <summary>
         /// The EventHubOrderedEventListener.
         /// </summary>
         /// <param name="executor"></param>
         /// <param name="statusManager"></param>
-        /// <param name="streamListenerConfig"></param>
+        /// <param name="orderedListenerConfig"></param>
         /// <param name="trace"></param>
         public EventHubOrderedEventListener(
             ITriggeredFunctionExecutor executor,
             IMessageStatusManager statusManager,
-            EventHubOrderedEventConfiguration streamListenerConfig,
+            EventHubOrderedEventConfiguration orderedListenerConfig,
             TraceWriter trace)
         {
-            this._singleDispatch = streamListenerConfig.IsSingleDispatch;
+            this._singleDispatch = orderedListenerConfig.IsSingleDispatch;
             this._executor = executor;
 
             this._dispatcher = new EventHubDispatcher(
                 executor: executor,
                 statusManager: statusManager,
-                maxElapsedTime: streamListenerConfig.MaxElapsedTime,
-                maxDop: streamListenerConfig.MaxDegreeOfParallelism,
-                capacity: streamListenerConfig.BoundedCapacity);
+                maxElapsedTime: orderedListenerConfig.MaxElapsedTime,
+                maxDop: orderedListenerConfig.MaxDegreeOfParallelism,
+                capacity: orderedListenerConfig.BoundedCapacity);
 
-            var checkpointStrategy = CreateCheckpointStrategy(streamListenerConfig.BatchCheckpointFrequency);
+            var checkpointStrategy = CreateCheckpointStrategy(orderedListenerConfig.BatchCheckpointFrequency);
             this._checkpoint = (context) => checkpointStrategy(context.CheckpointAsync);
+            this._orderedEventSlotCount = orderedListenerConfig.MaxDegreeOfParallelism;
             _trace = trace;
-            _trace.Info($"Event hub stream listener: Max degree of parallelism:{streamListenerConfig.MaxDegreeOfParallelism}, bounded capacity:{streamListenerConfig.BoundedCapacity}");
+            _trace.Info($"Event hub ordered listener: Max degree of parallelism:{orderedListenerConfig.MaxDegreeOfParallelism}, bounded capacity:{orderedListenerConfig.BoundedCapacity}");
         }
 
         public async Task CloseAsync(PartitionContext context, CloseReason reason)
@@ -86,17 +88,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 return;
             }
 
-            EventHubTriggerInput value = new EventHubTriggerInput
-            {
-                Events = messages.ToArray(),
-                PartitionContext = context
-            };
-
-            int messageCount = value.Events.Length;
+            int messageCount = events.Length;
 
             // Single dispatch 
             if (_singleDispatch)
             {
+                /*
                 List<Task> dispatches = new List<Task>();
                 for (int i = 0; i < events.Length; i++)
                 {
@@ -119,29 +116,87 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                     await Task.WhenAll(dispatches).ConfigureAwait(false);
                 }
 
-                _trace.Info($"Event hub stream listener: Single dispatch: Dispatched {dispatchCount} messages.");
+                _trace.Info($"Event hub ordered listener: Single dispatch: Dispatched {dispatchCount} messages.");
+                */
+
+                EventHubTriggerInput value = new EventHubTriggerInput
+                {
+                    Events = events,
+                    PartitionContext = context
+                };
+
+                List<Task> dispatches = new List<Task>();
+                for (int i = 0; i < messageCount; i++)
+                {
+                    if (_cts.IsCancellationRequested)
+                    {
+                        // If we stopped the listener, then we may lose the lease and be unable to checkpoint. 
+                        // So skip running the rest of the batch. The new listener will pick it up. 
+                        continue;
+                    }
+                    else
+                    {
+                        TriggeredFunctionData input = new TriggeredFunctionData
+                        {
+                            ParentId = null,
+                            TriggerValue = value.GetSingleEventTriggerInput(i)
+                        };
+
+                        Task task = _executor.TryExecuteAsync(input, _cts.Token);
+                        dispatches.Add(task);
+                    }
+                }
+
+                int dispatchCount = dispatches.Count;
+                // Drain the whole batch before taking more work
+                if (dispatches.Count > 0)
+                {
+                    await Task.WhenAll(dispatches);
+                }
+
+                _trace.Info($"Event hub ordered listener: Single dispatch: Dispatched {messageCount} messages.");
             }
             else
             {
                 // Batch dispatch
-                TriggeredFunctionData input = new TriggeredFunctionData
+                EventHubTriggerInput value = new EventHubTriggerInput
                 {
-                    ParentId = null,
-                    TriggerValue = value
+                    Events = events,
+                    PartitionContext = context,
+                    OrderedEventSlotCount = this._orderedEventSlotCount
                 };
 
-                // TODO: Replace _executor with _dispatcher
-                FunctionResult result = await _executor
-                    .TryExecuteAsync(input, CancellationToken.None)
-                    .ConfigureAwait(false);
+                value.CreatePartitionKeyOrdering();
 
-                // Dispose all messages to help with memory pressure. If this is missed, the finalizer thread will still get them. 
+                List<Task> dispatches = new List<Task>();
+                for (int i = 0; i < value.OrderedEventSlotCount; i++)
+                {
+                    // The entire batch of messages is passed to the dispatcher each 
+                    // time, incrementing the selector index
+                    var trigger = value.GetOrderedBatchEventTriggerInput(i);
+
+                    var task = _dispatcher.SendAsync(new TriggeredFunctionData()
+                    {
+                        ParentId = null,
+                        TriggerValue = trigger
+                    });
+                    dispatches.Add(task);
+                }
+
+                int dispatchCount = dispatches.Count;
+                // Drain the whole batch before taking more work
+                if (dispatches.Count > 0)
+                {
+                    await Task.WhenAll(dispatches).ConfigureAwait(false);
+                }
+
+                _trace.Info($"Event hub ordered listener: Batch dispatch: Dispatched {messageCount} messages.");
             }
 
             await _checkpoint(context).ConfigureAwait(false);
 
             // await context.CheckpointAsync().ConfigureAwait(false);
-            _trace.Info($"Event hub stream listener: Checkpointed {messageCount} messages.");
+            _trace.Info($"Event hub ordered listener: Checkpointed {messageCount} messages.");
 
             foreach (var message in events)
             {
@@ -175,7 +230,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         {
             if (batchCheckpointFrequency <= 0)
             {
-                throw new InvalidOperationException("Stream listener checkpoint frequency must be larger than 0.");
+                throw new InvalidOperationException("Ordered listener checkpoint frequency must be larger than 0.");
             }
             else if (batchCheckpointFrequency == 1)
             {

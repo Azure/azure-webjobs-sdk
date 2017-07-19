@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
@@ -42,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 async (trigger) =>
                 {
                     Interlocked.Increment(ref _messagesRunning);
-                    await TriggerSingleInput(trigger.WorkItem).ConfigureAwait(false);
+                    await TriggerOrderedBatchInput(trigger.WorkItem).ConfigureAwait(false);
                     trigger.CompletionSource.SetResult(0);
                     Interlocked.Decrement(ref _messagesRunning);
                 },
@@ -65,13 +66,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             return task.CompletionSource.Task;
         }
 
-        private async Task TriggerSingleInput(TriggeredFunctionData input)
+        private async Task TriggerOrderedBatchInput(TriggeredFunctionData input)
         {
             // Change this to use the simpler form from the data pipeline
             // the continue with is unnecessary for counting and timeouts
 
             var startTime = Stopwatch.GetTimestamp();
-            var messageId = Guid.NewGuid();
+            var slotId = Guid.NewGuid();
 
             var trigger = input.TriggerValue as EventHubTriggerInput;
             if (trigger == null)
@@ -79,13 +80,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 // Only handle event hub trigger values
                 return;
             }
-            var message = trigger.GetSingleEventData();
-            var content = trigger.GetSingleEventContent();
+            var messages = trigger.GetBatchEventData();
 
             // Execute with timeout (to allow more entries to flow into the long running queue                        
             var workTask = _executor.TryExecuteAsync(input, _cts.Token)
                 .ContinueWith(async task => await HandleCompletion(
-                    task, startTime, messageId, message, content).ConfigureAwait(false));
+                    task, startTime, slotId, messages).ConfigureAwait(false));
 
             var timerTask = Task.Delay(_maxElapsedTime);
             await Task.WhenAny(workTask, timerTask).ConfigureAwait(false);
@@ -98,7 +98,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 var timestamp = Stopwatch.GetTimestamp();
                 var elapsedMs = new TimeSpan(timestamp - startTime);
 
-                await _statusManager.SetRunning(messageId,
+                await _statusManager.SetRunning(slotId,
                     TimeSpan.FromSeconds(30), elapsedMs,
                     Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(input)))
                         .ConfigureAwait(false);
@@ -119,7 +119,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         }
 
         private async Task HandleCompletion(Task<FunctionResult> task,
-            long startTime, Guid messageId, EventData message, byte[] content)
+            long startTime, Guid messageId, List<EventData> messages)
         {
             if (task.IsFaulted)
             {
@@ -138,7 +138,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             await _statusManager.SetComplete(messageId, elapsedMs).ConfigureAwait(false);
 
             // Dispose the message to release memory as early as is practical     
-            message.Dispose();
+            foreach (var message in messages)
+            {
+                message.Dispose();
+            }
         }
 
         public void Dispose()

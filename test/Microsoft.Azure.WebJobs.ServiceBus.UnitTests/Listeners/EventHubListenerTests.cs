@@ -41,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
         void EventHubUnorderedEventListener_Throws_IfInvalidCheckpointStrategy(int batchCheckpointFrequency)
         {
             var exc = Assert.Throws<InvalidOperationException>(() => EventHubUnorderedEventListener.CreateCheckpointStrategy(batchCheckpointFrequency));
-            Assert.Equal("Batch listener checkpoint frequency must be larger than 0.", exc.Message);
+            Assert.Equal("Unordered listener checkpoint frequency must be larger than 0.", exc.Message);
         }
 
         [Theory]
@@ -76,7 +76,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
         void EventHubOrderedEventListener_Throws_IfInvalidCheckpointStrategy(int batchCheckpointFrequency)
         {
             var exc = Assert.Throws<InvalidOperationException>(() => EventHubOrderedEventListener.CreateCheckpointStrategy(batchCheckpointFrequency));
-            Assert.Equal("Stream listener checkpoint frequency must be larger than 0.", exc.Message);
+            Assert.Equal("Ordered listener checkpoint frequency must be larger than 0.", exc.Message);
         }
     }
 }

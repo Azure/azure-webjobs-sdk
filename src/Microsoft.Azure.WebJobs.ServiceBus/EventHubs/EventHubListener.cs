@@ -60,41 +60,22 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         // This will get called per-partition. 
         IEventProcessor IEventProcessorFactory.CreateEventProcessor(PartitionContext context)
         {
-            string orderedDispatcherEnabledSetting = Environment.GetEnvironmentVariable(OrderedDispatcherEnabledAppSettingsKey);
+            bool orderedDispatcherEnabled = false;
 
-            bool orderedDispatcherEnabled = !string.IsNullOrEmpty(orderedDispatcherEnabledSetting) && string.Equals(orderedDispatcherEnabledSetting, "TRUE", StringComparison.OrdinalIgnoreCase);
-
-            if (orderedDispatcherEnabled)
+            if (Boolean.TryParse(this._config.PartitionKeyOrdering, out orderedDispatcherEnabled))
             {
-                int orderedDispatcherMaxDop = 64;
-                int orderedDispatcherBoundedCapacity = 64;
-                int maxDop;
-                int boundedCapacity;
+                int orderedDispatcherMaxDop = this._options.MaxBatchSize / 16;
+                int maxDop = (orderedDispatcherMaxDop >= 2) ? orderedDispatcherMaxDop : 2;
+                int boundedCapacity = this._options.MaxBatchSize;
 
-                string orderedDispatcherMaxDopSetting = Environment.GetEnvironmentVariable(OrderedDispatcherMaxDopAppSettingsKey);
-                string orderedDispatcherBoundedCapacitySetting =
-                    Environment.GetEnvironmentVariable(OrderedDispatcherBoundedCapacityAppSettingsKey);
-
-                if (!string.IsNullOrEmpty(orderedDispatcherMaxDopSetting) &&
-                    int.TryParse(orderedDispatcherMaxDopSetting, out maxDop))
-                {
-                    orderedDispatcherMaxDop = maxDop;
-                }
-
-                if (!string.IsNullOrEmpty(orderedDispatcherBoundedCapacitySetting) &&
-                    int.TryParse(orderedDispatcherBoundedCapacitySetting, out boundedCapacity))
-                {
-                    orderedDispatcherBoundedCapacity = boundedCapacity;
-                }
-
-                EventHubOrderedEventConfiguration streamListenerConfig = new EventHubOrderedEventConfiguration(
+                EventHubOrderedEventConfiguration orderEventListenerConfig = new EventHubOrderedEventConfiguration(
                     _singleDispatch,
                     TimeSpan.FromSeconds(1),
-                    orderedDispatcherMaxDop,
-                    orderedDispatcherBoundedCapacity,
+                    maxDop,
+                    boundedCapacity,
                     this._config.BatchCheckpointFrequency);
 
-                return new EventHubOrderedEventListener(this._executor, _statusManager, streamListenerConfig, _trace);
+                return new EventHubOrderedEventListener(this._executor, _statusManager, orderEventListenerConfig, _trace);
             }
 
             return new EventHubUnorderedEventListener(this._singleDispatch, this._executor, this._config.BatchCheckpointFrequency, _trace);
