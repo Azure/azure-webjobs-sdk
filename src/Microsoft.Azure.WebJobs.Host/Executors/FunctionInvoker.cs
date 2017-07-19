@@ -7,15 +7,16 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal class FunctionInvoker<TReflected> : IFunctionInvoker
+    internal class FunctionInvoker<TReflected, TReturnValue> : IFunctionInvoker
     {
         private readonly IReadOnlyList<string> _parameterNames;
         private readonly IFactory<TReflected> _instanceFactory;
-        private readonly IMethodInvoker<TReflected> _methodInvoker;
-        private TReflected _instance;
+        private readonly IMethodInvoker<TReflected, TReturnValue> _methodInvoker;
 
-        public FunctionInvoker(IReadOnlyList<string> parameterNames, IFactory<TReflected> instanceFactory,
-            IMethodInvoker<TReflected> methodInvoker)
+        public FunctionInvoker(
+            IReadOnlyList<string> parameterNames,
+            IFactory<TReflected> instanceFactory,
+            IMethodInvoker<TReflected, TReturnValue> methodInvoker)
         {
             if (parameterNames == null)
             {
@@ -47,26 +48,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             get { return _parameterNames; }
         }
 
-        public object Instance
-        {
-            get
-            {
-                if (_instance == null)
-                {
-                    _instance = _instanceFactory.Create();
-                }
-                return _instance;
-            }
-        }
-
-        public async Task InvokeAsync(object[] arguments)
+        public async Task<object> InvokeAsync(object[] arguments)
         {
             // Return a task immediately in case the method is not async.
             await Task.Yield();
 
             using (Instance as IDisposable)
             {
-                await _methodInvoker.InvokeAsync((TReflected)Instance, arguments);
+                return await _methodInvoker.InvokeAsync(instance, arguments);
             }
         }
     }
