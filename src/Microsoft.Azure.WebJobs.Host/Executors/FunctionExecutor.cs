@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
@@ -487,6 +487,16 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 delayedBindingException.Throw();
             }
 
+            // Where the invocation filter attribute functionality is currently temporarily placed
+            var functionMethod = instance.FunctionDescriptor.Method;
+            var invokeFilter = functionMethod.GetCustomAttribute<InvocationFilterAttribute>();
+            if (invokeFilter != null)
+            {
+                var functionContext = new FunctionExecutingContext(instance.Id, instance.FunctionDescriptor.FullName, invokeParameters, logger);
+                var cancellationToken = functionCancellationTokenSource.Token;
+                await invokeFilter.OnPreFunctionInvocation(functionContext, cancellationToken);
+            }
+
             // if the function is a Singleton, aquire the lock
             SingletonLock singleton = await parameterHelper.GetSingletonLockAsync();
             if (singleton != null)
@@ -521,6 +531,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             if (singleton != null)
             {
                 await singleton.ReleaseAsync(functionCancellationTokenSource.Token);
+            }
+
+            // Where the invocation filter attribute functionality is currently temporarily placed
+            if (invokeFilter != null)
+            {
+                var functionContext = new FunctionExecutedContext(instance.Id, instance.FunctionDescriptor.FullName, invokeParameters, logger);
+                var cancellationToken = functionCancellationTokenSource.Token;
+                await invokeFilter.OnPostFunctionInvocation(functionContext, cancellationToken);
             }
         }
 
@@ -565,7 +583,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         /// <param name="throwOnTimeout">True if the method should throw an OperationCanceledException if it times out.</param>
         /// <param name="timeoutToken">The token to watch. If it is canceled, taskToTimeout has timed out.</param>
         /// <param name="timeoutInterval">The timeout period. Used only in the exception message.</param>
-        /// <param name="instance">The function instance. Used only in the exceptionMessage</param>
+        /// <param name="instance">The function instance. Used only in the exceptiogit snMessage</param>
         /// <param name="onTimeout">A callback to be executed if a timeout occurs.</param>
         /// <returns>True if a timeout occurred. Otherwise, false.</returns>
         private static async Task<bool> TryHandleTimeoutAsync(Task invokeTask, CancellationToken shutdownToken, bool throwOnTimeout, CancellationToken timeoutToken,

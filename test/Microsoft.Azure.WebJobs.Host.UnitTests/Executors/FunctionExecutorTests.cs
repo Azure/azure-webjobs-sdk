@@ -136,7 +136,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             bool throwOnTimeout = true;
 
             await FunctionExecutor.InvokeAsync(mockInvoker.Object, NewArgs(new object[0]), timeoutSource, shutdownSource,
-                throwOnTimeout, TimeSpan.MinValue, null);
+                throwOnTimeout, TimeSpan.MinValue, null, null);
 
             Assert.True(called);
         }
@@ -162,10 +162,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             var shutdownSource = new CancellationTokenSource();
             object[] parameters = new object[] { shutdownSource.Token };
             bool throwOnTimeout = false;
-
             timeoutSource.CancelAfter(500);
+
             await FunctionExecutor.InvokeAsync(mockInvoker.Object, NewArgs(parameters), timeoutSource, shutdownSource,
-                throwOnTimeout, TimeSpan.MinValue, null);
+                throwOnTimeout, TimeSpan.MinValue, null, null);
 
             Assert.True(called);
         }
@@ -199,7 +199,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             TimeSpan timeoutInterval = TimeSpan.FromMilliseconds(500);
             timeoutSource.CancelAfter(timeoutInterval);
             var ex = await Assert.ThrowsAsync<FunctionTimeoutException>(() => FunctionExecutor.InvokeAsync(mockInvoker.Object, NewArgs(parameters), timeoutSource, shutdownSource,
-                throwOnTimeout, timeoutInterval, _mockFunctionInstance.Object));
+                throwOnTimeout, timeoutInterval, _mockFunctionInstance.Object, null));
 
             var expectedMessage = string.Format("Timeout value of {0} was exceeded by function: {1}", timeoutInterval, _mockFunctionInstance.Object.FunctionDescriptor.ShortName);
             Assert.Equal(expectedMessage, ex.Message);
@@ -229,7 +229,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             shutdownSource.CancelAfter(500);
             await FunctionExecutor.InvokeAsync(mockInvoker.Object, NewArgs(parameters), timeoutSource, shutdownSource,
-                throwOnTimeout, TimeSpan.MinValue, null);
+                throwOnTimeout, TimeSpan.MinValue, null, null);
 
             Assert.True(called);
         }
@@ -258,8 +258,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             shutdownSource.CancelAfter(500);
             timeoutSource.CancelAfter(1000);
+
             await FunctionExecutor.InvokeAsync(mockInvoker.Object, NewArgs(parameters), timeoutSource, shutdownSource,
-                throwOnTimeout, TimeSpan.MinValue, null);
+                throwOnTimeout, TimeSpan.MinValue, _mockFunctionInstance.Object, null);
 
             Assert.True(called);
         }
@@ -293,8 +294,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             TimeSpan timeoutInterval = TimeSpan.FromMilliseconds(1000);
             shutdownSource.CancelAfter(500);
             timeoutSource.CancelAfter(timeoutInterval);
+
             var ex = await Assert.ThrowsAsync<FunctionTimeoutException>(() => FunctionExecutor.InvokeAsync(mockInvoker.Object, NewArgs(parameters), timeoutSource, shutdownSource,
-                 throwOnTimeout, timeoutInterval, _mockFunctionInstance.Object));
+                 throwOnTimeout, timeoutInterval, _mockFunctionInstance.Object, null));
 
             var expectedMessage = string.Format("Timeout value of {0} was exceeded by function: {1}", timeoutInterval, _mockFunctionInstance.Object.FunctionDescriptor.ShortName);
             Assert.Equal(expectedMessage, ex.Message);

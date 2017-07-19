@@ -53,9 +53,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // Return a task immediately in case the method is not async.
             await Task.Yield();
 
-            TReflected instance = _instanceFactory.Create();
-
-            using (instance as IDisposable)
+            using (Instance as IDisposable)
             {
                 return await _methodInvoker.InvokeAsync(instance, arguments);
             }
