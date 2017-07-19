@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
     internal interface IFunctionInvoker
-    {
+    {        
         IReadOnlyList<string> ParameterNames { get; }
 
         // The cancellation token, if any, is provided along with the other arguments.
