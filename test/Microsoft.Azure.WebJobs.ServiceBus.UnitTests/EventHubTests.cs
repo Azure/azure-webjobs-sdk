@@ -61,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         {
             var evt = new EventData();
             evt.PartitionKey = "TestKey";
-            var input = EventHubTriggerInput.New(evt);
+            var input = EventHubTriggerInput.New(evt, true);
             input.PartitionContext = new PartitionContext();
 
             var strategy = new EventHubTriggerBindingStrategy();

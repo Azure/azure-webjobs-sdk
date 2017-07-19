@@ -80,10 +80,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 // Only handle event hub trigger values
                 return;
             }
+
             var messages = trigger.GetBatchEventData();
 
             // Execute with timeout (to allow more entries to flow into the long running queue                        
-            var workTask = _executor.TryExecuteAsync(input, _cts.Token)
+            var workTask = await _executor.TryExecuteAsync(input, _cts.Token)
                 .ContinueWith(async task => await HandleCompletion(
                     task, startTime, slotId, messages).ConfigureAwait(false));
 

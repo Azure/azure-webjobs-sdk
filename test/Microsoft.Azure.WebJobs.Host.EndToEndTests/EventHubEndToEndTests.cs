@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,17 +11,19 @@ using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
 using Xunit;
+using System.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
     public class EventHubEndToEndTests : IDisposable
     {
-        private readonly JobHost _host;
+        private JobHost _host;
+        private JobHostConfiguration _config;
         private const string TestHubName = "webjobstesthub";
         private const string TestHub2Name = "webjobstesthub2";
         private const string TestHub2Connection = "AzureWebJobsTestHubConnection2";
 
-        public EventHubEndToEndTests()
+        public void SetupUnorderedEventListenerConfig()
         {
             var config = new JobHostConfiguration()
             {
@@ -39,14 +42,47 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             config.Tracing.Tracers.Add(trace);
             config.UseEventHub(eventHubConfig);
+            _config = config;
             _host = new JobHost(config);
 
             EventHubTestJobs.Result = null;
         }
 
-        [Fact]
-        public async Task EventHubTriggerTest_SingleDispatch()
+        public void SetupOrderedEventListenerConfig()
         {
+            var config = new JobHostConfiguration()
+            {
+                TypeLocator = new FakeTypeLocator(typeof(EventHubTestJobs))
+            };
+            var eventHubConfig = new EventHubConfiguration()
+            {
+                PartitionKeyOrdering = true
+            };
+
+            TestTraceWriter trace = new TestTraceWriter(TraceLevel.Info);
+
+            string connection = Environment.GetEnvironmentVariable("AzureWebJobsTestHubConnection");
+            Assert.True(!string.IsNullOrEmpty(connection), "Required test connection string is missing.");
+            eventHubConfig.AddSender(TestHubName, connection);
+            eventHubConfig.AddReceiver(TestHubName, connection);
+
+            connection = Environment.GetEnvironmentVariable(TestHub2Connection);
+            Assert.True(!string.IsNullOrEmpty(connection), "Required test connection string is missing.");
+
+            config.Tracing.Tracers.Add(trace);
+            config.UseEventHub(eventHubConfig);
+            _config = config;
+            _host = new JobHost(config);
+
+            EventHubTestJobs.Result = null;
+        }
+
+
+
+        [Fact]
+        public async Task EventHubTriggerTest_UnorderedListener_SingleDispatch()
+        {
+            SetupUnorderedEventListenerConfig();
             await _host.StartAsync();
 
             try
@@ -66,14 +102,43 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             finally
             {
                 await _host.StopAsync();
+                AssertDispatcherLogEntries(false, null, null, true, 1);
             }
         }
 
         [Fact]
-        public async Task EventHubTriggerTest_MultipleDispatch()
+        public async Task EventHubTriggerTest_OrderedListener_SingleDispatch()
+        {
+            SetupOrderedEventListenerConfig();
+            await _host.StartAsync();
+
+            try
+            {
+                var method = typeof(EventHubTestJobs).GetMethod("SendEvent_TestHub", BindingFlags.Static | BindingFlags.Public);
+                var id = Guid.NewGuid().ToString();
+                EventHubTestJobs.EventId = id;
+                await _host.CallAsync(method, new { input = id });
+
+                await TestHelpers.Await(() =>
+                {
+                    return EventHubTestJobs.Result != null;
+                });
+
+                Assert.Equal(id, (object)EventHubTestJobs.Result);
+            }
+            finally
+            {
+                await _host.StopAsync();
+                AssertDispatcherLogEntries(true, "4", "64", true, 1);
+            }
+        }
+
+        [Fact]
+        public async Task EventHubTriggerTest_UnorderedListener_MultipleDispatch()
         {
             // send some events BEFORE starting the host, to ensure
             // the events are received in batch
+            SetupUnorderedEventListenerConfig();
             var method = typeof(EventHubTestJobs).GetMethod("SendEvents_TestHub2", BindingFlags.Static | BindingFlags.Public);
             var id = Guid.NewGuid().ToString();
             EventHubTestJobs.EventId = id;
@@ -95,6 +160,38 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             finally
             {
                 await _host.StopAsync();
+                AssertDispatcherLogEntries(false, null, null, false, numEvents);
+            }
+        }
+
+        [Fact]
+        public async Task EventHubTriggerTest_OrderedListener_MultipleDispatch()
+        {
+            // send some events BEFORE starting the host, to ensure
+            // the events are received in batch
+            SetupOrderedEventListenerConfig();
+            var method = typeof(EventHubTestJobs).GetMethod("SendEvents_TestHub2", BindingFlags.Static | BindingFlags.Public);
+            var id = Guid.NewGuid().ToString();
+            EventHubTestJobs.EventId = id;
+            int numEvents = 5;
+            await _host.CallAsync(method, new { numEvents = numEvents, input = id });
+
+            try
+            {
+                await _host.StartAsync();
+
+                await TestHelpers.Await(() =>
+                {
+                    return EventHubTestJobs.Result != null;
+                });
+
+                var eventsProcessed = (string[])EventHubTestJobs.Result;
+                Assert.True(eventsProcessed.Length >= 1);
+            }
+            finally
+            {
+                await _host.StopAsync();
+                AssertDispatcherLogEntries(true, "4", "64", false, numEvents);
             }
         }
 
@@ -106,6 +203,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         public static class EventHubTestJobs
         {
             public static string EventId;
+
             public static object Result { get; set; }
 
             public static void SendEvent_TestHub(string input, [EventHub(TestHubName)] out EventData evt)
@@ -174,6 +272,28 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 {
                     Result = events;
                 }
+            }
+        }
+
+        private void AssertDispatcherLogEntries(bool isOrderedEventListener, string maxDop, string boundedCapacity,
+                bool isSingleDispatch, int eventCount)
+        {
+            var tracers = _config.Tracing.Tracers.ToList();
+            var traceWriters = tracers.ToList();
+            var tracer = traceWriters[0] as TestTraceWriter;
+
+            string dispatchMode = isSingleDispatch ? "Single" : "Batch";
+
+            if (isOrderedEventListener)
+            {
+                Assert.True(tracer.Traces.Any(m => m.Message.Contains($"Event hub ordered listener: Max degree of parallelism:{maxDop}, bounded capacity:{boundedCapacity}")));
+                Assert.True(tracer.Traces.Any(m => m.Message.Contains($"Event hub ordered listener: {dispatchMode} dispatch: Dispatched {eventCount} messages.")));
+                Assert.True(tracer.Traces.Any(m => m.Message.Contains($"Event hub ordered listener: Checkpointed {eventCount} messages.")));
+            }
+            else
+            {
+                Assert.True(tracer.Traces.Any(m => m.Message.Contains($"Event hub unordered listener: {dispatchMode} dispatch: Dispatched {eventCount} messages.")));
+                Assert.True(tracer.Traces.Any(m => m.Message.Contains($"Event hub unordered listener: Checkpointed {eventCount} messages.")));
             }
         }
     }

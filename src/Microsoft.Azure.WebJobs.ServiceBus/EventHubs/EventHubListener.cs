@@ -14,9 +14,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     // Created from the EventHubTrigger attribute to listen on the EventHub. 
     internal sealed class EventHubListener : IListener, IEventProcessorFactory
     {
-        private const string OrderedDispatcherEnabledAppSettingsKey = "ORDERED_DISPATCHER_ENABLED";
-        private const string OrderedDispatcherMaxDopAppSettingsKey = "ORDERED_DISPATCHER_MAXDOP";
-        private const string OrderedDispatcherBoundedCapacityAppSettingsKey = "ORDERED_DISPATCHER_BOUNDED_CAPACITY";
+        private const int MaxElapsedTimeInMinutes = 5;
         private readonly ITriggeredFunctionExecutor _executor;
         private readonly EventProcessorHost _eventListener;
         private readonly bool _singleDispatch;
@@ -24,7 +22,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         private readonly IMessageStatusManager _statusManager;
         private readonly EventHubConfiguration _config;
         private readonly TraceWriter _trace;
-
+        
         public EventHubListener(ITriggeredFunctionExecutor executor, IMessageStatusManager statusManager, EventProcessorHost eventListener, bool single, EventHubConfiguration config)
         {
             this._executor = executor;
@@ -60,17 +58,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         // This will get called per-partition. 
         IEventProcessor IEventProcessorFactory.CreateEventProcessor(PartitionContext context)
         {
-            bool orderedDispatcherEnabled = false;
-
-            if (Boolean.TryParse(this._config.PartitionKeyOrdering, out orderedDispatcherEnabled))
+            if (this._config.PartitionKeyOrdering == true)
             {
                 int orderedDispatcherMaxDop = this._options.MaxBatchSize / 16;
                 int maxDop = (orderedDispatcherMaxDop >= 2) ? orderedDispatcherMaxDop : 2;
                 int boundedCapacity = this._options.MaxBatchSize;
+                int maxElapsedTimeInSeconds = (MaxElapsedTimeInMinutes * 60) / maxDop;
 
                 EventHubOrderedEventConfiguration orderEventListenerConfig = new EventHubOrderedEventConfiguration(
                     _singleDispatch,
-                    TimeSpan.FromSeconds(1),
+                    TimeSpan.FromSeconds(maxElapsedTimeInSeconds),
                     maxDop,
                     boundedCapacity,
                     this._config.BatchCheckpointFrequency);

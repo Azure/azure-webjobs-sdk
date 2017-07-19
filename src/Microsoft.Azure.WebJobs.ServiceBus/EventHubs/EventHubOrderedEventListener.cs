@@ -93,32 +93,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             // Single dispatch 
             if (_singleDispatch)
             {
-                /*
-                List<Task> dispatches = new List<Task>();
-                for (int i = 0; i < events.Length; i++)
-                {
-                    // The entire batch of messages is passed to the dispatcher each 
-                    // time, incrementing the selector index
-                    var trigger = value.GetSingleEventTriggerInput(i);
-
-                    var task = _dispatcher.SendAsync(new TriggeredFunctionData()
-                    {
-                        ParentId = null,
-                        TriggerValue = trigger
-                    });
-                    dispatches.Add(task);
-                }
-
-                int dispatchCount = dispatches.Count;
-                // Drain the whole batch before taking more work
-                if (dispatches.Count > 0)
-                {
-                    await Task.WhenAll(dispatches).ConfigureAwait(false);
-                }
-
-                _trace.Info($"Event hub ordered listener: Single dispatch: Dispatched {dispatchCount} messages.");
-                */
-
                 EventHubTriggerInput value = new EventHubTriggerInput
                 {
                     Events = events,
@@ -147,14 +121,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                     }
                 }
 
-                int dispatchCount = dispatches.Count;
                 // Drain the whole batch before taking more work
                 if (dispatches.Count > 0)
                 {
                     await Task.WhenAll(dispatches);
                 }
 
-                _trace.Info($"Event hub ordered listener: Single dispatch: Dispatched {messageCount} messages.");
+                _trace.Info($"Event hub ordered listener: Single dispatch: Dispatched {dispatches.Count} messages.");
             }
             else
             {
@@ -169,28 +142,41 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 value.CreatePartitionKeyOrdering();
 
                 List<Task> dispatches = new List<Task>();
+                int dispatchedMessageCount = 0;
                 for (int i = 0; i < value.OrderedEventSlotCount; i++)
                 {
-                    // The entire batch of messages is passed to the dispatcher each 
-                    // time, incrementing the selector index
-                    var trigger = value.GetOrderedBatchEventTriggerInput(i);
-
-                    var task = _dispatcher.SendAsync(new TriggeredFunctionData()
+                    if (_cts.IsCancellationRequested)
                     {
-                        ParentId = null,
-                        TriggerValue = trigger
-                    });
-                    dispatches.Add(task);
+                        // If we stopped the listener, then we may lose the lease and be unable to checkpoint. 
+                        // So skip running the rest of the batch. The new listener will pick it up. 
+                        continue;
+                    }
+                    else
+                    {
+                        // The entire batch of messages is passed to the dispatcher each 
+                        // time, incrementing the selector index
+                        var trigger = value.GetOrderedBatchEventTriggerInput(i);
+                        if (trigger != null)
+                        {
+                            dispatchedMessageCount += trigger.Events.Length;
+
+                            var task = _dispatcher.SendAsync(new TriggeredFunctionData()
+                            {
+                                ParentId = null,
+                                TriggerValue = trigger
+                            });
+                            dispatches.Add(task);
+                        }
+                    }
                 }
 
-                int dispatchCount = dispatches.Count;
                 // Drain the whole batch before taking more work
                 if (dispatches.Count > 0)
                 {
                     await Task.WhenAll(dispatches).ConfigureAwait(false);
                 }
 
-                _trace.Info($"Event hub ordered listener: Batch dispatch: Dispatched {messageCount} messages.");
+                _trace.Info($"Event hub ordered listener: Batch dispatch: Dispatched {dispatchedMessageCount} messages.");
             }
 
             await _checkpoint(context).ConfigureAwait(false);
@@ -207,17 +193,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             {
                 message.Dispose();
             }
-        }
-
-        private static byte[][] GetContent(EventData[] messages)
-        {
-            var bytes = new List<byte[]>();
-            for (int i = 0; i < messages.Length; i++)
-            {
-                var content = messages[i].GetBytes();
-                bytes.Add(content);
-            }
-            return bytes.ToArray();
         }
 
         public void Dispose()

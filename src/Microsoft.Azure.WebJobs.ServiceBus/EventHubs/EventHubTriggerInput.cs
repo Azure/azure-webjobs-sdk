@@ -14,16 +14,18 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         // If != -1, then only process a single event in this batch. 
         private int _selector = -1;
 
-        internal Dictionary<string, List<EventData>> GroupedEvents { get; set; }
+        private bool _isSingleDispatch = false;
 
-        internal Dictionary<int, List<EventData>> SlottedEvents { get; set; }
+        internal static Dictionary<string, List<EventData>> GroupedEvents { get; set; }
+
+        internal static Dictionary<int, List<EventData>> SlottedEvents { get; set; }
 
         internal EventData[] Events { get; set; }
         internal PartitionContext PartitionContext { get; set; }
 
         internal int OrderedEventSlotCount { get; set; }
 
-        public static EventHubTriggerInput New(EventData eventData)
+        public static EventHubTriggerInput New(EventData eventData, bool isSingleDispatch)
         {
             return new EventHubTriggerInput
             {
@@ -33,6 +35,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                       eventData
                 },
                 _selector = 0,
+                _isSingleDispatch = isSingleDispatch
             };
         }
 
@@ -40,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         {
             get
             {
-                return _selector != -1;
+                return _isSingleDispatch;
             }
         }
 
@@ -50,18 +53,24 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             {
                 Events = this.Events,
                 PartitionContext = this.PartitionContext,
-                _selector = idx
+                _selector = idx,
+                _isSingleDispatch = true
             };
         }
 
         public EventHubTriggerInput GetOrderedBatchEventTriggerInput(int idx)
         {
-            return new EventHubTriggerInput
+            if (SlottedEvents.ContainsKey(idx))
             {
-                Events = this.SlottedEvents[idx].ToArray(),
-                PartitionContext = this.PartitionContext,
-                _selector = idx
-            };
+                return new EventHubTriggerInput
+                {
+                    Events = SlottedEvents[idx].ToArray(),
+                    PartitionContext = this.PartitionContext,
+                    _selector = idx
+                };
+            }
+
+            return null;
         }
 
         public EventData GetSingleEventData()
@@ -71,16 +80,24 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
         public List<EventData> GetBatchEventData()
         {
-            return this.SlottedEvents[this._selector];
+            return SlottedEvents[this._selector];
         }
 
         public void CreatePartitionKeyOrdering()
         {
-            this.GroupedEvents = this.Events.GroupBy(e => e.PartitionKey).ToDictionary(g => g.Key, g => g.ToList());
+            GroupedEvents = this.Events.GroupBy(e => e.PartitionKey).ToDictionary(g => g.Key, g => g.ToList());
+            SlottedEvents = new Dictionary<int, List<EventData>>();
+
+            /*
+            for (int i = 0; i < this.OrderedEventSlotCount; ++i)
+            {
+                SlottedEvents.Add(i, new List<EventData>());
+            }
+            */
 
             foreach (var groupedEvent in GroupedEvents)
             {
-                int slotId = this.GetNextSlot();
+                int slotId = GetNextSlot();
 
                 if (SlottedEvents.ContainsKey(slotId))
                 {
@@ -93,9 +110,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             }
         }
 
-        private int GetNextSlot()
+        private static int GetNextSlot()
         {
-            return this.SlottedEvents.Aggregate((l, r) => l.Value.Count > r.Value.Count ? l : r).Key;
+            if (SlottedEvents.Count > 2)
+            {
+                return SlottedEvents.Aggregate((l, r) => (l.Value.Any() && r.Value.Any() && (l.Value.Count > r.Value.Count)) ? l : r).Key;
+            }
+
+            return (SlottedEvents.Count == 0) ? 0 : 1;
         }
     }
 }

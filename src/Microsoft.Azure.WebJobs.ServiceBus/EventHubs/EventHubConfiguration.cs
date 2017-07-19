@@ -95,19 +95,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// <summary>
         /// Gets or sets the partition key ordering of messages. Default is false.
         /// </summary>
-        public string PartitionKeyOrdering
+        public bool PartitionKeyOrdering
         {
             get
             {
-                return _usePartitionKeyOrdering.ToString();
+                return _usePartitionKeyOrdering;
             }
 
             set
             {
-                if (!Boolean.TryParse(value, out _usePartitionKeyOrdering))
-                {
-                    throw new InvalidOperationException("Partition key ordering setting must be set to true or false.");
-                }
+                _usePartitionKeyOrdering = value;
             }
         }
 
