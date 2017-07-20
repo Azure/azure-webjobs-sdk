@@ -160,12 +160,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                         {
                             dispatchedMessageCount += trigger.Events.Length;
 
-                            var task = _dispatcher.SendAsync(new TriggeredFunctionData()
+                            var task = await _dispatcher.SendAsync(new TriggeredFunctionData()
                             {
                                 ParentId = null,
                                 TriggerValue = trigger
                             });
-                            dispatches.Add(task);
+                           dispatches.Add(task);
                         }
                     }
                 }
@@ -173,7 +173,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 // Drain the whole batch before taking more work
                 if (dispatches.Count > 0)
                 {
-                    await Task.WhenAll(dispatches).ConfigureAwait(true);
+                    await Task.WhenAll(dispatches).ConfigureAwait(false);
                 }
 
                 _trace.Info($"Event hub ordered listener: Batch dispatch: Dispatched {dispatchedMessageCount} messages.");

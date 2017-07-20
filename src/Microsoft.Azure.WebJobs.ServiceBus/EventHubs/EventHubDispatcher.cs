@@ -21,6 +21,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
         private readonly ITriggeredFunctionExecutor _executor;
         private readonly IMessageStatusManager _statusManager;
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")]
         private readonly TimeSpan _maxElapsedTime;
 
         private int _messagesExecuted = 0;
@@ -86,7 +87,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             // Execute with timeout (to allow more entries to flow into the long running queue                        
             var workTask = await _executor.TryExecuteAsync(input, _cts.Token)
                 .ContinueWith(async task => await HandleCompletion(
-                    task, startTime, slotId, messages).ConfigureAwait(false));
+                    task, startTime, slotId, messages)).ConfigureAwait(false);
 
             var timerTask = Task.Delay(_maxElapsedTime);
             await Task.WhenAny(workTask, timerTask).ConfigureAwait(false);
@@ -119,8 +120,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
         private async Task HandleCompletion(Task<FunctionResult> task,
-            long startTime, Guid messageId, List<EventData> messages)
+            long startTime, Guid messageId, EventData[] messages)
         {
             if (task.IsFaulted)
             {

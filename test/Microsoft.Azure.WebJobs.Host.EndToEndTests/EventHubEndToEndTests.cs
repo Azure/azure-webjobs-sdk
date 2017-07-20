@@ -202,18 +202,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // send some events BEFORE starting the host, to ensure
             // the events are received in batch
             SetupOrderedEventListenerConfig();
+
             var method = typeof(EventHubTestJobs).GetMethod("SendEvents_TestHub3", BindingFlags.Static | BindingFlags.Public);
 
-            int numEventsPerPartition = 2;
+            int numEventsPerPartitionKey = 2;
             int partitionCount = 4;
-            int numEvents = numEventsPerPartition * partitionCount;
-            for(int i = 0; i < numEventsPerPartition; i++)
+            int numEvents = numEventsPerPartitionKey * partitionCount;
+            var id = Guid.NewGuid().ToString();
+            EventHubTestJobs.EventId = id;
+
+            for (int i = 0; i < numEventsPerPartitionKey; i++)
             {
                 for (int j = 0; j < partitionCount; j++)
                 {
-                    var id = Guid.NewGuid().ToString();
-                    EventHubTestJobs.EventId = id;
-                    await _host.CallAsync(method, new { numEvents = numEvents, partitionId = j, input = id });
+                    await _host.CallAsync(method, new { numEvents = numEventsPerPartitionKey, partitionId = j, input = id });
                 }
             }
 
@@ -227,12 +229,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 });
 
                 var eventsProcessed = (string[])EventHubTestJobs.Result;
-                Assert.True(eventsProcessed.Length == numEvents);
+                Assert.True(eventsProcessed.Length >= 1);
             }
             finally
             {
                 await _host.StopAsync();
-                //AssertDispatcherLogEntries(true, "4", "64", false, numEvents);
+                AssertDispatcherLogEntries(true, "4", "64", false, numEvents/2);
             }
         }
 

@@ -48,6 +48,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             }
         }
 
+        public int SelectorId
+        {
+            get
+            {
+                return _selector;
+            }
+        }
+
         public EventHubTriggerInput GetSingleEventTriggerInput(int idx)
         {
             return new EventHubTriggerInput
@@ -69,7 +77,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                     {
                         Events = SlottedEvents[idx].ToArray(),
                         PartitionContext = this.PartitionContext,
-                        _selector = idx
+                        _selector = idx,
+                        _isSingleDispatch = false
                     };
                 }
             }
@@ -82,11 +91,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             return this.Events[this._selector];
         }
 
-        public List<EventData> GetBatchEventData()
+        public EventData[] GetBatchEventData()
         {
             lock (thisLock)
             {
-                return SlottedEvents[this._selector];
+                return this.Events;
             }
         }
 

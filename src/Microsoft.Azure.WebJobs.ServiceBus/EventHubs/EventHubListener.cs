@@ -63,7 +63,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 int orderedDispatcherMaxDop = this._options.MaxBatchSize / 16;
                 int maxDop = (orderedDispatcherMaxDop >= 2) ? orderedDispatcherMaxDop : 2;
                 int boundedCapacity = this._options.MaxBatchSize;
-                int maxElapsedTimeInSeconds = (MaxElapsedTimeInMinutes * 60) / maxDop;
+                int maxElapsedTimeInSeconds = 10; // (MaxElapsedTimeInMinutes * 60) / maxDop;
 
                 EventHubOrderedEventConfiguration orderEventListenerConfig = new EventHubOrderedEventConfiguration(
                     _singleDispatch,
