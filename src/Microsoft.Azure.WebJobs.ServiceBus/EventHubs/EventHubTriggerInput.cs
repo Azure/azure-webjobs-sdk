@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.ServiceBus.Messaging;
@@ -16,9 +17,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
         private bool _isSingleDispatch = false;
 
-        internal static Dictionary<string, List<EventData>> GroupedEvents { get; set; }
+        private Object thisLock = new Object();
 
-        internal static Dictionary<int, List<EventData>> SlottedEvents { get; set; }
+        internal Dictionary<int, List<EventData>> SlottedEvents { get; set; }
 
         internal EventData[] Events { get; set; }
         internal PartitionContext PartitionContext { get; set; }
@@ -60,14 +61,17 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
         public EventHubTriggerInput GetOrderedBatchEventTriggerInput(int idx)
         {
-            if (SlottedEvents.ContainsKey(idx))
+            lock (thisLock)
             {
-                return new EventHubTriggerInput
+                if (SlottedEvents.ContainsKey(idx) && SlottedEvents[idx].Any())
                 {
-                    Events = SlottedEvents[idx].ToArray(),
-                    PartitionContext = this.PartitionContext,
-                    _selector = idx
-                };
+                    return new EventHubTriggerInput
+                    {
+                        Events = SlottedEvents[idx].ToArray(),
+                        PartitionContext = this.PartitionContext,
+                        _selector = idx
+                    };
+                }
             }
 
             return null;
@@ -80,44 +84,55 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
         public List<EventData> GetBatchEventData()
         {
-            return SlottedEvents[this._selector];
+            lock (thisLock)
+            {
+                return SlottedEvents[this._selector];
+            }
         }
 
         public void CreatePartitionKeyOrdering()
         {
-            GroupedEvents = this.Events.GroupBy(e => e.PartitionKey).ToDictionary(g => g.Key, g => g.ToList());
-            SlottedEvents = new Dictionary<int, List<EventData>>();
-
-            /*
-            for (int i = 0; i < this.OrderedEventSlotCount; ++i)
+            lock (thisLock)
             {
-                SlottedEvents.Add(i, new List<EventData>());
-            }
-            */
+                // GroupedEvents = this.Events.GroupBy(e => e.PartitionKey).ToDictionary(g => g.Key, g => g.ToList());
+                var groupedEvents = (from events in this.Events
+                                     group events by events.PartitionKey
+                                     into groupedEvent
+                                     select groupedEvent).ToDictionary(g => g.Key, g => g.ToList());
 
-            foreach (var groupedEvent in GroupedEvents)
-            {
-                int slotId = GetNextSlot();
+                SlottedEvents = new Dictionary<int, List<EventData>>();
 
-                if (SlottedEvents.ContainsKey(slotId))
+                for (int i = 0; i < this.OrderedEventSlotCount; ++i)
                 {
-                    SlottedEvents[slotId].AddRange(groupedEvent.Value);
+                    if (!SlottedEvents.ContainsKey(i))
+                    {
+                        SlottedEvents.Add(i, new List<EventData>());
+                    }
                 }
-                else
+
+                foreach (var groupedEvent in groupedEvents)
                 {
-                    SlottedEvents.Add(slotId, groupedEvent.Value);
+                    int slotId = GetNextSlot();
+                    SlottedEvents[slotId].AddRange(groupedEvent.Value);
                 }
             }
         }
 
-        private static int GetNextSlot()
+        private int GetNextSlot()
         {
+            lock (thisLock)
+            {
+                return SlottedEvents.Aggregate((l, r) => (l.Value.Count < r.Value.Count) ? l : r).Key;
+            }
+
+            /*
             if (SlottedEvents.Count > 2)
             {
                 return SlottedEvents.Aggregate((l, r) => (l.Value.Any() && r.Value.Any() && (l.Value.Count > r.Value.Count)) ? l : r).Key;
             }
 
             return (SlottedEvents.Count == 0) ? 0 : 1;
+            */
         }
     }
 }

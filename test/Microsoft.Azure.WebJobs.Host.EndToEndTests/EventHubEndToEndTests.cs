@@ -12,6 +12,7 @@ using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
 using Xunit;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
@@ -155,7 +156,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 });
 
                 var eventsProcessed = (string[])EventHubTestJobs.Result;
-                Assert.True(eventsProcessed.Length >= 1);
+                Assert.True(eventsProcessed.Length == numEvents);
             }
             finally
             {
@@ -186,12 +187,52 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 });
 
                 var eventsProcessed = (string[])EventHubTestJobs.Result;
-                Assert.True(eventsProcessed.Length >= 1);
+                Assert.True(eventsProcessed.Length == numEvents);
             }
             finally
             {
                 await _host.StopAsync();
                 AssertDispatcherLogEntries(true, "4", "64", false, numEvents);
+            }
+        }
+
+        [Fact]
+        public async Task EventHubTriggerTest_OrderedListener_MultipleDispatch_DefaultSlotCount()
+        {
+            // send some events BEFORE starting the host, to ensure
+            // the events are received in batch
+            SetupOrderedEventListenerConfig();
+            var method = typeof(EventHubTestJobs).GetMethod("SendEvents_TestHub3", BindingFlags.Static | BindingFlags.Public);
+
+            int numEventsPerPartition = 2;
+            int partitionCount = 4;
+            int numEvents = numEventsPerPartition * partitionCount;
+            for(int i = 0; i < numEventsPerPartition; i++)
+            {
+                for (int j = 0; j < partitionCount; j++)
+                {
+                    var id = Guid.NewGuid().ToString();
+                    EventHubTestJobs.EventId = id;
+                    await _host.CallAsync(method, new { numEvents = numEvents, partitionId = j, input = id });
+                }
+            }
+
+            try
+            {
+                await _host.StartAsync();
+
+                await TestHelpers.Await(() =>
+                {
+                    return EventHubTestJobs.Result != null;
+                });
+
+                var eventsProcessed = (string[])EventHubTestJobs.Result;
+                Assert.True(eventsProcessed.Length == numEvents);
+            }
+            finally
+            {
+                await _host.StopAsync();
+                //AssertDispatcherLogEntries(true, "4", "64", false, numEvents);
             }
         }
 
@@ -230,6 +271,19 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 }
             }
 
+            public static void SendEvents_TestHub3(string input, int partitionId, [EventHub(TestHub2Name, Connection = TestHub2Connection)] out EventData evt)
+            {
+                evt = new EventData(Encoding.UTF8.GetBytes(input))
+                {
+                    PartitionKey = "TestPartition" + partitionId.ToString()
+                };
+
+                evt.Properties.Add("TestIndex", partitionId);
+                evt.Properties.Add("TestProp1", "value1");
+                evt.Properties.Add("TestProp2", "value2");
+            }
+
+
             public static void ProcessSingleEvent([EventHubTrigger(TestHubName)] string evt, 
                 string partitionKey, DateTime enqueuedTimeUtc, IDictionary<string, object> properties,
                 IDictionary<string, object> systemProperties)
@@ -261,10 +315,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 for (int i = 0; i < events.Length; i++)
                 {
-                    Assert.Equal("TestPartition", partitionKeyArray[i]);
+                    string partitionKeyNumber = GetPartitionKeyValue(partitionKeyArray[i]);
+                    if (partitionKeyNumber != null)
+                    {
+                        Assert.Equal("TestPartition"+ partitionKeyNumber, partitionKeyArray[i]);
+                        Assert.Equal(Convert.ToInt32(partitionKeyNumber), propertiesArray[i]["TestIndex"]);
+                    }
+                    else
+                    {
+                        Assert.Equal("TestPartition", partitionKeyArray[i]);
+                        Assert.Equal(i, propertiesArray[i]["TestIndex"]);
+                    }
+
                     Assert.Equal(3, propertiesArray[i].Count);
                     Assert.Equal(8, systemPropertiesArray[i].Count);
-                    Assert.Equal(i, propertiesArray[i]["TestIndex"]);
                 }
 
                 // filter for the ID the current test is using
@@ -272,6 +336,22 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 {
                     Result = events;
                 }
+            }
+
+            private static string GetPartitionKeyValue(string partitionKey)
+            {
+                Regex regex = new Regex(@"(\d+)$",
+                                        RegexOptions.Compiled |
+                                        RegexOptions.CultureInvariant);
+
+                Match match = regex.Match(partitionKey);
+
+                if(match.Success)
+                {
+                    return match.Groups[1].Value;
+                }
+
+                return null;
             }
         }
 

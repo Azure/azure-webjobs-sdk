@@ -173,7 +173,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 // Drain the whole batch before taking more work
                 if (dispatches.Count > 0)
                 {
-                    await Task.WhenAll(dispatches).ConfigureAwait(false);
+                    await Task.WhenAll(dispatches).ConfigureAwait(true);
                 }
 
                 _trace.Info($"Event hub ordered listener: Batch dispatch: Dispatched {dispatchedMessageCount} messages.");
