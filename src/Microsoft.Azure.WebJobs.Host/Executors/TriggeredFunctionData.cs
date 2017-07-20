@@ -24,6 +24,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         /// <summary>
         /// Optional handler function for processing the invocation.
         /// </summary>
-        public Func<Func<Task>, Task> InvokeHandler { get; set; }
+        public Func<Func<Task<object>>, Task<object>> InvokeHandler { get; set; }
     }
 }

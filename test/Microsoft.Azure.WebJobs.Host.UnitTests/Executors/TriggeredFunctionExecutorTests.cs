@@ -34,10 +34,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             });
 
             bool customInvokerInvoked = false;
-            Func<Func<Task>, Task> invokeHandler = async (inner) =>
+            Func<Func<Task<object>>, Task<object>> invokeHandler = async (inner) =>
             {
                 customInvokerInvoked = true;
                 await inner();
+                return null;
             };
 
             var mockTriggerBinding = new Mock<ITriggeredFunctionBinding<int>>();

@@ -35,20 +35,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             var context = new FunctionInstanceFactoryContext<TTriggerValue>()
             {
                 TriggerValue = (TTriggerValue)input.TriggerValue,
-                ParentId = input.ParentId
+                ParentId = input.ParentId,
+                InvokeHandler = input.InvokeHandler,
             };
-
-            if (input.InvokeHandler != null)
-            {
-                context.InvokeHandler = async next =>
-                {
-                    await input.InvokeHandler(next);
-
-                    // NOTE: The InvokeHandler code path currently does not support flowing the return 
-                    // value back to the trigger.
-                    return null;
-                };
-            }
 
             IFunctionInstance instance = _instanceFactory.Create(context);
             IDelayedException exception = await _executor.TryExecuteAsync(instance, cancellationToken);
