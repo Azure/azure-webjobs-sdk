@@ -20,7 +20,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
     {
         private JobHost _host;
         private JobHostConfiguration _config;
-        private static Dictionary<string, int> EventIds = new Dictionary<string, int>();
         private const string TestHubName = "webjobstesthub";
         private const string TestHub2Name = "webjobstesthub2";
         private const string TestHub2Connection = "AzureWebJobsTestHubConnection2";
@@ -77,7 +76,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _host = new JobHost(config);
 
             EventHubTestJobs.Result = null;
-            EventIds.Clear();
         }
 
 
@@ -137,7 +135,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [Fact]
-        public async Task EventHubTriggerTest_UnorderedListener_MultipleDispatch()
+        public async Task EventHubTriggerTest_UnorderedListener_BatchDispatch()
         {
             // send some events BEFORE starting the host, to ensure
             // the events are received in batch
@@ -168,7 +166,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [Fact]
-        public async Task EventHubTriggerTest_OrderedListener_MultipleDispatch()
+        public async Task EventHubTriggerTest_OrderedListener_BatchDispatch()
         {
             // send some events BEFORE starting the host, to ensure
             // the events are received in batch
@@ -199,7 +197,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [Fact]
-        public async Task EventHubTriggerTest_OrderedListener_MultipleDispatch_DefaultSlotCount()
+        public async Task EventHubTriggerTest_OrderedListener_BatchDispatch_MultiplePartitions()
         {
             // send some events BEFORE starting the host, to ensure
             // the events are received in batch
@@ -207,19 +205,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             var method = typeof(EventHubTestJobs).GetMethod("SendEvents_TestHub3", BindingFlags.Static | BindingFlags.Public);
 
-            int numEventsPerPartitionKey = 3;
-            int partitionCount = 4;
+            int numEventsPerPartitionKey = 2;
+            int partitionCount = 20;
             int numEvents = numEventsPerPartitionKey * partitionCount;
             var id = Guid.NewGuid().ToString();
             EventHubTestJobs.EventId = id;
+            int processedEventsMatchingEventId = 0;
 
             for (int i = 0; i < numEventsPerPartitionKey; i++)
             {
-                if (!EventIds.ContainsKey(id))
-                {
-                    EventIds.Add(id, 1);
-                }
-
                 for (int j = 0; j < partitionCount; j++)
                 {
                     await _host.CallAsync(method, new { numEvents = numEventsPerPartitionKey, partitionId = j, input = id });
@@ -237,24 +231,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         var results = EventHubTestJobs.Result as string[];
                         foreach (var result in results)
                         {
-                            if(EventIds.ContainsKey(result))
+                            if(result == id)
                             {
-                                EventIds[result]--;
-                                if(EventIds[result] == 0)
-                                {
-                                    EventIds.Remove(result);
-                                }
+                                processedEventsMatchingEventId++;
                             }
                         }
 
-                        if (!EventIds.Any())
+                        if(processedEventsMatchingEventId >= numEvents)
                         {
                             return true;
                         }
                     }
 
                     return false;
-                });
+                }, (120 * 1000));
 
                 var eventsProcessed = (string[])EventHubTestJobs.Result;
                 Assert.True(eventsProcessed.Length >= 1);
@@ -276,6 +266,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             public static string EventId;
 
             public static object Result { get; set; }
+
+            public static Dictionary<int, List<string>> ExecutionList { get; set;}
 
             public static void SendEvent_TestHub(string input, [EventHub(TestHubName)] out EventData evt)
             {
@@ -362,9 +354,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 }
 
                 // filter for the ID the current test is using
-                if (events[0] == EventId)
+                if (events.Any())
                 {
-                    Result = events;
+                    Result = events.Where(i => i == EventId).ToArray();
                 }
             }
 
