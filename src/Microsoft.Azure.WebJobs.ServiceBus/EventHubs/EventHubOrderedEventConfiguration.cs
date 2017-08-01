@@ -8,7 +8,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     /// <summary>
     /// Provide configuration for EventHubOrderedMessageConfiguration. 
     /// </summary>
-    public class EventHubOrderedEventConfiguration
+    internal class EventHubOrderedEventConfiguration
     {
         /// <summary>
         /// The EventHubOrderedMessageConfiguration
