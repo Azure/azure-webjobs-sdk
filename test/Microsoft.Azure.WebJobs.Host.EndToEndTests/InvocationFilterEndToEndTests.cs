@@ -34,10 +34,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var logger = new MyLogger();
             activator.Add(new FilterOrderTestClass());
             activator.Add(new FilterOrderTestClass.SampleClassForFilterOrderTest());
-            var host = TestHelpers.NewJobHost<FilterOrderTestClass>(activator, logger);
+            var typeLocator = new FakeTypeLocator(typeof(FilterOrderTestClass.SampleClassForFilterOrderTest), typeof(FilterOrderTestClass));
+
+            var host = TestHelpers.NewJobHost<FilterOrderTestClass>(activator, logger, loggerFactory, typeLocator);
             loggerFactory.AddProvider(_loggerProvider);
-            host.Configuration.LoggerFactory = loggerFactory;
-            host.Configuration.TypeLocator = new FakeTypeLocator(typeof(FilterOrderTestClass.SampleClassForFilterOrderTest), typeof(FilterOrderTestClass));
             var method = typeof(FilterOrderTestClass).GetMethod("Main", BindingFlags.Public | BindingFlags.Instance);
 
             // Invoke the method
@@ -73,10 +73,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var logger = new MyLogger();
             activator.Add(new FailingFilterOrderTestClass());
             activator.Add(new FailingFilterOrderTestClass.SampleClassForFilterOrderTest());
-            var host = TestHelpers.NewJobHost<FailingFilterOrderTestClass>(activator, logger);
+
+            var typeLocator = new FakeTypeLocator(typeof(FailingFilterOrderTestClass.SampleClassForFilterOrderTest), typeof(FailingFilterOrderTestClass));
+            var host = TestHelpers.NewJobHost<FailingFilterOrderTestClass>(activator, logger, loggerFactory, typeLocator);
             loggerFactory.AddProvider(_loggerProvider);
-            host.Configuration.LoggerFactory = loggerFactory;
-            host.Configuration.TypeLocator = new FakeTypeLocator(typeof(FailingFilterOrderTestClass.SampleClassForFilterOrderTest), typeof(FailingFilterOrderTestClass));
             var method = typeof(FailingFilterOrderTestClass).GetMethod("Main", BindingFlags.Public | BindingFlags.Instance);
 
             // Invoke the method
@@ -113,14 +113,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var loggerFactory = new LoggerFactory();
             var logger = new MyLogger();
             activator.Add(new StandardFilterTests());
-            var host = TestHelpers.NewJobHost<StandardFilterTests>(activator, logger);
+            var host = TestHelpers.NewJobHost<StandardFilterTests>(activator, logger, loggerFactory);
             loggerFactory.AddProvider(_loggerProvider);
-            host.Configuration.LoggerFactory = loggerFactory;
-            host.Configuration.TypeLocator = new FakeTypeLocator(typeof(StandardFilterTests));
-            var method = typeof(StandardFilterTests).GetMethod("TestPropertiesInFunctionFilter", BindingFlags.Public | BindingFlags.Instance);
 
             // Invoke the method
-            await host.CallAsync(method);
+            await host.CallAsync(nameof(StandardFilterTests.TestPropertiesInFunctionFilter));
 
             // Make sure the logs are correct
             var loggerToTest = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Executor).Single();
@@ -136,14 +133,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var loggerFactory = new LoggerFactory();
             var logger = new MyLogger();
             activator.Add(new StandardFilterTests());
-            var host = TestHelpers.NewJobHost<StandardFilterTests>(activator, logger);
+            var host = TestHelpers.NewJobHost<StandardFilterTests>(activator, logger, loggerFactory);
             loggerFactory.AddProvider(_loggerProvider);
-            host.Configuration.LoggerFactory = loggerFactory;
-            host.Configuration.TypeLocator = new FakeTypeLocator(typeof(StandardFilterTests));
-            var method = typeof(StandardFilterTests).GetMethod("UseLoggingFilter", BindingFlags.Public | BindingFlags.Instance);
 
             // Invoke the method
-            await host.CallAsync(method);
+            await host.CallAsync(nameof(StandardFilterTests.UseLoggingFilter));
 
             // Make sure the logs are correct
             var loggerToTest = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Executor).Single();
@@ -161,9 +155,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var loggerFactory = new LoggerFactory();
             var logger = new MyLogger();
             activator.Add(new StandardFilterTests());
-            var host = TestHelpers.NewJobHost<StandardFilterTests>(activator, logger);
+            var host = TestHelpers.NewJobHost<StandardFilterTests>(activator, logger, loggerFactory);
             loggerFactory.AddProvider(_loggerProvider);
-            host.Configuration.LoggerFactory = loggerFactory;
 
             // Setup the HTTPRequest for the test
             HttpRequestMessage testHttpMessage = new HttpRequestMessage();
@@ -185,11 +178,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var loggerFactory = new LoggerFactory();
             var logger = new MyLogger();
             activator.Add(new StandardFilterTests());
-            var host = TestHelpers.NewJobHost<StandardFilterTests>(activator, logger);
+            var config = TestHelpers.NewConfig<StandardFilterTests>(activator, logger, loggerFactory);
+
             loggerFactory.AddProvider(_loggerProvider);
             TestTraceWriter trace = new TestTraceWriter(TraceLevel.Verbose);
-            host.Configuration.Tracing.Tracers.Add(trace);
-            host.Configuration.LoggerFactory = loggerFactory;
+            config.Tracing.Tracers.Add(trace);
+
+            var host = new JobHost(config);
+
             var method = typeof(StandardFilterTests).GetMethod("TestFailingExecutingFilter", BindingFlags.Public | BindingFlags.Instance);
 
             // Invoke the method
@@ -233,11 +229,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var loggerFactory = new LoggerFactory();
             var logger = new MyLogger();
             activator.Add(new StandardFilterTests());
-            var host = TestHelpers.NewJobHost<StandardFilterTests>(activator, logger);
+
+            var config = TestHelpers.NewConfig<StandardFilterTests>(activator, logger, loggerFactory);
             loggerFactory.AddProvider(_loggerProvider);
             TestTraceWriter trace = new TestTraceWriter(TraceLevel.Verbose);
-            host.Configuration.Tracing.Tracers.Add(trace);
-            host.Configuration.LoggerFactory = loggerFactory;
+            config.Tracing.Tracers.Add(trace);
+
+            var host = new JobHost(config);
+
             var method = typeof(StandardFilterTests).GetMethod("TestFailingExecutedFilter", BindingFlags.Public | BindingFlags.Instance);
 
             // Invoke the method
@@ -281,11 +280,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var loggerFactory = new LoggerFactory();
             var logger = new MyLogger();
             activator.Add(new StandardFilterTests());
-            var host = TestHelpers.NewJobHost<StandardFilterTests>(activator, logger);
+            var config = TestHelpers.NewConfig<StandardFilterTests>(activator, logger, loggerFactory);
             loggerFactory.AddProvider(_loggerProvider);
             TestTraceWriter trace = new TestTraceWriter(TraceLevel.Verbose);
-            host.Configuration.Tracing.Tracers.Add(trace);
-            host.Configuration.LoggerFactory = loggerFactory;
+            config.Tracing.Tracers.Add(trace);
+
+            var host = new JobHost(config);
+            
             var method = typeof(StandardFilterTests).GetMethod("TestFailingFunctionFilter", BindingFlags.Public | BindingFlags.Instance);
 
             // Invoke the method
