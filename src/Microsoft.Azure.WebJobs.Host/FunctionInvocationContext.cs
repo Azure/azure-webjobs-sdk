@@ -34,13 +34,8 @@ namespace Microsoft.Azure.WebJobs.Host
         public ILogger Logger { get; set; }
 
         /// <summary>
-        /// Gets or sets the JobHost
+        /// gets or sets an object for invoking other functions
         /// </summary>
-        internal JobHost JobHost { get; set; }
-
-        /// <summary>
-        /// Gets or sets the JobHostConfiguration
-        /// </summary>
-        internal JobHostConfiguration Config { get; set; }
+        internal IJobInvoker JobHost { get; set; }
     }
 }

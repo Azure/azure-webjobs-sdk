@@ -32,13 +32,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IAsyncCollector<FunctionInstanceLogEntry> _functionEventCollector;
         private readonly ILogger _logger;
         private readonly ILogger _resultsLogger;
-        private readonly JobHost _jobHost;
-        private readonly JobHostConfiguration _config;
+        private readonly IJobInvoker _jobInvoker;
 
         private HostOutputMessage _hostOutputMessage;
 
         public FunctionExecutor(IFunctionInstanceLogger functionInstanceLogger, IFunctionOutputLogger functionOutputLogger,
-                IWebJobsExceptionHandler exceptionHandler, TraceWriter trace, JobHost jobHost, JobHostConfiguration config,
+                IWebJobsExceptionHandler exceptionHandler, TraceWriter trace, IJobInvoker jobInvoker,
                 IAsyncCollector<FunctionInstanceLogEntry> functionEventCollector = null,
                 ILoggerFactory loggerFactory = null)
         {
@@ -66,8 +65,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _functionOutputLogger = functionOutputLogger;
             _exceptionHandler = exceptionHandler;
             _trace = trace;
-            _jobHost = jobHost;
-            _config = config;
+            _jobInvoker = jobInvoker;
             _functionEventCollector = functionEventCollector;
             _logger = loggerFactory?.CreateLogger(LogCategories.Executor);
             _resultsLogger = loggerFactory?.CreateLogger(LogCategories.Results);
@@ -453,7 +451,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             try
             {
-                await ExecuteWithWatchersAsync(instance, parameterHelper, trace, logger, functionCancellationTokenSource, _jobHost, _config);
+                await ExecuteWithWatchersAsync(instance, parameterHelper, trace, logger, functionCancellationTokenSource, _jobInvoker);
 
                 if (updateParameterLogTimer != null)
                 {
@@ -480,8 +478,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             TraceWriter traceWriter,
             ILogger logger,
             CancellationTokenSource functionCancellationTokenSource,
-            JobHost jobHost,
-            JobHostConfiguration config)
+            IJobInvoker jobInvoker)
         {
             IFunctionInvoker invoker = instance.Invoker;
 
@@ -521,8 +518,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         Dictionary<string, object> properties = new Dictionary<string, object>();
 
                         // Create the context objects for the filter execution
-                        FunctionExecutingContext executingContext = NewFilter<FunctionExecutingContext>(instance, parameterHelper, properties, logger, jobHost);
-                        FunctionExecutedContext executedContext = NewFilter<FunctionExecutedContext>(instance, parameterHelper, properties, logger, jobHost);
+                        FunctionExecutingContext executingContext = NewFilter<FunctionExecutingContext>(instance, parameterHelper, properties, logger, jobInvoker);
+                        FunctionExecutedContext executedContext = NewFilter<FunctionExecutedContext>(instance, parameterHelper, properties, logger, jobInvoker);
 
                         invoker = FunctionWithFilterInvoker.ApplyFilters(invoker, filters, executingContext, executedContext);
 
@@ -589,7 +586,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             ParameterHelper parameterHelper,
             Dictionary<string, object> properties,
             ILogger logger,
-            JobHost jobHost)
+            IJobInvoker jobInvoker)
             where T : FunctionInvocationContext, new()
         {
             return new T
@@ -599,7 +596,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 Arguments = parameterHelper.GetParametersAsDictionary(),
                 Properties = properties,
                 Logger = logger,
-                JobHost = jobHost
+                JobHost = jobInvoker
             };
         }
 
