@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using System.Collections.Generic;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 {
@@ -129,13 +130,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             // - each instance calls [New] and [Dispose] 
             // - [Dispose] on the class comes after filters. 
 
-            await host.CallAsync("Method");
+            await host.CallAsync(nameof(MyProgInstanceFilter.Method));
             var fullPipeline = "[New][Pre-Instance][body][Post-Instance][Dispose]";
             Assert.Equal(fullPipeline, _log.ToString());
 
             // 2nd call invokes JobActivator again, which will new up a new instance 
             // So we should see another [New] tag in the log. 
-            await host.CallAsync("Method");
+            await host.CallAsync(nameof(MyProgInstanceFilter.Method));
             Assert.Equal(fullPipeline + fullPipeline, _log.ToString());
         }
 
@@ -147,11 +148,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             var host = TestHelpers.NewJobHost<MyProgWithClassFilter>();
                         
-            await host.CallAsync("MyProgWithClassFilter.Method");
+            await host.CallAsync(nameof(MyProgWithClassFilter.Method));
             Assert.Equal(1, MyFilterAttribute.Counter);
 
-            await host.CallAsync("MyProgWithClassFilter.Method");
-            await host.CallAsync("MyProgWithClassFilter.Method");
+            await host.CallAsync(nameof(MyProgWithClassFilter.Method));
+            await host.CallAsync(nameof(MyProgWithClassFilter.Method));
 
             Assert.Equal(1, MyFilterAttribute.Counter);
         }
@@ -164,7 +165,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             var host = TestHelpers.NewJobHost<MyProgWithMethodFilter>();
 
-            await host.CallAsync("MyProgWithMethodFilter.Method");
+            await host.CallAsync(nameof(MyProgWithMethodFilter.Method));
             Assert.Equal(1, MyFilterAttribute.Counter);
 
             await host.CallAsync("MyProgWithMethodFilter.Method");
@@ -173,12 +174,64 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             Assert.Equal(1, MyFilterAttribute.Counter);
         }
 
+        [Fact]
+        public async Task InvokeMethods()
+        {
+            var host = TestHelpers.NewJobHost<MyProg5>();
+            host.Call("Main");
+
+            var fullPipeline = "[Pre][body][Post]";
+            Assert.Equal(fullPipeline, _log.ToString());
+        }
+
+        // We should still be able to directly invoke a filter (such as for unit testing)
+        [Fact]
+        public async Task ExplicitInvokeFilter()
+        {
+            var host = TestHelpers.NewJobHost<MyProg5>();
+
+            var filter = new FunctionExecutingContext()
+            {
+                FunctionName = "foo"
+            };
+            IDictionary<string, object> args = new Dictionary<string, object>
+            {
+                { "filter", filter } // match on type, not name 
+            };
+            await host.CallAsync("Pre", args, CancellationToken.None);
+                        
+            Assert.Equal("[Pre]", _log.ToString());
+        }
+
+        public class MyProg5
+        {
+            [FunctionName("Pre")]
+            [NoAutomaticTrigger]
+            public void Method1(FunctionExecutingContext pre)
+            {
+                Act("Pre");
+            }
+
+            [NoAutomaticTrigger]
+            public void Post(FunctionExecutedContext ctx)
+            {
+                Act("Post");
+            }
+
+            [InvokeFunctionFilter("Pre", "Post")]
+            [NoAutomaticTrigger]
+            public void Main()
+            {
+                Act("body");
+            }
+        }
+
         static async Task CallExpectFailureAsync(JobHost host)
         {
             bool succeed = false;
             try
             {
-                await host.CallAsync("MyProg3.Method2");
+                await host.CallAsync(nameof(MyProg3.Method2));
                 succeed = true;
             }
             catch (FunctionInvocationException e)

@@ -48,7 +48,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
             if (!string.IsNullOrEmpty(ExecutingFilter))
             {
-                executingContext.Logger.LogInformation("Executing Function Filter '" + ExecutingFilter + "'");
+                executingContext.Logger?.LogInformation("Executing Function Filter '" + ExecutingFilter + "'");
 
                 await InvokeJobFunctionAsync(ExecutingFilter, executingContext, cancellationToken);
             }
@@ -64,7 +64,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
             if (!string.IsNullOrEmpty(ExecutedFilter))
             {
-                executedContext.Logger.LogInformation($"Executing Function Filter '{ExecutedFilter}'");
+                executedContext.Logger?.LogInformation($"Executing Function Filter '{ExecutedFilter}'");
 
                 await InvokeJobFunctionAsync(ExecutedFilter, executedContext, cancellationToken);
             }
@@ -72,45 +72,20 @@ namespace Microsoft.Azure.WebJobs.Host
 
         internal static async Task InvokeJobFunctionAsync<TContext>(string methodName, TContext context, CancellationToken cancellationToken) where TContext : FunctionInvocationContext
         {
-            MethodInfo methodInfo = null;
+            var invokeArguments = GetArgsForFilterContext(context);
+            await context.JobHost.CallAsync(methodName, invokeArguments, cancellationToken);
+        }
 
-            foreach (var type in context.Config.TypeLocator.GetTypes())
-            {
-                if (methodName != null)
-                {
-                    methodInfo = type.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
-                }
-
-                if (methodInfo != null)
-                {
-                    break;
-                }
-            }
-
-            if (methodInfo == null)
-            {
-                throw new InvalidOperationException("Incorrect method signature for invocation filter '{methodName}'.");
-            }
-
+        /// <summary>
+        /// See <see cref="Microsoft.Azure.WebJobs.Host.FunctionFilterBindingProvider"/> for how binders will extract 
+        /// the filter context and map it back to the parameter. 
+        /// </summary>
+        private static IDictionary<string, object> GetArgsForFilterContext(FunctionInvocationContext context)
+        {
+            // Extraction is by type, so we don't need to know the parameter name.
             IDictionary<string, object> invokeArguments = new Dictionary<string, object>();
-
-            ParameterInfo[] parameters = methodInfo.GetParameters();
-
-            if (!parameters.Any())
-            {
-                throw new InvalidOperationException("Incorrect method signature for invocation filter '{methodName}'.");
-            }
-
-            string parameterName = parameters.SingleOrDefault(p => p.ParameterType.IsAssignableFrom(typeof(TContext))).Name;
-
-            if (parameterName == null)
-            {
-                throw new InvalidOperationException("Incorrect method signature for invocation filter '{methodName}'.");
-            }
-
-            invokeArguments.Add(parameterName, context);
-            
-            await context.JobHost.CallAsync(methodInfo, invokeArguments, cancellationToken);
+            invokeArguments["$filter"] = context;
+            return invokeArguments;
         }
     }
 }

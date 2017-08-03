@@ -521,13 +521,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         Dictionary<string, object> properties = new Dictionary<string, object>();
 
                         // Create the context objects for the filter execution
-                        FunctionExecutingContext executingContext = new FunctionExecutingContext(instance.Id, instance.FunctionDescriptor.FullName, parameterHelper.GetParametersAsDictionary(), properties, logger);
-                        executingContext.JobHost = jobHost;
-                        executingContext.Config = config;
-
-                        FunctionExecutedContext executedContext = new FunctionExecutedContext(instance.Id, instance.FunctionDescriptor.FullName, parameterHelper.GetParametersAsDictionary(), properties, logger);
-                        executedContext.JobHost = jobHost;
-                        executedContext.Config = config;
+                        FunctionExecutingContext executingContext = NewFilter<FunctionExecutingContext>(instance, parameterHelper, properties, logger, jobHost);
+                        FunctionExecutedContext executedContext = NewFilter<FunctionExecutedContext>(instance, parameterHelper, properties, logger, jobHost);
 
                         invoker = FunctionWithFilterInvoker.ApplyFilters(invoker, filters, executingContext, executedContext);
 
@@ -586,6 +581,26 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             object returnValue = await invokeTask;
 
             parameterHelper.SetReturnValue(returnValue);
+        }
+
+        // Helper to create a filter context object 
+        private static T NewFilter<T>(
+            IFunctionInstance instance,
+            ParameterHelper parameterHelper,
+            Dictionary<string, object> properties,
+            ILogger logger,
+            JobHost jobHost)
+            where T : FunctionInvocationContext, new()
+        {
+            return new T
+            {
+                FunctionInstanceId = instance.Id,
+                FunctionName = instance.FunctionDescriptor.ShortName,
+                Arguments = parameterHelper.GetParametersAsDictionary(),
+                Properties = properties,
+                Logger = logger,
+                JobHost = jobHost
+            };
         }
 
         // Return a list of filters in order that they should be executed. 
