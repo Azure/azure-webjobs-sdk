@@ -33,7 +33,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         private readonly PartitionManagerOptions _partitionOptions; // optional, used to create EventProcessorHost
 
         private string _defaultStorageString; // set to JobHostConfig.StorageConnectionString
+        private TraceWriter _trace;
         private int _batchCheckpointFrequency = 1;
+
+        private bool _usePartitionKeyOrdering = false;
 
         /// <summary>
         /// Name of the blob container that the EventHostProcessor instances uses to coordinate load balancing listening on an event hub. 
@@ -86,6 +89,22 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                     throw new InvalidOperationException("Batch checkpoint frequency must be larger than 0.");
                 }
                 _batchCheckpointFrequency = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the partition key ordering of messages. Default is false.
+        /// </summary>
+        public bool PartitionKeyOrdering
+        {
+            get
+            {
+                return _usePartitionKeyOrdering;
+            }
+
+            set
+            {
+                _usePartitionKeyOrdering = value;
             }
         }
 
@@ -192,6 +211,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             {
                  EventHubConnectionString = receiverConnectionString
             };
+        }
+
+        internal TraceWriter GetTraceWriter()
+        {
+            return _trace;
         }
 
         /// <summary>
@@ -415,7 +439,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
             // register our binding provider
             context.AddBindingRule<EventHubAttribute>()
-                .BindToCollector(BuildFromAttribute);           
+                .BindToCollector(BuildFromAttribute);
+
+            _trace = context.Trace;
         }
 
         private IAsyncCollector<EventData> BuildFromAttribute(EventHubAttribute attribute)

@@ -59,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             Func<ListenerFactoryContext, bool, Task<IListener>> createListener =
              (factoryContext, singleDispatch) =>
              {
-                 IListener listener = new EventHubListener(factoryContext.Executor, eventHostListener, singleDispatch, _eventHubConfig);
+                 IListener listener = new EventHubListener(factoryContext.Executor, new InMemoryMessageStatusHandler(), eventHostListener, singleDispatch, _eventHubConfig);
                  return Task.FromResult(listener);
              };
 

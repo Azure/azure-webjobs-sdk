@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             EventData eventData = new EventData(bytes);
 
             // Return a single event. Doesn't support multiple dispatch 
-            return EventHubTriggerInput.New(eventData);            
+            return EventHubTriggerInput.New(eventData, true);            
         }
 
         // Single instance: Core --> EventData
