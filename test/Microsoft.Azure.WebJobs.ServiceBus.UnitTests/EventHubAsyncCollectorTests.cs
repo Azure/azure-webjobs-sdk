@@ -1,13 +1,12 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.ServiceBus.Messaging;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.EventHubs;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
@@ -32,7 +31,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
                 {
                     foreach (var e in batch)
                     {
-                        var payloadBytes = e.GetBytes();
+                        var payloadBytes = e.Body.Array;
                         Assert.NotNull(payloadBytes);
                         _sentEvents.Add(payloadBytes);
                     }
@@ -64,9 +63,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             await collector.FlushAsync();
             Assert.Equal(1, collector._sentEvents.Count);
             Assert.Equal(payload, collector._sentEvents[0]);
-
-            // Verify the event was disposed.
-            Assert.Throws<ObjectDisposedException>(() => e1.GetBodyStream());
         }
 
         // If we send enough events, that will eventually tip over and flush. 
@@ -127,7 +123,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             catch (InvalidOperationException e)
             {
                 // Exact error message (and serialization byte size) is subject to change. 
-                Assert.Equal("Event is too large. Event is approximately 307208b and max size is 245760b", e.Message);
+                Assert.Contains("Event is too large", e.Message);
             }
 
             // Verify we didn't queue anything

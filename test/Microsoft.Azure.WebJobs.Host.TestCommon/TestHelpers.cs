@@ -52,7 +52,17 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
         public static void SetField(object target, string fieldName, object value)
         {
             FieldInfo field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+            if (field == null)
+            {
+                field = target.GetType().GetField($"<{fieldName}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+            }
             field.SetValue(target, value);
+        }
+
+        public static T New<T>()
+        {
+            var constructor = typeof(T).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { }, null);
+            return (T)constructor.Invoke(null);
         }
 
         // Test that we get an indexing error (FunctionIndexingException)  

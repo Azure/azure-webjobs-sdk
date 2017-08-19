@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26724.1
+VisualStudioVersion = 15.0.26730.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{639967B0-0544-4C52-94AC-9A3D25E33256}"
 EndProject
@@ -36,6 +36,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{3B089351
 		build\common.props = build\common.props
 		build\PublicKey.snk = build\PublicKey.snk
 	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.EventHubs", "src\Microsoft.Azure.WebJobs.ServiceBus\EventHubs\WebJobs.EventHubs.csproj", "{F78F19F3-0023-4A5C-823B-DA054BC51D07}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.EventHubs.UnitTests", "test\Microsoft.Azure.WebJobs.EventHubs.UnitTests\WebJobs.EventHubs.UnitTests.csproj", "{27F0E6AC-505E-4BEC-81CA-8DF777DEA9C7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -91,6 +95,14 @@ Global
 		{340AB554-5482-4B3D-B65F-46DFF5AF1684}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{340AB554-5482-4B3D-B65F-46DFF5AF1684}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{340AB554-5482-4B3D-B65F-46DFF5AF1684}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F78F19F3-0023-4A5C-823B-DA054BC51D07}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F78F19F3-0023-4A5C-823B-DA054BC51D07}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F78F19F3-0023-4A5C-823B-DA054BC51D07}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F78F19F3-0023-4A5C-823B-DA054BC51D07}.Release|Any CPU.Build.0 = Release|Any CPU
+		{27F0E6AC-505E-4BEC-81CA-8DF777DEA9C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{27F0E6AC-505E-4BEC-81CA-8DF777DEA9C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{27F0E6AC-505E-4BEC-81CA-8DF777DEA9C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{27F0E6AC-505E-4BEC-81CA-8DF777DEA9C7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -102,6 +114,7 @@ Global
 		{C6B834AB-7B6A-47AE-A7C3-C102B0C861FF} = {639967B0-0544-4C52-94AC-9A3D25E33256}
 		{C8EAAE01-E8CF-4131-9D4B-F0FDF00DA4BE} = {639967B0-0544-4C52-94AC-9A3D25E33256}
 		{340AB554-5482-4B3D-B65F-46DFF5AF1684} = {639967B0-0544-4C52-94AC-9A3D25E33256}
+		{27F0E6AC-505E-4BEC-81CA-8DF777DEA9C7} = {639967B0-0544-4C52-94AC-9A3D25E33256}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {371BFA14-0980-4A43-A18A-CA1C1A9CB784}

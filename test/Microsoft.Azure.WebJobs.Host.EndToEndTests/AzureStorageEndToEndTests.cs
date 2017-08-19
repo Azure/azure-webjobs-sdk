@@ -423,7 +423,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.True(errors.All(t => t.Exception.InnerException.InnerException is FormatException));
 
             // Validate Logger
-            var loggerErrors = loggerProvider.GetAllLogMessages().Where(l => l.Level == Extensions.Logging.LogLevel.Error);
+            var loggerErrors = loggerProvider.GetAllLogMessages().Where(l => l.Level == Microsoft.Extensions.Logging.LogLevel.Error);
             Assert.True(loggerErrors.All(t => t.Exception.InnerException.InnerException is FormatException));
         }
 

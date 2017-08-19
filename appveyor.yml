@@ -44,6 +44,8 @@ build_script:
     dotnet pack src\Microsoft.Azure.WebJobs.Logging\WebJobs.Logging.csproj -o ..\..\buildoutput --no-build --version-suffix "-$env:APPVEYOR_BUILD_NUMBER"
 
     dotnet pack src\Microsoft.Azure.WebJobs.Logging.ApplicationInsights\WebJobs.Logging.ApplicationInsights.csproj -o ..\..\buildoutput --no-build --version-suffix "-$env:APPVEYOR_BUILD_NUMBER"
+
+    dotnet pack src\Microsoft.Azure.WebJobs.ServiceBus\EventHubs\WebJobs.EventHubs.csproj -o ..\..\..\buildoutput --no-build --version-suffix "-$env:APPVEYOR_BUILD_NUMBER"
 test_script:
 - ps: >-
     dotnet test .\test\Microsoft.Azure.WebJobs.Host.UnitTests\ -v q --no-build
@@ -53,6 +55,8 @@ test_script:
     dotnet test .\test\Microsoft.Azure.WebJobs.Logging.FunctionalTests\ -v q --no-build
 
     dotnet test .\test\Microsoft.Azure.WebJobs.Host.EndToEndTests\ -v q --no-build
+
+    dotnet test .\test\Microsoft.Azure.WebJobs.EventHubs.UnitTests\ -v q --no-build
 artifacts:
 - path: buildoutput\*.nupkg
   name: Binaries

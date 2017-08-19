@@ -1,17 +1,14 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-#if SERVICE_BUS
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.TestCommon;
-#if SERVICE_BUS
+using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.WebJobs.ServiceBus;
-using Microsoft.ServiceBus.Messaging;
-#endif
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
@@ -111,10 +108,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             public static void SendEvent_TestHub(string input, [EventHub(TestHubName)] out EventData evt)
             {
-                evt = new EventData(Encoding.UTF8.GetBytes(input))
-                {
-                    PartitionKey = "TestPartition"
-                };
+                evt = new EventData(Encoding.UTF8.GetBytes(input));
                 evt.Properties.Add("TestProp1", "value1");
                 evt.Properties.Add("TestProp2", "value2");
             }
@@ -125,7 +119,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 for (int i = 0; i < numEvents; i++)
                 {
                     var evt = new EventData(Encoding.UTF8.GetBytes(input));
-                    evt.PartitionKey = "TestPartition";
                     evt.Properties.Add("TestIndex", i);
                     evt.Properties.Add("TestProp1", "value1");
                     evt.Properties.Add("TestProp2", "value2");
@@ -140,14 +133,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 // filter for the ID the current test is using
                 if (evt == EventId)
                 {
-                    Assert.Equal("TestPartition", partitionKey);
                     Assert.True((DateTime.Now - enqueuedTimeUtc).TotalSeconds < 30);
 
-                    Assert.Equal(2, properties.Count);
                     Assert.Equal("value1", properties["TestProp1"]);
                     Assert.Equal("value2", properties["TestProp2"]);
-
-                    Assert.Equal(8, systemProperties.Count);
 
                     Result = evt;
                 }
@@ -164,9 +153,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 for (int i = 0; i < events.Length; i++)
                 {
-                    Assert.Equal("TestPartition", partitionKeyArray[i]);
-                    Assert.Equal(3, propertiesArray[i].Count);
-                    Assert.Equal(8, systemPropertiesArray[i].Count);
                     Assert.Equal(i, propertiesArray[i]["TestIndex"]);
                 }
 
@@ -179,4 +165,3 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
     }
 }
-#endif

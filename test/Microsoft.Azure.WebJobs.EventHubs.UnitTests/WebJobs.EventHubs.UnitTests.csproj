@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <RootNamespace>Microsoft.Azure.WebJobs.ServiceBus.UnitTests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="..\..\stylecop.json" Link="stylecop.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="StyleCop.Analyzers" Version="1.1.0-beta004">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.5.0-preview-20170810-02" />
+    <PackageReference Include="Moq" Version="4.7.99" />
+    <PackageReference Include="xunit" Version="2.3.0-beta3-build3705" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.3.0-beta3-build3705" />
+    <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.0-beta3-build3705" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Microsoft.Azure.WebJobs.ServiceBus.UnitTests\EventHubAsyncCollectorTests.cs" Link="EventHubAsyncCollectorTests.cs" />
+    <Compile Include="..\Microsoft.Azure.WebJobs.ServiceBus.UnitTests\EventHubTests.cs" Link="EventHubTests.cs" />
+    <Compile Include="..\Microsoft.Azure.WebJobs.ServiceBus.UnitTests\Listeners\EventHubListenerTests.cs" Link="EventHubListenerTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Microsoft.Azure.WebJobs.ServiceBus\EventHubs\WebJobs.EventHubs.csproj" />
+    <ProjectReference Include="..\Microsoft.Azure.WebJobs.Host.TestCommon\WebJobs.Host.TestCommon.csproj" />
+  </ItemGroup>
+</Project>

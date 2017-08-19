@@ -1,18 +1,11 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Azure.WebJobs.Host.Executors;
-using Microsoft.Azure.WebJobs.ServiceBus.Listeners;
-using Microsoft.ServiceBus.Messaging;
-using Moq;
-using Xunit;
 using System;
+using System.Threading.Tasks;
+using Xunit;
 
-namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
+namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
 {
     public class EventHubListenerTests
     {
