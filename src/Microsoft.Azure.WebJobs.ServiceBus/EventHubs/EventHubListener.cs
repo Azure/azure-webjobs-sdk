@@ -6,11 +6,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.EventHubs;
+using Microsoft.Azure.EventHubs.Processor;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
-using Microsoft.Azure.ServiceBus;
-using Microsoft.Azure.EventHubs.Processor;
-using Microsoft.Azure.EventHubs;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -117,7 +116,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
             public Task ProcessErrorAsync(PartitionContext context, Exception error)
             {
-                throw new NotImplementedException();
+                // TODO: log underlying event hubs error
+                return Task.CompletedTask;
             }
 
             public async Task ProcessEventsAsync(PartitionContext context, IEnumerable<EventData> messages)
@@ -163,7 +163,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 else
                 {
                     // Batch dispatch
-
                     TriggeredFunctionData input = new TriggeredFunctionData
                     {
                         ParentId = null,
@@ -174,10 +173,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 }
 
                 bool hasEvents = false;
+
                 // Dispose all messages to help with memory pressure. If this is missed, the finalizer thread will still get them. 
                 foreach (var message in messages)
                 {
                     hasEvents = true;
+                    message.Dispose();
                 }
 
                 // Don't checkpoint if no events. This can reset the sequence counter to 0. 

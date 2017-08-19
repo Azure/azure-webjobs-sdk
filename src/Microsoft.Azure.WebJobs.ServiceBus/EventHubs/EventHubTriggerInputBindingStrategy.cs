@@ -4,11 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Microsoft.Azure.WebJobs.Host.Bindings;
-using Microsoft.Azure.WebJobs.Host.Triggers;
-using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.EventHubs.Processor;
+using Microsoft.Azure.WebJobs.Host.Bindings;
+using Microsoft.Azure.WebJobs.Host.Triggers;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -109,23 +108,23 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
             for (int i = 0; i < events.Length; i++)
             {
-                partitionKeys[i] = events[i].PartitionKey;
-                offsets[i] = events[i].Offset;
-                sequenceNumbers[i] = events[i].SequenceNumber;
-                enqueuedTimesUtc[i] = events[i].EnqueuedTimeUtc;
+                partitionKeys[i] = events[i].SystemProperties?.PartitionKey;
+                offsets[i] = events[i].SystemProperties?.Offset;
+                sequenceNumbers[i] = events[i].SystemProperties?.SequenceNumber ?? 0;
+                enqueuedTimesUtc[i] = events[i].SystemProperties?.EnqueuedTimeUtc ?? DateTime.MinValue;
                 properties[i] = events[i].Properties;
-                systemProperties[i] = events[i].SystemProperties;
+                systemProperties[i] = events[i].SystemProperties?.ToDictionary();
             }
         }
 
         private static void AddBindingData(Dictionary<string, object> bindingData, EventData eventData)
         {
-            SafeAddValue(() => bindingData.Add(nameof(eventData.PartitionKey), eventData.PartitionKey));
-            SafeAddValue(() => bindingData.Add(nameof(eventData.Offset), eventData.Offset));
-            SafeAddValue(() => bindingData.Add(nameof(eventData.SequenceNumber), eventData.SequenceNumber));
-            SafeAddValue(() => bindingData.Add(nameof(eventData.EnqueuedTimeUtc), eventData.EnqueuedTimeUtc));
+            SafeAddValue(() => bindingData.Add(nameof(eventData.SystemProperties.PartitionKey), eventData.SystemProperties?.PartitionKey));
+            SafeAddValue(() => bindingData.Add(nameof(eventData.SystemProperties.Offset), eventData.SystemProperties?.Offset));
+            SafeAddValue(() => bindingData.Add(nameof(eventData.SystemProperties.SequenceNumber), eventData.SystemProperties?.SequenceNumber ?? 0));
+            SafeAddValue(() => bindingData.Add(nameof(eventData.SystemProperties.EnqueuedTimeUtc), eventData.SystemProperties?.EnqueuedTimeUtc ?? DateTime.MinValue));
             SafeAddValue(() => bindingData.Add(nameof(eventData.Properties), eventData.Properties));
-            SafeAddValue(() => bindingData.Add(nameof(eventData.SystemProperties), eventData.SystemProperties));
+            SafeAddValue(() => bindingData.Add(nameof(eventData.SystemProperties), eventData.SystemProperties?.ToDictionary()));
         }
 
         private static void SafeAddValue(Action addValue)

@@ -4,15 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Text;
-using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Azure.WebJobs.Host.Bindings;
-using Microsoft.Azure.WebJobs.Host.Config;
-using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.EventHubs;
-using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.EventHubs.Processor;
+using Microsoft.Azure.WebJobs.Host.Config;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -53,9 +48,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// Constructs a new instance.
         /// </summary>
         /// <param name="options">The optional <see cref="EventProcessorOptions"/> to use when receiving events.</param>
-        /// <param name="partitionOptions">Optional <see cref="PartitionManagerOptions"/> to use to configure any EventProcessorHosts. </param>
-        public EventHubConfiguration(
-            EventProcessorOptions options)
+        public EventHubConfiguration(EventProcessorOptions options)
         {
             if (options == null)
             {
@@ -136,7 +129,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 throw new ArgumentNullException("sendConnectionString");
             }
 
-            ServiceBusConnectionStringBuilder sb = new ServiceBusConnectionStringBuilder(sendConnectionString);
+            EventHubsConnectionStringBuilder sb = new EventHubsConnectionStringBuilder(sendConnectionString);
             if (string.IsNullOrWhiteSpace(sb.EntityPath))
             {
                 sb.EntityPath = eventHubName;
@@ -257,7 +250,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 // If the connection string provides a hub name, that takes precedence. 
                 // Note that connection strings *can't* specify a consumerGroup, so must always be passed in. 
                 string actualPath = eventHubName;
-                ServiceBusConnectionStringBuilder sb = new ServiceBusConnectionStringBuilder(creds.EventHubConnectionString);
+                EventHubsConnectionStringBuilder sb = new EventHubsConnectionStringBuilder(creds.EventHubConnectionString);
                 if (sb.EntityPath != null)
                 {
                     actualPath = sb.EntityPath;
@@ -271,12 +264,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 EventProcessorHost host = new EventProcessorHost(
                     hostName: eventProcessorHostName,
                     eventHubPath: actualPath,
-                    consumerGroupName: consumerGroup,
+                    consumerGroupName: consumerGroup, 
                     eventHubConnectionString: sb.ToString(),
-                    storageConnectionString: storageConnectionString,
+                    storageConnectionString: storageConnectionString, 
                     leaseContainerName: LeaseContainerName,
                     storageBlobPrefix: blobPrefix);
-                
+
                 return host;
             }
             else
@@ -340,7 +333,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             return sb.ToString();
         }
 
-        private static string GetServiceBusNamespace(ServiceBusConnectionStringBuilder connectionString)
+        private static string GetServiceBusNamespace(EventHubsConnectionStringBuilder connectionString)
         {
             // EventHubs only have 1 endpoint. 
             var url = connectionString.Endpoint;

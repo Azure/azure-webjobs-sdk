@@ -3,7 +3,6 @@
 
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.EventHubs.Processor;
-using Microsoft.Azure.ServiceBus;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -15,7 +14,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         private int _selector = -1;
 
         internal EventData[] Events { get; set; }
+
         internal PartitionContext PartitionContext { get; set; }
+
+        public bool IsSingleDispatch
+        {
+            get
+            {
+                return _selector != -1;
+            }
+        }
 
         public static EventHubTriggerInput New(EventData eventData)
         {
@@ -28,14 +36,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 },
                 _selector = 0,
             };
-        }
-
-        public bool IsSingleDispatch
-        {
-            get
-            {
-                return _selector != -1;
-            }
         }
 
         public EventHubTriggerInput GetSingleEventTriggerInput(int idx)

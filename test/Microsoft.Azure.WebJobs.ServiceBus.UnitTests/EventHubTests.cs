@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Microsoft.ServiceBus.Messaging;
-using Xunit;
+using Microsoft.Azure.EventHubs;
+using Microsoft.Azure.EventHubs.Processor;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Newtonsoft.Json.Linq;
+using Xunit;
+using static Microsoft.Azure.EventHubs.EventData;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
+using System.Reflection;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
 {
@@ -59,22 +63,34 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         [Fact]
         public void GetBindingData_SingleDispatch_ReturnsExpectedValue()
         {
-            var evt = new EventData();
-            evt.PartitionKey = "TestKey";
+            var evt = new EventData(new byte[] { });
+            var sysProps = TestHelpers.New<SystemPropertiesCollection>();
+            TestHelpers.SetField(sysProps, "PartitionKey", "TestKey");
+            TestHelpers.SetField(sysProps, "SequenceNumber", 1);
+            TestHelpers.SetField(sysProps, "Offset", "offset");
+            TestHelpers.SetField(sysProps, "EnqueuedTimeUtc", DateTime.MinValue);
+
+            TestHelpers.SetField(evt, "SystemProperties", sysProps);
+
             var input = EventHubTriggerInput.New(evt);
-            input.PartitionContext = new PartitionContext();
+            input.PartitionContext = GetPartitionContext();
 
             var strategy = new EventHubTriggerBindingStrategy();
             var bindingData = strategy.GetBindingData(input);
 
             Assert.Equal(7, bindingData.Count);
             Assert.Same(input.PartitionContext, bindingData["PartitionContext"]);
-            Assert.Equal(evt.PartitionKey, bindingData["PartitionKey"]);
-            Assert.Equal(evt.Offset, bindingData["Offset"]);
-            Assert.Equal(evt.SequenceNumber, bindingData["SequenceNumber"]);
-            Assert.Equal(evt.EnqueuedTimeUtc, bindingData["EnqueuedTimeUtc"]);
+            Assert.Equal(evt.SystemProperties.PartitionKey, bindingData["PartitionKey"]);
+            Assert.Equal(evt.SystemProperties.Offset, bindingData["Offset"]);
+            Assert.Equal(evt.SystemProperties.SequenceNumber, bindingData["SequenceNumber"]);
+            Assert.Equal(evt.SystemProperties.EnqueuedTimeUtc, bindingData["EnqueuedTimeUtc"]);
             Assert.Same(evt.Properties, bindingData["Properties"]);
-            Assert.Same(evt.SystemProperties, bindingData["SystemProperties"]);
+            var sysDict = bindingData["SystemProperties"] as IDictionary<string, object>;
+            Assert.NotNull(sysDict);
+            Assert.Equal(evt.SystemProperties.PartitionKey, sysDict["PartitionKey"]);
+            Assert.Equal(evt.SystemProperties.Offset, sysDict["Offset"]);
+            Assert.Equal(evt.SystemProperties.SequenceNumber, sysDict["SequenceNumber"]);
+            Assert.Equal(evt.SystemProperties.EnqueuedTimeUtc, sysDict["EnqueuedTimeUtc"]);
         }
 
         [Fact]
@@ -82,24 +98,23 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         {
             var events = new EventData[3]
             {
-                new EventData(Encoding.UTF8.GetBytes("Event 1"))
-                {
-                    PartitionKey = "pk1"
-                },
-                new EventData(Encoding.UTF8.GetBytes("Event 2"))
-                {
-                    PartitionKey = "pk2"
-                },
-                new EventData(Encoding.UTF8.GetBytes("Event 3"))
-                {
-                    PartitionKey = "pk3"
-                },
+                new EventData(Encoding.UTF8.GetBytes("Event 1")),
+                new EventData(Encoding.UTF8.GetBytes("Event 2")),
+                new EventData(Encoding.UTF8.GetBytes("Event 3")),
             };
+
+            var count = 0;
+            foreach (var evt in events)
+            {
+                var sysProps = TestHelpers.New<SystemPropertiesCollection>();
+                TestHelpers.SetField(sysProps, "PartitionKey", $"pk{count++}");
+                TestHelpers.SetField(evt, "SystemProperties", sysProps);
+            }
 
             var input = new EventHubTriggerInput
             {
-                PartitionContext = new PartitionContext(),
-                Events = events
+                Events = events,
+                PartitionContext = GetPartitionContext(),
             };
             var strategy = new EventHubTriggerBindingStrategy();
             var bindingData = strategy.GetBindingData(input);
@@ -115,10 +130,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             Assert.Equal(events.Length, ((IDictionary<string, object>[])bindingData["PropertiesArray"]).Length);
             Assert.Equal(events.Length, ((IDictionary<string, object>[])bindingData["SystemPropertiesArray"]).Length);
 
-            // verify event values are distributed to arrays properly
-            Assert.Equal(events[0].PartitionKey, ((string[])bindingData["PartitionKeyArray"])[0]);
-            Assert.Equal(events[1].PartitionKey, ((string[])bindingData["PartitionKeyArray"])[1]);
-            Assert.Equal(events[2].PartitionKey, ((string[])bindingData["PartitionKeyArray"])[2]);
+            Assert.Equal(events[0].SystemProperties.PartitionKey, ((string[])bindingData["PartitionKeyArray"])[0]);
+            Assert.Equal(events[1].SystemProperties.PartitionKey, ((string[])bindingData["PartitionKeyArray"])[1]);
+            Assert.Equal(events[2].SystemProperties.PartitionKey, ((string[])bindingData["PartitionKeyArray"])[2]);
         }
 
         [Fact]
@@ -132,7 +146,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             var contract = strategy.GetBindingData(triggerInput);
 
             EventData single = strategy.BindSingle(triggerInput, null);
-            string body = Encoding.UTF8.GetString(single.GetBytes());
+            string body = Encoding.UTF8.GetString(single.Body.Array);
 
             Assert.Equal(data, body);
             Assert.Null(contract["PartitionContext"]);
@@ -150,7 +164,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             // Test sender 
             config.AddSender("k1", connectionString);
             var client = config.GetEventHubClient("k1", null);
-            Assert.Equal(expectedPathName, client.Path);
+            Assert.Equal(expectedPathName, client.EventHubName);
         }
 
         private class TestNameResolver : INameResolver
@@ -168,7 +182,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         {
             EventHubConfiguration config = new EventHubConfiguration();
             var client = config.GetEventHubClient("k1", connectionString);
-            Assert.Equal(expectedPathName, client.Path);
+            Assert.Equal(expectedPathName, client.EventHubName);
         }
 
         [Theory]
@@ -232,6 +246,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             Assert.Equal(options.MaxBatchSize, 100);
             Assert.Equal(options.PrefetchCount, 200);
             Assert.Equal(config.BatchCheckpointFrequency, 5);
+        }
+
+        private PartitionContext GetPartitionContext()
+        {
+            var constructor = typeof(PartitionContext).GetConstructor(
+                BindingFlags.NonPublic | BindingFlags.Instance,
+                null,
+                new Type[] { typeof(EventProcessorHost), typeof(string), typeof(string), typeof(string) },
+                null);
+            return (PartitionContext)constructor.Invoke(new object[] { null, null, null, null });
         }
     }
 }

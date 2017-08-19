@@ -531,7 +531,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.Equal(0, traceErrors.Length);
 
             // Validate Logger
-            LogMessage[] logErrors = _loggerProvider.GetAllLogMessages().Where(l => l.Level == Extensions.Logging.LogLevel.Error).ToArray();
+            LogMessage[] logErrors = _loggerProvider.GetAllLogMessages().Where(l => l.Level == Microsoft.Extensions.Logging.LogLevel.Error).ToArray();
             Assert.Equal(0, logErrors.Length);
         }
 
