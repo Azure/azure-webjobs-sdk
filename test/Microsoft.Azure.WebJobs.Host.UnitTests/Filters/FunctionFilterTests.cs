@@ -41,6 +41,19 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             Assert.Equal(expected, TestLog.ToString());
         }
 
+        [Fact]
+        public async Task SuccessWithFilterResultTest()
+        {
+            var host = TestHelpers.NewJobHost<MyProg3>();
+
+            await host.CallAsync("MyProg3.Method3");
+            var expected =
+                "[ctor][Pre-Instance][Pre_class][Pre_m1][Pre_m2][Pre_m3]" +
+                "[Post_m3][Post_m2][Post_m1][Post_class][Post-Instance]";
+
+            Assert.Equal(expected, TestLog.ToString());
+        }
+
         // A B C Body* --> C' B' A'        
         [Fact]
         public async Task FailInBody()
@@ -423,6 +436,17 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                 Act("body");
             }
 
+            [NoAutomaticTrigger]
+            [MyInvocationFilter("m1")]
+            [MyInvocationFilter("m2", "filter-result")]
+            [MyInvocationFilter("m3")]
+            [MyExceptionFilter("method")]
+            public void Method3(ILogger logger)
+            {
+                logger.LogInformation("body");
+                Act("body");
+            }
+
             public Task OnExceptionAsync(FunctionExceptionContext exceptionContext, CancellationToken cancellationToken)
             {
                 Act("ExceptionFilter_Instance");
@@ -450,10 +474,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             public string _id;
 
-            public MyInvocationFilterAttribute(string id = null)
+            private object _result;
+
+            public MyInvocationFilterAttribute(string id = null, object result = null)
             {
                 Counter++;
                 _id = id;
+                _result = result;
             }
 
             public override Task OnExecutingAsync(FunctionExecutingContext executingContext, CancellationToken cancellationToken)
@@ -463,6 +490,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
                 // add a custom property and retrieve it below
                 executingContext.Properties["TestProperty"] = "TestValue";
+
+                if (_result != null)
+                {
+                    executingContext.Result = _result;
+                }
 
                 Assert.NotNull(executingContext.Logger);
 

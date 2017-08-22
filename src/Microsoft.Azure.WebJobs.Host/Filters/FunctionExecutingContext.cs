@@ -24,5 +24,10 @@ namespace Microsoft.Azure.WebJobs.Host
             : base(arguments, properties, functionInstanceId, functionName, logger)
         {
         }
+
+        /// <summary>
+        /// The result of the function
+        /// </summary>
+        public object Result { get; set; }
     }
 }
