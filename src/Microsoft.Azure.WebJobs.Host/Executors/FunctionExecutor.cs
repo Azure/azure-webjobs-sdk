@@ -1171,7 +1171,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         highestSuccessfulFilter = i;
                     }
 
-                    var result = await _innerInvoker.InvokeAsync(instance, arguments);
+                    var result = executingContext.Result ?? await _innerInvoker.InvokeAsync(instance, arguments);
+
                     return result;
                 }
                 catch (Exception ex)
