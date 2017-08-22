@@ -27,12 +27,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private const string HierarchicalBlobContainerName = TestArtifactPrefix + "subblobs-%rnd%";
         private const string TestData = "TestData";
         private readonly TestFixture _fixture;
-        private static int numBlobsRead;
+        private static int _numBlobsRead;
 
         public BlobBindingEndToEndTests(TestFixture fixture)
         {
             _fixture = fixture;
-            numBlobsRead = 0;
+            _numBlobsRead = 0;
         }
 
         [Fact]
@@ -40,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             await _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("CloudBlobContainerBinding"));
 
-            Assert.Equal(6, numBlobsRead);
+            Assert.Equal(6, _numBlobsRead);
         }
 
         [Fact]
@@ -48,7 +48,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             await _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("CloudBlobDirectoryBinding"));
 
-            Assert.Equal(3, numBlobsRead);
+            Assert.Equal(3, _numBlobsRead);
         }
 
         [Fact]
@@ -63,7 +63,55 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             await _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("CloudBlobContainerBinding_WithModelBinding"), arguments);
 
-            Assert.Equal(6, numBlobsRead);
+            Assert.Equal(6, _numBlobsRead);
+        }
+
+        [Fact]
+        public async Task BindToCloudBlockBlob_WithUrlBinding()
+        {
+            // get url for the test blob
+            CloudBlockBlob blob = _fixture.BlobContainer.GetBlockBlobReference("blob1");
+            TestPoco poco = new TestPoco
+            {
+                A = blob.Uri.ToString()
+            };
+            string json = JsonConvert.SerializeObject(poco);
+            var arguments = new { poco = json };
+            await _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("CloudBlockBlobBinding_WithUrlBinding"), arguments);
+
+            Assert.Equal(1, _numBlobsRead);
+        }
+
+        [Fact]
+        public async Task BindToCloudBlob_WithModelBinding_Fail()
+        {
+            TestPoco poco = new TestPoco
+            {
+                A = _fixture.Config.NameResolver.ResolveWholeString(ContainerName)
+            };
+            string json = JsonConvert.SerializeObject(poco);
+            var arguments = new { poco = json };
+            var ex = await Assert.ThrowsAsync<FunctionInvocationException>(() =>
+           _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("CloudBlockBlobBinding_WithUrlBinding"), arguments));
+            // CloudBlockBlobBinding_WithUrlBinding is suppose to bind to a blob
+            Assert.Equal($"Invalid absolute blob url: {poco.A}", ex.InnerException.InnerException.Message);
+        }
+
+        [Fact]
+        public async Task BindToCloudBlobContainer_WithUrlBinding_Fail()
+        {
+            // get url for the test blob
+            CloudBlockBlob blob = _fixture.BlobContainer.GetBlockBlobReference("blob1");
+            TestPoco poco = new TestPoco
+            {
+                A = blob.Uri.ToString()
+            };
+            string json = JsonConvert.SerializeObject(poco);
+            var arguments = new { poco = json };
+            var ex = await Assert.ThrowsAsync<FunctionInvocationException>(() =>
+            _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("CloudBlobContainerBinding_WithModelBinding"), arguments));
+            // CloudBlobContainerBinding_WithModelBinding is suppose to bind to a container
+            Assert.Equal($"Invalid container name: {poco.A}", ex.InnerException.InnerException.Message);
         }
 
         [Fact]
@@ -71,7 +119,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             await _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("IEnumerableCloudBlockBlobBinding_WithPrefixFilter"));
 
-            Assert.Equal(3, numBlobsRead);
+            Assert.Equal(3, _numBlobsRead);
         }
 
         [Fact]
@@ -79,7 +127,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             await _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("IEnumerableCloudBlockBlobBinding_WithPrefixFilter_NoMatchingBlobs"));
 
-            Assert.Equal(0, numBlobsRead);
+            Assert.Equal(0, _numBlobsRead);
         }
 
         [Fact]
@@ -87,7 +135,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             await _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("IEnumerableCloudBlockBlobBinding_WithPrefixFilter_HierarchicalBlobs"));
 
-            Assert.Equal(2, numBlobsRead);
+            Assert.Equal(2, _numBlobsRead);
         }
 
         [Fact]
@@ -95,7 +143,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             await _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("IEnumerableCloudBlockBlobBinding_WithPrefixFilter_HierarchicalBlobs_UsesFlatBlobListing"));
 
-            Assert.Equal(3, numBlobsRead);
+            Assert.Equal(3, _numBlobsRead);
         }
 
         [Fact]
@@ -111,7 +159,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             await _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("IEnumerableCloudBlockBlobBinding_WithModelBinding"), arguments);
 
-            Assert.Equal(3, numBlobsRead);
+            Assert.Equal(3, _numBlobsRead);
         }
 
         [Fact]
@@ -119,7 +167,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             await _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("IEnumerableCloudPageBlobBinding"));
 
-            Assert.Equal(2, numBlobsRead);
+            Assert.Equal(2, _numBlobsRead);
         }
 
         [Fact]
@@ -127,7 +175,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             await _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("IEnumerableCloudAppendBlobBinding"));
 
-            Assert.Equal(3, numBlobsRead);
+            Assert.Equal(3, _numBlobsRead);
         }
 
         [Fact]
@@ -135,7 +183,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             await _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("IEnumerableStringBinding"));
 
-            Assert.Equal(6, numBlobsRead);
+            Assert.Equal(6, _numBlobsRead);
         }
 
         [Fact]
@@ -143,7 +191,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             await _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("IEnumerableStreamBinding"));
 
-            Assert.Equal(6, numBlobsRead);
+            Assert.Equal(6, _numBlobsRead);
         }
 
         [Fact]
@@ -151,7 +199,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             await _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("IEnumerableTextReaderBinding"));
 
-            Assert.Equal(6, numBlobsRead);
+            Assert.Equal(6, _numBlobsRead);
         }
 
         [Fact]
@@ -159,7 +207,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             await _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("IEnumerableICloudBlobBinding"));
 
-            Assert.Equal(6, numBlobsRead);
+            Assert.Equal(6, _numBlobsRead);
         }
 
         [Fact]
@@ -167,7 +215,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             await _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("ByteArrayBinding"));
 
-            Assert.Equal(1, numBlobsRead);
+            Assert.Equal(1, _numBlobsRead);
         }
 
         [Theory]
@@ -178,7 +226,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             await _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod(functionName));
 
-            Assert.Equal(1, numBlobsRead);
+            Assert.Equal(1, _numBlobsRead);
         }
 
         [Theory]
@@ -189,7 +237,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             await _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod(functionName));
 
-            Assert.Equal(1, numBlobsRead);
+            Assert.Equal(1, _numBlobsRead);
         }
 
         [Fact]
@@ -275,7 +323,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             await _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("ByteArrayTriggerBinding"), arguments);
 
-            Assert.Equal(1, numBlobsRead);
+            Assert.Equal(1, _numBlobsRead);
         }
 
         [Fact]
@@ -300,7 +348,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string content = blob.DownloadTextAsync().Result;
                 Assert.Equal(TestData, content);
             }
-            numBlobsRead = blobs.Results.Count();
+            _numBlobsRead = blobs.Results.Count();
         }
 
         [NoAutomaticTrigger]
@@ -315,12 +363,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string content = blob.DownloadTextAsync().Result;
                 Assert.Equal(TestData, content);
             }
-            numBlobsRead += blobs.Count();
+            _numBlobsRead += blobs.Count();
 
             CloudBlobDirectory subDirectory = directoryItems.Results.OfType<CloudBlobDirectory>().Single();
             CloudBlockBlob subBlob = (await subDirectory.ListBlobsSegmentedAsync(null)).Results.Cast<CloudBlockBlob>().Single();
             Assert.Equal(TestData, await subBlob.DownloadTextAsync());
-            numBlobsRead += 1;
+            _numBlobsRead += 1;
         }
 
         [NoAutomaticTrigger]
@@ -332,6 +380,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [NoAutomaticTrigger]
+        public static void CloudBlockBlobBinding_WithUrlBinding(
+            [QueueTrigger("testqueue")] TestPoco poco,
+            [Blob("{A}")] string blob)
+        {
+            Assert.Equal(TestData, blob);
+            _numBlobsRead = 1;
+        }
+
+        [NoAutomaticTrigger]
         public async static Task IEnumerableCloudBlockBlobBinding_WithPrefixFilter(
             [Blob(ContainerName + "/blo")] IEnumerable<CloudBlockBlob> blobs)
         {
@@ -340,14 +397,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string content = await blob.DownloadTextAsync();
                 Assert.Equal(TestData, content);
             }
-            numBlobsRead = blobs.Count();
+            _numBlobsRead = blobs.Count();
         }
 
         [NoAutomaticTrigger]
         public static void IEnumerableCloudBlockBlobBinding_WithPrefixFilter_NoMatchingBlobs(
             [Blob(ContainerName + "/dne")] IEnumerable<CloudBlockBlob> blobs)
         {
-            numBlobsRead = blobs.Count();
+            _numBlobsRead = blobs.Count();
         }
 
         [NoAutomaticTrigger]
@@ -359,7 +416,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string content = await blob.DownloadTextAsync();
                 Assert.Equal(TestData, content);
             }
-            numBlobsRead = blobs.Count();
+            _numBlobsRead = blobs.Count();
         }
 
         // Ensure that a flat blob listing is used, meaning if a route prefix covers
@@ -374,7 +431,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string content = await blob.DownloadTextAsync();
                 Assert.Equal(TestData, content);
             }
-            numBlobsRead = blobs.Count();
+            _numBlobsRead = blobs.Count();
         }
 
         [NoAutomaticTrigger]
@@ -387,7 +444,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string content = await blob.DownloadTextAsync();
                 Assert.Equal(TestData, content);
             }
-            numBlobsRead = blobs.Count();
+            _numBlobsRead = blobs.Count();
         }
 
         [NoAutomaticTrigger]
@@ -401,7 +458,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string content = Encoding.UTF8.GetString(bytes, 0, byteCount);
                 Assert.True(content.StartsWith(TestData));
             }
-            numBlobsRead = blobs.Count();
+            _numBlobsRead = blobs.Count();
         }
 
         [NoAutomaticTrigger]
@@ -413,7 +470,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string content = await blob.DownloadTextAsync();
                 Assert.Equal(TestData, content);
             }
-            numBlobsRead = blobs.Count();
+            _numBlobsRead = blobs.Count();
         }
 
         [NoAutomaticTrigger]
@@ -424,7 +481,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 Assert.Equal(TestData, blob);
             }
-            numBlobsRead = blobs.Count();
+            _numBlobsRead = blobs.Count();
         }
 
         [NoAutomaticTrigger]
@@ -439,7 +496,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     Assert.Equal(TestData, content);
                 }
             }
-            numBlobsRead = blobs.Count();
+            _numBlobsRead = blobs.Count();
         }
 
         [NoAutomaticTrigger]
@@ -451,7 +508,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string content = blob.ReadToEnd();
                 Assert.Equal(TestData, content);
             }
-            numBlobsRead = blobs.Count();
+            _numBlobsRead = blobs.Count();
         }
 
         [NoAutomaticTrigger]
@@ -467,7 +524,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     Assert.Equal(TestData, content);
                 }
             }
-            numBlobsRead = blobs.Count();
+            _numBlobsRead = blobs.Count();
         }
 
         [NoAutomaticTrigger]
@@ -475,7 +532,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             [Blob(ContainerName + "/blob1")] string blob)
         {
             Assert.Equal(TestData, blob);
-            numBlobsRead = 1;
+            _numBlobsRead = 1;
         }
 
         [NoAutomaticTrigger]
@@ -484,7 +541,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             blob = blob.Trim('\0');
             Assert.Equal(TestData, blob);
-            numBlobsRead = 1;
+            _numBlobsRead = 1;
         }
 
         [NoAutomaticTrigger]
@@ -492,7 +549,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             [Blob(AppendBlobContainerName + "/blob1")] string blob)
         {
             Assert.Equal(TestData, blob);
-            numBlobsRead = 1;
+            _numBlobsRead = 1;
         }
 
         [NoAutomaticTrigger]
@@ -549,7 +606,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string content = reader.ReadToEnd();
                 Assert.Equal(TestData, content);
             }
-            numBlobsRead = 1;
+            _numBlobsRead = 1;
         }
 
         [NoAutomaticTrigger]
@@ -561,7 +618,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string content = reader.ReadToEnd();
                 Assert.Equal(TestData, content);
             }
-            numBlobsRead = 1;
+            _numBlobsRead = 1;
         }
 
         [NoAutomaticTrigger]
@@ -573,7 +630,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string content = reader.ReadToEnd();
                 Assert.Equal(TestData, content);
             }
-            numBlobsRead = 1;
+            _numBlobsRead = 1;
         }
 
         [NoAutomaticTrigger]
@@ -582,7 +639,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             string result = Encoding.UTF8.GetString(blob);
             Assert.Equal(TestData, result);
-            numBlobsRead = 1;
+            _numBlobsRead = 1;
         }
 
         [NoAutomaticTrigger]
@@ -591,7 +648,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             string result = Encoding.UTF8.GetString(blob);
             Assert.Equal(TestData, result);
-            numBlobsRead = 1;
+            _numBlobsRead = 1;
         }
 
         [NoAutomaticTrigger]
@@ -600,7 +657,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             string result = Encoding.UTF8.GetString(blob);
             Assert.Equal(TestData, result);
-            numBlobsRead = 1;
+            _numBlobsRead = 1;
         }
 
         [NoAutomaticTrigger]
@@ -623,7 +680,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             string result = Encoding.UTF8.GetString(blob);
             Assert.Equal(TestData, result);
-            numBlobsRead = 1;
+            _numBlobsRead = 1;
         }
 
         public class TestFixture : IDisposable
