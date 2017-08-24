@@ -55,39 +55,32 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
             return path;
         }
 
-        public static string TryConvertAbsUrlToContainerBlob(string value)
+        // throws exception if failed
+        public static string ConvertAbsUrlToContainerBlob(string blobUrl)
         {
             try
             {
-                Uri uri = new Uri(value); // default to UriKind.Absolute
+                Uri uri = new Uri(blobUrl); // default to UriKind.Absolute
                 return uri.LocalPath.Substring(1); // [0] is slash, same logic as ToBlobPath() in StorageAnalyticsLogEntry.cs
             }
             catch (Exception)
             {
-                return null;
+                throw new FormatException($"Invalid absolute blob url: {blobUrl}");
             }
         }
 
-        // Does not valid containerName and blobName
-        public static void ExtractContainerNameAndBlobName(string src, out string containerName, out string blobName)
+        public static bool TryConvertAbsUrlToContainerBlob(string blobUrl, out string value)
         {
-            if (String.IsNullOrEmpty(src))
+            try
             {
-                throw new FormatException($"can not get container name and blob name from {src}");
+                value = ConvertAbsUrlToContainerBlob(blobUrl);
+                return true;
             }
-            int slashIndex = src.IndexOf('/');
-            containerName = src.Substring(0, slashIndex);
-            blobName = src.Substring(slashIndex + 1);
-        }
-
-        public static BlobPath Parse(string value, bool isContainerBinding)
-        {
-            BlobPath path;
-            if (TryParse(value, isContainerBinding, out path))
+            catch (Exception)
             {
-                return path;
+                value = null;
+                return false;
             }
-            return null;
         }
 
         public static bool TryParse(string value, bool isContainerBinding, out BlobPath path)

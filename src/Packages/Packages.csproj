@@ -5,7 +5,7 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <SkipCopyBuildProduct>true</SkipCopyBuildProduct>
-    <ProjectGuid>{064F4B52-09DB-4882-9EE4-16B1AEFB4F9B}</ProjectGuid>
+    <ProjectGuid>{34AB8F63-18DE-4E0D-B21C-15E33B091634}</ProjectGuid>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <NuGetPackageImportStamp>d7fae0d2</NuGetPackageImportStamp>
   </PropertyGroup>

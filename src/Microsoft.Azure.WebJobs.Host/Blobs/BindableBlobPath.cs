@@ -11,18 +11,15 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
     {
         public static IBindableBlobPath Create(string pattern, bool isContainerBinding = false)
         {
-            var containerBlob = BlobPath.TryConvertAbsUrlToContainerBlob(pattern);
             BlobPath parsedPattern = null;
-            if (!string.IsNullOrEmpty(containerBlob))
+            string containerBlob = null;
+            // if pattern is a blob url, we extract the container/blob
+            if (!BlobPath.TryConvertAbsUrlToContainerBlob(pattern, out containerBlob))
             {
-                parsedPattern = BlobPath.Parse(containerBlob, isContainerBinding);
-            }
-            else
-            {
-                parsedPattern = BlobPath.Parse(pattern, isContainerBinding);
+                containerBlob = pattern;
             }
 
-            if (parsedPattern == null)
+            if (!BlobPath.TryParse(containerBlob, isContainerBinding, out parsedPattern))
             {
                 BindingTemplate urlTemplate = BindingTemplate.FromString(pattern);
                 if (urlTemplate.ParameterNames.Count() == 1)

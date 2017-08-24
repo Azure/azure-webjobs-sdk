@@ -48,14 +48,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs
         [Fact]
         public void ToString_BlobPath_ReturnsExpectedResult()
         {
-            BlobPath path = BlobPath.Parse("container/blob", false);
+            BlobPath path = null;
+            BlobPath.TryParse("container/blob", false, out path);
             Assert.Equal("container/blob", path.ToString());
 
             // '[' ad ']' are valid in blob names
-            path = BlobPath.Parse("container/blob[0]", false);
+            BlobPath.TryParse("container/blob[0]", false, out path);
             Assert.Equal("container/blob[0]", path.ToString());
 
-            path = BlobPath.Parse("container", true);
+            BlobPath.TryParse("container", true, out path);
             Assert.Equal("container", path.ToString());
 
             path = new BlobPath("container", null);

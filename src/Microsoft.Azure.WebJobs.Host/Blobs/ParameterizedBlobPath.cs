@@ -79,27 +79,23 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
 
         public BlobPath Bind(IReadOnlyDictionary<string, object> bindingData)
         {
-            string containerName;
-            string blobName;
             if (_urlBindingTemplate != null)
             {
                 string url = _urlBindingTemplate.Bind(bindingData);
-                BlobPath.ExtractContainerNameAndBlobName(BlobPath.TryConvertAbsUrlToContainerBlob(url), out containerName, out blobName);
+                return BlobPath.ParseAndValidate(BlobPath.ConvertAbsUrlToContainerBlob(url));
             }
             else
             {
-                containerName = _containerNameTemplate.Bind(bindingData);
-                blobName = _blobNameTemplate.Bind(bindingData);
-            }
+                string containerName = _containerNameTemplate.Bind(bindingData);
+                string blobName = _blobNameTemplate.Bind(bindingData);
+                BlobClient.ValidateContainerName(containerName);
+                if (!string.IsNullOrEmpty(_blobNameTemplate.Pattern))
+                {
+                    BlobClient.ValidateBlobName(blobName);
+                }
 
-            BlobClient.ValidateContainerName(containerName);
-            if (_urlBindingTemplate != null || !string.IsNullOrEmpty(_blobNameTemplate.Pattern))
-            {
-                // validate blobName when blobUrl is used or blobName template is provided
-                BlobClient.ValidateBlobName(blobName);
+                return new BlobPath(containerName, blobName);
             }
-
-            return new BlobPath(containerName, blobName);
         }
 
         public override string ToString()
