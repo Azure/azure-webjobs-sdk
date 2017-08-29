@@ -82,7 +82,22 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [Fact]
-        public async Task BindToCloudBlobContainer_WithUrlBinding_Fails()
+        public async Task BindToCloudBlob_WithModelBinding_Fail()
+        {
+            TestPoco poco = new TestPoco
+            {
+                A = _fixture.Config.NameResolver.ResolveWholeString(ContainerName)
+            };
+            string json = JsonConvert.SerializeObject(poco);
+            var arguments = new { poco = json };
+            var ex = await Assert.ThrowsAsync<FunctionInvocationException>(() =>
+           _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("CloudBlockBlobBinding_WithUrlBinding"), arguments));
+            // CloudBlockBlobBinding_WithUrlBinding is suppose to bind to a blob
+            Assert.Equal($"Invalid absolute blob url: {poco.A}", ex.InnerException.InnerException.Message);
+        }
+
+        [Fact]
+        public async Task BindToCloudBlobContainer_WithUrlBinding_Fail()
         {
             // get url for the test blob
             CloudBlockBlob blob = _fixture.BlobContainer.GetBlockBlobReference("blob1");
@@ -94,7 +109,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var arguments = new { poco = json };
             var ex = await Assert.ThrowsAsync<FunctionInvocationException>(() =>
             _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("CloudBlobContainerBinding_WithModelBinding"), arguments));
-            // ModelBinding is suppose to bind to a container
+            // CloudBlobContainerBinding_WithModelBinding is suppose to bind to a container
             Assert.Equal($"Invalid container name: {poco.A}", ex.InnerException.InnerException.Message);
         }
 
