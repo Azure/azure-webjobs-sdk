@@ -12,19 +12,16 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
         public static IBindableBlobPath Create(string pattern, bool isContainerBinding = false)
         {
             BlobPath parsedPattern = null;
-            string containerBlob = null;
-            // if pattern is a blob url, we extract the container/blob
-            if (!BlobPath.TryConvertAbsUrlToContainerBlob(pattern, out containerBlob))
+            // try blob/container pattern from url or string
+            if (!BlobPath.TryParseAbsUrl(pattern, out parsedPattern) &&
+                !BlobPath.TryParse(pattern, isContainerBinding, out parsedPattern))
             {
-                containerBlob = pattern;
-            }
-
-            if (!BlobPath.TryParse(containerBlob, isContainerBinding, out parsedPattern))
-            {
+                // if failed => not blob/container pattern
+                // we try pattern url
                 BindingTemplate urlTemplate = BindingTemplate.FromString(pattern);
                 if (urlTemplate.ParameterNames.Count() == 1)
                 {
-                    return new ParameterizedBlobPath(urlTemplate);
+                    return new ParameterizedBlobUrl(urlTemplate);
                 }
                 throw new FormatException($"Invalid blob path '{pattern}'. Paths must be in the format 'container/blob' or 'blob Url'.");
             }

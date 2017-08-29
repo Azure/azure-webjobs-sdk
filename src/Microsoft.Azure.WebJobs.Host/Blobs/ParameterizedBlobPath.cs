@@ -13,16 +13,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
     {
         private readonly BindingTemplate _containerNameTemplate;
         private readonly BindingTemplate _blobNameTemplate;
-        private readonly BindingTemplate _urlBindingTemplate;
-
-        public ParameterizedBlobPath(BindingTemplate urlBindingTemplate)
-        {
-            Debug.Assert(urlBindingTemplate != null);
-
-            _urlBindingTemplate = urlBindingTemplate;
-            _containerNameTemplate = null;
-            _blobNameTemplate = null;
-        }
 
         public ParameterizedBlobPath(BindingTemplate containerNameTemplate, BindingTemplate blobNameTemplate)
         {
@@ -31,33 +21,16 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
 
             _containerNameTemplate = containerNameTemplate;
             _blobNameTemplate = blobNameTemplate;
-            _urlBindingTemplate = null; // does not need to initialize, since we don't have property
         }
 
         public string ContainerNamePattern
         {
-            get
-            {
-                if (_urlBindingTemplate != null)
-                {
-                    // return template string for container
-                    return _urlBindingTemplate.Pattern + ".getContainer()";
-                }
-                return _containerNameTemplate.Pattern;
-            }
+            get { return _containerNameTemplate.Pattern; }
         }
 
         public string BlobNamePattern
         {
-            get
-            {
-                if (_urlBindingTemplate != null)
-                {
-                    // return template string for blob
-                    return _urlBindingTemplate.Pattern + ".getBlob()";
-                }
-                return _blobNameTemplate.Pattern;
-            }
+            get { return _blobNameTemplate.Pattern; }
         }
 
         public bool IsBound
@@ -67,43 +40,25 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
 
         public IEnumerable<string> ParameterNames
         {
-            get
-            {
-                if (_urlBindingTemplate != null)
-                {
-                    return _urlBindingTemplate.ParameterNames;
-                }
-                return _containerNameTemplate.ParameterNames.Concat(_blobNameTemplate.ParameterNames);
-            }
+            get { return _containerNameTemplate.ParameterNames.Concat(_blobNameTemplate.ParameterNames); }
         }
 
         public BlobPath Bind(IReadOnlyDictionary<string, object> bindingData)
         {
-            if (_urlBindingTemplate != null)
-            {
-                string url = _urlBindingTemplate.Bind(bindingData);
-                return BlobPath.ParseAndValidate(BlobPath.ConvertAbsUrlToContainerBlob(url));
-            }
-            else
-            {
-                string containerName = _containerNameTemplate.Bind(bindingData);
-                string blobName = _blobNameTemplate.Bind(bindingData);
-                BlobClient.ValidateContainerName(containerName);
-                if (!string.IsNullOrEmpty(_blobNameTemplate.Pattern))
-                {
-                    BlobClient.ValidateBlobName(blobName);
-                }
+            string containerName = _containerNameTemplate.Bind(bindingData);
+            string blobName = _blobNameTemplate.Bind(bindingData);
 
-                return new BlobPath(containerName, blobName);
+            BlobClient.ValidateContainerName(containerName);
+            if (!string.IsNullOrEmpty(_blobNameTemplate.Pattern))
+            {
+                BlobClient.ValidateBlobName(blobName);
             }
+            
+            return new BlobPath(containerName, blobName);
         }
 
         public override string ToString()
         {
-            if (_urlBindingTemplate != null)
-            {
-                return _urlBindingTemplate.Pattern;
-            }
             return _containerNameTemplate.Pattern + "/" + _blobNameTemplate.Pattern;
         }
     }

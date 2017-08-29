@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs
 {
@@ -56,31 +57,29 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
         }
 
         // throws exception if failed
-        public static string ConvertAbsUrlToContainerBlob(string blobUrl)
+        public static BlobPath ParseAbsUrl(string blobUrl)
         {
-            try
+            BlobPath returnV;
+            if (TryParseAbsUrl(blobUrl, out returnV))
             {
-                Uri uri = new Uri(blobUrl); // default to UriKind.Absolute
-                return uri.LocalPath.Substring(1); // [0] is slash, same logic as ToBlobPath() in StorageAnalyticsLogEntry.cs
+                return returnV;
             }
-            catch (Exception)
-            {
-                throw new FormatException($"Invalid absolute blob url: {blobUrl}");
-            }
+            throw new FormatException($"Invalid absolute blob url: {blobUrl}");
         }
 
-        public static bool TryConvertAbsUrlToContainerBlob(string blobUrl, out string value)
+        // similar to TryParse, but take in Url
+        // does not take argument isContainerBinding since Url is blob only
+        public static bool TryParseAbsUrl(string blobUrl, out BlobPath path)
         {
-            try
+            Uri uri;
+            path = null;
+            if (Uri.TryCreate(blobUrl, UriKind.Absolute, out uri))
             {
-                value = ConvertAbsUrlToContainerBlob(blobUrl);
+                var blob = new CloudBlob(uri);
+                path = new BlobPath(blob.Container.Name, blob.Name); // use storage sdk to parse url
                 return true;
             }
-            catch (Exception)
-            {
-                value = null;
-                return false;
-            }
+            return false;
         }
 
         public static bool TryParse(string value, bool isContainerBinding, out BlobPath path)
