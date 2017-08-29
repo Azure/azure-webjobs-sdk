@@ -7,6 +7,8 @@ using Microsoft.Azure.WebJobs.Host.Bindings.Path;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs
 {
+    // this class handles blob pattern like {data.url}
+    // which are expected to resolve to absolute blob URL
     internal class ParameterizedBlobUrl : IBindableBlobPath
     {
         private readonly BindingTemplate _urlBindingTemplate;
@@ -17,11 +19,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
 
             _urlBindingTemplate = urlBindingTemplate;
         }
+        // the return value here is just used for logging and does not need to be a valid binding expression
         public string ContainerNamePattern
         {
             get { return _urlBindingTemplate.Pattern + ".getContainer()"; }
         }
-
+        // the return value here is just used for logging and does not need to be a valid binding expression
         public string BlobNamePattern
         {
             get { return _urlBindingTemplate.Pattern + ".getBlob()"; }
