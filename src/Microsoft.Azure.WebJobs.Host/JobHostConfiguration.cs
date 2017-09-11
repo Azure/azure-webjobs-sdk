@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Reflection;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
@@ -358,7 +357,7 @@ namespace Microsoft.Azure.WebJobs
             }
 
             object service = null;
-            _services.TryGetValue(serviceType, out service); 
+            _services.TryGetValue(serviceType, out service);
 
             return service;
         }

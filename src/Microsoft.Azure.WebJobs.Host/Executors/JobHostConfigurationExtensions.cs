@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Blobs;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Loggers;
@@ -134,17 +135,19 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
 
                 singletonManager = new SingletonManager(
-                    lockManager,                     
-                    config.Singleton, 
+                    lockManager,
+                    config.Singleton,
                     trace,
                     exceptionHandler,
-                    config.LoggerFactory, 
-                    hostIdProvider, 
+                    config.LoggerFactory,
+                    hostIdProvider,
                     services.GetService<INameResolver>());
                 services.AddService<SingletonManager>(singletonManager);
             }
 
             IExtensionRegistry extensions = services.GetExtensions();
+            services.AddService<SharedQueueHandler>(new SharedQueueHandler(storageAccountProvider, hostIdProvider, exceptionHandler, trace,
+                                                    config.LoggerFactory, queueConfiguration, sharedContextProvider, messageEnqueuedWatcherAccessor));
             ITriggerBindingProvider triggerBindingProvider = DefaultTriggerBindingProvider.Create(nameResolver,
                 storageAccountProvider, extensionTypeLocator, hostIdProvider, queueConfiguration, blobsConfiguration, exceptionHandler,
                 messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor, sharedContextProvider, extensions, singletonManager, trace, config.LoggerFactory);
@@ -167,10 +170,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         // - indexing the functions 
         // - spinning up the listeners (so connecting to the services)
         public static async Task<JobHostContext> CreateJobHostContextAsync(
-            this JobHostConfiguration config, 
+            this JobHostConfiguration config,
             ServiceProviderWrapper services, // Results from first phase
-            JobHost host, 
-            CancellationToken shutdownToken, 
+            JobHost host,
+            CancellationToken shutdownToken,
             CancellationToken cancellationToken)
         {
             FunctionExecutor functionExecutor = services.GetService<FunctionExecutor>();
@@ -186,6 +189,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             ILoggerFactory loggerFactory = services.GetService<ILoggerFactory>();
             IFunctionResultAggregatorFactory aggregatorFactory = services.GetService<IFunctionResultAggregatorFactory>();
             IAsyncCollector<FunctionInstanceLogEntry> functionEventCollector = null;
+            SharedQueueHandler hostSharedQueue = services.GetService<SharedQueueHandler>();
 
             // Create the aggregator if all the pieces are configured
             IAsyncCollector<FunctionInstanceLogEntry> aggregator = null;
@@ -276,7 +280,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         extensions,
                         singletonManager,
                         trace,
-                        loggerFactory);
+                        loggerFactory,
+                        hostSharedQueue);
 
                     // Important to set this so that the func we passed to DynamicHostIdProvider can pick it up. 
                     services.AddService<IFunctionIndexProvider>(functionIndexProvider);
@@ -301,7 +306,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 {
                     hostCallExecutor = new ShutdownFunctionExecutor(shutdownToken, functionExecutor);
 
-                    IListener factoryListener = new ListenerFactoryListener(functionsListenerFactory);
+                    IListener factoryListener = new ListenerFactoryListener(functionsListenerFactory, hostSharedQueue);
                     IListener shutdownListener = new ShutdownListener(shutdownToken, factoryListener);
                     listener = shutdownListener;
 
@@ -354,7 +359,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         exceptionHandler, shutdownToken, functionExecutor);
                     IListenerFactory hostListenerFactory = new CompositeListenerFactory(functionsListenerFactory,
                         sharedQueueListenerFactory, instanceQueueListenerFactory);
-                    listener = CreateHostListener(hostListenerFactory, heartbeatCommand, exceptionHandler, shutdownToken);
+                    listener = CreateHostListener(hostListenerFactory, hostSharedQueue, heartbeatCommand, exceptionHandler, shutdownToken);
 
                     // Publish this to Azure logging account so that a web dashboard can see it. 
                     await LogHostStartedAsync(functions, hostOutputMessage, hostInstanceLogger, combinedCancellationToken);
@@ -397,11 +402,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
 
                 return new JobHostContext(
-                    functions, 
-                    hostCallExecutor, 
-                    listener, 
+                    functions,
+                    hostCallExecutor,
+                    listener,
                     trace,
-                    functionEventCollector, 
+                    functionEventCollector,
                     loggerFactory);
             }
         }
@@ -431,11 +436,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         }
 
         [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
-        private static IListener CreateHostListener(IListenerFactory allFunctionsListenerFactory,
+        private static IListener CreateHostListener(IListenerFactory allFunctionsListenerFactory, SharedQueueHandler sharedQueue,
             IRecurrentCommand heartbeatCommand, IWebJobsExceptionHandler exceptionHandler,
             CancellationToken shutdownToken)
         {
-            IListener factoryListener = new ListenerFactoryListener(allFunctionsListenerFactory);
+            IListener factoryListener = new ListenerFactoryListener(allFunctionsListenerFactory, sharedQueue);
             IListener heartbeatListener = new HeartbeatListener(heartbeatCommand, exceptionHandler, factoryListener);
             IListener shutdownListener = new ShutdownListener(shutdownToken, heartbeatListener);
             return shutdownListener;

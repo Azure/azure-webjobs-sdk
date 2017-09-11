@@ -5,22 +5,24 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Azure.WebJobs.Host.Dispatch;
 
 namespace Microsoft.Azure.WebJobs.Host.Listeners
 {
     internal class ListenerFactoryListener : IListener
     {
         private readonly IListenerFactory _factory;
+        private readonly SharedQueueHandler _sharedQueue;
         private readonly CancellationTokenSource _cancellationSource;
 
         private IListener _listener;
         private CancellationTokenRegistration _cancellationRegistration;
         private bool _disposed;
 
-        public ListenerFactoryListener(IListenerFactory factory)
+        public ListenerFactoryListener(IListenerFactory factory, SharedQueueHandler sharedQueue)
         {
             _factory = factory;
+            _sharedQueue = sharedQueue;
             _cancellationSource = new CancellationTokenSource();
         }
 
@@ -38,12 +40,16 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 
         private async Task StartAsyncCore(CancellationToken cancellationToken)
         {
+            // create sharedQueue so that once the listener started, they can enqueue
+            await _sharedQueue.InitializeAsync(cancellationToken);
             _listener = await _factory.CreateAsync(cancellationToken);
             _cancellationRegistration = _cancellationSource.Token.Register(_listener.Cancel);
-            await _listener.StartAsync(cancellationToken);
+            await _listener.StartAsync(cancellationToken); // composite listener, startAsync in parallel
+            // start sharedQueue after other listeners
+            await _sharedQueue.StartQueueAsync(cancellationToken);
         }
 
-        public Task StopAsync(CancellationToken cancellationToken)
+        public async Task StopAsync(CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
 
@@ -52,7 +58,10 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                 throw new InvalidOperationException("The listener has not been started.");
             }
 
-            return _listener.StopAsync(cancellationToken);
+            await _listener.StopAsync(cancellationToken);
+            // technically we should stop the SharedQueue after others
+            // if we stop SharedQueue before, other listeners cannot write to it
+            await _sharedQueue.StopQueueAsync(cancellationToken);
         }
 
         public void Cancel()

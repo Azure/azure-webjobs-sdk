@@ -40,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 
         public TimeSpan VisibilityTimeout
         {
-            get { return TimeSpan.Zero;  }
+            get { return TimeSpan.Zero; }
         }
 
         public IQueueProcessorFactory QueueProcessorFactory

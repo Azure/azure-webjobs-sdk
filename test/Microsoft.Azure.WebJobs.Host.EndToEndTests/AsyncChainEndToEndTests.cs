@@ -967,8 +967,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 if (item.IsCompleted)
                 {
                     prevState.Append("[complete]");
-                }            
-                
+                }
+
                 LogEntries.Add(item);
                 return Task.CompletedTask;
             }
@@ -991,7 +991,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     Assert.Equal("[start][postbind][complete]", kv.Value.ToString());
                 }
 
-                var actual = this._state.Count;                
+                var actual = this._state.Count;
                 Assert.True(actual == expected, "Actual function invocations:" + Environment.NewLine + string.Join(Environment.NewLine, this.LogEntries.Select(l => l.FunctionName)));
             }
         }
