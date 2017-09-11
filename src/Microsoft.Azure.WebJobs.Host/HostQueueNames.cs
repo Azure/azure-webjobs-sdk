@@ -11,6 +11,8 @@ namespace Microsoft.Azure.WebJobs.Host
 
         private const string HostBlobTriggerQueuePrefix = Prefix + "blobtrigger-";
         private const string HostQueuePrefix = Prefix + "host-";
+        private const string HostSharedQueuePrefix = Prefix + "shared-";
+        private const string HostSharedPoisonPrefix = Prefix + "poison-";
 
         // The standard prefix is too long here; this queue is bound by customers.
         public const string BlobTriggerPoisonQueue = "webjobs-blobtrigger-poison";
@@ -21,6 +23,22 @@ namespace Microsoft.Azure.WebJobs.Host
         public static string GetHostBlobTriggerQueueName(string hostId)
         {
             return HostBlobTriggerQueuePrefix + hostId;
+        }
+
+        /// <summary>Gets the shared host queue name.</summary>
+        /// <param name="hostId">The host ID.</param>
+        /// <returns>The shared host queue name.</returns>
+        public static string GetHostSharedQueueName(string hostId)
+        {
+            return HostSharedQueuePrefix + hostId;
+        }
+
+        /// <summary>Gets the shared host poison queue name.</summary>
+        /// <param name="hostId">The host ID.</param>
+        /// <returns>The shared host poison queue name.</returns>
+        public static string GetHostSharedPoisonQueueName(string hostId)
+        {
+            return HostSharedPoisonPrefix + hostId;
         }
 
         /// <summary>Gets the host instance queue name.</summary>

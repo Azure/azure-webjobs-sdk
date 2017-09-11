@@ -115,7 +115,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "AppSettingAttribute",
                 "BinderExtensions",
                 "BlobAttribute",
-                "BlobTriggerAttribute",                
+                "BlobTriggerAttribute",
                 "IBinder",
                 "IAsyncCollector`1",
                 "ICollector`1",
@@ -247,7 +247,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IFunctionExceptionFilter",
                 "IFunctionFilter",
                 "IFunctionInvocationFilter",
-                "LoggerExtensions"
+                "LoggerExtensions",
+                "IDispatchQueueHandler",
+                "IMessageHandler"
             };
 
             AssertPublicTypes(expected, assembly);

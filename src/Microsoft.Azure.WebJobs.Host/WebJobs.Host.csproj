@@ -491,6 +491,8 @@
     <Compile Include="Config\ServiceProviderWrapper.cs" />
     <Compile Include="DefaultNameResolver.cs" />
     <Compile Include="Diagnostics\ExceptionFormatter.cs" />
+    <Compile Include="Dispatch\InMemoryDispatchQueueHandler.cs" />
+    <Compile Include="Dispatch\IDispatchQueueHandler.cs" />
     <Compile Include="Executors\CompositeFunctionEventCollector.cs" />
     <Compile Include="Executors\FunctionInstanceFactoryContext.cs" />
     <Compile Include="Executors\FunctionInstanceFactoryContextOfT.cs" />
@@ -548,6 +550,9 @@
     <Compile Include="Blobs\Listeners\ContainerScanInfo.cs" />
     <Compile Include="Blobs\Listeners\ScanBlobScanLogHybridPollingStrategy.cs" />
     <Compile Include="Config\ExtensionConfigContextExtensions.cs" />
+    <Compile Include="Dispatch\DispatchQueueHandler.cs" />
+    <Compile Include="Dispatch\IMessageHandler.cs" />
+    <Compile Include="Dispatch\SharedQueueHandler.cs" />
     <Compile Include="Singleton\RenewableLockHandle.cs" />
     <Compile Include="Singleton\IDistributedLock.cs" />
     <Compile Include="Singleton\BlobLeaseDistributedLockManager.cs" />

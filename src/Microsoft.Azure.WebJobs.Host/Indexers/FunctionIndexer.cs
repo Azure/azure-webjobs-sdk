@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Bindings.Invoke;
+using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
@@ -34,17 +35,19 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly SingletonManager _singletonManager;
         private readonly TraceWriter _trace;
         private readonly ILogger _logger;
+        private readonly SharedQueueHandler _sharedQueue;
 
         public FunctionIndexer(
-            ITriggerBindingProvider triggerBindingProvider, 
-            IBindingProvider bindingProvider, 
-            IJobActivator activator, 
-            IFunctionExecutor executor, 
-            IExtensionRegistry extensions, 
+            ITriggerBindingProvider triggerBindingProvider,
+            IBindingProvider bindingProvider,
+            IJobActivator activator,
+            IFunctionExecutor executor,
+            IExtensionRegistry extensions,
             SingletonManager singletonManager,
-            TraceWriter trace, 
+            TraceWriter trace,
             ILoggerFactory loggerFactory,
-            INameResolver nameResolver = null)
+            INameResolver nameResolver = null,
+            SharedQueueHandler sharedQueue = null)
         {
             if (triggerBindingProvider == null)
             {
@@ -90,6 +93,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _nameResolver = nameResolver;
             _trace = trace;
             _logger = loggerFactory?.CreateLogger(LogCategories.Startup);
+            _sharedQueue = sharedQueue;
         }
 
         public async Task IndexTypeAsync(Type type, IFunctionIndexCollector index, CancellationToken cancellationToken)
@@ -115,7 +119,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             if (method.ContainsGenericParameters)
             {
                 return false;
-            }            
+            }
 
             if (method.GetCustomAttributesData().Any(HasJobAttribute))
             {
@@ -227,11 +231,11 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                     // The trigger will handle the return value.
                     triggerHasReturnBinding = true;
                 }
-                
+
                 // We treat binding to the return type the same as binding to an 'out T' parameter. 
                 // An explicit return binding takes precedence over an implicit trigger binding. 
                 returnParameter = new ReturnParameterInfo(method, methodReturnType);
-                parameters = parameters.Concat(new ParameterInfo[] { returnParameter });                
+                parameters = parameters.Concat(new ParameterInfo[] { returnParameter });
             }
 
             foreach (ParameterInfo parameter in parameters)
@@ -350,14 +354,14 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             ITriggeredFunctionBinding<TTriggerValue> functionBinding = new TriggeredFunctionBinding<TTriggerValue>(descriptor, parameterName, triggerBinding, nonTriggerBindings, _singletonManager);
             ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory = new TriggeredFunctionInstanceFactory<TTriggerValue>(functionBinding, invoker, descriptor);
             ITriggeredFunctionExecutor triggerExecutor = new TriggeredFunctionExecutor<TTriggerValue>(descriptor, _executor, instanceFactory);
-            IListenerFactory listenerFactory = new ListenerFactory(descriptor, triggerExecutor, triggerBinding);
+            IListenerFactory listenerFactory = new ListenerFactory(descriptor, triggerExecutor, triggerBinding, _sharedQueue);
 
             return new FunctionDefinition(descriptor, instanceFactory, listenerFactory);
         }
 
         // Expose internally for testing purposes 
         internal static FunctionDescriptor FromMethod(
-            MethodInfo method, 
+            MethodInfo method,
             IJobActivator jobActivator = null,
             INameResolver nameResolver = null)
         {
@@ -403,9 +407,9 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             var descr = FromMethod(method, this._activator, _nameResolver);
 
             List<ParameterDescriptor> parameters = new List<ParameterDescriptor>();
-            
+
             foreach (ParameterInfo parameter in method.GetParameters())
-            {            
+            {
                 string name = parameter.Name;
 
                 if (name == triggerParameterName)
@@ -417,7 +421,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                     parameters.Add(nonTriggerBindings[name].ToParameterDescriptor());
                 }
             }
-                        
+
             descr.Parameters = parameters;
             descr.TriggerParameterDescriptor = parameters.OfType<TriggerParameterDescriptor>().FirstOrDefault();
 
@@ -429,18 +433,20 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             private readonly FunctionDescriptor _descriptor;
             private readonly ITriggeredFunctionExecutor _executor;
             private readonly ITriggerBinding _binding;
+            private readonly SharedQueueHandler _sharedQueue;
 
-            public ListenerFactory(FunctionDescriptor descriptor, ITriggeredFunctionExecutor executor, ITriggerBinding binding)
+            public ListenerFactory(FunctionDescriptor descriptor, ITriggeredFunctionExecutor executor, ITriggerBinding binding, SharedQueueHandler sharedQueue)
             {
                 _descriptor = descriptor;
                 _executor = executor;
                 _binding = binding;
+                _sharedQueue = sharedQueue;
             }
 
-            public Task<IListener> CreateAsync(CancellationToken cancellationToken)
+            public async Task<IListener> CreateAsync(CancellationToken cancellationToken)
             {
-                ListenerFactoryContext context = new ListenerFactoryContext(_descriptor, _executor, cancellationToken);
-                return _binding.CreateListenerAsync(context);
+                ListenerFactoryContext context = new ListenerFactoryContext(_descriptor, _executor, _sharedQueue, cancellationToken);
+                return await _binding.CreateListenerAsync(context);
             }
         }
 

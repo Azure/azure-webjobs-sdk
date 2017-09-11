@@ -60,6 +60,7 @@
     <Compile Include="Blobs\Listeners\ScanContainersStrategyTests.cs" />
     <Compile Include="Blobs\Listeners\StorageBlobScanInfoManagerTests.cs" />
     <Compile Include="BlobTriggerTests.cs" />
+    <Compile Include="DispatchQueueTests.cs" />
     <Compile Include="ILoggerTests.cs" />
     <Compile Include="JobHostTests.cs" />
     <Compile Include="FunctionalTest.cs" />

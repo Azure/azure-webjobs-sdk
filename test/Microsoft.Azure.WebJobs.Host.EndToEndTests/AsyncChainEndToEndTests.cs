@@ -174,8 +174,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.True(queueProcessorFactory.CustomQueueProcessors.Sum(p => p.BeginProcessingCount) >= 2);
                 Assert.True(queueProcessorFactory.CustomQueueProcessors.Sum(p => p.CompleteProcessingCount) >= 2);
 
-                Assert.Equal(19, storageClientFactory.TotalBlobClientCount);
-                Assert.Equal(15, storageClientFactory.TotalQueueClientCount);
+                // sharedQueueHandler calls getHostIdAsync --> createBlobClient++
+                Assert.Equal(20, storageClientFactory.TotalBlobClientCount);
+                // sharedQueueHandler calls this function to get dispatchQueue and poisonQueue
+                Assert.Equal(16, storageClientFactory.TotalQueueClientCount);
                 Assert.Equal(0, storageClientFactory.TotalTableClientCount);
 
                 Assert.Equal(8, storageClientFactory.ParameterBlobClientCount);
@@ -961,8 +963,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 if (item.IsCompleted)
                 {
                     prevState.Append("[complete]");
-                }            
-                
+                }
+
                 LogEntries.Add(item);
                 return Task.CompletedTask;
             }
@@ -980,12 +982,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             public void AssertFunctionCount(int expected)
             {
                 // Verify the event ordering and that we got all notifications. 
-                foreach(var kv in _state)
+                foreach (var kv in _state)
                 {
                     Assert.Equal("[start][postbind][complete]", kv.Value.ToString());
                 }
 
-                var actual = this._state.Count;                
+                var actual = this._state.Count;
                 Assert.True(actual == expected, "Actual function invocations:" + Environment.NewLine + string.Join(Environment.NewLine, this.LogEntries.Select(l => l.FunctionName)));
             }
         }
