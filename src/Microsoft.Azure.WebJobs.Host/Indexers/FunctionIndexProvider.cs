@@ -23,6 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly SingletonManager _singletonManager;
         private readonly TraceWriter _trace;
         private readonly ILoggerFactory _loggerFactory;
+        private readonly INameResolver _nameResolver;
 
         private IFunctionIndex _index;
 
@@ -34,7 +35,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             IExtensionRegistry extensions,
             SingletonManager singletonManager,
             TraceWriter trace,
-            ILoggerFactory loggerFactory)
+            ILoggerFactory loggerFactory,
+            INameResolver nameResolver = null)
         {
             if (typeLocator == null)
             {
@@ -85,6 +87,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _singletonManager = singletonManager;
             _trace = trace;
             _loggerFactory = loggerFactory;
+            _nameResolver = nameResolver;
         }
 
         public async Task<IFunctionIndex> GetAsync(CancellationToken cancellationToken)
@@ -100,7 +103,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private async Task<IFunctionIndex> CreateAsync(CancellationToken cancellationToken)
         {
             FunctionIndex index = new FunctionIndex();
-            FunctionIndexer indexer = new FunctionIndexer(_triggerBindingProvider, _bindingProvider, _activator, _executor, _extensions, _singletonManager, _trace, _loggerFactory);
+            FunctionIndexer indexer = new FunctionIndexer(_triggerBindingProvider, _bindingProvider, _activator, _executor, _extensions, _singletonManager, _trace, _loggerFactory, _nameResolver);
             IReadOnlyList<Type> types = _typeLocator.GetTypes();
 
             foreach (Type type in types)
