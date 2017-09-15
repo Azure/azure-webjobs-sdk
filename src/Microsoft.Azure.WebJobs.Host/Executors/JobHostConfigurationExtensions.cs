@@ -269,7 +269,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         extensions,
                         singletonManager,
                         trace,
-                        loggerFactory);
+                        loggerFactory,
+                        nameResolver);
 
                     // Important to set this so that the func we passed to DynamicHostIdProvider can pick it up. 
                     services.AddService<IFunctionIndexProvider>(functionIndexProvider);

@@ -373,7 +373,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             FunctionNameAttribute nameAttribute = method.GetCustomAttribute<FunctionNameAttribute>();
             if (nameAttribute != null)
             {
-                logName = nameAttribute.Name;
+                logName = nameResolver.ResolveWholeString(nameAttribute.Name);
                 shortName = logName;
                 if (!FunctionNameAttribute.FunctionNameValidationRegex.IsMatch(logName))
                 {
