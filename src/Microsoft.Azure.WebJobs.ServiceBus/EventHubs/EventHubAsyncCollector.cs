@@ -52,7 +52,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 throw new ArgumentNullException("item");
             }
 
-            string key = item.PartitionKey ?? string.Empty;
+            string key = item.SystemProperties?.PartitionKey ?? string.Empty;
 
             PartitionCollector partition;
             lock (_partitions)
@@ -131,7 +131,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 {
                     lock (_list)
                     {
-                        var size = (int)item.SerializedSizeInBytes;
+                        var size = (int)item.Body.Count;
 
                         if (size > MaxByteSize)
                         {
