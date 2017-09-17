@@ -9,26 +9,6 @@ branches:
 image: Visual Studio 2017
 install:
 - ps: >-
-    # Download .NET Core 2.0 SDK and add to PATH
-
-    $urlCurrent = "https://download.microsoft.com/download/1/B/4/1B4DE605-8378-47A5-B01B-2C79D6C55519/dotnet-sdk-2.0.0-win-x64.zip"
-
-    $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = "true"
-
-    $env:DOTNET_CLI_TELEMETRY_OPTOUT = "true"
-
-    $env:DOTNET_INSTALL_DIR = "$pwd\.dotnetsdk"
-
-    mkdir $env:DOTNET_INSTALL_DIR -Force | Out-Null
-
-    $tempFileCurrent = [System.IO.Path]::GetTempFileName()
-
-    (New-Object System.Net.WebClient).DownloadFile($urlCurrent, $tempFileCurrent)
-
-    Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory($tempFileCurrent, $env:DOTNET_INSTALL_DIR)
-
-    $env:Path = "$env:DOTNET_INSTALL_DIR;$env:Path"
-
     $env:CommitHash = "$env:APPVEYOR_REPO_COMMIT"
 cache: '%USERPROFILE%\.nuget\packages'
 build_script:
@@ -48,15 +28,23 @@ build_script:
     dotnet pack src\Microsoft.Azure.WebJobs.ServiceBus\EventHubs\WebJobs.EventHubs.csproj -o ..\..\..\buildoutput --no-build --version-suffix "-$env:APPVEYOR_BUILD_NUMBER"
 test_script:
 - ps: >-
-    dotnet test .\test\Microsoft.Azure.WebJobs.Host.UnitTests\ -v q --no-build
+    $success = $true;
+    dotnet test .\test\Microsoft.Azure.WebJobs.Host.UnitTests\ -v q --no-build;
+    $success = $success -and $?;
 
-    dotnet test .\test\Microsoft.Azure.WebJobs.Host.FunctionalTests\ -v q --no-build
+    dotnet test .\test\Microsoft.Azure.WebJobs.Host.FunctionalTests\ -v q --no-build;
+    $success = $success -and $?;
 
-    dotnet test .\test\Microsoft.Azure.WebJobs.Logging.FunctionalTests\ -v q --no-build
+    dotnet test .\test\Microsoft.Azure.WebJobs.Logging.FunctionalTests\ -v q --no-build;
+    $success = $success -and $?;
 
-    dotnet test .\test\Microsoft.Azure.WebJobs.Host.EndToEndTests\ -v q --no-build
+    dotnet test .\test\Microsoft.Azure.WebJobs.Host.EndToEndTests\ -v q --no-build;
+    $success = $success -and $?;
 
-    dotnet test .\test\Microsoft.Azure.WebJobs.EventHubs.UnitTests\ -v q --no-build
+    dotnet test .\test\Microsoft.Azure.WebJobs.EventHubs.UnitTests\ -v q --no-build;
+    $success = $success -and $?;
+
+    if (-not $success) { exit 1 }
 artifacts:
 - path: buildoutput\*.nupkg
   name: Binaries
