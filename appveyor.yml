@@ -42,7 +42,7 @@ test_script:
 
     $success = $success -and $?
 
-    # see results in app insights 'Functions-CI-Reporting'
+    # see results in app insights AntaresDemo 'functionse2eai'
 
     dotnet test .\test\Microsoft.Azure.WebJobs.Host.EndToEndTests\ -v q --no-build -l appinsights
 
