@@ -90,7 +90,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(defaultIp, telemetry.Context.Location.Ip);
             Assert.Equal(LogCategories.Results, telemetry.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
-            Assert.Equal("my message", telemetry.Properties[$"{LogConstants.ParameterPrefix}queueMessage"]);
             Assert.Equal(_triggerReason, telemetry.Properties[LogConstants.TriggerReasonKey]);
             // TODO: Beef up validation to include properties
         }
