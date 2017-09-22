@@ -55,14 +55,6 @@ namespace Microsoft.Extensions.Logging
             properties.Add(LogConstants.DurationKey, logEntry.Duration);
             properties.Add(LogConstants.SucceededKey, succeeded);
 
-            if (logEntry.Arguments != null)
-            {
-                foreach (var arg in logEntry.Arguments)
-                {
-                    properties.Add(LogConstants.ParameterPrefix + arg.Key, arg.Value);
-                }
-            }
-
             FormattedLogValuesCollection payload = new FormattedLogValuesCollection(logString, values, new ReadOnlyDictionary<string, object>(properties));
             LogLevel level = succeeded ? LogLevel.Information : LogLevel.Error;
             logger.Log(level, 0, payload, logEntry.Exception, (s, e) => s.ToString());

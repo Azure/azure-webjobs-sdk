@@ -244,9 +244,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.Equal(expectedOperationName, telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}{LogConstants.NameKey}"]);
                 Assert.Equal("This function was programmatically called via the host APIs.", telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}{LogConstants.TriggerReasonKey}"]);
 
-                // TODO: Parameter logging shouldn't have prop__ prefixes. Need to revisit.
-                Assert.Equal("function input", telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}{LogConstants.ParameterPrefix}input"]);
-
                 Assert.IsType<FunctionInvocationException>(telemetry.Exception);
                 Assert.IsType<Exception>(telemetry.Exception.InnerException);
             }
@@ -268,7 +265,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.NotNull(telemetry.Duration);
             Assert.Equal(success, telemetry.Success);
 
-            Assert.NotNull(telemetry.Properties[$"{LogConstants.ParameterPrefix}input"]);
             Assert.Equal($"ApplicationInsightsEndToEndTests.{operationName}", telemetry.Properties[LogConstants.FullNameKey].ToString());
             Assert.Equal("This function was programmatically called via the host APIs.", telemetry.Properties[LogConstants.TriggerReasonKey].ToString());
 

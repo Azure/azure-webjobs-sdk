@@ -152,7 +152,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             var payload = enumerable.ToDictionary(k => k.Key, v => v.Value);
 
-            Assert.Equal(11, payload.Count);
+            Assert.Equal(9, payload.Count);
             Assert.Equal(_functionFullName, payload[LogConstants.FullNameKey]);
             Assert.Equal(_functionShortName, payload[LogConstants.NameKey]);
             Assert.Equal(_invocationId, payload[LogConstants.InvocationIdKey]);
@@ -161,14 +161,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(_duration, payload[LogConstants.DurationKey]);
             Assert.Equal(_triggerReason, payload[LogConstants.TriggerReasonKey]);
 
-            // verify default arguments were passed with prefix
-            var args = payload.Where(kvp => kvp.Value is string && kvp.Key.ToString().StartsWith(LogConstants.ParameterPrefix));
-            Assert.Equal(_arguments.Count, args.Count());
-            foreach (var arg in _arguments)
-            {
-                var payloadKey = LogConstants.ParameterPrefix + arg.Key;
-                Assert.Equal(arg.Value, args.Single(kvp => kvp.Key == payloadKey).Value.ToString());
-            }
+            // verify that we no longer log parameters
+            var args = payload.Where(kvp => kvp.Key.ToString().StartsWith(LogConstants.ParameterPrefix));
+            Assert.Empty(args);
 
             return payload;
         }
