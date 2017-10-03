@@ -1,6 +1,6 @@
 $isPr = Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER
 
-if (-not $isPr) {
+if (-not $isPr -and $env:SkipAssemblySigning -ne "true") {
   $timeout = new-timespan -Minutes 1
   $sw = [diagnostics.stopwatch]::StartNew();
   $polling = $true;
