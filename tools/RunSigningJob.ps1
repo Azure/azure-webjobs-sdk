@@ -1,6 +1,12 @@
 $isPr = Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER
 
 if (-not $isPr) {
+
+  if ($env:SkipAssemblySigning -eq "true") {
+    "Assembly signing disabled. Skipping signing process."
+    exit 0;
+  }
+
   $ctx = New-AzureStorageContext $env:FILES_ACCOUNT_NAME $env:FILES_ACCOUNT_KEY
   Set-AzureStorageBlobContent "$PSScriptRoot/../bin/tosign.zip" "webjobs" -Blob "$env:APPVEYOR_BUILD_VERSION.zip" -Context $ctx
 
