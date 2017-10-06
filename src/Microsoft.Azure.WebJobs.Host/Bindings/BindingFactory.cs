@@ -3,6 +3,7 @@
 
 using System;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
@@ -234,6 +235,18 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             public Func<TAttribute, TType> BuildFromAttribute { get; set; }
 
             public TType Convert(TAttribute input)
+            {
+                var result = BuildFromAttribute(input);
+                return result;
+            }
+        }
+
+        internal class DelegateTaskConverterBuilder<TAttribute, TType> : IAsyncConverter<TAttribute, TType>
+            where TAttribute : Attribute
+        {
+            public Func<TAttribute, Task<TType>> BuildFromAttribute { get; set; }
+
+            public Task<TType> ConvertAsync(TAttribute input, CancellationToken cancellationToken)
             {
                 var result = BuildFromAttribute(input);
                 return result;
