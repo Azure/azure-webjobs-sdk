@@ -239,6 +239,22 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         /// <param name="buildFromAttribute"></param>
         /// <returns></returns>
         public void BindToCollector<TMessage>(
+           IAsyncConverter<TAttribute, IAsyncCollector<TMessage>> buildFromAttribute)
+        {
+            var bf = _parent.BindingFactory;
+            var pm = PatternMatcher.New(buildFromAttribute);
+            var rule = new AsyncCollectorBindingProvider<TAttribute, TMessage>(bf.NameResolver, bf.ConverterManager, pm);
+
+            Bind(rule);
+        }
+
+        /// <summary>
+        /// Bind to a collector. 
+        /// </summary>
+        /// <typeparam name="TMessage"></typeparam>
+        /// <param name="buildFromAttribute"></param>
+        /// <returns></returns>
+        public void BindToCollector<TMessage>(
            IConverter<TAttribute, IAsyncCollector<TMessage>> buildFromAttribute)
         {
             var bf = _parent.BindingFactory;

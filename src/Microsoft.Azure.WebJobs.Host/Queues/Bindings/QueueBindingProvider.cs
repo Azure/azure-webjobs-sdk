@@ -39,7 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
         // Multiple JobHost objects may share the same JobHostConfiguration.
         // But queues have per-host instance state (IMessageEnqueuedWatcher). 
         // so capture that and create new binding rules per host instance. 
-        private class PerHostConfig
+        private class PerHostConfig : IAsyncConverter<QueueAttribute, IAsyncCollector<IStorageQueueMessage>>
         {
             // Fields that the various binding funcs need to close over. 
             private IStorageAccountProvider _accountProvider;
@@ -70,7 +70,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
 
                 binding.AddValidator(ValidateQueueAttribute)
                     .SetPostResolveHook(ToWriteParameterDescriptorForCollector)
-                        .BindToCollector<IStorageQueueMessage>(BuildFromQueueAttribute);
+                        .BindToCollector<IStorageQueueMessage>(this);
 
                 binding.SetPostResolveHook(ToReadWriteParameterDescriptorForCollector)
                         .BindToInput<IStorageQueue>(builder);
@@ -179,15 +179,15 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
                 return msg;
             }
 
-            private IAsyncCollector<IStorageQueueMessage> BuildFromQueueAttribute(QueueAttribute attrResolved)
+            public async Task<IAsyncCollector<IStorageQueueMessage>> ConvertAsync(QueueAttribute attrResolved, CancellationToken cancellationToken)
             {
-                IStorageQueue queue = GetQueue(attrResolved);
+                IStorageQueue queue = await GetQueueAsync(attrResolved);
                 return new QueueAsyncCollector(queue, _messageEnqueuedWatcherGetter.Value);
             }
 
-            internal IStorageQueue GetQueue(QueueAttribute attrResolved)
+            internal async Task<IStorageQueue> GetQueueAsync(QueueAttribute attrResolved)
             {
-                var account = Task.Run(() => _accountProvider.GetStorageAccountAsync(attrResolved, CancellationToken.None)).GetAwaiter().GetResult();
+                var account = await _accountProvider.GetStorageAccountAsync(attrResolved, CancellationToken.None);
                 var client = account.CreateQueueClient();
 
                 string queueName = attrResolved.QueueName.ToLowerInvariant();
@@ -195,6 +195,12 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
 
                 return client.GetQueueReference(queueName);
             }
+
+            internal IStorageQueue GetQueue(QueueAttribute attrResolved)
+            {
+                var queue = Task.Run(() => GetQueueAsync(attrResolved)).GetAwaiter().GetResult();
+                return queue;
+            } 
         }
 
         private class QueueBuilder : 
