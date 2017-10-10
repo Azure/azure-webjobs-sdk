@@ -594,7 +594,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     TraceEvent[] traces = trace.Traces.ToArray();
                     Assert.Equal(9, traces.Length);
 
-                    string output = string.Join("\r\n", traces.Select(p => p.Message));
+                    string output = string.Join(Environment.NewLine, traces.Select(p => p.Message));
                     Assert.Contains("Executing 'AsyncChainEndToEndTests.QueueTrigger_TraceLevelOverride' (Reason='New queue message detected", output);
                     Assert.Contains("Exception while executing function: AsyncChainEndToEndTests.QueueTrigger_TraceLevelOverride", output);
                     Assert.Contains("Executed 'AsyncChainEndToEndTests.QueueTrigger_TraceLevelOverride' (Failed, Id=", output);

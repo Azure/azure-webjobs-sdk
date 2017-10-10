@@ -292,10 +292,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             if (newlyIntroducedPublicTypes.Length > 0)
             {
-                string message = String.Format("Found {0} unexpected public type{1}: \r\n{2}",
+                string message = String.Format("Found {0} unexpected public type{1}: {3}{2}",
                     newlyIntroducedPublicTypes.Length,
                     newlyIntroducedPublicTypes.Length == 1 ? "" : "s",
-                    string.Join("\r\n", newlyIntroducedPublicTypes));
+                    string.Join(Environment.NewLine, newlyIntroducedPublicTypes),
+                    Environment.NewLine);
                 Assert.True(false, message);
             }
 
@@ -306,7 +307,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 string message = String.Format("missing {0} public type{1}: \r\n{2}",
                     missingPublicTypes.Length,
                     missingPublicTypes.Length == 1 ? "" : "s",
-                    string.Join("\r\n", missingPublicTypes));
+                    string.Join(Environment.NewLine, missingPublicTypes));
                 Assert.True(false, message);
             }
         }
