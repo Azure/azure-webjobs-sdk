@@ -12,6 +12,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using static Microsoft.Azure.WebJobs.Host.Bindings.BindingFactory;
+using Microsoft.Azure.WebJobs.Host.Indexers;
 
 namespace Microsoft.Azure.WebJobs.Host.Config
 {
@@ -174,6 +175,43 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         }
 
         #endregion // BindToInput
+
+
+        #region BindToStream
+
+        /// <summary>
+        /// Bind an attribute to a stream. This ensures the stream is flushed after the user function returns. 
+        /// It uses the attribute's Access property to determine direction (Read/Write). 
+        /// It includes rules for additional types of TextReader,string, byte[], and TextWriter,out string, out byte[].
+        /// </summary>
+        /// <param name="builderInstance"></param>
+        /// <param name="fileAccess"></param>
+        public void BindToStream(IAsyncConverter<TAttribute, Stream> builderInstance, FileAccess fileAccess)
+        {
+            var pm = PatternMatcher.New(builderInstance);
+            var nameResolver = _parent.NameResolver;
+            var streamExtensions = _parent.GetService<IExtensionTypeLocator>();
+            var rule = new BindToStreamBindingProvider<TAttribute>(pm, fileAccess, nameResolver, streamExtensions);
+            Bind(rule);
+        }
+
+        /// <summary>
+        /// Bind an attribute to a stream. This ensures the stream is flushed after the user function returns. 
+        /// It uses the attribute's Access property to determine direction (Read/Write). 
+        /// It includes rules for additional types of TextReader,string, byte[], and TextWriter,out string, out byte[].
+        /// </summary>
+        /// <param name="builderInstance"></param>
+        /// <param name="fileAccess"></param>
+        public void BindToStream(IConverter<TAttribute, Stream> builderInstance, FileAccess fileAccess)
+        {
+            var pm = PatternMatcher.New(builderInstance);
+            var nameResolver = _parent.NameResolver;
+            var streamExtensions = _parent.GetService<IExtensionTypeLocator>();
+            var rule = new BindToStreamBindingProvider<TAttribute>(pm, fileAccess, nameResolver, streamExtensions);
+            Bind(rule);
+        }
+
+        #endregion 
 
         /// <summary>
         /// Add a general binder.

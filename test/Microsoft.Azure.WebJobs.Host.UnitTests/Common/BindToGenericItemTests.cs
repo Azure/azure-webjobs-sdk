@@ -2,15 +2,14 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Xunit;
-using System.Threading.Tasks;
-using System.Reflection;
-using Microsoft.Azure.WebJobs.Host.Bindings;
-using System.Threading;
 using Newtonsoft.Json;
-using Microsoft.Azure.WebJobs.Description;
+using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
 {

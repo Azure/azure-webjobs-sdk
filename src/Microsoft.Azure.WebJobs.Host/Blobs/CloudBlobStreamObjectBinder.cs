@@ -30,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
                 blobWrittenWatcherGetter);
         }
 
-        private static Type GetBindingValueType(Type binderType)
+        internal static Type GetBindingValueType(Type binderType)
         {
             Type binderInterfaceType = GetCloudBlobStreamBinderInterface(binderType);
             Debug.Assert(binderInterfaceType != null);
