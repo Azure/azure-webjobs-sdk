@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Newtonsoft.Json.Linq;
+using System.Text;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -21,8 +22,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         IBindingRuleProvider
         where TAttribute : Attribute
     {
-
-        private FileAccess _access; // Which direction this rule applies to. 
+        private readonly FileAccess _access; // Which direction this rule applies to. Can be R, W, or  RW
         private readonly INameResolver _nameResolver;
         private readonly IConverterManager _converterManager;
         private readonly PatternMatcher _patternMatcher;
@@ -101,6 +101,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             public Stream _inner; 
             public abstract object Get();
             public virtual Task Flush() { return Task.CompletedTask; }
+
+            // Used for output bindings. 
+            public virtual Task SetOutputAsync(object value)
+            {
+                return Task.CompletedTask;
+            }
             // public bool IsRead; ??? $$$ 
         }
 
@@ -177,6 +183,42 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 return base.Flush();
             }
+
+            public override async Task SetOutputAsync(object value)
+            {
+                // $$$ Share with C:\dev\afunc\core\azure-webjobs-sdk\src\Microsoft.Azure.WebJobs.Host\Blobs\Bindings\OutStringArgumentBindingProvider.cs 
+                var text = (string)value;
+
+                const int DefaultBufferSize = 1024;
+
+                var encoding = new UTF8Encoding(false); // skip emitting BOM
+
+                using (TextWriter writer = new StreamWriter(_inner, encoding, DefaultBufferSize,
+                        leaveOpen: true))
+                    {
+                        // cancellationToken.ThrowIfCancellationRequested();
+                        await writer.WriteAsync(text);
+                    }                    
+            }
+        }
+
+        // OutByteArrayArgHelper
+        private class OutByteArrayArgHelper : ArgHelper
+        {
+            public override object Get()
+            {
+                return null; // Out-parameter only 
+            }
+            public override Task Flush() // $$$ need th evalue...
+            {
+                return base.Flush();
+            }
+
+            public override async Task SetOutputAsync(object value)
+            {
+                var bytes = (byte[])value;
+                await _inner.WriteAsync(bytes, 0, bytes.Length);
+            }
         }
 
         public Task<IBinding> TryCreateAsync(BindingProviderContext context)
@@ -241,6 +283,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             else if (typeUser == typeof(String).MakeByRefType())
             {
                 argHelperType = typeof(OutStringArgHelper);
+                isRead = false;
+            }
+            else if (typeUser == typeof(byte[]).MakeByRefType())
+            {
+                argHelperType = typeof(OutByteArrayArgHelper);
                 isRead = false;
             }
             else
@@ -373,6 +420,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 // Caller has done some degree of type-verifications 
                 // $$$ verify matches?
 
+                await _helper.SetOutputAsync(value);
 
                 // $$$ CloudBlob implementation will 
                 // - notify other watchers (optimization for BlobTrigger) 

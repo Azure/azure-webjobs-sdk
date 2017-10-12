@@ -254,7 +254,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 // Test writes. Verify the stream content. 
                 foreach (var funcName in new string[]
                {
-                    "WriteStream", "FuncTextWriter1", "FuncTextWriter2"
+                    "WriteStream", "WriteTextWriter1", "WriteTextWriter2", "WriteString", "WriteByteArray" 
                 })
                 {
                     _writeStream = null;
@@ -310,6 +310,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             }
             #endregion // Read Overloads
 
+            #region Write overloads 
             const string _writeMessage = "HelloFromWriter";
                         
             public void WriteStream(
@@ -322,7 +323,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             }
 
             // Explicit Write access 
-            public void FuncTextWriter1(
+            public void WriteTextWriter1(
                 [TestStream(Path = "{k}", Access = FileAccess.Write)] TextWriter tw
                 )
             {
@@ -330,12 +331,30 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             }
 
             // When FileAccess it not specified, we try to figure it out via the parameter type. 
-            public void FuncTextWriter2(
+            public void WriteTextWriter2(
                     [TestStream(Path = "{k}")] TextWriter tw
                 )
             {
                 tw.Write(_writeMessage);
             }
+
+            // Explicit Write access 
+            public void WriteString(
+                [TestStream(Path = "{k}")] out string x
+                )
+            {
+                x = _writeMessage;
+            }
+
+            public void WriteByteArray(
+                [TestStream(Path = "{k}")] out byte[] x
+                )
+            {
+                x = Encoding.UTF8.GetBytes(_writeMessage);
+            }
+
+
+            #endregion // #region Write overloads 
 
             public async Task<Stream> ConvertAsync(TestStreamAttribute input, CancellationToken cancellationToken)
             {
