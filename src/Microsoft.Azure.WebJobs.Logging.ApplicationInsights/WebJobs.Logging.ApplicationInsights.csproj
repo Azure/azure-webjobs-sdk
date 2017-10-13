@@ -147,6 +147,7 @@
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="ITelemetryClientFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="WebJobsRoleEnvironmentTelmetryInitializer.cs" />
     <Compile Include="WebJobsTelemetryInitializer.cs" />
   </ItemGroup>
   <ItemGroup>

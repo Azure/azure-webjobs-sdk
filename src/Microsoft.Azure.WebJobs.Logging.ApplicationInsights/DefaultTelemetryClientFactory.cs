@@ -9,7 +9,6 @@ using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
-using Microsoft.ApplicationInsights.WindowsServer;
 using Microsoft.ApplicationInsights.WindowsServer.Channel.Implementation;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
 using Microsoft.Extensions.Logging;
@@ -142,7 +141,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         internal static void AddInitializers(TelemetryConfiguration config)
         {
             // This picks up the RoleName from the server
-            config.TelemetryInitializers.Add(new AzureWebAppRoleEnvironmentTelemetryInitializer());
+            config.TelemetryInitializers.Add(new WebJobsRoleEnvironmentTelemetryInitializer());
 
             // This applies our special scope properties and gets RoleInstance name
             config.TelemetryInitializers.Add(new WebJobsTelemetryInitializer());
