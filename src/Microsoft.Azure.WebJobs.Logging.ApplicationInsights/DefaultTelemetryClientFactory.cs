@@ -94,6 +94,9 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
         internal static void AddInitializers(TelemetryConfiguration config)
         {
+            // This picks up the RoleName from the server
+            config.TelemetryInitializers.Add(new WebJobsRoleEnvironmentTelemetryInitializer());
+
             // This applies our special scope properties and gets RoleInstance name
             config.TelemetryInitializers.Add(new WebJobsTelemetryInitializer());
         }
