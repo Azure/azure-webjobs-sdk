@@ -125,11 +125,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // Validate the exception
             ExceptionTelemetry[] exceptions = _channel.Telemetries
                 .OfType<ExceptionTelemetry>()
-                .OrderBy(t => t.Message)
+                .OrderBy(t => t.Timestamp)
                 .ToArray();
-            Assert.Equal(2, exceptions.Length);
-            ValidateException(exceptions[0], LogCategories.Results, testName);
-            ValidateException(exceptions[1], LogCategories.Function, testName);
+            Assert.Equal(2, exceptions.Length);            
+            ValidateException(exceptions[0], LogCategories.Function, testName);
+            ValidateException(exceptions[1], LogCategories.Results, testName);
 
             // Finally, validate the request
             RequestTelemetry request = _channel.Telemetries
