@@ -50,8 +50,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             string formattedMessage = formatter?.Invoke(state, exception);
             IEnumerable<KeyValuePair<string, object>> stateValues = state as IEnumerable<KeyValuePair<string, object>>;
 
-            // If we don't have a message or any key/value pairs, there's nothing to log.
-            if (stateValues == null && string.IsNullOrEmpty(formattedMessage))
+            // If we don't have anything here, there's nothing to log.
+            if (stateValues == null && string.IsNullOrEmpty(formattedMessage) && exception == null)
             {
                 return;
             }
@@ -165,10 +165,15 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         {
             ExceptionTelemetry telemetry = new ExceptionTelemetry(exception)
             {
-                Message = formattedMessage,
                 SeverityLevel = GetSeverityLevel(logLevel),
                 Timestamp = DateTimeOffset.UtcNow
             };
+
+            if (!string.IsNullOrEmpty(formattedMessage))
+            {
+                telemetry.Properties[LogConstants.FormattedMessageKey] = formattedMessage;
+            }
+
             ApplyProperties(telemetry, values, LogConstants.CustomPropertyPrefix);
             ApplyCustomScopeProperties(telemetry);
             _telemetryClient.TrackException(telemetry);

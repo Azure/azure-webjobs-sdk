@@ -372,13 +372,18 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             Assert.Equal(LogCategories.Function, telemetry.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(LogLevel.Error.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
-            Assert.Equal("Error with customer: {customer}.",
-                telemetry.Properties[LogConstants.CustomPropertyPrefix + LogConstants.OriginalFormatKey]);
-            Assert.Equal("Error with customer: John Doe.", telemetry.Message);
+            Assert.Equal("Error with customer: {customer}.", telemetry.Properties[LogConstants.CustomPropertyPrefix + LogConstants.OriginalFormatKey]);
+            Assert.Equal("Error with customer: John Doe.", telemetry.Properties[LogConstants.FormattedMessageKey]);
             Assert.Equal("John Doe", telemetry.Properties[LogConstants.CustomPropertyPrefix + "customer"]);
             Assert.Same(ex, telemetry.Exception);
             Assert.Equal(scopeGuid.ToString(), telemetry.Context.Operation.Id);
             Assert.Equal(_functionShortName, telemetry.Context.Operation.Name);
+
+            string internalMessage = GetInternalExceptionMessages(telemetry).Single();
+            Assert.Equal("Failure", internalMessage);
+
+            // We should not have the request logged.
+            Assert.False(telemetry.Properties.TryGetValue(LogConstants.CustomPropertyPrefix + ApplicationInsightsScopeKeys.HttpRequest, out string request));
         }
 
         [Fact]
@@ -527,6 +532,71 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             var telemetry = _channel.Telemetries.Single() as TraceTelemetry;
             Assert.Equal("some string", telemetry.Message);
             Assert.Equal(LogCategories.Function, telemetry.Properties[LogConstants.CategoryNameKey]);
+        }
+
+        [Fact]
+        public void Log_Exception_NoLogMessage()
+        {
+            var logger = CreateLogger(LogCategories.Function);
+            var innerEx = new Exception("Inner");
+            var outerEx = new Exception("Outer", innerEx);
+
+            logger.LogError(0, outerEx, string.Empty);
+
+            var telemetry = _channel.Telemetries.Single() as ExceptionTelemetry;
+
+            string[] internalMessages = GetInternalExceptionMessages(telemetry).ToArray();
+
+            Assert.Equal(2, internalMessages.Length);
+            Assert.Equal("Outer", internalMessages[0]);
+            Assert.Equal("Inner", internalMessages[1]);
+
+            Assert.Equal(outerEx, telemetry.Exception);
+            Assert.Equal(LogCategories.Function, telemetry.Properties[LogConstants.CategoryNameKey]);
+            Assert.Equal(LogLevel.Error.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
+            Assert.DoesNotContain(LogConstants.FormattedMessageKey, telemetry.Properties.Keys);
+        }
+
+        [Fact]
+        public void Log_Exception_LogMessage()
+        {
+            var logger = CreateLogger(LogCategories.Function);
+            var innerEx = new Exception("Inner");
+            var outerEx = new Exception("Outer", innerEx);
+
+            logger.LogError(0, outerEx, "Log message");
+
+            var telemetry = _channel.Telemetries.Single() as ExceptionTelemetry;
+
+            string[] internalMessages = GetInternalExceptionMessages(telemetry).ToArray();
+
+            Assert.Equal(2, internalMessages.Length);
+            Assert.Equal("Outer", internalMessages[0]);
+            Assert.Equal("Inner", internalMessages[1]);
+
+            Assert.Equal(outerEx, telemetry.Exception);
+            Assert.Equal(LogCategories.Function, telemetry.Properties[LogConstants.CategoryNameKey]);
+            Assert.Equal(LogLevel.Error.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
+            Assert.Equal("Log message", telemetry.Properties[LogConstants.FormattedMessageKey]);
+        }
+
+        private static IEnumerable<string> GetInternalExceptionMessages(ExceptionTelemetry telemetry)
+        {
+            IList<string> internalMessages = new List<string>();
+
+            // The transmitted details may get out-of-sync with the Exception. We previously had bugs 
+            // around this, so double-checking that the exception messages remain as intended. These are 
+            // all internal to App Insights so pull them out with reflection.
+            PropertyInfo exceptionsProp = typeof(ExceptionTelemetry).GetProperty("Exceptions", BindingFlags.NonPublic | BindingFlags.Instance);
+            var details = exceptionsProp.GetValue(telemetry) as IEnumerable<object>;
+
+            foreach (var detail in details)
+            {
+                var messageProp = detail.GetType().GetProperty("message", BindingFlags.Public | BindingFlags.Instance);
+                internalMessages.Add(messageProp.GetValue(detail) as string);
+            }
+
+            return internalMessages;
         }
 
         [Fact]
