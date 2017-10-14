@@ -24,12 +24,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     {
         private readonly FileAccess _access; // Which direction this rule applies to. Can be R, W, or  RW
         private readonly INameResolver _nameResolver;
-        private readonly IConverterManager _converterManager;
         private readonly PatternMatcher _patternMatcher;
 
-        public BindToStreamBindingProvider(PatternMatcher patternMatcher, FileAccess access)
+        public BindToStreamBindingProvider(PatternMatcher patternMatcher, FileAccess access, INameResolver nameResolver)
         {
             _patternMatcher = patternMatcher;
+            _nameResolver = nameResolver;
             _access = access;
         }
 
@@ -93,134 +93,6 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return true;
         }
 
-
-        // $$$ Can this merge with the IValueBinder?
-
-        private abstract class ArgHelper
-        {
-            public Stream _inner; 
-            public abstract object Get();
-            public virtual Task Flush() { return Task.CompletedTask; }
-
-            // Used for output bindings. 
-            public virtual Task SetOutputAsync(object value)
-            {
-                return Task.CompletedTask;
-            }
-            // public bool IsRead; ??? $$$ 
-        }
-
-        private class StreamArgHelper : ArgHelper
-        {
-            public override object Get()
-            {
-                return _inner;
-            }
-        }
-     
-        private class TextReaderArgHelper : ArgHelper
-        {
-            private TextReader _arg;
-            public override object Get()
-            {
-                _arg = new StreamReader(_inner);
-                return _arg;
-            }
-            public override Task Flush()
-            {
-                _arg.Close(); // $$$ Closes underlying stream 
-                return Task.CompletedTask; 
-            }
-        }
-
-        private class TextWriterArgHelper : ArgHelper
-        {
-            private TextWriter _arg;
-            public override object Get()
-            {
-                _arg = new StreamWriter(_inner);
-                return _arg;
-            }
-            public override Task Flush()
-            {
-                return _arg.FlushAsync();
-            }
-        }
-
-        private class StringArgHelper : ArgHelper
-        {
-            public override object Get()
-            {
-                using (var arg = new StreamReader(_inner))
-                {
-                    return arg.ReadToEnd(); // $$$ async?
-                }
-            }            
-        }
-         
-        // $$$ Merge with 
-        private class ByteArrayArgHelper : ArgHelper
-        {
-            public override object Get()
-            {
-                using (MemoryStream outputStream = new MemoryStream())
-                {
-                    const int DefaultBufferSize = 4096;
-                    _inner.CopyTo(outputStream, DefaultBufferSize); // $$$ Make async
-                    byte[] value = outputStream.ToArray();
-                    return value;
-                }
-            }
-        }
-
-        private class OutStringArgHelper : ArgHelper
-        {
-            public override object Get()
-            {
-                return null; // Out-parameter only 
-            }
-            public override Task Flush() // $$$ need th evalue...
-            {
-                return base.Flush();
-            }
-
-            public override async Task SetOutputAsync(object value)
-            {
-                // $$$ Share with C:\dev\afunc\core\azure-webjobs-sdk\src\Microsoft.Azure.WebJobs.Host\Blobs\Bindings\OutStringArgumentBindingProvider.cs 
-                var text = (string)value;
-
-                const int DefaultBufferSize = 1024;
-
-                var encoding = new UTF8Encoding(false); // skip emitting BOM
-
-                using (TextWriter writer = new StreamWriter(_inner, encoding, DefaultBufferSize,
-                        leaveOpen: true))
-                    {
-                        // cancellationToken.ThrowIfCancellationRequested();
-                        await writer.WriteAsync(text);
-                    }                    
-            }
-        }
-
-        // OutByteArrayArgHelper
-        private class OutByteArrayArgHelper : ArgHelper
-        {
-            public override object Get()
-            {
-                return null; // Out-parameter only 
-            }
-            public override Task Flush() // $$$ need th evalue...
-            {
-                return base.Flush();
-            }
-
-            public override async Task SetOutputAsync(object value)
-            {
-                var bytes = (byte[])value;
-                await _inner.WriteAsync(bytes, 0, bytes.Length);
-            }
-        }
-
         public Task<IBinding> TryCreateAsync(BindingProviderContext context)
         {
             if (context == null)
@@ -247,47 +119,46 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 switch (actualAccess.Value)
                 {
                     case FileAccess.Read:
-                        argHelperType = typeof(StreamArgHelper);
                         isRead = true;
                         
                         break;
-                    case FileAccess.Write:
-                        argHelperType = typeof(StreamArgHelper);
+                    case FileAccess.Write: 
                         isRead = false;
                         break;
 
                     default:
                         throw new NotImplementedException("ReadWrite access is not supported. Pick either Read or Write.");
                 }
+                argHelperType = typeof(StreamValueProvider);
             }
             else if (typeUser == typeof(TextReader))
             {
-                argHelperType = typeof(TextReaderArgHelper);
+                argHelperType = typeof(TextReaderValueProvider);
                 isRead = true;
             }
             else if (typeUser == typeof(String))
             {
-                argHelperType = typeof(StringArgHelper);
+                argHelperType = typeof(StringValueProvider);
                 isRead = true;
             }
             else if (typeUser == typeof(byte[]))
             {
-                argHelperType = typeof(ByteArrayArgHelper);
+                argHelperType = typeof(ByteArrayValueProvider);
                 isRead = true;
             }
             else if (typeUser == typeof(TextWriter))
             {
-                argHelperType = typeof(TextWriterArgHelper);
+                argHelperType = typeof(TextWriterValueProvider);
                 isRead = false;
             }
             else if (typeUser == typeof(String).MakeByRefType())
             {
-                argHelperType = typeof(OutStringArgHelper);
+                argHelperType = typeof(OutStringArgBaseProvider);
                 isRead = false;
             }
             else if (typeUser == typeof(byte[]).MakeByRefType())
             {
-                argHelperType = typeof(OutByteArrayArgHelper);
+                argHelperType = typeof(OutByteArrayArgBaseProvider);
                 isRead = false;
             }
             else
@@ -349,14 +220,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             var prop = attribute.GetType().GetProperty("Access", BindingFlags.Public | BindingFlags.Instance);
             prop.SetValue(attribute, access); // $$$ FileAccess? vs FileAccess
         }
-
-        // Caller has already verified the rule is applicable.
+                
+        // As a binding, this is one per parameter, shared across each invocation instance.
         private class ReadExactBinding : BindingBase<TAttribute>
         {
             private readonly BindToStreamBindingProvider<TAttribute> _parent;
-            private readonly Type _argHelperType;
             private readonly Type _userType;
             private readonly FileAccess _targetFileAccess;
+            private readonly Type _typeValueProvider;
 
             public ReadExactBinding(
                 AttributeCloner<TAttribute> cloner,
@@ -368,70 +239,209 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 : base(cloner, param)
             {
                 _parent = parent;
-                _argHelperType = argHelper;
                 _userType = userType;
                 _targetFileAccess = targetFileAccess;
+                _typeValueProvider = argHelper;
             }
 
-            protected override Task<IValueProvider> BuildAsync(TAttribute attrResolved, ValueBindingContext context)
+            protected override async Task<IValueProvider> BuildAsync(TAttribute attrResolved, ValueBindingContext context)
             {
                 // set FileAccess beofre calling into the converter. Don't want converters to need to deal with a null FileAccess.
                 SetFileAccessFromAttribute(attrResolved, _targetFileAccess);
 
                 var patternMatcher = _parent._patternMatcher;
-                var argHelper = (ArgHelper)Activator.CreateInstance(_argHelperType);
+                Func<object, object> builder = patternMatcher.TryGetConverterFunc(typeof(TAttribute), typeof(Stream));
+                Func<Stream> builder2 = () => (Stream)builder(attrResolved);
 
 
-                var builder = patternMatcher.TryGetConverterFunc(typeof(TAttribute), typeof(Stream));
-
-                var stream = (Stream) builder(attrResolved);
-                argHelper._inner = stream;
-
-                var obj = argHelper.Get();
-
-                // Coerce 
-                var valueProvider = new ReaderValueProvider
-                {
-                    _helper = argHelper,
-                    Type = _userType,
-                    _stream = stream,
-                    _obj = obj,
-                    _invokeString = "???"
-                };
-                return Task.FromResult<IValueProvider>(valueProvider);
+                BaseProvider valueProvider = (BaseProvider)Activator.CreateInstance(_typeValueProvider);
+                await valueProvider.InitAsync(builder2, _userType);
+             
+                return valueProvider;
             }
         }
 
-        private class ReaderValueProvider : IValueBinder
+        #region Out parameters
+        // Base class for 'out T' stream bindings. 
+        // These are special in that they don't create the stream until after the function functions. 
+        private abstract class OutArgBaseProvider : BaseProvider
         {
-            public ArgHelper _helper;
-            public Stream _stream;
-            public object _obj;
-            public Type Type { get; set; }
-            public string _invokeString;
+            override protected Task<object> CreateUserArgAsync()
+            {
+                // Nop on create. Will do work on complete. 
+                return Task.FromResult<object>(null);
+            }
+
+            public override async Task SetValueAsync(object value, CancellationToken cancellationToken)
+            {
+                // Normally value is the same as the input value. 
+                if (value == null)
+                {
+                    // This means we're an 'out T' parameter and they left it null.
+                    // Don't create the stream or write anything in this case. 
+                    return;
+                }
+
+                // Now Create the stream 
+                using (var stream = this.GetOrCreateStream())
+                {
+                    await this.WriteToStreamAsync(value, cancellationToken);
+                } // Dipose on Stream will close it. Safe to call this multiple times. 
+            }
+
+            protected abstract Task WriteToStreamAsync(object value, CancellationToken cancellationToken);
+        }
+
+        private class OutStringArgBaseProvider : OutArgBaseProvider
+        {
+            protected override async Task WriteToStreamAsync(object value, CancellationToken cancellationToken)
+            {
+                var stream = this.GetOrCreateStream();
+
+                var text = (string)value;
+
+                const int DefaultBufferSize = 1024;
+
+                var encoding = new UTF8Encoding(false); // skip emitting BOM
+
+                using (TextWriter writer = new StreamWriter(stream, encoding, DefaultBufferSize,
+                        leaveOpen: true))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await writer.WriteAsync(text);
+                }
+            }
+        }
+
+        private class OutByteArrayArgBaseProvider : OutArgBaseProvider
+        {
+            protected override async Task WriteToStreamAsync(object value, CancellationToken cancellationToken)
+            {
+                var stream = this.GetOrCreateStream();
+                var bytes = (byte[])value;
+                await stream.WriteAsync(bytes, 0, bytes.Length);
+            }
+        }
+        #endregion // Out parameters
+
+
+        // The base IVlaueProvider. Handed  out per-instance
+        // This wraps the stream and coerces it to the user's parameter.
+        private abstract class BaseProvider : IValueBinder
+        {
+            private Stream _stream;
+            public Type Type { get; set; } // Impl IValueBinder
+
+            private string _invokeString;
+
+            // Helper to build the stream. This will only get invoked once and then cached as _stream. 
+            private Func<Stream> _streamBuilder;
+
+            object _userArg;
+
+            protected Stream GetOrCreateStream()
+            {
+                if (_stream == null)
+                {
+                    _stream = _streamBuilder();
+                }
+                return _stream;
+            }
+
+            public async Task InitAsync(Func<Stream> builder, Type userType)
+            {
+                Type = userType;
+                _invokeString = "???";
+                _streamBuilder = builder;
+
+                _userArg = await this.CreateUserArgAsync();
+            }
 
             public Task<object> GetValueAsync()
             {
-                return Task.FromResult(_obj);
+                return Task.FromResult<object>(_userArg);
             }
-
-            public async Task SetValueAsync(object value, CancellationToken cancellationToken)
+            
+            public virtual async Task SetValueAsync(object value, CancellationToken cancellationToken)
             {
-                // Caller has done some degree of type-verifications 
-                // $$$ verify matches?
-
-                await _helper.SetOutputAsync(value);
-
-                // $$$ CloudBlob implementation will 
-                // - notify other watchers (optimization for BlobTrigger) 
-                // - Call CloudBlobStream.Commit() 
-                await _helper.Flush();
-                _stream.Close(); // $$$ Is this more complex? 
+                // 'Out T' parameters override this method; so this case only needs to handle normal input parameters. 
+                await this.FlushAsync();
+                _stream.Close(); // Safe to call this multiple times. 
             }
 
             public string ToInvokeString()
             {
                 return _invokeString;
+            }
+                       
+            // Deterministic initialization for UserValue. 
+            abstract protected Task<object> CreateUserArgAsync();
+            
+            // Give derived object a chance to flush any buffering before we close the stream. 
+            virtual protected Task FlushAsync() { return Task.CompletedTask;  }
+        }
+
+        // Runs both ways
+        private class StreamValueProvider : BaseProvider
+        {
+            protected override Task<object> CreateUserArgAsync()
+            {
+                return Task.FromResult<object>(this.GetOrCreateStream());
+            }
+        }
+
+        private class TextReaderValueProvider : BaseProvider
+        {
+            protected override Task<object> CreateUserArgAsync()
+            {
+                var stream = this.GetOrCreateStream();
+                var arg = new StreamReader(stream);
+                return Task.FromResult<object>(arg);
+            }    
+        }
+
+        private class StringValueProvider : BaseProvider
+        {
+            protected override async Task<object> CreateUserArgAsync()
+            {
+                var stream = this.GetOrCreateStream();
+                using (var arg = new StreamReader(stream))
+                {
+                    var str = await arg.ReadToEndAsync();
+                    return str;
+                }
+            }
+        }
+
+        private class ByteArrayValueProvider : BaseProvider
+        {
+            protected override async Task<object> CreateUserArgAsync()
+            {
+                var stream = this.GetOrCreateStream();
+                using (MemoryStream outputStream = new MemoryStream())
+                {
+                    const int DefaultBufferSize = 4096;
+                    await stream.CopyToAsync(outputStream, DefaultBufferSize);
+                    byte[] value = outputStream.ToArray();
+                    return value;
+                }
+            }
+        }
+
+        private class TextWriterValueProvider : BaseProvider
+        {
+            private TextWriter _arg;
+
+            protected override Task<object> CreateUserArgAsync()
+            {
+                var stream = this.GetOrCreateStream();
+                _arg = new StreamWriter(stream);
+                return Task.FromResult<object>(_arg);
+            }
+
+            protected override async Task FlushAsync()
+            {
+                await _arg.FlushAsync();
             }
         }
     }

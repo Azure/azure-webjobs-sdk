@@ -188,7 +188,8 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         public void BindToStream(IAsyncConverter<TAttribute, Stream> builderInstance, FileAccess fileAccess)
         {
             var pm = PatternMatcher.New(builderInstance);
-            var rule = new BindToStreamBindingProvider<TAttribute>(pm, fileAccess);
+            var nameResolver = _parent.NameResolver;
+            var rule = new BindToStreamBindingProvider<TAttribute>(pm, fileAccess, nameResolver);
             Bind(rule);
         }
 
