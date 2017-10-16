@@ -193,6 +193,21 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             Bind(rule);
         }
 
+        /// <summary>
+        /// Bind an attribute to a stream. This ensures the stream is flushed after the user function returns. 
+        /// It uses the attribute's Access property to determine direction (Read/Write). 
+        /// It includes rules for additional types of TextReader,string, byte[], and TextWriter,out string, out byte[].
+        /// </summary>
+        /// <param name="builderInstance"></param>
+        /// <param name="fileAccess"></param>
+        public void BindToStream(IConverter<TAttribute, Stream> builderInstance, FileAccess fileAccess)
+        {
+            var pm = PatternMatcher.New(builderInstance);
+            var nameResolver = _parent.NameResolver;
+            var rule = new BindToStreamBindingProvider<TAttribute>(pm, fileAccess, nameResolver);
+            Bind(rule);
+        }
+
         #endregion 
 
         /// <summary>

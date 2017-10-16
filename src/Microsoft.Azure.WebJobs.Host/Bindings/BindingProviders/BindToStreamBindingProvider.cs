@@ -302,7 +302,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 // 'Out T' parameters override this method; so this case only needs to handle normal input parameters. 
                 await this.FlushAsync();
-                _stream.Close(); // Safe to call this multiple times. 
+                if (_stream != null)
+                {
+                    _stream.Close(); // Safe to call this multiple times. 
+                }
             }
 
             public string ToInvokeString()
@@ -332,6 +335,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             protected override Task<object> CreateUserArgAsync()
             {
                 var stream = this.GetOrCreateStream();
+                if (stream == null)
+                {
+                    return Task.FromResult<object>(null);
+                }
                 var arg = new StreamReader(stream);
                 return Task.FromResult<object>(arg);
             }    
@@ -344,6 +351,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             protected override async Task<object> CreateUserArgAsync()
             {
                 var stream = this.GetOrCreateStream();
+                if (stream == null)
+                {
+                    return null;
+                }
                 using (var arg = new StreamReader(stream))
                 {
                     var str = await arg.ReadToEndAsync();
@@ -359,6 +370,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             protected override async Task<object> CreateUserArgAsync()
             {
                 var stream = this.GetOrCreateStream();
+                if (stream == null)
+                {
+                    return null;
+                }
                 using (MemoryStream outputStream = new MemoryStream())
                 {
                     const int DefaultBufferSize = 4096;
