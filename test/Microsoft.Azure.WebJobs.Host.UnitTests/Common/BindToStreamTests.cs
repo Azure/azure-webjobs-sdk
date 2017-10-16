@@ -1,19 +1,17 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
+using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Xunit;
-using System.Threading.Tasks;
-using System.Reflection;
-using Microsoft.Azure.WebJobs.Host.Bindings;
-using System.Threading;
-using Newtonsoft.Json;
-using Microsoft.Azure.WebJobs.Description;
+using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
 {
@@ -35,7 +33,24 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             [AutoResolve]
             public string Path { get; set; }
 
-            public FileAccess Access { get; set; }
+            public FileAccess? Access { get; set; }
+
+            public TestStreamAttribute()
+            {
+            }
+
+            // Constructor layout like Blob.
+            // Can't assign a Nullable<T> in an attribute parameter list. Must be in ctor. 
+            public TestStreamAttribute(string path)
+            {
+                this.Path = path;
+            }
+
+            public TestStreamAttribute(string path, FileAccess access)
+                : this(path)
+            {
+                this.Access = access;
+            }
         }
 
         // Test that leaving an out-parameter as null does not create a stream.
@@ -167,7 +182,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 throw new InvalidOperationException();
             }
 
-            public void Read1([TestStream(Access =FileAccess.Read)] Stream value)
+            public void Read1([TestStream("path", FileAccess.Read)] Stream value)
             {
                 _log = value;
             }
@@ -246,7 +261,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             #region Read overloads
 
             public void StreamRead(
-                [TestStream(Access = FileAccess.Read)] Stream sr
+                [TestStream("path", FileAccess.Read)] Stream sr
                 )
             {
                 List<byte> lb = new List<byte>();
@@ -279,7 +294,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             }
 
             public void TextReaderRead(
-                [TestStream(Access = FileAccess.Read)] TextReader tr
+                [TestStream("path", FileAccess.Read)] TextReader tr
                 )
             {
                 _log = tr.ReadToEnd();
@@ -290,7 +305,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             const string _writeMessage = "HelloFromWriter";
 
             public void WriteStream(
-                [TestStream(Access = FileAccess.Write)] Stream tw
+                [TestStream("path", FileAccess.Write)] Stream tw
                 )
             {
                 var bytes = Encoding.UTF8.GetBytes(_writeMessage);
@@ -299,7 +314,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             }
 
             public void WriteStream2(
-                [TestStream(Access = FileAccess.Write)] Stream stream
+                [TestStream("path", FileAccess.Write)] Stream stream
                 )
             {
                 var bytes = Encoding.UTF8.GetBytes(_writeMessage);
@@ -310,7 +325,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
 
             // Explicit Write access 
             public void WriteTextWriter1(
-                [TestStream(Access = FileAccess.Write)] TextWriter tw
+                [TestStream("path", FileAccess.Write)] TextWriter tw
                 )
             {
                 tw.Write(_writeMessage);
@@ -367,6 +382,61 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 }
                 throw new NotImplementedException();
             }
+        }
+
+        // From a JObject (ala the Function.json), generate a strongly-typed attribute. 
+        [Fact]
+        public void TestMetadata()
+        {
+            JobHostConfiguration config = TestHelpers.NewConfig();
+            var host2 = new JobHost(config);
+            var metadataProvider = host2.CreateMetadataProvider();
+
+            // Blob 
+            var blobAttr = GetAttr<TestStreamAttribute>(metadataProvider, new { path = "x" });
+            Assert.Equal("x", blobAttr.Path);
+
+            // Special casing to map Direction to Access field. 
+            blobAttr = GetAttr<TestStreamAttribute>(metadataProvider, new { path = "x", direction = "in" });
+            Assert.Equal("x", blobAttr.Path);
+            Assert.Equal(FileAccess.Read, blobAttr.Access);
+
+            blobAttr = GetAttr<TestStreamAttribute>(metadataProvider, new { Path = "x", Direction = "out" });
+            Assert.Equal("x", blobAttr.Path);
+            Assert.Equal(FileAccess.Write, blobAttr.Access);
+
+            blobAttr = GetAttr<TestStreamAttribute>(metadataProvider, new { path = "x", direction = "inout" });
+            Assert.Equal("x", blobAttr.Path);
+            Assert.Equal(FileAccess.ReadWrite, blobAttr.Access);
+        }
+
+        // Verify that we get Default Type to stream 
+        [Fact]
+        public void DefaultType()
+        {
+            var config = TestHelpers.NewConfig<ConfigNullOutParam>();
+            config.AddExtension(new ConfigNullOutParam()); // Registers a BindToInput rule
+            var host = new JobHost(config);
+            IJobHostMetadataProvider metadataProvider = host.CreateMetadataProvider();
+
+            // Getting default type. 
+            var attr = new TestStreamAttribute("x", FileAccess.Read);
+            {
+                var defaultType = metadataProvider.GetDefaultType(attr, FileAccess.Read, null);
+                Assert.Equal(typeof(Stream), defaultType);
+            }
+
+            {
+                var defaultType = metadataProvider.GetDefaultType(attr, FileAccess.Write, null);
+                Assert.Equal(typeof(Stream), defaultType);
+            }
+        }
+
+
+        static T GetAttr<T>(IJobHostMetadataProvider metadataProvider, object obj) where T : Attribute
+        {
+            var attribute = metadataProvider.GetAttribute(typeof(T), JObject.FromObject(obj));
+            return (T)attribute;
         }
 
         // Glue to initialize a JobHost with the correct config and invoke the Test method. 

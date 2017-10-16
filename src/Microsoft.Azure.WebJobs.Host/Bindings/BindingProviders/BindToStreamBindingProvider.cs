@@ -5,11 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using Newtonsoft.Json.Linq;
-using System.Text;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -35,12 +34,32 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         public Type GetDefaultType(Attribute attribute, FileAccess access, Type requestedType)
         {
-            throw new NotImplementedException();
+            if (attribute is TAttribute)
+            {
+                return typeof(Stream);
+            }
+            return null;
         }
 
         public IEnumerable<BindingRule> GetRules()
         {
-            yield break; // $$$ Add some 
+            foreach (var type in new Type[]
+            {
+                typeof(Stream),
+                typeof(TextReader),
+                typeof(TextWriter),                
+                typeof(string),
+                typeof(byte[]),
+                typeof(string).MakeByRefType(),
+                typeof(byte[]).MakeByRefType()
+            })
+            {
+                yield return new BindingRule
+                {
+                    SourceAttribute = typeof(BlobAttribute),
+                    UserType = new ConverterManager.ExactMatch(type)
+                };
+            }
         }
 
         private void VerifyOrThrow(FileAccess? actualAccess, bool isRead)
@@ -79,7 +98,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 if (!CanRead(_access))
                 {
-                    // $$$ Would be good to give an error here, but could be blank since another rule is claiming it. 
+                    // Would be good to give an error here, but could be blank since another rule is claiming it. 
                     return false;
                 }
             }
@@ -203,22 +222,22 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         private static FileAccess? GetFileAccessFromAttribute(Attribute attribute)
         {
             var prop = attribute.GetType().GetProperty("Access", BindingFlags.Public | BindingFlags.Instance);
-            if (prop == null)
+            if ((prop == null) || (prop.PropertyType != typeof(FileAccess?)))
             {
-                // $$$ Check type 
                 throw new InvalidOperationException("The BindToStream rule requires that attributes have an Access property of type 'FileAccess?'");
             }
 
             var val = prop.GetValue(attribute);
             var access = (FileAccess?)val;
                         
-            return access.Value;
+            return access;
         }
 
         private static void SetFileAccessFromAttribute(Attribute attribute, FileAccess access)
         {
             var prop = attribute.GetType().GetProperty("Access", BindingFlags.Public | BindingFlags.Instance);
-            prop.SetValue(attribute, access); // $$$ FileAccess? vs FileAccess
+            // We already verified the type in GetFileAccessFromAttribute
+            prop.SetValue(attribute, access); 
         }
                 
         // As a binding, this is one per parameter, shared across each invocation instance.
@@ -304,6 +323,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 await this.FlushAsync();
                 if (_stream != null)
                 {
+                    // These are safe even when the stream is closed/disposed. 
+                    await _stream.FlushAsync();
                     _stream.Close(); // Safe to call this multiple times. 
                 }
             }
