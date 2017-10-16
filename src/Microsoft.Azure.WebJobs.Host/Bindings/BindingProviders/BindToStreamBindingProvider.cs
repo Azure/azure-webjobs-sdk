@@ -153,12 +153,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
             else if (typeUser == typeof(String).MakeByRefType())
             {
-                argHelperType = typeof(OutStringArgBaseProvider);
+                argHelperType = typeof(OutStringValueProvider);
                 isRead = false;
             }
             else if (typeUser == typeof(byte[]).MakeByRefType())
             {
-                argHelperType = typeof(OutByteArrayArgBaseProvider);
+                argHelperType = typeof(OutByteArrayValueProvider);
                 isRead = false;
             }
             else
@@ -254,80 +254,16 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 Func<Stream> builder2 = () => (Stream)builder(attrResolved);
 
 
-                BaseProvider valueProvider = (BaseProvider)Activator.CreateInstance(_typeValueProvider);
+                BaseValueProvider valueProvider = (BaseValueProvider)Activator.CreateInstance(_typeValueProvider);
                 await valueProvider.InitAsync(builder2, _userType);
              
                 return valueProvider;
             }
         }
 
-        #region Out parameters
-        // Base class for 'out T' stream bindings. 
-        // These are special in that they don't create the stream until after the function functions. 
-        private abstract class OutArgBaseProvider : BaseProvider
-        {
-            override protected Task<object> CreateUserArgAsync()
-            {
-                // Nop on create. Will do work on complete. 
-                return Task.FromResult<object>(null);
-            }
-
-            public override async Task SetValueAsync(object value, CancellationToken cancellationToken)
-            {
-                // Normally value is the same as the input value. 
-                if (value == null)
-                {
-                    // This means we're an 'out T' parameter and they left it null.
-                    // Don't create the stream or write anything in this case. 
-                    return;
-                }
-
-                // Now Create the stream 
-                using (var stream = this.GetOrCreateStream())
-                {
-                    await this.WriteToStreamAsync(value, cancellationToken);
-                } // Dipose on Stream will close it. Safe to call this multiple times. 
-            }
-
-            protected abstract Task WriteToStreamAsync(object value, CancellationToken cancellationToken);
-        }
-
-        private class OutStringArgBaseProvider : OutArgBaseProvider
-        {
-            protected override async Task WriteToStreamAsync(object value, CancellationToken cancellationToken)
-            {
-                var stream = this.GetOrCreateStream();
-
-                var text = (string)value;
-
-                const int DefaultBufferSize = 1024;
-
-                var encoding = new UTF8Encoding(false); // skip emitting BOM
-
-                using (TextWriter writer = new StreamWriter(stream, encoding, DefaultBufferSize,
-                        leaveOpen: true))
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    await writer.WriteAsync(text);
-                }
-            }
-        }
-
-        private class OutByteArrayArgBaseProvider : OutArgBaseProvider
-        {
-            protected override async Task WriteToStreamAsync(object value, CancellationToken cancellationToken)
-            {
-                var stream = this.GetOrCreateStream();
-                var bytes = (byte[])value;
-                await stream.WriteAsync(bytes, 0, bytes.Length);
-            }
-        }
-        #endregion // Out parameters
-
-
-        // The base IVlaueProvider. Handed  out per-instance
+        // The base IValueProvider. Handed  out per-instance
         // This wraps the stream and coerces it to the user's parameter.
-        private abstract class BaseProvider : IValueBinder
+        private abstract class BaseValueProvider : IValueBinder
         {
             private Stream _stream;
             public Type Type { get; set; } // Impl IValueBinder
@@ -381,8 +317,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             virtual protected Task FlushAsync() { return Task.CompletedTask;  }
         }
 
-        // Runs both ways
-        private class StreamValueProvider : BaseProvider
+        // Bind to a 'Stream' parameter.  Handles both Read and Write streams.
+        private class StreamValueProvider : BaseValueProvider
         {
             protected override Task<object> CreateUserArgAsync()
             {
@@ -390,7 +326,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
         }
 
-        private class TextReaderValueProvider : BaseProvider
+        // Bind to a 'TextReader' parameter.
+        private class TextReaderValueProvider : BaseValueProvider
         {
             protected override Task<object> CreateUserArgAsync()
             {
@@ -400,7 +337,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }    
         }
 
-        private class StringValueProvider : BaseProvider
+        // Bind to a 'String' parameter. 
+        // This reads the entire contents on invocation and passes as a single string. 
+        private class StringValueProvider : BaseValueProvider
         {
             protected override async Task<object> CreateUserArgAsync()
             {
@@ -413,7 +352,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
         }
 
-        private class ByteArrayValueProvider : BaseProvider
+        // bind to a 'byte[]' parameter.
+        // This reads the entire stream contents on invocation and passes as a byte[].
+        private class ByteArrayValueProvider : BaseValueProvider
         {
             protected override async Task<object> CreateUserArgAsync()
             {
@@ -428,7 +369,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
         }
 
-        private class TextWriterValueProvider : BaseProvider
+        // Bind to a 'TextWriter' parameter. 
+        // This is for writing out to the stream. 
+        private class TextWriterValueProvider : BaseValueProvider
         {
             private TextWriter _arg;
 
@@ -444,5 +387,70 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 await _arg.FlushAsync();
             }
         }
+
+        #region Out parameters
+        // Base class for 'out T' stream bindings. 
+        // These are special in that they don't create the stream until after the function returns. 
+        private abstract class OutArgBaseValueProvider : BaseValueProvider
+        {
+            override protected Task<object> CreateUserArgAsync()
+            {
+                // Nop on create. Will do work on complete. 
+                return Task.FromResult<object>(null);
+            }
+
+            public override async Task SetValueAsync(object value, CancellationToken cancellationToken)
+            {
+                // Normally value is the same as the input value. 
+                if (value == null)
+                {
+                    // This means we're an 'out T' parameter and they left it null.
+                    // Don't create the stream or write anything in this case. 
+                    return;
+                }
+
+                // Now Create the stream 
+                using (var stream = this.GetOrCreateStream())
+                {
+                    await this.WriteToStreamAsync(value, cancellationToken);
+                } // Dipose on Stream will close it. Safe to call this multiple times. 
+            }
+
+            protected abstract Task WriteToStreamAsync(object value, CancellationToken cancellationToken);
+        }
+
+        // Bind to an 'out string' parameter
+        private class OutStringValueProvider : OutArgBaseValueProvider
+        {
+            protected override async Task WriteToStreamAsync(object value, CancellationToken cancellationToken)
+            {
+                var stream = this.GetOrCreateStream();
+
+                var text = (string)value;
+
+                const int DefaultBufferSize = 1024;
+
+                var encoding = new UTF8Encoding(false); // skip emitting BOM
+
+                using (TextWriter writer = new StreamWriter(stream, encoding, DefaultBufferSize,
+                        leaveOpen: true))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await writer.WriteAsync(text);
+                }
+            }
+        }
+
+        // Bind to an 'out byte[]' parameter
+        private class OutByteArrayValueProvider : OutArgBaseValueProvider
+        {
+            protected override async Task WriteToStreamAsync(object value, CancellationToken cancellationToken)
+            {
+                var stream = this.GetOrCreateStream();
+                var bytes = (byte[])value;
+                await stream.WriteAsync(bytes, 0, bytes.Length);
+            }
+        }
+        #endregion // Out parameters
     }
 }
