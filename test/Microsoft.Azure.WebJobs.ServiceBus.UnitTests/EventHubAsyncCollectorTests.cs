@@ -3,11 +3,15 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Xunit;
+
+using static Microsoft.Azure.EventHubs.EventData;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
 {
@@ -25,8 +29,17 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             public TestEventHubAsyncCollector() : base(_testClient)
             {
             }
-            protected override Task SendBatchAsync(EventData[] batch)
+
+            protected override Task SendBatchAsync(IEnumerable<EventData> batch)
             {
+
+                // Assert they all have the same partition key (could be null)
+                var partitionKey = batch.First().SystemProperties?.PartitionKey;
+                foreach(var e in batch)
+                {
+                    Assert.Equal(partitionKey, e.SystemProperties?.PartitionKey);
+                }
+
                 lock(_sentEvents)
                 {
                     foreach (var e in batch)
@@ -44,7 +57,38 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         public void NullArgumentCheck()
         {
             Assert.Throws<ArgumentNullException>(() => new EventHubAsyncCollector(null));
-        }             
+        }
+
+        public EventData CreateEvent(byte[] body, string partitionKey)
+        {
+            var data = new EventData(body);
+            var sysProps = TestHelpers.New<SystemPropertiesCollection>();
+            TestHelpers.SetField(sysProps, "PartitionKey", partitionKey);
+            TestHelpers.SetField(data, "SystemProperties", sysProps);
+            return data;
+        }
+
+        [Fact]
+        public async Task SendMultiplePartitions()
+        {
+            var collector = new TestEventHubAsyncCollector();
+
+            await collector.AddAsync(CreateEvent(new byte[] { 1 }, "pk1"));
+            await collector.AddAsync(CreateEvent(new byte[] { 2 }, "pk2"));
+
+            // Not physically sent yet since we haven't flushed
+            Assert.Equal(0, collector._sentEvents.Count);
+
+            await collector.FlushAsync();
+
+            // Partitions aren't flushed in a specific order. 
+            Assert.Equal(2, collector._sentEvents.Count);
+            var items = collector._sentEvents.ToArray();
+
+            var item0 = items[0];
+            var item1 = items[1];
+            Assert.Equal(3, item0[0] + item1[0]); // either order.
+        }
 
         [Fact]
         public async Task NotSentUntilFlushed()
@@ -57,7 +101,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             var e1 = new EventData(payload);
             await collector.AddAsync(e1);
 
-            // Not physically sent yet since we haven't flushed 
+            // Not physically sent yet since we haven't flushed
             Assert.Equal(0, collector._sentEvents.Count);
 
             await collector.FlushAsync();
@@ -65,7 +109,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             Assert.Equal(payload, collector._sentEvents[0]);
         }
 
-        // If we send enough events, that will eventually tip over and flush. 
+        // If we send enough events, that will eventually tip over and flush.
         [Fact]
         public async Task FlushAfterLotsOfSmallEvents()
         {
@@ -81,7 +125,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             Assert.True(collector._sentEvents.Count > 0);
         }
 
-        // If we send enough events, that will eventually tip over and flush. 
+        // If we send enough events, that will eventually tip over and flush.
         [Fact]
         public async Task FlushAfterSizeThreshold()
         {
@@ -93,7 +137,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
                 var e1 = new EventData(new byte[10 * 1024]);
                 await collector.AddAsync(e1);
             }
-            // Not yet 
+
+            // Not yet
             Assert.Equal(0, collector._sentEvents.Count);
 
             // This will push it over the theshold
@@ -152,7 +197,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
 
             HashSet<string> expected = new HashSet<string>();
 
-            // Send from different physical threads.             
+            // Send from different physical threads.
             Thread[] threads = new Thread[numThreads];
             for (int iThread = 0; iThread < numThreads; iThread++)
             {
@@ -172,8 +217,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
                             collector.AddAsync(new EventData(payload)).Wait();
                         }
                     });
-            };
-
+            }
 
             foreach (var thread in threads)
             {
@@ -184,7 +228,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             {
                 thread.Join();
             }
-
 
             // Add more events to trip flushing of the original batch without calling Flush()
             const string ignore = "ignore";
@@ -198,12 +241,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             int count = 0;
             foreach (var payloadBytes in collector._sentEvents)
             {
-                count++;   
+                count++;
                 var payloadStr = Encoding.UTF8.GetString(payloadBytes);
                 if (payloadStr == ignore)
                 {
                     continue;
                 }
+
                 if (!expected.Remove(payloadStr))
                 {
                     // Already removed!
@@ -211,8 +255,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
                 }
             }
 
-            Assert.Equal(0, expected.Count); // Some events where missed. 
-
-        }            
-    } // end class         
+            Assert.Equal(0, expected.Count); // Some events where missed.
+        }
+    } // end class
 }
