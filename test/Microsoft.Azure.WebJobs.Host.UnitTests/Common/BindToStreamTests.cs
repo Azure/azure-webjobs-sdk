@@ -82,7 +82,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 throw new InvalidOperationException("Test cases should never create stream");
             }
 
-            // Explicit Write access 
             public void WriteString(
                 [TestStream] out string x
                 )
@@ -129,7 +128,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 throw new InvalidOperationException();
             }
 
-            // Explicit Write access 
             public void Read(
                 [TestStream(Path="{x}-%y%")] string value
                 )
@@ -348,7 +346,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 tw.Flush(); // Extra flush 
             }
 
-            // Explicit Write access 
             public void WriteString(
                 [TestStream] out string x
                 )

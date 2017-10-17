@@ -56,7 +56,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 yield return new BindingRule
                 {
-                    SourceAttribute = typeof(BlobAttribute),
+                    SourceAttribute = typeof(TAttribute),
                     UserType = new ConverterManager.ExactMatch(type)
                 };
             }
@@ -222,7 +222,16 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         private static FileAccess? GetFileAccessFromAttribute(Attribute attribute)
         {
             var prop = attribute.GetType().GetProperty("Access", BindingFlags.Public | BindingFlags.Instance);
-            if ((prop == null) || (prop.PropertyType != typeof(FileAccess?)))
+
+            bool ok = (prop != null);
+            if (ok)
+            {
+                if ((prop.PropertyType != typeof(FileAccess?) && (prop.PropertyType != typeof(FileAccess))))
+                {
+                    ok = false;
+                }
+            }
+            if (!ok)
             {
                 throw new InvalidOperationException("The BindToStream rule requires that attributes have an Access property of type 'FileAccess?'");
             }
