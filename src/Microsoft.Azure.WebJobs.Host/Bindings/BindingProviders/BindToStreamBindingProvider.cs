@@ -47,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 typeof(Stream),
                 typeof(TextReader),
-                typeof(TextWriter),                
+                typeof(TextWriter),
                 typeof(string),
                 typeof(byte[]),
                 typeof(string).MakeByRefType(),
@@ -62,29 +62,29 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
         }
 
-        private void VerifyOrThrow(FileAccess? actualAccess, bool isRead)
+        private void VerifyAccessOrThrow(FileAccess? declaredAccess, bool isRead)
         {
             // Verify direction is compatible with the attribute's direction flag. 
-            if (actualAccess.HasValue)
+            if (declaredAccess.HasValue)
             {
                 string errorMsg = null;
                 if (isRead)
                 {
-                    if (!CanRead(actualAccess.Value))
+                    if (!CanRead(declaredAccess.Value))
                     {
                         errorMsg = "Read";
                     }
                 }
                 else
                 {
-                    if (!CanWrite(actualAccess.Value))
+                    if (!CanWrite(declaredAccess.Value))
                     {
                         errorMsg = "Write";
                     }
                 }
                 if (errorMsg != null)
                 {
-                    throw new InvalidOperationException($"The parameter type is a '{errorMsg}' binding, but the Attribute's access type is '{actualAccess}'");
+                    throw new InvalidOperationException($"The parameter type is a '{errorMsg}' binding, but the Attribute's access type is '{declaredAccess}'");
                 }
             }
         }
@@ -92,7 +92,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         // Return true iff this rule can support the given mode. 
         // Returning false allows another rule to handle this. 
         private bool IsSupportedByRule(bool isRead)
-        { 
+        {
             // Verify the expected binding is supported by this rule
             if (isRead)
             {
@@ -120,28 +120,28 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
 
             var parameter = context.Parameter;
-            var typeUser = parameter.ParameterType;
+            var parameterType = parameter.ParameterType;
 
             var attributeSource = TypeUtility.GetResolvedAttribute<TAttribute>(parameter);
 
             // Stream is either way; all other types are known. 
-            FileAccess? actualAccess = GetFileAccessFromAttribute(attributeSource);
+            FileAccess? declaredAccess = GetFileAccessFromAttribute(attributeSource);
 
             Type argHelperType;
             bool isRead;
-            if (typeUser == typeof(Stream))
+            if (parameterType == typeof(Stream))
             {
-                if (!actualAccess.HasValue)
+                if (!declaredAccess.HasValue)
                 {
                     throw new InvalidOperationException("When binding to Stream, the attribute must specify a FileAccess direction.");
                 }
-                switch (actualAccess.Value)
+                switch (declaredAccess.Value)
                 {
                     case FileAccess.Read:
                         isRead = true;
-                        
+
                         break;
-                    case FileAccess.Write: 
+                    case FileAccess.Write:
                         isRead = false;
                         break;
 
@@ -150,32 +150,32 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 }
                 argHelperType = typeof(StreamValueProvider);
             }
-            else if (typeUser == typeof(TextReader))
+            else if (parameterType == typeof(TextReader))
             {
                 argHelperType = typeof(TextReaderValueProvider);
                 isRead = true;
             }
-            else if (typeUser == typeof(String))
+            else if (parameterType == typeof(String))
             {
                 argHelperType = typeof(StringValueProvider);
                 isRead = true;
             }
-            else if (typeUser == typeof(byte[]))
+            else if (parameterType == typeof(byte[]))
             {
                 argHelperType = typeof(ByteArrayValueProvider);
                 isRead = true;
             }
-            else if (typeUser == typeof(TextWriter))
+            else if (parameterType == typeof(TextWriter))
             {
                 argHelperType = typeof(TextWriterValueProvider);
                 isRead = false;
             }
-            else if (typeUser == typeof(String).MakeByRefType())
+            else if (parameterType == typeof(String).MakeByRefType())
             {
                 argHelperType = typeof(OutStringValueProvider);
                 isRead = false;
             }
-            else if (typeUser == typeof(byte[]).MakeByRefType())
+            else if (parameterType == typeof(byte[]).MakeByRefType())
             {
                 argHelperType = typeof(OutByteArrayValueProvider);
                 isRead = false;
@@ -186,12 +186,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return Task.FromResult<IBinding>(null);
             }
 
-            VerifyOrThrow(actualAccess, isRead);
+            VerifyAccessOrThrow(declaredAccess, isRead);
             if (!IsSupportedByRule(isRead))
             {
                 return Task.FromResult<IBinding>(null);
             }
-            
+
             var cloner = new AttributeCloner<TAttribute>(attributeSource, context.BindingDataContract, _nameResolver);
 
             var param = new ParameterDescriptor
@@ -204,8 +204,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             };
 
             var fileAccess = isRead ? FileAccess.Read : FileAccess.Write;
-            IBinding binding = new ReadExactBinding(cloner, param, this, argHelperType, typeUser, fileAccess);
-            
+            IBinding binding = new ReadExactBinding(cloner, param, this, argHelperType, parameterType, fileAccess);
+
             return Task.FromResult<IBinding>(binding);
         }
 
@@ -218,37 +218,41 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return access != FileAccess.Read;
         }
 
+        private static PropertyInfo GetFileAccessProperty(Attribute attribute)
+        {
+            var prop = attribute.GetType().GetProperty("Access", BindingFlags.Public | BindingFlags.Instance);
+            return prop;
+        }
 
         private static FileAccess? GetFileAccessFromAttribute(Attribute attribute)
         {
-            var prop = attribute.GetType().GetProperty("Access", BindingFlags.Public | BindingFlags.Instance);
+            var prop = GetFileAccessProperty(attribute);
 
-            bool ok = (prop != null);
-            if (ok)
+            if (prop != null)
             {
                 if ((prop.PropertyType != typeof(FileAccess?) && (prop.PropertyType != typeof(FileAccess))))
                 {
-                    ok = false;
+                    prop = null;
                 }
             }
-            if (!ok)
+            if (prop == null)
             {
-                throw new InvalidOperationException("The BindToStream rule requires that attributes have an Access property of type 'FileAccess?'");
+                throw new InvalidOperationException("The BindToStream rule requires that attributes have an Access property of type 'FileAccess?' or 'FileAccess'");
             }
 
             var val = prop.GetValue(attribute);
             var access = (FileAccess?)val;
-                        
+
             return access;
         }
 
         private static void SetFileAccessFromAttribute(Attribute attribute, FileAccess access)
         {
-            var prop = attribute.GetType().GetProperty("Access", BindingFlags.Public | BindingFlags.Instance);
+            var prop = GetFileAccessProperty(attribute);
             // We already verified the type in GetFileAccessFromAttribute
-            prop.SetValue(attribute, access); 
+            prop.SetValue(attribute, access);
         }
-                
+
         // As a binding, this is one per parameter, shared across each invocation instance.
         private class ReadExactBinding : BindingBase<TAttribute>
         {
@@ -279,12 +283,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                 var patternMatcher = _parent._patternMatcher;
                 Func<object, object> builder = patternMatcher.TryGetConverterFunc(typeof(TAttribute), typeof(Stream));
-                Func<Stream> builder2 = () => (Stream)builder(attrResolved);
-
+                Func<Stream> buildStream = () => (Stream)builder(attrResolved);
 
                 BaseValueProvider valueProvider = (BaseValueProvider)Activator.CreateInstance(_typeValueProvider);
-                await valueProvider.InitAsync(builder2, _userType);
-             
+                await valueProvider.InitAsync(buildStream, _userType);
+
                 return valueProvider;
             }
         }
@@ -293,15 +296,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         // This wraps the stream and coerces it to the user's parameter.
         private abstract class BaseValueProvider : IValueBinder
         {
-            private Stream _stream;
-            public Type Type { get; set; } // Impl IValueBinder
-
+            private Stream _stream; // underlying stream 
+            private object _userValue; // argument passed to the user's function. This is some wrapper over _stream. 
             private string _invokeString;
 
             // Helper to build the stream. This will only get invoked once and then cached as _stream. 
             private Func<Stream> _streamBuilder;
 
-            object _userArg;
+            public Type Type { get; set; } // Implement IValueBinder.Type
 
             protected Stream GetOrCreateStream()
             {
@@ -318,14 +320,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 _invokeString = "???";
                 _streamBuilder = builder;
 
-                _userArg = await this.CreateUserArgAsync();
+                _userValue = await this.CreateUserArgAsync();
             }
 
             public Task<object> GetValueAsync()
             {
-                return Task.FromResult<object>(_userArg);
+                return Task.FromResult<object>(_userValue);
             }
-            
+
             public virtual async Task SetValueAsync(object value, CancellationToken cancellationToken)
             {
                 // 'Out T' parameters override this method; so this case only needs to handle normal input parameters. 
@@ -342,12 +344,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 return _invokeString;
             }
-                       
+
             // Deterministic initialization for UserValue. 
-            abstract protected Task<object> CreateUserArgAsync();
-            
+            protected abstract Task<object> CreateUserArgAsync();
+
             // Give derived object a chance to flush any buffering before we close the stream. 
-            virtual protected Task FlushAsync() { return Task.CompletedTask;  }
+            protected virtual Task FlushAsync() { return Task.CompletedTask; }
         }
 
         // Bind to a 'Stream' parameter.  Handles both Read and Write streams.
@@ -371,7 +373,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 }
                 var arg = new StreamReader(stream);
                 return Task.FromResult<object>(arg);
-            }    
+            }
         }
 
         // Bind to a 'String' parameter. 
