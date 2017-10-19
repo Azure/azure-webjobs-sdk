@@ -20,6 +20,12 @@ using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Azure.WebJobs
 {
+    public enum TimerMode
+    {
+        File,
+        Storage
+    }
+
     /// <summary>
     /// Represents the configuration settings for a <see cref="JobHost"/>.
     /// </summary>
@@ -86,6 +92,7 @@ namespace Microsoft.Azure.WebJobs
                 _storageAccountProvider = new DefaultStorageAccountProvider(this);
             }
 
+            TimerMode = TimerMode.Storage;
             Singleton = new SingletonConfiguration();
             Aggregator = new FunctionResultAggregatorConfiguration();
 
@@ -281,6 +288,15 @@ namespace Microsoft.Azure.WebJobs
         {
             get;
             private set;
+        }
+
+        /// <summary>
+        /// Gets or sets the timers config.
+        /// </summary>
+        public TimerMode TimerMode
+        {
+            get;
+            set;
         }
 
         /// <summary>
