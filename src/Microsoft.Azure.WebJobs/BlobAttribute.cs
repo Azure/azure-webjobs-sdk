@@ -57,7 +57,7 @@ namespace Microsoft.Azure.WebJobs
     public sealed class BlobAttribute : Attribute, IConnectionProvider
     {
         private readonly string _blobPath;
-        private readonly FileAccess? _access;
+        private FileAccess? _access;
 
         /// <summary>Initializes a new instance of the <see cref="BlobAttribute"/> class.</summary>
         /// <param name="blobPath">The path of the blob to which to bind.</param>
@@ -88,6 +88,7 @@ namespace Microsoft.Azure.WebJobs
         public FileAccess? Access
         {
             get { return _access; }
+            set { _access = value; }
         }
 
         /// <summary>

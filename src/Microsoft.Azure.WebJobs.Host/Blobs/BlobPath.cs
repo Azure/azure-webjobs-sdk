@@ -115,6 +115,14 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
         {
             BlobPath possiblePath;
 
+            if (!isContainerBinding && TryParseAbsUrl(value, out possiblePath))
+            {
+                path = possiblePath;
+                errorMessage = null;
+                return true;
+            }
+
+
             if (!TryParse(value, isContainerBinding, out possiblePath))
             {
                 errorMessage = "Blob identifiers must be in the format 'container/blob'.";
