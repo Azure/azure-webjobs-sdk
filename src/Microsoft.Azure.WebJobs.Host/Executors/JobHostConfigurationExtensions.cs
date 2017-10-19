@@ -82,6 +82,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             ContextAccessor<IMessageEnqueuedWatcher> messageEnqueuedWatcherAccessor = new ContextAccessor<IMessageEnqueuedWatcher>();
             services.AddService(messageEnqueuedWatcherAccessor);
             ContextAccessor<IBlobWrittenWatcher> blobWrittenWatcherAccessor = new ContextAccessor<IBlobWrittenWatcher>();
+            services.AddService(blobWrittenWatcherAccessor);
             ISharedContextProvider sharedContextProvider = new SharedContextProvider();
 
             // Create a wrapper TraceWriter that delegates to both the user 
@@ -99,6 +100,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 config.AddExtension(new TableExtension());
                 config.AddExtension(new QueueExtension());
+                config.AddExtension(new Blobs.Bindings.BlobExtension());
             }
 
             ExtensionConfigContext context = new ExtensionConfigContext

@@ -24,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private const string Output = TestArtifactPrefix + "-output-%rnd%";
         private const string InputTableName = TestArtifactPrefix + "tableinput%rnd%";
         private const string OutputTableName = TestArtifactPrefix + "tableinput%rnd%";
-        private const string TestData = "﻿TestData";
+        private const string TestData = "TestData";
         private const string Secondary = "SecondaryStorage";
         private static CloudStorageAccount primaryAccountResult;
         private static CloudStorageAccount secondaryAccountResult;
@@ -103,7 +103,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 await blobReference.DownloadToStreamAsync(memoryStream);
                 memoryStream.Position = 0;
-                using (var reader = new StreamReader(memoryStream, Encoding.Unicode))
+                using (var reader = new StreamReader(memoryStream))
                 {
                     data = reader.ReadToEnd();
                 }

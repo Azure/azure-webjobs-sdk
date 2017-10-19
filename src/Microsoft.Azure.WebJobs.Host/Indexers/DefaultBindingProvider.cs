@@ -33,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         {
             List<IBindingProvider> innerProviders = new List<IBindingProvider>();
                      
-            innerProviders.Add(new BlobAttributeBindingProvider(nameResolver, storageAccountProvider, extensionTypeLocator, blobWrittenWatcherGetter));
+            // innerProviders.Add(new BlobAttributeBindingProvider(nameResolver, storageAccountProvider, extensionTypeLocator, blobWrittenWatcherGetter));
 
             // add any registered extension binding providers
             // Queue and Table bindings were added as an extension, so those rules get included here.  
