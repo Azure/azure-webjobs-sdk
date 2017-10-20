@@ -14,12 +14,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
     internal sealed class ServiceBusListener : IListener
     {
         private readonly MessagingProvider _messagingProvider;
-        private readonly MessagingFactory _messagingFactory;
         private readonly string _entityPath;
         private readonly ServiceBusTriggerExecutor _triggerExecutor;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly MessageProcessor _messageProcessor;
-
+        private MessagingFactory _messagingFactory;
         private MessageReceiver _receiver;
         private bool _disposed;
 
@@ -48,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             return Task.CompletedTask;
         }
 
-        public async Task StopAsync(CancellationToken cancellationToken)
+        public Task StopAsync(CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
 
@@ -61,9 +60,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             // ProcessMessageAsync invocations to cancel
             _cancellationTokenSource.Cancel();
 
-            // stop the message receiver so no new work is started
-            await _receiver.CloseAsync();
-            _receiver = null;
+            // abort the message factory which will stop all receivers
+            // created by it so no new work is started
+            _messagingFactory.Abort();
+
+            return Task.CompletedTask;
         }
 
         public void Cancel()
@@ -83,11 +84,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
                 // For now, rely on finalization to clean up _cancellationTokenSource's wait handle (if allocated).
                 _cancellationTokenSource.Cancel();
 
-                if (_receiver != null)
+                if (_messagingFactory != null)
                 {
-                    _receiver.Abort();
-                    _receiver = null;
+                    _messagingFactory.Abort();
+                    _messagingFactory = null;
                 }
+
+                // Aborting the messaging factory aborts the receiver as well
+                _receiver = null;
 
                 _disposed = true;
             }
