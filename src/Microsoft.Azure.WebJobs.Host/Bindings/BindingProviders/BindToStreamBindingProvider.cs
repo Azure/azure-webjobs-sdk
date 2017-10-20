@@ -335,7 +335,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 if (_stream != null)
                 {
                     // These are safe even when the stream is closed/disposed. 
-                    await _stream.FlushAsync();
+                    //await _stream.FlushAsync();
                     _stream.Close(); // Safe to call this multiple times. 
                 }
             }
