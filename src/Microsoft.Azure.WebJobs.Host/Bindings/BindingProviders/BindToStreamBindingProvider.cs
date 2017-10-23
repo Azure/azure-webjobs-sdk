@@ -477,7 +477,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                 const int DefaultBufferSize = 1024;
 
-                var encoding = new UTF8Encoding(false); // skip emitting BOM
+                // $$$ Do we omit BOM or not? Blob does. Does this need to be customizable?
+                // Omit a BOM - this is backwards compat with [Blob] bindings. 
+                // var encoding = new UTF8Encoding(false); // skip emitting BOM
+                var encoding = Encoding.UTF8;
 
                 using (TextWriter writer = new StreamWriter(stream, encoding, DefaultBufferSize,
                         leaveOpen: true))
