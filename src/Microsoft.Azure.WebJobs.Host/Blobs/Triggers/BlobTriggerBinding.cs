@@ -237,6 +237,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
 
         private static IAsyncObjectToTypeConverter<IStorageBlob> CreateConverter(IStorageBlobClient client)
         {
+            BlobTriggerExtension._invoker = new StringToStorageBlobConverter(client); // Plumb this better. 
+
             return new CompositeAsyncObjectToTypeConverter<IStorageBlob>(
                 new BlobOutputConverter<IStorageBlob>(new AsyncConverter<IStorageBlob, IStorageBlob>(new IdentityConverter<IStorageBlob>())),
                 new BlobOutputConverter<ICloudBlob>(new AsyncConverter<ICloudBlob, IStorageBlob>(new CloudBlobToStorageBlobConverter())),
@@ -252,10 +254,10 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
                 throw new InvalidOperationException("Unable to convert trigger to IStorageBlob.");
             }
 
-            Host.Bindings.IValueProvider valueProvider = await _argumentBinding.BindAsync(conversionResult.Result, context);
+            // Leave ValueProvider null - regular BlobAttribute bindings will take care of it. 
             IReadOnlyDictionary<string, object> bindingData = CreateBindingData(conversionResult.Result);
 
-            return new TriggerData(valueProvider, bindingData);
+            return new TriggerData(null, bindingData);
         }
 
         public Task<IListener> CreateListenerAsync(ListenerFactoryContext context)

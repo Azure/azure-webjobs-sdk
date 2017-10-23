@@ -177,6 +177,16 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         #endregion // BindToInput
 
 
+        public void BindToTrigger<TTriggerValue>()
+            where TTriggerValue : class
+        {
+            var triggerBinder = new TriggerHelperBindingProvider<TAttribute, TTriggerValue>(
+                this._parent.NameResolver,
+                this._parent.ConverterManager);
+            Bind(triggerBinder);
+        }
+
+
         #region BindToStream
 
         /// <summary>

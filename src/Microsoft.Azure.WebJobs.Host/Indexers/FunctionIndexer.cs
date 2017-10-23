@@ -36,13 +36,13 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly ILogger _logger;
 
         public FunctionIndexer(
-            ITriggerBindingProvider triggerBindingProvider, 
-            IBindingProvider bindingProvider, 
-            IJobActivator activator, 
-            IFunctionExecutor executor, 
-            IExtensionRegistry extensions, 
+            ITriggerBindingProvider triggerBindingProvider,
+            IBindingProvider bindingProvider,
+            IJobActivator activator,
+            IFunctionExecutor executor,
+            IExtensionRegistry extensions,
             SingletonManager singletonManager,
-            TraceWriter trace, 
+            TraceWriter trace,
             ILoggerFactory loggerFactory,
             INameResolver nameResolver = null)
         {
@@ -115,7 +115,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             if (method.ContainsGenericParameters)
             {
                 return false;
-            }            
+            }
 
             if (method.GetCustomAttributesData().Any(HasJobAttribute))
             {
@@ -173,6 +173,45 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
         }
 
+
+        class TriggerX : ITriggerBinding
+        {
+            private readonly ITriggerBinding _inner;
+            private readonly IBinding _binding;
+
+            public TriggerX(ITriggerBinding inner, IBinding binding)
+            {
+                _inner = inner;
+                _binding = binding;
+            }
+
+            public Type TriggerValueType => _inner.TriggerValueType;
+
+            public IReadOnlyDictionary<string, Type> BindingDataContract => _inner.BindingDataContract;
+
+            public async Task<ITriggerData> BindAsync(object value, ValueBindingContext context)
+            {
+                var data = await _inner.BindAsync(value, context);
+
+                if (data.ValueProvider == null)
+                {
+                    var valueProvider = await _binding.BindAsync(value, context);
+                    data = new TriggerData(valueProvider, data.BindingData);
+                }
+                return data;
+            }
+
+            public Task<IListener> CreateListenerAsync(ListenerFactoryContext context)
+            {
+                return _inner.CreateListenerAsync(context);
+            }
+
+            public ParameterDescriptor ToParameterDescriptor()
+            {
+                return _inner.ToParameterDescriptor();
+            }
+        }    
+
         internal async Task IndexMethodAsyncCore(MethodInfo method, IFunctionIndexCollector index, CancellationToken cancellationToken)
         {
             Debug.Assert(method != null);
@@ -206,6 +245,18 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             if (triggerBinding != null)
             {
                 bindingDataContract = triggerBinding.BindingDataContract;
+
+                // $$$ Just search for converter 
+                {
+                    
+
+                }
+                // See if a regular binding can handle it. 
+                IBinding binding = await _bindingProvider.TryCreateAsync(new BindingProviderContext(triggerParameter, bindingDataContract, cancellationToken));
+                if (binding != null)
+                {
+                    triggerBinding = new TriggerX(triggerBinding, binding);
+                }
             }
             else
             {

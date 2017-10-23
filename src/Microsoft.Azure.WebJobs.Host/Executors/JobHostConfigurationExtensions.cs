@@ -28,6 +28,7 @@ using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Azure.WebJobs.Host.Blobs.Triggers;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
@@ -101,6 +102,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 config.AddExtension(new TableExtension());
                 config.AddExtension(new QueueExtension());
                 config.AddExtension(new Blobs.Bindings.BlobExtension());
+                config.AddExtension(new BlobTriggerExtension());
             }
 
             ExtensionConfigContext context = new ExtensionConfigContext
