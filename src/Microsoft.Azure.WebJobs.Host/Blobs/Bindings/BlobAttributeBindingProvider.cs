@@ -18,6 +18,7 @@ using Microsoft.Azure.WebJobs.Host.Config;
 using System.Threading;
 using System.Collections;
 using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
+using Microsoft.Azure.WebJobs.Host.Protocols;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 {
@@ -295,6 +296,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
             var rule = context.AddBindingRule<BlobAttribute>();
 
+            // Bind to multiple blobs (either via a container; a blob directory, an IEnumerable<T>)
             rule.BindToInput<CloudBlobDirectory>(this);
 
             rule.BindToInput<CloudBlobContainer>(this);
@@ -303,17 +305,62 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             rule.AddConverter<MultiBlobContext, IEnumerable<MultiBlobType>>(typeof(MultiBlobConverer<>), this);
 
             // BindToStream will also handle the custom Stream-->T converters.
-            rule.BindToStream(this, FileAccess.ReadWrite); // Precedence, must beat CloudBlobStream
+            rule.SetPostResolveHook(ToBlobDescr).BindToStream(this, FileAccess.ReadWrite); // Precedence, must beat CloudBlobStream
 
             // Normal blob
-            rule.BindToInput<CloudBlockBlob>(this);
-            rule.BindToInput<CloudPageBlob>(this);
-            rule.BindToInput<CloudAppendBlob>(this);
-            rule.BindToInput<ICloudBlob>(this); // base interface 
+            rule.SetPostResolveHook(ToBlobDescr).BindToInput<CloudBlockBlob>(this);
+            rule.SetPostResolveHook(ToBlobDescr).BindToInput<CloudPageBlob>(this);
+            rule.SetPostResolveHook(ToBlobDescr).BindToInput<CloudAppendBlob>(this);
+            rule.SetPostResolveHook(ToBlobDescr).BindToInput<ICloudBlob>(this); // base interface 
 
             // $$$ Only when Access == FileAccess.Write
             // CloudBlobStream's derived functionality is only relevant to writing. 
-            rule.BindToInput<CloudBlobStream>(this);
+            rule.SetPostResolveHook(ToBlobDescr).BindToInput<CloudBlobStream>(this);
+        }
+
+        private ParameterDescriptor ToBlobDescr(BlobAttribute attr, ParameterInfo parameter, INameResolver nameResolver)
+        {
+            // Resolve the connection string to get an account name. 
+            var client = Task.Run(() => this.GetClientAsync(attr, CancellationToken.None)).GetAwaiter().GetResult();
+            var accountName = client.Credentials.AccountName;
+
+            var resolved = nameResolver.ResolveWholeString(attr.BlobPath);
+
+            string containerName = resolved;
+            string blobName= null;
+            int split = resolved.IndexOf('/');
+            if (split > 0)
+            {
+                containerName = resolved.Substring(0, split);
+                blobName = resolved.Substring(split + 1);
+            }
+
+            FileAccess access = FileAccess.ReadWrite;
+            if (attr.Access.HasValue)
+            {
+                access = attr.Access.Value;
+            }
+            else
+            {
+                var type = parameter.ParameterType;
+                if (type.IsByRef || type == typeof(TextWriter))
+                {
+                    access = FileAccess.Write;
+                }
+                if (type == typeof(TextReader) || type == typeof(string) || type == typeof(byte[]))
+                {
+                    access = FileAccess.Read;
+                }
+            }
+
+            return new BlobParameterDescriptor
+            {
+                Name = parameter.Name,
+                AccountName = accountName,
+                ContainerName = containerName,
+                BlobName = blobName,
+                Access = access
+            };
         }
     }
 
