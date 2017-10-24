@@ -496,12 +496,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 var stream = this.GetOrCreateStream();
                 if (stream == null)
                 {
-                    // If T is a struct, then we need to create a value for it. So call the converters. 
-                    // $$$ - or just skip and new T() outselves? Breaking change. See FuncWithValueT test. 
-                    if (!typeof(T).IsValueType)
+                    if (typeof(T).IsValueType)
                     {
-                        // return null; $$$ Need to test update 
+                        // If T is a struct, then we need to create a value for it.
+                        return Activator.CreateInstance(typeof(T));
                     }
+                    return null;
                 }
                                 
                 ICloudBlobStreamBinder<T> customBinder = _parent.GetCustomBinderInstance<T>();

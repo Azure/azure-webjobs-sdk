@@ -252,6 +252,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                     var content = _writeStream.ToArray(); // safe to call even after Dispose()
                     var str = Encoding.UTF8.GetString(content);
 
+                    // The comparison will also verify there is no BOM written.
                     Assert.Equal(_writeMessage, str);
                 }
             }
