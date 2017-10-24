@@ -262,14 +262,22 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
             var cloner = new AttributeCloner<TAttribute>(attributeSource, context.BindingDataContract, _nameResolver);
 
-            var param = new ParameterDescriptor
+            ParameterDescriptor param;
+            if (this.BuildParameterDescriptor != null)
             {
-                Name = parameter.Name,
-                DisplayHints = new ParameterDisplayHints
+                param = this.BuildParameterDescriptor(attributeSource, parameter, _nameResolver);
+            }
+            else
+            {
+                param = new ParameterDescriptor
                 {
-                    Description = isRead ? "Read Stream" : "Write Stream"
-                }
-            };
+                    Name = parameter.Name,
+                    DisplayHints = new ParameterDisplayHints
+                    {
+                        Description = isRead ? "Read Stream" : "Write Stream"
+                    }
+                };
+            }
 
             var fileAccess = isRead ? FileAccess.Read : FileAccess.Write;
             IBinding binding = new ReadExactBinding(cloner, param, this, argHelperType, parameterType, fileAccess);
@@ -354,7 +362,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 Func<Stream> buildStream = () => (Stream)builder(attrResolved);
 
                 BaseValueProvider valueProvider = (BaseValueProvider)Activator.CreateInstance(_typeValueProvider);
-                await valueProvider.InitAsync(buildStream, _userType, _parent);
+                var invokeString = this.Cloner.GetInvokeString(attrResolved);
+                await valueProvider.InitAsync(buildStream, _userType, _parent, invokeString);
 
                 return valueProvider;
             }
@@ -384,10 +393,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return _stream;
             }
 
-            public async Task InitAsync(Func<Stream> builder, Type userType, BindToStreamBindingProvider<TAttribute> parent)
+            public async Task InitAsync(Func<Stream> builder, Type userType, BindToStreamBindingProvider<TAttribute> parent, string invokeString)
             {
                 Type = userType;
-                _invokeString = "???";
+                _invokeString = invokeString;
                 _streamBuilder = builder;
                 _parent = parent;
 
