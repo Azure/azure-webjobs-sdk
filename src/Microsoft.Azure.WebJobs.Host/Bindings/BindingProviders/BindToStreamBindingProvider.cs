@@ -538,7 +538,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return new StreamWriter(stream);
             }
 
-            // $$$ Is this actually necessary? Won't they call Dispose?
+            // Import for TextWriter to flush before writing the stream. 
             protected override async Task FlushAsync()
             {
                 await _arg.FlushAsync();
