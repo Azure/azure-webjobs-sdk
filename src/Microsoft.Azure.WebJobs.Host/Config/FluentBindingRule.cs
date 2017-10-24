@@ -12,6 +12,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using static Microsoft.Azure.WebJobs.Host.Bindings.BindingFactory;
+using Microsoft.Azure.WebJobs.Host.Indexers;
 
 namespace Microsoft.Azure.WebJobs.Host.Config
 {
@@ -189,7 +190,8 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         {
             var pm = PatternMatcher.New(builderInstance);
             var nameResolver = _parent.NameResolver;
-            var rule = new BindToStreamBindingProvider<TAttribute>(pm, fileAccess, nameResolver);
+            var streamExtensions = _parent.GetService<IExtensionTypeLocator>();
+            var rule = new BindToStreamBindingProvider<TAttribute>(pm, fileAccess, nameResolver, streamExtensions);
             Bind(rule);
         }
 
@@ -204,7 +206,8 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         {
             var pm = PatternMatcher.New(builderInstance);
             var nameResolver = _parent.NameResolver;
-            var rule = new BindToStreamBindingProvider<TAttribute>(pm, fileAccess, nameResolver);
+            var streamExtensions = _parent.GetService<IExtensionTypeLocator>();
+            var rule = new BindToStreamBindingProvider<TAttribute>(pm, fileAccess, nameResolver, streamExtensions);
             Bind(rule);
         }
 

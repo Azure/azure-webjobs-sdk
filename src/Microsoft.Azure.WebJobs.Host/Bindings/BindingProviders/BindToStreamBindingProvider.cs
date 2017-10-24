@@ -4,11 +4,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Azure.WebJobs.Host.Indexers;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -24,12 +26,49 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         private readonly FileAccess _access; // Which direction this rule applies to. Can be R, W, or  RW
         private readonly INameResolver _nameResolver;
         private readonly PatternMatcher _patternMatcher;
+        private readonly IExtensionTypeLocator _extensionTypeLocator;
 
-        public BindToStreamBindingProvider(PatternMatcher patternMatcher, FileAccess access, INameResolver nameResolver)
+        public BindToStreamBindingProvider(PatternMatcher patternMatcher, FileAccess access, INameResolver nameResolver, IExtensionTypeLocator extensionTypeLocator)
         {
             _patternMatcher = patternMatcher;
             _nameResolver = nameResolver;
             _access = access;
+            _extensionTypeLocator = extensionTypeLocator;
+        }
+
+        // Does _extensionTypeLocator implement ICloudBlobStreamBinder<T>? 
+        private bool HasCustomBinderForType(Type t)
+        {
+            if (_extensionTypeLocator != null)
+            {
+                foreach (var extensionType in _extensionTypeLocator.GetCloudBlobStreamBinderTypes())
+                {
+                    var inner = Blobs.CloudBlobStreamObjectBinder.GetBindingValueType(extensionType);
+                    if (inner == t)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // T is the parameter type. 
+        // Return a binder that cna handle Stream --> T conversions. 
+        private ICloudBlobStreamBinder<T> GetCustomBinderInstance<T>()
+        {
+            foreach (var extensionType in _extensionTypeLocator.GetCloudBlobStreamBinderTypes())
+            {
+                var inner = Blobs.CloudBlobStreamObjectBinder.GetBindingValueType(extensionType);
+                if (inner == typeof(T))
+                {
+                    var obj = Activator.CreateInstance(extensionType);
+                    return (ICloudBlobStreamBinder<T>)obj;
+                }
+            }
+
+            // Should have been checked earlier. 
+            throw new InvalidOperationException("Can't find a stream converter for " + typeof(T).FullName);
         }
 
         public Type GetDefaultType(Attribute attribute, FileAccess access, Type requestedType)
@@ -182,8 +221,37 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
             else
             {
+                // check for custom types
+                Type elementType;
+                if (parameterType.IsByRef)
+                {
+                    elementType = parameterType.GetElementType();
+                    isRead = false;
+                } else
+                {
+                    elementType = parameterType;
+                    isRead = true;
+                }
+                var hasCustomBinder = HasCustomBinderForType(elementType); // returns a user class that impls  ICloudBlobStreamBinder
+
+                argHelperType = null;
+                if (hasCustomBinder)
+                {
+                    if (isRead)
+                    {
+                        argHelperType = typeof(CustomValueProvider<>).MakeGenericType(typeof(TAttribute), elementType);
+                    }
+                    else
+                    {
+                        argHelperType = typeof(OutCustomValueProvider<>).MakeGenericType(typeof(TAttribute), elementType);
+                    }
+                }
+
                 // Totally unrecognized. Let another binding try it. 
-                return Task.FromResult<IBinding>(null);
+                if (argHelperType == null)
+                {
+                    return Task.FromResult<IBinding>(null);
+                }
             }
 
             VerifyAccessOrThrow(declaredAccess, isRead);
@@ -286,7 +354,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 Func<Stream> buildStream = () => (Stream)builder(attrResolved);
 
                 BaseValueProvider valueProvider = (BaseValueProvider)Activator.CreateInstance(_typeValueProvider);
-                await valueProvider.InitAsync(buildStream, _userType);
+                await valueProvider.InitAsync(buildStream, _userType, _parent);
 
                 return valueProvider;
             }
@@ -296,6 +364,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         // This wraps the stream and coerces it to the user's parameter.
         private abstract class BaseValueProvider : IValueBinder
         {
+            protected BindToStreamBindingProvider<TAttribute> _parent;
+
             private Stream _stream; // underlying stream 
             private object _userValue; // argument passed to the user's function. This is some wrapper over _stream. 
             private string _invokeString;
@@ -314,11 +384,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return _stream;
             }
 
-            public async Task InitAsync(Func<Stream> builder, Type userType)
+            public async Task InitAsync(Func<Stream> builder, Type userType, BindToStreamBindingProvider<TAttribute> parent)
             {
                 Type = userType;
                 _invokeString = "???";
                 _streamBuilder = builder;
+                _parent = parent;
 
                 _userValue = await this.CreateUserArgAsync();
             }
@@ -416,6 +487,29 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
         }
 
+        // Bind to a 'String' parameter. 
+        // This reads the entire contents on invocation and passes as a single string. 
+        private class CustomValueProvider<T> : BaseValueProvider
+        {
+            protected override async Task<object> CreateUserArgAsync()
+            {
+                var stream = this.GetOrCreateStream();
+                if (stream == null)
+                {
+                    // If T is a struct, then we need to create a value for it. So call the converters. 
+                    // $$$ - or just skip and new T() outselves? Breaking change. See FuncWithValueT test. 
+                    if (!typeof(T).IsValueType)
+                    {
+                        // return null; $$$ Need to test update 
+                    }
+                }
+                                
+                ICloudBlobStreamBinder<T> customBinder = _parent.GetCustomBinderInstance<T>();
+                T value = await customBinder.ReadFromStreamAsync(stream, CancellationToken.None);
+                return value;
+            }
+        }
+
         // Bind to a 'TextWriter' parameter. 
         // This is for writing out to the stream. 
         private class TextWriterValueProvider : BaseValueProvider
@@ -425,10 +519,17 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             protected override Task<object> CreateUserArgAsync()
             {
                 var stream = this.GetOrCreateStream();
-                _arg = new StreamWriter(stream);
+                _arg = Create(stream);
                 return Task.FromResult<object>(_arg);
             }
 
+            internal static TextWriter Create(Stream stream)
+            {
+                // Default is UTF8, not write a BOM, close stream when done. 
+                return new StreamWriter(stream);
+            }
+
+            // $$$ Is this actually necessary? Won't they call Dispose?
             protected override async Task FlushAsync()
             {
                 await _arg.FlushAsync();
@@ -475,15 +576,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                 var text = (string)value;
 
-                const int DefaultBufferSize = 1024;
-
-                // $$$ Do we omit BOM or not? Blob does. Does this need to be customizable?
-                // Omit a BOM - this is backwards compat with [Blob] bindings. 
-                // var encoding = new UTF8Encoding(false); // skip emitting BOM
-                var encoding = Encoding.UTF8;
-
-                using (TextWriter writer = new StreamWriter(stream, encoding, DefaultBufferSize,
-                        leaveOpen: true))
+                // Specifically use the same semantics as binding to 'TextWriter'
+                using (var writer = TextWriterValueProvider.Create(stream))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     await writer.WriteAsync(text);
@@ -499,6 +593,32 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 var stream = this.GetOrCreateStream();
                 var bytes = (byte[])value;
                 await stream.WriteAsync(bytes, 0, bytes.Length);
+            }
+        }
+
+        // Bind to an a custom 'T' parameter, using a custom ICloudBlobStreamBinder<T>. 
+        private class OutCustomValueProvider<T> : OutArgBaseValueProvider
+        {
+            override protected Task<object> CreateUserArgAsync()
+            {
+                object val = null;
+                if (typeof(T).IsValueType)
+                {
+                    // ValueTypes must provide a non-null value on input, even though it will be ignored. 
+                    val = Activator.CreateInstance<T>();
+                }
+                // Nop on create. Will do work on complete. 
+                return Task.FromResult<object>(val);
+            }
+
+            protected override async Task WriteToStreamAsync(object value, CancellationToken cancellationToken)
+            {
+                var stream = this.GetOrCreateStream();
+                
+                T val = (T)value;
+
+                ICloudBlobStreamBinder<T> customBinder = _parent.GetCustomBinderInstance<T>();
+                await customBinder.WriteToStreamAsync(val, stream, cancellationToken);
             }
         }
         #endregion // Out parameters
