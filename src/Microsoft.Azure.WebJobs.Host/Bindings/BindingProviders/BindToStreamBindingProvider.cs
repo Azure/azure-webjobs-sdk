@@ -280,7 +280,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
 
             var fileAccess = isRead ? FileAccess.Read : FileAccess.Write;
-            IBinding binding = new ReadExactBinding(cloner, param, this, argHelperType, parameterType, fileAccess);
+            IBinding binding = new StreamBinding(cloner, param, this, argHelperType, parameterType, fileAccess);
 
             return Task.FromResult<IBinding>(binding);
         }
@@ -330,14 +330,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         // As a binding, this is one per parameter, shared across each invocation instance.
-        private class ReadExactBinding : BindingBase<TAttribute>
+        private class StreamBinding : BindingBase<TAttribute>
         {
             private readonly BindToStreamBindingProvider<TAttribute> _parent;
             private readonly Type _userType;
             private readonly FileAccess _targetFileAccess;
             private readonly Type _typeValueProvider;
 
-            public ReadExactBinding(
+            public StreamBinding(
                 AttributeCloner<TAttribute> cloner,
                 ParameterDescriptor param,
                 BindToStreamBindingProvider<TAttribute> parent,
