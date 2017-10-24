@@ -17,28 +17,11 @@ using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.Azure.WebJobs.Host.Config;
 using System.Threading;
 using System.Collections;
+using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 {
-#if false
-
-    FunctionInstaceId !!! Converter doesn't have this... 
-
-
-    - watcher? per config?  (same trick as Stream) 
-
-    - Pass tests 
-
-    nameResolver on connection string? 
-
-    InvokeString , Log 
-
-    customer types 
-
-
-#endif
-
-    internal class BlobExtension : IExtensionConfigProvider, 
+    internal class BlobExtension : IExtensionConfigProvider,
         IAsyncConverter<BlobAttribute, Stream>,
         IAsyncConverter<BlobAttribute, CloudBlobStream>,
         IAsyncConverter<BlobAttribute, CloudBlockBlob>,
@@ -46,11 +29,13 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         IAsyncConverter<BlobAttribute, CloudAppendBlob>,
         IAsyncConverter<BlobAttribute, ICloudBlob>,
         IAsyncConverter<BlobAttribute, CloudBlobContainer>,
-        IAsyncConverter<BlobAttribute, CloudBlobDirectory>
+        IAsyncConverter<BlobAttribute, CloudBlobDirectory>,
+        IAsyncConverter<BlobAttribute, BlobExtension.MultiBlobContext>
 
     {
         private IStorageAccountProvider _accountProvider;
         private IContextGetter<IBlobWrittenWatcher> _blobWrittenWatcherGetter;
+        private INameResolver _nameResolver;
 
 
         #region Container rules
@@ -76,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
             return directory;
         }
-        
+
         #endregion
 
         #region CloudBlob rules 
@@ -86,7 +71,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             BlobAttribute blobAttribute, CancellationToken cancellationToken)
         {
             // $$$ Fix cast. 
-            return (CloudBlobStream) await CreateStreamAsync(blobAttribute, cancellationToken);
+            return (CloudBlobStream)await CreateStreamAsync(blobAttribute, cancellationToken);
         }
 
 
@@ -117,7 +102,115 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             var blob = await GetBlobAsync(blobAttribute, cancellationToken, typeof(ICloudBlob));
             return (ICloudBlob)(blob.SdkObject);
         }
-        #endregion 
+        #endregion
+        
+        #region Support for binding to Multiple blobs 
+        // Open type matching types that can bind to an IEnumerable<T> blob collection. 
+        class MultiBlobType : OpenType
+        {
+            private static readonly Type[] _types = new Type[]
+            {
+                typeof(ICloudBlob),
+                typeof(CloudBlockBlob),
+                typeof(CloudPageBlob),
+                typeof(CloudAppendBlob),
+                typeof(TextReader),
+                typeof(Stream),
+                typeof(string)
+            };
+
+            public override bool IsMatch(Type type)
+            {
+                bool match = _types.Contains(type);
+                return match;
+            }
+        }
+
+        // Converter to produce an IEnumerable<T> for binding to multiple blobs. 
+        // T must have been matched by MultiBlobType        
+        class MultiBlobConverer<T> : IAsyncConverter<MultiBlobContext, IEnumerable<T>>
+        {
+            public MultiBlobConverer(BlobExtension parent)
+            {
+            }
+            public async Task<IEnumerable<T>> ConvertAsync(MultiBlobContext context, CancellationToken cancellationToken)
+            {
+                // Query the blob container using the blob prefix (if specified)
+                // Note that we're explicitly using useFlatBlobListing=true to collapse
+                // sub directories. If users want to bind to a sub directory, they can
+                // bind to CloudBlobDirectory.
+                string prefix = context.Prefix;
+                var container = context.Container;
+                IEnumerable<IStorageListBlobItem> blobItems = await container.ListBlobsAsync(prefix, true, cancellationToken);
+
+                // create an IEnumerable<T> of the correct type, performing any
+                // required conversions on the blobs                
+                var list = await ConvertBlobs(blobItems);
+                return list;
+            }
+
+            // $$$ This whole block is a legacy from the CloudBlobEnumerableArgumentBinding.
+            // Would be nice to share them with the individual blob converters, although there are subtle differences.
+            private static async Task<IEnumerable<T>> ConvertBlobs(IEnumerable<IStorageListBlobItem> blobItems)
+            {
+                var list = new List<T>();
+
+                foreach (var blobItem in blobItems)
+                {
+                    var converted = await ConvertBlob(((IStorageBlob)blobItem).SdkObject);
+                    list.Add(converted);
+                }
+
+                return list;
+            }
+
+            private static async Task<T> ConvertBlob(ICloudBlob blob)
+            {
+                object converted = blob;
+                var targetType = typeof(T);
+
+                if (targetType == typeof(Stream))
+                {
+                    converted = await blob.OpenReadAsync(null, null, null);
+                }
+                else if (targetType == typeof(TextReader))
+                {
+                    Stream stream = await blob.OpenReadAsync(null, null, null);
+                    converted = new StreamReader(stream);
+                }
+                else if (targetType == typeof(string))
+                {
+                    Stream stream = await blob.OpenReadAsync(null, null, null);
+                    using (StreamReader reader = new StreamReader(stream))
+                    {
+                        converted = await reader.ReadToEndAsync();
+                    }
+                }
+
+                return (T)converted;
+            }
+        }
+
+        // Internal context object to aide in binding to  multiple blobs. 
+        private class MultiBlobContext
+        {
+            public string Prefix;
+            public IStorageBlobContainer Container;
+        }
+
+        // Initial rule that captures the muti-blob context.
+        // Then a converter morphs this to the user type
+        async Task<MultiBlobContext> IAsyncConverter<BlobAttribute, MultiBlobContext>.ConvertAsync(BlobAttribute attr, CancellationToken cancellationToken)
+        {
+            var path = BlobPath.ParseAndValidate(attr.BlobPath, isContainerBinding: true);
+
+            return new MultiBlobContext
+            {
+                Prefix = path.BlobName,
+                Container = await this.GetContainerAsync(attr, cancellationToken)
+            };
+        }
+        #endregion
 
         public async Task<Stream> ConvertAsync(BlobAttribute blobAttribute, CancellationToken cancellationToken)
         {
@@ -125,7 +218,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         }
 
         private async Task<Stream> CreateStreamAsync(BlobAttribute blobAttribute, CancellationToken cancellationToken)
-        { 
+        {
             var fbc = new FunctionBindingContext(Guid.NewGuid(), cancellationToken, null);
             var vbc = new ValueBindingContext(fbc, cancellationToken);
             // $$$ Stamp with FunctionInstaceId, for causality 
@@ -134,11 +227,11 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
             switch (blobAttribute.Access)
             {
-                case FileAccess.Read:                    
+                case FileAccess.Read:
                     var readStream = await ReadBlobArgumentBinding.TryBindStreamAsync(blob, vbc);
-                    return readStream;                    
+                    return readStream;
 
-                case FileAccess.Write:                    
+                case FileAccess.Write:
                     var writeStream = await WriteBlobArgumentBinding.BindStreamAsync(blob,
                     vbc, _blobWrittenWatcherGetter.Value);
                     return writeStream;
@@ -152,11 +245,10 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
          BlobAttribute blobAttribute,
          CancellationToken cancellationToken)
         {
-            IStorageAccount account = await _accountProvider.GetStorageAccountAsync(blobAttribute, cancellationToken);
+            IStorageAccount account = await _accountProvider.GetStorageAccountAsync(blobAttribute, cancellationToken, _nameResolver);
             IStorageBlobClient client = account.CreateBlobClient();
             return client;
         }
-
 
         private async Task<IStorageBlobContainer> GetContainerAsync(
             BlobAttribute blobAttribute,
@@ -164,16 +256,16 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         {
             IStorageBlobClient client = await GetClientAsync(blobAttribute, cancellationToken);
 
-            BlobPath boundPath = BlobPath.ParseAndValidate(blobAttribute.BlobPath, isContainerBinding : true);
+            BlobPath boundPath = BlobPath.ParseAndValidate(blobAttribute.BlobPath, isContainerBinding: true);
 
             IStorageBlobContainer container = client.GetContainerReference(boundPath.ContainerName);
             return container;
         }
 
-            private async Task<IStorageBlob> GetBlobAsync(
-            BlobAttribute blobAttribute, 
-            CancellationToken cancellationToken,
-            Type requestedType = null)
+        private async Task<IStorageBlob> GetBlobAsync(
+        BlobAttribute blobAttribute,
+        CancellationToken cancellationToken,
+        Type requestedType = null)
         {
             IStorageBlobClient client = await GetClientAsync(blobAttribute, cancellationToken);
 
@@ -193,62 +285,24 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             return blob;
         }
 
-
-        class XXXBinder<T> : IAsyncConverter<CloudBlobContainer, IEnumerable<T>>
-        {
-            public XXXBinder(BlobExtension parent)
-            {
-            }
-            public async Task<IEnumerable<T>> ConvertAsync(CloudBlobContainer container, CancellationToken cancellationToken)
-            {
-                /*
-                // Query the blob container using the blob prefix (if specified)
-                // Note that we're explicitly using useFlatBlobListing=true to collapse
-                // sub directories. If users want to bind to a sub directory, they can
-                // bind to CloudBlobDirectory.
-                string prefix = containerBindingContext.Path.BlobName;
-                IEnumerable<IStorageListBlobItem> blobItems = await container.ListBlobsAsync(
-                    prefix, true, cancellationToken);
-
-    */
-
-                throw new NotImplementedException("Convert to " + typeof(T));
-            }
-        }
-
         public void Initialize(ExtensionConfigContext context)
         {
             _accountProvider = context.Config.GetService<IStorageAccountProvider>();
 
             // $$$ Per-host 
             _blobWrittenWatcherGetter = context.PerHostServices.GetService<ContextAccessor<IBlobWrittenWatcher>>();
-            
-
-            
+            _nameResolver = context.Config.NameResolver;
 
             var rule = context.AddBindingRule<BlobAttribute>();
 
-
-            rule.BindToInput<CloudBlobContainer>(this);
             rule.BindToInput<CloudBlobDirectory>(this);
 
-            //rule.BindToInput<IEnumerable<OpenType>>(typeof(XXXBinder<>), this);
+            rule.BindToInput<CloudBlobContainer>(this);
 
-            rule.AddConverter<CloudBlobContainer, IEnumerable<OpenType>>(typeof(XXXBinder<>), this);
+            rule.BindToInput<MultiBlobContext>(this); // Intermediate private context to capture state
+            rule.AddConverter<MultiBlobContext, IEnumerable<MultiBlobType>>(typeof(MultiBlobConverer<>), this);
 
-            // CloudBlobEnumerableArgumentBindingProvider
-#if false
-                        if (parameter.ParameterType == typeof(IEnumerable<ICloudBlob>) ||
-                parameter.ParameterType == typeof(IEnumerable<CloudBlockBlob>) ||
-                parameter.ParameterType == typeof(IEnumerable<CloudPageBlob>) ||
-                parameter.ParameterType == typeof(IEnumerable<CloudAppendBlob>) ||
-
-            // All converted from ICloudBlob 
-                parameter.ParameterType == typeof(IEnumerable<TextReader>) ||
-                parameter.ParameterType == typeof(IEnumerable<Stream>) ||
-                parameter.ParameterType == typeof(IEnumerable<string>))
-#endif
-
+            // BindToStream will also handle the custom Stream-->T converters.
             rule.BindToStream(this, FileAccess.ReadWrite); // Precedence, must beat CloudBlobStream
 
             // Normal blob
@@ -258,11 +312,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             rule.BindToInput<ICloudBlob>(this); // base interface 
 
             // $$$ Only when Access == FileAccess.Write
-            rule.BindToInput<CloudBlobStream>(this);            
-
-            
-
-            // $$$ Custom types via a Converter  (replace ICloudStreamBinder) 
+            // CloudBlobStream's derived functionality is only relevant to writing. 
+            rule.BindToInput<CloudBlobStream>(this);
         }
     }
 

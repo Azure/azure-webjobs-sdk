@@ -51,7 +51,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         [InlineData("FuncWithStreamRead")]
         [InlineData("FuncWithBlockBlob")]
         [InlineData("FuncWithOutStringNull")]
-        [InlineData("FuncWithStreamWriteNoop")]
         [InlineData("FuncWithT")]
         [InlineData("FuncWithOutTNull")]
         [InlineData("FuncWithValueT")]
@@ -73,6 +72,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         [Theory]
         [InlineData("FuncWithOutString")]
+        [InlineData("FuncWithStreamWriteNoop")]
         [InlineData("FuncWithTextWriter")]
         [InlineData("FuncWithStreamWrite")]
         [InlineData("FuncWithOutT")]
