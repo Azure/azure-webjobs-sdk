@@ -79,31 +79,41 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 
         internal static bool IsDisabled(MethodInfo method, INameResolver nameResolver, IJobActivator activator)
         {
-            ParameterInfo triggerParameter = method.GetParameters().FirstOrDefault();
-            if (triggerParameter != null)
+            // First try to resolve disabled state by setting
+            string settingName = string.Format(CultureInfo.InvariantCulture, "AzureWebJobs.{0}.Disabled", method.Name);
+            if (ConfigurationUtility.IsSettingEnabled(settingName))
             {
-                // look for the first DisableAttribute up the hierarchy
-                DisableAttribute disableAttribute = TypeUtility.GetHierarchicalAttributeOrNull<DisableAttribute>(triggerParameter);
-                if (disableAttribute != null)
+                return true;
+            }
+            else 
+            {
+                // Second try to resolve disabled state by attribute
+                ParameterInfo triggerParameter = method.GetParameters().FirstOrDefault();
+                if (triggerParameter != null)
                 {
-                    if (!string.IsNullOrEmpty(disableAttribute.SettingName))
+                    // look for the first DisableAttribute up the hierarchy
+                    DisableAttribute disableAttribute = TypeUtility.GetHierarchicalAttributeOrNull<DisableAttribute>(triggerParameter);
+                    if (disableAttribute != null)
                     {
-                        return IsDisabledBySetting(disableAttribute.SettingName, method, nameResolver);
-                    }
-                    else if (disableAttribute.ProviderType != null)
-                    {
-                        // a custom provider Type has been specified
-                        return IsDisabledByProvider(disableAttribute.ProviderType, method, activator);
-                    }
-                    else
-                    {
-                        // the default constructor was used
-                        return true;
+                        if (!string.IsNullOrEmpty(disableAttribute.SettingName))
+                        {
+                            return IsDisabledBySetting(disableAttribute.SettingName, method, nameResolver);
+                        }
+                        else if (disableAttribute.ProviderType != null)
+                        {
+                            // a custom provider Type has been specified
+                            return IsDisabledByProvider(disableAttribute.ProviderType, method, activator);
+                        }
+                        else
+                        {
+                            // the default constructor was used
+                            return true;
+                        }
                     }
                 }
-            }
 
-            return false;
+                return false;
+            }
         }
 
         internal static bool IsDisabledBySetting(string settingName, MethodInfo method, INameResolver nameResolver)
@@ -119,17 +129,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             bindingData.Add("MethodShortName", method.Name);
             settingName = bindingTemplate.Bind(bindingData);
 
-            // check the target setting and return false (disabled) if the value exists
-            // and is "falsey"
-            string value = ConfigurationUtility.GetSetting(settingName);
-            if (!string.IsNullOrEmpty(value) &&
-                (string.Compare(value, "1", StringComparison.OrdinalIgnoreCase) == 0 ||
-                 string.Compare(value, "true", StringComparison.OrdinalIgnoreCase) == 0))
-            {
-                return true;
-            }
-
-            return false;
+            return ConfigurationUtility.IsSettingEnabled(settingName);
         }
 
         internal static bool IsDisabledByProvider(Type providerType, MethodInfo jobFunction, IJobActivator activator)

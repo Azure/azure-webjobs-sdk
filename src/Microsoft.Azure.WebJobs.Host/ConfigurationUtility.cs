@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Globalization;
 using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Azure.WebJobs.Host
@@ -32,6 +33,21 @@ namespace Microsoft.Azure.WebJobs.Host
         {
             _configurationFactory = configurationRootFactory;
             Reset();
+        }
+
+        public static bool IsSettingEnabled(string settingName)
+        {
+            // check the target setting and return false (disabled) if the value exists
+            // and is "falsey"
+            string value = GetSetting(settingName);
+            if (!string.IsNullOrEmpty(value) &&
+                (string.Compare(value, "1", StringComparison.OrdinalIgnoreCase) == 0 ||
+                 string.Compare(value, "true", StringComparison.OrdinalIgnoreCase) == 0))
+            {
+                return true;
+            }
+
+            return false;
         }
 
         private static IConfigurationRoot BuildConfiguration()
