@@ -191,7 +191,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             var pm = PatternMatcher.New(builderInstance);
             var nameResolver = _parent.NameResolver;
             var streamExtensions = _parent.GetService<IExtensionTypeLocator>();
-            var rule = new BindToStreamBindingProvider<TAttribute>(pm, fileAccess, nameResolver, streamExtensions);
+            var rule = new BindToStreamBindingProvider<TAttribute>(pm, fileAccess, nameResolver,  _parent.ConverterManager, streamExtensions);
             Bind(rule);
         }
 
@@ -207,7 +207,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             var pm = PatternMatcher.New(builderInstance);
             var nameResolver = _parent.NameResolver;
             var streamExtensions = _parent.GetService<IExtensionTypeLocator>();
-            var rule = new BindToStreamBindingProvider<TAttribute>(pm, fileAccess, nameResolver, streamExtensions);
+            var rule = new BindToStreamBindingProvider<TAttribute>(pm, fileAccess, nameResolver, _parent.ConverterManager, streamExtensions);
             Bind(rule);
         }
 

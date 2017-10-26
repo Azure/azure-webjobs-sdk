@@ -120,7 +120,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
                 typeof(string)
             };
 
-            public override bool IsMatch(Type type)
+            public override bool IsMatch(Type type, OpenTypeMatchContext ctx)
             {
                 bool match = _types.Contains(type);
                 return match;
@@ -302,7 +302,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             rule.BindToInput<CloudBlobContainer>(this);
 
             rule.BindToInput<MultiBlobContext>(this); // Intermediate private context to capture state
-            rule.AddConverter<MultiBlobContext, IEnumerable<MultiBlobType>>(typeof(MultiBlobConverer<>), this);
+            rule.AddOpenConverter<MultiBlobContext, IEnumerable<MultiBlobType>>(typeof(MultiBlobConverer<>), this);
 
             // BindToStream will also handle the custom Stream-->T converters.
             rule.SetPostResolveHook(ToBlobDescr).BindToStream(this, FileAccess.ReadWrite); // Precedence, must beat CloudBlobStream

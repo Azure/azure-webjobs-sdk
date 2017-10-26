@@ -8,9 +8,18 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Newtonsoft.Json.Linq;
+using System.IO;
+using System.Threading;
 
 namespace Microsoft.Azure.WebJobs
 {
+    // $$$ Beter name? Tuple? 
+    class ToStream<T>
+    {
+        public T Value;
+        public Stream Stream;
+    }
+
     // Concrete implementation of IConverterManager
     internal class ConverterManager : IConverterManager
     {
@@ -31,7 +40,59 @@ namespace Microsoft.Azure.WebJobs
         {
             this.AddExactConverter<byte[], string>(DefaultByteArrayToString);
             this.AddExactConverter<IEnumerable<JObject>, JArray>((enumerable) => JArray.FromObject(enumerable));            
-        } 
+        
+            this.AddExactConverter<ToStream<string>, object>(async (pair, cancellationToken) =>
+          {
+              var text = pair.Value;
+              var stream = pair.Stream;
+
+              // Specifically use the same semantics as binding to 'TextWriter'
+              // $$$ Can we chain to TextWriter?
+              using (var writer = new StreamWriter(stream))
+              {
+                  cancellationToken.ThrowIfCancellationRequested();
+                  await writer.WriteAsync(text);
+              }
+              return null;
+          });
+
+            this.AddExactConverter<ToStream<byte[]>, object>(async (pair, cancellationToken) =>
+            {
+                var bytes = pair.Value;
+                var stream = pair.Stream;
+
+                await stream.WriteAsync(bytes, 0, bytes.Length);
+                return null;
+            });
+
+            this.AddExactConverter<Stream, string>(async (stream, cancellationToken) =>
+            {
+                using (var sr = new StreamReader(stream))
+                {
+                    return await sr.ReadToEndAsync();
+                }
+            });
+            this.AddExactConverter<Stream, byte[]>(async (stream, cancellatinToken) =>
+            {
+                using (MemoryStream outputStream = new MemoryStream())
+                {
+                    const int DefaultBufferSize = 4096;
+                    await stream.CopyToAsync(outputStream, DefaultBufferSize);
+                    byte[] value = outputStream.ToArray();
+                    return value;
+                }
+            });
+
+            this.AddExactConverter<Stream, TextReader>(stream =>
+            {
+                return new StreamReader(stream);
+            });
+            this.AddExactConverter<Stream, TextWriter>(stream =>
+            {
+                // Default is UTF8, not write a BOM, close stream when done. 
+                return new StreamWriter(stream);
+            });
+        }
 
         // If somebody registered a converter from Src-->Dest, then both those types  can be used to 
         // resolve assemblies. 
@@ -104,6 +165,14 @@ namespace Microsoft.Azure.WebJobs
         }
 
         // Add a 'global' converter for all Attributes.
+        // Passing in the cancellationToken also helps C# overload resolution determine sync. vs. async
+        public void AddExactConverter<TSource, TDestination>(Func<TSource, CancellationToken, Task<TDestination>> func)
+        {
+            FuncAsyncConverter converter = async (src, attr, context) => await func((TSource)src, CancellationToken.None);
+            FuncConverterBuilder builder = (srcType, destType) => converter;
+            this.AddConverter<TSource, TDestination, System.Attribute>(builder);
+        }
+
         public void AddExactConverter<TSource, TDestination>(Func<TSource, TDestination> func)
         {
             FuncAsyncConverter converter = (src, attr, context) => Task.FromResult<object>(func((TSource)src));

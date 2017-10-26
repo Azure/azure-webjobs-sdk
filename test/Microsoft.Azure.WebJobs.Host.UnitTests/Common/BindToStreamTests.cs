@@ -382,6 +382,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             }
         }
 
+
+        // $$$ Test:
+        // - custom converter 
+        // - overwrite a builtin converter 
+
         // From a JObject (ala the Function.json), generate a strongly-typed attribute. 
         [Fact]
         public void TestMetadata()

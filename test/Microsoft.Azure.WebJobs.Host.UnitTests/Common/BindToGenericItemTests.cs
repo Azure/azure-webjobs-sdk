@@ -10,6 +10,7 @@ using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Newtonsoft.Json;
 using Xunit;
+using Microsoft.Azure.WebJobs.Description;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
 {

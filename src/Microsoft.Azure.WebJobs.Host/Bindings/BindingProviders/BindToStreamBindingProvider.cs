@@ -25,51 +25,54 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     {
         private readonly FileAccess _access; // Which direction this rule applies to. Can be R, W, or  RW
         private readonly INameResolver _nameResolver;
+        private readonly IConverterManager _converterManager;
         private readonly PatternMatcher _patternMatcher;
-        private readonly IExtensionTypeLocator _extensionTypeLocator;
 
-        public BindToStreamBindingProvider(PatternMatcher patternMatcher, FileAccess access, INameResolver nameResolver, IExtensionTypeLocator extensionTypeLocator)
+        public BindToStreamBindingProvider(PatternMatcher patternMatcher, FileAccess access, INameResolver nameResolver, IConverterManager converterManager, IExtensionTypeLocator extensionTypeLocator)
         {
             _patternMatcher = patternMatcher;
             _nameResolver = nameResolver;
+            _converterManager = converterManager;
             _access = access;
-            _extensionTypeLocator = extensionTypeLocator;
+
+            Add(extensionTypeLocator, (ConverterManager) _converterManager);
         }
 
-        // Does _extensionTypeLocator implement ICloudBlobStreamBinder<T>? 
-        private bool HasCustomBinderForType(Type t)
-        {
-            if (_extensionTypeLocator != null)
-            {
-                foreach (var extensionType in _extensionTypeLocator.GetCloudBlobStreamBinderTypes())
-                {
-                    var inner = Blobs.CloudBlobStreamObjectBinder.GetBindingValueType(extensionType);
-                    if (inner == t)
-                    {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
+        #region Hackery for ExtensionLocator
 
-        // T is the parameter type. 
-        // Return a binder that cna handle Stream --> T conversions. 
-        private ICloudBlobStreamBinder<T> GetCustomBinderInstance<T>()
+        // create IConverterManager adapters to any legacy ICloudBlobStreamBinder<T>. 
+        static void Add(IExtensionTypeLocator extensionTypeLocator, ConverterManager cm)
         {
-            foreach (var extensionType in _extensionTypeLocator.GetCloudBlobStreamBinderTypes())
+            if (extensionTypeLocator == null)
             {
-                var inner = Blobs.CloudBlobStreamObjectBinder.GetBindingValueType(extensionType);
-                if (inner == typeof(T))
-                {
-                    var obj = Activator.CreateInstance(extensionType);
-                    return (ICloudBlobStreamBinder<T>)obj;
-                }
+                return;
             }
 
-            // Should have been checked earlier. 
-            throw new InvalidOperationException("Can't find a stream converter for " + typeof(T).FullName);
+            foreach (var type in extensionTypeLocator.GetCloudBlobStreamBinderTypes())
+            {
+                var inst = Activator.CreateInstance(type);
+
+                var t = Blobs.CloudBlobStreamObjectBinder.GetBindingValueType(type);
+                var m = typeof(BindToStreamBindingProvider<TAttribute>).GetMethod("AddAdapter", BindingFlags.Static | BindingFlags.NonPublic);
+                m = m.MakeGenericMethod(t);
+                m.Invoke(null, new object[] { cm, inst });
+            }
         }
+
+        static void AddAdapter<T>(ConverterManager cm, ICloudBlobStreamBinder<T> x)
+        {
+            cm.AddExactConverter<Stream, T>(stream => x.ReadFromStreamAsync(stream, CancellationToken.None).Result);
+
+            cm.AddExactConverter<ToStream<T>, object>(pair =>
+            {
+                T value = pair.Value;
+                Stream stream = pair.Stream;
+                x.WriteToStreamAsync(value, stream, CancellationToken.None).Wait();
+                return null;
+            });
+        }
+        #endregion
+
 
         public Type GetDefaultType(Attribute attribute, FileAccess access, Type requestedType)
         {
@@ -96,12 +99,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 yield return new BindingRule
                 {
                     SourceAttribute = typeof(TAttribute),
-                    UserType = new ConverterManager.ExactMatch(type)
+                    UserType = OpenType.FromType(type)
                 };
             }
         }
 
-        private void VerifyAccessOrThrow(FileAccess? declaredAccess, bool isRead)
+        static private void VerifyAccessOrThrow(FileAccess? declaredAccess, bool isRead)
         {
             // Verify direction is compatible with the attribute's direction flag. 
             if (declaredAccess.HasValue)
@@ -151,6 +154,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return true;
         }
 
+
         public Task<IBinding> TryCreateAsync(BindingProviderContext context)
         {
             if (context == null)
@@ -159,128 +163,17 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
 
             var parameter = context.Parameter;
-            var parameterType = parameter.ParameterType;
+            var typeUser = parameter.ParameterType;
 
-            var attributeSource = TypeUtility.GetResolvedAttribute<TAttribute>(parameter);
-
-            // Stream is either way; all other types are known. 
-            FileAccess? declaredAccess = GetFileAccessFromAttribute(attributeSource);
-
-            Type argHelperType;
-            bool isRead;
-            if (parameterType == typeof(Stream))
+            if (typeUser.IsByRef)
             {
-                if (!declaredAccess.HasValue)
-                {
-                    throw new InvalidOperationException("When binding to Stream, the attribute must specify a FileAccess direction.");
-                }
-                switch (declaredAccess.Value)
-                {
-                    case FileAccess.Read:
-                        isRead = true;
-
-                        break;
-                    case FileAccess.Write:
-                        isRead = false;
-                        break;
-
-                    default:
-                        throw new NotImplementedException("ReadWrite access is not supported. Pick either Read or Write.");
-                }
-                argHelperType = typeof(StreamValueProvider);
+                typeUser = typeUser.GetElementType(); // Can't generic instantiate  a ByRef. 
             }
-            else if (parameterType == typeof(TextReader))
-            {
-                argHelperType = typeof(TextReaderValueProvider);
-                isRead = true;
-            }
-            else if (parameterType == typeof(String))
-            {
-                argHelperType = typeof(StringValueProvider);
-                isRead = true;
-            }
-            else if (parameterType == typeof(byte[]))
-            {
-                argHelperType = typeof(ByteArrayValueProvider);
-                isRead = true;
-            }
-            else if (parameterType == typeof(TextWriter))
-            {
-                argHelperType = typeof(TextWriterValueProvider);
-                isRead = false;
-            }
-            else if (parameterType == typeof(String).MakeByRefType())
-            {
-                argHelperType = typeof(OutStringValueProvider);
-                isRead = false;
-            }
-            else if (parameterType == typeof(byte[]).MakeByRefType())
-            {
-                argHelperType = typeof(OutByteArrayValueProvider);
-                isRead = false;
-            }
-            else
-            {
-                // check for custom types
-                Type elementType;
-                if (parameterType.IsByRef)
-                {
-                    elementType = parameterType.GetElementType();
-                    isRead = false;
-                } else
-                {
-                    elementType = parameterType;
-                    isRead = true;
-                }
-                var hasCustomBinder = HasCustomBinderForType(elementType); // returns a user class that impls  ICloudBlobStreamBinder
-
-                argHelperType = null;
-                if (hasCustomBinder)
-                {
-                    if (isRead)
-                    {
-                        argHelperType = typeof(CustomValueProvider<>).MakeGenericType(typeof(TAttribute), elementType);
-                    }
-                    else
-                    {
-                        argHelperType = typeof(OutCustomValueProvider<>).MakeGenericType(typeof(TAttribute), elementType);
-                    }
-                }
-
-                // Totally unrecognized. Let another binding try it. 
-                if (argHelperType == null)
-                {
-                    return Task.FromResult<IBinding>(null);
-                }
-            }
-
-            VerifyAccessOrThrow(declaredAccess, isRead);
-            if (!IsSupportedByRule(isRead))
-            {
-                return Task.FromResult<IBinding>(null);
-            }
-
-            var cloner = new AttributeCloner<TAttribute>(attributeSource, context.BindingDataContract, _nameResolver);
-
-            ParameterDescriptor param;
-            if (this.BuildParameterDescriptor != null)
-            {
-                param = this.BuildParameterDescriptor(attributeSource, parameter, _nameResolver);
-            }
-            else
-            {
-                param = new ParameterDescriptor
-                {
-                    Name = parameter.Name,
-                    DisplayHints = new ParameterDisplayHints
-                    {
-                        Description = isRead ? "Read Stream" : "Write Stream"
-                    }
-                };
-            }
-
-            var fileAccess = isRead ? FileAccess.Read : FileAccess.Write;
-            IBinding binding = new StreamBinding(cloner, param, this, argHelperType, parameterType, fileAccess);
+                        
+            var type = typeof(StreamBinding);
+            var method = type.GetMethod("TryBuild", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+            method = method.MakeGenericMethod(typeUser);
+            var binding = BindingFactoryHelpers.MethodInvoke<IBinding>(method, this, context);
 
             return Task.FromResult<IBinding>(binding);
         }
@@ -343,14 +236,144 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 BindToStreamBindingProvider<TAttribute> parent,
                 Type argHelper,
                 Type userType,
-                FileAccess targetFileAccess)
-                : base(cloner, param)
+                FileAccess targetFileAccess,
+                object converterParam)
+                    : base(cloner, param)
             {
                 _parent = parent;
                 _userType = userType;
                 _targetFileAccess = targetFileAccess;
                 _typeValueProvider = argHelper;
+                _converter = converterParam;
             }
+
+
+            public static IBinding TryBuild<TUserType>(
+                BindToStreamBindingProvider<TAttribute> parent,
+                BindingProviderContext context)
+            {
+                // Allowed Param types:
+                //  Stream
+                //  any T with a Stream --> T conversion 
+                // out T, with a Out<Stream,T> --> void conversion 
+
+                var parameter = context.Parameter;
+                var parameterType = parameter.ParameterType;
+
+
+                var attributeSource = TypeUtility.GetResolvedAttribute<TAttribute>(parameter);
+
+                // Stream is either way; all other types are known. 
+                FileAccess? declaredAccess = GetFileAccessFromAttribute(attributeSource);
+
+                Type argHelperType;
+                bool isRead;
+
+                IConverterManager cm = parent._converterManager;
+                INameResolver nm = parent._nameResolver;
+
+                object converterParam = null;
+                {
+                    if (parameter.IsOut)
+                    {
+                        var outConverter = cm.GetConverter<ToStream<TUserType>, object, TAttribute>();
+                        if (outConverter != null)
+                        {
+                            converterParam = outConverter;
+                            isRead = false;
+                            argHelperType = typeof(OutArgBaseValueProvider<>).MakeGenericType(typeof(TAttribute), typeof(TUserType));
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException($"No stream converter to handle {typeof(TUserType).FullName}.");
+                        }
+                    }
+                    else
+                    {
+                        var converter = cm.GetConverter<Stream, TUserType, TAttribute>();
+                        if (converter != null)
+                        {
+                            converterParam = converter;
+
+                            if (parameterType == typeof(Stream))
+                            {
+                                if (!declaredAccess.HasValue)
+                                {
+                                    throw new InvalidOperationException("When binding to Stream, the attribute must specify a FileAccess direction.");
+                                }
+                                switch (declaredAccess.Value)
+                                {
+                                    case FileAccess.Read:
+                                        isRead = true;
+
+                                        break;
+                                    case FileAccess.Write:
+                                        isRead = false;
+                                        break;
+
+                                    default:
+                                        throw new NotImplementedException("ReadWrite access is not supported. Pick either Read or Write.");
+                                }
+                            }
+                            else
+                            {
+                                // For backwards compat, we recognize TextWriter as write; 
+                                // anything else should explicitly set the FileAccess flag. 
+                                if (typeof(TextWriter).IsAssignableFrom(typeof(TUserType)))
+                                {
+                                    isRead = false;
+                                }
+                                else
+                                {
+                                    isRead = true;
+                                }
+                            }
+
+
+                            argHelperType = typeof(ValueProvider<>).MakeGenericType(typeof(TAttribute), typeof(TUserType));
+                        }
+                        else
+                        {
+                            // This rule can't bind. 
+                            // Let another try. 
+                            return null;
+                        }
+                    }
+                }
+
+                VerifyAccessOrThrow(declaredAccess, isRead);
+                if (!parent.IsSupportedByRule(isRead))
+                {
+                    return null;
+                }
+
+                var cloner = new AttributeCloner<TAttribute>(attributeSource, context.BindingDataContract, nm);
+
+                ParameterDescriptor param;
+                if (parent.BuildParameterDescriptor != null)
+                {
+                    param = parent.BuildParameterDescriptor(attributeSource, parameter, nm);
+                }
+                else
+                {
+                    param = new ParameterDescriptor
+                    {
+                        Name = parameter.Name,
+                        DisplayHints = new ParameterDisplayHints
+                        {
+                            Description = isRead ? "Read Stream" : "Write Stream"
+                        }
+                    };
+                }
+
+                var fileAccess = isRead ? FileAccess.Read : FileAccess.Write;
+                IBinding binding = new StreamBinding(cloner, param, parent, argHelperType, parameterType, fileAccess, converterParam);
+
+                return binding;
+            }
+
+
+            object _converter;
 
             protected override async Task<IValueProvider> BuildAsync(TAttribute attrResolved, ValueBindingContext context)
             {
@@ -361,7 +384,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 Func<object, object> builder = patternMatcher.TryGetConverterFunc(typeof(TAttribute), typeof(Stream));
                 Func<Stream> buildStream = () => (Stream)builder(attrResolved);
 
-                BaseValueProvider valueProvider = (BaseValueProvider)Activator.CreateInstance(_typeValueProvider);
+                BaseValueProvider valueProvider = (BaseValueProvider)Activator.CreateInstance(_typeValueProvider, _converter);
                 var invokeString = this.Cloner.GetInvokeString(attrResolved);
                 await valueProvider.InitAsync(buildStream, _userType, _parent, invokeString);
 
@@ -411,12 +434,30 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             public virtual async Task SetValueAsync(object value, CancellationToken cancellationToken)
             {
                 // 'Out T' parameters override this method; so this case only needs to handle normal input parameters. 
-                await this.FlushAsync();
+
+                // value may be null (such as in an IBinder.Bind case). 
+                if (_userValue is IDisposable disposable)
+                {
+                    // This will handle TextWriter and a chance for other writers to flush their contents to the underlying stream.
+                    // This needs to be done *before* we close the underlying stream, so we can't wait for webjobs 
+                    // to do the check. 
+                    disposable.Dispose();
+                }
+                                
                 if (_stream != null)
                 {
-                    // These are safe even when the stream is closed/disposed. 
-                    //await _stream.FlushAsync();
-                    _stream.Close(); // Safe to call this multiple times. 
+                    // 1. Close() / Dispose()  are sync. So we want to FlushAsync() first to do any long-running operations async,
+                    //    and then the sync close() is just a nop. 
+                    // 2. Stream may already be closed (in user's code). 
+                    //    - Can't call Flush() on a closed stream. But CanWrite should be set to false once the stream is closed. 
+                    //    - closed/disposed are safe to call multiple times.
+
+                    if (_stream.CanWrite)
+                    {
+                        // Do heavy lifting as async so the following close() is a nop. 
+                        await _stream.FlushAsync();
+                    }
+                    _stream.Close();
                 }
             }
 
@@ -427,133 +468,52 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
             // Deterministic initialization for UserValue. 
             protected abstract Task<object> CreateUserArgAsync();
-
-            // Give derived object a chance to flush any buffering before we close the stream. 
-            protected virtual Task FlushAsync() { return Task.CompletedTask; }
         }
 
-        // Bind to a 'Stream' parameter.  Handles both Read and Write streams.
-        private class StreamValueProvider : BaseValueProvider
+        // Regular value provider that handles all non-out cases. 
+        // This coerces the Stream to the user parameter type. 
+        private class ValueProvider<TUserType> : BaseValueProvider
         {
-            protected override Task<object> CreateUserArgAsync()
+            private readonly FuncAsyncConverter<Stream, TUserType> _converter;
+
+            public ValueProvider(object converter)
             {
-                return Task.FromResult<object>(this.GetOrCreateStream());
-            }
-        }
+                _converter = (FuncAsyncConverter<Stream, TUserType>)converter;
+            }                       
 
-        // Bind to a 'TextReader' parameter.
-        private class TextReaderValueProvider : BaseValueProvider
-        {
-            protected override Task<object> CreateUserArgAsync()
-            {
-                var stream = this.GetOrCreateStream();
-                if (stream == null)
-                {
-                    return Task.FromResult<object>(null);
-                }
-                var arg = new StreamReader(stream);
-                return Task.FromResult<object>(arg);
-            }
-        }
-
-        // Bind to a 'String' parameter. 
-        // This reads the entire contents on invocation and passes as a single string. 
-        private class StringValueProvider : BaseValueProvider
-        {
             protected override async Task<object> CreateUserArgAsync()
             {
+                TUserType result;
                 var stream = this.GetOrCreateStream();
                 if (stream == null)
                 {
-                    return null;
+                    // If T is a struct, then we need to create a value for it.
+                    result = default(TUserType);
                 }
-                using (var arg = new StreamReader(stream))
+                else
                 {
-                    var str = await arg.ReadToEndAsync();
-                    return str;
+                    result = await _converter(stream, null, null);
                 }
+                return result;
             }
         }
-
-        // bind to a 'byte[]' parameter.
-        // This reads the entire stream contents on invocation and passes as a byte[].
-        private class ByteArrayValueProvider : BaseValueProvider
-        {
-            protected override async Task<object> CreateUserArgAsync()
-            {
-                var stream = this.GetOrCreateStream();
-                if (stream == null)
-                {
-                    return null;
-                }
-                using (MemoryStream outputStream = new MemoryStream())
-                {
-                    const int DefaultBufferSize = 4096;
-                    await stream.CopyToAsync(outputStream, DefaultBufferSize);
-                    byte[] value = outputStream.ToArray();
-                    return value;
-                }
-            }
-        }
-
-        // Bind to a 'String' parameter. 
-        // This reads the entire contents on invocation and passes as a single string. 
-        private class CustomValueProvider<T> : BaseValueProvider
-        {
-            protected override async Task<object> CreateUserArgAsync()
-            {
-                var stream = this.GetOrCreateStream();
-                if (stream == null)
-                {
-                    if (typeof(T).IsValueType)
-                    {
-                        // If T is a struct, then we need to create a value for it.
-                        return Activator.CreateInstance(typeof(T));
-                    }
-                    return null;
-                }
-                                
-                ICloudBlobStreamBinder<T> customBinder = _parent.GetCustomBinderInstance<T>();
-                T value = await customBinder.ReadFromStreamAsync(stream, CancellationToken.None);
-                return value;
-            }
-        }
-
-        // Bind to a 'TextWriter' parameter. 
-        // This is for writing out to the stream. 
-        private class TextWriterValueProvider : BaseValueProvider
-        {
-            private TextWriter _arg;
-
-            protected override Task<object> CreateUserArgAsync()
-            {
-                var stream = this.GetOrCreateStream();
-                _arg = Create(stream);
-                return Task.FromResult<object>(_arg);
-            }
-
-            internal static TextWriter Create(Stream stream)
-            {
-                // Default is UTF8, not write a BOM, close stream when done. 
-                return new StreamWriter(stream);
-            }
-
-            // Import for TextWriter to flush before writing the stream. 
-            protected override async Task FlushAsync()
-            {
-                await _arg.FlushAsync();
-            }
-        }
-
-        #region Out parameters
+                
         // Base class for 'out T' stream bindings. 
         // These are special in that they don't create the stream until after the function returns. 
-        private abstract class OutArgBaseValueProvider : BaseValueProvider
+        private class OutArgBaseValueProvider<TUserType> : BaseValueProvider
         {
+            private readonly FuncAsyncConverter<ToStream<TUserType>, object> _converter;
+
+            public OutArgBaseValueProvider(object converter)
+            {
+                _converter = (FuncAsyncConverter<ToStream<TUserType>, object>)converter;
+            }
+
             override protected Task<object> CreateUserArgAsync()
             {
                 // Nop on create. Will do work on complete. 
-                return Task.FromResult<object>(null);
+                var val = default(TUserType);
+                return Task.FromResult<object>(val);
             }
 
             public override async Task SetValueAsync(object value, CancellationToken cancellationToken)
@@ -569,67 +529,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 // Now Create the stream 
                 using (var stream = this.GetOrCreateStream())
                 {
-                    await this.WriteToStreamAsync(value, cancellationToken);
-                } // Dipose on Stream will close it. Safe to call this multiple times. 
-            }
-
-            protected abstract Task WriteToStreamAsync(object value, CancellationToken cancellationToken);
-        }
-
-        // Bind to an 'out string' parameter
-        private class OutStringValueProvider : OutArgBaseValueProvider
-        {
-            protected override async Task WriteToStreamAsync(object value, CancellationToken cancellationToken)
-            {
-                var stream = this.GetOrCreateStream();
-
-                var text = (string)value;
-
-                // Specifically use the same semantics as binding to 'TextWriter'
-                using (var writer = TextWriterValueProvider.Create(stream))
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    await writer.WriteAsync(text);
-                }
+                    var pair = new ToStream<TUserType>
+                    {
+                        Value = (TUserType) value,
+                         Stream = stream
+                    };
+                    await _converter(pair, null, null); // will write to the stream. 
+                } // Dispose on Stream will close it. Safe to call this multiple times. 
             }
         }
-
-        // Bind to an 'out byte[]' parameter
-        private class OutByteArrayValueProvider : OutArgBaseValueProvider
-        {
-            protected override async Task WriteToStreamAsync(object value, CancellationToken cancellationToken)
-            {
-                var stream = this.GetOrCreateStream();
-                var bytes = (byte[])value;
-                await stream.WriteAsync(bytes, 0, bytes.Length);
-            }
-        }
-
-        // Bind to an a custom 'T' parameter, using a custom ICloudBlobStreamBinder<T>. 
-        private class OutCustomValueProvider<T> : OutArgBaseValueProvider
-        {
-            override protected Task<object> CreateUserArgAsync()
-            {
-                object val = null;
-                if (typeof(T).IsValueType)
-                {
-                    // ValueTypes must provide a non-null value on input, even though it will be ignored. 
-                    val = Activator.CreateInstance<T>();
-                }
-                // Nop on create. Will do work on complete. 
-                return Task.FromResult<object>(val);
-            }
-
-            protected override async Task WriteToStreamAsync(object value, CancellationToken cancellationToken)
-            {
-                var stream = this.GetOrCreateStream();
-                
-                T val = (T)value;
-
-                ICloudBlobStreamBinder<T> customBinder = _parent.GetCustomBinderInstance<T>();
-                await customBinder.WriteToStreamAsync(val, stream, cancellationToken);
-            }
-        }
-        #endregion // Out parameters
     }
 }
