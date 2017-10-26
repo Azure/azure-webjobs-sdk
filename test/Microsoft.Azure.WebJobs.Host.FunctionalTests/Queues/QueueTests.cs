@@ -4,16 +4,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Storage.Queue;
-using Microsoft.WindowsAzure.Storage.Queue;
-using Xunit;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.WindowsAzure.Storage.Queue;
 using Newtonsoft.Json;
-using System.Reflection;
-using Microsoft.Azure.WebJobs.Host.Executors;
+using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
@@ -27,17 +27,17 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             public void Func([Queue(QueueName)] T q)
             {
-                var x = (ICollector<string>) q;
-                x.Add("123");                
+                var x = (ICollector<string>)q;
+                x.Add("123");
             }
         }
 
         [Fact]
         public void TestGenericSucceeds()
         {
-            IStorageAccount account = CreateFakeStorageAccount();          
+            IStorageAccount account = CreateFakeStorageAccount();
             var host = TestHelpers.NewJobHost<GenericProgram<ICollector<string>>>(account);
-            
+
             host.Call("Func");
 
             // Now peek at messages. 
@@ -73,7 +73,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         private static string GetErrorMessageForBadQueueName(string value, string parameterName)
         {
-            return "A queue name can contain only letters, numbers, and and dash(-) characters - \"" + value+ "\"" +
+            return "A queue name can contain only letters, numbers, and and dash(-) characters - \"" + value + "\"" +
                 "\r\nParameter name: " + parameterName; // from ArgumentException 
         }
 
@@ -145,10 +145,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // And queue name is normalized to lowercase. 
             // Connection="" is same as Connection=null
             public const string QueueOutName = "qName-{XYZ}";
-            public void Func([QueueTrigger(QueueName, Connection ="")] Poco triggers,  [Queue(QueueOutName)] ICollector<string> q)
+            public void Func([QueueTrigger(QueueName, Connection = "")] Poco triggers, [Queue(QueueOutName)] ICollector<string> q)
             {
                 q.Add("123");
-            }        
+            }
         }
 
         [Fact]
@@ -192,7 +192,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // And queue name is normalized to lowercase. 
             public const string QueueOutName = "qName-{prop1.xyz}";
             public void Func(
-                [QueueTrigger(QueueName)] Poco triggers, 
+                [QueueTrigger(QueueName)] Poco triggers,
                 [Queue(QueueOutName)] ICollector<string> q,
                 string xyz, // {xyz}
                 SubOject prop1) // Bind to a object 
@@ -246,14 +246,40 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
         }
 
+        public class ProgramSimple2
+        {
+            public const string ConnectionString = "DefaultEndpointsProtocol=https;AccountName=test;AccountKey=test";
+
+            // Validate that we sanitize the error to remove a connection string if someone accidentally uses one.
+            public void Func2([Queue(QueueName, Connection = ConnectionString)] out string x)
+            {
+                x = "abc";
+            }
+        }
+
         // Nice failure when no storage account is set
         [Fact]
         public void Fails_When_No_Storage_is_set()
         {
             var host = TestHelpers.NewJobHost<ProgramSimple>();  // no storage account!
-            string message = StorageAccountParser.FormatParseAccountErrorMessage(StorageAccountParseResult.MissingOrEmptyConnectionStringError, "Storage");            
+            string message = StorageAccountParser.FormatParseAccountErrorMessage(StorageAccountParseResult.MissingOrEmptyConnectionStringError, "Storage");
             TestHelpers.AssertIndexingError(() => host.Call("Func"),
                 "ProgramSimple.Func", message);
+        }
+
+        [Fact]
+        public void Sanitizes_Exception_If_Connection_String()
+        {
+            // people accidentally use their connection string; we want to make sure we sanitize it
+            var host = TestHelpers.NewJobHost<ProgramSimple2>();
+            string message = StorageAccountParser.FormatParseAccountErrorMessage(StorageAccountParseResult.MissingOrEmptyConnectionStringError, ProgramSimple2.ConnectionString);
+
+            TestHelpers.AssertIndexingError(() => host.Call(nameof(ProgramSimple2.Func2)),
+                "ProgramSimple2.Func2", message);
+
+            Assert.DoesNotContain(ProgramSimple2.ConnectionString, message);
+            Assert.DoesNotContain("AzureWebJobs", message); // prefix should not be added
+            Assert.Contains("[Hidden Credential]", message);
         }
 
         public class ProgramBadContract
@@ -293,7 +319,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 "ProgramCantBindToObject.Func",
                 "Object element types are not supported.");
         }
-        
+
         [Theory]
         [InlineData(typeof(int), "System.Int32")]
         [InlineData(typeof(DateTime), "System.DateTime")]
@@ -311,7 +337,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 throw e.InnerException;
             }
         }
-            
+
         private void Fails_Cant_Bind_To_Types_Worker<T>(string typeName)
         {
             IStorageAccount account = CreateFakeStorageAccount();

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26724.1
+VisualStudioVersion = 15.0.27004.2005
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{639967B0-0544-4C52-94AC-9A3D25E33256}"
 EndProject
@@ -59,7 +59,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{D684FDFB
 		WebJobs.common.props = WebJobs.common.props
 	EndProjectSection
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "WebJobs.Shared", "src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.shproj", "{ADD036F5-2170-4B05-9E0A-C2ED0A08A929}"
+EndProject
 Global
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.projitems*{0e095cb2-3030-49ff-966c-785f1a55f0c1}*SharedItemsImports = 4
+		src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.projitems*{add036f5-2170-4b05-9e0a-c2ed0a08a929}*SharedItemsImports = 13
+		src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.projitems*{d3ff0fde-ebdf-4751-8131-3375cf2a5c21}*SharedItemsImports = 4
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU

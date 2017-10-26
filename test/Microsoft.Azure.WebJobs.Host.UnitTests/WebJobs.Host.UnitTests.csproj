@@ -317,6 +317,7 @@
     <Compile Include="Loggers\TestTelemetryChannel.cs" />
     <Compile Include="Loggers\TraceWriterFunctionInstanceLoggerTests.cs" />
     <Compile Include="Loggers\WebJobsRoleEnvironmentTelemetryInitializerTests.cs" />
+    <Compile Include="Loggers\WebJobsSanitizingInitializerTests.cs" />
     <Compile Include="NullExtensionTypeLocator.cs" />
     <Compile Include="Protocols\FunctionStartedMessageExtensionsTests.cs" />
     <Compile Include="Protocols\ProtocolSerializationTests.cs" />

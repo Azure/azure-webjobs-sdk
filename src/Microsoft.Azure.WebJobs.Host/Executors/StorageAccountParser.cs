@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using Microsoft.Azure.WebJobs.Host.Storage;
+using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.WindowsAzure.Storage;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
@@ -70,9 +71,21 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         /// <returns>Formatted error message with details about reason of the failure and possible ways of mitigation</returns>
         public static string FormatParseAccountErrorMessage(StorageAccountParseResult error, string connectionStringName)
         {
+            // Users may accidentally use their real connection strings here, so let's be safe before throwing.            
+            connectionStringName = Sanitizer.Sanitize(connectionStringName);
+
             switch (error)
             {
                 case StorageAccountParseResult.MissingOrEmptyConnectionStringError:
+
+                    // We don't want to add 'AzureWebJobs' as a prefix unless it is one of our keys.
+                    string prefixedConnectionString = connectionStringName;
+                    if (connectionStringName == ConnectionStringNames.Dashboard ||
+                        connectionStringName == ConnectionStringNames.Storage)
+                    {
+                        prefixedConnectionString = AmbientConnectionStringProvider.GetPrefixedConnectionStringName(connectionStringName);
+                    }
+
                     return String.Format(CultureInfo.CurrentCulture,
                         "Microsoft Azure WebJobs SDK '{0}' connection string is missing or empty. " +
                         "The Microsoft Azure Storage account connection string can be set in the following ways:" + Environment.NewLine +
@@ -81,7 +94,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         "2. Set the environment variable named '{1}', or" + Environment.NewLine +
                         "3. Set corresponding property of JobHostConfiguration.",
                         connectionStringName,
-                        AmbientConnectionStringProvider.GetPrefixedConnectionStringName(connectionStringName));
+                        prefixedConnectionString);
 
                 case StorageAccountParseResult.MalformedConnectionStringError:
                     return String.Format(CultureInfo.CurrentCulture,
