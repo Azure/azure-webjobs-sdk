@@ -11,26 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
 {
     internal static class CloudBlobStreamObjectBinder
     {
-        public static IBlobArgumentBindingProvider CreateReadBindingProvider(Type binderType)
-        {
-            VerifyDefaultConstructor(binderType);
-            Type valueType = GetBindingValueType(binderType);
-            Type bindingProviderType = typeof(ObjectArgumentBindingProvider<,>).MakeGenericType(valueType, binderType);
-            return (IBlobArgumentBindingProvider)Activator.CreateInstance(bindingProviderType);
-        }
-
-        public static IBlobArgumentBindingProvider CreateWriteBindingProvider(Type binderType,
-            IContextGetter<IBlobWrittenWatcher> blobWrittenWatcherGetter)
-        {
-            VerifyDefaultConstructor(binderType);
-            Type valueType = GetBindingValueType(binderType);
-            Type bindingProviderType = typeof(OutObjectArgumentBindingProvider<,>).MakeGenericType(valueType,
-                binderType);
-            return (IBlobArgumentBindingProvider)Activator.CreateInstance(bindingProviderType,
-                blobWrittenWatcherGetter);
-        }
-
-        private static Type GetBindingValueType(Type binderType)
+        internal static Type GetBindingValueType(Type binderType)
         {
             Type binderInterfaceType = GetCloudBlobStreamBinderInterface(binderType);
             Debug.Assert(binderInterfaceType != null);

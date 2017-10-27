@@ -7,17 +7,23 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Storage.Blob;
 using Microsoft.WindowsAzure.Storage;
+using System.Threading;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs
 {
     internal static class ReadBlobArgumentBinding
     {
-        public static async Task<WatchableReadStream> TryBindStreamAsync(IStorageBlob blob, ValueBindingContext context)
+        public static Task<WatchableReadStream> TryBindStreamAsync(IStorageBlob blob, ValueBindingContext context)
+        {
+            return TryBindStreamAsync(blob, context.CancellationToken);
+        }
+
+        public static async Task<WatchableReadStream> TryBindStreamAsync(IStorageBlob blob, CancellationToken cancellationToken)
         {
             Stream rawStream;
             try
             {
-                rawStream = await blob.OpenReadAsync(context.CancellationToken);
+                rawStream = await blob.OpenReadAsync(cancellationToken);
             }
             catch (StorageException exception)
             {

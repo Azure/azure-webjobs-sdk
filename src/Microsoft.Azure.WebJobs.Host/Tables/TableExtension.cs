@@ -46,7 +46,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
 
             binding
                 .AddConverter<JObject, ITableEntity>(JObjectToTableEntityConverterFunc)
-                .AddConverter<object, ITableEntity>(typeof(ObjectToITableEntityConverter<>));
+                .AddOpenConverter<object, ITableEntity>(typeof(ObjectToITableEntityConverter<>));
 
             binding.WhenIsNull(RowKeyProperty)
                     .SetPostResolveHook(ToParameterDescriptorForCollector)

@@ -28,6 +28,7 @@ using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Azure.WebJobs.Host.Blobs.Triggers;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
@@ -82,6 +83,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             ContextAccessor<IMessageEnqueuedWatcher> messageEnqueuedWatcherAccessor = new ContextAccessor<IMessageEnqueuedWatcher>();
             services.AddService(messageEnqueuedWatcherAccessor);
             ContextAccessor<IBlobWrittenWatcher> blobWrittenWatcherAccessor = new ContextAccessor<IBlobWrittenWatcher>();
+            services.AddService(blobWrittenWatcherAccessor);
             ISharedContextProvider sharedContextProvider = new SharedContextProvider();
 
             // Create a wrapper TraceWriter that delegates to both the user 
@@ -93,12 +95,18 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             var metadataProvider = new JobHostMetadataProvider(deferredGetter);
             metadataProvider.AddAttributesFromAssembly(typeof(TableAttribute).Assembly);
 
+            var converterManager = (ConverterManager)config.ConverterManager;
+
             var exts = config.GetExtensions();
             bool builtinsAdded = exts.GetExtensions<IExtensionConfigProvider>().OfType<TableExtension>().Any();
             if (!builtinsAdded)
             {
+                AddStreamConverters(extensionTypeLocator, converterManager);
+
                 config.AddExtension(new TableExtension());
                 config.AddExtension(new QueueExtension());
+                config.AddExtension(new Blobs.Bindings.BlobExtensionConfig());
+                config.AddExtension(new BlobTriggerExtensionConfig());
             }
 
             ExtensionConfigContext context = new ExtensionConfigContext
@@ -148,7 +156,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 services.AddService<IBindingProvider>(bindingProvider);
             }
                         
-            var converterManager = (ConverterManager)config.ConverterManager;
             metadataProvider.Initialize(bindingProvider, converterManager, exts);
             services.AddService<IJobHostMetadataProvider>(metadataProvider);
 
@@ -408,8 +415,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 context.Current = configProvider;
                 configProvider.Initialize(context);
-                context.ApplyRules();
             }
+            context.ApplyRules();
         }
 
         private static IFunctionExecutor CreateHostCallExecutor(IListenerFactory instanceQueueListenerFactory,
@@ -514,6 +521,42 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
             }
         }
+
+        #region Backwards compat shim for ExtensionLocator
+        // We can remove this when we fix https://github.com/Azure/azure-webjobs-sdk/issues/995
+
+        // create IConverterManager adapters to any legacy ICloudBlobStreamBinder<T>. 
+        static void AddStreamConverters(IExtensionTypeLocator extensionTypeLocator, ConverterManager cm)
+        {
+            if (extensionTypeLocator == null)
+            {
+                return;
+            }
+
+            foreach (var type in extensionTypeLocator.GetCloudBlobStreamBinderTypes())
+            {
+                var instance = Activator.CreateInstance(type);
+
+                var bindingType = Blobs.CloudBlobStreamObjectBinder.GetBindingValueType(type);
+                var method = typeof(JobHostConfigurationExtensions).GetMethod("AddAdapter", BindingFlags.Static | BindingFlags.NonPublic);
+                method = method.MakeGenericMethod(bindingType);
+                method.Invoke(null, new object[] { cm, instance });
+            }
+        }
+
+        static void AddAdapter<T>(ConverterManager cm, ICloudBlobStreamBinder<T> x)
+        {
+            cm.AddExactConverter<Stream, T>(stream => x.ReadFromStreamAsync(stream, CancellationToken.None).Result);
+
+            cm.AddExactConverter<ApplyConversion<T, Stream>, object>(pair =>
+            {
+                T value = pair.Value;
+                Stream stream = pair.Existing;
+                x.WriteToStreamAsync(value, stream, CancellationToken.None).Wait();
+                return null;
+            });
+        }
+        #endregion
 
         private class DataOnlyHostOutputMessage : HostOutputMessage
         {

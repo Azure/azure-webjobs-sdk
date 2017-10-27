@@ -169,31 +169,39 @@ namespace Microsoft.Azure.WebJobs.Host
                 {
                     metadata["BlobPath"] = token;
                 }
+            }
 
-                if (metadata.TryGetValue("direction", StringComparison.OrdinalIgnoreCase, out token))
+            // Other "look like a stream" attributes may expose an Access property for stream direction. 
+            var prop = attributeType.GetProperty("Access", BindingFlags.Instance | BindingFlags.Public);
+            if (prop != null)
+            {
+                if (prop.PropertyType == typeof(FileAccess?))
                 {
-                    FileAccess access;
-                    switch (token.ToString().ToLowerInvariant())
+                    if (metadata.TryGetValue("direction", StringComparison.OrdinalIgnoreCase, out token))
                     {
-                        case "in":
-                            access = FileAccess.Read;
-                            break;
-                        case "out":
-                            access = FileAccess.Write;
-                            break;
-                        case "inout":
-                            access = FileAccess.ReadWrite;
-                            break;
-                        default:
-                            throw new InvalidOperationException($"Illegal direction value: '{token}'");
+                        FileAccess access;
+                        switch (token.ToString().ToLowerInvariant())
+                        {
+                            case "in":
+                                access = FileAccess.Read;
+                                break;
+                            case "out":
+                                access = FileAccess.Write;
+                                break;
+                            case "inout":
+                                access = FileAccess.ReadWrite;
+                                break;
+                            default:
+                                throw new InvalidOperationException($"Illegal direction value: '{token}'");
+                        }
+                        metadata["access"] = access.ToString();
                     }
-                    metadata["access"] = access.ToString();
                 }
             }
 
             return metadata;
         }
-             
+
         // Get a better implementation 
         public Type GetDefaultType(
             Attribute attribute,
@@ -263,7 +271,7 @@ namespace Microsoft.Azure.WebJobs.Host
                 {
                     foreach (var converterType in rule.Converters)
                     {
-                        output.Write($"{ConverterManager.ExactMatch.TypeToString(converterType)}-->");
+                        output.Write($"{OpenType.ExactMatch.TypeToString(converterType)}-->");
                     }
                 }
 
@@ -276,7 +284,7 @@ namespace Microsoft.Azure.WebJobs.Host
         {
             foreach (var rule in root.GetRules())
             {
-                var type = rule.UserType as ConverterManager.ExactMatch;
+                var type = rule.UserType as OpenType.ExactMatch;
                 if (type != null)                
                 {
                     AddAssembly(type.ExactType);

@@ -18,14 +18,64 @@ using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.WebJobs.Host.Config;
+using System.Threading;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
 {
+    internal class BlobTriggerExtensionConfig : IExtensionConfigProvider        
+    {
+        private IStorageAccountProvider _accountProvider;
+
+        public void Initialize(ExtensionConfigContext context)
+        {
+            _accountProvider = context.Config.GetService<IStorageAccountProvider>();
+
+            var rule = context.AddBindingRule<BlobTriggerAttribute>();
+            rule.BindToTrigger<IStorageBlob>();
+
+            rule.AddConverter<IStorageBlob, DirectInvokeString>(blob => new DirectInvokeString(blob.GetBlobPath()));
+            rule.AddConverter<DirectInvokeString, IStorageBlob>(ConvertFromInvokeString);
+
+            // Common converters shared between [Blob] and [BlobTrigger]
+
+            // Trigger already has the IStorageBlob. Whereas BindToInput defines: Attr-->Stream. 
+            //  Converter manager already has Stream-->Byte[],String,TextReader
+            context.AddConverter<IStorageBlob, Stream>(ConvertToStreamAsync);
+
+            // Blob type is a property of an existing blob. 
+            context.AddConverter(new StorageBlobToCloudBlobConverter());
+            context.AddConverter(new StorageBlobToCloudBlockBlobConverter());
+            context.AddConverter(new StorageBlobToCloudPageBlobConverter());
+            context.AddConverter(new StorageBlobToCloudAppendBlobConverter());
+        }
+
+        private async Task<Stream> ConvertToStreamAsync(IStorageBlob input, CancellationToken cancellationToken)
+        {
+            WatchableReadStream watchableStream = await ReadBlobArgumentBinding.TryBindStreamAsync(input, cancellationToken);
+            return watchableStream;
+        }
+
+        // For describing InvokeStrings.
+        private async Task<IStorageBlob> ConvertFromInvokeString(DirectInvokeString input, Attribute attr, ValueBindingContext context)
+        {
+            var attrResolved = (BlobTriggerAttribute)attr;
+            var account = await _accountProvider.GetStorageAccountAsync(attrResolved, CancellationToken.None);
+            var client = account.CreateBlobClient();
+
+            var cancellationToken = context.CancellationToken;
+            BlobPath path = BlobPath.ParseAndValidate(input.Value);
+            IStorageBlobContainer container = client.GetContainerReference(path.ContainerName);
+            var blob = await container.GetBlobReferenceFromServerAsync(path.BlobName, cancellationToken);
+
+            return blob;
+        }
+    }
+
     internal class BlobTriggerAttributeBindingProvider : ITriggerBindingProvider
     {
         private readonly INameResolver _nameResolver;
         private readonly IStorageAccountProvider _accountProvider;
-        private readonly IBlobArgumentBindingProvider _provider;
         private readonly IHostIdProvider _hostIdProvider;
         private readonly IQueueConfiguration _queueConfiguration;
         private readonly JobHostBlobsConfiguration _blobsConfiguration;
@@ -108,7 +158,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
 
             _nameResolver = nameResolver;
             _accountProvider = accountProvider;
-            _provider = CreateProvider(extensionTypeLocator.GetCloudBlobStreamBinderTypes());
             _hostIdProvider = hostIdProvider;
             _queueConfiguration = queueConfiguration;
             _blobsConfiguration = blobsConfiguration;
@@ -119,34 +168,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             _singletonManager = singletonManager;
             _trace = trace;
             _loggerFactory = loggerFactory;
-        }
-
-        private static IBlobArgumentBindingProvider CreateProvider(IEnumerable<Type> cloudBlobStreamBinderTypes)
-        {
-            List<IBlobArgumentBindingProvider> innerProviders = new List<IBlobArgumentBindingProvider>();
-
-            innerProviders.Add(CreateConverterProvider<ICloudBlob, StorageBlobToCloudBlobConverter>());
-            innerProviders.Add(CreateConverterProvider<CloudBlockBlob, StorageBlobToCloudBlockBlobConverter>());
-            innerProviders.Add(CreateConverterProvider<CloudPageBlob, StorageBlobToCloudPageBlobConverter>());
-            innerProviders.Add(CreateConverterProvider<CloudAppendBlob, StorageBlobToCloudAppendBlobConverter>());
-            innerProviders.Add(new StreamArgumentBindingProvider(defaultAccess: FileAccess.Read));
-            innerProviders.Add(new TextReaderArgumentBindingProvider());
-            innerProviders.Add(new StringArgumentBindingProvider());
-            innerProviders.Add(new ByteArrayArgumentBindingProvider());
-
-            if (cloudBlobStreamBinderTypes != null)
-            {
-                innerProviders.AddRange(cloudBlobStreamBinderTypes.Select(
-                    t => CloudBlobStreamObjectBinder.CreateReadBindingProvider(t)));
-            }
-
-            return new CompositeBlobArgumentBindingProvider(innerProviders);
-        }
-
-        private static IBlobArgumentBindingProvider CreateConverterProvider<TValue, TConverter>()
-            where TConverter : IConverter<IStorageBlob, TValue>, new()
-        {
-            return new ConverterArgumentBindingProvider<TValue>(new TConverter());
         }
 
         public async Task<ITriggerBinding> TryCreateAsync(TriggerBindingProviderContext context)
@@ -162,18 +183,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             string resolvedCombinedPath = Resolve(blobTriggerAttribute.BlobPath);
             IBlobPathSource path = BlobPathSource.Create(resolvedCombinedPath);
 
-            IArgumentBinding<IStorageBlob> argumentBinding = _provider.TryCreate(parameter, access: null);
-            if (argumentBinding == null)
-            {
-                throw new InvalidOperationException("Can't bind BlobTrigger to type '" + parameter.ParameterType + "'.");
-            }
-
             IStorageAccount hostAccount = await _accountProvider.GetStorageAccountAsync(context.CancellationToken);
             IStorageAccount dataAccount = await _accountProvider.GetStorageAccountAsync(blobTriggerAttribute, context.CancellationToken, _nameResolver);
             // premium does not support blob logs, so disallow for blob triggers
             dataAccount.AssertTypeOneOf(StorageAccountType.GeneralPurpose, StorageAccountType.BlobOnly);
 
-            ITriggerBinding binding = new BlobTriggerBinding(parameter, argumentBinding, hostAccount, dataAccount, path,
+            ITriggerBinding binding = new BlobTriggerBinding(parameter, hostAccount, dataAccount, path,
                 _hostIdProvider, _queueConfiguration, _blobsConfiguration, _exceptionHandler, _blobWrittenWatcherSetter,
                 _messageEnqueuedWatcherSetter, _sharedContextProvider, _singletonManager, _trace, _loggerFactory);
 

@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -57,7 +56,7 @@ namespace Microsoft.Azure.WebJobs
     public sealed class BlobAttribute : Attribute, IConnectionProvider
     {
         private readonly string _blobPath;
-        private readonly FileAccess? _access;
+        private FileAccess? _access;
 
         /// <summary>Initializes a new instance of the <see cref="BlobAttribute"/> class.</summary>
         /// <param name="blobPath">The path of the blob to which to bind.</param>
@@ -77,6 +76,7 @@ namespace Microsoft.Azure.WebJobs
 
         /// <summary>Gets the path of the blob to which to bind.</summary>
         [AutoResolve]
+        [BlobNameValidation]
         public string BlobPath
         {
             get { return _blobPath; }
@@ -88,11 +88,12 @@ namespace Microsoft.Azure.WebJobs
         public FileAccess? Access
         {
             get { return _access; }
+            set { _access = value; }
         }
 
         /// <summary>
         /// Gets or sets the app setting name that contains the Azure Storage connection string.
         /// </summary>
         public string Connection { get; set; }
-    }
+    }   
 }

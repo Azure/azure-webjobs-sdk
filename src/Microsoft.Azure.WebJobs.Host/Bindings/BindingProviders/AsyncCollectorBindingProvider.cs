@@ -106,7 +106,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     return new CollectorBindingPattern(Mode.OutArray, messageType);
                 }
 
-                var validator = ConverterManager.GetTypeValidator<TType>();
+                var validator = OpenType.FromType<TType>();
                 if (validator.IsMatch(elementType))
                 {
                     // out T, t is not an array 
@@ -162,7 +162,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 {
                     SourceAttribute = typeof(TAttribute),
                     Converters = MakeArray(intermediateType),
-                    UserType = new ConverterManager.ExactMatch(typeIAC)
+                    UserType = OpenType.FromType(typeIAC)
                 });
 
             rules.Add(
@@ -170,7 +170,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                   {
                       SourceAttribute = typeof(TAttribute),
                       Converters = MakeArray(intermediateType, typeIAC),                      
-                      UserType = new ConverterManager.ExactMatch(typeof(ICollector<>).MakeGenericType(type))
+                      UserType = OpenType.FromType(typeof(ICollector<>).MakeGenericType(type))
                   });
 
             rules.Add(
@@ -178,7 +178,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                   {
                       SourceAttribute = typeof(TAttribute),
                       Converters = MakeArray(intermediateType, typeIAC),
-                      UserType = new ConverterManager.ExactMatch(type.MakeByRefType())
+                      UserType = OpenType.FromType(type.MakeByRefType())
                   });
 
             rules.Add(
@@ -186,7 +186,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                   {
                       SourceAttribute = typeof(TAttribute),
                       Converters = MakeArray(intermediateType, typeIAC),
-                      UserType = new ConverterManager.ExactMatch(type.MakeArrayType().MakeByRefType())
+                      UserType = OpenType.FromType(type.MakeArrayType().MakeByRefType())
                   });
         }
 
@@ -206,17 +206,32 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return rules;
         }
 
+        // Listed in precedence for providing via DefaultType.
+        private static readonly Type[] _defaultTypes = new Type[] { typeof(JObject), typeof(byte[]), typeof(string) };
+
         public Type GetDefaultType(Attribute attribute, FileAccess access, Type requestedType)
         {
             if (access == FileAccess.Write)
-            {              
-                var cm = (ConverterManager)this._converterManager;
-                var types = cm.GetPossibleSourceTypesFromDestination(attribute.GetType(), typeof(TType));
+            {
+                // TType is OpenType 
+                // TType is CloudMessage,   String --> CloudMessage
 
-                // search in precedence 
-                foreach (var target in new Type[] { typeof(JObject), typeof(byte[]), typeof(string) })
+                var openType = OpenType.FromType<TType>();
+
+                // Check for a direct match. 
+                // This is critical when there are no converters, such as if TType is an OpenType
+                foreach (var target in _defaultTypes)
                 {
-                    if (types.Contains(target))
+                    if (openType.IsMatch(target))
+                    {
+                        return typeof(IAsyncCollector<>).MakeGenericType(target);
+                    }
+                }
+
+                // Check if there's a converter 
+                foreach (var target in _defaultTypes)
+                {
+                    if (_converterManager.HasConverter<TAttribute>(target, typeof(TType)))
                     {
                         return typeof(IAsyncCollector<>).MakeGenericType(target);
                     }
@@ -230,17 +245,16 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         // TMessage - element type of the IAsyncCollector<> we matched to.  
         private class ExactBinding<TMessage> : BindingBase<TAttribute>
         {
-            private readonly Func<object, object> _buildFromAttribute;
-
-            private readonly FuncConverter<TMessage, TAttribute, TType> _converter;
+            private readonly FuncAsyncConverter _buildFromAttribute;
+            private readonly FuncAsyncConverter<TMessage, TType> _converter;
             private readonly Mode _mode;
 
             public ExactBinding(
                 AttributeCloner<TAttribute> cloner,
                 ParameterDescriptor param,
                 Mode mode,
-                Func<object, object> buildFromAttribute,
-                FuncConverter<TMessage, TAttribute, TType> converter) : base(cloner, param)
+                FuncAsyncConverter buildFromAttribute,
+                FuncAsyncConverter<TMessage, TType> converter) : base(cloner, param)
             {
                 this._buildFromAttribute = buildFromAttribute;
                 this._mode = mode;
@@ -256,14 +270,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                 var parameter = context.Parameter;
                 var attributeSource = TypeUtility.GetResolvedAttribute<TAttribute>(parameter);
-                   
-                Func<object, object> buildFromAttribute;
-                FuncConverter<TMessage, TAttribute, TType> converter = null;
+
+                FuncAsyncConverter buildFromAttribute;
+                FuncAsyncConverter<TMessage, TType> converter = null;
 
                 // Prefer the shortest route to creating the user type.
                 // If TType matches the user type directly, then we should be able to directly invoke the builder in a single step. 
                 //   TAttribute --> TUserType
-                var checker = ConverterManager.GetTypeValidator<TType>();
+                var checker = OpenType.FromType<TType>();
                 if (checker.IsMatch(typeof(TMessage)))
                 {
                     buildFromAttribute = patternMatcher.TryGetConverterFunc(
@@ -329,13 +343,13 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return new InvalidOperationException("Can't convert from type '" + typeUser.FullName);
             }
 
-            protected override Task<IValueProvider> BuildAsync(
+            protected override async Task<IValueProvider> BuildAsync(
                 TAttribute attrResolved,
                 ValueBindingContext context)
             {
                 string invokeString = Cloner.GetInvokeString(attrResolved);
 
-                object obj = _buildFromAttribute(attrResolved);
+                object obj = await _buildFromAttribute(attrResolved, null, context);
                 
                 IAsyncCollector<TMessage> collector;
                 if (_converter != null)
@@ -352,7 +366,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 }
 
                 var vp = CoerceValueProvider(_mode, invokeString, collector);
-                return Task.FromResult(vp);
+                return vp;
             }
 
             // Get a ValueProvider that's in the right mode. 

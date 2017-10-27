@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Reflection;
 using System.Collections.Generic;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
@@ -25,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             var cm = new ConverterManager(); // empty 
 
-            var identity = cm.GetConverter<string, string, Attribute>();
+            var identity = cm.GetSyncConverter<string, string, Attribute>();
 
             var value = "abc";
             var x1 = identity(value, null, context);
@@ -39,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var cm = new ConverterManager(); // empty 
             cm.AddConverter<string, string>(x => "*" + x + "*");
 
-            var func = cm.GetConverter<string, string, Attribute>();
+            var func = cm.GetSyncConverter<string, string, Attribute>();
 
             var x1 = func("x", null, context);
             Assert.Equal("*x*", x1);
@@ -50,7 +51,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             if (cm == null) {
                 cm = new ConverterManager();
             }
-            var converter = cm.GetConverter<F, T, Attribute>();
+            var converter = cm.GetSyncConverter<F, T, Attribute>();
             Assert.NotNull(converter);
             var result = converter(from, null, null);
             Assert.Equal(to, result);
@@ -94,19 +95,21 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Guid instance = Guid.NewGuid();
             var testContext = new ValueBindingContext(new FunctionBindingContext(instance, CancellationToken.None, null), CancellationToken.None);
 
-            cm.AddConverter((object obj, Attribute attr, ValueBindingContext ctx) => {
+            FuncAsyncConverter converter = 
+            (object obj, Attribute attr, ValueBindingContext ctx) => {
                 Assert.Same(ctx, testContext);
                 var result = JObject.FromObject(obj);
                 result["$"] = ctx.FunctionInstanceId;
-                return result;
-            });
-            cm.AddConverter<string, Wrapper>(str => new Wrapper { Value = str });
+                return Task.FromResult<object>(result);
+            };
+            cm.AddConverter<object, JObject, Attribute>(converter);
+            cm.AddConverter<JObject, Wrapper>(str => new Wrapper { Value = str.ToString() });
 
             // Expected: 
             //    Other --> JObject,  
             //    JObject --> string ,  (builtin) 
             //    string --> Wrapper
-            var func = cm.GetConverter<Other, Wrapper, Attribute>();
+            var func = cm.GetSyncConverter<Other, Wrapper, Attribute>();
 
             var value = new Other { Value2 = "abc" };
             Wrapper x1 = func(value, null, testContext);
@@ -122,7 +125,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void Inheritence()
         {
             var cm = new ConverterManager(); // empty             
-            var func = cm.GetConverter<DerivedWrapper, Wrapper, Attribute>();
+            var func = cm.GetSyncConverter<DerivedWrapper, Wrapper, Attribute>();
 
             var obj = new DerivedWrapper { Value = "x" };
             Wrapper x1 = func(obj, null, context);
@@ -136,7 +139,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var cm = new ConverterManager(); // empty 
             cm.AddConverter<object, Wrapper>(x => new Wrapper { Value = x.ToString() });
 
-            var func = cm.GetConverter<int, Wrapper, Attribute>();
+            var func = cm.GetSyncConverter<int, Wrapper, Attribute>();
 
             var x1 = func(123, null, context);
             Assert.Equal("123", x1.Value);
@@ -149,51 +152,31 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var cm = new ConverterManager(); // empty             
 
             // No default byte[]-->Wrapper conversion. 
-            var fromBytes = cm.GetConverter<byte[], Wrapper, Attribute>();
+            var fromBytes = cm.GetSyncConverter<byte[], Wrapper, Attribute>();
             Assert.Null(fromBytes);
 
             // Add a string-->Wrapper conversion
             cm.AddConverter<string, Wrapper>(str => new Wrapper { Value = str });
 
-            var fromString = cm.GetConverter<string, Wrapper, Attribute>();
+            var fromString = cm.GetSyncConverter<string, Wrapper, Attribute>();
             Wrapper obj1 = fromString("abc", null, context);
             Assert.Equal("abc", obj1.Value);
 
             // Now we can get a byte-->string  , composed from a default (byte[]-->string) + supplied (string-->Wrapper)
             byte[] bytes = Encoding.UTF8.GetBytes("abc");
 
-            fromBytes = cm.GetConverter<byte[], Wrapper, Attribute>();
+            fromBytes = cm.GetSyncConverter<byte[], Wrapper, Attribute>();
             Assert.NotNull(fromBytes);
             Wrapper obj2 = fromBytes(bytes, null, context);
             Assert.Equal("abc", obj2.Value);
 
             // Now override the default. Uppercase the string so we know it used our custom converter.
             cm.AddConverter<byte[], string>(b => Encoding.UTF8.GetString(b).ToUpper());
-            fromBytes = cm.GetConverter<byte[], Wrapper, Attribute>();
+            fromBytes = cm.GetSyncConverter<byte[], Wrapper, Attribute>();
             Wrapper obj3 = fromBytes(bytes, null, context);
             Assert.Equal("ABC", obj3.Value);
         }
-
-        // Allow Json serialization if we have a String-->T converter 
-        [Fact]
-        public void JsonSerialization()
-        {
-            var cm = new ConverterManager(); // empty             
-            
-            cm.AddConverter<string, Wrapper>(str => new Wrapper { Value = str });
-
-            var objSrc = new Other { Value2 = "abc" };
-
-            // Json Serialize: (Other --> string)
-            // custom          (string -->Wrapper)
-            var func = cm.GetConverter<Other, Wrapper, Attribute>();
-            Wrapper obj2 = func(objSrc, null, context);
-
-            string json = obj2.Value;
-            var objSrc2 = JsonConvert.DeserializeObject<Other>(json);
-            Assert.Equal(objSrc.Value2, objSrc2.Value2);            
-        }
-                
+               
         // Overload conversions on type if they're using different attributes. 
         [Fact]
         public void AttributeOverloads()
@@ -203,16 +186,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             cm.AddConverter<Wrapper, string, TestAttribute2>((x, attr) => string.Format("[t2:{0}-{1}]", x.Value, attr.Flag));
 
             // Since converter was registered for a specific attribute, it must be queried by that attribute. 
-            var funcMiss = cm.GetConverter<Wrapper, string, Attribute>();
+            var funcMiss = cm.GetSyncConverter<Wrapper, string, Attribute>();
             Assert.Null(funcMiss);
 
             // Each attribute type has its own conversion function
-            var func1 = cm.GetConverter<Wrapper, string, TestAttribute>();
+            var func1 = cm.GetSyncConverter<Wrapper, string, TestAttribute>();
             Assert.NotNull(func1);
             var x1 = func1(new Wrapper { Value = "x" }, new TestAttribute("y"), context);
             Assert.Equal("[t1:x-y]", x1);
 
-            var func2 = cm.GetConverter<Wrapper, string, TestAttribute2>();
+            var func2 = cm.GetSyncConverter<Wrapper, string, TestAttribute2>();
             Assert.NotNull(func2);
             var x2 = func2(new Wrapper { Value = "x" }, new TestAttribute2("y"), context);
             Assert.Equal("[t2:x-y]", x2);
@@ -227,13 +210,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             cm.AddConverter<Wrapper, string>(x => string.Format("[common:{0}]", x.Value));
                         
             // This has an exact match on attribute and gives the specific function we registered.
-            var func1 = cm.GetConverter<Wrapper, string, TestAttribute>();
+            var func1 = cm.GetSyncConverter<Wrapper, string, TestAttribute>();
             Assert.NotNull(func1);
             var x1 = func1(new Wrapper { Value = "x" }, new TestAttribute("y"), context);
             Assert.Equal("[t1:x-y]", x1);
 
             // Nothing registered for this attribute, so we return the converter that didn't require any attribute.
-            var func2 = cm.GetConverter<Wrapper, string, TestAttribute2>();
+            var func2 = cm.GetSyncConverter<Wrapper, string, TestAttribute2>();
             Assert.NotNull(func2);
             var x2 = func2(new Wrapper { Value = "x" }, new TestAttribute2("y"), context);
             Assert.Equal("[common:x]", x2);
@@ -271,7 +254,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             // Uses open type to match. 
             cm.AddConverter<TypeWrapperIsString, int, Attribute>(typeof(TypeConverterWithTwoGenericArgs<,>), this);
 
-            var converter = cm.GetConverter<string, int, Attribute>();
+            var converter = cm.GetSyncConverter<string, int, Attribute>();
 
             Assert.Equal(12, converter("12", new TestAttribute(null), null));
             Assert.Equal(34, converter("34", new TestAttribute(null), null));
@@ -279,9 +262,25 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.Equal(1, _counter); // converterBuilder is only called once. 
 
             // 'char' as src parameter doesn't match the type predicate. 
-            Assert.Null(cm.GetConverter<char, int, Attribute>());
+            Assert.Null(cm.GetSyncConverter<char, int, Attribute>());
         }
-               
+
+        // Verify that all open Types within the same context must resolve to the same type. 
+        // This is important when resolving (Source,Dest) pairs. 
+        [Fact]
+        public void OpenTypeContext()
+        {
+            var ctx = new OpenTypeMatchContext();
+
+            var ot = OpenType.FromType(typeof(OpenType));
+            var otArray = OpenType.FromType(typeof(OpenType[]));
+
+            Assert.True(ot.IsMatch(typeof(string), ctx));
+            Assert.False(ot.IsMatch(typeof(string[]), ctx));
+            Assert.True(otArray.IsMatch(typeof(string[]), ctx));
+            Assert.True(ot.IsMatch(typeof(DateTime))); // We could match DateTime normally
+            Assert.False(ot.IsMatch(typeof(DateTime), ctx)); // false because we already commited to 'string' within this context
+        }
 
         // Test converter using Open generic types, rearranging generics
         class TypeConverterWithOneGenericArg<TElement> : 
@@ -303,19 +302,119 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             // Builder runs once; converter runs each time.
             // Uses open type to match. 
             // Also test the IEnumerable<OpenType> pattern. 
+
             cm.AddConverter<OpenType, IEnumerable<OpenType>, Attribute>(typeof(TypeConverterWithOneGenericArg<>));
 
             var attr = new TestAttribute(null);
-
             {
-                var converter = cm.GetConverter<int, IEnumerable<int>, Attribute>();
+                // Doesn't match since the OpenTypes would resolve to different Ts
+                var converter = cm.GetSyncConverter<object, IEnumerable<int>, Attribute>();
+                Assert.Null(converter);
+            }
+            {
+                var converter = cm.GetSyncConverter<int, IEnumerable<int>, Attribute>();
                 Assert.Equal(new int[] { 1, 1, 1 }, converter(1, attr, null));
             }
 
             {
-                var converter = cm.GetConverter<string, IEnumerable<string>, Attribute>();
+                var converter = cm.GetSyncConverter<string, IEnumerable<string>, Attribute>();
                 Assert.Equal(new string[] { "a", "a", "a" }, converter("a", attr, null));
             }
+        }
+
+        // Replace
+        [Fact]
+        public void Replace()
+        {
+            var cm = new ConverterManager(); // empty
+
+            cm.AddConverter<string, int>(str => int.Parse(str));
+
+            var c = cm.GetSyncConverter<string, int, Attribute>();
+            Assert.Equal(123, c("123", null, null));
+
+            // Replace the original 
+            cm.AddConverter<string, int>(str => int.Parse(str)* 10);
+
+            Assert.Equal(123, c("123", null, null)); // Original converter still works as is. 
+            var c2 = cm.GetSyncConverter<string, int, Attribute>();
+            Assert.Equal(1230, c2("123", null, null)); // New converter pulls replaced results. 
+        }
+
+        // Precedence: an exact match wins over an OpenType match 
+        [Fact]
+        public void Precedence()
+        {
+            var cm = new ConverterManager(); // empty
+
+            cm.AddConverter<OpenType, int, Attribute>((srcType, destType) =>
+            {
+                return (src, attr, ctx) => Task.FromResult<object>(int.Parse(src.ToString()) * 100);
+            });
+            cm.AddConverter<string, int>(str => int.Parse(str)); // Exact types
+            
+
+            var c = cm.GetSyncConverter<string, int, Attribute>();
+            Assert.Equal(123, c("123", null, null)); // Exact takes precedence
+
+            var c2 = cm.GetSyncConverter<double, int, Attribute>();
+            Assert.Equal(9900, c2(99, null, null)); // Uses the open converter
+        }
+
+        // String-->T converter is not enough to support JObject serialization. 
+        [Fact]
+        public void String2TDoesNotEnableJObject()
+        {
+            var cm = new ConverterManager(); // empty
+
+            cm.AddConverter<string, Wrapper>(str => new Wrapper { Value = str });
+
+            var objSrc = new Other { Value2 = "abc" };
+
+            // Json Serialize: (Other --> string)
+            // custom          (string -->Wrapper)
+            var func = cm.GetSyncConverter<Other, Wrapper, Attribute>();
+            Assert.Null(func);
+        }
+
+        // If A --> Jobject, and JObject -->B, then we can do A --> B via a JObject. 
+        [Fact]
+        public void JObjectMiddleman()
+        {
+            var cm = new ConverterManager();
+
+            cm.AddConverter<OpenType.Poco, JObject, Attribute>( (src, dest) =>
+                (input, attr2, ctx) =>
+                {
+                    var val = JObject.FromObject(input);
+                    val["c"] = "custom"; // stamp an extra field to verify it's our serialization 
+                    return Task.FromResult<object>(val);
+                });
+           
+            cm.AddConverter<JObject, Other>(obj => new Other { Value2 = obj["c"].ToString() });
+            var attr = new TestAttribute(null);
+
+            // Non poco types don't match 
+            Assert.Null(cm.GetSyncConverter<int, JObject, Attribute>());
+            Assert.Null(cm.GetSyncConverter<Object, JObject, Attribute>());
+                        
+            var converter = cm.GetSyncConverter<Wrapper, JObject, Attribute>();
+            Assert.NotNull(converter);
+
+            // Wrapper --> JObject --> Other
+            var c2 = cm.GetSyncConverter<Wrapper, Other, Attribute>(); 
+            Assert.NotNull(c2);
+
+            Other result = c2(new Wrapper { Value = "x" }, null, null);
+            Assert.Equal("custom", result.Value2);
+
+
+            // If we now add a direct converter, that takes precedence 
+            cm.AddConverter<Wrapper, Other>(input => new Other { Value2 = input.Value });
+            var direct = cm.GetSyncConverter<Wrapper, Other, Attribute>();
+
+            Other result2 = direct(new Wrapper { Value = "x" }, null, null);
+            Assert.Equal("x", result2.Value2);
         }
 
 
@@ -337,7 +436,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             cm.AddConverter<OpenType[], string, Attribute>(typeof(OpenArrayConverter<>));
             var attr = new TestAttribute(null);
 
-            var converter = cm.GetConverter<int[], string, Attribute>();
+            var converter = cm.GetSyncConverter<int[], string, Attribute>();
             Assert.Equal("1,2,3", converter(new int[] { 1, 2, 3 }, attr, null));
         }
 
@@ -350,7 +449,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             cm.AddConverter<int[], string, Attribute>(new OpenArrayConverter<int>());
             var attr = new TestAttribute(null);
 
-            var converter = cm.GetConverter<int[], string, Attribute>();
+            var converter = cm.GetSyncConverter<int[], string, Attribute>();
             Assert.Equal("1,2,3", converter(new int[] { 1, 2, 3 }, attr, null));
         }
 
@@ -379,7 +478,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             // Uses open type to match. 
             cm.AddConverter<TypeWrapperIsString, int, Attribute>(new ConverterInstanceMethod());
 
-            var converter = cm.GetConverter<string, int, Attribute>();
+            var converter = cm.GetSyncConverter<string, int, Attribute>();
 
             Assert.Equal(12, converter("12", new TestAttribute(null), null));
             Assert.Equal(34, converter("34", new TestAttribute(null), null));
@@ -387,7 +486,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.Equal(0, _counter); // passed in instantiated object; counter never incremented. 
 
             // 'char' as src parameter doesn't match the type predicate. 
-            Assert.Null(cm.GetConverter<char, int, Attribute>());
+            Assert.Null(cm.GetSyncConverter<char, int, Attribute>());
         }
 
         // Test converter using concrete types. 
@@ -416,7 +515,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             // Uses open type to match. 
             cm.AddConverter<TypeWrapperIsString, int, Attribute>(typeof(TypeConverterWithConcreteTypes), this);
 
-            var converter = cm.GetConverter<string, int, Attribute>();
+            var converter = cm.GetSyncConverter<string, int, Attribute>();
 
             Assert.Equal(12, converter("12", new TestAttribute(null), null));
             Assert.Equal(34, converter("34", new TestAttribute(null), null));
@@ -424,11 +523,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.Equal(1, _counter); // converterBuilder is only called once. 
 
             // 'char' as src parameter doesn't match the type predicate. 
-            Assert.Null(cm.GetConverter<char, int, Attribute>());
+            Assert.Null(cm.GetSyncConverter<char, int, Attribute>());
         }
 
         [Fact]
-        public void OpenType()
+        public void OpenTypeTest()
         {
             int count = 0;
             var cm = new ConverterManager();
@@ -443,14 +542,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                     Assert.Equal(typeof(String), typeSrc);
                     Assert.Equal(typeof(int), typeDest);
 
-                    return (input) =>
+                    FuncAsyncConverter converter2 = (input, attr, ctx) =>
                     {
                         string s = (string)input;
-                        return int.Parse(s);
+                        return Task.FromResult<object>(int.Parse(s));
                     };
+                    return converter2;
                 });
 
-            var converter = cm.GetConverter<string, int, Attribute>();
+            var converter = cm.GetSyncConverter<string, int, Attribute>();
             Assert.NotNull(converter);
             Assert.Equal(12, converter("12", new TestAttribute(null), null));
             Assert.Equal(34, converter("34", new TestAttribute(null), null));            
@@ -458,7 +558,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.Equal(1, count); // converterBuilder is only called once. 
 
             // 'char' as src parameter doesn't match the type predicate. 
-            Assert.Null(cm.GetConverter<char, int, Attribute>());
+            Assert.Null(cm.GetSyncConverter<char, int, Attribute>());
         }
 
 
@@ -479,7 +579,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             cm.AddConverter<int, string, Attribute>(new UseAsyncConverter());
 
-            var converter = cm.GetConverter<int, string, Attribute>();
+            var converter = cm.GetSyncConverter<int, string, Attribute>();
 
             Assert.Equal("12", converter(12, new TestAttribute(null), null));            
         }
@@ -503,7 +603,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             cm.AddConverter<int, string, Attribute>(typeof(UseGenericAsyncConverter<>));
 
-            var converter = cm.GetConverter<int, string, Attribute>();
+            var converter = cm.GetSyncConverter<int, string, Attribute>();
 
             Assert.Equal("12", converter(12, new TestAttribute(null), null));
         }
@@ -616,14 +716,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             cm.AddConverter<OpenType, IFakeEntity, Attribute>(typeof(TestConverterFakeEntity<>));
 
             {
-                var converter = cm.GetConverter<IFakeEntity, IFakeEntity, Attribute>();
+                var converter = cm.GetSyncConverter<IFakeEntity, IFakeEntity, Attribute>();
                 var src = new MyFakeEntity { Property = "123" };
                 var dest = converter(src, null, null);
                 Assert.Same(src, dest); // should be exact same instance - no conversion 
             }
 
             {
-                var converter = cm.GetConverter<JObject, IFakeEntity, Attribute>();
+                var converter = cm.GetSyncConverter<JObject, IFakeEntity, Attribute>();
                 JObject obj = new JObject();
                 obj["Property1"] = "456";
                 var dest = converter(obj, null, null);
@@ -631,7 +731,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
 
             {
-                var converter = cm.GetConverter<PocoEntity, IFakeEntity, Attribute>();
+                var converter = cm.GetSyncConverter<PocoEntity, IFakeEntity, Attribute>();
                 var src = new PocoEntity { Property2 = "789" };                
                 var dest = converter(src, null, null);
                 Assert.Equal("789", dest.Property);
@@ -659,7 +759,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         class TypeWrapperIsString : OpenType
         {
             // Predicate is invoked by ConverterManager to determine if a type matches. 
-            public override bool IsMatch(Type t)
+            public override bool IsMatch(Type t, OpenTypeMatchContext context)
             {
                 return t == typeof(string);
             }
@@ -700,5 +800,5 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
             public string Flag { get; set; }
         }
-    }
+    }    
 }

@@ -4,6 +4,7 @@
 using System;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Triggers;
@@ -50,6 +51,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
+        [Binding]
         public class TestAttribute : Attribute
         {
             [AutoResolve]
@@ -60,19 +62,17 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             public void Initialize(ExtensionConfigContext context)
             {
-                IExtensionRegistry extensions = context.Config.GetService<IExtensionRegistry>();
-                var bf = context.Config.BindingFactory;
-
                 // Add [Test] support
-                var rule = bf.BindToInput<TestAttribute, string>(typeof(FakeExtClient));
-                extensions.RegisterBindingRules<TestAttribute>(rule);
+                var rule = context.AddBindingRule<TestAttribute>();
+                rule.BindToInput<string>(typeof(FakeExtClient));
+                
+                // Add [FakeQueueTrigger] support.                 
+                context.AddConverter<string, FakeQueueData>(x => new FakeQueueData { Message = x });
+                context.AddConverter<FakeQueueData, string>(msg => msg.Message);
 
-                // Add [FakeQueueTrigger] support. 
-                IConverterManager cm = context.Config.GetService<IConverterManager>();
-                cm.AddConverter<string, FakeQueueData>(x => new FakeQueueData { Message = x });
-                cm.AddConverter<FakeQueueData, string>(msg => msg.Message);
+                var cm = context.Config.ConverterManager;
                 var triggerBindingProvider = new FakeQueueTriggerBindingProvider(new FakeQueueClient(), cm);
-                extensions.RegisterExtension<ITriggerBindingProvider>(triggerBindingProvider);
+                context.AddBindingRule<FakeQueueTriggerAttribute>().BindToTrigger(triggerBindingProvider);
             }
 
             public string Convert(TestAttribute attr)

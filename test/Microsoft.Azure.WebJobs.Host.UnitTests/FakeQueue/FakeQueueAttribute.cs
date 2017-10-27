@@ -6,11 +6,13 @@ using System.Collections.Generic;
 using System.Reflection;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Bindings.Path;
+using Microsoft.Azure.WebJobs.Description;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
     // "Fake Queue" support for 100% in-memory for unit test bindings. 
     // Put on a parameter to mark that it goes to a "FakeQueue". 
+    [Binding]
     public class FakeQueueAttribute : Attribute, IAttributeInvokeDescriptor<FakeQueueAttribute>
     {
         public FakeQueueAttribute() : this(null)

@@ -25,7 +25,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
     internal class BlobTriggerBinding : ITriggerBinding
     {
         private readonly ParameterInfo _parameter;
-        private readonly IArgumentBinding<IStorageBlob> _argumentBinding;
         private readonly IStorageAccount _hostAccount;
         private readonly IStorageAccount _dataAccount;
         private readonly IStorageBlobClient _blobClient;
@@ -45,7 +44,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
         private readonly SingletonManager _singletonManager;
 
         public BlobTriggerBinding(ParameterInfo parameter,
-            IArgumentBinding<IStorageBlob> argumentBinding,
             IStorageAccount hostAccount,
             IStorageAccount dataAccount,
             IBlobPathSource path,
@@ -63,11 +61,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             if (parameter == null)
             {
                 throw new ArgumentNullException("parameter");
-            }
-
-            if (argumentBinding == null)
-            {
-                throw new ArgumentNullException("argumentBinding");
             }
 
             if (hostAccount == null)
@@ -131,7 +124,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             }
 
             _parameter = parameter;
-            _argumentBinding = argumentBinding;
             _hostAccount = hostAccount;
             _dataAccount = dataAccount;
             StorageClientFactoryContext context = new StorageClientFactoryContext
@@ -181,15 +173,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
         public string BlobPath
         {
             get { return _path.ToString(); }
-        }
-
-        private FileAccess Access
-        {
-            get
-            {
-                return typeof(ICloudBlob).IsAssignableFrom(_argumentBinding.ValueType)
-                    ? FileAccess.ReadWrite : FileAccess.Read;
-            }
         }
 
         private static IReadOnlyDictionary<string, Type> CreateBindingDataContract(IBlobPathSource path)
@@ -252,10 +235,9 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
                 throw new InvalidOperationException("Unable to convert trigger to IStorageBlob.");
             }
 
-            Host.Bindings.IValueProvider valueProvider = await _argumentBinding.BindAsync(conversionResult.Result, context);
             IReadOnlyDictionary<string, object> bindingData = CreateBindingData(conversionResult.Result);
 
-            return new TriggerData(valueProvider, bindingData);
+            return new TriggerData(bindingData);
         }
 
         public Task<IListener> CreateListenerAsync(ListenerFactoryContext context)
@@ -282,7 +264,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
                 AccountName = _accountName,
                 ContainerName = _path.ContainerNamePattern,
                 BlobName = _path.BlobNamePattern,
-                Access = Access
+                Access = FileAccess.Read
             };
         }
     }

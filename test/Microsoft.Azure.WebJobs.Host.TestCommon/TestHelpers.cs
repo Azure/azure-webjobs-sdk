@@ -231,7 +231,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                 throw new InvalidOperationException("Test bug: Unrecognized type: " + obj.GetType().FullName);                
             }
         }
-
+        
         private class FakeStorageAccountProvider : IStorageAccountProvider
         {
             public IStorageAccount StorageAccount { get; set; }

@@ -29,7 +29,8 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
         /// <summary>
         /// Perform a bind to the specified value using the specified binding context.
         /// </summary>
-        /// <param name="value">The value to bind to.</param>
+        /// <param name="value">The value to bind to. 
+        /// This is commonly passed from the listener via <see cref="ITriggeredFunctionExecutor.TryExecuteAsync(TriggeredFunctionData, System.Threading.CancellationToken)"/>  </param>
         /// <param name="context">The binding context.</param>
         /// <returns>A task that returns the <see cref="ITriggerData"/> for the binding.</returns>
         Task<ITriggerData> BindAsync(object value, ValueBindingContext context);

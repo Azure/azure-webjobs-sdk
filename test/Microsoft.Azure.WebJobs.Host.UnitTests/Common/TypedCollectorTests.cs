@@ -129,11 +129,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         void IExtensionConfigProvider.Initialize(ExtensionConfigContext context)
         {
             // Don't add any converters. 
-            IExtensionRegistry extensions = context.Config.GetService<IExtensionRegistry>();
-            var bf = context.Config.BindingFactory;
-
-            var ruleOutput = bf.BindToCollector<FakeQueueAttribute, OpenType>(typeof(Builder<>), this);
-            extensions.RegisterBindingRules<FakeQueueAttribute>(ruleOutput);
+            var rule = context.AddBindingRule<FakeQueueAttribute>();
+            rule.BindToCollector<OpenType>(typeof(Builder<>), this);
         }
 
         public class Builder<T> : IConverter<FakeQueueAttribute, IAsyncCollector<T>>

@@ -59,7 +59,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
                 var binding = context.AddBindingRule<QueueAttribute>();
                 binding
                     .AddConverter<byte[], IStorageQueueMessage>(ConvertByteArrayToCloudQueueMessage)
-                    .AddConverter<string, IStorageQueueMessage>(ConvertStringToCloudQueueMessage);
+                    .AddConverter<string, IStorageQueueMessage>(ConvertStringToCloudQueueMessage)
+                    .AddOpenConverter<OpenType.Poco, IStorageQueueMessage>(ConvertPocoToCloudQueueMessage);
 
                 context // global converters, apply to multiple attributes. 
                      .AddConverter<IStorageQueueMessage, byte[]>(ConvertCloudQueueMessageToByteArray)
@@ -68,8 +69,9 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
 
                 var builder = new QueueBuilder(this);
 
-                binding.AddValidator(ValidateQueueAttribute)
-                    .SetPostResolveHook(ToWriteParameterDescriptorForCollector)
+                binding.AddValidator(ValidateQueueAttribute);
+
+                binding.SetPostResolveHook(ToWriteParameterDescriptorForCollector)
                         .BindToCollector<IStorageQueueMessage>(this);
 
                 binding.SetPostResolveHook(ToReadWriteParameterDescriptorForCollector)
@@ -80,19 +82,30 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
 
                 binding.SetPostResolveHook(ToReadWriteParameterDescriptorForCollector)
                         .BindToInput<CloudQueue>(builder);
+            }
 
-                IConverterManager converterManager = context.Config.ConverterManager;
-                converterManager.AddConverter<object, JObject, QueueAttribute>(SerializeToJobject);
+            private async Task<object> ConvertPocoToCloudQueueMessage(object arg, Attribute attrResolved, ValueBindingContext context)
+            {
+                var attr = (QueueAttribute)attrResolved;
+                var jobj = await SerializeToJobject(arg, attr, context);
+                var msg = ConvertJObjectToCloudQueueMessage(jobj, attr);
+                return msg;
+            }
+
+            private IStorageQueueMessage ConvertJObjectToCloudQueueMessage(JObject obj, QueueAttribute attrResolved)
+            {
+                var json = obj.ToString(); // convert to JSon
+                return ConvertStringToCloudQueueMessage(json, attrResolved);
             }
 
             // Hook JObject serialization to so we can stamp the object with a causality marker. 
-            private static JObject SerializeToJobject(object input, QueueAttribute attrResolved, ValueBindingContext context)
+            private static Task<JObject> SerializeToJobject(object input, Attribute attrResolved, ValueBindingContext context)
             {
                 JObject objectToken = JObject.FromObject(input, JsonSerialization.Serializer);
                 var functionInstanceId = context.FunctionInstanceId;
                 QueueCausalityManager.SetOwner(functionInstanceId, objectToken);
 
-                return objectToken;
+                return Task.FromResult<JObject>(objectToken);
             }
 
             // ParameterDescriptor for binding to CloudQueue. Whereas the output bindings are FileAccess.Write; CloudQueue exposes Peek() 

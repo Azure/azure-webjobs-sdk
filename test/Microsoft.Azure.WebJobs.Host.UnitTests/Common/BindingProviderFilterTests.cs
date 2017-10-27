@@ -5,27 +5,38 @@ using System;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Xunit;
+using Microsoft.Azure.WebJobs.Description;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
 {
     // Test for binding validator 
     public class BindingProviderFilterTests
     {
+        [Binding]
         public class TestAttribute : Attribute
         {
+            public TestAttribute()
+            {
+
+            }
             public TestAttribute(string path)
             {
                 this.Path = path;
             }
 
             [AutoResolve]
-            public string Path { get; set; }
+            public string Path {get;set;}
         }
 
         class Program
         {
             public string _value;
             public void Func([Test("%x%")] string x)
+            {
+                _value = x;
+            }
+
+            public void FuncNull([Test] string x)
             {
                 _value = x;
             }
@@ -40,68 +51,59 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
 
             TestHelpers.AssertIndexingError(() => host.Call("Func"), "Program.Func", FakeExtClient.IndexErrorMsg);
         }
-
-        // Fitler that skips the first rule and lands on the second rule. 
+              
+        // Filter takes the not-null branch
         [Fact]
-        public void TestSkip()
+        public void TestSuccessNotNull()
         {
             var prog = new Program();
             var jobActivator = new FakeActivator();
             jobActivator.Add(prog);
 
-            var nr = new FakeNameResolver().Add("x", "false");
+            var nr = new FakeNameResolver().Add("x", "something"); 
             var host = TestHelpers.NewJobHost<Program>(nr, jobActivator, new FakeExtClient());
-            host.Call("Func");
+            host.Call(nameof(Program.Func));
+
+            // Skipped first rule, applied second 
+            Assert.Equal(prog._value, "something");
+        }
+
+        // Filter takes the Null branch
+        [Fact]
+        public void TestSuccessNull()
+        {
+            var prog = new Program();
+            var jobActivator = new FakeActivator();
+            jobActivator.Add(prog);
+
+            var nr = new FakeNameResolver().Add("x", "something");
+            var host = TestHelpers.NewJobHost<Program>(nr, jobActivator, new FakeExtClient());
+            host.Call(nameof(Program.FuncNull));
 
             // Skipped first rule, applied second 
             Assert.Equal(prog._value, "xxx");
         }
-        
+
         public class FakeExtClient : IExtensionConfigProvider
         {
             public void Initialize(ExtensionConfigContext context)
             {
-                var bf = context.Config.BindingFactory;
-
-                // Add [Test] support                
-                var rule = bf.BindToInput<TestAttribute, string>(typeof(Converter1));                     
-                var ruleValidate = bf.AddFilter<TestAttribute>(Filter, rule);
-                var rule2 = bf.BindToInput<TestAttribute, string>(typeof(Converter2));
-                context.RegisterBindingRules<TestAttribute>(ruleValidate, rule2);
+                // Add [Test] support
+                var x = context.AddBindingRule<TestAttribute>();
+                x.WhenIsNotNull("Path").BindToInput<string>(attr => attr.Path).AddValidator(Validate);
+                x.WhenIsNull("Path").BindToInput<string>(attr => "xxx");
             }
 
-            class Converter1 : IConverter<TestAttribute, string>
+            // Validate the post-resolved attribute. 
+            private void Validate(TestAttribute attribute, Type arg2)
             {
-                public string Convert(TestAttribute attr)
-                {
-                    return attr.Path;
-                }
-            }
-            class Converter2 : IConverter<TestAttribute, string>
-            {
-                public string Convert(TestAttribute attr)
-                {
-                    return "xxx";
-                }
-            }
-
-            public const string IndexErrorMsg = "error 12345";
-
-            private static bool Filter(TestAttribute attribute, Type parameterType)
-            {
-                Assert.Equal(typeof(string), parameterType); 
-
-                // Validation example
                 if (attribute.Path == "error")
                 {
                     throw new InvalidOperationException(IndexErrorMsg);
                 }
-                if (attribute.Path == "false")
-                {
-                    return false;
-                }
-                return true;
             }
+
+            public const string IndexErrorMsg = "error 12345";
         }
     }
 }
