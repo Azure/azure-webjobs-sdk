@@ -21,7 +21,7 @@ namespace Microsoft.Azure.WebJobs.Host
             this._innerBinding = innerBinding;
         }
 
-        public override Task<ITriggerData> BindAsync(TTriggerValue value, ValueBindingContext context)
+        public override async Task<ITriggerData> BindAsync(TTriggerValue value, ValueBindingContext context)
         {
             Dictionary<string, object> bindingData = Hooks.GetBindingData(value);
 
@@ -34,14 +34,14 @@ namespace Microsoft.Azure.WebJobs.Host
             for (int i = 0; i < len; i++)
             {
                 TMessage item = arrayRaw[i];
-                object obj = _innerBinding.Convert(item, null);
+                object obj = await _innerBinding.ConvertAsync(item, null, context);
                 arrayUser.SetValue(obj, i);
             }
             Type arrayType = elementType.MakeArrayType();
 
             IValueProvider valueProvider = new ConstantValueProvider(arrayUser, arrayType, "???");
             var triggerData = new TriggerData(valueProvider, bindingData);
-            return Task.FromResult<ITriggerData>(triggerData);
+            return triggerData;
         }
     }
 }

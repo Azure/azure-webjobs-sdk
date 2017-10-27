@@ -51,7 +51,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         [InlineData("FuncWithStreamRead")]
         [InlineData("FuncWithBlockBlob")]
         [InlineData("FuncWithOutStringNull")]
-        [InlineData("FuncWithStreamWriteNoop")]
         [InlineData("FuncWithT")]
         [InlineData("FuncWithOutTNull")]
         [InlineData("FuncWithValueT")]
@@ -73,6 +72,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         [Theory]
         [InlineData("FuncWithOutString")]
+        [InlineData("FuncWithStreamWriteNoop")]
         [InlineData("FuncWithTextWriter")]
         [InlineData("FuncWithStreamWrite")]
         [InlineData("FuncWithOutT")]
@@ -1376,10 +1376,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             public Task<CustomDataObject> ReadFromStreamAsync(Stream input, CancellationToken cancellationToken)
             {
-                Assert.Null(input);
-
-                CustomDataObject value = new CustomDataObject { ValueId = TestValue };
-                return Task.FromResult(value);
+                // Read() shouldn't be called if the stream is missing. 
+                Assert.False(true, "If stream is missing, should never call Read() converter");
+                                
+                return Task.FromResult<CustomDataObject>(null);
             }
 
             public Task WriteToStreamAsync(CustomDataObject value, Stream output, CancellationToken cancellationToken)
@@ -1402,10 +1402,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             public Task<CustomDataValue> ReadFromStreamAsync(Stream input, CancellationToken cancellationToken)
             {
-                Assert.Null(input);
+                // Read() shouldn't be called if the stream is missing. 
+                Assert.False(true, "If stream is missing, should never call Read() converter");
 
-                CustomDataValue value = new CustomDataValue { ValueId = TestValue };
-                return Task.FromResult(value);
+                return Task.FromResult<CustomDataValue>(new CustomDataValue());
             }
 
             public Task WriteToStreamAsync(CustomDataValue value, Stream output, CancellationToken cancellationToken)
@@ -1475,8 +1475,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             public static void FuncWithT([Blob(BlobPath)] CustomDataObject value)
             {
-                Assert.NotNull(value);
-                Assert.Equal(TestValue, value.ValueId);
+                Assert.Null(value); // null value is Blob is Missing 
             }
 
             public static void FuncWithOutT([Blob(BlobPath)] out CustomDataObject value)
@@ -1491,8 +1490,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             public static void FuncWithValueT([Blob(BlobPath)] CustomDataValue value)
             {
+                // default(T) is blob is missing 
                 Assert.NotNull(value);
-                Assert.Equal(TestValue, value.ValueId);
+                Assert.Equal(0, value.ValueId);
             }
 
             public static void FuncWithOutValueT([Blob(BlobPath)] out CustomDataValue value)

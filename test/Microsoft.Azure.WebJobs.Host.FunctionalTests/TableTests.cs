@@ -20,6 +20,7 @@ using Microsoft.WindowsAzure.Storage.Table;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Xunit;
+using Microsoft.Azure.WebJobs.Host.Config;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
@@ -105,14 +106,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // Arrange
             IStorageAccount account = CreateFakeStorageAccount();
 
-            var config = TestHelpers.NewConfig(typeof(CustomTableBindingExtensionProgram), account);
+            var ext = new TableConverter();
 
-            IConverterManager cm = config.GetService<IConverterManager>();
+            var config = TestHelpers.NewConfig(typeof(CustomTableBindingExtensionProgram), account, ext);
 
-            // Add a rule for binding CloudTable --> CustomTableBinding<TEntity>
-            cm.AddConverter<CloudTable, CustomTableBinding<OpenType>, TableAttribute>(
-                typeof(CustomTableBindingConverter<>));
-
+            var cm = (ConverterManager) config.GetService<IConverterManager>();
+                              
             var host = new TestJobHost<CustomTableBindingExtensionProgram>(config);
             host.Call("Run"); // Act
 
@@ -120,6 +119,17 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Assert.Equal(TableName, CustomTableBinding<Poco>.Table.Name);
             Assert.True(CustomTableBinding<Poco>.AddInvoked);
             Assert.True(CustomTableBinding<Poco>.DeleteInvoked);
+        }
+
+        // Add a rule for binding CloudTable --> CustomTableBinding<TEntity>
+        class TableConverter : IExtensionConfigProvider
+        {
+            public void Initialize(ExtensionConfigContext context)
+            {
+                context.AddBindingRule<TableAttribute>().
+                    AddOpenConverter<CloudTable, CustomTableBinding<OpenType>>(
+               typeof(CustomTableBindingConverter<>));
+            }
         }
 
         [Fact]

@@ -16,13 +16,16 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     {
         private readonly INameResolver _nameResolver;
         private readonly Func<TAttribute, Type, Task<IValueBinder>> _builder;
+        private readonly OpenType _filter; // Filter to only apply to types that match this open type. 
 
         public ItemBindingProvider(
                     INameResolver nameResolver,
-                    Func<TAttribute, Type, Task<IValueBinder>> builder)
+                    Func<TAttribute, Type, Task<IValueBinder>> builder,
+                    OpenType filter)
         {
             this._nameResolver = nameResolver;
             this._builder = builder;
+            this._filter = filter;
         }
 
         public Task<IBinding> TryCreateAsync(BindingProviderContext context)
@@ -39,6 +42,13 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 return Task.FromResult<IBinding>(null);
             }
+
+            var parameterType = parameter.ParameterType;
+            if (!_filter.IsMatch(parameterType))
+            {
+                return Task.FromResult<IBinding>(null);
+            }
+
 
             var cloner = new AttributeCloner<TAttribute>(attributeSource, context.BindingDataContract, _nameResolver);
 

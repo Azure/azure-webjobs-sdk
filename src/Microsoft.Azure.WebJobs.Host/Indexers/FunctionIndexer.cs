@@ -36,13 +36,13 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly ILogger _logger;
 
         public FunctionIndexer(
-            ITriggerBindingProvider triggerBindingProvider, 
-            IBindingProvider bindingProvider, 
-            IJobActivator activator, 
-            IFunctionExecutor executor, 
-            IExtensionRegistry extensions, 
+            ITriggerBindingProvider triggerBindingProvider,
+            IBindingProvider bindingProvider,
+            IJobActivator activator,
+            IFunctionExecutor executor,
+            IExtensionRegistry extensions,
             SingletonManager singletonManager,
-            TraceWriter trace, 
+            TraceWriter trace,
             ILoggerFactory loggerFactory,
             INameResolver nameResolver = null)
         {
@@ -115,7 +115,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             if (method.ContainsGenericParameters)
             {
                 return false;
-            }            
+            }
 
             if (method.GetCustomAttributesData().Any(HasJobAttribute))
             {
@@ -206,6 +206,13 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             if (triggerBinding != null)
             {
                 bindingDataContract = triggerBinding.BindingDataContract;
+                
+                // See if a regular binding can handle it. 
+                IBinding binding = await _bindingProvider.TryCreateAsync(new BindingProviderContext(triggerParameter, bindingDataContract, cancellationToken));
+                if (binding != null)
+                {
+                    triggerBinding = new TriggerWrapper(triggerBinding, binding);
+                }
             }
             else
             {
@@ -463,6 +470,48 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             public override object[] GetCustomAttributes(Type attributeType, bool inherit)
             {
                 return _attributes.Where(p => p.GetType() == attributeType).ToArray();
+            }
+        }
+
+        // Wrapper for leveraging existing input pipeline and converter manager to get a ValueProvider.
+        // Forwards all other calls to the inner binding. 
+        class TriggerWrapper : ITriggerBinding
+        {
+            private readonly ITriggerBinding _inner;
+            private readonly IBinding _binding;
+
+            // 'inner' provides the rest of the ITriggerBinding functionality. 
+            // 'binding' provides the means to get the IValueProvider. 
+            public TriggerWrapper(ITriggerBinding inner, IBinding binding)
+            {
+                _inner = inner;
+                _binding = binding;
+            }
+
+            public Type TriggerValueType => _inner.TriggerValueType;
+
+            public IReadOnlyDictionary<string, Type> BindingDataContract => _inner.BindingDataContract;
+
+            public async Task<ITriggerData> BindAsync(object value, ValueBindingContext context)
+            {
+                var data = await _inner.BindAsync(value, context);
+
+                if (data.ValueProvider == null)
+                {
+                    var valueProvider = await _binding.BindAsync(value, context);
+                    data = new TriggerData(valueProvider, data.BindingData);
+                }
+                return data;
+            }
+
+            public Task<IListener> CreateListenerAsync(ListenerFactoryContext context)
+            {
+                return _inner.CreateListenerAsync(context);
+            }
+
+            public ParameterDescriptor ToParameterDescriptor()
+            {
+                return _inner.ToParameterDescriptor();
             }
         }
     }

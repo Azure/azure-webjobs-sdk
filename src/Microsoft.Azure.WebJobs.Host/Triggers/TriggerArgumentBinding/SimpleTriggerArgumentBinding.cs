@@ -14,9 +14,12 @@ namespace Microsoft.Azure.WebJobs.Host
     {
         private readonly ITriggerBindingStrategy<TMessage, TTriggerValue> _hooks;
         private readonly IConverterManager _converterManager;
-        private readonly FuncConverter<TMessage, Attribute, string> _stringConverter;
+        private readonly FuncAsyncConverter<TMessage, string> _stringConverter;
 
-        public SimpleTriggerArgumentBinding(ITriggerBindingStrategy<TMessage, TTriggerValue> hooks, IConverterManager converterManager, bool isSingleDispatch = true)
+        public SimpleTriggerArgumentBinding(
+            ITriggerBindingStrategy<TMessage, TTriggerValue> hooks, 
+            IConverterManager converterManager, 
+            bool isSingleDispatch = true)
         {
             this._hooks = hooks;
             this.Contract = Hooks.GetBindingContract(isSingleDispatch);
@@ -53,30 +56,31 @@ namespace Microsoft.Azure.WebJobs.Host
             }
         }
 
-        internal virtual object Convert(TMessage value, Dictionary<string, object> bindingData)
+        internal virtual Task<object> ConvertAsync(TMessage value, Dictionary<string, object> bindingData, ValueBindingContext context)
         {
-            return value;
+            return Task.FromResult<object>(value);
         }
 
-        protected string ConvertToString(TMessage eventData)
+        protected async Task<string> ConvertToStringAsync(TMessage eventData)
         {
-            return _stringConverter(eventData, null, null);
+            var val = await _stringConverter(eventData, null, null);
+            return val;
         }
 
-        public virtual Task<ITriggerData> BindAsync(TTriggerValue value, ValueBindingContext context)
+        public virtual async Task<ITriggerData> BindAsync(TTriggerValue value, ValueBindingContext context)
         {
             Dictionary<string, object> bindingData = Hooks.GetBindingData(value);
 
             TMessage eventData = Hooks.BindSingle(value, context);
 
-            object userValue = this.Convert(eventData, bindingData);
+            object userValue = await this.ConvertAsync(eventData, bindingData, context);
 
-            string invokeString = _stringConverter(eventData, null, null);
+            string invokeString = await ConvertToStringAsync(eventData);
 
             IValueProvider valueProvider = new ConstantValueProvider(userValue, this.ElementType, invokeString);
             var triggerData = new TriggerData(valueProvider, bindingData);
 
-            return Task.FromResult<ITriggerData>(triggerData);
+            return triggerData;
         }
     }
 }

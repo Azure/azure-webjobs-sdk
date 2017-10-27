@@ -2,46 +2,89 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
+using System.IO;
+using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
+using Microsoft.Azure.WebJobs.Host.Config;
 using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs
-{   
+{
     // Concrete implementation of IConverterManager
     internal class ConverterManager : IConverterManager
     {
-        // Map from <TSrc,TDest> to a converter function. 
-        // (Type) --> FuncConverter<object, TAttribute, object>
-        private readonly Dictionary<string, object> _funcsWithAttr = new Dictionary<string, object>();
-
+        // Exact converters are between two Exact types. 
+        // These are higher precedence than "open" converters. 
+        private readonly List<Entry> _exactConverters = new List<Entry>();
         private readonly List<Entry> _openConverters = new List<Entry>();
+
+        private IEnumerable<Entry> GetEntries()
+        {
+            // Exact converters have precedence
+            return _exactConverters.Concat(_openConverters);
+        }
 
         public static readonly IConverterManager Identity = new IdentityConverterManager();
 
         public ConverterManager()
         {
-            this.AddConverter<byte[], string>(DefaultByteArrayToString);
-            this.AddConverter<IEnumerable<JObject>, JArray>((enumerable) => JArray.FromObject(enumerable));
-        }
+            this.AddExactConverter<byte[], string>(DefaultByteArrayToString);
+            this.AddExactConverter<IEnumerable<JObject>, JArray>((enumerable) => JArray.FromObject(enumerable));            
+        
+            this.AddExactConverter<ApplyConversion<string, Stream>, object>(async (pair, cancellationToken) =>
+          {
+              var text = pair.Value;
+              var stream = pair.Existing;
 
-        private void AddOpenConverter<TAttribute>(
-            OpenType source,
-            OpenType dest,
-          Func<Type, Type, Func<object, object>> converterBuilder)
-          where TAttribute : Attribute
-        {            
-            var entry = new Entry
+              // Specifically use the same semantics as binding to 'TextWriter'              
+              using (var writer = new StreamWriter(stream))
+              {
+                  cancellationToken.ThrowIfCancellationRequested();
+                  await writer.WriteAsync(text);
+              }
+              return null;
+          });
+
+            this.AddExactConverter<ApplyConversion<byte[], Stream>, object>(async (pair, cancellationToken) =>
             {
-                Source = source,
-                Dest = dest,
-                Attribute = typeof(TAttribute),
-                Builder = converterBuilder
-            };
-            this._openConverters.Add(entry);
+                var bytes = pair.Value;
+                var stream = pair.Existing;
+
+                await stream.WriteAsync(bytes, 0, bytes.Length);
+                return null;
+            });
+
+            this.AddExactConverter<Stream, string>(async (stream, cancellationToken) =>
+            {
+                using (var sr = new StreamReader(stream))
+                {
+                    return await sr.ReadToEndAsync();
+                }
+            });
+            this.AddExactConverter<Stream, byte[]>(async (stream, cancellatinToken) =>
+            {
+                using (MemoryStream outputStream = new MemoryStream())
+                {
+                    const int DefaultBufferSize = 4096;
+                    await stream.CopyToAsync(outputStream, DefaultBufferSize);
+                    byte[] value = outputStream.ToArray();
+                    return value;
+                }
+            });
+
+            this.AddExactConverter<Stream, TextReader>(stream =>
+            {
+                return new StreamReader(stream);
+            });
+            this.AddExactConverter<Stream, TextWriter>(stream =>
+            {
+                // Default is UTF8, not write a BOM, close stream when done. 
+                return new StreamWriter(stream);
+            });
         }
 
         // If somebody registered a converter from Src-->Dest, then both those types  can be used to 
@@ -50,170 +93,37 @@ namespace Microsoft.Azure.WebJobs
         // Whereas some of the Src,Dest types will point to the resource's "native sdk"
         internal void AddAssemblies(Action<Type> funcAddType)
         {
-            foreach (var func in _funcsWithAttr.Values)
+            foreach (var entry in GetEntries())
             {
-                var t = func.GetType();
-                if (t.IsGenericType)
-                {
-                    var dt = t.GetGenericTypeDefinition();
-                    if (dt == typeof(FuncConverter<,,>))
-                    {
-                        foreach (var genericArg in t.GetGenericArguments())
-                        {
-                            funcAddType(genericArg);
-                        }
-                    }
-                }
+                AddType(entry.Source, funcAddType);
+                AddType(entry.Dest, funcAddType);
+            }
+        }
+        private void AddType(OpenType type, Action<Type> funcAddType)
+        {
+            if (type is OpenType.ExactMatch x)
+            {
+                funcAddType(x.ExactType);
             }
         }
 
-        private Func<Type, Type, Func<object, object>> TryGetOpenConverter(Type typeSource, Type typeDest, Type typeAttribute)
-        {
-            foreach (var entry in _openConverters)
-            {
-                if (entry.Attribute == typeAttribute)
-                {
-                    if (entry.Source.IsMatch(typeSource) && entry.Dest.IsMatch(typeDest))
-                    {
-                        return entry.Builder;
-                    }
-                }
-            }
-            return null;
-        }
+        static readonly FuncAsyncConverter IdentityConverter = (src, attr, ctx) => Task.FromResult<object>(src);
 
         private static string DefaultByteArrayToString(byte[] bytes)
         {
+            // This does not remove the BOM. 
             string str = Encoding.UTF8.GetString(bytes);
             return str;
-        }
-
-        private static string GetKey<TSrc, TDest, TAttribute>()
-        {
-            return typeof(TSrc).FullName + "|" + typeof(TDest).FullName + "|" + typeof(TAttribute).FullName;
-        }
-
-        // Decode the types from a FuncConverter entry 
-        private static Tuple<Type, Type, Type> DecodeFuncEntry(object func)
-        {
-            var t = func.GetType();
-            if (t.IsGenericType)
-            {
-                var dt = t.GetGenericTypeDefinition();
-                if (dt == typeof(FuncConverter<,,>))
-                {
-                    var typeSource = t.GetGenericArguments()[0];
-                    var typeAttribute = t.GetGenericArguments()[1];
-                    var typeDest = t.GetGenericArguments()[2];
-
-                    return Tuple.Create(typeSource, typeAttribute, typeDest);
-                }
-            }
-            return null;
-        }
-
-        internal static OpenType GetTypeValidator<T>()
-        {
-            return GetTypeValidator(typeof(T));            
-        }
-
-        internal static OpenType GetTypeValidator(Type type)
-        {
-            var openType = GetOpenType(type);
-            if (openType != null)
-            {
-                return openType;
-            }
-
-            return new ExactMatch(type);
-        }
-
-        // Gets an OpenType from the given argument. 
-        // Return null if it's a concrete type (ie, not an open type).  
-        private static OpenType GetOpenType<T>()
-        {
-            var t = typeof(T);
-            return GetOpenType(t);
-        }
-
-        private static OpenType GetOpenType(Type t)
-        {
-            if (t == typeof(OpenType) || t == typeof(object))
-            {
-                return new AnythingOpenType();
-            }
-            if (typeof(OpenType).IsAssignableFrom(t))
-            {
-                return (OpenType)Activator.CreateInstance(t);
-            }
-
-            if (t.IsArray)
-            {
-                var elementType = t.GetElementType();
-                var innerType = GetTypeValidator(elementType);
-                return new ArrayOpenType(innerType);
-            }
-
-            // Rewriter rule for generics so customers can say: IEnumerable<OpenType> 
-            if (t.IsGenericType)
-            {
-                var outerType = t.GetGenericTypeDefinition();
-                Type[] args = t.GetGenericArguments();
-                if (args.Length == 1)
-                {
-                    var arg1 = GetOpenType(args[0]);
-                    if (arg1 != null)
-                    {
-                        return new SingleGenericArgOpenType(outerType, arg1);
-                    }
-                    // This is a concrete generic type, like IEnumerable<JObject>. No open types needed. 
-                }
-                else
-                {
-                    // Just to sanity check, make sure there's no OpenType buried in the argument. 
-                    foreach (var arg in args)
-                    {
-                        if (GetOpenType(arg) != null)
-                        {
-                            throw new NotSupportedException("Embedded Open Types are only supported for types with a single generic argument.");
-                        }
-                    }
-                }
-            }
-
-            return null;
         }
 
         // Get list of possible destination types given a source. 
         public OpenType[] GetPossibleDestinationTypesFromSource(Type typeAttribute, Type typeSource)
         {
             List<OpenType> typeDestinations = new List<OpenType>();
-
-            // Look at concrete types. 
-            foreach (var kv in _funcsWithAttr)
-            {
-                var types = DecodeFuncEntry(kv.Value);
-
-                if (types != null)
-                {
-                    var typeSource2 = types.Item1;
-                    var typeAttribute2 = types.Item2;
-                    var typeDest2 = types.Item3;
-
-                    if (typeAttribute2.IsAssignableFrom(typeAttribute))
-                    {
-                        if (typeSource == typeSource2)
-                        {
-                            typeDestinations.Add(new ExactMatch(typeDest2));
-                        }
-                    }
-                }
-            }
                     
-            // Look at generic types.                 
-            foreach (var entry in this._openConverters)
+            foreach (var entry in GetEntries())
             {
-                if (entry.Source.IsMatch(typeSource))
+                if (entry.IsMatchAttribute(typeAttribute) && entry.Source.IsMatch(typeSource))
                 {
                     if (entry.Attribute.IsAssignableFrom(typeAttribute))
                     {
@@ -230,97 +140,153 @@ namespace Microsoft.Azure.WebJobs
         {
             var typeSources = new List<Type>();
 
-            // Look at concrete types. 
-            foreach (var kv in _funcsWithAttr)
+            foreach (var entry in GetEntries())
             {
-                var types = DecodeFuncEntry(kv.Value);
-
-                if (types != null)
+                if (entry.IsMatchAttribute(typeAttribute) && entry.Dest.IsMatch(typeDest))
                 {
-                    var typeSource2 = types.Item1;
-                    var typeAttribute2 = types.Item2;
-                    var typeDest2 = types.Item3;
-
-                    if (typeAttribute2.IsAssignableFrom(typeAttribute))
+                    if (entry.Attribute.IsAssignableFrom(typeAttribute))
                     {
-                        if (typeDest == typeDest2)
+                        if (entry.Source is OpenType.ExactMatch et)
                         {
-                            typeSources.Add(typeSource2);
+                            typeSources.Add(et.ExactType);
                         }
                     }
                 }
             }
-
+       
             return typeSources.ToArray();
         }
 
-        public void AddConverter<TSrc, TDest, TAttribute>(
-            Func<Type, Type, Func<object, object>> converterBuilder)
+        // Add a 'global' converter for all Attributes.
+        // Passing in the cancellationToken also helps C# overload resolution determine sync. vs. async
+        public void AddExactConverter<TSource, TDestination>(Func<TSource, CancellationToken, Task<TDestination>> func)
+        {
+            FuncAsyncConverter converter = async (src, attr, context) => await func((TSource)src, CancellationToken.None);
+            FuncConverterBuilder builder = (srcType, destType) => converter;
+            this.AddConverter<TSource, TDestination, System.Attribute>(builder);
+        }
+
+        public void AddExactConverter<TSource, TDestination>(Func<TSource, TDestination> func)
+        {
+            FuncAsyncConverter converter = (src, attr, context) => Task.FromResult<object>(func((TSource)src));
+            FuncConverterBuilder builder = (srcType, destType) => converter;
+            this.AddConverter<TSource, TDestination, System.Attribute>(builder);
+        }
+
+        // Add a converter for a specific attribute, TAttribute. 
+        public void AddExactConverter<TSource, TDestination, TAttribute>(Func<TSource, TAttribute, TDestination> func)
+                        where TAttribute : Attribute
+        {
+            FuncAsyncConverter converter = (src, attr, context) => Task.FromResult<object>(func((TSource)src, (TAttribute) attr));
+            FuncConverterBuilder builder = (srcType, destType) => converter;
+            this.AddConverter<TSource, TDestination, TAttribute>(builder);
+        }
+
+        /// <summary>
+        /// Add a builder function that returns a converter. This can use <see cref="Microsoft.Azure.WebJobs.Host.Bindings.OpenType"/>  to match against an 
+        /// open set of types. The builder can then do one time static type checking and code gen caching before
+        /// returning a converter function that is called on each invocation. 
+        /// The types passed to that converter are gauranteed to have matched against the TSource and TDestination parameters. 
+        /// </summary>
+        /// <typeparam name="TSource">Source type. Can be a concrete type or a <see cref="OpenType"/></typeparam>
+        /// <typeparam name="TDestination">Destination type. Can be a concrete type or a <see cref="OpenType"/></typeparam>
+        /// <typeparam name="TAttribute">Attribute on the binding. 
+        /// If this is <see cref="System.Attribute"/>, then it applies to any attribute. 
+        /// Else it applies to the specific TAttribte.</typeparam>
+        /// <param name="converterBuilder">A function that is invoked if-and-only-if there is a compatible type match for the 
+        /// source and destination types. It then produce a converter function that can be called many times </param>
+        public void AddConverter<TSource, TDestination, TAttribute>(
+            FuncConverterBuilder converterBuilder)
             where TAttribute : Attribute
         {
-            var openTypeSource = GetOpenType<TSrc>();
-            var openTypeDest = GetOpenType<TDest>();
-
-            if (openTypeSource == null)
-            {
-                openTypeSource = new ExactMatch(typeof(TSrc));
-            }
-            if (openTypeDest == null)
-            {
-                openTypeDest = new ExactMatch(typeof(TDest));
-            }
-
+            var openTypeSource = OpenType.FromType<TSource>();
+            var openTypeDest = OpenType.FromType<TDestination>();
+          
             AddOpenConverter<TAttribute>(openTypeSource, openTypeDest, converterBuilder);
         }
 
-        public void AddConverter<TSrc, TDest, TAttribute>(FuncConverter<TSrc, TAttribute, TDest> converter)
-            where TAttribute : Attribute
+        // Exact types have precedence over open-types 
+        // If source nad dest match exactly, then replace. 
+        private void AddOpenConverter<TAttribute>(
+            OpenType source,
+            OpenType dest,
+            FuncConverterBuilder converterBuilder)
+          where TAttribute : Attribute
         {
-            string key = GetKey<TSrc, TDest, TAttribute>();
-            _funcsWithAttr[key] = converter;                        
+
+            // Replace existing if the keys are exactly the same.
+            foreach (var entry in GetEntries())
+            {
+                if (entry.Attribute == typeof(TAttribute) && 
+                    entry.Source.Equals(source) &&
+                    entry.Dest.Equals(dest))
+                {
+                    entry.Builder = converterBuilder;
+                    return;
+                }
+            }
+
+            {
+                var entry = new Entry
+                {
+                    Source = source,
+                    Dest = dest,
+                    Attribute = typeof(TAttribute),
+                    Builder = converterBuilder
+                };
+
+                // Exact types are a "better match" than open types, so give them precedence.
+                // Precedence is handled by having 2 separate lists. 
+                if (source is OpenType.ExactMatch && dest is OpenType.ExactMatch)
+                {
+                    this._exactConverters.Add(entry);
+                }
+                else
+                {
+                    this._openConverters.Add(entry);
+                }
+            }
         }
 
-        // Return null if not found. 
-        private FuncConverter<TSrc, TAttribute, TDest> TryGetConverter<TSrc, TAttribute, TDest>()
-            where TAttribute : Attribute
+        private FuncConverterBuilder TryGetOpenConverter(Type typeSource, Type typeDest, Type typeAttribute, IEnumerable<Entry> converters = null)
         {
-            object obj;
-
-            // First lookup specificially for TAttribute. 
-            string keySpecific = GetKey<TSrc, TDest, TAttribute>();
-            if (_funcsWithAttr.TryGetValue(keySpecific, out obj))
-            {               
-                var func = (FuncConverter<TSrc, TAttribute, TDest>)obj;
-                return func;
-            }
-
-            // No specific case, lookup in the general purpose case. 
-            string keyGeneral = GetKey<TSrc, TDest, Attribute>();
-            if (_funcsWithAttr.TryGetValue(keyGeneral, out obj))
+            if (converters == null)
             {
-                var func1 = (FuncConverter<TSrc, Attribute, TDest>)obj;
-                FuncConverter<TSrc, TAttribute, TDest> func2 = (src, attr, context) => func1(src, null, context);
-                return func2;
+                converters = GetEntries();
             }
-
+            
+            foreach (var entry in converters)
+            {
+                if (entry.IsMatch(typeSource, typeDest, typeAttribute))
+                {
+                    return entry.Builder;
+                }
+            }
             return null;
         }
 
-        public FuncConverter<TSrc, TAttribute, TDest> GetConverter<TSrc, TDest, TAttribute>()
+        private FuncAsyncConverter TryGetConverter<TAttribute>(Type typeSource, Type typeDest, IEnumerable<Entry> converters = null)
+        {
+            var builder = TryGetOpenConverter(typeSource, typeDest, typeof(TAttribute), converters);
+            if (builder == null)
+            {
+                return null;
+            }
+            var converter = builder(typeSource, typeDest);
+            return converter;
+        }
+                
+        public FuncAsyncConverter GetConverter<TAttribute>(Type typeSource, Type typeDest)
             where TAttribute : Attribute
         {
             // Give precedence to exact matches.
-            // this lets callers override any other rules (like JSON binding) 
-
+            // This lets callers override any other rules (like JSON binding).
             // TSrc --> TDest
-            var exactMatch = TryGetConverter<TSrc, TAttribute, TDest>();
+            var exactMatch = TryGetConverter<TAttribute>(typeSource, typeDest, this._exactConverters);
             if (exactMatch != null)
             {
                 return exactMatch;
             }
-
-            var typeSource = typeof(TSrc);
-            var typeDest = typeof(TDest);
 
             // Inheritence (also covers idempotency)
             if (typeDest.IsAssignableFrom(typeSource))
@@ -331,121 +297,132 @@ namespace Microsoft.Azure.WebJobs
                 // support it. 
                 if (typeDest != typeof(Object))
                 {
-                    return (src, attr, context) =>
-                    {
-                        object obj = (object)src;
-                        return (TDest)obj;
-                    };
+                    return IdentityConverter;
                 }
             }
 
-            // Object --> TDest
-            // Catch all for any conversion to TDest
-            var objConversion = TryGetConverter<object, TAttribute, TDest>();
-            if (objConversion != null)
-            {
-                return (src, attr, context) =>
-                {
-                    var result = objConversion(src, attr, context);
-                    return result;
-                };
-            }
-
+            // General Open converter lookup.
+            // If they registered an Object-->TDest converter, that will get picked up here
+            // and give them broad control over creating a TDest from anything. 
             {
                 var builder = TryGetOpenConverter(typeSource, typeDest, typeof(TAttribute));
                 if (builder != null)
                 {
                     var converter = builder(typeSource, typeDest);
-                    return (src, attr, context) => (TDest)converter(src);
+                    return converter;
                 }
             }
 
+            // Helper to treat IEnumerabe<JObject> as a JArray. 
             // TSrc --> IEnum<JObject> --> JArray
             if (typeDest == typeof(JArray))
             {
-                var toEnumerableJObj = TryGetConverter<TSrc, TAttribute, IEnumerable<JObject>>();
-                if (toEnumerableJObj != null)
+                var converter = GetComposition<TAttribute, IEnumerable<JObject>>(typeSource, typeDest);
+                if (converter != null)
                 {
-                    var toJArray = TryGetConverter<IEnumerable<JObject>, TAttribute, JArray>();
-                    if (toJArray != null)
-                    {
-                        return (src, attr, context) =>
-                        {
-                            var ieJo = toEnumerableJObj(src, attr, context);
-                            var result = toJArray(ieJo, attr, context);
-                            return (TDest)(object)result;
-                        };
-                    }
-                }
+                    return converter;
+                }           
             }
 
-            // string --> TDest
-            var fromString = TryGetConverter<string, TAttribute, TDest>();
-            if (fromString == null)
-            {
-                return null;
-            }
-
-            // String --> TDest
-            if (typeSource == typeof(string))
-            {
-                return (src, attr, context) =>
-                {
-                    var result = fromString((string)(object)src, attr, context);
-                    return result;
-                };
-            }
-
-            // Allow some well-defined intermediate conversions. 
+            // We already matched against (string --> Dest) in the general case
+            // but now allow some well-defined intermediate conversions. 
             // If this is "wrong" for your type, then it should provide an exact match to override.
-
             // Byte[] --[builtin]--> String --> TDest
             if (typeSource == typeof(byte[]))
             {
-                var bytes2string = TryGetConverter<byte[], TAttribute, string>();
-
-                return (src, attr, context) =>
+                var converter = GetComposition<TAttribute, string>(typeSource, typeDest);
+                if (converter != null)
                 {
-                    byte[] bytes = (byte[])(object)src;
-                    string str = bytes2string(bytes, attr, context);
-                    var result = fromString(str, attr, context);
-                    return result;
-                };
+                    return converter;
+                }
             }
 
-            // General JSON serialization rule. 
-
-            if (typeSource.IsPrimitive ||
-               (typeSource == typeof(object)) ||
-                typeof(IEnumerable).IsAssignableFrom(typeSource))
+            // General JSON Serialization rule. 
+            // Can we convert from src to dest via a JObject serialization?
+            // Common exampe is Poco --> Jobject --> QueueMessage
             {
-                return null;
+                var converter = GetComposition<TAttribute, JObject>(typeSource, typeDest);
+                if (converter != null)
+                {
+                    return converter;
+                }
             }
 
-            var funcJobj = TryGetConverter<object, TAttribute, JObject>();
-            if (funcJobj == null)
             {
-                funcJobj = (object obj, TAttribute attr, ValueBindingContext context) => JObject.FromObject(obj);
+                // Common for blob and stream-based systems.
+                var converter = GetComposition<TAttribute, Stream>(typeSource, typeDest);
+                if (converter != null)
+                {
+                    return converter;
+                }
             }
 
-            // TSrc --[Json]--> string --> TDest
-            return (src, attr, context) =>
-            {
-                JObject jobj = funcJobj((object)src, attr, context);
-                string json = jobj.ToString();
-                TDest obj = fromString(json, attr, context);
-                return obj;
-            };
+            return null;          
         }
 
-        // List of open converters. Since these are not exact type matches, need to search through and determine the match. 
+        // Compose via a middle type. 
+        // If we have (TSrc --> X) and (X --> TDest), then support (Tsrc-->TDest) via X
+        private FuncAsyncConverter GetComposition<TAttribute, TMiddle>(Type typeSource, Type typeDest)
+            where TAttribute : Attribute
+        {
+            var first = TryGetConverter<TAttribute>(typeSource, typeof(TMiddle));
+            if (first != null)
+            {
+                var second = TryGetConverter<TAttribute>(typeof(TMiddle), typeDest);
+                if (second != null)
+                {
+                    // TSrc --> Jobject --> TDest
+                    return async (src, attr, context) =>
+                    {
+                        TMiddle jobj = (TMiddle)await first(src, attr, context);
+                        object obj = await second(jobj, attr, context);
+                        return obj;
+                    };
+                }
+            }
+            return null;
+        }
+
+        // The Converter manager maintains a list of all converters. This may refer to an open type or an exact match. 
+        // Entry for that list to describe a converter. 
         private class Entry
         {
+            // Filter for what this can convert from. 
             public OpenType Source { get; set; }
+
+            // Filter for what this can convert to. 
             public OpenType Dest { get; set; }
+
+            // Attribute that this can apply to. 
+            // If this is System.Attribute (the base class), then it will match all attributes. 
             public Type Attribute { get; set; }
 
-            public Func<Type, Type, Func<object, object>> Builder { get; set; }
+            // Converter builder to invoke when we have a match. 
+            public FuncConverterBuilder Builder { get; set; }
+
+            public bool IsMatchAttribute(Type typeAttribute)
+            {
+                if (this.Attribute != typeof(System.Attribute))
+                {
+                    if (this.Attribute != typeAttribute)
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            public override string ToString()
+            {
+                return string.Format("{0} --> {1} (for {2})", this.Source.GetDisplayName(), this.Dest.GetDisplayName(), this.Attribute.Name);
+            }
+
+            public bool IsMatch(Type source, Type dest, Type typeAttribute)
+            {
+                var ctx = new OpenTypeMatchContext();
+
+                return this.IsMatchAttribute(typeAttribute) && this.Source.IsMatch(source, ctx) && this.Dest.IsMatch(dest, ctx);
+            }            
         }
 
         // "Empty" converter manager that only allows identity conversions. 
@@ -453,151 +430,18 @@ namespace Microsoft.Azure.WebJobs
         // arbitrary user conversions. 
         private class IdentityConverterManager : IConverterManager
         {
-            public void AddConverter<TSource, TDestination, TAttribute1>(FuncConverter<TSource, TAttribute1, TDestination> converter) where TAttribute1 : Attribute
+            public void AddConverter<TSource, TDestination, TAttribute>(FuncConverterBuilder converterBuilder) where TAttribute : Attribute
             {
-                throw new NotImplementedException();
+                throw new NotSupportedException("Identity converter is read-only");
             }
 
-            public void AddConverter<TSrc, TDest, TAttribute1>(Func<Type, Type, Func<object, object>> converterBuilder) where TAttribute1 : Attribute
+            FuncAsyncConverter IConverterManager.GetConverter<TAttribute>(Type typeSource, Type typeDest)
             {
-                throw new NotImplementedException();
-            }
-
-            public FuncConverter<TSource, TAttribute1, TDestination> GetConverter<TSource, TDestination, TAttribute1>() where TAttribute1 : Attribute
-            {
-                if (typeof(TSource) != typeof(TDestination))
+                if (typeSource != typeDest)
                 {
                     return null;
                 }
-                return (src, attr, ctx) =>
-                {
-                    object obj = (object)src;
-                    return (TDestination)obj;
-                };
-            }
-        }
-
-        // Match a generic type with 1 generic arg. 
-        // like IEnumerable<T>,  IQueryable<T>, etc. 
-        private class SingleGenericArgOpenType : OpenType
-        {
-            private readonly OpenType _inner;
-            private readonly Type _outerType;
-
-            public SingleGenericArgOpenType(Type outerType, OpenType inner)
-            {
-                _inner = inner;
-                _outerType = outerType;
-            }
-
-            public override bool IsMatch(Type type)
-            {
-                if (type == null)
-                {
-                    throw new ArgumentNullException("type");
-                }
-                if (type.IsGenericType &&
-                    type.GetGenericTypeDefinition() == _outerType)
-                {
-                    var args = type.GetGenericArguments();
-
-                    return _inner.IsMatch(args[0]);
-                }
-
-                return false;
-            }
-
-            internal override string GetDisplayName()
-            {
-                var name = _outerType.GetGenericTypeDefinition().Name;
-                return name + "<" + _inner.GetDisplayName() + ">";
-            }
-        }
-
-        // Bind to any type
-        private class AnythingOpenType : OpenType
-        {
-            public override bool IsMatch(Type type)
-            {
-                return true;
-            }
-        }
-                
-        internal class ExactMatch : OpenType
-        {
-            private readonly Type _type;
-            public ExactMatch(Type type)
-            {
-                _type = type;
-            }
-
-            internal Type ExactType => _type;
-
-            public override bool IsMatch(Type type)
-            {
-                return type == _type;
-            }
-
-            internal override string GetDisplayName()
-            {
-                return TypeToString(_type);
-            }
-            public static string TypeToString(Type t)
-            {
-                if (t.IsByRef)
-                {
-                    var element = t.GetElementType();
-                    return "out " + TypeToString(element);
-                }
-                if (t.IsGenericType)
-                {
-                    var def = t.GetGenericTypeDefinition();
-
-                    string name = def.Name + "<";
-
-                    int i = 0;
-                    foreach (var arg in t.GetGenericArguments())
-                    {
-                        if (i > 0)
-                        {
-                            name += ",";
-                        }
-
-                        name += TypeToString(arg);
-                        i++;
-                    }
-                    name += ">";
-                    return name;
-                }
-                return t.Name;
-            }
-        }
-
-        // Matches any T[] 
-        private class ArrayOpenType : OpenType
-        {
-            private readonly OpenType _inner;
-            public ArrayOpenType(OpenType inner)
-            {
-                _inner = inner;
-            }
-            public override bool IsMatch(Type type)
-            {
-                if (type == null)
-                {
-                    throw new ArgumentNullException(nameof(type));
-                }
-                if (type.IsArray)
-                {
-                    var elementType = type.GetElementType();
-                    return _inner.IsMatch(elementType);
-                }
-                return false;
-            }
-
-            internal override string GetDisplayName()
-            {
-                return _inner.GetDisplayName() + "[]";
+                return IdentityConverter;
             }
         }
     } // end class ConverterManager

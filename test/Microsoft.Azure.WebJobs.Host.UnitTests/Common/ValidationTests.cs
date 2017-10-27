@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
@@ -15,6 +16,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
 {
     public class ValidationTests
     {
+        [Binding]
         public class TestAttribute : Attribute
         {
             public bool Bad { get; set; }
@@ -70,11 +72,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         {
             public void Initialize(ExtensionConfigContext context)
             {
-                var bf = context.Config.BindingFactory;
-
                 // Add [Test] support                
-                var rule = bf.BindToInput<TestAttribute, Widget>(this);
-                context.RegisterBindingRules<TestAttribute>(ValidateAtIndexTime, rule);
+                var rule = context.AddBindingRule<TestAttribute>();
+                rule.AddValidator(ValidateAtIndexTime);
+                rule.BindToInput<Widget>(this);
             }
 
             public Widget Convert(TestAttribute attr)
@@ -114,14 +115,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         {
             public void Initialize(ExtensionConfigContext context)
             {
-                var bf = context.Config.BindingFactory;
-
                 // Add [Test] support
-                var rule1 = bf.BindToInput<TestAttribute, Widget>(this);
-                var rule2 = bf.BindToInput<TestAttribute, Widget2>(this);
-                var rule2Validator = bf.AddValidator<TestAttribute>(LocalValidator, rule2);
-
-                context.RegisterBindingRules<TestAttribute>(rule2Validator, rule1);
+                var rule = context.AddBindingRule<TestAttribute>();
+                rule.BindToInput<Widget>(this);
+                rule.BindToInput<Widget2>(this).AddValidator(LocalValidator);
             }
 
             Widget IConverter<TestAttribute, Widget>.Convert(TestAttribute attr)

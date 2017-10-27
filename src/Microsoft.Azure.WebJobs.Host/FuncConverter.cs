@@ -3,19 +3,21 @@
 
 using System;
 using Microsoft.Azure.WebJobs.Host.Bindings;
+using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs
 {
-    /// <summary>
-    /// Converter function to use with <see cref="IConverterManager"/>
-    /// </summary>
-    /// <typeparam name="TSource">source to convert from</typeparam>
-    /// <typeparam name="TAttribute">attribute on the binding. This may have parameter that influence conversion.</typeparam>
-    /// <typeparam name="TDestination">destination type to convert to. </typeparam>
-    /// <param name="src">source</param>
-    /// <param name="attribute">attribute</param>
-    /// <param name="context">binding context that may have additional parameters to influence conversion. </param>
-    [Obsolete("Not ready for public consumption.")]
-    public delegate TDestination FuncConverter<TSource, TAttribute, TDestination>(TSource src, TAttribute attribute, ValueBindingContext context)
-            where TAttribute : Attribute;
+    // Core converter. 
+    // The converter may be async. For example,  Stream --> String converter may need to read the contents. 
+    public delegate Task<object> FuncAsyncConverter(object src, Attribute attribute, ValueBindingContext context);
+
+    // A strongly typed version of FuncAsyncConverter
+    public delegate Task<TDestination> FuncAsyncConverter<TSource, TDestination>(TSource src, Attribute attribute, ValueBindingContext context);
+        
+    // Build a converter given specific types.
+    // This is used by the converter manager, which is responsible to match the incoming types and only invoke
+    // this delegate if it was registered to handle these types.
+    // This is primarily reflection operations to create a specialized converter instance, 
+    // but it does not actually do the conversions. Therefore, this is not async and should not need to do any IO. 
+    public delegate FuncAsyncConverter FuncConverterBuilder(Type typeSource, Type typeDest);
 }

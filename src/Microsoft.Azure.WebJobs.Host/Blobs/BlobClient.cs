@@ -5,6 +5,7 @@ using System;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Microsoft.Azure.WebJobs.Host.Storage.Blob;
+using Microsoft.Azure.WebJobs.Description;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs
 {
@@ -41,17 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
 
         public static bool IsValidContainerName(string containerName)
         {
-            if (containerName == null)
-            {
-                return false;
-            }
-
-            if (containerName.Equals("$root"))
-            {
-                return true;
-            }
-
-            return Regex.IsMatch(containerName, @"^[a-z0-9](([a-z0-9\-[^\-])){1,61}[a-z0-9]$");
+            return BlobNameValidationAttribute.IsValidContainerName(containerName);
         }
 
         public static void ValidateBlobName(string blobName)
@@ -67,46 +58,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
         // See http://msdn.microsoft.com/en-us/library/windowsazure/dd135715.aspx.
         public static bool IsValidBlobName(string blobName, out string errorMessage)
         {
-            const string UnsafeCharactersMessage =
-                "The given blob name '{0}' contain illegal characters. A blob name cannot the following character(s): '\\'.";
-            const string TooLongErrorMessage =
-                "The given blob name '{0}' is too long. A blob name must be at least one character long and cannot be more than 1,024 characters long.";
-            const string TooShortErrorMessage =
-                "The given blob name '{0}' is too short. A blob name must be at least one character long and cannot be more than 1,024 characters long.";
-            const string InvalidSuffixErrorMessage =
-                "The given blob name '{0}' has an invalid suffix. Avoid blob names that end with a dot ('.'), a forward slash ('/'), or a sequence or combination of the two.";
-
-            if (blobName == null)
-            {
-                errorMessage = string.Format(CultureInfo.CurrentCulture, TooShortErrorMessage, String.Empty);
-                return false;
-            }
-            if (blobName.Length == 0)
-            {
-                errorMessage = string.Format(CultureInfo.CurrentCulture, TooShortErrorMessage, blobName);
-                return false;
-            }
-
-            if (blobName.Length > 1024)
-            {
-                errorMessage = string.Format(CultureInfo.CurrentCulture, TooLongErrorMessage, blobName);
-                return false;
-            }
-
-            if (blobName.EndsWith(".", StringComparison.OrdinalIgnoreCase) || blobName.EndsWith("/", StringComparison.OrdinalIgnoreCase))
-            {
-                errorMessage = string.Format(CultureInfo.CurrentCulture, InvalidSuffixErrorMessage, blobName);
-                return false;
-            }
-
-            if (blobName.IndexOfAny(UnsafeBlobNameCharacters) > -1)
-            {
-                errorMessage = string.Format(CultureInfo.CurrentCulture, UnsafeCharactersMessage, blobName);
-                return false;
-            }
-
-            errorMessage = null;
-            return true;
+            return BlobNameValidationAttribute.IsValidBlobName(blobName, out errorMessage);
         }
     }
 }

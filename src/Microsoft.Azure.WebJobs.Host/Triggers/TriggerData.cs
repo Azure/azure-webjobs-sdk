@@ -16,6 +16,16 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
         private readonly IReadOnlyDictionary<string, object> _bindingData;
 
         /// <summary>
+        /// Creates a new instance. No ValueProvider used here since the converter pipeline will take care of it. 
+        /// </summary>
+        /// <param name="bindingData"></param>
+        public TriggerData(IReadOnlyDictionary<string, object> bindingData)
+        {
+            _valueProvider = null;
+            _bindingData = bindingData;
+        }
+
+        /// <summary>
         /// Creates a new instance
         /// </summary>
         /// <param name="valueProvider"></param>

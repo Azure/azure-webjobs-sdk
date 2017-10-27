@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Description;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
@@ -69,13 +70,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var cm = config.ConverterManager;
 
             {
-                var generalConverter = cm.GetConverter<int, string, Attribute>();
+                var generalConverter = cm.GetSyncConverter<int, string, Attribute>();
                 var result = generalConverter(12, null, null);
                 Assert.Equal("general", result);
             }
 
             {
-                var specificConverter = cm.GetConverter<int, string, TestAttribute>();
+                var specificConverter = cm.GetSyncConverter<int, string, TestAttribute>();
                 var result = specificConverter(12, null, null);
                 Assert.Equal("specific", result);
             }
@@ -95,7 +96,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
-        public void Error_CallingAddBindingRule_Multiple_Times()
+        public void CallingAddBindingRule_Multiple_Times()
         {
             var config = new JobHostConfiguration();
             var ctx = new ExtensionConfigContext
@@ -104,10 +105,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             };
 
             // First time is fine
-            ctx.AddBindingRule<TestAttribute>();
+            var rule1 = ctx.AddBindingRule<TestAttribute>();
 
-            // Second time on the same Attribute is an error. 
-            Assert.Throws<InvalidOperationException>(() => ctx.AddBindingRule<TestAttribute>());
+            // Second time on the same Attribute gives the same instance
+            var rule2 = ctx.AddBindingRule<TestAttribute>();
+
+            Assert.Same(rule1, rule2);
         }
 
         [Fact]

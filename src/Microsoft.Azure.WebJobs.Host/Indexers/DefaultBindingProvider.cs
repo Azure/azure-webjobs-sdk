@@ -1,22 +1,14 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Bindings.Cancellation;
 using Microsoft.Azure.WebJobs.Host.Bindings.Data;
 using Microsoft.Azure.WebJobs.Host.Bindings.Runtime;
 using Microsoft.Azure.WebJobs.Host.Bindings.StorageAccount;
 using Microsoft.Azure.WebJobs.Host.Blobs;
-using Microsoft.Azure.WebJobs.Host.Blobs.Bindings;
-using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Executors;
-using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.Azure.WebJobs.Host.Queues;
-using Microsoft.Azure.WebJobs.Host.Queues.Bindings;
-using Microsoft.Azure.WebJobs.Host.Tables;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Indexers
@@ -33,8 +25,6 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         {
             List<IBindingProvider> innerProviders = new List<IBindingProvider>();
                      
-            innerProviders.Add(new BlobAttributeBindingProvider(nameResolver, storageAccountProvider, extensionTypeLocator, blobWrittenWatcherGetter));
-
             // add any registered extension binding providers
             // Queue and Table bindings were added as an extension, so those rules get included here.  
             foreach (IBindingProvider provider in extensions.GetExtensions(typeof(IBindingProvider)))
