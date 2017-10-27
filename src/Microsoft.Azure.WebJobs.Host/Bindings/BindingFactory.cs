@@ -33,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// <summary>
         /// Get the name resolver for resolving %% tokens. 
         /// </summary>
-        public INameResolver NameResolver
+        internal INameResolver NameResolver
         {
             get { return _nameResolver; }
         }
@@ -41,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// <summary>
         /// Get the converter manager for coercing types. 
         /// </summary>
-        public IConverterManager ConverterManager
+        internal IConverterManager ConverterManager
         {
             get { return _converterManager; }
         }
@@ -53,7 +53,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// The predicate is called once at indexing time and passed a non-resolved attribute. If it returns true, the inner provider is used to bind this parameter. It can throw an exception to signal an indexing error. </param>
         /// <param name="innerProvider">Inner provider to use if the predicate returns true.</param>
         /// <returns>A new binding provider that wraps the existing provider with a predicate.</returns>
-        public IBindingProvider AddFilter<TAttribute>(Func<TAttribute, Type, bool> predicate, IBindingProvider innerProvider)
+        internal IBindingProvider AddFilter<TAttribute>(Func<TAttribute, Type, bool> predicate, IBindingProvider innerProvider)
             where TAttribute : Attribute
         {
             return new FilteringBindingProvider<TAttribute>(predicate, this._nameResolver, innerProvider);
@@ -65,7 +65,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// <param name="predicate">type predicate. Only apply inner provider if this predicate as applied to the user parameter type is true. </param>
         /// <param name="innerProvider">Inner provider to use if the predicate returns true.</param>
         /// <returns>A new binding provider that wraps the existing provider with a predicate.</returns>
-        public IBindingProvider AddFilter(Func<Type, bool> predicate, IBindingProvider innerProvider)
+        internal IBindingProvider AddFilter(Func<Type, bool> predicate, IBindingProvider innerProvider)
         {
             return new FilteringBindingProvider<Attribute>((attr, parameterType) => predicate(parameterType), this._nameResolver, innerProvider);
         }
@@ -78,7 +78,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// and only if the inner provider returns a binding. </param>
         /// <param name="innerProvider">Inner provider. This is always run.  </param>
         /// <returns>A new binding provider that wraps the existing provider with a validator.</returns>
-        public IBindingProvider AddValidator<TAttribute>(Action<TAttribute, Type> validator, IBindingProvider innerProvider)
+        internal IBindingProvider AddValidator<TAttribute>(Action<TAttribute, Type> validator, IBindingProvider innerProvider)
             where TAttribute : Attribute
         {
             return new ValidatingWrapperBindingProvider<TAttribute>(validator, this._nameResolver, innerProvider);
@@ -91,7 +91,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// <typeparam name="TAttribute">Type of binding attribute on the user's parameter.</typeparam>
         /// <param name="builder">Builder function to create a IValueBinder given a resolved attribute and the user parameter type. </param>
         /// <returns>A binding provider that applies these semantics.</returns>
-        public IBindingProvider BindToGenericValueProvider<TAttribute>(Func<TAttribute, Type, Task<IValueBinder>> builder)
+        internal IBindingProvider BindToGenericValueProvider<TAttribute>(Func<TAttribute, Type, Task<IValueBinder>> builder)
             where TAttribute : Attribute
         {
             return new ItemBindingProvider<TAttribute>(this._nameResolver, builder);
@@ -105,7 +105,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// <typeparam name="TMessage">element type of the IAsyncCollector.</typeparam>
         /// <param name="buildFromAttribute">Function to allocate the collector object given a resolved instance of the attribute.</param>
         /// <returns>A binding provider that applies these semantics.</returns>
-        public IBindingProvider BindToCollector<TAttribute, TMessage>(
+        internal IBindingProvider BindToCollector<TAttribute, TMessage>(
             Func<TAttribute, IAsyncCollector<TMessage>> buildFromAttribute)
             where TAttribute : Attribute
         {
@@ -121,7 +121,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// <typeparam name="TType">'core type' for the IAsyncCollector. This can be an OpenType and allow resolving against generics.</typeparam>
         /// <param name="builderInstance">builder object that converts from the attribute to an AsyncCollector. </param>
         /// <returns></returns>
-        public IBindingProvider BindToCollector<TAttribute, TType>(            
+        internal IBindingProvider BindToCollector<TAttribute, TType>(            
             IConverter<TAttribute, IAsyncCollector<TType>> builderInstance)
             where TAttribute : Attribute
         {
@@ -139,7 +139,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// </param>
         /// <param name="constructorArgs">Arguments to pass to the constructor for the builderType.</param>
         /// <returns></returns>
-        public IBindingProvider BindToCollector<TAttribute, TType>(
+        internal IBindingProvider BindToCollector<TAttribute, TType>(
             Type builderType,
             params object[] constructorArgs)
             where TAttribute : Attribute
@@ -158,7 +158,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// <param name="constructorArgs">constructor arguments to pass to the typeBuilder instantiation. This can be used 
         /// to flow state (like configuration, secrets, etc) from the configuration to the specific binding</param>
         /// <returns>A binding rule.</returns>
-        public IBindingProvider BindToInput<TAttribute, TType>(
+        internal IBindingProvider BindToInput<TAttribute, TType>(
             Type builderType,
             params object[] constructorArgs)
                 where TAttribute : Attribute
@@ -174,7 +174,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// <typeparam name="TType">The user type must be compatible with this type for the binding to apply.</typeparam>
         /// <param name="builderInstance">Instance with converter methods on it.</param>
         /// <returns>A binding rule.</returns>
-        public IBindingProvider BindToInput<TAttribute, TType>(
+        internal IBindingProvider BindToInput<TAttribute, TType>(
             IConverter<TAttribute, TType> builderInstance)
             where TAttribute : Attribute
         {

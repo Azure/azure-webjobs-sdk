@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Azure.WebJobs.Host.Bindings;
+using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Triggers
 {
@@ -12,12 +13,12 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
     internal class CustomTriggerArgumentBinding<TMessage, TTriggerValue, TUserType> : 
         SimpleTriggerArgumentBinding<TMessage, TTriggerValue>
     {
-        private readonly FuncConverter<TMessage, Attribute, TUserType> _converter;
+        private readonly FuncAsyncConverter<TMessage, TUserType> _converter;
 
         public CustomTriggerArgumentBinding(
             ITriggerBindingStrategy<TMessage, TTriggerValue> bindingStrategy, 
             IConverterManager converterManager,
-            FuncConverter<TMessage, Attribute, TUserType> converter) :
+            FuncAsyncConverter<TMessage, TUserType> converter) :
             base(bindingStrategy, converterManager)
         {
             if (converter == null)
@@ -28,9 +29,12 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             this.ElementType = typeof(TUserType);
         }
 
-        internal override object Convert(TMessage value, Dictionary<string, object> bindingData)
+        internal override async Task<object> ConvertAsync(
+            TMessage value, 
+            Dictionary<string, object> bindingData,
+            ValueBindingContext context)
         {
-            var obj = _converter(value, null, null);
+            var obj = await _converter(value, null, context);
             return obj;
         }
     }

@@ -237,11 +237,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             Assert.Equal(e0.Message, items[0]);
         }
 
-        static void AddItem2ByteArrayConverter(IConverterManager cm)
+        static void AddItem2ByteArrayConverter(ExtensionConfigContext cm)
         {
             cm.AddConverter<FakeQueueData, byte[]>(msg => System.Text.Encoding.UTF8.GetBytes(msg.Message));
         }
-        static void AddItem2ByteConverter(IConverterManager cm)
+        static void AddItem2ByteConverter(ExtensionConfigContext cm)
         {
             cm.AddConverter<FakeQueueData, byte>(msg => msg.Byte);
         }

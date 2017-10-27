@@ -106,7 +106,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     return new CollectorBindingPattern(Mode.OutArray, messageType);
                 }
 
-                var validator = ConverterManager.GetTypeValidator<TType>();
+                var validator = OpenType.FromType<TType>();
                 if (validator.IsMatch(elementType))
                 {
                     // out T, t is not an array 
@@ -162,7 +162,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 {
                     SourceAttribute = typeof(TAttribute),
                     Converters = MakeArray(intermediateType),
-                    UserType = new ConverterManager.ExactMatch(typeIAC)
+                    UserType = OpenType.FromType(typeIAC)
                 });
 
             rules.Add(
@@ -170,7 +170,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                   {
                       SourceAttribute = typeof(TAttribute),
                       Converters = MakeArray(intermediateType, typeIAC),                      
-                      UserType = new ConverterManager.ExactMatch(typeof(ICollector<>).MakeGenericType(type))
+                      UserType = OpenType.FromType(typeof(ICollector<>).MakeGenericType(type))
                   });
 
             rules.Add(
@@ -178,7 +178,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                   {
                       SourceAttribute = typeof(TAttribute),
                       Converters = MakeArray(intermediateType, typeIAC),
-                      UserType = new ConverterManager.ExactMatch(type.MakeByRefType())
+                      UserType = OpenType.FromType(type.MakeByRefType())
                   });
 
             rules.Add(
@@ -186,7 +186,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                   {
                       SourceAttribute = typeof(TAttribute),
                       Converters = MakeArray(intermediateType, typeIAC),
-                      UserType = new ConverterManager.ExactMatch(type.MakeArrayType().MakeByRefType())
+                      UserType = OpenType.FromType(type.MakeArrayType().MakeByRefType())
                   });
         }
 
@@ -232,7 +232,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         {
             private readonly Func<object, object> _buildFromAttribute;
 
-            private readonly FuncConverter<TMessage, TAttribute, TType> _converter;
+            private readonly FuncAsyncConverter<TMessage, TType> _converter;
             private readonly Mode _mode;
 
             public ExactBinding(
@@ -240,7 +240,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 ParameterDescriptor param,
                 Mode mode,
                 Func<object, object> buildFromAttribute,
-                FuncConverter<TMessage, TAttribute, TType> converter) : base(cloner, param)
+                FuncAsyncConverter<TMessage, TType> converter) : base(cloner, param)
             {
                 this._buildFromAttribute = buildFromAttribute;
                 this._mode = mode;
@@ -258,12 +258,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 var attributeSource = TypeUtility.GetResolvedAttribute<TAttribute>(parameter);
                    
                 Func<object, object> buildFromAttribute;
-                FuncConverter<TMessage, TAttribute, TType> converter = null;
+                FuncAsyncConverter<TMessage, TType> converter = null;
 
                 // Prefer the shortest route to creating the user type.
                 // If TType matches the user type directly, then we should be able to directly invoke the builder in a single step. 
                 //   TAttribute --> TUserType
-                var checker = ConverterManager.GetTypeValidator<TType>();
+                var checker = OpenType.FromType<TType>();
                 if (checker.IsMatch(typeof(TMessage)))
                 {
                     buildFromAttribute = patternMatcher.TryGetConverterFunc(

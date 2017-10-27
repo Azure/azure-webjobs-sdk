@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Newtonsoft.Json;
 
@@ -33,9 +34,12 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             }
         }
 
-        internal override object Convert(TMessage value, Dictionary<string, object> bindingData)
+        internal override async Task<object> ConvertAsync(
+            TMessage value,
+            Dictionary<string, object> bindingData,
+            ValueBindingContext context)
         {
-            string json = this.ConvertToString(value);
+            string json = await this.ConvertToStringAsync(value);
 
             object obj;
             try

@@ -163,7 +163,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var t1 = metadataProvider.GetDefaultType(new QueueAttribute("q"), FileAccess.Read, typeof(byte[]));
             Assert.Equal(typeof(byte[]), t1);
 
-            var t2 = metadataProvider.GetDefaultType(new QueueAttribute("q"), FileAccess.Read, null);
+            var t2 = metadataProvider.GetDefaultType(new QueueTriggerAttribute("q"), FileAccess.Read, null);
             Assert.Equal(typeof(string), t2);
                         
             var t3 = metadataProvider.GetDefaultType(new QueueAttribute("q"), FileAccess.Write, null);

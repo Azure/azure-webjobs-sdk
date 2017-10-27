@@ -39,11 +39,11 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             _parent = parent;
         }
 
-        internal override IConverterManager Converters
+        internal override ConverterManager Converters
         {
             get
             {
-                return _parent.ConverterManager;
+                return (ConverterManager) _parent.ConverterManager;
             }
         }
 
