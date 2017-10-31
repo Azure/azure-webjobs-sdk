@@ -99,6 +99,9 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
             // This applies our special scope properties and gets RoleInstance name
             config.TelemetryInitializers.Add(new WebJobsTelemetryInitializer());
+
+            // This removes any well-known connection strings from logs
+            config.TelemetryInitializers.Add(new WebJobsSanitizingInitializer());
         }
 
         /// <inheritdoc />

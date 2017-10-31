@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Linq;
+using Microsoft.ApplicationInsights.Channel;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
 using Xunit;
 
@@ -16,10 +17,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             var config = factory.InitializeConfiguration();
 
             // Verify Initializers
-            Assert.Equal(2, config.TelemetryInitializers.Count);
+            Assert.Equal(3, config.TelemetryInitializers.Count);
             // These will throw if there are not exactly one
             config.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>().Single();
             config.TelemetryInitializers.OfType<WebJobsTelemetryInitializer>().Single();
+            config.TelemetryInitializers.OfType<WebJobsSanitizingInitializer>().Single();
+
+            // Verify Channel            
+            Assert.IsType<InMemoryChannel>(config.TelemetryChannel);
         }
     }
 }

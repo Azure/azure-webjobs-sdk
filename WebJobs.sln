@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26730.0
+VisualStudioVersion = 15.0.27004.2005
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{639967B0-0544-4C52-94AC-9A3D25E33256}"
 EndProject
@@ -41,7 +41,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.EventHubs", "src\Mi
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.EventHubs.UnitTests", "test\Microsoft.Azure.WebJobs.EventHubs.UnitTests\WebJobs.EventHubs.UnitTests.csproj", "{27F0E6AC-505E-4BEC-81CA-8DF777DEA9C7}"
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "WebJobs.Shared", "src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.shproj", "{ADD036F5-2170-4B05-9E0A-C2ED0A08A929}"
+EndProject
 Global
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.projitems*{add036f5-2170-4b05-9e0a-c2ed0a08a929}*SharedItemsImports = 13
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
