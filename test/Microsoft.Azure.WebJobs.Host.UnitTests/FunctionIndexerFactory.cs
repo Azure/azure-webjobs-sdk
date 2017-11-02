@@ -1,19 +1,16 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
-using System.Threading;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
-using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
-using Moq;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
@@ -24,32 +21,46 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             IStorageAccountProvider storageAccountProvider = GetStorageAccountProvider(account);
 
-            var config = TestHelpers.NewConfig(storageAccountProvider, nameResolver, extensionRegistry);
-            var services = config.CreateStaticServices();
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost()
+                .ConfigureServices(services =>
+                {
+                    if (storageAccountProvider != null)
+                    {
+                        services.AddSingleton<IStorageAccountProvider>(storageAccountProvider);
+                    }
 
-            ITriggerBindingProvider triggerBindingProvider = services.GetService<ITriggerBindingProvider>();
-            IBindingProvider bindingProvider = services.GetService<IBindingProvider>();
-            IJobActivator activator = services.GetService<IJobActivator>();
-            extensionRegistry = services.GetService<IExtensionRegistry>();
+                    if (nameResolver != null)
+                    {
+                        services.AddSingleton<INameResolver>(nameResolver);
+                    }
 
-            SingletonManager singletonManager = new SingletonManager();
-            IWebJobsExceptionHandler exceptionHandler = new WebJobsExceptionHandler();
-            IFunctionOutputLoggerProvider outputLoggerProvider = new NullFunctionOutputLoggerProvider();
-            IFunctionOutputLogger outputLogger = outputLoggerProvider.GetAsync(CancellationToken.None).Result;
+                    if (extensionRegistry != null)
+                    {
+                        services.AddSingleton<IExtensionRegistry>(extensionRegistry);
+                    }
+                })
+                .Build();
 
-            IFunctionExecutor executor = new FunctionExecutor(new NullFunctionInstanceLogger(), outputLogger, exceptionHandler, loggerFactory: loggerFactory);
+            ITriggerBindingProvider triggerBindingProvider = host.Services.GetService<ITriggerBindingProvider>();
+            IBindingProvider bindingProvider = host.Services.GetService<IBindingProviderFactory>().Create();
+            IJobActivator activator = host.Services.GetService<IJobActivator>();
+            extensionRegistry = host.Services.GetService<IExtensionRegistry>();
+            SingletonManager singletonManager = host.Services.GetService<SingletonManager>();
 
-            return new FunctionIndexer(triggerBindingProvider, bindingProvider, DefaultJobActivator.Instance, executor,
+            IFunctionExecutor executor = host.Services.GetService<IFunctionExecutor>();
+
+            // TODO: This should be using DI internally and not be so complicated to construct
+            return new FunctionIndexer(triggerBindingProvider, bindingProvider, new DefaultJobActivator(), executor,
                 extensionRegistry, singletonManager, loggerFactory);
         }
 
         private static IStorageAccountProvider GetStorageAccountProvider(CloudStorageAccount account)
         {
-            Mock<IServiceProvider> services = new Mock<IServiceProvider>(MockBehavior.Strict);
             StorageClientFactory clientFactory = new StorageClientFactory();
-            services.Setup(p => p.GetService(typeof(StorageClientFactory))).Returns(clientFactory);
-            IStorageAccount storageAccount = account != null ? new StorageAccount(account, services.Object) : null;
-            IStorageAccountProvider storageAccountProvider = new SimpleStorageAccountProvider(services.Object)
+
+            IStorageAccount storageAccount = account != null ? new StorageAccount(account, clientFactory) : null;
+            IStorageAccountProvider storageAccountProvider = new SimpleStorageAccountProvider(clientFactory)
             {
                 StorageAccount = account
             };

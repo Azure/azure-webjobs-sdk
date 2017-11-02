@@ -8,8 +8,10 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.Storage.Queue;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.WindowsAzure.Storage.Queue;
-using Moq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
@@ -20,14 +22,14 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private CloudQueue _queue;
         private CloudQueue _poisonQueue;
         private QueueProcessor _processor;
-        private JobHostQueuesConfiguration _queuesConfig;
+        private JobHostQueuesOptions _queuesConfig;
 
         public QueueProcessorTests(TestFixture fixture)
         {
             _queue = fixture.Queue;
             _poisonQueue = fixture.PoisonQueue;
 
-            _queuesConfig = new JobHostQueuesConfiguration();
+            _queuesConfig = new JobHostQueuesOptions();
             QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, null, _queuesConfig);
             _processor = new QueueProcessor(context);
         }
@@ -35,7 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         [Fact]
         public void Constructor_DefaultsValues()
         {
-            var config = new JobHostQueuesConfiguration
+            var config = new JobHostQueuesOptions
             {
                 BatchSize = 32,
                 MaxDequeueCount = 2,
@@ -126,7 +128,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         [Fact]
         public async Task CompleteProcessingMessageAsync_Failure_AppliesVisibilityTimeout()
         {
-            var queuesConfig = new JobHostQueuesConfiguration
+            var queuesConfig = new JobHostQueuesOptions
             {
                 // configure a non-zero visibility timeout
                 VisibilityTimeout = TimeSpan.FromMinutes(5)
@@ -152,11 +154,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             public TestFixture()
             {
-                Mock<IServiceProvider> services = new Mock<IServiceProvider>(MockBehavior.Strict);
-                StorageClientFactory clientFactory = new StorageClientFactory();
-                services.Setup(p => p.GetService(typeof(StorageClientFactory))).Returns(clientFactory);
+                IHost host = new HostBuilder()
+                    .ConfigureDefaultTestHost()
+                    .Build();
 
-                DefaultStorageAccountProvider accountProvider = new DefaultStorageAccountProvider(services.Object);
+                var accountProvider = host.Services.GetService<IStorageAccountProvider>();
                 var task = accountProvider.GetStorageAccountAsync(CancellationToken.None);
                 IStorageQueueClient client = task.Result.CreateQueueClient();
                 QueueClient = client.SdkObject;

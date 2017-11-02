@@ -4,9 +4,12 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
+using Moq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
@@ -24,18 +27,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private static CancellationTokenSource _tokenSource;
         private readonly CloudQueueClient _queueClient;
         private readonly CloudQueue _queue;
-        private readonly JobHostConfiguration _config;
+        private readonly JobHostOptions _config;
 
         public LeaseExpirationTests()
         {
             RandomNameResolver nameResolver = new RandomNameResolver();
-            _config = new JobHostConfiguration()
+            _config = new JobHostOptions()
             {
-                NameResolver = nameResolver,
-                TypeLocator = new FakeTypeLocator(typeof(LeaseExpirationTests))
+                // NameResolver = nameResolver,
+                // TODO: DI:
+                //TypeLocator = new FakeTypeLocator(typeof(LeaseExpirationTests))
             };
 
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(_config.StorageConnectionString);
+            // TODO: DI:
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(null);//_config.StorageConnectionString);
             _queueClient = storageAccount.CreateCloudQueueClient();
 
             _queue = _queueClient.GetQueueReference(nameResolver.ResolveInString(TestQueueName));
@@ -79,7 +84,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await _queue.AddMessageAsync(new CloudQueueMessage("Test"));
 
             _tokenSource = new CancellationTokenSource();
-            JobHost host = new JobHost(_config);
+            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_config), new Mock<IJobHostContextFactory>().Object);
 
             _tokenSource.Token.Register(host.Stop);
             host.RunAndBlock();

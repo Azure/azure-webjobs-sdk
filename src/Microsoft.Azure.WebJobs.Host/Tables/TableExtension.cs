@@ -22,10 +22,17 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
     internal class TableExtension : IExtensionConfigProvider
     {
         private IStorageAccountProvider _accountProvider;
+        private readonly INameResolver _nameResolver;
 
         // Property names on TableAttribute
         private const string RowKeyProperty = nameof(TableAttribute.RowKey);
         private const string PartitionKeyProperty = nameof(TableAttribute.PartitionKey);
+
+        public TableExtension(IStorageAccountProvider accountProvider, INameResolver nameResolver)
+        {
+            _accountProvider = accountProvider;
+            _nameResolver = nameResolver;
+        }
 
         public void Initialize(ExtensionConfigContext context)
         {
@@ -33,12 +40,9 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
             {
                 throw new ArgumentNullException(nameof(context));
             }
-            var config = context.Config;
-            _accountProvider = config.GetService<IStorageAccountProvider>();
-            var nameResolver = config.NameResolver;
 
             // rules for single entity. 
-            var original = new TableAttributeBindingProvider(nameResolver, _accountProvider);
+            var original = new TableAttributeBindingProvider(_nameResolver, _accountProvider);
 
             var builder = new JObjectBuilder(this);
 

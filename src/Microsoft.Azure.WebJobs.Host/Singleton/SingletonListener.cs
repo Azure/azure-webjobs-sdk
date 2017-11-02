@@ -16,7 +16,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
     {
         private readonly SingletonAttribute _attribute;
         private readonly SingletonManager _singletonManager;
-        private readonly SingletonConfiguration _singletonConfig;
+        private readonly SingletonOptions _singletonConfig;
         private readonly IListener _innerListener;
         private readonly ILogger _logger;
         private string _lockId;

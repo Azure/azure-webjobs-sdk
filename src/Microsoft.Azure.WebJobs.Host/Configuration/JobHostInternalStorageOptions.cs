@@ -10,7 +10,7 @@ namespace Microsoft.Azure.WebJobs
     /// For example, this can support <see cref="SingletonAttribute"/>, blob leases, timers, etc. 
     /// This provides a common place to set storage that the various subsequent services can use. 
     /// </summary>
-    public class JobHostInternalStorageConfiguration
+    public class JobHostInternalStorageOptions
     {
         /// <summary>
         /// A SAS to a Blob Container. This allows services to create blob leases and do distributed locking.

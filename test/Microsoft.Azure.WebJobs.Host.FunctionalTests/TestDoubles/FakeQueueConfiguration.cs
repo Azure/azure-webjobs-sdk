@@ -8,53 +8,30 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Storage.Queue;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage.Queue;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
 {
-    internal class FakeQueueConfiguration : IQueueConfiguration
+    internal class FakeQueuesOptionsFactory : IOptionsFactory<JobHostQueuesOptions>
     {
         private readonly FakeQueueProcessorFactory _queueProcessorFactory;
 
-        public FakeQueueConfiguration(IStorageAccountProvider accountProvider)
+        public FakeQueuesOptionsFactory(IStorageAccountProvider accountProvider)
         {
             _queueProcessorFactory = new FakeQueueProcessorFactory(accountProvider);
         }
 
-        public int BatchSize
+        public JobHostQueuesOptions Create(string name)
         {
-            get { return 2; }
-        }
-
-        public int NewBatchThreshold
-        {
-            get
+            return new JobHostQueuesOptions
             {
-                return BatchSize / 2;
-            }
-        }
-
-        public TimeSpan MaxPollingInterval
-        {
-            get { return TimeSpan.FromSeconds(10); }
-        }
-
-        public int MaxDequeueCount
-        {
-            get { return 3; }
-        }
-
-        public TimeSpan VisibilityTimeout
-        {
-            get { return TimeSpan.Zero; }
-        }
-
-        public IQueueProcessorFactory QueueProcessorFactory
-        {
-            get
-            {
-                return _queueProcessorFactory;
-            }
+                BatchSize = 2,
+                MaxPollingInterval = TimeSpan.FromSeconds(10),
+                MaxDequeueCount = 3,
+                VisibilityTimeout = TimeSpan.Zero,
+                QueueProcessorFactory = _queueProcessorFactory
+            };
         }
 
         private class FakeQueueProcessorFactory : DefaultQueueProcessorFactory

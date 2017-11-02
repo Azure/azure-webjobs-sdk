@@ -7,8 +7,14 @@ using Microsoft.Azure.WebJobs.Host.Storage;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal interface IStorageAccountProvider
+    public interface IStorageAccountProvider
     {
         Task<IStorageAccount> TryGetAccountAsync(string connectionStringName, CancellationToken cancellationToken);
+
+        string StorageConnectionString { get; }
+
+        string DashboardConnectionString { get; }
+
+        string InternalSasStorage { get; }
     }
 }

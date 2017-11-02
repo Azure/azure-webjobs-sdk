@@ -2,18 +2,12 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
-using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.EventHubs.Processor;
-using Microsoft.Azure.WebJobs.Host.Bindings;
-using Microsoft.Azure.WebJobs.Host.Config;
-using Microsoft.Azure.WebJobs.Logging;
-using Newtonsoft.Json;
-using Microsoft.Extensions.Logging;
+using Microsoft.Azure.WebJobs.Host.Executors;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -21,19 +15,17 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     /// Provide configuration for event hubs. 
     /// This is primarily mapping names to underlying EventHub listener and receiver objects from the EventHubs SDK. 
     /// </summary>
-    public class EventHubConfiguration : IExtensionConfigProvider
+    public class EventHubConfiguration
     {
         // Event Hub Names are case-insensitive.
         // The same path can have multiple connection strings with different permissions (sending and receiving), 
         // so we track senders and receivers separately and infer which one to use based on the EventHub (sender) vs. EventHubTrigger (receiver) attribute. 
-        // Connection strings may also encapsulate different endpoints.
-        //
-        // The client cache must be thread safe because clients are accessed/added on the function
-        // invocation path (BuildFromAttribute)
-        private readonly ConcurrentDictionary<string, EventHubClient> _clients = new ConcurrentDictionary<string, EventHubClient>(StringComparer.OrdinalIgnoreCase);
+        // Connection strings may also encapsulate different endpoints. 
+        private readonly Dictionary<string, EventHubClient> _senders = new Dictionary<string, EventHubClient>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, ReceiverCreds> _receiverCreds = new Dictionary<string, ReceiverCreds>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, EventProcessorHost> _explicitlyProvidedHosts = new Dictionary<string, EventProcessorHost>(StringComparer.OrdinalIgnoreCase);
 
+        private readonly EventProcessorOptions _options;
         private string _defaultStorageString;
         private int _batchCheckpointFrequency = 1;
 
@@ -44,17 +36,27 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         public const string LeaseContainerName = "azure-webjobs-eventhub";
 
         /// <summary>
-        /// Constructs a new instance.
+        /// default constructor. Callers can reference this without having any assembly references to service bus assemblies. 
         /// </summary>
         public EventHubConfiguration()
+            : this(null, null)
         {
-            // Our default options will delegate to our own exception
-            // logger. Customers can override this completely by setting their
-            // own EventProcessorOptions instance.
-            EventProcessorOptions = EventProcessorOptions.DefaultOptions;
-            EventProcessorOptions.MaxBatchSize = 64;
-            EventProcessorOptions.PrefetchCount = EventProcessorOptions.MaxBatchSize * 4;
-            EventProcessorOptions.SetExceptionHandler(ExceptionReceivedHandler);
+        }
+
+        /// <summary>
+        /// Constructs a new instance.
+        /// </summary>
+        /// <param name="options">The optional <see cref="EventProcessorOptions"/> to use when receiving events.</param>
+        public EventHubConfiguration(IStorageAccountProvider accountProvider, EventProcessorOptions options = null)
+        {
+            if (options == null)
+            {
+                options = EventProcessorOptions.DefaultOptions;
+                options.MaxBatchSize = 64;
+                options.PrefetchCount = options.MaxBatchSize * 4;
+            }
+            _options = options;
+            _defaultStorageString = accountProvider?.StorageConnectionString;
         }
 
         /// <summary>
@@ -106,8 +108,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             {
                 throw new ArgumentNullException("client");
             }
-           
-            _clients[eventHubName] = client;
+
+            _senders[eventHubName] = client;
         }
 
         /// <summary>
@@ -130,7 +132,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             if (string.IsNullOrWhiteSpace(sb.EntityPath))
             {
                 sb.EntityPath = eventHubName;
-            }            
+            }
 
             var client = EventHubClient.CreateFromConnectionString(sb.ToString());
             AddEventHubClient(eventHubName, client);
@@ -178,7 +180,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
             this._receiverCreds[eventHubName] = new ReceiverCreds
             {
-                 EventHubConnectionString = receiverConnectionString
+                EventHubConnectionString = receiverConnectionString
             };
         }
 
@@ -209,21 +211,18 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 StorageConnectionString = storageConnectionString
             };
         }
-        
+
         internal EventHubClient GetEventHubClient(string eventHubName, string connection)
         {
             EventHubClient client;
-            if (_clients.TryGetValue(eventHubName, out client))             
+            if (_senders.TryGetValue(eventHubName, out client))
             {
                 return client;
             }
             else if (!string.IsNullOrWhiteSpace(connection))
             {
-                return _clients.GetOrAdd(eventHubName, k =>
-                {
-                    AddSender(k, connection);
-                    return _clients[k];
-                });
+                AddSender(eventHubName, connection);
+                return _senders[eventHubName];
             }
             throw new InvalidOperationException("No event hub sender named " + eventHubName);
         }
@@ -264,9 +263,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 EventProcessorHost host = new EventProcessorHost(
                     hostName: eventProcessorHostName,
                     eventHubPath: actualPath,
-                    consumerGroupName: consumerGroup, 
+                    consumerGroupName: consumerGroup,
                     eventHubConnectionString: sb.ToString(),
-                    storageConnectionString: storageConnectionString, 
+                    storageConnectionString: storageConnectionString,
                     leaseContainerName: LeaseContainerName,
                     storageBlobPrefix: blobPrefix);
 
@@ -296,7 +295,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 return string.Format(CultureInfo.InvariantCulture, "::{0:X4}", ordinalValue);
             }
         }
-                
+
         // Escape a blob path.  
         // For diagnostics, we want human-readble strings that resemble the input. 
         // Inputs are most commonly alphanumeric with a fex extra chars (dash, underscore, dot). 
@@ -311,7 +310,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 {
                     sb.Append(c);
                 }
-                else if (c == '-' || c == '_' || c == '.') 
+                else if (c == '-' || c == '_' || c == '.')
                 {
                     // Potentially common carahcters. 
                     sb.Append(c);
@@ -367,105 +366,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             string key = EscapeBlobPath(serviceBusNamespace) + "/" + EscapeBlobPath(eventHubName) + "/";
             return key;
         }
-        public EventProcessorOptions EventProcessorOptions { get; set; }
 
-        void IExtensionConfigProvider.Initialize(ExtensionConfigContext context)
-        {
-            if (context == null)
-            {
-                throw new ArgumentNullException("context");
-            }
-
-            // apply at eventProcessorOptions level (maxBatchSize, prefetchCount)
-            context.ApplyConfig(EventProcessorOptions, "eventHub");
-
-            // apply at config level (batchCheckpointFrequency)
-            context.ApplyConfig(this, "eventHub");
-
-           _defaultStorageString = context.Config.StorageConnectionString;
-
-            context
-                .AddConverter<string, EventData>(ConvertString2EventData)
-                .AddConverter<EventData, string>(ConvertEventData2String)
-                .AddConverter<byte[], EventData>(ConvertBytes2EventData)
-                .AddConverter<EventData, byte[]>(ConvertEventData2Bytes)
-                .AddOpenConverter<OpenType.Poco, EventData>(ConvertPocoToEventData);
-
-            // register our trigger binding provider
-            INameResolver nameResolver = context.Config.NameResolver;
-            IConverterManager cm = context.Config.GetService<IConverterManager>();
-            var triggerBindingProvider = new EventHubTriggerAttributeBindingProvider(nameResolver, cm, this, context.Config.LoggerFactory);
-            context.AddBindingRule<EventHubTriggerAttribute>()
-                .BindToTrigger(triggerBindingProvider);
-
-            // register our binding provider
-            context.AddBindingRule<EventHubAttribute>()
-                .BindToCollector(BuildFromAttribute);
-
-            // Set the default exception handler for background exceptions
-            // coming from the EventProcessorHost.
-            ExceptionHandler = (e =>
-            {
-                LogExceptionReceivedEvent(e, context.Config.LoggerFactory);
-            });
-        }
-
-        internal static void LogExceptionReceivedEvent(ExceptionReceivedEventArgs e, ILoggerFactory loggerFactory)
-        {
-            try
-            {
-                var logger = loggerFactory?.CreateLogger(LogCategories.Executor);
-                string message = $"EventProcessorHost error (Action={e.Action}, HostName={e.Hostname}, PartitionId={e.PartitionId})";
-
-                var ehex = e.Exception as EventHubsException;
-                if (!(e.Exception is OperationCanceledException) && (ehex == null || !ehex.IsTransient))
-                {
-                    // any non-transient exceptions or unknown exception types
-                    // we want to log as errors
-                    logger?.LogError(0, e.Exception, message);
-                }
-                else
-                {
-                    // transient errors we log as verbose so we have a record
-                    // of them, but we don't treat them as actual errors
-                    logger?.LogDebug(0, e.Exception, message);
-                }
-            }
-            catch
-            {
-                // best effort logging
-            }
-        }
-
-        private IAsyncCollector<EventData> BuildFromAttribute(EventHubAttribute attribute)
-        {
-            EventHubClient client = this.GetEventHubClient(attribute.EventHubName, attribute.Connection);
-            return new EventHubAsyncCollector(client);
-        }
-
-        private static string ConvertEventData2String(EventData x) 
-            => Encoding.UTF8.GetString(ConvertEventData2Bytes(x));
-
-        private static EventData ConvertBytes2EventData(byte[] input) 
-            => new EventData(input);
-
-        private static byte[] ConvertEventData2Bytes(EventData input)
-            => input.Body.Array;
-
-        private static EventData ConvertString2EventData(string input) 
-            => ConvertBytes2EventData(Encoding.UTF8.GetBytes(input));
-
-        private static Task<object> ConvertPocoToEventData(object arg, Attribute attrResolved, ValueBindingContext context)
-        {
-            return Task.FromResult<object>(ConvertString2EventData(JsonConvert.SerializeObject(arg)));
-        }
-
-        internal Action<ExceptionReceivedEventArgs> ExceptionHandler { get; set; }
-
-        private void ExceptionReceivedHandler(ExceptionReceivedEventArgs args)
-        {
-            ExceptionHandler?.Invoke(args);
-        }
+        // Get the eventhub options, used by the EventHub SDK for listening on event. 
+        internal EventProcessorOptions GetOptions() => _options;
 
         // Hold credentials for a given eventHub name. 
         // Multiple consumer groups (and multiple listeners) on the same hub can share the same credentials. 

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Storage;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Xunit;
 
@@ -22,8 +23,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var serviceProvider = FunctionalTest.CreateConfigurationForCallFailure(account,
                 typeof(InvalidQueueNameProgram), backgroundTaskSource);
 
-            using (JobHost host = new JobHost(serviceProvider))
+            using (serviceProvider)
             {
+                var host = serviceProvider.GetJobHost();
                 // Act & Assert
                 FunctionIndexingException exception = Assert.Throws<FunctionIndexingException>(() => host.Start());
                 Assert.Equal("Error indexing method 'InvalidQueueNameProgram.Invalid'", exception.Message);

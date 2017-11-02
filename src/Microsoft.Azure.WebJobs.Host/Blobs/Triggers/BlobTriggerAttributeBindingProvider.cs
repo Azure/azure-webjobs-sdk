@@ -24,10 +24,13 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
     {
         private IStorageAccountProvider _accountProvider;
 
+        public BlobTriggerExtensionConfig(IStorageAccountProvider accountProvider)
+        {
+            _accountProvider = accountProvider;
+        }
+
         public void Initialize(ExtensionConfigContext context)
         {
-            _accountProvider = context.Config.GetService<IStorageAccountProvider>();
-
             var rule = context.AddBindingRule<BlobTriggerAttribute>();
             rule.BindToTrigger<IStorageBlob>();
 
@@ -74,8 +77,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
         private readonly INameResolver _nameResolver;
         private readonly IStorageAccountProvider _accountProvider;
         private readonly IHostIdProvider _hostIdProvider;
-        private readonly IQueueConfiguration _queueConfiguration;
-        private readonly JobHostBlobsConfiguration _blobsConfiguration;
+        private readonly JobHostQueuesOptions _queueOptions;
+        private readonly JobHostBlobsOptions _blobsOptions;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IContextSetter<IBlobWrittenWatcher> _blobWrittenWatcherSetter;
         private readonly IContextSetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherSetter;
@@ -87,8 +90,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             IStorageAccountProvider accountProvider,
             IExtensionTypeLocator extensionTypeLocator,
             IHostIdProvider hostIdProvider,
-            IQueueConfiguration queueConfiguration,
-            JobHostBlobsConfiguration blobsConfiguration,
+            JobHostQueuesOptions queueOptions,
+            JobHostBlobsOptions blobsConfiguration,
             IWebJobsExceptionHandler exceptionHandler,
             IContextSetter<IBlobWrittenWatcher> blobWrittenWatcherSetter,
             IContextSetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherSetter,
@@ -103,8 +106,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
 
             _accountProvider = accountProvider ?? throw new ArgumentNullException(nameof(accountProvider));
             _hostIdProvider = hostIdProvider ?? throw new ArgumentNullException(nameof(hostIdProvider));
-            _queueConfiguration = queueConfiguration ?? throw new ArgumentNullException(nameof(queueConfiguration));
-            _blobsConfiguration = blobsConfiguration ?? throw new ArgumentNullException(nameof(blobsConfiguration));
+            _queueOptions = queueOptions ?? throw new ArgumentNullException(nameof(queueOptions));
+            _blobsOptions = blobsConfiguration ?? throw new ArgumentNullException(nameof(blobsConfiguration));
             _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
             _blobWrittenWatcherSetter = blobWrittenWatcherSetter ?? throw new ArgumentNullException(nameof(blobWrittenWatcherSetter));
             _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter ?? throw new ArgumentNullException(nameof(messageEnqueuedWatcherSetter));
@@ -134,7 +137,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             dataAccount.AssertTypeOneOf(StorageAccountType.GeneralPurpose, StorageAccountType.BlobOnly);
 
             ITriggerBinding binding = new BlobTriggerBinding(parameter, hostAccount, dataAccount, path,
-                _hostIdProvider, _queueConfiguration, _blobsConfiguration, _exceptionHandler, _blobWrittenWatcherSetter,
+                _hostIdProvider, _queueOptions, _blobsOptions, _exceptionHandler, _blobWrittenWatcherSetter,
                 _messageEnqueuedWatcherSetter, _sharedContextProvider, _singletonManager, _loggerFactory);
 
             return binding;

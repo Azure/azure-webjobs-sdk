@@ -7,9 +7,11 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.Host.Timers;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json.Linq;
@@ -37,39 +39,36 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private readonly CloudStorageAccount _storageAccount;
         private readonly RandomNameResolver _nameResolver;
 
-        private readonly TestLoggerProvider _loggerProvider = new TestLoggerProvider();
-
         private static object _syncLock = new object();
 
         public BlobTriggerEndToEndTests()
         {
             _nameResolver = new RandomNameResolver();
 
-            var storageConnectionString = new JobHostConfiguration().StorageConnectionString;
-            _storageAccount = CloudStorageAccount.Parse(storageConnectionString);
+            // pull from a default host
+            var host = new HostBuilder()
+                .ConfigureDefaultTestHost()
+                .Build();
+            var provider = host.Services.GetService<IStorageAccountProvider>();
+            _storageAccount = provider.TryGetAccountAsync(ConnectionStringNames.Storage, CancellationToken.None).Result.SdkObject;
             CloudBlobClient blobClient = _storageAccount.CreateCloudBlobClient();
             _testContainer = blobClient.GetContainerReference(_nameResolver.ResolveInString(SingleTriggerContainerName));
             Assert.False(_testContainer.ExistsAsync().Result);
             _testContainer.CreateAsync().Wait();
         }
 
-        public JobHostConfiguration NewConfig<TProgram>(TProgram program, params object[] services)
+        public IHostBuilder NewBuilder<TProgram>(TProgram program)
         {
-            JobHostConfiguration config = new JobHostConfiguration();
-
             var activator = new FakeActivator();
             activator.Add(program);
-            config.TypeLocator = new FakeTypeLocator(typeof(TProgram));
-            config.JobActivator = activator;
 
-            ILoggerFactory loggerFactory = new LoggerFactory();
-            loggerFactory.AddProvider(_loggerProvider);
-            config.LoggerFactory = loggerFactory;
-
-            config.AddServices(services);
-            config.AddServices(_nameResolver);
-            config.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
-            return config;
+            return new HostBuilder()
+                .ConfigureDefaultTestHost<TProgram>()
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<IJobActivator>(activator);
+                    services.AddSingleton<INameResolver>(_nameResolver);
+                });
         }
 
         public class Poison_Program
@@ -176,9 +175,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await blob.UploadTextAsync("0");
 
             var prog = new Poison_Program();
-            var config = NewConfig(prog);
+            var host = NewBuilder(prog).Build();
 
-            using (JobHost host = new JobHost(config))
+            using (host)
             {
                 host.Start();
 
@@ -199,11 +198,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             int timeToProcess;
 
             var prog = new BlobGetsProcessedOnlyOnce_SingleHost_Program();
-            var config = NewConfig(prog);
+            
+            // make sure they both have the same id
+            string hostId = Guid.NewGuid().ToString("N");
+            var host = NewBuilder(prog)
+                .ConfigureServices(services => services.Configure<JobHostOptions>(o => o.HostId = hostId))
+                .Build();           
 
             // Process the blob first
             using (prog._completedEvent = new ManualResetEvent(initialState: false))
-            using (JobHost host = new JobHost(config))
+            using (host)
             {
                 DateTime startTime = DateTime.Now;
 
@@ -214,7 +218,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 Assert.Equal(1, prog._timesProcessed);
 
-                string[] loggerOutputLines = _loggerProvider.GetAllLogMessages()
+                string[] loggerOutputLines = host.GetTestLoggerProvider().GetAllLogMessages()
                     .Where(p => p.FormattedMessage != null)
                     .SelectMany(p => p.FormattedMessage.Split(Environment.NewLine, StringSplitOptions.None))
                     .ToArray();
@@ -228,7 +232,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // wait twice the amount of time required to process first before 
             // deciding that it doesn't get reprocessed
             using (prog._completedEvent = new ManualResetEvent(initialState: false))
-            using (JobHost host = new JobHost(config))
+            using (host)
             {
                 host.Start();
 
@@ -251,10 +255,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await blob.UploadTextAsync("0");
 
             var prog = new BlobChainTest_Program();
-            var config = NewConfig(prog);
+            var host = NewBuilder(prog).Build();
 
             using (prog._completedEvent = new ManualResetEvent(initialState: false))
-            using (JobHost host = new JobHost(config))
+            using (host)
             {
                 host.Start();
                 Assert.True(prog._completedEvent.WaitOne(TimeSpan.FromSeconds(60)));
@@ -268,14 +272,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 .GetBlockBlobReference(TestBlobName)
                 .UploadTextAsync("10");
 
-
             var prog = new BlobGetsProcessedOnlyOnce_SingleHost_Program();
-            var config = NewConfig(prog);
 
+            // make sure they both have the same id
+            string hostId = Guid.NewGuid().ToString("N");
+            var host1 = NewBuilder(prog)
+                .ConfigureServices(services => services.Configure<JobHostOptions>(o => o.HostId = hostId))
+                .Build();
+            var host2 = NewBuilder(prog)
+                .ConfigureServices(services => services.Configure<JobHostOptions>(o => o.HostId = hostId))
+                .Build();
 
             using (prog._completedEvent = new ManualResetEvent(initialState: false))
-            using (JobHost host1 = new JobHost(config))
-            using (JobHost host2 = new JobHost(config))
+            using (host1)
+            using (host2)
             {
                 host1.Start();
                 host2.Start();

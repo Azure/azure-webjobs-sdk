@@ -3,15 +3,17 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.TestCommon
 {
-    public class TestJobHost<TProgram> : JobHost
+    public class JobHost<TProgram> : JobHost
     {
-        public TestJobHost(JobHostConfiguration config)
-            : base(config)
+        public JobHost(IOptions<JobHostOptions> options, IJobHostContextFactory contextFactory)
+            : base(options, contextFactory)
         {
         }
 

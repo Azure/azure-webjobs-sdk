@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
-    internal class DefaultExtensionRegistry : IExtensionRegistry
+    public class DefaultExtensionRegistry : IExtensionRegistry
     {
         private ConcurrentDictionary<Type, ConcurrentBag<object>> _registry = new ConcurrentDictionary<Type, ConcurrentBag<object>>();
 

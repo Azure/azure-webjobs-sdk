@@ -69,7 +69,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 try
                 {
                     // Arrange
-                    JobHost host = new JobHost(serviceProvider);
+                    JobHost host = serviceProvider.GetJobHost();
                     host.Start();
                     callback.Invoke(host);
                     startTaskSource.TrySetResult(null);

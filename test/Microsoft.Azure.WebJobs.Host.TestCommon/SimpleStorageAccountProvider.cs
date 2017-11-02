@@ -1,7 +1,6 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
@@ -12,16 +11,22 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 {
     public class SimpleStorageAccountProvider : IStorageAccountProvider
     {
-        private readonly IServiceProvider _services;
+        private readonly StorageClientFactory _storageClientFactory;
 
-        public SimpleStorageAccountProvider(IServiceProvider services)
+        public SimpleStorageAccountProvider(StorageClientFactory storageClientFactory)
         {
-            _services = services;
+            _storageClientFactory = storageClientFactory;
         }
 
         public CloudStorageAccount StorageAccount { get; set; }
 
         public CloudStorageAccount DashboardAccount { get; set; }
+
+        public string StorageConnectionString => null;
+
+        public string DashboardConnectionString => null;
+
+        public string InternalSasStorage => null;
 
         Task<IStorageAccount> IStorageAccountProvider.TryGetAccountAsync(string connectionStringName, CancellationToken cancellationToken)
         {
@@ -29,11 +34,11 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 
             if (connectionStringName == ConnectionStringNames.Dashboard)
             {
-                account = DashboardAccount != null ? new StorageAccount(DashboardAccount, _services) : null;
+                account = DashboardAccount != null ? new StorageAccount(DashboardAccount, _storageClientFactory) : null;
             }
             else if (connectionStringName == ConnectionStringNames.Storage)
             {
-                account = StorageAccount != null ? new StorageAccount(StorageAccount, _services) : null;
+                account = StorageAccount != null ? new StorageAccount(StorageAccount, _storageClientFactory) : null;
             }
             else
             {

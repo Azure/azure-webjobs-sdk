@@ -10,11 +10,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Blob
 #endif
 {
     /// <summary>Defines blob types.</summary>
-#if PUBLICSTORAGE
     public enum StorageBlobType
-#else
-    internal enum StorageBlobType
-#endif
     {
         /// <summary>A block blob.</summary>
         BlockBlob = BlobType.BlockBlob,

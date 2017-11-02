@@ -21,12 +21,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
         /// <param name="poisonQueue">The queue to move messages to when unable to process a message after the maximum dequeue count has been exceeded. May be null.</param>
         public QueueProcessorFactoryContext(CloudQueue queue, ILoggerFactory loggerFactory, CloudQueue poisonQueue = null)
         {
-            if (queue == null)
-            {
-                throw new ArgumentNullException("queue");
-            }
-
-            Queue = queue;
+            Queue = queue ?? throw new ArgumentNullException("queue");
             PoisonQueue = poisonQueue;
             Logger = loggerFactory?.CreateLogger(LogCategories.CreateTriggerCategory("Queue"));
         }
@@ -36,16 +31,16 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
         /// </summary>
         /// <param name="queue">The <see cref="CloudQueue"/> the <see cref="QueueProcessor"/> will operate on.</param>
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> to create an <see cref="ILogger"/> from.</param>
-        /// <param name="queueConfiguration">The queue configuration.</param>
+        /// <param name="options">The queue configuration.</param>
         /// <param name="poisonQueue">The queue to move messages to when unable to process a message after the maximum dequeue count has been exceeded. May be null.</param>
-        internal QueueProcessorFactoryContext(CloudQueue queue, ILoggerFactory loggerFactory, IQueueConfiguration queueConfiguration, CloudQueue poisonQueue = null)
+        internal QueueProcessorFactoryContext(CloudQueue queue, ILoggerFactory loggerFactory, JobHostQueuesOptions options, CloudQueue poisonQueue = null)
             : this(queue, loggerFactory, poisonQueue)
         {
-            BatchSize = queueConfiguration.BatchSize;
-            MaxDequeueCount = queueConfiguration.MaxDequeueCount;
-            NewBatchThreshold = queueConfiguration.NewBatchThreshold;
-            VisibilityTimeout = queueConfiguration.VisibilityTimeout;
-            MaxPollingInterval = queueConfiguration.MaxPollingInterval;
+            BatchSize = options.BatchSize;
+            MaxDequeueCount = options.MaxDequeueCount;
+            NewBatchThreshold = options.NewBatchThreshold;
+            VisibilityTimeout = options.VisibilityTimeout;
+            MaxPollingInterval = options.MaxPollingInterval;
         }
 
         /// <summary>

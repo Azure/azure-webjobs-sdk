@@ -10,17 +10,24 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
-using Microsoft.Azure.WebJobs.Host.Loggers;
-using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.TestCommon
 {
     public static class TestHelpers
     {
+        public static async Task Await(Func<Task<bool>> condition, int timeout = 60 * 1000, int pollingInterval = 2 * 1000, bool throwWhenDebugging = false, Func<string> userMessageCallback = null)
+        {
+            return Await(() => Task.FromResult(condition()), timeout, pollingInterval, throwWhenDebugging, userMessageCallback);
+        }
+
         public static async Task Await(Func<Task<bool>> condition, int timeout = 60 * 1000, int pollingInterval = 2 * 1000, bool throwWhenDebugging = false, Func<string> userMessageCallback = null)
         {
             DateTime start = DateTime.Now;
@@ -91,152 +98,90 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             Assert.True(false, "Invoker should have failed");
         }
 
-        // Helper to quickly create a new JobHost object from a set of services. 
-        // Default is pure-in-memory, good for unit testing. 
-        public static TestJobHost<TProgram> NewJobHost<TProgram>(
-             params object[] services
-             )
+        public static IHostBuilder ConfigureDefaultTestHost(this IHostBuilder builder, params Type[] types)
         {
-            var config = NewConfig(typeof(TProgram), services);
-            var host = new TestJobHost<TProgram>(config);
-            return host;
+            return builder.ConfigureWebJobsHost()
+               .ConfigureServices(services =>
+               {
+                   services.AddSingleton<ITypeLocator>(new FakeTypeLocator(types));
+
+                   // Register this to fail a test if a background exception is thrown
+                   services.AddSingleton<IWebJobsExceptionHandlerFactory, TestExceptionHandlerFactory>();
+               })
+               .ConfigureLogging(logging =>
+               {
+                   logging.AddProvider(new TestLoggerProvider());
+               });
         }
 
-        public static JobHostConfiguration NewConfig<TProgram>(params object[] services)
+        public static IHostBuilder ConfigureDefaultTestHost<TProgram>(this IHostBuilder builder,
+            INameResolver nameResolver = null, IJobActivator activator = null)
         {
-            return NewConfig(typeof(TProgram), services);
-        }
-
-        // Helper to create a JobHostConfiguraiton from a set of services. 
-        // Default config, pure-in-memory
-        // Default is pure-in-memory, good for unit testing. 
-        public static JobHostConfiguration NewConfig(Type functions, params object[] services)
-        {
-            var config = NewConfig(services);
-            if (!services.OfType<ITypeLocator>().Any())
-            {
-                config.AddServices(new FakeTypeLocator(functions));
-            }
-            return config;
-        }
-
-        public static JobHostConfiguration NewConfig(
-            params object[] services
-            )
-        {
-            var loggerFactory = new LoggerFactory();
-            ILoggerProvider loggerProvider = services.OfType<ILoggerProvider>().SingleOrDefault() ?? new TestLoggerProvider();
-            loggerFactory.AddProvider(loggerProvider);
-
-            var config = new JobHostConfiguration()
-            {
-                // Pure in-memory, no storage. 
-                HostId = Guid.NewGuid().ToString("n"),
-                DashboardConnectionString = null,
-                StorageConnectionString = null,
-                LoggerFactory = loggerFactory
-            };
-            config.AddServices(services);
-            return config;
-        }
-
-        public static void AddServices(this JobHostConfiguration config, params object[] services)
-        {
-            // Set extensionRegistry first since other services may depend on it. 
-            foreach (var obj in services)
-            {
-                IExtensionRegistry extensionRegistry = obj as IExtensionRegistry;
-                if (extensionRegistry != null)
+            return builder.ConfigureDefaultTestHost(typeof(TProgram))
+                .ConfigureServices(services =>
                 {
-                    config.AddService<IExtensionRegistry>(extensionRegistry);
-                    break;
-                }
-            }
+                    services.AddSingleton<IJobHost, JobHost<TProgram>>();
 
-            IExtensionRegistry extensions = config.GetService<IExtensionRegistry>();
-
-            var types = new Type[] {
-                typeof(IAsyncCollector<FunctionInstanceLogEntry>),
-                typeof(IHostInstanceLoggerProvider),
-                typeof(IFunctionInstanceLoggerProvider),
-                typeof(IFunctionOutputLoggerProvider),
-                typeof(IConsoleProvider),
-                typeof(ITypeLocator),
-                typeof(IWebJobsExceptionHandler),
-                typeof(INameResolver),
-                typeof(IJobActivator),
-                typeof(IExtensionTypeLocator),
-                typeof(SingletonManager),
-                typeof(IHostIdProvider),
-                typeof(IQueueConfiguration),
-                typeof(IExtensionRegistry),
-                typeof(IDistributedLockManager),
-                typeof(ILoggerFactory),
-                typeof(IFunctionIndexProvider) // set to unit test indexing. 
-            };
-
-            foreach (var obj in services)
-            {
-                if (obj == null ||
-                    obj is ILoggerProvider)
-                {
-                    continue;
-                }
-
-                IStorageAccountProvider storageAccountProvider = obj as IStorageAccountProvider;
-                IStorageAccount account = obj as IStorageAccount;
-                if (account != null)
-                {
-                    storageAccountProvider = new FakeStorageAccountProvider
+                    if (nameResolver != null)
                     {
-                        StorageAccount = account
-                    };
-                }
-                if (storageAccountProvider != null)
-                {
-                    config.AddService<IStorageAccountProvider>(storageAccountProvider);
-                    continue;
-                }
-
-                // A new extension 
-                IExtensionConfigProvider extension = obj as IExtensionConfigProvider;
-                if (extension != null)
-                {
-                    extensions.RegisterExtension<IExtensionConfigProvider>(extension);
-                    continue;
-                }
-
-                // A function filter
-                if (obj is IFunctionInvocationFilter)
-                {
-                    extensions.RegisterExtension<IFunctionInvocationFilter>((IFunctionInvocationFilter)obj);
-                    continue;
-                }
-
-                if (obj is IFunctionExceptionFilter)
-                {
-                    extensions.RegisterExtension<IFunctionExceptionFilter>((IFunctionExceptionFilter)obj);
-                    continue;
-                }
-
-                // basic pattern. 
-                bool ok = false;
-                foreach (var type in types)
-                {
-                    if (type.IsAssignableFrom(obj.GetType()))
-                    {
-                        config.AddService(type, obj);
-                        ok = true;
-                        break;
+                        services.AddSingleton<INameResolver>(nameResolver);
                     }
-                }
-                if (ok)
-                {
-                    continue;
-                }
 
-                throw new InvalidOperationException("Test bug: Unrecognized type: " + obj.GetType().FullName);
-            }
+                    if (activator != null)
+                    {
+                        services.AddSingleton<IJobActivator>(activator);
+                    }
+                });
+        }
+
+        public static TestLoggerProvider GetTestLoggerProvider(this IHost host)
+        {
+            return host.Services.GetServices<ILoggerProvider>().OfType<TestLoggerProvider>().Single();
+        }
+
+        public static TExtension GetExtension<TExtension>(this IHost host)
+        {
+            return host.Services.GetServices<IExtensionConfigProvider>().OfType<TExtension>().SingleOrDefault();
+        }
+
+        public static JobHost GetJobHost(this IHost host)
+        {
+            return host.Services.GetService<IJobHost>() as JobHost;
+        }
+
+        public static JobHost<TProgram> GetJobHost<TProgram>(this IHost host)
+        {
+            return host.Services.GetService<IJobHost>() as JobHost<TProgram>;
+        }
+
+        public static void Call<T>(this JobHost host, string methodName, object arguments)
+        {
+            host.Call(typeof(T).GetMethod(methodName), arguments);
+        }
+
+        public static void Call<T>(this JobHost host, string methodName)
+        {
+            host.Call(typeof(T).GetMethod(methodName));
+        }
+
+        public static CloudStorageAccount GetStorageAccount(this IHost host)
+        {
+            var provider = host.Services.GetRequiredService<IStorageAccountProvider>();
+            return provider.GetStorageAccountAsync(CancellationToken.None).Result.SdkObject;
+        }
+
+        public static TOptions GetOptions<TOptions>(this IHost host) where TOptions : class, new()
+        {
+            return host.Services.GetService<IOptions<TOptions>>().Value;
+        }
+
+        public static IConnectionStringProvider GetConnectionStringProvider()
+        {
+            IConfiguration config = new ConfigurationBuilder()
+                .AddEnvironmentVariables()
+                .Build();
+
+            return new AmbientConnectionStringProvider(config);
         }
 
         private class FakeStorageAccountProvider : IStorageAccountProvider
@@ -244,6 +189,12 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             public IStorageAccount StorageAccount { get; set; }
 
             public IStorageAccount DashboardAccount { get; set; }
+
+            public string StorageConnectionString => throw new NotImplementedException();
+
+            public string DashboardConnectionString => throw new NotImplementedException();
+
+            public string InternalSasStorage => throw new NotImplementedException();
 
             public Task<IStorageAccount> TryGetAccountAsync(string connectionStringName, CancellationToken cancellationToken)
             {
@@ -266,7 +217,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             }
         }
 
-        public static IJobHostMetadataProvider CreateMetadataProvider(this JobHost host)
+        public static IJobHostMetadataProvider CreateMetadataProvider(this IHost host)
         {
             return host.Services.GetService<IJobHostMetadataProvider>();
         }

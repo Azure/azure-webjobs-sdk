@@ -13,33 +13,44 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Indexers
 {
-    internal static class DefaultBindingProvider
+    internal sealed class DefaultBindingProvider : IBindingProviderFactory
     {
-        public static IBindingProvider Create(
+        private readonly INameResolver _nameResolver;
+        private readonly ILoggerFactory _loggerFactory;
+        private readonly IStorageAccountProvider _storageAccountProvider;
+        private readonly IExtensionRegistry _extensions;
+
+        public DefaultBindingProvider(
             INameResolver nameResolver,
             ILoggerFactory loggerFactory,
             IStorageAccountProvider storageAccountProvider,
-            IExtensionTypeLocator extensionTypeLocator,
-            IContextGetter<IBlobWrittenWatcher> blobWrittenWatcherGetter,
             IExtensionRegistry extensions)
+        {
+            _nameResolver = nameResolver;
+            _loggerFactory = loggerFactory;
+            _storageAccountProvider = storageAccountProvider;
+            _extensions = extensions;
+        }
+
+        public IBindingProvider Create()
         {
             List<IBindingProvider> innerProviders = new List<IBindingProvider>();
                      
             // add any registered extension binding providers
             // Queue and Table bindings were added as an extension, so those rules get included here.  
-            foreach (IBindingProvider provider in extensions.GetExtensions(typeof(IBindingProvider)))
+            foreach (IBindingProvider provider in _extensions.GetExtensions(typeof(IBindingProvider)))
             {
                 innerProviders.Add(provider);
             }
 
-            innerProviders.Add(new CloudStorageAccountBindingProvider(storageAccountProvider));
+            innerProviders.Add(new CloudStorageAccountBindingProvider(_storageAccountProvider));
             innerProviders.Add(new CancellationTokenBindingProvider());
 
             // The TraceWriter binder handles all remaining TraceWriter/TextWriter parameters. It must come after the
             // Blob binding provider; otherwise bindings like Do([Blob("a/b")] TextWriter blob) wouldn't work.
-            innerProviders.Add(new TraceWriterBindingProvider(loggerFactory));
+            innerProviders.Add(new TraceWriterBindingProvider(_loggerFactory));
 
-            innerProviders.Add(new ILoggerBindingProvider(loggerFactory));
+            innerProviders.Add(new ILoggerBindingProvider(_loggerFactory));
 
             ContextAccessor<IBindingProvider> bindingProviderAccessor = new ContextAccessor<IBindingProvider>();
             innerProviders.Add(new RuntimeBindingProvider(bindingProviderAccessor));

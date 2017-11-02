@@ -21,8 +21,13 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
     // This is fundemantentally an IAsyncCollector<IStorageQueueMessage>
     internal class QueueExtension : IExtensionConfigProvider
     {
-        public QueueExtension()
+        private readonly IContextGetter<IMessageEnqueuedWatcher> _contextGetter;
+        private readonly IStorageAccountProvider _storageAccountProvider;
+
+        public QueueExtension(IStorageAccountProvider storageAccountProvider, IContextGetter<IMessageEnqueuedWatcher> contextGetter)
         {
+            _contextGetter = contextGetter;
+            _storageAccountProvider = storageAccountProvider;
         }
 
         public void Initialize(ExtensionConfigContext context)
@@ -33,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
             }
 
             var config = new PerHostConfig();
-            config.Initialize(context);
+            config.Initialize(context, _storageAccountProvider, _contextGetter);
         }
 
         // Multiple JobHost objects may share the same JobHostConfiguration.
@@ -46,14 +51,15 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
 
             // Optimization where a queue output can directly trigger a queue input. 
             // This is per-host (not per-config)
-            private ContextAccessor<IMessageEnqueuedWatcher> _messageEnqueuedWatcherGetter;
+            private IContextGetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherGetter;
 
-            public void Initialize(ExtensionConfigContext context)
+            public void Initialize(ExtensionConfigContext context, IStorageAccountProvider storageAccountProvider, IContextGetter<IMessageEnqueuedWatcher> contextGetter)
             {
-                _messageEnqueuedWatcherGetter = context.PerHostServices.GetService<ContextAccessor<IMessageEnqueuedWatcher>>();
-                _accountProvider = context.Config.GetService<IStorageAccountProvider>();
+                _accountProvider = storageAccountProvider;
+                _messageEnqueuedWatcherGetter = contextGetter;
 
-                context.ApplyConfig(context.Config.Queues, "queues");
+                // TODO: FACAVAL replace this with queue options. This should no longer be needed.
+                //context.ApplyConfig(context.Config.Queues, "queues");
 
                 // IStorageQueueMessage is the core testing interface 
                 var binding = context.AddBindingRule<QueueAttribute>();

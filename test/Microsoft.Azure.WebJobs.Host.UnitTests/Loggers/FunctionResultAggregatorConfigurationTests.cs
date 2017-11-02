@@ -13,7 +13,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         [Fact]
         public void DefaultValues()
         {
-            var config = new FunctionResultAggregatorConfiguration();
+            var config = new FunctionResultAggregatorOptions();
 
             Assert.Equal(TimeSpan.FromSeconds(30), config.FlushTimeout);
             Assert.Equal(1000, config.BatchSize);
@@ -27,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         [InlineData(10000, false)]
         public void BatchSize_Limits(int batchSize, bool throws)
         {
-            var config = new FunctionResultAggregatorConfiguration();
+            var config = new FunctionResultAggregatorOptions();
             ArgumentOutOfRangeException caughtEx = null;
 
             try
@@ -53,7 +53,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         [MemberData(nameof(TimeSpanData))]
         public void FlushTimeout_Limits(TimeSpan flushTimeout, bool throws)
         {
-            var config = new FunctionResultAggregatorConfiguration();
+            var config = new FunctionResultAggregatorOptions();
             ArgumentOutOfRangeException caughtEx = null;
 
             try

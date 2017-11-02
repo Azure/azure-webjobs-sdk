@@ -7,7 +7,8 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -15,7 +16,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
     // Unit test for exercising Host.Call passing route data. 
     public class HostCallTestsWithBindingData
-    {        
+    {
         public class FunctionBase
         {
             // Derived functions write to this variable, test harness can read from it.
@@ -26,13 +27,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             public void Func(
                 [Test(Path = "{k1}-x")] string p1,
-                [Test(Path = "{k2}-y")] string p2, 
+                [Test(Path = "{k2}-y")] string p2,
                 int k1)
             {
                 _sb.AppendFormat("{0};{1};{2}", p1, p2, k1);
             }
         }
-       
+
         public class Functions2 : FunctionBase
         {
             public class Payload
@@ -60,18 +61,26 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
         public class FakeExtClient : IExtensionConfigProvider, IConverter<TestAttribute, string>
         {
+            private readonly INameResolver _nameResolver;
+            private readonly IConverterManager _converterManager;
+
+            public FakeExtClient(INameResolver nameResolver, IConverterManager converterManager)
+            {
+                _nameResolver = nameResolver;
+                _converterManager = converterManager;
+            }
+
             public void Initialize(ExtensionConfigContext context)
             {
                 // Add [Test] support
                 var rule = context.AddBindingRule<TestAttribute>();
-                rule.BindToInput<string>(typeof(FakeExtClient));
-                
+                rule.BindToInput<string>(typeof(FakeExtClient), _nameResolver, _converterManager);
+
                 // Add [FakeQueueTrigger] support.                 
                 context.AddConverter<string, FakeQueueData>(x => new FakeQueueData { Message = x });
                 context.AddConverter<FakeQueueData, string>(msg => msg.Message);
 
-                var cm = context.Config.ConverterManager;
-                var triggerBindingProvider = new FakeQueueTriggerBindingProvider(new FakeQueueClient(), cm);
+                var triggerBindingProvider = new FakeQueueTriggerBindingProvider(new FakeQueueClient(_nameResolver, _converterManager), _converterManager);
                 context.AddBindingRule<FakeQueueTriggerAttribute>().BindToTrigger(triggerBindingProvider);
             }
 
@@ -117,7 +126,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         // Invoke with binding data only, no parameters. 
         [Fact]
         public async Task InvokeWithBindingData()
-        {           
+        {
             string result = await Invoke<Functions>(new { k1 = 100, k2 = 200 });
             Assert.Equal("100-x;200-y;100", result);
         }
@@ -126,7 +135,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public async Task Parameter_Takes_Precedence()
         {
-            string result = await Invoke<Functions>(new { k1 = 100, k2 = 200, p1="override" });
+            string result = await Invoke<Functions>(new { k1 = 100, k2 = 200, p1 = "override" });
             Assert.Equal("override;200-y;100", result);
         }
 
@@ -158,11 +167,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             TFunction testInstance = new TFunction();
             activator.Add(testInstance);
 
-            FakeExtClient client = new FakeExtClient();
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<TFunction>()
+                .ConfigureServices(services => services.AddSingleton<IJobActivator>(activator))
+                .AddExtension<FakeExtClient>()
+                .Build();
 
-            var host = TestHelpers.NewJobHost<TFunction>(activator, client); 
-
-            await host.CallAsync("Func", arguments);
+            await host.GetJobHost().CallAsync(typeof(TFunction).GetMethod("Func"), arguments);
 
             var x = testInstance._sb.ToString();
 

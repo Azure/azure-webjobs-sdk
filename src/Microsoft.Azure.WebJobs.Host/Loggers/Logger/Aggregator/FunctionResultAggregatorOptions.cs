@@ -9,7 +9,7 @@ namespace Microsoft.Azure.WebJobs.Logging
     /// <summary>
     /// Configuration options for function result aggregation.
     /// </summary>
-    public class FunctionResultAggregatorConfiguration
+    public class FunctionResultAggregatorOptions
     {
         private int _batchSize;
         private TimeSpan _flushTimeout;
@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         /// <summary>
         /// Constructs a new instance.
         /// </summary>
-        public FunctionResultAggregatorConfiguration()
+        public FunctionResultAggregatorOptions()
         {
             _batchSize = DefaultBatchSize;
             _flushTimeout = DefaultFlushTimeout;

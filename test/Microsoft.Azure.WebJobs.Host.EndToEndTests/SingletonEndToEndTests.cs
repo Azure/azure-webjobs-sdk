@@ -7,12 +7,16 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
+using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -35,19 +39,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private static CloudBlobDirectory _lockDirectory;
         private static CloudBlobDirectory _secondaryLockDirectory;
 
-        static SingletonEndToEndTests()
-        {
-            JobHostConfiguration config = new JobHostConfiguration();
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(config.StorageConnectionString);
-            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
-            _lockDirectory = blobClient.GetContainerReference("azure-webjobs-hosts").GetDirectoryReference("locks");
-
-            string secondaryConnectionString = AmbientConnectionStringProvider.Instance.GetConnectionString(Secondary);
-            storageAccount = CloudStorageAccount.Parse(secondaryConnectionString);
-            blobClient = storageAccount.CreateCloudBlobClient();
-            _secondaryLockDirectory = blobClient.GetContainerReference("azure-webjobs-hosts").GetDirectoryReference("locks");
-        }
-
         public SingletonEndToEndTests()
         {
             TestJobs.Reset();
@@ -57,7 +48,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task SingletonNonTriggeredFunction_MultipleConcurrentInvocations_InvocationsAreSerialized()
         {
-            JobHost host = CreateTestJobHost(1);
+            IHost host = CreateTestJobHost(1);
             host.Start();
 
             // make a bunch of parallel invocations
@@ -76,7 +67,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     Category = 3,
                     Description = "Test Work Item " + i
                 };
-                invokeTasks.Add(host.CallAsync(method, new { workItem = workItem }));
+                invokeTasks.Add(host.GetJobHost().CallAsync(method, new { workItem = workItem }));
             }
 
             await Task.WhenAll(invokeTasks);
@@ -86,7 +77,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             await VerifyLeaseState(method, SingletonScope.Function, "TestValue", LeaseState.Available, LeaseStatus.Unlocked);
 
-            host.Stop();
+            await host.StopAsync();
             host.Dispose();
         }
 
@@ -95,17 +86,21 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             // create and start multiple hosts concurrently
             int numHosts = 3;
-            List<JobHost> hosts = new List<JobHost>();
+            List<IHost> hosts = new List<IHost>();
             Task[] tasks = new Task[numHosts];
             for (int i = 0; i < numHosts; i++)
             {
-                JobHost host = CreateTestJobHost(i);
+                IHost host = CreateTestJobHost(i);
                 hosts.Add(host);
                 tasks[i] = host.StartAsync();
             }
             await Task.WhenAll(tasks);
 
             // verify that only 2 listeners were started (one for each of the singleton functions)
+            await TestHelpers.Await(() =>
+            {
+                return TestTriggerAttributeBindingProvider.TestTriggerBinding.TestTriggerListener.StartCount == 3;
+            });
             Assert.Equal(3, TestTriggerAttributeBindingProvider.TestTriggerBinding.TestTriggerListener.StartCount);
 
             MethodInfo singletonListenerMethod = typeof(TestJobs).GetMethod("TriggerJob_SingletonListener");
@@ -115,7 +110,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await VerifyLeaseState(singletonListenerAndFunctionMethod, SingletonScope.Function, "Listener", LeaseState.Leased, LeaseStatus.Locked);
 
             // stop all the hosts
-            foreach (JobHost host in hosts)
+            foreach (IHost host in hosts)
             {
                 await host.StopAsync();
                 host.Dispose();
@@ -128,13 +123,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task SingletonListener_SingletonFunction_InvocationsAreSerialized()
         {
-            JobHost host = CreateTestJobHost(1);
+            IHost host = CreateTestJobHost(1);
             await host.StartAsync();
 
             MethodInfo singletonListenerAndFunctionMethod = typeof(TestJobs).GetMethod("SingletonTriggerJob_SingletonListener");
             await VerifyLeaseState(singletonListenerAndFunctionMethod, SingletonScope.Function, "Listener", LeaseState.Leased, LeaseStatus.Locked);
 
-            await host.CallAsync(singletonListenerAndFunctionMethod, new { test = "Test" });
+            await host.GetJobHost().CallAsync(singletonListenerAndFunctionMethod, new { test = "Test" });
 
             await host.StopAsync();
             host.Dispose();
@@ -146,13 +141,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task SingletonListener_SingletonFunction_ListenerSingletonOverride_InvocationsAreSerialized()
         {
-            JobHost host = CreateTestJobHost(1);
+            IHost host = CreateTestJobHost(1);
             await host.StartAsync();
 
             MethodInfo singletonListenerAndFunctionMethod = typeof(TestJobs).GetMethod("SingletonTriggerJob_SingletonListener_ListenerSingletonOverride");
             await VerifyLeaseState(singletonListenerAndFunctionMethod, SingletonScope.Function, "TestScopeTestValue.Listener", LeaseState.Leased, LeaseStatus.Locked);
 
-            await host.CallAsync(singletonListenerAndFunctionMethod, new { test = "Test" });
+            await host.GetJobHost().CallAsync(singletonListenerAndFunctionMethod, new { test = "Test" });
 
             await host.StopAsync();
             host.Dispose();
@@ -164,7 +159,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task SingletonTriggerFunction_MultipleConcurrentInvocations_InvocationsAreSerialized()
         {
-            JobHost host = CreateTestJobHost(1);
+            IHost host = CreateTestJobHost(1);
             host.Start();
 
             // trigger a bunch of parallel invocations
@@ -183,7 +178,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     { "Category", 3 },
                     { "Description", "Test Work Item " + i }
                 };
-                await host.CallAsync(typeof(TestJobs).GetMethod("EnqueueQueue2TestMessage"), new { message = workItem.ToString() });
+                await host.GetJobHost().CallAsync(typeof(TestJobs).GetMethod("EnqueueQueue2TestMessage"), new { message = workItem.ToString() });
             }
 
             // wait for all the messages to be processed by the job
@@ -200,14 +195,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await VerifyLeaseState(typeof(TestJobs).GetMethod("SingletonTriggerJob"), SingletonScope.Function, "Central/2", LeaseState.Available, LeaseStatus.Unlocked);
             await VerifyLeaseState(typeof(TestJobs).GetMethod("SingletonTriggerJob"), SingletonScope.Function, "Central/3", LeaseState.Available, LeaseStatus.Unlocked);
 
-            host.Stop();
+            await host.StopAsync();
             host.Dispose();
         }
 
         [Fact]
         public async Task SingletonFunction_Exception_LeaseReleasedImmediately()
         {
-            JobHost host = CreateTestJobHost(1);
+            IHost host = CreateTestJobHost(1);
             host.Start();
 
             WorkItem workItem = new WorkItem
@@ -223,7 +218,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             MethodInfo method = typeof(TestJobs).GetMethod("SingletonJob");
             try
             {
-                await host.CallAsync(method, new { workItem = workItem });
+                await host.GetJobHost().CallAsync(method, new { workItem = workItem });
             }
             catch (Exception ex)
             {
@@ -233,20 +228,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.Equal("Exception while executing function: TestJobs.SingletonJob", exception.Message);
             await VerifyLeaseState(method, SingletonScope.Function, "TestValue", LeaseState.Available, LeaseStatus.Unlocked);
 
-            host.Stop();
+            await host.StopAsync();
             host.Dispose();
         }
 
         [Fact]
         public async Task QueueFunction_SingletonListener()
         {
-            JobHost host = CreateTestJobHost(1);
+            IHost host = CreateTestJobHost(1);
             await host.StartAsync();
 
             MethodInfo method = typeof(TestJobs).GetMethod("QueueFunction_SingletonListener");
             await VerifyLeaseState(method, SingletonScope.Function, "Listener", LeaseState.Leased, LeaseStatus.Locked);
 
-            await host.CallAsync(method, new { message = "{}" });
+            await host.GetJobHost().CallAsync(method, new { message = "{}" });
 
             await host.StopAsync();
             host.Dispose();
@@ -257,12 +252,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task SingletonFunction_StorageAccountOverride()
         {
-            JobHost host = CreateTestJobHost(1);
+            IHost host = CreateTestJobHost(1);
             await host.StartAsync();
 
             MethodInfo method = typeof(TestJobs).GetMethod("SingletonJob_StorageAccountOverride");
 
-            await host.CallAsync(method, new { message = "{}" });
+            await host.GetJobHost().CallAsync(method, new { message = "{}" });
 
             await host.StopAsync();
             host.Dispose();
@@ -275,35 +270,35 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task SingletonFunction_HostScope()
         {
-            JobHost host = CreateTestJobHost(1);
+            IHost host = CreateTestJobHost(1);
             host.Start();
 
             MethodInfo method = typeof(TestJobs).GetMethod("SingletonJobA_HostScope");
-            await host.CallAsync(method, new { });
+            await host.GetJobHost().CallAsync(method, new { });
 
             await VerifyLeaseState(method, SingletonScope.Host, "TestValue", LeaseState.Available, LeaseStatus.Unlocked);
 
-            host.Stop();
+            await host.StopAsync();
             host.Dispose();
         }
 
         [Fact]
         public async Task SingletonFunction_HostScope_InvocationsAreSerialized()
         {
-            JobHost host = CreateTestJobHost(1);
+            IHost host = CreateTestJobHost(1);
             host.Start();
 
             MethodInfo methodA = typeof(TestJobs).GetMethod("SingletonJobA_HostScope");
             List<Task> tasks = new List<Task>();
             for (int i = 0; i < 5; i++)
             {
-                tasks.Add(host.CallAsync(methodA, new { }));
+                tasks.Add(host.GetJobHost().CallAsync(methodA, new { }));
             }
 
             MethodInfo methodB = typeof(TestJobs).GetMethod("SingletonJobB_HostScope");
             for (int i = 0; i < 5; i++)
             {
-                tasks.Add(host.CallAsync(methodB, new { }));
+                tasks.Add(host.GetJobHost().CallAsync(methodB, new { }));
             }
             await Task.WhenAll(tasks);
 
@@ -313,7 +308,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await VerifyLeaseState(methodA, SingletonScope.Host, "TestValue", LeaseState.Available, LeaseStatus.Unlocked);
             await VerifyLeaseState(methodB, SingletonScope.Host, "TestValue", LeaseState.Available, LeaseStatus.Unlocked);
 
-            host.Stop();
+            await host.StopAsync();
             host.Dispose();
         }
 
@@ -599,27 +594,26 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
-        private JobHost CreateTestJobHost(int hostId)
+        private IHost CreateTestJobHost(int hostId)
         {
             TestJobActivator activator = new TestJobActivator(hostId);
 
-            JobHostConfiguration config = new JobHostConfiguration
-            {
-                HostId = TestHostId,
-                NameResolver = _resolver,
-                TypeLocator = new FakeTypeLocator(typeof(TestJobs)),
-                JobActivator = activator
-            };
-
-            config.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
-            config.Queues.MaxPollingInterval = TimeSpan.FromSeconds(2);
-            config.Singleton.LockAcquisitionTimeout = TimeSpan.FromSeconds(10);
-            config.Singleton.LockAcquisitionPollingInterval = TimeSpan.FromMilliseconds(500);
-
-            IExtensionRegistry registry = config.GetService<IExtensionRegistry>();
-            registry.RegisterExtension<ITriggerBindingProvider>(new TestTriggerAttributeBindingProvider());
-
-            JobHost host = new JobHost(config);
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<TestJobs>()
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<IJobActivator>(activator);
+                    services.AddSingleton<INameResolver>(_resolver);
+                    services.Configure<JobHostOptions>(o => o.HostId = TestHostId);
+                    services.Configure<JobHostQueuesOptions>(o => o.MaxPollingInterval = TimeSpan.FromSeconds(2));
+                    services.Configure<SingletonOptions>(o =>
+                    {
+                        o.LockAcquisitionTimeout = TimeSpan.FromSeconds(10);
+                        o.LockAcquisitionPollingInterval = TimeSpan.FromMilliseconds(500);
+                    });
+                })
+                .AddExtension<TestTriggerAttributeBindingProvider>()
+                .Build();
 
             return host;
         }
@@ -639,6 +633,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
+        [Binding]
         [AttributeUsage(AttributeTargets.Parameter)]
         public class TestTriggerAttribute : Attribute
         {
@@ -650,8 +645,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         /// <summary>
         /// Test trigger binding that applies SingletonAttribute to its listener implementation.
         /// </summary>
-        public class TestTriggerAttributeBindingProvider : ITriggerBindingProvider
+        public class TestTriggerAttributeBindingProvider : ITriggerBindingProvider, IExtensionConfigProvider
         {
+            public void Initialize(ExtensionConfigContext context)
+            {
+                context
+                    .AddBindingRule<TestTriggerAttribute>()
+                    .BindToTrigger<string>(this);
+            }
+
             public Task<ITriggerBinding> TryCreateAsync(TriggerBindingProviderContext context)
             {
                 TestTriggerAttribute attribute = context.Parameter.GetCustomAttributes<TestTriggerAttribute>().SingleOrDefault();
@@ -764,17 +766,46 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private class TestFixture : IDisposable
         {
-            private CloudStorageAccount storageAccount;
+            private Lazy<CloudStorageAccount> _storageAccountLazy = new Lazy<CloudStorageAccount>(GetStorageAccount);
+
+            public CloudStorageAccount StorageAccount => _storageAccountLazy.Value;
 
             public TestFixture()
             {
-                JobHostConfiguration config = new JobHostConfiguration();
-                storageAccount = CloudStorageAccount.Parse(config.StorageConnectionString);
+                CloudBlobClient blobClient = StorageAccount.CreateCloudBlobClient();
+                _lockDirectory = blobClient.GetContainerReference("azure-webjobs-hosts").GetDirectoryReference("locks");
+
+                string secondaryConnectionString = GetConfigurationString($"AzureWebJobs{Secondary}");
+                var secondaryStorageAccount = CloudStorageAccount.Parse(secondaryConnectionString);
+                blobClient = secondaryStorageAccount.CreateCloudBlobClient();
+                _secondaryLockDirectory = blobClient.GetContainerReference("azure-webjobs-hosts").GetDirectoryReference("locks");
+            }
+
+            private static CloudStorageAccount GetStorageAccount()
+            {
+                // Create a default host since we know that's where the account
+                // is coming from
+                IHost host = new HostBuilder()
+                    .ConfigureDefaultTestHost()
+                    .Build();
+
+                return host.GetStorageAccount();
+            }
+
+            private static string GetConfigurationString(string key)
+            {
+                // Create a default host since we know that's where the account
+                // is coming from
+                IHost host = new HostBuilder()
+                    .ConfigureDefaultTestHost()
+                    .Build();
+
+                return host.Services.GetService<IConfiguration>()[key];
             }
 
             public void Dispose()
             {
-                if (storageAccount != null)
+                if (StorageAccount != null)
                 {
                     Clean().Wait();
                 }
@@ -782,14 +813,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             private async Task Clean()
             {
-                CloudQueueClient queueClient = storageAccount.CreateCloudQueueClient();
+                CloudQueueClient queueClient = StorageAccount.CreateCloudQueueClient();
                 var queuesResult = await queueClient.ListQueuesSegmentedAsync(TestArtifactsPrefix, null);
                 foreach (var queue in queuesResult.Results)
                 {
                     await queue.DeleteAsync();
                 }
 
-                CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+                CloudBlobClient blobClient = StorageAccount.CreateCloudBlobClient();
                 CloudBlobContainer hostContainer = blobClient.GetContainerReference("azure-webjobs-hosts");
                 var blobs = await hostContainer.ListBlobsSegmentedAsync(string.Format("locks/{0}", TestHostId), useFlatBlobListing: true, blobListingDetails: BlobListingDetails.None,
                     maxResults: null, currentToken: null, options: null, operationContext: null);

@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     /// </summary>
     /// <remarks>
     /// Custom <see cref="MessageProcessor"/> implementations can be specified by implementing
-    /// a custom <see cref="MessagingProvider"/> and setting it via <see cref="ServiceBusConfiguration.MessagingProvider"/>.
+    /// a custom <see cref="MessagingProvider"/> and setting it via <see cref="ServiceBusOptions.MessagingProvider"/>.
     /// </remarks>
     public class MessageProcessor
     {

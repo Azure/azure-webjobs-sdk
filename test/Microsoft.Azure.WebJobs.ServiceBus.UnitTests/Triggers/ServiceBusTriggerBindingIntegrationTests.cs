@@ -2,16 +2,15 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Diagnostics;
-using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Threading;
+using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.ServiceBus.Triggers;
-using Microsoft.Azure.ServiceBus;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -27,8 +26,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Triggers
             IQueueTriggerArgumentBindingProvider provider = new UserTypeArgumentBindingProvider();
             ParameterInfo pi = new StubParameterInfo("parameterName", typeof(UserDataType));
             var argumentBinding = provider.TryCreate(pi);
-            _queueBinding = new ServiceBusTriggerBinding("parameterName", typeof(UserDataType), argumentBinding, null, new ServiceBusConfiguration(), "queueName");
-            _topicBinding = new ServiceBusTriggerBinding("parameterName", typeof(UserDataType), argumentBinding, null, new ServiceBusConfiguration(), "subscriptionName", "topicName");
+            var options = new ServiceBusOptions();
+            var messagingProvider = new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(options));
+            _queueBinding = new ServiceBusTriggerBinding("parameterName", typeof(UserDataType), argumentBinding, null, options, messagingProvider, "queueName");
+            _topicBinding = new ServiceBusTriggerBinding("parameterName", typeof(UserDataType), argumentBinding, null, options, messagingProvider, "subscriptionName", "topicName");
         }
 
         [Theory]
@@ -42,8 +43,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Triggers
             UserDataType expectedObject = new UserDataType();
             PropertyInfo userProperty = typeof(UserDataType).GetProperty(userPropertyName);
             var parseMethod = userProperty.PropertyType.GetMethod(
-                "Parse", new Type[] {typeof(string)});
-            object convertedPropertyValue = parseMethod.Invoke(null, new object[] {userPropertyValue});
+                "Parse", new Type[] { typeof(string) });
+            object convertedPropertyValue = parseMethod.Invoke(null, new object[] { userPropertyValue });
             userProperty.SetValue(expectedObject, convertedPropertyValue);
             string messageContent = JsonConvert.SerializeObject(expectedObject);
             ValueBindingContext context = new ValueBindingContext(null, CancellationToken.None);

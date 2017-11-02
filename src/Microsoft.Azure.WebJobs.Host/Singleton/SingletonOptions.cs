@@ -11,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host
     /// The configuration needs to cooperate with the SDK's registered <see cref="IDistributedLockManager"/>. 
     /// For example, this configuration determines the refresh frequently for calls on <see cref="IDistributedLockManager.RenewAsync(IDistributedLock, CancellationToken)"/>. 
     /// </summary>
-    public sealed class SingletonConfiguration
+    public sealed class SingletonOptions
     {
         // These are the min/max values supported by Azure Storage
         private static readonly TimeSpan MinimumLeasePeriod = TimeSpan.FromSeconds(15);
@@ -26,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <summary>
         /// Constructs a new instance.
         /// </summary>
-        public SingletonConfiguration()
+        public SingletonOptions()
         {
             _lockPeriod = MinimumLeasePeriod;
             _listenerLockPeriod = MaximumLeasePeriod;

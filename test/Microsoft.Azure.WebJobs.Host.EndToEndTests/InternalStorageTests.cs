@@ -2,22 +2,21 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.IO;
-using System.Linq;
-using System.Text;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage.Queue;
-using Microsoft.WindowsAzure.Storage.Table;
-using Newtonsoft.Json.Linq;
+using Moq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
-    public class InternalStorageTests 
+    public class InternalStorageTests
     {
         // End-2-end test that we can run a JobHost from purely a SAS connection string. 
         [Fact]
@@ -40,39 +39,48 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var now = DateTime.UtcNow;
             var sig = container.GetSharedAccessSignature(new SharedAccessBlobPolicy
             {
-                 Permissions = SharedAccessBlobPermissions.Read | SharedAccessBlobPermissions.Write | SharedAccessBlobPermissions.List,
-                 SharedAccessStartTime = now.AddDays(-10),
-                 SharedAccessExpiryTime = now.AddDays(10)
+                Permissions = SharedAccessBlobPermissions.Read | SharedAccessBlobPermissions.Write | SharedAccessBlobPermissions.List,
+                SharedAccessStartTime = now.AddDays(-10),
+                SharedAccessExpiryTime = now.AddDays(10)
             });
 
             var fakeSasUri = container.Uri + sig;
-            
-            // Set env to the SAS container and clear out all other storage. 
-            using (EnvVarHolder.Set("AzureWebJobsInternalSasBlobContainer", fakeSasUri))
-            using (EnvVarHolder.Set("AzureWebJobsStorage", null))
-            using (EnvVarHolder.Set("AzureWebJobsDashboard", null))
-            {
-                var prog = new BasicProg();
-                var activator = new FakeActivator(prog);
-                JobHostConfiguration config = new JobHostConfiguration()
+            var prog = new BasicProg();
+            var activator = new FakeActivator(prog);
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<BasicProg>()
+                .ConfigureAppConfiguration(config =>
                 {
-                    TypeLocator = new FakeTypeLocator(typeof(BasicProg))                    
-                };
+                    // Set env to the SAS container and clear out all other storage. 
+                    config.AddInMemoryCollection(new Dictionary<string, string>()
+                    {
+                            { "AzureWebJobsInternalSasBlobContainer", fakeSasUri },
+                            { "AzureWebJobsStorage", null },
+                            { "AzureWebJobsDashboard", null }
+                    });
+                })
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<IJobActivator>(activator);
 
-                Assert.NotNull(config.InternalStorageConfiguration);
-                Assert.Equal(container.Name, config.InternalStorageConfiguration.InternalContainer.Name);
+                    // TODO: We shouldn't have to do this, but our default parser
+                    //       does not allow for null Storage/Dashboard.
+                    var mockParser = new Mock<IStorageAccountParser>();
+                    mockParser
+                        .Setup(p => p.ParseAccount(null, It.IsAny<string>()))
+                        .Returns<string>(null);
 
-                config.JobActivator = activator;
-                config.HostId = Guid.NewGuid().ToString("n");
-                config.DashboardConnectionString = null;
-                config.StorageConnectionString = null;
+                    services.AddSingleton<IStorageAccountParser>(mockParser.Object);
+                })
+                .Build();
 
+            var internalOptions = host.GetOptions<JobHostInternalStorageOptions>();
+            Assert.NotNull(internalOptions);
+            Assert.Equal(container.Name, internalOptions.InternalContainer.Name);
 
-                var host = new JobHost(config);
-                await host.CallAsync("Foo");
+            await host.GetJobHost().CallAsync("Foo");
 
-                Assert.Equal(1, prog._count); // Verify successfully called.
-            }
+            Assert.Equal(1, prog._count); // Verify successfully called.
         }
 
         public class BasicProg

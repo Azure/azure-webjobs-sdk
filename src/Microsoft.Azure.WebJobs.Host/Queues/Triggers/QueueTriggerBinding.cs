@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
         private readonly IStorageQueue _queue;
         private readonly ITriggerDataArgumentBinding<IStorageQueueMessage> _argumentBinding;
         private readonly IReadOnlyDictionary<string, Type> _bindingDataContract;
-        private readonly IQueueConfiguration _queueConfiguration;
+        private readonly JobHostQueuesOptions _queueOptions;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IContextSetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherSetter;
         private readonly ISharedContextProvider _sharedContextProvider;
@@ -33,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
         public QueueTriggerBinding(string parameterName,
             IStorageQueue queue,
             ITriggerDataArgumentBinding<IStorageQueueMessage> argumentBinding,
-            IQueueConfiguration queueConfiguration,
+            JobHostQueuesOptions queueOptions,
             IWebJobsExceptionHandler exceptionHandler,
             IContextSetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherSetter,
             ISharedContextProvider sharedContextProvider,
@@ -42,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             _queue = queue ?? throw new ArgumentNullException(nameof(queue));
             _argumentBinding = argumentBinding ?? throw new ArgumentNullException(nameof(argumentBinding));
             _bindingDataContract = CreateBindingDataContract(argumentBinding.BindingDataContract);
-            _queueConfiguration = queueConfiguration ?? throw new ArgumentNullException(nameof(queueConfiguration));
+            _queueOptions = queueOptions ?? throw new ArgumentNullException(nameof(queueOptions));
             _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
             _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter ?? throw new ArgumentNullException(nameof(messageEnqueuedWatcherSetter));
             _sharedContextProvider = sharedContextProvider ?? throw new ArgumentNullException(nameof(sharedContextProvider));
@@ -123,7 +123,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
                 throw new ArgumentNullException("context");
             }
 
-            var factory = new QueueListenerFactory(_queue, _queueConfiguration, _exceptionHandler,
+            var factory = new QueueListenerFactory(_queue, _queueOptions, _exceptionHandler,
                     _messageEnqueuedWatcherSetter, _sharedContextProvider, _loggerFactory, context.Executor);
 
             return factory.CreateAsync(context.CancellationToken);

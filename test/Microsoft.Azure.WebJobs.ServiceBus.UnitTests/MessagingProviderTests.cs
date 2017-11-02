@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
@@ -11,11 +12,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         public void CreateMessageReceiver_ReturnsExpectedReceiver()
         {
             string defaultConnection = "Endpoint=sb://default.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=abc123=";
-            var config = new ServiceBusConfiguration
+            var config = new ServiceBusOptions
             {
                 ConnectionString = defaultConnection
             };
-            var provider = new MessagingProvider(config);
+            var provider = new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(config));
             var receiver = provider.CreateMessageReceiver("entityPath", defaultConnection);
             Assert.Equal("entityPath", receiver.Path);
 

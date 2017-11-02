@@ -16,6 +16,7 @@ using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Newtonsoft.Json.Linq;
 using Xunit;
@@ -32,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private Mock<IContextSetter<IMessageEnqueuedWatcher>> _messageEnqueueSetterMock;
         private Mock<IStorageAccountProvider> _accountProviderMock;
 
-        private IQueueConfiguration _queueConfiguration;
+        private JobHostQueuesOptions _queueConfiguration;
         private ISharedContextProvider _sharedContextProvider;
         private SharedQueueHandler _sharedQueue;
 
@@ -53,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             _exceptionMock = new Mock<IWebJobsExceptionHandler>();
 
-            _queueConfiguration = new FakeQueueConfiguration(accountProvider);
+            _queueConfiguration = new FakeQueuesOptionsFactory(accountProvider).Create(string.Empty);
 
             _sharedContextProvider = new SharedContextProvider();
 
@@ -66,7 +67,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                                                 _hostIdMock.Object,
                                                 _exceptionMock.Object,
                                                 factory,
-                                                _queueConfiguration,
+                                                new OptionsWrapper<JobHostQueuesOptions>(_queueConfiguration),
                                                 _sharedContextProvider,
                                                 _messageEnqueueSetterMock.Object
                                                 );

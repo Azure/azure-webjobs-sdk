@@ -24,28 +24,39 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     internal class FunctionExecutor : IFunctionExecutor
     {
         private readonly IFunctionInstanceLogger _functionInstanceLogger;
-        private readonly IFunctionOutputLogger _functionOutputLogger;
+        private readonly IFunctionOutputLoggerProvider _functionOutputLoggerProvider;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IAsyncCollector<FunctionInstanceLogEntry> _functionEventCollector;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger _resultsLogger;
         private readonly IEnumerable<IFunctionFilter> _globalFunctionFilters;
 
+        private IFunctionOutputLogger _functionOutputLogger;
         private HostOutputMessage _hostOutputMessage;
 
-        public FunctionExecutor(IFunctionInstanceLogger functionInstanceLogger, IFunctionOutputLogger functionOutputLogger,
+        public FunctionExecutor(IFunctionInstanceLogger functionInstanceLogger, IFunctionOutputLoggerProvider functionOutputLoggerProvider,
                 IWebJobsExceptionHandler exceptionHandler,
-                IAsyncCollector<FunctionInstanceLogEntry> functionEventCollector = null,
+                IAsyncCollector<FunctionInstanceLogEntry> functionEventCollector,
                 ILoggerFactory loggerFactory = null,
                 IEnumerable<IFunctionFilter> globalFunctionFilters = null)
         {
             _functionInstanceLogger = functionInstanceLogger ?? throw new ArgumentNullException(nameof(functionInstanceLogger));
-            _functionOutputLogger = functionOutputLogger ?? throw new ArgumentNullException(nameof(functionOutputLogger));
+            _functionOutputLoggerProvider = functionOutputLoggerProvider;
             _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
-            _functionEventCollector = functionEventCollector;
+            _functionEventCollector = functionEventCollector ?? throw new ArgumentNullException(nameof(functionEventCollector));
             _loggerFactory = loggerFactory;
             _resultsLogger = _loggerFactory?.CreateLogger(LogCategories.Results);
             _globalFunctionFilters = globalFunctionFilters ?? Enumerable.Empty<IFunctionFilter>();
+        }
+
+        private async Task<IFunctionOutputLogger> GetFunctionOutputLogger(CancellationToken cancellationToken)
+        {
+            if (_functionOutputLogger == null)
+            {
+                _functionOutputLogger = await _functionOutputLoggerProvider.GetAsync(cancellationToken);
+            }
+
+            return _functionOutputLogger;
         }
 
         public HostOutputMessage HostOutputMessage
@@ -188,7 +199,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             ITaskSeriesTimer updateOutputLogTimer = null;
             TextWriter functionOutputTextWriter = null;
 
-            outputDefinition = await _functionOutputLogger.CreateAsync(instance, cancellationToken);
+            IFunctionOutputLogger outputLogger = await GetFunctionOutputLogger(cancellationToken);
+            outputDefinition = await outputLogger.CreateAsync(instance, cancellationToken);
             outputLog = outputDefinition.CreateOutput();
             functionOutputTextWriter = outputLog.Output;
             updateOutputLogTimer = StartOutputTimer(outputLog.UpdateCommand, _exceptionHandler);
@@ -220,11 +232,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     {
                         startedMessageId = await LogFunctionStartedAsync(message, outputDefinition, parameterHelper, cancellationToken);
 
-                        if (_functionEventCollector != null)
-                        {
-                            // Log started
-                            await NotifyPostBindAsync(instanceLogEntry, message.Arguments);
-                        }
+                        // Log started
+                        await NotifyPostBindAsync(instanceLogEntry, message.Arguments);
 
                         try
                         {
@@ -678,11 +687,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             };
             Debug.Assert(fastItem.IsStart);
 
-            if (_functionEventCollector != null)
-            {
-                // Log pre-bind event. 
-                await _functionEventCollector.AddAsync(fastItem);
-            }
+            // Log pre-bind event. 
+            await _functionEventCollector.AddAsync(fastItem);
+
             return fastItem;
         }
 
@@ -693,10 +700,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             fastItem.Arguments = arguments;
             Debug.Assert(fastItem.IsPostBind);
 
-            if (_functionEventCollector == null)
-            {
-                return Task.CompletedTask;
-            }
             return _functionEventCollector.AddAsync(fastItem);
         }
 
@@ -725,10 +728,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 intanceLogEntry.ErrorDetails = ex.Message;
             }
 
-            if (_functionEventCollector == null)
-            {
-                return Task.CompletedTask;
-            }
             return _functionEventCollector.AddAsync(intanceLogEntry);
         }
 
@@ -873,7 +872,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 {
                     foreach (KeyValuePair<string, IValueProvider> parameter in _parameters)
                     {
-                        arguments.Add(parameter.Key, parameter.Value.ToInvokeString());
+                        arguments.Add(parameter.Key, parameter.Value?.ToInvokeString() ?? "null");
                     }
                 }
 

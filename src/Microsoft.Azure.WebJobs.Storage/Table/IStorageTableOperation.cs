@@ -11,12 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Table
 #endif
 {
     /// <summary>Defines an operation on a table.</summary>
-#if PUBLICSTORAGE
-    
     public interface IStorageTableOperation
-#else
-    internal interface IStorageTableOperation
-#endif
     {
         /// <summary>Gets the type of operation to perform.</summary>
         /// <remarks>

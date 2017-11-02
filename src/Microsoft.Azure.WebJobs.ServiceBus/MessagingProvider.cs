@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Concurrent;
 using Microsoft.Azure.ServiceBus.Core;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -11,23 +12,19 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     /// This class provides factory methods for the creation of instances
     /// used for ServiceBus message processing.
     /// </summary>
-    public class MessagingProvider
+    public class MessagingProvider : IMessagingProvider
     {
-        private readonly ServiceBusConfiguration _config;
+        private readonly ServiceBusOptions _config;
         private readonly ConcurrentDictionary<string, MessageReceiver> _messageReceiverCache = new ConcurrentDictionary<string, MessageReceiver>();
         private readonly ConcurrentDictionary<string, MessageSender> _messageSenderCache = new ConcurrentDictionary<string, MessageSender>();
 
         /// <summary>
         /// Constructs a new instance.
         /// </summary>
-        /// <param name="config">The <see cref="ServiceBusConfiguration"/>.</param>
-        public MessagingProvider(ServiceBusConfiguration config)
+        /// <param name="serviceBusOptions">The <see cref="ServiceBusOptions"/>.</param>
+        public MessagingProvider(IOptions<ServiceBusOptions> serviceBusOptions)
         {
-            if (config == null)
-            {
-                throw new ArgumentNullException("config");
-            }
-            _config = config;
+            _config = serviceBusOptions?.Value ?? throw new ArgumentNullException(nameof(serviceBusOptions));
         }
 
         /// <summary>

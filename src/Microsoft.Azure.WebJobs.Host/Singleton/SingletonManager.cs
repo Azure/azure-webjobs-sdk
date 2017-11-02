@@ -15,6 +15,7 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
@@ -24,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host
     internal class SingletonManager
     {
         private readonly INameResolver _nameResolver;
-        private readonly SingletonConfiguration _config;
+        private readonly SingletonOptions _config;
         private readonly ILogger _logger;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IDistributedLockManager _lockManager;
@@ -40,12 +41,12 @@ namespace Microsoft.Azure.WebJobs.Host
         {
         }
 
-        public SingletonManager(IDistributedLockManager lockManager, SingletonConfiguration config, IWebJobsExceptionHandler exceptionHandler,
+        public SingletonManager(IDistributedLockManager lockManager, IOptions<SingletonOptions> config, IWebJobsExceptionHandler exceptionHandler,
             ILoggerFactory loggerFactory, IHostIdProvider hostIdProvider, INameResolver nameResolver = null)
         {
             _lockManager = lockManager;
             _nameResolver = nameResolver;
-            _config = config;
+            _config = config.Value;
             _loggerFactory = loggerFactory;
             _exceptionHandler = exceptionHandler;
             _logger = _loggerFactory?.CreateLogger(LogCategories.Singleton);
@@ -65,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.Host
             }
         }
 
-        internal virtual SingletonConfiguration Config
+        internal virtual SingletonOptions Config
         {
             get
             {
@@ -144,7 +145,7 @@ namespace Microsoft.Azure.WebJobs.Host
             return new TaskSeriesTimer(command, this._exceptionHandler, Task.Delay(normalUpdateInterval));
         }
 
-        internal static TimeSpan GetLockPeriod(SingletonAttribute attribute, SingletonConfiguration config)
+        internal static TimeSpan GetLockPeriod(SingletonAttribute attribute, SingletonOptions config)
         {
             return attribute.Mode == SingletonMode.Listener ?
                     config.ListenerLockPeriod : config.LockPeriod;
@@ -277,7 +278,7 @@ namespace Microsoft.Azure.WebJobs.Host
             return singletonAttribute;
         }
 
-        internal static TimeSpan GetLockAcquisitionTimeout(SingletonAttribute attribute, SingletonConfiguration config)
+        internal static TimeSpan GetLockAcquisitionTimeout(SingletonAttribute attribute, SingletonOptions config)
         {
             TimeSpan acquisitionTimeout = attribute.LockAcquisitionTimeout != -1
                     ? TimeSpan.FromSeconds(attribute.LockAcquisitionTimeout)

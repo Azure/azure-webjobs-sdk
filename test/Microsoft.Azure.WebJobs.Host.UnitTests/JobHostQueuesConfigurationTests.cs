@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void Constructor_Defaults()
         {
-            JobHostQueuesConfiguration config = new JobHostQueuesConfiguration();
+            JobHostQueuesOptions config = new JobHostQueuesOptions();
 
             Assert.Equal(16, config.BatchSize);
             Assert.Equal(8, config.NewBatchThreshold);
@@ -26,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void NewBatchThreshold_CanSetAndGetValue()
         {
-            JobHostQueuesConfiguration config = new JobHostQueuesConfiguration();
+            JobHostQueuesOptions config = new JobHostQueuesOptions();
 
             // Unless explicitly set, NewBatchThreshold will be computed based
             // on the current BatchSize
@@ -45,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void VisibilityTimeout_CanGetAndSetValue()
         {
-            JobHostQueuesConfiguration config = new JobHostQueuesConfiguration();
+            JobHostQueuesOptions config = new JobHostQueuesOptions();
 
             Assert.Equal(TimeSpan.Zero, config.VisibilityTimeout);
 
@@ -60,7 +60,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
                 { "MaxPollingInterval", 5000 }
             };
-            var config = jo.ToObject<JobHostQueuesConfiguration>();
+            var config = jo.ToObject<JobHostQueuesOptions>();
             Assert.Equal(TimeSpan.FromMilliseconds(5000), config.MaxPollingInterval);
             string json = JsonConvert.SerializeObject(config);
 
@@ -68,7 +68,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
                 { "MaxPollingInterval", "00:00:05" }
             };
-            config = jo.ToObject<JobHostQueuesConfiguration>();
+            config = jo.ToObject<JobHostQueuesOptions>();
             Assert.Equal(TimeSpan.FromMilliseconds(5000), config.MaxPollingInterval);
             json = JsonConvert.SerializeObject(config);
         }

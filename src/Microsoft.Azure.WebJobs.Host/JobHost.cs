@@ -9,13 +9,13 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 
 namespace Microsoft.Azure.WebJobs
@@ -24,14 +24,15 @@ namespace Microsoft.Azure.WebJobs
     /// A <see cref="JobHost"/> is the execution container for jobs. Once started, the
     /// <see cref="JobHost"/> will manage and run job functions when they are triggered.
     /// </summary>
-    public class JobHost : IDisposable, IJobInvoker
+    public class JobHost : IJobHost, IDisposable, IJobInvoker
     {
         private const int StateNotStarted = 0;
         private const int StateStarting = 1;
         private const int StateStarted = 2;
         private const int StateStoppingOrStopped = 3;
 
-        private readonly JobHostConfiguration _config;
+        private readonly JobHostOptions _options;
+        private readonly IJobHostContextFactory _jobHostContextFactory;
         private readonly CancellationTokenSource _shutdownTokenSource;
         private readonly WebJobsShutdownWatcher _shutdownWatcher;
         private readonly CancellationTokenSource _stoppingTokenSource;
@@ -44,28 +45,14 @@ namespace Microsoft.Azure.WebJobs
         // Points to a completed task after initialization. 
         private Task _initializationRunning = null;
 
-        // These are services that are accessible without starting the execution container. 
-        // They include the initial set of JobHostConfiguration services as well as 
-        // additional services created. 
-        private ServiceProviderWrapper _services;
-
         private int _state;
         private Task _stopTask;
         private bool _disposed;
 
-        // Common lock to protect fields. 
+        // Common lock to protect fields.
         private object _lock = new object();
 
         private ILogger _logger;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="JobHost"/> class, using a Microsoft Azure Storage connection
-        /// string located in the connectionStrings section of the configuration file or in environment variables.
-        /// </summary>
-        public JobHost()
-            : this(new JobHostConfiguration())
-        {
-        }
 
         static JobHost()
         {
@@ -82,14 +69,15 @@ namespace Microsoft.Azure.WebJobs
         /// Initializes a new instance of the <see cref="JobHost"/> class using the configuration provided.
         /// </summary>
         /// <param name="configuration">The job host configuration.</param>
-        public JobHost(JobHostConfiguration configuration)
+        public JobHost(IOptions<JobHostOptions> options, IJobHostContextFactory jobHostContextFactory)
         {
-            if (configuration == null)
+            if (options == null)
             {
-                throw new ArgumentNullException("configuration");
+                throw new ArgumentNullException(nameof(options));
             }
 
-            _config = configuration;
+            _options = options.Value;
+            _jobHostContextFactory = jobHostContextFactory;
             _shutdownTokenSource = new CancellationTokenSource();
             _shutdownWatcher = WebJobsShutdownWatcher.Create(_shutdownTokenSource);
             _stoppingTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_shutdownTokenSource.Token);
@@ -174,11 +162,7 @@ namespace Microsoft.Azure.WebJobs
             await _listener.StopAsync(cancellationToken);
 
             // Flush remaining logs
-            var functionEventCollector = _context.FunctionEventCollector;
-            if (functionEventCollector != null)
-            {
-                await functionEventCollector.FlushAsync(cancellationToken);
-            }
+            await _context.EventCollector.FlushAsync(cancellationToken);
 
             string msg = "Job host stopped";
             _logger?.LogInformation(msg);
@@ -422,9 +406,7 @@ namespace Microsoft.Azure.WebJobs
         {
             try
             {
-                InitializeServices();
-
-                var context = await _config.CreateJobHostContextAsync(_services, this, _shutdownTokenSource.Token, cancellationToken);
+                var context = await _jobHostContextFactory.Create(_shutdownTokenSource.Token, cancellationToken);
 
                 // must call this BEFORE setting the results below
                 // since listener startup is blocking on those members
@@ -455,33 +437,6 @@ namespace Microsoft.Azure.WebJobs
         /// </summary>
         protected virtual void OnHostStarted()
         {
-        }
-
-        // Ensure the static services are initialized. 
-        // These are derived from the underlying JobHostConfiguration. 
-        // Caller ensures this is single threaded. 
-        private void InitializeServices()
-        {
-            if (this._services != null)
-            {
-                return; // already Created 
-            }
-
-            var services = this._config.CreateStaticServices();
-
-            _services = services;
-        }
-
-        /// <summary>
-        /// Get set of services. 
-        /// </summary>
-        public IServiceProvider Services
-        {
-            get
-            {
-                InitializeServices();
-                return _services;
-            }
         }
     }
 }

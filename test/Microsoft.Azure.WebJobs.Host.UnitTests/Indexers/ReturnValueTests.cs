@@ -1,20 +1,19 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host.Config;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Xunit;
 using System.Threading;
-using Microsoft.Azure.WebJobs.Host.Triggers;
+using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
+using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.Description;
+using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Extensions.Hosting;
+using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 {
@@ -24,19 +23,27 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         public void ImplicitReturn()
         {
             var ext = new MyExtension();
-            var prog = TestHelpers.NewJobHost<TestProg>(ext);
 
-            prog.Call("ImplicitReturn", new { trigger = "trigger" } );
-            ext.AssertFromBeta("triggerbeta");        
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<TestProg>()
+                .AddExtension(ext)
+                .Build();
+
+            host.GetJobHost<TestProg>().Call("ImplicitReturn", new { trigger = "trigger" });
+            ext.AssertFromBeta("triggerbeta");
         }
 
         [Fact]
         public void ImplicitTaskReturn()
         {
             var ext = new MyExtension();
-            var prog = TestHelpers.NewJobHost<TestProg>(ext);
 
-            prog.Call("ImplicitTaskReturn", new { trigger = "trigger" });
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<TestProg>()
+                .AddExtension(ext)
+                .Build();
+
+            host.GetJobHost<TestProg>().Call("ImplicitTaskReturn", new { trigger = "trigger" });
             ext.AssertFromBeta("triggerbeta");
         }
 
@@ -44,9 +51,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         public void ExplicitReturn()
         {
             var ext = new MyExtension();
-            var prog = TestHelpers.NewJobHost<TestProg>(ext);
 
-            prog.Call("ExplicitReturn");
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<TestProg>()
+                .AddExtension(ext)
+                .Build();
+
+            host.GetJobHost<TestProg>().Call("ExplicitReturn");
             ext.AssertFromAlpha("alpha");
         }
 
@@ -54,9 +65,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         public void ExplicitTaskReturn()
         {
             var ext = new MyExtension();
-            var prog = TestHelpers.NewJobHost<TestProg>(ext);
 
-            prog.Call("ExplicitTaskReturn");
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<TestProg>()
+                .AddExtension(ext)
+                .Build();
+
+            host.GetJobHost<TestProg>().Call("ExplicitTaskReturn");
             ext.AssertFromAlpha("alpha");
         }
 
@@ -64,9 +79,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         public void ExplicitReturnWins()
         {
             var ext = new MyExtension();
-            var prog = TestHelpers.NewJobHost<TestProg>(ext);        
 
-            prog.Call("ExplicitReturnWins", new { trigger = "trigger" });
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<TestProg>()
+                .AddExtension(ext)
+                .Build();
+
+            host.GetJobHost<TestProg>().Call("ExplicitReturnWins", new { trigger = "trigger" });
             ext.AssertFromAlpha("triggeralpha");
         }
 
@@ -74,9 +93,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         public void TestIndexError()
         {
             var ext = new MyExtension();
-            var prog = TestHelpers.NewJobHost<TestProgErrors>(ext);
 
-            TestHelpers.AssertIndexingError(() => prog.Call("Error"), "TestProgErrors.Error",
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<TestProgErrors>()
+                .AddExtension(ext)
+                .Build();
+
+            TestHelpers.AssertIndexingError(() => host.GetJobHost<TestProgErrors>().Call("Error"), "TestProgErrors.Error",
                 "Functions must return Task or void, have a binding attribute for the return value, or be triggered by a binding that natively supports return values.");
         }
 
@@ -144,7 +167,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                 context.AddBindingRule<BetaAttribute>().
                     BindToTrigger(this);
             }
-        
+
             Task<ITriggerBinding> ITriggerBindingProvider.TryCreateAsync(TriggerBindingProviderContext context)
             {
                 return Task.FromResult<ITriggerBinding>(new BetaTrigger(this));
@@ -202,7 +225,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
                 public Task<object> GetValueAsync()
                 {
-                    return Task.FromResult(Value);                    
+                    return Task.FromResult(Value);
                 }
                 public string ToInvokeString()
                 {
@@ -218,7 +241,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
                 public Task SetValueAsync(object value, CancellationToken cancellationToken)
                 {
-                    _parent._itemsFromBeta.Add((string) value);
+                    _parent._itemsFromBeta.Add((string)value);
                     return Task.CompletedTask;
                 }
             }
@@ -257,7 +280,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             public string ExplicitReturnWins([Beta] string trigger)
             {
                 return trigger + "alpha";
-            }            
+            }
         }
     }
 }

@@ -15,12 +15,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Blob
 #endif
 {
     /// <summary>Defines an append blob.</summary>
-#if PUBLICSTORAGE
-    
     public interface IStorageAppendBlob : IStorageBlob
-#else
-    internal interface IStorageAppendBlob : IStorageBlob
-#endif
     {
         /// <summary>Gets the underlying <see cref="CloudAppendBlob"/>.</summary>
         new CloudAppendBlob SdkObject { get; }

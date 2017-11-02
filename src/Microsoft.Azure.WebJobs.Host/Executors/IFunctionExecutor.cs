@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal interface IFunctionExecutor
+    public interface IFunctionExecutor
     {
         Task<IDelayedException> TryExecuteAsync(IFunctionInstance instance, CancellationToken cancellationToken);
     }

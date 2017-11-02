@@ -16,15 +16,21 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     /// </summary>
     internal sealed class StorageAccountParser : IStorageAccountParser
     {
+        private readonly StorageClientFactory _storageClientFactory;
+
+        public StorageAccountParser(StorageClientFactory storageClientFactory)
+        {
+            _storageClientFactory = storageClientFactory;
+        }
+
         /// <summary>
         /// Throwing version of parse account API. It calls TryParseAccount internally, analyzes returned result,
         /// and throws an exception with formatted message in case of error.
         /// </summary>
         /// <param name="connectionString">A Storage account connection string as retrieved from the config</param>
         /// <param name="connectionStringName">Friendly connection string name used to format error message</param>
-        /// <param name="services">The <see cref="IServiceProvider"/> to use.</param>
         /// <returns>An instance of <see cref="StorageAccount"/> associated with the given connection string</returns>
-        public IStorageAccount ParseAccount(string connectionString, string connectionStringName, IServiceProvider services)
+        public IStorageAccount ParseAccount(string connectionString, string connectionStringName)
         {
             CloudStorageAccount account;
             StorageAccountParseResult result = TryParseAccount(connectionString, out account);
@@ -35,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 throw new InvalidOperationException(message);
             }
 
-            return new StorageAccount(account, services);
+            return new StorageAccount(account, _storageClientFactory);
         }
 
         /// <summary>

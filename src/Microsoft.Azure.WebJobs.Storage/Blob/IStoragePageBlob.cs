@@ -13,12 +13,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Blob
 #endif
 {
     /// <summary>Defines a page blob.</summary>
-#if PUBLICSTORAGE
-    
     public interface IStoragePageBlob : IStorageBlob
-#else
-    internal interface IStoragePageBlob : IStorageBlob
-#endif
     {
         /// <summary>Gets the underlying <see cref="CloudPageBlob"/>.</summary>
         new CloudPageBlob SdkObject { get; }

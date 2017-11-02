@@ -12,12 +12,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Table
 #endif
 {
     /// <summary>Defines an entity resolver.</summary>
-#if PUBLICSTORAGE
-    
     public interface IEntityResolver
-#else
-    internal interface IEntityResolver
-#endif
     {
         /// <summary>Gets the type of entity returned by <see cref="Resolve"/>.</summary>
         Type EntityType { get; }

@@ -9,7 +9,10 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Microsoft.Azure.WebJobs.Host.Storage.Queue;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Moq;
 using Xunit;
@@ -31,7 +34,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Queues
             CloudQueue queue = Fixture.CreateNewQueue();
             CloudQueue poisonQueue = Fixture.CreateNewQueue();
 
-            JobHostQueuesConfiguration queuesConfig = new JobHostQueuesConfiguration { MaxDequeueCount = 2 };
+            var queuesConfig = new JobHostQueuesOptions { MaxDequeueCount = 2 };
 
             StorageQueue storageQueue = new StorageQueue(new StorageQueueClient(Fixture.QueueClient), queue);
             StorageQueue storagePoisonQueue = new StorageQueue(new StorageQueueClient(Fixture.QueueClient), poisonQueue);
@@ -42,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Queues
             await queue.AddMessageAsync(message, null, null, null, null, CancellationToken.None);
             CloudQueueMessage messageFromCloud = await queue.GetMessageAsync();
 
-            QueueListener listener = new QueueListener(storageQueue, storagePoisonQueue, mockTriggerExecutor.Object, new WebJobsExceptionHandler(),
+            QueueListener listener = new QueueListener(storageQueue, storagePoisonQueue, mockTriggerExecutor.Object, new WebJobsExceptionHandler(null),
                 null, null, queuesConfig);
 
             mockTriggerExecutor
@@ -81,8 +84,8 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Queues
             await queue.AddMessageAsync(message, null, null, null, null, CancellationToken.None);
             CloudQueueMessage messageFromCloud = await queue.GetMessageAsync();
 
-            QueueListener listener = new QueueListener(storageQueue, null, mockTriggerExecutor.Object, new WebJobsExceptionHandler(),
-                null, null, new JobHostQueuesConfiguration());
+            QueueListener listener = new QueueListener(storageQueue, null, mockTriggerExecutor.Object, new WebJobsExceptionHandler(null),
+                null, null, new JobHostQueuesOptions());
             listener.MinimumVisibilityRenewalInterval = TimeSpan.FromSeconds(1);
 
             // Set up a function that sleeps to allow renewal
@@ -115,11 +118,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Queues
 
             public TestFixture()
             {
-                Mock<IServiceProvider> services = new Mock<IServiceProvider>(MockBehavior.Strict);
-                StorageClientFactory clientFactory = new StorageClientFactory();
-                services.Setup(p => p.GetService(typeof(StorageClientFactory))).Returns(clientFactory);
+                // Create a default host to get some default services
+                IHost host = new HostBuilder()
+                    .ConfigureDefaultTestHost()
+                    .Build();
 
-                DefaultStorageAccountProvider accountProvider = new DefaultStorageAccountProvider(services.Object);
+                var accountProvider = host.Services.GetService<IStorageAccountProvider>();
                 var task = accountProvider.GetStorageAccountAsync(CancellationToken.None);
                 IStorageQueueClient client = task.Result.CreateQueueClient();
                 QueueClient = client.SdkObject;

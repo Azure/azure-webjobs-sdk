@@ -4,8 +4,10 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Xunit;
@@ -26,19 +28,22 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private readonly CloudStorageAccount _storageAccount;
         private readonly RandomNameResolver _resolver;
-        private readonly JobHostConfiguration _hostConfiguration;
+        private readonly IHost _host;
 
         public AsyncCancellationEndToEndTests()
         {
             _resolver = new RandomNameResolver();
 
-            _hostConfiguration = new JobHostConfiguration()
-            {
-                NameResolver = _resolver,
-                TypeLocator = new FakeTypeLocator(typeof(AsyncCancellationEndToEndTests))
-            };
-            _hostConfiguration.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
-            _storageAccount = CloudStorageAccount.Parse(_hostConfiguration.StorageConnectionString);
+            _host = new HostBuilder()
+                .ConfigureDefaultTestHost<AsyncCancellationEndToEndTests>()
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<INameResolver, RandomNameResolver>();
+                })
+                .Build();
+
+            var accountProvider = _host.Services.GetService<IStorageAccountProvider>();
+            _storageAccount = accountProvider.TryGetAccountAsync(ConnectionStringNames.Storage, CancellationToken.None).GetAwaiter().GetResult().SdkObject;
 
             _invokeInFunction = () => { };
             _tokenCancelled = false;
@@ -110,11 +115,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 SynchronizationContext.SetSynchronizationContext(null);
                 using (WebJobsShutdownContext shutdownContext = new WebJobsShutdownContext())
-                using (JobHost host = new JobHost(_hostConfiguration))
+                using (_host)
                 {
                     _invokeInFunction = () => { shutdownContext.NotifyShutdown(); };
 
-                    Task callTask = InvokeNoAutomaticTriggerFunction(host);
+                Task callTask = InvokeNoAutomaticTriggerFunction(jobHost);
 
                     EvaluateNoAutomaticTriggerCancellation(callTask, expectedCancellation: true);
                 }
@@ -129,31 +134,32 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         public void WebJobsShutdown_WhenUsingTriggeredFunction_TriggersCancellationToken()
         {
             using (WebJobsShutdownContext shutdownContext = new WebJobsShutdownContext())
-            using (JobHost host = new JobHost(_hostConfiguration))
+            using (_host)
             {
+                JobHost jobHost = _host.GetJobHost();
                 _invokeInFunction = () => { shutdownContext.NotifyShutdown(); };
 
-                PrepareHostForTrigger(host, startHost: true);
+                PrepareHostForTrigger(jobHost, startHost: true);
 
                 EvaluateTriggeredCancellation(expectedCancellation: true);
             }
         }
 
         [Fact]
-        public void Stop_WhenUsingHostCall_DoesNotTriggerCancellationToken()
+        public async Task Stop_WhenUsingHostCall_DoesNotTriggerCancellationToken()
         {
             // Run test in multithreaded environment
             var oldContext = SynchronizationContext.Current;
             try
             {
                 SynchronizationContext.SetSynchronizationContext(null);
-                using (JobHost host = new JobHost(_hostConfiguration))
+                using (_host)
                 {
                     host.Start();
 
-                    Task callTask = InvokeNoAutomaticTriggerFunction(host);
+                Task callTask = InvokeNoAutomaticTriggerFunction(jobHost);
 
-                    host.Stop();
+                await _host.StopAsync();
 
                     EvaluateNoAutomaticTriggerCancellation(callTask, expectedCancellation: false);
                 }
@@ -167,11 +173,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public void Stop_WhenUsingTriggeredFunction_TriggersCancellationToken()
         {
-            using (JobHost host = new JobHost(_hostConfiguration))
+            // Note: Calling IHost.StopAsync() does not stop registered IHostedServices. The host must
+            //       be disposed in order to stop those.
+            using (_host)
             {
-                PrepareHostForTrigger(host, startHost: true);
-
-                host.Stop();
+                JobHost jobHost = _host.GetJobHost();
+                PrepareHostForTrigger(jobHost, startHost: true);
+                jobHost.Stop();
 
                 EvaluateTriggeredCancellation(expectedCancellation: true);
             }
@@ -180,13 +188,17 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public void Dispose_WhenUsingHostCall_TriggersCancellationToken()
         {
+            // Note: This is still failing. Using JobHost.CallAsync() forces the JobHost to start, but the 
+            //       wrapping IHostedService and IHost don't know that it's started. So when the IHost is disposed,
+            //       it never cancels or stops anything related to the JobHost.
+
             Task callTask;
             // Run test in multithreaded environment
             var oldContext = SynchronizationContext.Current;
             try
             {
                 SynchronizationContext.SetSynchronizationContext(null);
-                using (JobHost host = new JobHost(_hostConfiguration))
+                using (_host)
                 {
                     callTask = InvokeNoAutomaticTriggerFunction(host);
                 }
@@ -202,9 +214,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public void Dispose_WhenUsingTriggeredFunction_TriggersCancellationToken()
         {
-            using (JobHost host = new JobHost(_hostConfiguration))
+            using (_host)
             {
-                PrepareHostForTrigger(host, startHost: true);
+                JobHost jobHost = _host.GetJobHost();
+                PrepareHostForTrigger(jobHost, startHost: true);
             }
 
             EvaluateTriggeredCancellation(expectedCancellation: true);
@@ -219,11 +232,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 SynchronizationContext.SetSynchronizationContext(null);
                 using (CancellationTokenSource tokenSource = new CancellationTokenSource())
-                using (JobHost host = new JobHost(_hostConfiguration))
+                using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
                 {
                     _invokeInFunction = () => { tokenSource.Cancel(); };
 
-                    Task callTask = InvokeNoAutomaticTriggerFunction(host, tokenSource.Token);
+                Task callTask = InvokeNoAutomaticTriggerFunction(jobHost, tokenSource.Token);
 
                     EvaluateNoAutomaticTriggerCancellation(callTask, expectedCancellation: true);
                 }
@@ -244,12 +257,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 SynchronizationContext.SetSynchronizationContext(null);
 
                 using (CancellationTokenSource tokenSource = new CancellationTokenSource())
-                using (JobHost host = new JobHost(_hostConfiguration))
+                using (_host)
                 {
                     _invokeInFunction = () => { tokenSource.Cancel(); };
 
-                    PrepareHostForTrigger(host, startHost: false);
-                    Assert.True(host.StartAsync(tokenSource.Token).WaitUntilCompleted(DefaultTimeout));
+                PrepareHostForTrigger(jobHost, startHost: false);
+                Assert.True(_host.StartAsync(tokenSource.Token).WaitUntilCompleted(DefaultTimeout));
 
                     EvaluateTriggeredCancellation(expectedCancellation: false);
                 }
@@ -262,7 +275,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private void PrepareHostForTrigger(JobHost host, bool startHost)
         {
-            host.Call(typeof(AsyncCancellationEndToEndTests).GetMethod("WriteQueueMessage"));
+            host.Call(typeof(AsyncCancellationEndToEndTests).GetMethod(nameof(WriteQueueMessage)));
 
             if (startHost)
             {
@@ -279,7 +292,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private Task InvokeNoAutomaticTriggerFunction(JobHost host, CancellationToken token)
         {
             Task callTask = host.CallAsync(
-                typeof(AsyncCancellationEndToEndTests).GetMethod("InfiniteRunningFunctionUnlessCancelledManual"),
+                typeof(AsyncCancellationEndToEndTests).GetMethod(nameof(InfiniteRunningFunctionUnlessCancelledManual)),
                 token);
             Assert.True(_functionStarted.WaitOne(DefaultTimeout));
 

@@ -1,16 +1,16 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Azure.WebJobs.Host.Config;
-using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
+using Newtonsoft.Json;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
@@ -27,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             public int val1 { get; set; }
         }
 
-         public class FunctionsSingle : FunctionsBase
+        public class FunctionsSingle : FunctionsBase
         {
             public void SingleTrigger([FakeQueueTrigger] FakeQueueData single)
             {
@@ -46,7 +46,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 this.Finished();
             }
         }
-                
+
         public class FunctionsByteArray : FunctionsBase
         {
             // If a Item-->byte[]  converter is registered with the ConverterManager, then 
@@ -58,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 this.Finished();
             }
         }
-                
+
         public class FunctionsDoubleByteArray : FunctionsBase
         {
             public void Trigger([FakeQueueTrigger] byte[][] single)
@@ -82,7 +82,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             public async Task SinglePocoTrigger([FakeQueueTrigger] Payload single, int val1,
                 [FakeQueue(Prefix = "x{val1}")] IAsyncCollector<FakeQueueData> q2)
             {
-                await q2.AddAsync(new FakeQueueData { Message = "abc"});
+                await q2.AddAsync(new FakeQueueData { Message = "abc" });
 
                 this.Finished();
             }
@@ -162,7 +162,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             Assert.True(object.ReferenceEquals(e0, items[0]));
             Assert.True(object.ReferenceEquals(e1, items[1]));
         }
-                
+
         [Fact]
         public void TestFunctionsOutputUsesParams()
         {
@@ -176,7 +176,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             Assert.Single(items);
 
             // this trigger strongly binds to a poco and adds Payload.val1
-            var d = (FakeQueueData) (items[0]);
+            var d = (FakeQueueData)(items[0]);
             Assert.Equal("x123", d.ExtraPropertery);
             Assert.Equal("abc", d.Message);
         }
@@ -203,7 +203,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         public void TestMultiPocoDispatch()
         {
             var payload0 = new Payload { val1 = 100 };
-            var payload1 = new Payload { val1 = 200 };            
+            var payload1 = new Payload { val1 = 200 };
             var e0 = new FakeQueueData
             {
                 Message = JsonConvert.SerializeObject(payload0)
@@ -217,8 +217,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             Assert.Equal(2, items.Length);
 
             // this trigger strongly binds to a poco and adds Payload.val1
-            Assert.Equal(payload0.val1, ((Payload) items[0]).val1);
-            Assert.Equal(payload1.val1, ((Payload) items[1]).val1);
+            Assert.Equal(payload0.val1, ((Payload)items[0]).val1);
+            Assert.Equal(payload1.val1, ((Payload)items[1]).val1);
         }
 
         // Queue 2 native events to a single-dispatch trigger and ensure they both fire. 
@@ -256,12 +256,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 Message = "ABC"
             };
 
-            var client = new FakeQueueClient();
-            client.SetConverters = AddItem2ByteArrayConverter;
-            
-            var items = Run<FunctionsByteArray>(client, e0);
+            var items = Run<FunctionsByteArray>(c => c.SetConverters = AddItem2ByteArrayConverter, e0);
             Assert.Single(items);
-            
+
             // This uses the Item --> byte[] converter. Dispatch as a single item.
             // Received as 1 object, a byte[]. 
             var bytes = System.Text.Encoding.UTF8.GetBytes(e0.Message);
@@ -273,10 +270,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         [Fact]
         public void TestByteArrayDispatch3()
         {
-            var client = new FakeQueueClient();
-            client.SetConverters = AddItem2ByteArrayConverter;
-
-            object[] items = Run<FunctionsDoubleByteArray>(client,
+            object[] items = Run<FunctionsDoubleByteArray>(c => c.SetConverters = AddItem2ByteArrayConverter,
                 new FakeQueueData { Message = "AB" },
                 new FakeQueueData { Message = "CD" }
                 );
@@ -293,10 +287,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         [Fact]
         public void TestByteArrayDispatch2()
         {
-            var client = new FakeQueueClient();
-            client.SetConverters = AddItem2ByteConverter;
-            
-            var items = Run<FunctionsByteArray>(client,
+            var items = Run<FunctionsByteArray>(c => c.SetConverters = AddItem2ByteConverter,
                 new FakeQueueData { Byte = 1 },
                 new FakeQueueData { Byte = 2 },
                 new FakeQueueData { Byte = 3 }
@@ -311,28 +302,39 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         // Helper to send items to the listener, and return what they collected
         private object[] Run<TFunction>(params FakeQueueData[] items) where TFunction : FunctionsBase, new()
         {
-            return Run<TFunction>(new FakeQueueClient(), items);
+            return Run<TFunction>(null /*new FakeQueueClient()*/, items);
         }
 
-        private object[] Run<TFunction>(FakeQueueClient client, params FakeQueueData[] items) where TFunction : FunctionsBase, new()
-        {        
+        private object[] Run<TFunction>(Action<FakeQueueClient> clientSetup, params FakeQueueData[] items) where TFunction : FunctionsBase, new()
+        {
             var activator = new FakeActivator();
             var func1 = new TFunction();
             activator.Add(func1);
 
-            var host = TestHelpers.NewJobHost<TFunction>(client, activator);
-
-            foreach (var item in items)
-            {
-                client.AddAsync(item).Wait();
-            }
+            FakeQueueClient fakeClient = null;
+            var host = new HostBuilder()
+                .ConfigureDefaultTestHost<TFunction>(activator: activator)
+                .ConfigureServices(services =>
+                {
+                    services.TryAddEnumerable(ServiceDescriptor.Singleton<IExtensionConfigProvider, FakeQueueClient>(p =>
+                    {
+                        fakeClient = new FakeQueueClient(p.GetService<INameResolver>(), p.GetService<IConverterManager>());
+                        clientSetup?.Invoke(fakeClient);
+                        foreach (var item in items)
+                        {
+                            fakeClient.AddAsync(item).Wait();
+                        }
+                        return fakeClient;
+                    }));
+                })
+                .Build();
 
             host.Start();
             TestHelpers.WaitOne(func1._stopEvent);
-            host.Stop();
+            host.StopAsync().GetAwaiter().GetResult();
 
             // Add any items sent using [FakeQueue(Prefix=...)]
-            foreach (var kv in client._prefixedItems)
+            foreach (var kv in fakeClient._prefixedItems)
             {
                 func1._collected.AddRange(kv.Value);
             }

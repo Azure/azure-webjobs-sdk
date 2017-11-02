@@ -4,13 +4,15 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Storage.Blob;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Xunit;
-using Microsoft.Azure.WebJobs.Host.TestCommon;
-using System.IO;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
@@ -54,14 +56,22 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var app = new BindToCloudBlob2Program();
             var activator = new FakeActivator(app);
             IStorageAccount account = CreateFakeStorageAccount();
-            var host = TestHelpers.NewJobHost<BindToCloudBlob2Program>(account, activator);
+            var provider = new FakeStorageAccountProvider() { StorageAccount = account };
+            var host = new HostBuilder()
+                .ConfigureDefaultTestHost<BindToCloudBlob2Program>()
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<IJobActivator>(activator);
+                    services.AddSingleton<IStorageAccountProvider>(provider);
+                })
+                .Build();
 
             // Set the binding data, and verify it's accessible in the function. 
             IStorageBlobContainer container = CreateContainer(account, ContainerName);
             IStorageBlockBlob blob = container.GetBlockBlobReference(BlobName);
             blob.Metadata["m1"] = "v1";
 
-            host.Call("Run", new { blob = blob });
+            host.GetJobHost().Call(typeof(BindToCloudBlob2Program).GetMethod(nameof(BindToCloudBlob2Program.Run)), new { blob });
 
             Assert.True(app.Success);
         }

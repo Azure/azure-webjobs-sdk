@@ -15,12 +15,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Table
 #endif
 {
     /// <summary>Defines a table.</summary>
-#if PUBLICSTORAGE
-    
     public interface IStorageTable
-#else
-    internal interface IStorageTable
-#endif
     {
         /// <summary>Gets the name of the table.</summary>
         string Name { get; }

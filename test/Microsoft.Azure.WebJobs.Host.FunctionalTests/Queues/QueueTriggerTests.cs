@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
@@ -13,7 +14,6 @@ using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Newtonsoft.Json;
 using Xunit;
-using System.Text.RegularExpressions;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
@@ -497,9 +497,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 // Assert
                 IStorageAccountProvider storageAccountProvider = new FakeStorageAccountProvider()
                 {
-                    StorageAccount = new FakeStorageAccount()
+                    StorageAccount = account
                 };
-                Assert.Equal(new FakeQueueConfiguration(storageAccountProvider).MaxDequeueCount, MaxDequeueCountProgram.DequeueCount);
+
+                // These tests use the FakeQueueOptionsFactory, so compare dequeue count to that
+                JobHostQueuesOptions options = new FakeQueuesOptionsFactory(storageAccountProvider).Create(string.Empty);
+                Assert.Equal(options.MaxDequeueCount, MaxDequeueCountProgram.DequeueCount);
             }
             finally
             {
@@ -750,8 +753,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Task callTask;
             bool completed;
 
-            using (JobHost host = new JobHost(serviceProvider))
+            using (serviceProvider)
             {
+                var host = serviceProvider.GetJobHost();
                 try
                 {
                     callTask = host.CallAsync(programType.GetMethod("Run"), new { message = message });

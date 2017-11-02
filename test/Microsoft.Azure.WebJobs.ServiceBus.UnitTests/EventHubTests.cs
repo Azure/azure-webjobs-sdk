@@ -7,11 +7,11 @@ using System.Reflection;
 using System.Text;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.EventHubs.Processor;
-using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.ServiceBus;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Xunit;
 using static Microsoft.Azure.EventHubs.EventData;
 
@@ -218,33 +218,29 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
         [Fact]
         public void InitializeFromHostMetadata()
         {
-            var config = new EventHubConfiguration();
-            var context = new ExtensionConfigContext()
-            {
-                Config = new JobHostConfiguration()
+            // TODO: It's tough to wire all this up without using a new host.
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost()
+                .AddEventHubs()
+                .ConfigureAppConfiguration(c =>
                 {
-#pragma warning disable CS0618 // Type or member is obsolete
-                    HostConfigMetadata = new JObject
-#pragma warning restore CS0618 // Type or member is obsolete
+                    c.AddInMemoryCollection(new Dictionary<string, string>
                     {
-                        {
-                            "EventHub", new JObject
-                            {
-                                { "MaxBatchSize", 100 },
-                                { "PrefetchCount", 200 },
-                                { "BatchCheckpointFrequency", 5 },
-                            }
-                        },
-                    },
-                },
-            };
-            context.Config.AddService<ILoggerFactory>(new LoggerFactory());
-            (config as IExtensionConfigProvider).Initialize(context);
+                        { "EventHub:MaxBatchSize", "100" },
+                        { "EventHub:PrefetchCount", "200" },
+                        { "EventHub:BatchCheckpointFrequency", "5" },
+                    });
+                })
+                .Build();
 
-            var options = config.EventProcessorOptions;
+            // Force the ExtensionRegistryFactory to run, which will initialize the EventHubConfiguration.
+            var extensionRegistry = host.Services.GetService<IExtensionRegistry>();
+            var eventHubConfig = host.Services.GetService<EventHubConfiguration>();
+
+            var options = eventHubConfig.GetOptions();
             Assert.Equal(100, options.MaxBatchSize);
             Assert.Equal(200, options.PrefetchCount);
-            Assert.Equal(5, config.BatchCheckpointFrequency);
+            Assert.Equal(5, eventHubConfig.BatchCheckpointFrequency);
         }
 
         private PartitionContext GetPartitionContext()

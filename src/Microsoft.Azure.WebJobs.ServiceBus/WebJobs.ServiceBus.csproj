@@ -26,7 +26,6 @@
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Converters\IAsyncObjectToTypeConverter.cs" Link="Converters\IAsyncObjectToTypeConverter.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Converters\IdentityConverter.cs" Link="Converters\IdentityConverter.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Converters\IObjectToTypeConverter.cs" Link="Converters\IObjectToTypeConverter.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Host\Listeners\IListenerFactory.cs" Link="Listeners\IListenerFactory.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Triggers\ITriggerDataArgumentBinding.cs" Link="Triggers\ITriggerDataArgumentBinding.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\TypeUtility.cs" Link="TypeUtility.cs" />
   </ItemGroup>

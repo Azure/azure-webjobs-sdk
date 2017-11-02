@@ -1,6 +1,8 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using Microsoft.Extensions.Configuration;
+
 namespace Microsoft.Azure.WebJobs.Host
 {
     /// <summary>
@@ -9,20 +11,12 @@ namespace Microsoft.Azure.WebJobs.Host
     /// </summary>
     public class AmbientConnectionStringProvider : IConnectionStringProvider
     {
-        private static readonly AmbientConnectionStringProvider Singleton = new AmbientConnectionStringProvider();
+        internal const string Prefix = "AzureWebJobs";
+        private IConfiguration _configuration;
 
-        internal static readonly string Prefix = "AzureWebJobs";
-
-        private AmbientConnectionStringProvider()
+        public AmbientConnectionStringProvider(IConfiguration configuration)
         {
-        }
-
-        /// <summary>
-        /// Gets the singleton instance.
-        /// </summary>
-        public static AmbientConnectionStringProvider Instance
-        {
-            get { return Singleton; }
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -35,12 +29,12 @@ namespace Microsoft.Azure.WebJobs.Host
         {
             // first try prefixing
             string prefixedConnectionStringName = GetPrefixedConnectionStringName(connectionStringName);
-            string connectionString = ConfigurationUtility.GetConnectionString(prefixedConnectionStringName);
+            string connectionString = FindConnectionString(prefixedConnectionStringName);
 
             if (string.IsNullOrEmpty(connectionString))
             {
                 // next try a direct unprefixed lookup
-                connectionString = ConfigurationUtility.GetConnectionString(connectionStringName);
+                connectionString = FindConnectionString(connectionStringName);
             }
 
             return connectionString;
@@ -50,5 +44,11 @@ namespace Microsoft.Azure.WebJobs.Host
         {
             return Prefix + connectionStringName;
         }
+
+        private string FindConnectionString(string connectionName) =>
+            _configuration.GetConnectionString(connectionName) ?? _configuration[connectionName];
+
     }
+
+
 }

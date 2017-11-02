@@ -1,53 +1,52 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
 using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Azure.WebJobs.Hosting;
+using Microsoft.Extensions.Hosting;
+using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Extensions.Configuration;
+using System.Collections.Generic;
 
 namespace SampleHost
 {
     class Program
     {
-        static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
-            var config = new JobHostConfiguration();
-            config.Queues.VisibilityTimeout = TimeSpan.FromSeconds(15);
-            config.Queues.MaxDequeueCount = 3;
-            config.LoggerFactory = new LoggerFactory().AddConsole();
+            var builder = new HostBuilder()
+                .UseEnvironment("Development")
+                .ConfigureWebJobsHost(o =>
+                {
+                    // Example setting options properties:
+                    // o.HostId = "testhostid";
+                })
+                .ConfigureAppConfiguration(config =>
+                {
+                    // Adding command line as a configuration source
+                    config.AddCommandLine(args);
+                    config.AddInMemoryCollection(new Dictionary<string, string>()
+                    {
+                        // Configuration options set from configuration providers:
+                        { "HostId", "testhostidfromprovider" }
+                    });
+                })
+                .ConfigureLogging(b =>
+                {
+                    b.SetMinimumLevel(LogLevel.Debug);
+                    b.AddConsole();
+                    b.AddApplicationInsights();
+                })
+                .UseConsoleLifetime();
 
-            if (config.IsDevelopment)
+            var jobHost = builder.Build();
+
+            using (jobHost)
             {
-                config.UseDevelopmentSettings();
-            }
-
-            config.UseEventHub();
-            config.UseServiceBus();
-
-            CheckAndEnableAppInsights(config);
-
-            var host = new JobHost(config);
-            host.RunAndBlock();
-        }
-
-        private static void CheckAndEnableAppInsights(JobHostConfiguration config)
-        {
-            // If AppInsights is enabled, build up a LoggerFactory
-            string instrumentationKey = Environment.GetEnvironmentVariable("APPINSIGHTS_INSTRUMENTATIONKEY");
-            if (!string.IsNullOrEmpty(instrumentationKey))
-            {
-                var filter = new LogCategoryFilter();
-                filter.DefaultLevel = LogLevel.Debug;
-                filter.CategoryLevels[LogCategories.Results] = LogLevel.Debug;
-                filter.CategoryLevels[LogCategories.Aggregator] = LogLevel.Debug;
-
-                // Adjust the LogLevel for a specific Function.
-                filter.CategoryLevels[LogCategories.CreateFunctionCategory(nameof(Functions.ProcessWorkItem))] = LogLevel.Debug;
-
-                config.LoggerFactory = new LoggerFactory()
-                    .AddApplicationInsights(instrumentationKey, filter.Filter)
-                    .AddConsole(filter.Filter);
+                await jobHost.RunAsync();
             }
         }
     }

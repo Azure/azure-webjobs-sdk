@@ -10,7 +10,7 @@ namespace Microsoft.Azure.WebJobs.Host
     /// <summary>
     /// Configuration options for controlling function execution timeout behavior.
     /// </summary>
-    public class JobHostFunctionTimeoutConfiguration
+    public class JobHostFunctionTimeoutOptions
     {
         /// <summary>
         /// Gets the timeout value.

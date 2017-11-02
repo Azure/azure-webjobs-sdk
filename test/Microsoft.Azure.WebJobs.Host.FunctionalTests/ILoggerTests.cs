@@ -5,12 +5,14 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Executors;
-using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -18,28 +20,28 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
     public class ILoggerTests
     {
-        TestLoggerProvider _loggerProvider = new TestLoggerProvider();
-
         [Fact]
         public void ILogger_Succeeds()
         {
             string functionName = nameof(ILoggerFunctions.ILogger);
-            using (JobHost host = new JobHost(CreateConfig()))
+            IHost host = ConfigureHostBuilder().Build();
+            using (host)
             {
                 var method = typeof(ILoggerFunctions).GetMethod(functionName);
-                host.Call(method);
+                host.GetJobHost().Call(method);
             }
 
             // Six loggers are the startup, singleton, results, function and function.user
-            Assert.Equal(5, _loggerProvider.CreatedLoggers.Count());
+            // Note: We currently have 3 additional Logger<T> categories that need to be renamed
+            var loggerProvider = host.GetTestLoggerProvider();
+            Assert.Equal(9, loggerProvider.CreatedLoggers.Count);
 
-            var functionLogger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.CreateFunctionUserCategory(functionName)).Single();
-            var resultsLogger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Results).Single();
+            var functionLogger = loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.CreateFunctionUserCategory(functionName)).Single();
+            var resultsLogger = loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Results).Single();
 
-            var messages = functionLogger.GetLogMessages();
-            Assert.Equal(2, messages.Count);
-            var infoMessage = messages[0];
-            var errorMessage = messages[1];
+            Assert.Equal(2, functionLogger.GetLogMessages().Count);
+            var infoMessage = functionLogger.GetLogMessages()[0];
+            var errorMessage = functionLogger.GetLogMessages()[1];
 
             // These get the {OriginalFormat} property as well as the 2 from structured log properties
             Assert.Equal(3, infoMessage.State.Count());
@@ -54,19 +56,21 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public void TraceWriter_ForwardsTo_ILogger()
         {
             string functionName = nameof(ILoggerFunctions.TraceWriterWithILoggerFactory);
-            using (JobHost host = new JobHost(CreateConfig()))
+
+            IHost host = ConfigureHostBuilder().Build();
+            using (host)
             {
                 var method = typeof(ILoggerFunctions).GetMethod(functionName);
-                host.Call(method);
+                host.GetJobHost().Call(method);
             }
 
             // Five loggers are the startup, singleton, results, function and function.user
-            Assert.Equal(5, _loggerProvider.CreatedLoggers.Count());
-            var functionLogger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.CreateFunctionUserCategory(functionName)).Single();
-            var messages = functionLogger.GetLogMessages();
-            Assert.Equal(2, messages.Count);
-            var infoMessage = messages[0];
-            var errorMessage = messages[1];
+            var loggerProvider = host.GetTestLoggerProvider();
+            Assert.Equal(9, loggerProvider.CreatedLoggers.Count);
+            var functionLogger = loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.CreateFunctionUserCategory(functionName)).Single();
+            Assert.Equal(2, functionLogger.GetLogMessages().Count);
+            var infoMessage = functionLogger.GetLogMessages()[0];
+            var errorMessage = functionLogger.GetLogMessages()[1];
 
             // These get the {OriginalFormat} only
             Assert.Single(infoMessage.State);
@@ -76,12 +80,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void Aggregator_Runs_WhenEnabled_AndFlushes_OnStop()
+        public async Task Aggregator_Runs_WhenEnabled_AndFlushes_OnStop()
         {
             int addCalls = 0;
             int flushCalls = 0;
 
-            var config = CreateConfig();
+            var config = ConfigureHostBuilder();
 
             var mockAggregator = new Mock<IAsyncCollector<FunctionInstanceLogEntry>>(MockBehavior.Strict);
             mockAggregator
@@ -99,19 +103,23 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 .Callback<CancellationToken>(t => flushCalls++)
                 .Returns(Task.CompletedTask);
 
-            var mockFactory = new Mock<IFunctionResultAggregatorFactory>(MockBehavior.Strict);
-            mockFactory
-                .Setup(f => f.Create(5, TimeSpan.FromSeconds(1), It.IsAny<ILoggerFactory>()))
-                .Returns(mockAggregator.Object);
-
-            config.AddService<IFunctionResultAggregatorFactory>(mockFactory.Object);
-
             const int N = 5;
-            config.Aggregator.IsEnabled = true;
-            config.Aggregator.BatchSize = N;
-            config.Aggregator.FlushTimeout = TimeSpan.FromSeconds(1);
 
-            using (JobHost host = new JobHost(config))
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<ILoggerFunctions>()
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<IAsyncCollector<FunctionInstanceLogEntry>>(mockAggregator.Object);
+                    services.Configure<FunctionResultAggregatorOptions>(o =>
+                    {
+                        o.IsEnabled = true;
+                        o.BatchSize = N;
+                        o.FlushTimeout = TimeSpan.FromSeconds(1);
+                    });
+                })
+                .Build();
+
+            using (host)
             {
                 host.Start();
 
@@ -119,10 +127,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
                 for (int i = 0; i < N; i++)
                 {
-                    host.Call(method);
+                    host.GetJobHost().Call(method);
                 }
 
-                host.Stop();
+                await host.StopAsync();
             }
 
             Assert.Equal(N, addCalls);
@@ -132,64 +140,46 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void NoILoggerFactory_NoAggregator()
+        public async Task DisabledAggregator_NoAggregator()
         {
-            var config = CreateConfig(addFactory: false);
+            // Ensure our default aggregator returns null when the aggregator is disabled.
+            var hostBuilder = ConfigureHostBuilder()
+                .ConfigureServices(services =>
+                {
+                    // TODO: Is there a better way to register these? This is the only way to remove
+                    //       the default-registered Aggregator, which seems unintuitive.
+                    services.RemoveAll<IEventCollectorProvider>();
+                    services.TryAddEnumerable(ServiceDescriptor.Singleton<IEventCollectorProvider, MockAggregatorProvider>());
 
-            // Ensure the aggregator is never configured by registering an
-            // AggregatorFactory that with a strict, unconfigured mock.
-            var mockFactory = new Mock<IFunctionResultAggregatorFactory>(MockBehavior.Strict);
-            config.AddService<IFunctionResultAggregatorFactory>(mockFactory.Object);
+                    // register a validator to make sure the returned value is null.
+                    services.AddSingleton<Action<IAsyncCollector<FunctionInstanceLogEntry>>>(r =>
+                    {
+                        Assert.Null(r);
+                    });
+                });
 
-            using (JobHost host = new JobHost(config))
-            {
-                var method = typeof(ILoggerFunctions).GetMethod(nameof(ILoggerFunctions.TraceWriterWithILoggerFactory));
-                host.Call(method);
-            }
-        }
-
-        [Fact]
-        public void DisabledAggregator_NoAggregator()
-        {
-            // Add the loggerfactory but disable the aggregator
-            var config = CreateConfig();
-            config.Aggregator.IsEnabled = false;
-
-            // Ensure the aggregator is never configured by registering an
-            // AggregatorFactory that with a strict, unconfigured mock.
-            var mockFactory = new Mock<IFunctionResultAggregatorFactory>(MockBehavior.Strict);
-            config.AddService<IFunctionResultAggregatorFactory>(mockFactory.Object);
-
-            using (JobHost host = new JobHost(config))
+            using (IHost host = hostBuilder.Build())
             {
                 // also start and stop the host to ensure nothing throws due to the
                 // null aggregator
                 host.Start();
 
                 var method = typeof(ILoggerFunctions).GetMethod(nameof(ILoggerFunctions.TraceWriterWithILoggerFactory));
-                host.Call(method);
+                host.GetJobHost().Call(method);
 
-                host.Stop();
+                await host.StopAsync();
             }
         }
 
-        private JobHostConfiguration CreateConfig(bool addFactory = true)
+        private IHostBuilder ConfigureHostBuilder()
         {
-            IStorageAccountProvider accountProvider = new FakeStorageAccountProvider()
-            {
-                StorageAccount = new FakeStorageAccount()
-            };
+            return new HostBuilder()
+                .ConfigureDefaultTestHost<ILoggerFunctions>()
+                .ConfigureServices(services =>
+                {
+                    services.Configure<FunctionResultAggregatorOptions>(o => o.IsEnabled = false);
 
-            ILoggerFactory factory = new LoggerFactory();
-            factory.AddProvider(_loggerProvider);
-
-            var config = new JobHostConfiguration();
-            config.AddService(accountProvider);
-            config.TypeLocator = new FakeTypeLocator(new[] { typeof(ILoggerFunctions) });
-            config.AddService(factory);
-            config.Aggregator.IsEnabled = false; // disable aggregator
-
-            return config;
+                });
         }
 
         private class ILoggerFunctions
@@ -210,6 +200,24 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
                 var ex = new InvalidOperationException("Failure.");
                 log.Error("This should go to the ILogger with an Exception!", ex);
+            }
+        }
+
+        private class MockAggregatorProvider : FunctionResultAggregatorProvider
+        {
+            private readonly Action<IAsyncCollector<FunctionInstanceLogEntry>> _validateCallback;
+
+            public MockAggregatorProvider(Action<IAsyncCollector<FunctionInstanceLogEntry>> validateCallback, IOptions<FunctionResultAggregatorOptions> options, ILoggerFactory loggerFactory) :
+                base(options, loggerFactory)
+            {
+                _validateCallback = validateCallback;
+            }
+
+            public override IAsyncCollector<FunctionInstanceLogEntry> Create()
+            {
+                var collector = base.Create();
+                _validateCallback(collector);
+                return collector;
             }
         }
     }

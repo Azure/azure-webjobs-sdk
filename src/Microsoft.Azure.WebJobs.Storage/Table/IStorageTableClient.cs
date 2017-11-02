@@ -11,12 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Table
 #endif
 {
     /// <summary>Defines a table client.</summary>
-#if PUBLICSTORAGE
-    
     public interface IStorageTableClient
-#else
-    internal interface IStorageTableClient
-#endif
     {
         /// <summary>Gets the credentials used to connect to the account.</summary>
         StorageCredentials Credentials { get; }

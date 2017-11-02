@@ -5,16 +5,16 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Executors;
-using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.ServiceBus.Core;
+using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Azure.WebJobs.Host.Listeners;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
 {
     internal sealed class ServiceBusListener : IListener
     {
-        private readonly MessagingProvider _messagingProvider;
+        private readonly IMessagingProvider _messagingProvider;
         private readonly string _entityPath;
         private readonly ServiceBusTriggerExecutor _triggerExecutor;
         private readonly CancellationTokenSource _cancellationTokenSource;
@@ -25,14 +25,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         private bool _disposed;
         private bool _started;
 
-        public ServiceBusListener(string entityPath, ServiceBusTriggerExecutor triggerExecutor, ServiceBusConfiguration config, ServiceBusAccount serviceBusAccount)
+        public ServiceBusListener(string entityPath, ServiceBusTriggerExecutor triggerExecutor, ServiceBusOptions config, ServiceBusAccount serviceBusAccount, IMessagingProvider messagingProvider)
         {
             _entityPath = entityPath;
             _triggerExecutor = triggerExecutor;
             _cancellationTokenSource = new CancellationTokenSource();
-            _messagingProvider = config.MessagingProvider;
+            _messagingProvider = messagingProvider;
             _serviceBusAccount = serviceBusAccount;
-            _messageProcessor = config.MessagingProvider.CreateMessageProcessor(entityPath, _serviceBusAccount.ConnectionString);
+            _messageProcessor = messagingProvider.CreateMessageProcessor(entityPath, _serviceBusAccount.ConnectionString);
         }
 
         internal MessageReceiver Receiver => _receiver;
