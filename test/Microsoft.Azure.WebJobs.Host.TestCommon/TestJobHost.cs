@@ -4,14 +4,15 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Indexers;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.TestCommon
 {
     public class TestJobHost<TProgram> : JobHost
     {
-        public TestJobHost(JobHostConfiguration config)
-            : base(config)
+        public TestJobHost(JobHostConfiguration config, IOptions<JobHostOptions> options)
+            : base(config, options)
         {
         }
 

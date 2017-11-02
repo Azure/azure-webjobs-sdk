@@ -21,6 +21,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Xunit;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
@@ -112,7 +113,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             var cm = (ConverterManager) config.GetService<IConverterManager>();
                               
-            var host = new TestJobHost<CustomTableBindingExtensionProgram>(config);
+            var host = new TestJobHost<CustomTableBindingExtensionProgram>(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
             host.Call("Run"); // Act
 
             // Assert
@@ -186,7 +187,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var config = TestHelpers.NewConfig(typeof(BindToICollectorJObjectProgramKeysInAttr), account);
 
             // Act
-            var host = new TestJobHost<BindToICollectorJObjectProgramKeysInAttr>(config);
+            var host = new TestJobHost<BindToICollectorJObjectProgramKeysInAttr>(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
             host.Call("Run");
 
             // Assert

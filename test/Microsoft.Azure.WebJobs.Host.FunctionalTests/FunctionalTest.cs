@@ -19,6 +19,7 @@ using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
@@ -34,7 +35,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 programType, backgroundTaskSource, cloudBlobStreamBinderTypes: cloudBlobStreamBinderTypes);
             Task backgroundTask = backgroundTaskSource.Task;
 
-            using (JobHost host = new JobHost(serviceProvider))
+            using (JobHost host = new JobHost(serviceProvider, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 Task task = host.CallAsync(method, arguments);
 
@@ -76,7 +77,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             try
             {
-                using (JobHost host = new JobHost(serviceProvider))
+                using (JobHost host = new JobHost(serviceProvider, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
                 {
                     Task callTask = host.CallAsync(method, arguments);
 
@@ -118,7 +119,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 backgroundTaskSource);
             Task backgroundTask = backgroundTaskSource.Task;
 
-            using (JobHost host = new JobHost(serviceProvider))
+            using (JobHost host = new JobHost(serviceProvider, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 Task callTask = host.CallAsync(method, arguments);
 
@@ -173,7 +174,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             IEnumerable<string> ignoreFailureFunctions, IExtensionRegistry extensions = null, params Type[] cloudBlobStreamBinderTypes)
         {
             return CreateConfigurationForManualCompletion<TResult>(storageAccount, programType,
-                DefaultJobActivator.Instance, taskSource, ignoreFailureFunctions, extensions, cloudBlobStreamBinderTypes);
+                new DefaultJobActivator(), taskSource, ignoreFailureFunctions, extensions, cloudBlobStreamBinderTypes);
         }
 
         private static JobHostConfiguration CreateConfigurationForManualCompletion<TResult>(
@@ -201,7 +202,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             IFunctionInstanceLogger functionInstanceLogger, IExtensionRegistry extensions = null)
         {
             return CreateConfiguration<TResult>(storageAccount, programType, extensionTypeLocator,
-                DefaultJobActivator.Instance, taskSource, functionInstanceLogger, extensions);
+                new DefaultJobActivator(), taskSource, functionInstanceLogger, extensions);
         }
 
         private static JobHostConfiguration CreateConfiguration<TResult>(IStorageAccount storageAccount, Type programType,
@@ -244,7 +245,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public static TResult RunTrigger<TResult>(IStorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
-            return RunTrigger<TResult>(account, programType, setTaskSource, DefaultJobActivator.Instance,
+            return RunTrigger<TResult>(account, programType, setTaskSource, new DefaultJobActivator(),
                 ignoreFailureFunctions: null);
         }
 
@@ -257,7 +258,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public static TResult RunTrigger<TResult>(IStorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource, IEnumerable<string> ignoreFailureFunctions)
         {
-            return RunTrigger<TResult>(account, programType, setTaskSource, DefaultJobActivator.Instance, ignoreFailureFunctions);
+            return RunTrigger<TResult>(account, programType, setTaskSource, new DefaultJobActivator(), ignoreFailureFunctions);
         }
 
         public static TResult RunTrigger<TResult>(IStorageAccount account, Type programType,
@@ -287,7 +288,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // Arrange
             bool completed;
 
-            using (JobHost host = new JobHost(config))
+            using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 host.Start();
 
@@ -326,7 +327,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // The task for failed function invocation (should complete successfully with a non-null exception).
             Task<Exception> task = taskSource.Task;
 
-            using (JobHost host = new JobHost(serviceProvider))
+            using (JobHost host = new JobHost(serviceProvider, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 host.Start();
 
@@ -367,7 +368,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             try
             {
-                using (JobHost host = new JobHost(serviceProvider))
+                using (JobHost host = new JobHost(serviceProvider, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
                 {
                     host.Start();
 

@@ -13,6 +13,7 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -619,7 +620,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             IExtensionRegistry registry = config.GetService<IExtensionRegistry>();
             registry.RegisterExtension<ITriggerBindingProvider>(new TestTriggerAttributeBindingProvider());
 
-            JobHost host = new JobHost(config);
+            JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
 
             return host;
         }

@@ -11,6 +11,7 @@ using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -24,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public void ILogger_Succeeds()
         {
             string functionName = nameof(ILoggerFunctions.ILogger);
-            using (JobHost host = new JobHost(CreateConfig()))
+            using (JobHost host = new JobHost(CreateConfig(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 var method = typeof(ILoggerFunctions).GetMethod(functionName);
                 host.Call(method);
@@ -53,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public void TraceWriter_ForwardsTo_ILogger()
         {
             string functionName = nameof(ILoggerFunctions.TraceWriterWithILoggerFactory);
-            using (JobHost host = new JobHost(CreateConfig()))
+            using (JobHost host = new JobHost(CreateConfig(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 var method = typeof(ILoggerFunctions).GetMethod(functionName);
                 host.Call(method);
@@ -109,7 +110,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             config.Aggregator.BatchSize = N;
             config.Aggregator.FlushTimeout = TimeSpan.FromSeconds(1);
 
-            using (JobHost host = new JobHost(config))
+            using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 host.Start();
 
@@ -139,7 +140,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var mockFactory = new Mock<IFunctionResultAggregatorFactory>(MockBehavior.Strict);
             config.AddService<IFunctionResultAggregatorFactory>(mockFactory.Object);
 
-            using (JobHost host = new JobHost(config))
+            using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 var method = typeof(ILoggerFunctions).GetMethod(nameof(ILoggerFunctions.TraceWriterWithILoggerFactory));
                 host.Call(method);
@@ -158,7 +159,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var mockFactory = new Mock<IFunctionResultAggregatorFactory>(MockBehavior.Strict);
             config.AddService<IFunctionResultAggregatorFactory>(mockFactory.Object);
 
-            using (JobHost host = new JobHost(config))
+            using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 // also start and stop the host to ensure nothing throws due to the
                 // null aggregator

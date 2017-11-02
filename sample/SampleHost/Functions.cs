@@ -17,25 +17,25 @@ namespace SampleHost
     public static class Functions
     {
         public static void BlobTrigger(
-            [BlobTrigger("test")] string blob)
+            [BlobTrigger("test")] string blob, ILogger logger)
         {
-            Console.WriteLine("Processed blob: " + blob);
+            logger.LogInformation("Processed blob: " + blob);
         }
 
         public static void BlobPoisonBlobHandler(
-            [QueueTrigger("webjobs-blobtrigger-poison")] JObject blobInfo)
+            [QueueTrigger("webjobs-blobtrigger-poison")] JObject blobInfo, ILogger logger)
         {
             string container = (string)blobInfo["ContainerName"];
             string blobName = (string)blobInfo["BlobName"];
 
-            Console.WriteLine($"Poison blob: {container}/{blobName}");
+            logger.LogInformation($"Poison blob: {container}/{blobName}");
         }
 
         [WorkItemValidator]
         public static void ProcessWorkItem(
-            [QueueTrigger("test")] WorkItem workItem)
+            [QueueTrigger("test")] WorkItem workItem, ILogger logger)
         {
-            Console.WriteLine($"Processed work item {workItem.ID}");
+            logger.LogInformation($"Processed work item {workItem.ID}");
         }
 
         public static async Task ProcessWorkItem_ServiceBus(

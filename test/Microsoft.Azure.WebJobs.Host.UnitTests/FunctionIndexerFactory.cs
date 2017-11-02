@@ -39,7 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             IFunctionExecutor executor = new FunctionExecutor(new NullFunctionInstanceLogger(), outputLogger, exceptionHandler, loggerFactory: loggerFactory);
 
-            return new FunctionIndexer(triggerBindingProvider, bindingProvider, DefaultJobActivator.Instance, executor,
+            return new FunctionIndexer(triggerBindingProvider, bindingProvider, new DefaultJobActivator(), executor,
                 extensionRegistry, singletonManager, loggerFactory);
         }
 

@@ -14,6 +14,7 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -379,7 +380,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 var fastLogger = new FastLogger();
                 config.AddService<IAsyncCollector<FunctionInstanceLogEntry>>(fastLogger);
 
-                JobHost host = new JobHost(config);
+                JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
 
                 // Manually invoked.
                 var method = typeof(BasicTest).GetMethod("Method", BindingFlags.Public | BindingFlags.Static);
@@ -426,7 +427,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             // - config is then initialized, including adding extensions 
             // - extensions may register their own services. 
             JobHostConfiguration config = new JobHostConfiguration();
-            var host = new JobHost(config);
+            var host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
 
             var lockManager = config.GetService<IDistributedLockManager>();
             Assert.Null(lockManager); // Not initialized yet. 

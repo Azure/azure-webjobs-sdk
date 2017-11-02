@@ -12,6 +12,7 @@ using Microsoft.WindowsAzure.Storage.Queue;
 using Newtonsoft.Json.Linq;
 using Xunit;
 using Xunit.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
@@ -70,7 +71,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // each test will have a unique hostId so that consecutive test run will not be affected by clean up code
             _hostConfiguration.HostId = "bttest";
 
-            using (var host = new JobHost(_hostConfiguration))
+            using (var host = new JobHost(_hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 _funcInvokation = new ConcurrentStringSet();
 
@@ -96,7 +97,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _hostConfiguration.TypeLocator = new FakeTypeLocator(typeof(SampleTriggerWithPoisonQueue));
             _hostConfiguration.HostId = "pqtest";
 
-            using (var host = new JobHost(_hostConfiguration))
+            using (var host = new JobHost(_hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 _funcInvokation = new ConcurrentStringSet();
 

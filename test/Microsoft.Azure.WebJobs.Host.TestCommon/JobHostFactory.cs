@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 
 namespace Microsoft.Azure.WebJobs.Host.TestCommon
@@ -35,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                 DashboardAccount = null
             };
             config.AddServices(storageAccountProvider);
-            return new TestJobHost<TProgram>(config);
+            return new TestJobHost<TProgram>(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
         }
     }
 }

@@ -41,6 +41,16 @@ namespace Microsoft.Azure.WebJobs
             : this(null, null)
         {
         }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="JobHostConfiguration"/> class.
+        /// </summary>
+        public JobHostConfiguration(ILoggerFactory loggerFactory)
+            : this(null, null)
+        {
+            LoggerFactory = loggerFactory;
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="JobHostConfiguration"/> class, using the
         /// specified connection string for both reading and writing data as well as Dashboard logging.
@@ -113,7 +123,7 @@ namespace Microsoft.Azure.WebJobs
             AddService<IExtensionRegistry>(extensions);
             AddService<StorageClientFactory>(new StorageClientFactory());
             AddService<INameResolver>(new DefaultNameResolver());
-            AddService<IJobActivator>(DefaultJobActivator.Instance);
+            AddService<IJobActivator>(new DefaultJobActivator());
             AddService<ITypeLocator>(typeLocator);
             AddService<IConverterManager>(converterManager);
             AddService<IWebJobsExceptionHandler>(exceptionHandler);

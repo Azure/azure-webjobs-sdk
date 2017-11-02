@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json.Linq;
@@ -178,7 +179,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var prog = new Poison_Program();
             var config = NewConfig(prog);
 
-            using (JobHost host = new JobHost(config))
+            using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 host.Start();
 
@@ -203,7 +204,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             // Process the blob first
             using (prog._completedEvent = new ManualResetEvent(initialState: false))
-            using (JobHost host = new JobHost(config))
+            using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 DateTime startTime = DateTime.Now;
 
@@ -228,7 +229,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // wait twice the amount of time required to process first before 
             // deciding that it doesn't get reprocessed
             using (prog._completedEvent = new ManualResetEvent(initialState: false))
-            using (JobHost host = new JobHost(config))
+            using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 host.Start();
 
@@ -254,7 +255,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var config = NewConfig(prog);
 
             using (prog._completedEvent = new ManualResetEvent(initialState: false))
-            using (JobHost host = new JobHost(config))
+            using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 host.Start();
                 Assert.True(prog._completedEvent.WaitOne(TimeSpan.FromSeconds(60)));
@@ -274,8 +275,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
 
             using (prog._completedEvent = new ManualResetEvent(initialState: false))
-            using (JobHost host1 = new JobHost(config))
-            using (JobHost host2 = new JobHost(config))
+            using (JobHost host1 = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host2 = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 host1.Start();
                 host2.Start();

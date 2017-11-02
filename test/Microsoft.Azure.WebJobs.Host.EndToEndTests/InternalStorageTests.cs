@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -68,7 +69,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 config.StorageConnectionString = null;
 
 
-                var host = new JobHost(config);
+                var host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
                 await host.CallAsync("Foo");
 
                 Assert.Equal(1, prog._count); // Verify successfully called.

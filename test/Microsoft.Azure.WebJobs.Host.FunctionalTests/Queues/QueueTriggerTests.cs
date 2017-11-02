@@ -14,6 +14,7 @@ using Microsoft.WindowsAzure.Storage.Queue;
 using Newtonsoft.Json;
 using Xunit;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
@@ -750,7 +751,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Task callTask;
             bool completed;
 
-            using (JobHost host = new JobHost(serviceProvider))
+            using (JobHost host = new JobHost(serviceProvider, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 try
                 {
