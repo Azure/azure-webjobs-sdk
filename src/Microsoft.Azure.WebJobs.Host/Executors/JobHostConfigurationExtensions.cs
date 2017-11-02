@@ -408,8 +408,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 context.Current = configProvider;
                 configProvider.Initialize(context);
-                context.ApplyRules();
             }
+            context.ApplyRules();
         }
 
         private static IFunctionExecutor CreateHostCallExecutor(IListenerFactory instanceQueueListenerFactory,

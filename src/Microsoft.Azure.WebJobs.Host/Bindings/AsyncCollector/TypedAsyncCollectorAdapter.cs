@@ -12,13 +12,13 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         where TAttribute : Attribute
     {
         private readonly IAsyncCollector<TDest> _inner;
-        private readonly FuncConverter<TSrc, TAttribute, TDest> _convert;
+        private readonly FuncAsyncConverter<TSrc, TDest> _convert;
         private readonly TAttribute _attrResolved;
         private readonly ValueBindingContext _context;
 
         public TypedAsyncCollectorAdapter(
             IAsyncCollector<TDest> inner,
-            FuncConverter<TSrc, TAttribute, TDest> convert, 
+            FuncAsyncConverter<TSrc, TDest> convert,
             TAttribute attrResolved,
             ValueBindingContext context)
         {
@@ -33,10 +33,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             _context = context;
         }
 
-        public Task AddAsync(TSrc item, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task AddAsync(TSrc item, CancellationToken cancellationToken = default(CancellationToken))
         {
-            TDest x = _convert(item, _attrResolved, _context);
-            return _inner.AddAsync(x, cancellationToken);
+            TDest result = await _convert(item, _attrResolved, _context);
+            
+            await _inner.AddAsync(result, cancellationToken);
         }
 
         public Task FlushAsync(CancellationToken cancellationToken)

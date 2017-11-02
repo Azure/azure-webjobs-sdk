@@ -169,7 +169,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
                 yield return new BindingRule
                 {
                     SourceAttribute = typeof(BlobAttribute),
-                    UserType = new ConverterManager.ExactMatch(type)
+                    UserType = OpenType.FromType(type)
                 };
             }
         }

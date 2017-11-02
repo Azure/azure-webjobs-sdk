@@ -2,6 +2,8 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Bindings;
 
 namespace Microsoft.Azure.WebJobs.Host.Triggers
 {
@@ -14,9 +16,12 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             this.ElementType = typeof(string);
         }
 
-        internal override object Convert(TMessage value, Dictionary<string, object> bindingData)
+        internal override async Task<object> ConvertAsync(
+            TMessage value,
+            Dictionary<string, object> bindingData,
+            ValueBindingContext context)
         {
-            var obj = this.ConvertToString(value);
+            var obj = this.ConvertToStringAsync(value);
             return obj;
         }
     }

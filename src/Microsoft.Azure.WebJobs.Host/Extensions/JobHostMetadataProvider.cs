@@ -253,7 +253,7 @@ namespace Microsoft.Azure.WebJobs.Host
                 {
                     foreach (var converterType in rule.Converters)
                     {
-                        output.Write($"{ConverterManager.ExactMatch.TypeToString(converterType)}-->");
+                        output.Write($"{OpenType.ExactMatch.TypeToString(converterType)}-->");
                     }
                 }
 
@@ -266,7 +266,7 @@ namespace Microsoft.Azure.WebJobs.Host
         {
             foreach (var rule in root.GetRules())
             {
-                var type = rule.UserType as ConverterManager.ExactMatch;
+                var type = rule.UserType as OpenType.ExactMatch;
                 if (type != null)                
                 {
                     AddAssembly(type.ExactType);

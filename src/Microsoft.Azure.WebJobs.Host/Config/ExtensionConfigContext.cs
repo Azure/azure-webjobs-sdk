@@ -16,8 +16,8 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         // List of actions to flush from the fluent configuration. 
         private List<Action> _updates = new List<Action>();
 
-        // track which TAttribute rules have been added. 
-        private HashSet<object> _existingRules = new HashSet<object>();
+        // Map of tyepof(TAttribute) --> FluentBindingRule<TAttribute>
+        private Dictionary<Type, object> _rules = new Dictionary<Type, object>();
 
         internal IExtensionConfigProvider Current { get; set; }
 
@@ -31,11 +31,11 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         /// </summary>
         public TraceWriter Trace { get; set; }
 
-        internal override IConverterManager Converters
+        internal override ConverterManager Converters
         {
             get
             {
-                return this.Config.ConverterManager;
+                return (ConverterManager) this.Config.ConverterManager;
             }
         }
 
@@ -56,8 +56,31 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             return webhook.GetUrl(this.Current);            
         }
 
+        // Ensure that multiple attempts bind to the same attribute, they get the same rule object. 
+        private FluentBindingRule<TAttribute> GetOrCreate<TAttribute>()
+              where TAttribute : Attribute
+        {
+            FluentBindingRule<TAttribute> rule;
+            object temp;
+            if (!this._rules.TryGetValue(typeof(TAttribute), out temp))
+            {
+                // Create and register
+                rule = new FluentBindingRule<TAttribute>(this.Config);
+                this._rules[typeof(TAttribute)] = rule;
+
+                _updates.Add(rule.ApplyRules);
+            }
+            else
+            {
+                // Return existing.
+                rule = (FluentBindingRule<TAttribute>)temp;
+            }
+            return rule;
+        }
+
         /// <summary>
-        /// Add a binding rule for the given attribute
+        /// Add a binding rule for the given attribute. 
+        /// Multiple extensions can add rules to the same attribute. 
         /// </summary>
         /// <typeparam name="TAttribute"></typeparam>
         /// <returns></returns>
@@ -69,18 +92,11 @@ namespace Microsoft.Azure.WebJobs.Host.Config
                 throw new InvalidOperationException($"Can't add a binding rule for '{typeof(TAttribute).Name}' since it is missing the a {typeof(BindingAttribute).Name}");
             }
 
-            if (!_existingRules.Add(typeof(TAttribute)))
-            {
-                throw new InvalidOperationException($"Only call AddBindingRule once per attribute type.");
-            }
-
-            var fluent = new FluentBindingRule<TAttribute>(this.Config);
-            _updates.Add(fluent.ApplyRules);
+            var fluent = GetOrCreate<TAttribute>();
             return fluent;
         }
 
-        // Called after we return from the extension's intitialize code. 
-        // This will apply the rules and update the config. 
+        // Called once after all extensions. 
         internal void ApplyRules()
         {
             foreach (var func in _updates)

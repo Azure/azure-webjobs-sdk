@@ -4,11 +4,15 @@
 using System;
 using System.IO;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Newtonsoft.Json.Linq;
 using Xunit;
+using System.Collections.Generic;
+using Microsoft.Azure.WebJobs.Host.Bindings;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
@@ -160,14 +164,41 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var host2 = new JobHost(config);
             var metadataProvider = host2.CreateMetadataProvider();
 
-            var t1 = metadataProvider.GetDefaultType(new QueueAttribute("q"), FileAccess.Read, typeof(byte[]));
+            var t1 = metadataProvider.GetDefaultType(new QueueTriggerAttribute("q"), FileAccess.Read, typeof(byte[]));
             Assert.Equal(typeof(byte[]), t1);
 
-            var t2 = metadataProvider.GetDefaultType(new QueueAttribute("q"), FileAccess.Read, null);
+            var t2 = metadataProvider.GetDefaultType(new QueueTriggerAttribute("q"), FileAccess.Read, null);
             Assert.Equal(typeof(string), t2);
                         
             var t3 = metadataProvider.GetDefaultType(new QueueAttribute("q"), FileAccess.Write, null);
-            Assert.Equal(typeof(IAsyncCollector<byte[]>), t3);
+            Assert.Equal(typeof(IAsyncCollector<JObject>), t3);
+        }
+
+        // This is a setup used by CosmoDb. 
+        [Fact]
+        public void DefaultTypeForOpenTypeCollector()
+        {
+            var ext = new TestExtension2();
+            var prog = new FakeTypeLocator();
+            JobHostConfiguration config = TestHelpers.NewConfig(prog, ext);                                 
+            var host = new JobHost(config);
+            IJobHostMetadataProvider metadataProvider = host.CreateMetadataProvider();
+
+            var attr = new TestAttribute(null);
+            var type = metadataProvider.GetDefaultType(attr, FileAccess.Write, null);
+
+            Assert.Equal(typeof(IAsyncCollector<JObject>), type);
+
+        }
+
+        // Setup similar to CosmoDb
+        public class TestExtension2 : IExtensionConfigProvider
+        {
+            public void Initialize(ExtensionConfigContext context)
+            {
+                var ignored = typeof(object); // not used 
+                context.AddBindingRule<TestAttribute>().BindToCollector<OpenType>(ignored);
+            }
         }
 
         [Binding]

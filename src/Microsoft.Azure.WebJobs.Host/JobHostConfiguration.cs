@@ -238,7 +238,7 @@ namespace Microsoft.Azure.WebJobs
         /// Get the converter manager, which can be used to register additional conversions for 
         /// customizing model binding. 
         /// </summary>
-        public IConverterManager ConverterManager
+        internal IConverterManager ConverterManager
         {
             get
             {
@@ -249,7 +249,7 @@ namespace Microsoft.Azure.WebJobs
         /// <summary>
         /// Gets a helper object for constructing common binding rules for extensions.
         /// </summary>
-        public BindingFactory BindingFactory
+        internal BindingFactory BindingFactory
         {
             get
             {

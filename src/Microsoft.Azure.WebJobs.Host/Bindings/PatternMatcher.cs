@@ -268,6 +268,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         // Helper for getting a converter func that invokes the converter interface on an object.
         private abstract class InvokerBase
         {
+            // This should get changed to a FuncAsyncConverter 
             public abstract Func<object, object> Work(object instance);
         }
 
