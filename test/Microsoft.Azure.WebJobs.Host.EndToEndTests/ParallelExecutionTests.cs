@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Xunit;
@@ -87,7 +88,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
 
             using (_allMessagesProcessed = new ManualResetEvent(initialState: false))
-            using (JobHost host = new JobHost(hostConfiguration))
+            using (JobHost host = new JobHost(hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 host.Start();
                 _allMessagesProcessed.WaitOne(TimeSpan.FromSeconds(90));

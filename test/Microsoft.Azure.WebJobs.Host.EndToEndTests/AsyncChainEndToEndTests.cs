@@ -17,6 +17,7 @@ using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -200,7 +201,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 var eventCollector = new TestFunctionEventCollector();
                 _hostConfig.AddService<IAsyncCollector<FunctionInstanceLogEntry>>(eventCollector);
 
-                JobHost host = new JobHost(_hostConfig);
+                JobHost host = new JobHost(_hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
 
                 await host.StartAsync();
                 await host.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod(nameof(WriteStartDataMessageToQueue)));
@@ -230,7 +231,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 _hostConfig.Aggregator.IsEnabled = true;
                 _hostConfig.Aggregator.BatchSize = 1;
 
-                JobHost host = new JobHost(_hostConfig);
+                JobHost host = new JobHost(_hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
 
                 await host.StartAsync();
                 await host.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod("WriteStartDataMessageToQueue"));
@@ -262,7 +263,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 var eventCollector = new TestFunctionEventCollector();
                 _hostConfig.AddService<IAsyncCollector<FunctionInstanceLogEntry>>(eventCollector);
 
-                JobHost host = new JobHost(_hostConfig);
+                JobHost host = new JobHost(_hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
 
                 await host.StartAsync();
                 await host.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod("WriteStartDataMessageToQueue"));
@@ -286,7 +287,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public void FunctionFailures_LogsExpectedMessage()
         {
-            JobHost host = new JobHost(_hostConfig);
+            JobHost host = new JobHost(_hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
 
             MethodInfo methodInfo = GetType().GetMethod("AlwaysFailJob");
             try
@@ -309,7 +310,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task SystemParameterBindingOutput_GeneratesExpectedBlobs()
         {
-            JobHost host = new JobHost(_hostConfig);
+            JobHost host = new JobHost(_hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
 
             var blobClient = _fixture.StorageAccount.CreateCloudBlobClient();
             var container = blobClient.GetContainerReference("test-output");
@@ -372,7 +373,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             try
             {
                 _hostConfig.AddService<IWebJobsExceptionHandler>(exceptionHandler);
-                JobHost host = new JobHost(_hostConfig);
+                JobHost host = new JobHost(_hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
 
                 try
                 {
@@ -419,7 +420,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task Timeout_NoExpiry_CompletesSuccessfully()
         {
-            JobHost host = new JobHost(_hostConfig);
+            JobHost host = new JobHost(_hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
 
             _timeoutJobDelay = TimeSpan.FromSeconds(0);
             MethodInfo methodInfo = GetType().GetMethod("TimeoutJob");
@@ -564,7 +565,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private async Task AsyncChainEndToEndInternal()
         {
-            JobHost host = new JobHost(_hostConfig);
+            JobHost host = new JobHost(_hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
 
             Assert.Null(_hostConfig.HostId);
 

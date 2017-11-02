@@ -22,6 +22,7 @@ using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -56,7 +57,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             config.Aggregator.IsEnabled = false;
             config.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
 
-            using (JobHost host = new JobHost(config))
+            using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 await host.StartAsync();
                 var methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
@@ -116,7 +117,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             config.Aggregator.IsEnabled = false;
             config.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
 
-            using (JobHost host = new JobHost(config))
+            using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 await host.StartAsync();
                 var methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
@@ -189,7 +190,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 listener.StartListening();
 
-                using (JobHost host = new JobHost(config))
+                using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
                 {
                     await host.StartAsync();
 

@@ -17,6 +17,7 @@ using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -40,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             var configuration = CreateConfiguration();
 
-            using (JobHost host = new JobHost(configuration))
+            using (JobHost host = new JobHost(configuration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 try
                 {
@@ -63,7 +64,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void StartAsync_WhenNotStarted_DoesNotThrow()
         {
             // Arrange
-            using (JobHost host = new JobHost(CreateConfiguration()))
+            using (JobHost host = new JobHost(CreateConfiguration(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 // Act & Assert
                 host.StartAsync().GetAwaiter().GetResult();
@@ -73,7 +74,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void StartAsync_WhenStarted_Throws()
         {
             // Arrange
-            using (JobHost host = new JobHost(CreateConfiguration()))
+            using (JobHost host = new JobHost(CreateConfiguration(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 host.Start();
 
@@ -85,7 +86,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void StartAsync_WhenStopped_Throws()
         {
             // Arrange
-            using (JobHost host = new JobHost(CreateConfiguration()))
+            using (JobHost host = new JobHost(CreateConfiguration(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 host.Start();
                 host.Stop();
@@ -102,7 +103,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             JobHostConfiguration configuration = CreateConfiguration(new LambdaStorageAccountProvider(
                     (i1, i2) => getAccountTaskSource.Task));
 
-            using (JobHost host = new JobHost(configuration))
+            using (JobHost host = new JobHost(configuration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 Task starting = host.StartAsync();
                 Assert.False(starting.IsCompleted); // Guard
@@ -119,7 +120,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void StartAsync_WhenStopping_Throws()
         {
             // Arrange
-            using (JobHost host = new JobHost(CreateConfiguration()))
+            using (JobHost host = new JobHost(CreateConfiguration(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 host.Start();
 
@@ -147,7 +148,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void StopAsync_WhenStarted_DoesNotThrow()
         {
             // Arrange
-            using (JobHost host = new JobHost(CreateConfiguration()))
+            using (JobHost host = new JobHost(CreateConfiguration(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 host.Start();
 
@@ -159,7 +160,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void StopAsync_WhenStopped_DoesNotThrow()
         {
             // Arrange
-            using (JobHost host = new JobHost(CreateConfiguration()))
+            using (JobHost host = new JobHost(CreateConfiguration(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 host.Start();
                 host.Stop();
@@ -172,7 +173,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void StopAsync_WhenNotStarted_Throws()
         {
             // Arrange
-            using (JobHost host = new JobHost(CreateConfiguration()))
+            using (JobHost host = new JobHost(CreateConfiguration(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 // Act & Assert
                 ExceptionAssert.ThrowsInvalidOperation(() => host.StopAsync(), "The host has not yet started.");
@@ -186,7 +187,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             JobHostConfiguration configuration = CreateConfiguration(new LambdaStorageAccountProvider(
                     (i1, i2) => getAccountTaskSource.Task));
 
-            using (JobHost host = new JobHost(configuration))
+            using (JobHost host = new JobHost(configuration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 Task starting = host.StartAsync();
                 Assert.False(starting.IsCompleted); // Guard
@@ -203,7 +204,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void StopAsync_WhenWaiting_ReturnsIncompleteTask()
         {
             // Arrange
-            using (JobHost host = new JobHost(CreateConfiguration()))
+            using (JobHost host = new JobHost(CreateConfiguration(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 host.Start();
 
@@ -232,7 +233,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void StopAsync_WhenAlreadyStopping_ReturnsSameTask()
         {
             // Arrange
-            using (JobHost host = new JobHost(CreateConfiguration()))
+            using (JobHost host = new JobHost(CreateConfiguration(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 host.Start();
 
@@ -470,7 +471,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             config.LoggerFactory = factory;
 
-            JobHost host = new JobHost(config);
+            JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
             host.Start();
 
             // verify the handled binding error

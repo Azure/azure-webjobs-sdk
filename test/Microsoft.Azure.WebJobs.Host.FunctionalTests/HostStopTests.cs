@@ -8,6 +8,7 @@ using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Storage.Queue;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
@@ -69,7 +70,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 try
                 {
                     // Arrange
-                    JobHost host = new JobHost(serviceProvider);
+                    JobHost host = new JobHost(serviceProvider, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
                     host.Start();
                     callback.Invoke(host);
                     startTaskSource.TrySetResult(null);

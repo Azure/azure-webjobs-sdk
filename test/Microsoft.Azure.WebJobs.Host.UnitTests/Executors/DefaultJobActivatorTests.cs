@@ -39,7 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
         private static DefaultJobActivator CreateProductUnderTest()
         {
-            return DefaultJobActivator.Instance;
+            return new DefaultJobActivator();
         }
     }
 }

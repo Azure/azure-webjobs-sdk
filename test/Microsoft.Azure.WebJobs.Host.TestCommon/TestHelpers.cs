@@ -15,6 +15,7 @@ using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.TestCommon
@@ -98,7 +99,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
              )
         {
             var config = NewConfig(typeof(TProgram), services);
-            var host = new TestJobHost<TProgram>(config);
+            var host = new TestJobHost<TProgram>(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
             return host;
         }
 

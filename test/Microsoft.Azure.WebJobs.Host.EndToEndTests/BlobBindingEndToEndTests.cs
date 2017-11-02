@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json;
@@ -723,7 +724,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.False(await appendBlobContainer.ExistsAsync());
                 await appendBlobContainer.CreateAsync();
 
-                Host = new JobHost(hostConfiguration);
+                Host = new JobHost(hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
                 Host.Start();
 
                 // upload some test blobs

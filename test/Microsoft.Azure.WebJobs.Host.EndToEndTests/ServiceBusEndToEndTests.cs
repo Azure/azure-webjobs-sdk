@@ -13,6 +13,7 @@ using Microsoft.Azure.ServiceBus.Core;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
@@ -112,7 +113,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 };
 
                 config.UseServiceBus(_serviceBusConfig);
-                JobHost host = new JobHost(config);
+                JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
 
                 await ServiceBusEndToEndInternal(typeof(ServiceBusTestJobs), host: host);
 
@@ -142,7 +143,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     TypeLocator = new FakeTypeLocator(typeof(ServiceBusTestJobs))
                 };
                 config.UseServiceBus(_serviceBusConfig);
-                JobHost host = new JobHost(config);
+                JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
 
                 await WriteQueueMessage(_secondaryConnectionString, FirstQueueName, "Test");
 
@@ -208,7 +209,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 LoggerFactory = _loggerFactory
             };
             config.UseServiceBus(_serviceBusConfig);
-            return new JobHost(config);
+            return new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
         }
 
         private async Task ServiceBusEndToEndInternal(Type jobContainerType, JobHost host = null, bool verifyLogs = true)

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Storage;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Xunit;
 
@@ -22,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var serviceProvider = FunctionalTest.CreateConfigurationForCallFailure(account,
                 typeof(InvalidQueueNameProgram), backgroundTaskSource);
 
-            using (JobHost host = new JobHost(serviceProvider))
+            using (JobHost host = new JobHost(serviceProvider, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 // Act & Assert
                 FunctionIndexingException exception = Assert.Throws<FunctionIndexingException>(() => host.Start());

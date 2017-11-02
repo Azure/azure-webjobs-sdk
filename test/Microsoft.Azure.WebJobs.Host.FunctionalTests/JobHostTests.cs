@@ -8,6 +8,7 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
@@ -37,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             config.TypeLocator = new FakeTypeLocator(typeof(ProgramSimple));
 
             var expected = "123";
-            using (var jobHost = new JobHost(config))
+            using (var jobHost = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 var method = typeof(ProgramSimple).GetMethod("Test");
                 jobHost.Call(method, new { value = expected });

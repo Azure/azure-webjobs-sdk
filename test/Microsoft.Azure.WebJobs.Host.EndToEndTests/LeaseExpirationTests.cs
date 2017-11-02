@@ -5,6 +5,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Xunit;
@@ -79,7 +80,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await _queue.AddMessageAsync(new CloudQueueMessage("Test"));
 
             _tokenSource = new CancellationTokenSource();
-            JobHost host = new JobHost(_config);
+            JobHost host = new JobHost(_config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
 
             _tokenSource.Token.Register(host.Stop);
             host.RunAndBlock();

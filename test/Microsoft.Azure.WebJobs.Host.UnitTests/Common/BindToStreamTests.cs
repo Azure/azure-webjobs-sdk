@@ -4,6 +4,7 @@
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -463,7 +464,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         public void TestMetadata()
         {
             JobHostConfiguration config = TestHelpers.NewConfig();
-            var host2 = new JobHost(config);
+            var host2 = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
             var metadataProvider = host2.CreateMetadataProvider();
 
             // Blob 
@@ -490,7 +491,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         {
             var config = TestHelpers.NewConfig<ConfigNullOutParam>();
             config.AddExtension(new ConfigNullOutParam()); // Registers a BindToInput rule
-            var host = new JobHost(config);
+            var host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
             IJobHostMetadataProvider metadataProvider = host.CreateMetadataProvider();
 
             // Getting default type. 

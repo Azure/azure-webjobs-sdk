@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Xunit;
@@ -110,7 +111,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 SynchronizationContext.SetSynchronizationContext(null);
                 using (WebJobsShutdownContext shutdownContext = new WebJobsShutdownContext())
-                using (JobHost host = new JobHost(_hostConfiguration))
+                using (JobHost host = new JobHost(_hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
                 {
                     _invokeInFunction = () => { shutdownContext.NotifyShutdown(); };
 
@@ -129,7 +130,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         public void WebJobsShutdown_WhenUsingTriggeredFunction_TriggersCancellationToken()
         {
             using (WebJobsShutdownContext shutdownContext = new WebJobsShutdownContext())
-            using (JobHost host = new JobHost(_hostConfiguration))
+            using (JobHost host = new JobHost(_hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 _invokeInFunction = () => { shutdownContext.NotifyShutdown(); };
 
@@ -147,7 +148,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             try
             {
                 SynchronizationContext.SetSynchronizationContext(null);
-                using (JobHost host = new JobHost(_hostConfiguration))
+                using (JobHost host = new JobHost(_hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
                 {
                     host.Start();
 
@@ -167,7 +168,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public void Stop_WhenUsingTriggeredFunction_TriggersCancellationToken()
         {
-            using (JobHost host = new JobHost(_hostConfiguration))
+            using (JobHost host = new JobHost(_hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 PrepareHostForTrigger(host, startHost: true);
 
@@ -186,7 +187,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             try
             {
                 SynchronizationContext.SetSynchronizationContext(null);
-                using (JobHost host = new JobHost(_hostConfiguration))
+                using (JobHost host = new JobHost(_hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
                 {
                     callTask = InvokeNoAutomaticTriggerFunction(host);
                 }
@@ -202,7 +203,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public void Dispose_WhenUsingTriggeredFunction_TriggersCancellationToken()
         {
-            using (JobHost host = new JobHost(_hostConfiguration))
+            using (JobHost host = new JobHost(_hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
             {
                 PrepareHostForTrigger(host, startHost: true);
             }
@@ -219,7 +220,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 SynchronizationContext.SetSynchronizationContext(null);
                 using (CancellationTokenSource tokenSource = new CancellationTokenSource())
-                using (JobHost host = new JobHost(_hostConfiguration))
+                using (JobHost host = new JobHost(_hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
                 {
                     _invokeInFunction = () => { tokenSource.Cancel(); };
 
@@ -244,7 +245,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 SynchronizationContext.SetSynchronizationContext(null);
 
                 using (CancellationTokenSource tokenSource = new CancellationTokenSource())
-                using (JobHost host = new JobHost(_hostConfiguration))
+                using (JobHost host = new JobHost(_hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
                 {
                     _invokeInFunction = () => { tokenSource.Cancel(); };
 

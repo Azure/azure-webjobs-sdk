@@ -11,6 +11,7 @@ using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -253,7 +254,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             });
             await table.ExecuteBatchAsync(operation);
 
-            JobHost host = new JobHost(hostConfig);
+            JobHost host = new JobHost(hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
             var methodInfo = this.GetType().GetMethod("TableWithFilter", BindingFlags.Public | BindingFlags.Static);
             var input = new Person { Age = 25, Location = "Seattle" };
             string json = JsonConvert.SerializeObject(input);
@@ -298,7 +299,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
 
             // The jobs host is started
-            JobHost host = new JobHost(hostConfig);
+            JobHost host = new JobHost(hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
 
             _functionChainWaitHandle = new ManualResetEvent(initialState: false);
 
@@ -353,7 +354,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             hostConfig.LoggerFactory = loggerFactory;
 
             // The jobs host is started
-            JobHost host = new JobHost(hostConfig);
+            JobHost host = new JobHost(hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
             host.Start();
 
             // use reflection to construct a bad message:

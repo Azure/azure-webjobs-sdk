@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -310,7 +311,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await inputQueue1.AddMessageAsync(new CloudQueueMessage(TestData));
                 await inputQueue2.AddMessageAsync(new CloudQueueMessage(TestData));
 
-                Host = new JobHost(hostConfiguration);
+                Host = new JobHost(hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
                 Host.Start();
             }
 

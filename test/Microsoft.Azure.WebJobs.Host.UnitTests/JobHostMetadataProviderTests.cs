@@ -15,6 +15,10 @@ using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Moq;
 using Newtonsoft.Json.Linq;
 using Xunit;
+using System.Collections.Generic;
+using Microsoft.Azure.WebJobs.Host.Bindings;
+using Moq;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
@@ -33,7 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             config.AddExtension(ext);
 
-            var host = new TestJobHost<MyProg>(config);
+            var host = new TestJobHost<MyProg>(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
             IJobHostMetadataProvider metadataProvider = host.CreateMetadataProvider();
             Assert.Equal(1, ext._counter);
 
@@ -80,7 +84,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void AttrBuilder()
         {
             JobHostConfiguration config = TestHelpers.NewConfig();
-            var host2 = new JobHost(config);
+            var host2 = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
             var metadataProvider = host2.CreateMetadataProvider();
 
             // Blob 
@@ -147,7 +151,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void DefaultTypeForTable()
         {
             JobHostConfiguration config = TestHelpers.NewConfig();
-            var host2 = new JobHost(config);
+            var host2 = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
             var metadataProvider = host2.CreateMetadataProvider();
 
             var t1 = metadataProvider.GetDefaultType(new TableAttribute("table1"), FileAccess.Read, null);
@@ -165,7 +169,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void DefaultTypeForQueue()
         {
             JobHostConfiguration config = TestHelpers.NewConfig();
-            var host2 = new JobHost(config);
+            var host2 = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
             var metadataProvider = host2.CreateMetadataProvider();
 
             var t1 = metadataProvider.GetDefaultType(new QueueTriggerAttribute("q"), FileAccess.Read, typeof(byte[]));
@@ -189,8 +193,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             var ext = new TestExtension2();
             var prog = new FakeTypeLocator();
-            JobHostConfiguration config = TestHelpers.NewConfig(prog, ext);
-            var host = new JobHost(config);
+            JobHostConfiguration config = TestHelpers.NewConfig(prog, ext);                                 
+            var host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
             IJobHostMetadataProvider metadataProvider = host.CreateMetadataProvider();
 
             var attr = new Test9Attribute(null);
@@ -217,7 +221,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var ext = new TestExtension3();
             var prog = new FakeTypeLocator();
             JobHostConfiguration config = TestHelpers.NewConfig(prog, ext);
-            var host = new JobHost(config);
+            var host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
             IJobHostMetadataProvider metadataProvider = host.CreateMetadataProvider();
 
             var attr = new Test9Attribute(null);
@@ -292,7 +296,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void GetFunctionMetadata()
         {
             JobHostConfiguration config = TestHelpers.NewConfig();
-            var host = new JobHost(config);
+            var host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
 
             var mockFunctionIndexProvider = new Mock<IFunctionIndexProvider>();
 

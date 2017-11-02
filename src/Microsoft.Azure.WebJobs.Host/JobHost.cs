@@ -16,6 +16,7 @@ using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 
 namespace Microsoft.Azure.WebJobs
@@ -24,7 +25,7 @@ namespace Microsoft.Azure.WebJobs
     /// A <see cref="JobHost"/> is the execution container for jobs. Once started, the
     /// <see cref="JobHost"/> will manage and run job functions when they are triggered.
     /// </summary>
-    public class JobHost : IDisposable, IJobInvoker
+    public class JobHost : IJobHost, IDisposable, IJobInvoker
     {
         private const int StateNotStarted = 0;
         private const int StateStarting = 1;
@@ -58,15 +59,6 @@ namespace Microsoft.Azure.WebJobs
 
         private ILogger _logger;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="JobHost"/> class, using a Microsoft Azure Storage connection
-        /// string located in the connectionStrings section of the configuration file or in environment variables.
-        /// </summary>
-        public JobHost()
-            : this(new JobHostConfiguration())
-        {
-        }
-
         static JobHost()
         {
             // add webjobs to user agent for all storage calls
@@ -82,7 +74,7 @@ namespace Microsoft.Azure.WebJobs
         /// Initializes a new instance of the <see cref="JobHost"/> class using the configuration provided.
         /// </summary>
         /// <param name="configuration">The job host configuration.</param>
-        public JobHost(JobHostConfiguration configuration)
+        public JobHost(JobHostConfiguration configuration, IOptions<JobHostOptions> options)
         {
             if (configuration == null)
             {
