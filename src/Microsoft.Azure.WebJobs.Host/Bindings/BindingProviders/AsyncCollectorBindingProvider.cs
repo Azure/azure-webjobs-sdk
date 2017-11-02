@@ -206,17 +206,34 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return rules;
         }
 
+        // Listed in precedence for providing via DefaultType.
+        private static readonly Type[] _defaultTypes = new Type[] { typeof(JObject), typeof(byte[]), typeof(string) };
+
         public Type GetDefaultType(Attribute attribute, FileAccess access, Type requestedType)
         {
             if (access == FileAccess.Write)
-            {              
-                var cm = (ConverterManager)this._converterManager;
-                var types = cm.GetPossibleSourceTypesFromDestination(attribute.GetType(), typeof(TType));
+            {
+                // TType is OpenType 
+                // TType is CloudMessage,   String --> CloudMessage
 
-                // search in precedence 
-                foreach (var target in new Type[] { typeof(JObject), typeof(byte[]), typeof(string) })
+                var ot = OpenType.FromType<TType>();
+
+                // Check for a direct match. 
+                // This is critical when there are no converters, such as if TType is an OpenType
+                foreach (var target in _defaultTypes)
                 {
-                    if (types.Contains(target))
+                    if (ot.IsMatch(target))
+                    {
+                        return typeof(IAsyncCollector<>).MakeGenericType(target);
+                    }
+                }
+
+                // Check if there's a converter 
+                var cm = this._converterManager;
+                                
+                foreach (var target in _defaultTypes)
+                {
+                    if (cm.HasConverter<TAttribute>(target, typeof(TType)))
                     {
                         return typeof(IAsyncCollector<>).MakeGenericType(target);
                     }
