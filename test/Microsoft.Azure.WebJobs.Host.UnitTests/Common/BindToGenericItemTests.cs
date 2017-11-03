@@ -177,8 +177,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 // The AlphaType restriction here means that although we have a GeneralBuilder<> that *could*
                 // directly build a BetaType, we can only use it to build AlphaTypes, and so we must invoke the converter.
                 context.AddBindingRule<Test6Attribute>().BindToInput<AlphaType>(typeof(GeneralBuilder<>));
-                                
-                
             }
 
             public void Test(TestJobHost<ConfigWithConverters> host)

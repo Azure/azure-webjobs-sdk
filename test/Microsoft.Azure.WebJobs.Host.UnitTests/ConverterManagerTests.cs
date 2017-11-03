@@ -384,11 +384,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var cm = new ConverterManager();
 
             cm.AddConverter<OpenType.Poco, JObject, Attribute>( (src, dest) =>
-                async (input, attr2, ctx) =>
+                (input, attr2, ctx) =>
                 {
                     var val = JObject.FromObject(input);
                     val["c"] = "custom"; // stamp an extra field to verify it's our serialization 
-                    return val;
+                    return Task.FromResult<object>(val);
                 });
            
             cm.AddConverter<JObject, Other>(obj => new Other { Value2 = obj["c"].ToString() });

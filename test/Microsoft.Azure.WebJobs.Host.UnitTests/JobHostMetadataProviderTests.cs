@@ -188,7 +188,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var type = metadataProvider.GetDefaultType(attr, FileAccess.Write, null);
 
             Assert.Equal(typeof(IAsyncCollector<JObject>), type);
-
         }
 
         // Setup similar to CosmoDb
