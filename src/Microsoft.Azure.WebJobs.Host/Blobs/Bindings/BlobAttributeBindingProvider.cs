@@ -305,7 +305,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             rule.AddOpenConverter<MultiBlobContext, IEnumerable<MultiBlobType>>(typeof(MultiBlobConverer<>), this);
 
             // BindToStream will also handle the custom Stream-->T converters.
-            rule.SetPostResolveHook(ToBlobDescr).BindToStream(this, FileAccess.ReadWrite); // Precedence, must beat CloudBlobStream
+            rule.SetPostResolveHook(ToBlobDescr).
+                BindToStream(this, FileAccess.ReadWrite); // Precedence, must beat CloudBlobStream
 
             // Normal blob
             rule.SetPostResolveHook(ToBlobDescr).BindToInput<CloudBlockBlob>(this);

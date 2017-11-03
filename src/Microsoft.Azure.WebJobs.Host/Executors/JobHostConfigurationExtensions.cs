@@ -95,10 +95,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             var metadataProvider = new JobHostMetadataProvider();
             metadataProvider.AddAttributesFromAssembly(typeof(TableAttribute).Assembly);
 
+            var converterManager = (ConverterManager)config.ConverterManager;
+
             var exts = config.GetExtensions();
             bool builtinsAdded = exts.GetExtensions<IExtensionConfigProvider>().OfType<TableExtension>().Any();
             if (!builtinsAdded)
             {
+                AddStreamConverters(extensionTypeLocator, converterManager);
+
                 config.AddExtension(new TableExtension());
                 config.AddExtension(new QueueExtension());
                 config.AddExtension(new Blobs.Bindings.BlobExtension());
@@ -152,7 +156,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 services.AddService<IBindingProvider>(bindingProvider);
             }
                         
-            var converterManager = (ConverterManager)config.ConverterManager;
             metadataProvider.Initialize(bindingProvider, converterManager, exts);
             services.AddService<IJobHostMetadataProvider>(metadataProvider);
 
@@ -518,6 +521,41 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
             }
         }
+
+        #region Hackery for ExtensionLocator
+
+        // create IConverterManager adapters to any legacy ICloudBlobStreamBinder<T>. 
+        static void AddStreamConverters(IExtensionTypeLocator extensionTypeLocator, ConverterManager cm)
+        {
+            if (extensionTypeLocator == null)
+            {
+                return;
+            }
+
+            foreach (var type in extensionTypeLocator.GetCloudBlobStreamBinderTypes())
+            {
+                var inst = Activator.CreateInstance(type);
+
+                var t = Blobs.CloudBlobStreamObjectBinder.GetBindingValueType(type);
+                var m = typeof(JobHostConfigurationExtensions).GetMethod("AddAdapter", BindingFlags.Static | BindingFlags.NonPublic);
+                m = m.MakeGenericMethod(t);
+                m.Invoke(null, new object[] { cm, inst });
+            }
+        }
+
+        static void AddAdapter<T>(ConverterManager cm, ICloudBlobStreamBinder<T> x)
+        {
+            cm.AddExactConverter<Stream, T>(stream => x.ReadFromStreamAsync(stream, CancellationToken.None).Result);
+
+            cm.AddExactConverter<ToStream<T>, object>(pair =>
+            {
+                T value = pair.Value;
+                Stream stream = pair.Stream;
+                x.WriteToStreamAsync(value, stream, CancellationToken.None).Wait();
+                return null;
+            });
+        }
+        #endregion
 
         private class DataOnlyHostOutputMessage : HostOutputMessage
         {

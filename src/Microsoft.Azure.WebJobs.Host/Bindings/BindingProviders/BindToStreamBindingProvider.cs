@@ -28,51 +28,13 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         private readonly IConverterManager _converterManager;
         private readonly PatternMatcher _patternMatcher;
 
-        public BindToStreamBindingProvider(PatternMatcher patternMatcher, FileAccess access, INameResolver nameResolver, IConverterManager converterManager, IExtensionTypeLocator extensionTypeLocator)
+        public BindToStreamBindingProvider(PatternMatcher patternMatcher, FileAccess access, INameResolver nameResolver, IConverterManager converterManager)
         {
             _patternMatcher = patternMatcher;
             _nameResolver = nameResolver;
             _converterManager = converterManager;
             _access = access;
-
-            Add(extensionTypeLocator, (ConverterManager) _converterManager);
         }
-
-        #region Hackery for ExtensionLocator
-
-        // create IConverterManager adapters to any legacy ICloudBlobStreamBinder<T>. 
-        static void Add(IExtensionTypeLocator extensionTypeLocator, ConverterManager cm)
-        {
-            if (extensionTypeLocator == null)
-            {
-                return;
-            }
-
-            foreach (var type in extensionTypeLocator.GetCloudBlobStreamBinderTypes())
-            {
-                var inst = Activator.CreateInstance(type);
-
-                var t = Blobs.CloudBlobStreamObjectBinder.GetBindingValueType(type);
-                var m = typeof(BindToStreamBindingProvider<TAttribute>).GetMethod("AddAdapter", BindingFlags.Static | BindingFlags.NonPublic);
-                m = m.MakeGenericMethod(t);
-                m.Invoke(null, new object[] { cm, inst });
-            }
-        }
-
-        static void AddAdapter<T>(ConverterManager cm, ICloudBlobStreamBinder<T> x)
-        {
-            cm.AddExactConverter<Stream, T>(stream => x.ReadFromStreamAsync(stream, CancellationToken.None).Result);
-
-            cm.AddExactConverter<ToStream<T>, object>(pair =>
-            {
-                T value = pair.Value;
-                Stream stream = pair.Stream;
-                x.WriteToStreamAsync(value, stream, CancellationToken.None).Wait();
-                return null;
-            });
-        }
-        #endregion
-
 
         public Type GetDefaultType(Attribute attribute, FileAccess access, Type requestedType)
         {
