@@ -13,6 +13,16 @@ using System.Threading;
 
 namespace Microsoft.Azure.WebJobs
 {
+    class DirectInvokeString
+    {
+        public string Value { get; set; }
+
+        public static DirectInvokeString New(string value)
+        {
+            return new DirectInvokeString { Value = value };
+        }
+    }
+
     // $$$ Beter name? Tuple? 
     class ToStream<T>
     {

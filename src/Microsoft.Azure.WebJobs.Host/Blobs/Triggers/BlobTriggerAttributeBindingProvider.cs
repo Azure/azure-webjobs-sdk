@@ -24,74 +24,27 @@ using System.Threading;
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
 {
     internal class BlobTriggerExtension : IExtensionConfigProvider,
-        IAsyncConverter<string, IStorageBlob>, // for invoker
-        IAsyncConverter<IStorageBlob, Stream>,
-         IAsyncConverter<Stream, string>,
-        IAsyncConverter<Stream, byte[]>,
-        IAsyncConverter<Stream, TextReader>
+        IAsyncConverter<DirectInvokeString, IStorageBlob>, // for invoker
+        IAsyncConverter<IStorageBlob, Stream>
     {
         public void Initialize(ExtensionConfigContext context)
         {
             var rule = context.AddBindingRule<BlobTriggerAttribute>();
             rule.BindToTrigger<IStorageBlob>(); // Add listener here too? $$$ Condense with AddBindingRule
 
-            // We can now reuse converters from BindToInput/BindToStream
-            // $$$ Reduce BindToStream to a converter problem. 
-            rule.AddConverter<string, IStorageBlob>(this); // for direct invoker
-            rule.AddConverter<IStorageBlob, Stream>(this);
+            rule.AddConverter<IStorageBlob, DirectInvokeString>(blob => DirectInvokeString.New(blob.GetBlobPath()));
+            rule.AddConverter<DirectInvokeString, IStorageBlob>(this);
 
+            // Trigger already has the IStorageBlob. Whereas BindToInput defines: Attr-->Stream. 
+            //  Converter manager already has Stream-->Byte[],String,TextReader
+            rule.AddConverter<IStorageBlob, Stream>(this); 
+
+            // $$$ Can these overlap BindToInput? IStorageBlob --> X? 
             rule.AddConverter(new StorageBlobToCloudBlobConverter());
             rule.AddConverter(new StorageBlobToCloudBlockBlobConverter());
             rule.AddConverter(new StorageBlobToCloudPageBlobConverter());
             rule.AddConverter(new StorageBlobToCloudAppendBlobConverter());
-
-            rule.AddConverter<Stream, string>(this);
-            rule.AddConverter<Stream, byte[]>(this);
-            rule.AddConverter<Stream, TextReader>(this);
-
-            // ApplyRules() will have _binders == 0.
-            // Add a Binding to Non-trigger _BindingProvider  for this ; which FunctionIndexer will claim. 
-            // Don't event add a BindingProvider ... that can get confusing. 
-            // !!! Just search for converters! If converter exist, then create the rule. 
-
-            // Also check explicit invoke ... Obj is a string ... (can we convert string to IStorageBlob )
         }
-
-        // StringArgumentBindingProvider
-        async Task<string> IAsyncConverter<Stream, string>.ConvertAsync(Stream input, CancellationToken cancellationToken)
-        {
-            string value;
-
-            using (input)
-            using (TextReader reader = new StreamReader(input))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                value = await reader.ReadToEndAsync();
-                return value;
-            }
-        }
-
-        // ByteArrayArgumentBindingProvider
-        async Task<byte[]> IAsyncConverter<Stream, byte[]>.ConvertAsync(Stream input, CancellationToken cancellationToken)
-        {
-            byte[] value;
-
-            using (input)
-            using (MemoryStream outputStream = new MemoryStream())
-            {
-                const int DefaultBufferSize = 4096;
-                await input.CopyToAsync(outputStream, DefaultBufferSize);
-                value = outputStream.ToArray();
-                return value;
-            }
-        }
-
-        // TextReaderArgumentBindingProvider
-        async Task<TextReader> IAsyncConverter<Stream, TextReader>.ConvertAsync(Stream input, CancellationToken cancellationToken)
-        {
-            return new StreamReader(input);
-        }
-
 
         async Task<Stream> IAsyncConverter<IStorageBlob, Stream>.ConvertAsync(IStorageBlob input, CancellationToken cancellationToken)
         {
@@ -99,15 +52,14 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             return watchableStream;
         }
 
+        // $$$ 
         internal static StringToStorageBlobConverter _invoker;
 
-        Task<IStorageBlob> IAsyncConverter<string, IStorageBlob>.ConvertAsync(string input, CancellationToken cancellationToken)
+        Task<IStorageBlob> IAsyncConverter<DirectInvokeString, IStorageBlob>.ConvertAsync(DirectInvokeString input, CancellationToken cancellationToken)
         {
-            return _invoker.ConvertAsync(input, cancellationToken);
+            return _invoker.ConvertAsync(input.Value, cancellationToken);
         }
     }
-
-
 
     internal class BlobTriggerAttributeBindingProvider : ITriggerBindingProvider
     {

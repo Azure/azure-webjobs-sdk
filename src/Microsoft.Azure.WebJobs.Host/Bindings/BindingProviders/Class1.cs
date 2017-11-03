@@ -62,8 +62,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         private class ExactBinding<TUserType> : IBinding
         {
-            private FuncConverter<TTriggerValue, TAttribute, TUserType> _converter;
-            private FuncConverter<string, TAttribute, TTriggerValue> _directInvoker;
+            private FuncAsyncConverter<TTriggerValue, TUserType> _converter;
+            private FuncAsyncConverter<DirectInvokeString, TTriggerValue> _directInvoker;
+
+            private FuncAsyncConverter<TTriggerValue, DirectInvokeString> _getInvokeString;
 
             public bool FromAttribute => true;
 
@@ -84,14 +86,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                         var c2 = cm.GetConverter<Stream, TUserType, TAttribute>();
                         if (c2 != null)
                         {
-                            converter = (TTriggerValue src, TAttribute attr, ValueBindingContext ctx) =>
+                            converter = async (TTriggerValue src, Attribute attr, ValueBindingContext ctx) =>
                             {
-                                Stream o1 = c1(src, attr, ctx);
+                                Stream o1 = await c1(src, attr, ctx);
                                 if (o1 ==null)
                                 {
                                     return default(TUserType);
                                 }
-                                TUserType o2 = c2(o1, attr, ctx);
+                                TUserType o2 = await c2(o1, attr, ctx);
                                 return o2;
                             };
                         }
@@ -111,11 +113,28 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return new ExactBinding<TUserType>
                 {
                     _converter = converter,
-                    _directInvoker = cm.GetConverter<string, TTriggerValue, TAttribute>()
+                    _directInvoker = GetDirectInvoker(cm),
+                    _getInvokeString = cm.GetConverter<TTriggerValue, DirectInvokeString, TAttribute>()
                 };
             }
 
-            public Task<IValueProvider> BindAsync(object value, ValueBindingContext context)
+            private static FuncAsyncConverter<DirectInvokeString, TTriggerValue> GetDirectInvoker(IConverterManager cm)
+            {
+                var direct = cm.GetConverter<DirectInvokeString, TTriggerValue, TAttribute>();
+                if (direct != null)
+                {
+                    return direct;
+                }
+
+                var str = cm.GetConverter<string, TTriggerValue, TAttribute>();
+                if (str != null)
+                {
+                    return (input, attr, ctx) => str(input.Value, attr, ctx);
+                }
+                return null;
+            }
+
+            public async Task<IValueProvider> BindAsync(object value, ValueBindingContext context)
             {                
                 TTriggerValue val = value as TTriggerValue;
                 if (val == null)
@@ -123,7 +142,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     if (_directInvoker != null && (value is string str))
                     {
                         // Direct invoke case. NEed to converrt String-->TTriggerValue. 
-                        val = _directInvoker(str, null, context);
+                        val = await _directInvoker(DirectInvokeString.New(str), null, context);
                     }
                     else
                     {
@@ -132,12 +151,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     }
                 }
 
-                TUserType result = _converter(val, null, context);
+                TUserType result = await _converter(val, null, context);
 
-
-                string invokeString = "???";
-                IValueProvider vp = new ConstantValueProvider(result, typeof(TUserType), invokeString);
-                return Task.FromResult(vp);
+                var invokeString = await _getInvokeString(val, null, null);
+                IValueProvider vp = new ConstantValueProvider(result, typeof(TUserType), invokeString.Value);
+                return vp;
             }
 
             public Task<IValueProvider> BindAsync(BindingContext context)
