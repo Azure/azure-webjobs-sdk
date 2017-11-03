@@ -63,9 +63,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         private class ExactBinding<TUserType> : IBinding
         {
             private FuncAsyncConverter<TTriggerValue, TUserType> _converter;
-            private FuncAsyncConverter<DirectInvokeString, TTriggerValue> _directInvoker;
 
+            private FuncAsyncConverter<DirectInvokeString, TTriggerValue> _directInvoker;
             private FuncAsyncConverter<TTriggerValue, DirectInvokeString> _getInvokeString;
+
+            private TAttribute _attribute;
 
             public bool FromAttribute => true;
 
@@ -106,15 +108,16 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     return null;
                 }
 
-
-
-
-
+                var parameter = context.Parameter;
+                var attributeSource = TypeUtility.GetResolvedAttribute<TAttribute>(parameter);
+                // $$$ Apply resolver?
+                
                 return new ExactBinding<TUserType>
                 {
                     _converter = converter,
                     _directInvoker = GetDirectInvoker(cm),
-                    _getInvokeString = cm.GetConverter<TTriggerValue, DirectInvokeString, TAttribute>()
+                    _getInvokeString = cm.GetConverter<TTriggerValue, DirectInvokeString, TAttribute>(),
+                    _attribute = attributeSource
                 };
             }
 
@@ -141,8 +144,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 {
                     if (_directInvoker != null && (value is string str))
                     {
-                        // Direct invoke case. NEed to converrt String-->TTriggerValue. 
-                        val = await _directInvoker(DirectInvokeString.New(str), null, context);
+                        // Direct invoke case. Need to converrt String-->TTriggerValue. 
+                        val = await _directInvoker(DirectInvokeString.New(str), _attribute, context);
                     }
                     else
                     {
@@ -151,9 +154,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     }
                 }
 
-                TUserType result = await _converter(val, null, context);
+                TUserType result = await _converter(val, _attribute, context);
 
-                var invokeString = await _getInvokeString(val, null, null);
+                DirectInvokeString invokeString = await _getInvokeString(val, _attribute, context);
                 IValueProvider vp = new ConstantValueProvider(result, typeof(TUserType), invokeString.Value);
                 return vp;
             }

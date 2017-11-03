@@ -237,8 +237,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
 
         private static IAsyncObjectToTypeConverter<IStorageBlob> CreateConverter(IStorageBlobClient client)
         {
-            BlobTriggerExtension._invoker = new StringToStorageBlobConverter(client); // Plumb this better. 
-
             return new CompositeAsyncObjectToTypeConverter<IStorageBlob>(
                 new BlobOutputConverter<IStorageBlob>(new AsyncConverter<IStorageBlob, IStorageBlob>(new IdentityConverter<IStorageBlob>())),
                 new BlobOutputConverter<ICloudBlob>(new AsyncConverter<ICloudBlob, IStorageBlob>(new CloudBlobToStorageBlobConverter())),

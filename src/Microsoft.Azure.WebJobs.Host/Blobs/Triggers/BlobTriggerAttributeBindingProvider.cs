@@ -24,16 +24,19 @@ using System.Threading;
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
 {
     internal class BlobTriggerExtension : IExtensionConfigProvider,
-        IAsyncConverter<DirectInvokeString, IStorageBlob>, // for invoker
         IAsyncConverter<IStorageBlob, Stream>
     {
+        private IStorageAccountProvider _accountProvider;
+
         public void Initialize(ExtensionConfigContext context)
         {
+            _accountProvider = context.Config.GetService<IStorageAccountProvider>();
+
             var rule = context.AddBindingRule<BlobTriggerAttribute>();
             rule.BindToTrigger<IStorageBlob>(); // Add listener here too? $$$ Condense with AddBindingRule
 
             rule.AddConverter<IStorageBlob, DirectInvokeString>(blob => DirectInvokeString.New(blob.GetBlobPath()));
-            rule.AddConverter<DirectInvokeString, IStorageBlob>(this);
+            rule.AddConverter<DirectInvokeString, IStorageBlob>(ConvertX);
 
             // Trigger already has the IStorageBlob. Whereas BindToInput defines: Attr-->Stream. 
             //  Converter manager already has Stream-->Byte[],String,TextReader
@@ -52,12 +55,18 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             return watchableStream;
         }
 
-        // $$$ 
-        internal static StringToStorageBlobConverter _invoker;
-
-        Task<IStorageBlob> IAsyncConverter<DirectInvokeString, IStorageBlob>.ConvertAsync(DirectInvokeString input, CancellationToken cancellationToken)
+        private async Task<IStorageBlob> ConvertX(DirectInvokeString input, Attribute attr, ValueBindingContext context)
         {
-            return _invoker.ConvertAsync(input.Value, cancellationToken);
+            var attrResolved = (BlobTriggerAttribute)attr;
+            var account = await _accountProvider.GetStorageAccountAsync(attrResolved, CancellationToken.None);
+            var client = account.CreateBlobClient();
+
+            var cancellationToken = context.CancellationToken;
+            BlobPath path = BlobPath.ParseAndValidate(input.Value);
+            IStorageBlobContainer container = client.GetContainerReference(path.ContainerName);
+            var blob = await container.GetBlobReferenceFromServerAsync(path.BlobName, cancellationToken);
+
+            return blob;
         }
     }
 
