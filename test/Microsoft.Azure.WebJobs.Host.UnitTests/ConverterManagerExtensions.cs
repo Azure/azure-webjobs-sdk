@@ -146,7 +146,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
           object converterInstance)
           where TAttribute : Attribute
         {
-            var patternMatcher = PatternMatcher.New(converterInstance);
+            var patternMatcher = PatternMatcher.NewObj(converterInstance);
             converterManager.AddConverterBuilder<TSource, TDestination, TAttribute>(patternMatcher);
         }
 
@@ -160,11 +160,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 throw new ArgumentNullException("converterManager");
             }
 
-            converterManager.AddConverter<TSource, TDestination, TAttribute>((typeSource, typeDest) =>
-            {
-                Func<object, object> converter = patternMatcher.TryGetConverterFunc(typeSource, typeDest);
-                return (src, attribute, context) => Task.FromResult<object>(converter(src));
-            });
+            converterManager.AddConverter<TSource, TDestination, TAttribute>(
+                (typeSource, typeDest) => patternMatcher.TryGetConverterFunc(typeSource, typeDest));
         }
     }
 }

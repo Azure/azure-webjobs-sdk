@@ -37,10 +37,16 @@ namespace Microsoft.Azure.WebJobs
             where TAttribute : Attribute
         {
             var func = converterManager.GetConverter<TAttribute>(typeof(TSource), typeof(TDestination));
+            return func.AsTyped<TSource, TDestination>();
+        }
+
+        internal static FuncAsyncConverter<TSource, TDestination> AsTyped<TSource, TDestination>(this FuncAsyncConverter func)
+        {
             if (func == null)
             {
                 return null;
             }
+
             return async (src, attr, ctx) =>
             {
                 var result = await func((TSource)src, attr, ctx);

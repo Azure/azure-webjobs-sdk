@@ -11,9 +11,9 @@ using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Triggers;
-using static Microsoft.Azure.WebJobs.Host.Bindings.BindingFactory;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using System.Threading;
+using static Microsoft.Azure.WebJobs.Host.Bindings.BindingFactory;
 
 namespace Microsoft.Azure.WebJobs.Host.Config
 {
@@ -208,13 +208,28 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         /// It uses the attribute's Access property to determine direction (Read/Write). 
         /// It includes rules for additional types of TextReader,string, byte[], and TextWriter,out string, out byte[].
         /// </summary>
+        /// <param name="builder"></param>
+        /// <param name="fileAccess"></param>
+        public void BindToStream(FuncAsyncConverter<TAttribute, Stream> builder, FileAccess fileAccess)
+        {
+            var nameResolver = _parent.NameResolver;
+            var rule = new BindToStreamBindingProvider<TAttribute>(builder, fileAccess, nameResolver, _parent.ConverterManager);
+            Bind(rule);
+        }
+
+        /// <summary>
+        /// Bind an attribute to a stream. This ensures the stream is flushed after the user function returns. 
+        /// It uses the attribute's Access property to determine direction (Read/Write). 
+        /// It includes rules for additional types of TextReader,string, byte[], and TextWriter,out string, out byte[].
+        /// </summary>
         /// <param name="builderInstance"></param>
         /// <param name="fileAccess"></param>
         public void BindToStream(IAsyncConverter<TAttribute, Stream> builderInstance, FileAccess fileAccess)
         {
             var pm = PatternMatcher.New(builderInstance);
+            var builder = pm.TryGetConverterFunc<TAttribute, Stream>(); // throws 
             var nameResolver = _parent.NameResolver;
-            var rule = new BindToStreamBindingProvider<TAttribute>(pm, fileAccess, nameResolver,  _parent.ConverterManager);
+            var rule = new BindToStreamBindingProvider<TAttribute>(builder, fileAccess, nameResolver,  _parent.ConverterManager);
             Bind(rule);
         }
 
@@ -228,8 +243,9 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         public void BindToStream(IConverter<TAttribute, Stream> builderInstance, FileAccess fileAccess)
         {
             var pm = PatternMatcher.New(builderInstance);
+            var builder = pm.TryGetConverterFunc<TAttribute, Stream>(); // throws
             var nameResolver = _parent.NameResolver;
-            var rule = new BindToStreamBindingProvider<TAttribute>(pm, fileAccess, nameResolver, _parent.ConverterManager);
+            var rule = new BindToStreamBindingProvider<TAttribute>(builder, fileAccess, nameResolver, _parent.ConverterManager);
             Bind(rule);
         }
 

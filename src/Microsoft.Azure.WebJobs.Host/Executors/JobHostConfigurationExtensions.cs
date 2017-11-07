@@ -547,10 +547,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             cm.AddExactConverter<Stream, T>(stream => x.ReadFromStreamAsync(stream, CancellationToken.None).Result);
 
-            cm.AddExactConverter<ToStream<T>, object>(pair =>
+            cm.AddExactConverter<Apply<T, Stream>, object>(pair =>
             {
                 T value = pair.Value;
-                Stream stream = pair.Stream;
+                Stream stream = pair.Existing;
                 x.WriteToStreamAsync(value, stream, CancellationToken.None).Wait();
                 return null;
             });

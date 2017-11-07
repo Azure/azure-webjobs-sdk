@@ -247,8 +247,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         // TMessage - element type of the IAsyncCollector<> we matched to.  
         private class ExactBinding<TMessage> : BindingBase<TAttribute>
         {
-            private readonly Func<object, object> _buildFromAttribute;
-
+            private readonly FuncAsyncConverter _buildFromAttribute;
             private readonly FuncAsyncConverter<TMessage, TType> _converter;
             private readonly Mode _mode;
 
@@ -256,7 +255,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 AttributeCloner<TAttribute> cloner,
                 ParameterDescriptor param,
                 Mode mode,
-                Func<object, object> buildFromAttribute,
+                FuncAsyncConverter buildFromAttribute,
                 FuncAsyncConverter<TMessage, TType> converter) : base(cloner, param)
             {
                 this._buildFromAttribute = buildFromAttribute;
@@ -273,8 +272,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                 var parameter = context.Parameter;
                 var attributeSource = TypeUtility.GetResolvedAttribute<TAttribute>(parameter);
-                   
-                Func<object, object> buildFromAttribute;
+
+                FuncAsyncConverter buildFromAttribute;
                 FuncAsyncConverter<TMessage, TType> converter = null;
 
                 // Prefer the shortest route to creating the user type.
@@ -346,13 +345,13 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return new InvalidOperationException("Can't convert from type '" + typeUser.FullName);
             }
 
-            protected override Task<IValueProvider> BuildAsync(
+            protected override async Task<IValueProvider> BuildAsync(
                 TAttribute attrResolved,
                 ValueBindingContext context)
             {
                 string invokeString = Cloner.GetInvokeString(attrResolved);
 
-                object obj = _buildFromAttribute(attrResolved);
+                object obj = await _buildFromAttribute(attrResolved, null, context);
                 
                 IAsyncCollector<TMessage> collector;
                 if (_converter != null)
@@ -369,7 +368,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 }
 
                 var vp = CoerceValueProvider(_mode, invokeString, collector);
-                return Task.FromResult(vp);
+                return vp;
             }
 
             // Get a ValueProvider that's in the right mode. 

@@ -144,11 +144,9 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         private TThis AddConverterBuilder<TSource, TDestination>(          
           PatternMatcher patternMatcher)
         {
-             this.Converters.AddConverter<TSource, TDestination, TAttribute>((typeSource, typeDest) =>
-            {
-                Func<object, object> converter = patternMatcher.TryGetConverterFunc(typeSource, typeDest);
-                return (src, attribute, context) => Task.FromResult<object>(converter(src));
-            });
+            var builder = patternMatcher.GetBuilder();
+            this.Converters.AddConverter<TSource, TDestination, TAttribute>(builder);
+                
             return (TThis)(object)this;
         }
 
@@ -158,6 +156,10 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             if (OpenType.IsOpenType<T1>() || OpenType.IsOpenType<T2>())
             {
                 throw new InvalidOperationException($"Use AddOpenConverter to add a converter for open types.");
+            }
+            if (typeof(T1) == typeof(T2))
+            {
+                throw new InvalidOperationException($"Converter source and desitnation types must be different (${typeof(T1).Name}).");
             }
         }
     }

@@ -3,36 +3,17 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
+using Microsoft.Azure.WebJobs.Host.Config;
 using Newtonsoft.Json.Linq;
-using System.IO;
-using System.Threading;
 
 namespace Microsoft.Azure.WebJobs
 {
-    // A short string serialization used to rehydrate the trigger. Sometimes this is the contents, and sometimes it's a moniker.  For example:
-    // For Blob, the DirectInvokeString is the blob path; whereas the String is the blob contents. (because blobs can be MB large) 
-    // For queue, both the DirectInvokeString and String are the queue contents. (because queue messages are generally small)
-    class DirectInvokeString
-    {
-        public string Value { get; set; }
-
-        public static DirectInvokeString New(string value)
-        {
-            return new DirectInvokeString { Value = value };
-        }
-    }
-
-    // $$$ Beter name? Tuple? 
-    class ToStream<T>
-    {
-        public T Value;
-        public Stream Stream;
-    }
-
     // Concrete implementation of IConverterManager
     internal class ConverterManager : IConverterManager
     {
@@ -54,13 +35,12 @@ namespace Microsoft.Azure.WebJobs
             this.AddExactConverter<byte[], string>(DefaultByteArrayToString);
             this.AddExactConverter<IEnumerable<JObject>, JArray>((enumerable) => JArray.FromObject(enumerable));            
         
-            this.AddExactConverter<ToStream<string>, object>(async (pair, cancellationToken) =>
+            this.AddExactConverter<Apply<string, Stream>, object>(async (pair, cancellationToken) =>
           {
               var text = pair.Value;
-              var stream = pair.Stream;
+              var stream = pair.Existing;
 
-              // Specifically use the same semantics as binding to 'TextWriter'
-              // $$$ Can we chain to TextWriter?
+              // Specifically use the same semantics as binding to 'TextWriter'              
               using (var writer = new StreamWriter(stream))
               {
                   cancellationToken.ThrowIfCancellationRequested();
@@ -69,10 +49,10 @@ namespace Microsoft.Azure.WebJobs
               return null;
           });
 
-            this.AddExactConverter<ToStream<byte[]>, object>(async (pair, cancellationToken) =>
+            this.AddExactConverter<Apply<byte[], Stream>, object>(async (pair, cancellationToken) =>
             {
                 var bytes = pair.Value;
-                var stream = pair.Stream;
+                var stream = pair.Existing;
 
                 await stream.WriteAsync(bytes, 0, bytes.Length);
                 return null;

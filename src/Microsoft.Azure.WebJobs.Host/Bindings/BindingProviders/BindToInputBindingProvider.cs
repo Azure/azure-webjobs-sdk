@@ -115,14 +115,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         private class ExactBinding : BindingBase<TAttribute>
         {
-            private readonly Func<object, object> _buildFromAttribute;
+            private readonly FuncAsyncConverter _buildFromAttribute;
             private readonly FuncAsyncConverter _converter;
             private readonly Type _parameterType;
 
             public ExactBinding(
                 AttributeCloner<TAttribute> cloner,
                 ParameterDescriptor param,
-                Func<object, object> buildFromAttribute,
+                FuncAsyncConverter buildFromAttribute,
                 FuncAsyncConverter converter,
                 Type parameterType) : base(cloner, param)
             {
@@ -144,7 +144,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                 var cloner = new AttributeCloner<TAttribute>(attributeSource, context.BindingDataContract, parent._nameResolver);
 
-                Func<object, object> buildFromAttribute;
+                FuncAsyncConverter buildFromAttribute;
                 FuncAsyncConverter converter = null;
                                 
                 // Prefer the shortest route to creating the user type.
@@ -200,7 +200,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 string invokeString = Cloner.GetInvokeString(attrResolved);
 
-                object obj = _buildFromAttribute(attrResolved);
+                object obj = await _buildFromAttribute(attrResolved, null, context);
                 object finalObj;
                 if (_converter == null)
                 {

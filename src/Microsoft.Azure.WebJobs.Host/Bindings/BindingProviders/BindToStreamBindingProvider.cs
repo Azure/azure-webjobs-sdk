@@ -4,13 +4,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.Azure.WebJobs.Host.Indexers;
+using Microsoft.Azure.WebJobs.Host.Config;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -26,29 +24,44 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         private readonly FileAccess _access; // Which direction this rule applies to. Can be R, W, or  RW
         private readonly INameResolver _nameResolver;
         private readonly IConverterManager _converterManager;
-        private readonly PatternMatcher _patternMatcher;
 
-        public BindToStreamBindingProvider(PatternMatcher patternMatcher, FileAccess access, INameResolver nameResolver, IConverterManager converterManager)
+        private readonly FuncAsyncConverter<TAttribute, Stream> _builder;
+
+        public BindToStreamBindingProvider(FuncAsyncConverter<TAttribute, Stream> builder, FileAccess access, INameResolver nameResolver, IConverterManager converterManager)
         {
-            _patternMatcher = patternMatcher;
             _nameResolver = nameResolver;
             _converterManager = converterManager;
             _access = access;
+
+            _builder = builder;
         }
 
         public Type GetDefaultType(Attribute attribute, FileAccess access, Type requestedType)
-        {
-            // $$$ This should compare file access to _access
+        {            
             if (attribute is TAttribute)
             {
-                return typeof(Stream);
+                if (access == FileAccess.Read)
+                {
+                    if (CanRead(this._access))
+                    {
+                        return typeof(Stream);
+                    }
+                }
+                if (access == FileAccess.Write)
+                {
+                    if (CanWrite(this._access))
+                    {
+                        return typeof(Stream);
+                    }    
+                }
+                // Read write stream area not supported. 
             }
+
             return null;
         }
 
         public IEnumerable<BindingRule> GetRules()
         {
-            // $$$ This should be driven based on registered converters 
             foreach (var type in new Type[]
             {
                 typeof(Stream),
@@ -194,6 +207,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             private readonly FileAccess _targetFileAccess;
             private readonly Type _typeValueProvider;
 
+            // Convert from Stream to the final user type 
+            object _converter;
+
             public StreamBinding(
                 AttributeCloner<TAttribute> cloner,
                 ParameterDescriptor param,
@@ -240,7 +256,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 {
                     if (parameter.IsOut)
                     {
-                        var outConverter = cm.GetConverter<ToStream<TUserType>, object, TAttribute>();
+                        var outConverter = cm.GetConverter<Apply<TUserType, Stream>, object, TAttribute>();
                         if (outConverter != null)
                         {
                             converterParam = outConverter;
@@ -335,18 +351,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                 return binding;
             }
-
-
-            object _converter;
-
+                        
             protected override async Task<IValueProvider> BuildAsync(TAttribute attrResolved, ValueBindingContext context)
             {
                 // set FileAccess beofre calling into the converter. Don't want converters to need to deal with a null FileAccess.
                 SetFileAccessFromAttribute(attrResolved, _targetFileAccess);
 
-                var patternMatcher = _parent._patternMatcher;
-                Func<object, object> builder = patternMatcher.TryGetConverterFunc(typeof(TAttribute), typeof(Stream));
-                Func<Stream> buildStream = () => (Stream)builder(attrResolved);
+                var builder = this._parent._builder;
+                Func<Task<Stream>> buildStream = async () => (Stream)await builder(attrResolved, null, context);
 
                 BaseValueProvider valueProvider = (BaseValueProvider)Activator.CreateInstance(_typeValueProvider, _converter);
                 var invokeString = this.Cloner.GetInvokeString(attrResolved);
@@ -367,20 +379,20 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             private string _invokeString;
 
             // Helper to build the stream. This will only get invoked once and then cached as _stream. 
-            private Func<Stream> _streamBuilder;
+            private Func<Task<Stream>> _streamBuilder;
 
             public Type Type { get; set; } // Implement IValueBinder.Type
 
-            protected Stream GetOrCreateStream()
+            protected async Task<Stream> GetOrCreateStreamAsync()
             {
                 if (_stream == null)
                 {
-                    _stream = _streamBuilder();
+                    _stream = await _streamBuilder();
                 }
                 return _stream;
             }
 
-            public async Task InitAsync(Func<Stream> builder, Type userType, BindToStreamBindingProvider<TAttribute> parent, string invokeString)
+            public async Task InitAsync(Func<Task<Stream>> builder, Type userType, BindToStreamBindingProvider<TAttribute> parent, string invokeString)
             {
                 Type = userType;
                 _invokeString = invokeString;
@@ -448,7 +460,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             protected override async Task<object> CreateUserArgAsync()
             {
                 TUserType result;
-                var stream = this.GetOrCreateStream();
+                var stream = await this.GetOrCreateStreamAsync();
                 if (stream == null)
                 {
                     // If T is a struct, then we need to create a value for it.
@@ -466,11 +478,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         // These are special in that they don't create the stream until after the function returns. 
         private class OutArgBaseValueProvider<TUserType> : BaseValueProvider
         {
-            private readonly FuncAsyncConverter<ToStream<TUserType>, object> _converter;
+            private readonly FuncAsyncConverter<Apply<TUserType, Stream>, object> _converter;
 
             public OutArgBaseValueProvider(object converter)
             {
-                _converter = (FuncAsyncConverter<ToStream<TUserType>, object>)converter;
+                _converter = (FuncAsyncConverter<Apply<TUserType, Stream>, object>)converter;
             }
 
             override protected Task<object> CreateUserArgAsync()
@@ -491,12 +503,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 }
 
                 // Now Create the stream 
-                using (var stream = this.GetOrCreateStream())
+                using (var stream = await this.GetOrCreateStreamAsync())
                 {
-                    var pair = new ToStream<TUserType>
+                    var pair = new Apply<TUserType, Stream>
                     {
                         Value = (TUserType) value,
-                         Stream = stream
+                        Existing = stream
                     };
                     await _converter(pair, null, null); // will write to the stream. 
                 } // Dispose on Stream will close it. Safe to call this multiple times. 

@@ -459,6 +459,5 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             ITest<TConfig> test = prog;
             test.Test(host);
         }
-
     }
 }
