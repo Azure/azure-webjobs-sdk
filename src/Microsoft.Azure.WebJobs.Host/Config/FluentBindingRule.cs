@@ -13,6 +13,7 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using static Microsoft.Azure.WebJobs.Host.Bindings.BindingFactory;
 using Microsoft.Azure.WebJobs.Host.Indexers;
+using System.Threading;
 
 namespace Microsoft.Azure.WebJobs.Host.Config
 {
@@ -159,6 +160,19 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             var bf = _parent.BindingFactory;
             var rule = bf.BindToInput<TAttribute, TType>(builderType, constructorArgs);
             Bind(rule);
+        }
+
+        /// <summary>
+        /// Bind an attribute to the given input, using the supplied delegate to build the input from an resolved 
+        /// instance of the attribute. 
+        /// </summary>
+        /// <typeparam name="TType"></typeparam>
+        /// <param name="builder"></param>
+        /// <returns></returns>
+        public void BindToInput<TType>(Func<TAttribute, CancellationToken, Task<TType>> builder)
+        {
+            var builderInstance = new AsyncDelegateConverterBuilder<TAttribute, TType> { BuildFromAttribute = builder };
+            this.BindToInput<TType>(builderInstance);
         }
 
         /// <summary>

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using System.Threading;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -224,6 +225,19 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 bindingStrategy, argumentBinding, createListener, parameterDescriptor, singleDispatch);
 
             return binding;
+        }
+
+        // Adapter to expose a delegate veneer over builders. 
+        // Delegates are more convenient for concrete types. 
+        internal class AsyncDelegateConverterBuilder<TAttribute, TType> : IAsyncConverter<TAttribute, TType>
+            where TAttribute : Attribute
+        {
+            public Func<TAttribute, CancellationToken, Task<TType>> BuildFromAttribute { get; set; }
+
+            public Task<TType> ConvertAsync(TAttribute input, CancellationToken cancellationToken)
+            {
+                return BuildFromAttribute(input, cancellationToken);
+            }
         }
 
         // Adapter to expose a delegate veneer over builders. 

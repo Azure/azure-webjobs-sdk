@@ -38,6 +38,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         public Type GetDefaultType(Attribute attribute, FileAccess access, Type requestedType)
         {
+            // $$$ This should compare file access to _access
             if (attribute is TAttribute)
             {
                 return typeof(Stream);
@@ -47,6 +48,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         public IEnumerable<BindingRule> GetRules()
         {
+            // $$$ This should be driven based on registered converters 
             foreach (var type in new Type[]
             {
                 typeof(Stream),

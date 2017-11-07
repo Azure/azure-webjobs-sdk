@@ -337,66 +337,72 @@ namespace Microsoft.Azure.WebJobs
             // TSrc --> IEnum<JObject> --> JArray
             if (typeDest == typeof(JArray))
             {
-                var toEnumerableJObj = TryGetConverter<TAttribute>(typeSource, typeof(IEnumerable<JObject>));
-                if (toEnumerableJObj != null)
+                var func2 = GetMiddle<TAttribute, IEnumerable<JObject>>(typeSource, typeDest);
+                if (func2 != null)
                 {
-                    var toJArray = TryGetConverter<TAttribute>(typeof(IEnumerable<JObject>), typeof(JArray));
-                    if (toJArray != null)
-                    {
-                        return async (src, attr, context) =>
-                        {
-                            var ieJo = (IEnumerable<JObject>) await toEnumerableJObj(src, attr, context);
-                            var result = await toJArray(ieJo, attr, context);
-                            return result;
-                        };
-                    }
-                }
+                    return func2;
+                }           
             }
 
-            // string --> TDest
-            var fromString = TryGetConverter<TAttribute>(typeof(string), typeDest);
-            if (fromString != null)
+            // We already matched against (string --> Dest) in the general case
+            // but now allow some well-defined intermediate conversions. 
+            // If this is "wrong" for your type, then it should provide an exact match to override.
+            // Byte[] --[builtin]--> String --> TDest
+            if (typeSource == typeof(byte[]))
             {
-                // We already matched against (string --> Dest) in the general case
-                // but now allow some well-defined intermediate conversions. 
-                // If this is "wrong" for your type, then it should provide an exact match to override.
-
-                // Byte[] --[builtin]--> String --> TDest
-                if (typeSource == typeof(byte[]))
+                var func2 = GetMiddle<TAttribute, string>(typeSource, typeDest);
+                if (func2 != null)
                 {
-                    var bytes2string = TryGetConverter<TAttribute>(typeof(byte[]), typeof(string));
-
-                    return async (src, attr, context) =>
-                    {
-                        byte[] bytes = (byte[])(object)src;
-                        string str = (string)await bytes2string(bytes, attr, context);
-                        object result = await fromString(str, attr, context);
-                        return result;
-                    };
+                    return func2;
                 }
             }
 
             // General JSON Serialization rule. 
             // Can we convert from src to dest via a JObject serialization?
             // Common exampe is Poco --> Jobject --> QueueMessage
-            var toJObj = TryGetConverter<TAttribute>(typeSource, typeof(JObject));
-            if (toJObj != null)
             {
-                var fromJObj = TryGetConverter<TAttribute>(typeof(JObject), typeDest);
-                if (fromJObj != null)
+                var func = GetMiddle<TAttribute, JObject>(typeSource, typeDest);
+                if (func != null)
                 {
-                    // TSrc --> Jobject --> TDest
-                    return async (src, attr, context) =>
-                    {
-                        JObject jobj = (JObject)await toJObj(src, attr, context);
-                        object obj = await fromJObj(jobj, attr, context);
-                        return obj;
-                    };
+                    return func;
+                }
+            }
+
+            {
+                // Common for blob and stream-based systems.
+                var func = GetMiddle<TAttribute, Stream>(typeSource, typeDest);
+                if (func != null)
+                {
+                    return func;
                 }
             }
 
             return null;          
         }
+
+        // Compose via a middle type. 
+        // If we have (TSrc --> X) and (X --> TDest), then support (Tsrc-->TDest) via X
+        private FuncAsyncConverter GetMiddle<TAttribute, TMiddle>(Type typeSource, Type typeDest)
+            where TAttribute : Attribute
+        {
+            var first = TryGetConverter<TAttribute>(typeSource, typeof(TMiddle));
+            if (first != null)
+            {
+                var second = TryGetConverter<TAttribute>(typeof(TMiddle), typeDest);
+                if (second != null)
+                {
+                    // TSrc --> Jobject --> TDest
+                    return async (src, attr, context) =>
+                    {
+                        TMiddle jobj = (TMiddle)await first(src, attr, context);
+                        object obj = await second(jobj, attr, context);
+                        return obj;
+                    };
+                }
+            }
+            return null;
+        }
+
 
         // List of all converters. This may refer to an pen type or an exact match. 
         private class Entry
