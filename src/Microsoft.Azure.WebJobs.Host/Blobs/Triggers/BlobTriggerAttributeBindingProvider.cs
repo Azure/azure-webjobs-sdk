@@ -40,13 +40,14 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
 
             // Trigger already has the IStorageBlob. Whereas BindToInput defines: Attr-->Stream. 
             //  Converter manager already has Stream-->Byte[],String,TextReader
-            rule.AddConverter<IStorageBlob, Stream>(this); 
+            context.AddConverter<IStorageBlob, Stream>(this);
 
             // $$$ Can these overlap BindToInput? IStorageBlob --> X? 
-            rule.AddConverter(new StorageBlobToCloudBlobConverter());
-            rule.AddConverter(new StorageBlobToCloudBlockBlobConverter());
-            rule.AddConverter(new StorageBlobToCloudPageBlobConverter());
-            rule.AddConverter(new StorageBlobToCloudAppendBlobConverter());
+            // Blob type is a property of an existing blob. 
+            context.AddConverter(new StorageBlobToCloudBlobConverter());
+            context.AddConverter(new StorageBlobToCloudBlockBlobConverter());
+            context.AddConverter(new StorageBlobToCloudPageBlobConverter());
+            context.AddConverter(new StorageBlobToCloudAppendBlobConverter());
         }
 
         async Task<Stream> IAsyncConverter<IStorageBlob, Stream>.ConvertAsync(IStorageBlob input, CancellationToken cancellationToken)
@@ -55,6 +56,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             return watchableStream;
         }
 
+        // For descirbing InvokeStrings.
         private async Task<IStorageBlob> ConvertX(DirectInvokeString input, Attribute attr, ValueBindingContext context)
         {
             var attrResolved = (BlobTriggerAttribute)attr;

@@ -25,10 +25,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
     internal class BlobExtension : IExtensionConfigProvider,
         IAsyncConverter<BlobAttribute, Stream>,
         IAsyncConverter<BlobAttribute, CloudBlobStream>,
-        IAsyncConverter<BlobAttribute, CloudBlockBlob>,
-        IAsyncConverter<BlobAttribute, CloudPageBlob>,
-        IAsyncConverter<BlobAttribute, CloudAppendBlob>,
-        IAsyncConverter<BlobAttribute, ICloudBlob>,
         IAsyncConverter<BlobAttribute, CloudBlobContainer>,
         IAsyncConverter<BlobAttribute, CloudBlobDirectory>,
         IAsyncConverter<BlobAttribute, BlobExtension.MultiBlobContext>
@@ -37,6 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         private IStorageAccountProvider _accountProvider;
         private IContextGetter<IBlobWrittenWatcher> _blobWrittenWatcherGetter;
         private INameResolver _nameResolver;
+        private IConverterManager _converterManager;
 
 
         #region Container rules
@@ -75,34 +72,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             return (CloudBlobStream)await CreateStreamAsync(blobAttribute, cancellationToken);
         }
 
-
-        async Task<CloudBlockBlob> IAsyncConverter<BlobAttribute, CloudBlockBlob>.ConvertAsync(
-            BlobAttribute blobAttribute, CancellationToken cancellationToken)
+        private async Task<T> CreateBlobReference<T>(BlobAttribute blobAttribute, CancellationToken cancellationToken)
         {
-            var blob = await GetBlobAsync(blobAttribute, cancellationToken, typeof(CloudBlockBlob));
-            return (CloudBlockBlob)(blob.SdkObject);
+            var blob = await GetBlobAsync(blobAttribute, cancellationToken, typeof(T));
+            return (T)(blob.SdkObject);
         }
-
-        async Task<CloudPageBlob> IAsyncConverter<BlobAttribute, CloudPageBlob>.ConvertAsync(
-    BlobAttribute blobAttribute, CancellationToken cancellationToken)
-        {
-            var blob = await GetBlobAsync(blobAttribute, cancellationToken, typeof(CloudPageBlob));
-            return (CloudPageBlob)(blob.SdkObject);
-        }
-
-        async Task<CloudAppendBlob> IAsyncConverter<BlobAttribute, CloudAppendBlob>.ConvertAsync(
-    BlobAttribute blobAttribute, CancellationToken cancellationToken)
-        {
-            var blob = await GetBlobAsync(blobAttribute, cancellationToken, typeof(CloudAppendBlob));
-            return (CloudAppendBlob)(blob.SdkObject);
-        }
-
-        async Task<ICloudBlob> IAsyncConverter<BlobAttribute, ICloudBlob>.ConvertAsync(
-    BlobAttribute blobAttribute, CancellationToken cancellationToken)
-        {
-            var blob = await GetBlobAsync(blobAttribute, cancellationToken, typeof(ICloudBlob));
-            return (ICloudBlob)(blob.SdkObject);
-        }
+        
         #endregion
         
         #region Support for binding to Multiple blobs 
@@ -131,8 +106,16 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         // T must have been matched by MultiBlobType        
         class MultiBlobConverer<T> : IAsyncConverter<MultiBlobContext, IEnumerable<T>>
         {
+            private readonly FuncAsyncConverter<IStorageBlob, T> _converter;
+
             public MultiBlobConverer(BlobExtension parent)
             {
+                IConverterManager cm = parent._converterManager;
+                _converter = cm.GetConverter<IStorageBlob, T, BlobAttribute>();
+                if (_converter == null)
+                {
+                    throw new InvalidOperationException($"Can't convert blob to {typeof(T).FullName}.");
+                }
             }
             public async Task<IEnumerable<T>> ConvertAsync(MultiBlobContext context, CancellationToken cancellationToken)
             {
@@ -144,51 +127,25 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
                 var container = context.Container;
                 IEnumerable<IStorageListBlobItem> blobItems = await container.ListBlobsAsync(prefix, true, cancellationToken);
 
-                // create an IEnumerable<T> of the correct type, performing any
-                // required conversions on the blobs                
+                // create an IEnumerable<T> of the correct type, performing any required conversions on the blobs
                 var list = await ConvertBlobs(blobItems);
                 return list;
             }
 
-            // $$$ This whole block is a legacy from the CloudBlobEnumerableArgumentBinding.
-            // Would be nice to share them with the individual blob converters, although there are subtle differences.
-            private static async Task<IEnumerable<T>> ConvertBlobs(IEnumerable<IStorageListBlobItem> blobItems)
+            private async Task<IEnumerable<T>> ConvertBlobs(IEnumerable<IStorageListBlobItem> blobItems)
             {
                 var list = new List<T>();
 
                 foreach (var blobItem in blobItems)
                 {
-                    var converted = await ConvertBlob(((IStorageBlob)blobItem).SdkObject);
+                    var src = (IStorageBlob)blobItem;
+                 
+                    var converted = await _converter(src, null, null); // $$$ nulls? 
+
                     list.Add(converted);
                 }
 
                 return list;
-            }
-
-            private static async Task<T> ConvertBlob(ICloudBlob blob)
-            {
-                object converted = blob;
-                var targetType = typeof(T);
-
-                if (targetType == typeof(Stream))
-                {
-                    converted = await blob.OpenReadAsync(null, null, null);
-                }
-                else if (targetType == typeof(TextReader))
-                {
-                    Stream stream = await blob.OpenReadAsync(null, null, null);
-                    converted = new StreamReader(stream);
-                }
-                else if (targetType == typeof(string))
-                {
-                    Stream stream = await blob.OpenReadAsync(null, null, null);
-                    using (StreamReader reader = new StreamReader(stream))
-                    {
-                        converted = await reader.ReadToEndAsync();
-                    }
-                }
-
-                return (T)converted;
             }
         }
 
@@ -264,9 +221,9 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         }
 
         private async Task<IStorageBlob> GetBlobAsync(
-        BlobAttribute blobAttribute,
-        CancellationToken cancellationToken,
-        Type requestedType = null)
+                BlobAttribute blobAttribute,
+                CancellationToken cancellationToken,
+                Type requestedType = null)
         {
             IStorageBlobClient client = await GetClientAsync(blobAttribute, cancellationToken);
 
@@ -293,6 +250,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             // $$$ Per-host 
             _blobWrittenWatcherGetter = context.PerHostServices.GetService<ContextAccessor<IBlobWrittenWatcher>>();
             _nameResolver = context.Config.NameResolver;
+            _converterManager = context.Config.ConverterManager;
 
             var rule = context.AddBindingRule<BlobAttribute>();
 
@@ -309,10 +267,18 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
                 BindToStream(this, FileAccess.ReadWrite); // Precedence, must beat CloudBlobStream
 
             // Normal blob
-            rule.SetPostResolveHook(ToBlobDescr).BindToInput<CloudBlockBlob>(this);
-            rule.SetPostResolveHook(ToBlobDescr).BindToInput<CloudPageBlob>(this);
-            rule.SetPostResolveHook(ToBlobDescr).BindToInput<CloudAppendBlob>(this);
-            rule.SetPostResolveHook(ToBlobDescr).BindToInput<ICloudBlob>(this); // base interface 
+            // These are not converters because Blob/Page/Append affects how we *create* the blob. 
+            rule.SetPostResolveHook(ToBlobDescr).
+                BindToInput<CloudBlockBlob>((attr, cts)=> CreateBlobReference<CloudBlockBlob>(attr, cts));
+
+            rule.SetPostResolveHook(ToBlobDescr).
+                BindToInput<CloudPageBlob>((attr, cts) => CreateBlobReference<CloudPageBlob>(attr, cts));
+
+            rule.SetPostResolveHook(ToBlobDescr).
+                 BindToInput<CloudAppendBlob>((attr, cts) => CreateBlobReference<CloudAppendBlob>(attr, cts));
+
+            rule.SetPostResolveHook(ToBlobDescr). // base interface 
+                BindToInput<ICloudBlob>((attr, cts) => CreateBlobReference<ICloudBlob>(attr, cts));
 
             // $$$ Only when Access == FileAccess.Write
             // CloudBlobStream's derived functionality is only relevant to writing. 
