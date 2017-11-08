@@ -5,6 +5,10 @@ using Microsoft.ServiceBus.Messaging;
 using Xunit;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Newtonsoft.Json.Linq;
+using Microsoft.ServiceBus;
+using System.Linq;
+using System.Reflection;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
 {
@@ -149,7 +153,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
 
             // Test sender 
             config.AddSender("k1", connectionString);
-            var client = config.GetEventHubClient("k1", null);
+            var client = config.GetEventHubClient("k1", connectionString);
             Assert.Equal(expectedPathName, client.Path);
         }
 
@@ -201,6 +205,283 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         {
             var config = new EventHubConfiguration();
             Assert.Throws<InvalidOperationException>(() => config.BatchCheckpointFrequency = num);
+        }
+
+        [Fact]
+        public void UseReflectionToAccessEndpointFromEventHubClient()
+        {
+            var connectionString = "Endpoint=sb://test89123-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey";
+            var client = EventHubClient.CreateFromConnectionString(connectionString, "hub1");
+            var endpoint = EventHubConfiguration.GetEndpointFromEventHubClient(client);
+
+            var connectionBuilder = new ServiceBusConnectionStringBuilder(connectionString);
+            Assert.Equal(connectionBuilder.Endpoints.Single(), endpoint);
+        }
+
+        [Theory]
+        [InlineData("myhub", "myhub", "myhub")]
+        [InlineData("myhub", "MYHUB", "myhub")]
+        [InlineData("myhub", "myhub", "MYHUB")]
+        public void AddEventHubClient_EventHubNamesAreCaseInsensitive(string hubNameCreate, string hubNameAdd, string hubNameGet)
+        {
+            string connectionString = "Endpoint=sb://test1-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey";
+
+            EventHubConfiguration config = new EventHubConfiguration();
+
+            var client = EventHubClient.CreateFromConnectionString(connectionString, hubNameCreate);
+            config.AddEventHubClient(hubNameAdd, client);
+
+            var retrieval = config.GetEventHubClient(hubNameGet, connectionString);
+            Assert.Same(client, retrieval);
+        }
+
+        [Fact]
+        public void AddEventHubClient_SupportsTwoEventHubsWithSameNameInDifferentNamespaces()
+        {
+            string connectionString1 = "Endpoint=sb://test1-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey";
+            string connectionString2 = "Endpoint=sb://test2-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey";
+
+            var client1 = EventHubClient.CreateFromConnectionString(connectionString1, "myhub");
+            var client2 = EventHubClient.CreateFromConnectionString(connectionString2, "myhub");
+
+            EventHubConfiguration config = new EventHubConfiguration();
+            config.AddEventHubClient(client1);
+            config.AddEventHubClient(client2);
+
+            EventHubClient namespace1Retrieval1 = config.GetEventHubClient("myhub", connectionString1);
+            EventHubClient namespace2Retrieval1 = config.GetEventHubClient("myhub", connectionString2);            
+            
+            Assert.Equal(client1, namespace1Retrieval1);
+            Assert.Equal(client2, namespace2Retrieval1);
+        }
+
+        [Fact]
+        public void AddEventHubClient_HasOverwriteSemantics()
+        {
+            // Note: this test was written to verify preservation of existing behavior. Unclear whether overwrite semantics are actually
+            // desirable or a simple side-effect of the way the code was written
+
+            string connectionString = "Endpoint=sb://test1-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey";
+
+            var client1 = EventHubClient.CreateFromConnectionString(connectionString, "myhub");
+            var client2 = EventHubClient.CreateFromConnectionString(connectionString, "myhub");
+
+            EventHubConfiguration config = new EventHubConfiguration();
+            config.AddEventHubClient(client1);
+            config.AddEventHubClient(client2);
+
+            var retrievedClient = config.GetEventHubClient("myhub", connectionString);
+
+            // Last one wins
+            Assert.Same(client2, retrievedClient);
+        }
+
+        [Fact]
+        public void AddEventHubClient_AllowsPassedEventHubNameToActAsAUniqueKey()
+        {
+            // Note: this test is verifying behavior that is not desirable long term but must be preserved in this major version to avoid breaking changes
+
+            string connectionString = "Endpoint=sb://test1-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey";
+
+            var client1 = EventHubClient.CreateFromConnectionString(connectionString, "myhub");
+            var client2 = EventHubClient.CreateFromConnectionString(connectionString, "myhub");
+
+            EventHubConfiguration config = new EventHubConfiguration();
+            config.AddEventHubClient("hub1", client1);
+            config.AddEventHubClient("hub2", client2);
+
+            var client1Retrieval1 = config.GetEventHubClient("hub1", connectionString);
+            var client2Retrieval1 = config.GetEventHubClient("hub2", connectionString);
+
+            // These are two different instances
+            Assert.NotSame(client1Retrieval1, client2Retrieval1);
+        }
+
+        [Fact]
+        public void GetEventHubClient_DoesNotRequireConnection_IfMatchingSenderWasAdded()
+        {
+            // Note: this test is verifying behavior that is not desirable long term but must be preserved in this major version to avoid breaking changes
+
+            string connectionString = "Endpoint=sb://test1-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey";
+
+            EventHubConfiguration config = new EventHubConfiguration();
+
+            config.AddSender("myHub", connectionString);
+            var client = config.GetEventHubClient("myhub", null);
+
+            Assert.NotNull(client);
+        }
+
+        [Fact]
+        public void CanAddBothReceiverAndSenderForSameHub()
+        {
+            // Note: this test is verifying behavior that is not desirable long term but must be preserved in this major version to avoid breaking changes
+
+            string connectionString = "Endpoint=sb://test1-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey";
+            string storageConnectionString = "DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=GTfc0SIUd4Mg6n8wBzCRy29wnx2VVd+90MQKnJtgoCj4rB8LAIQ==";
+
+            EventHubConfiguration config = new EventHubConfiguration();
+            config.DefaultStorageString = storageConnectionString;
+
+            config.AddSender("myHub", connectionString);
+            config.AddReceiver("myHub", connectionString);
+
+            var client = config.GetEventHubClient("myhub", null);
+            var host = config.GetEventProcessorHost("myhub", EventHubConsumerGroup.DefaultGroupName);
+
+            Assert.NotNull(client);
+            Assert.NotNull(host);
+        }
+
+        [Fact]
+        public void AddSender_HasOverwriteSemantics()
+        {
+            // Note: this test was written to verify preservation of existing behavior. Unclear whether overwrite semantics are actually
+            // desirable or a simple side-effect of the way the code was written
+
+            string connectionString = "Endpoint=sb://test1-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey";
+
+            EventHubConfiguration config = new EventHubConfiguration();
+
+            config.AddSender("myHub", connectionString);
+            var retrieval1 = config.GetEventHubClient("myhub", connectionString);
+
+            config.AddSender("myHub", connectionString);
+            var retrieval2 = config.GetEventHubClient("myhub", connectionString);
+
+            // These are two different instances
+            Assert.NotSame(retrieval1, retrieval2);
+        }
+
+        [Fact]
+        public void AddReceiver_AllowsForAnEventProcessorHostToBeRetrieved()
+        {
+            string connectionString = "Endpoint=sb://test1-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey";
+            string storageConnectionString = "DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=GTfc0SIUd4Mg6n8wBzCRy29wnx2VVd+90MQKnJtgoCj4rB8LAIQ==";
+
+            EventHubConfiguration config = new EventHubConfiguration();
+            config.DefaultStorageString = storageConnectionString;
+            config.AddReceiver("foo", connectionString);
+
+            var host = config.GetEventProcessorHost("foo", EventHubConsumerGroup.DefaultGroupName);
+            Assert.NotNull(host);
+        }
+
+        [Fact]
+        public void AddReceiver_SupportsTwoEventHubsWithSameNameInDifferentNamespaces()
+        {
+            string connectionString1 = "Endpoint=sb://test1-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey";
+            string connectionString2 = "Endpoint=sb://test2-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey";
+
+            string storageConnectionString1 = "DefaultEndpointsProtocol=https;AccountName=myaccount1;AccountKey=GTfc0SIUd4Mg6n8wBzCRy29wnx2VVd+90MQKnJtgoCj4rB8LAIQ==";
+            string storageConnectionString2 = "DefaultEndpointsProtocol=https;AccountName=myaccount2;AccountKey=GTfc0SIUd4Mg6n8wBzCRy29wnx2VVd+90MQKnJtgoCj4rB8LAIQ==";
+
+            EventHubConfiguration config = new EventHubConfiguration();
+
+            config.AddReceiver("foo", connectionString1, storageConnectionString1);
+            config.AddReceiver("foo", connectionString2, storageConnectionString2);
+
+            var host1 = config.GetEventProcessorHost("foo", EventHubConsumerGroup.DefaultGroupName, connectionString1);
+            var host2 = config.GetEventProcessorHost("foo", EventHubConsumerGroup.DefaultGroupName, connectionString2);
+
+            // Verify that the correct storage connection string was used for each host
+            // Since the EventProcessorHost type has basically zero public members we need to use reflection
+            var blobClientProperty = typeof(EventProcessorHost).GetProperty("CloudBlobClient", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            Assert.NotNull(blobClientProperty);
+
+            var host1Client = (CloudBlobClient)blobClientProperty.GetValue(host1);
+            var host2Client = (CloudBlobClient)blobClientProperty.GetValue(host2);
+
+            Assert.Contains("myaccount1", host1Client.BaseUri.ToString());
+            Assert.Contains("myaccount2", host2Client.BaseUri.ToString());            
+        }
+
+        [Fact]
+        public void GetEventHubClient_ForSameHubNameAndConnectionString_ReturnsTheSameInstanceEachTime()
+        {
+            string connectionString = "Endpoint=sb://test1-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey";
+
+            EventHubConfiguration config = new EventHubConfiguration();
+
+            var retrieval1 = config.GetEventHubClient("myhub", connectionString);
+            var retrieval2 = config.GetEventHubClient("myhub", connectionString);
+
+            Assert.Same(retrieval1, retrieval2);
+        }
+
+        [Fact]
+        public void GetEventHubClient_SupportsTwoEventHubsWithSameNameInDifferentNamespaces()
+        {
+            string connectionString1 = "Endpoint=sb://test1-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey";
+            string connectionString2 = "Endpoint=sb://test2-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey";
+
+            EventHubConfiguration config = new EventHubConfiguration();
+            EventHubClient namespace1Retrieval1 = config.GetEventHubClient("myhub", connectionString1);
+            EventHubClient namespace2Retrieval1 = config.GetEventHubClient("myhub", connectionString2);
+
+            // These are different clients
+            Assert.NotSame(namespace1Retrieval1, namespace2Retrieval1);
+
+            EventHubClient namespace1Retrieval2 = config.GetEventHubClient("myhub", connectionString1);
+            EventHubClient namespace2Retrieval2 = config.GetEventHubClient("myhub", connectionString2);
+
+            // Again, two different clients
+            Assert.NotSame(namespace1Retrieval2, namespace2Retrieval2);
+
+            // But we only have two different clients here, so these pairs should match
+            Assert.Same(namespace1Retrieval1, namespace1Retrieval2);
+            Assert.Same(namespace2Retrieval1, namespace2Retrieval2);
+        }
+
+        [Fact]
+        public void GetEventHubClient_HubInConnectionStringTakesPriority()
+        {
+            string connectionString1 = "Endpoint=sb://test1-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey;EntityPath=hub1";
+            string connectionString2 = "Endpoint=sb://test2-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey;EntityPath=hub1";
+
+            EventHubConfiguration config = new EventHubConfiguration();
+            EventHubClient client1 = config.GetEventHubClient("myhub", connectionString1);
+            EventHubClient client2 = config.GetEventHubClient("myhub", connectionString2);
+
+            Assert.Equal("hub1", client1.Path);
+            Assert.Equal("hub1", client2.Path);
+
+            Assert.NotSame(client1, client2);
+        }
+
+        [Fact]
+        public void AddEventProcessorHost_AllowsAnExplicitHostToBeProvidedAndRetrieved()
+        {
+            // Note: this test is verifying behavior that is not desirable long term but must be preserved in this major version to avoid breaking changes
+
+            string connectionString = "Endpoint=sb://test1-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey";
+            string storageConnectionString = "DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=GTfc0SIUd4Mg6n8wBzCRy29wnx2VVd+90MQKnJtgoCj4rB8LAIQ==";
+
+            EventHubConfiguration config = new EventHubConfiguration();
+
+            var host = new EventProcessorHost("myhub", EventHubConsumerGroup.DefaultGroupName, connectionString, storageConnectionString);
+            config.AddEventProcessorHost("myhub", host);
+
+            var retrieval1 = config.GetEventProcessorHost("myhub", null);
+            Assert.Same(host, retrieval1);
+        }
+
+        [Fact]
+        public void AddEventProcessorHost_AllowsPassedEventHubNameToActAsAUniqueKey()
+        {
+            // Note: this test is verifying behavior that is not desirable long term but must be preserved in this major version to avoid breaking changes
+
+            string connectionString = "Endpoint=sb://test1-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey";
+            string storageConnectionString = "DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=GTfc0SIUd4Mg6n8wBzCRy29wnx2VVd+90MQKnJtgoCj4rB8LAIQ==";
+
+            EventHubConfiguration config = new EventHubConfiguration();
+
+            var host = new EventProcessorHost("myhub", EventHubConsumerGroup.DefaultGroupName, connectionString, storageConnectionString);
+            config.AddEventProcessorHost("foo", host);
+
+            var retrieval1 = config.GetEventProcessorHost("foo", null);
+            Assert.Same(host, retrieval1);
         }
 
         [Fact]

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
@@ -89,6 +90,15 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             }
         }
 
+        // for unit testing
+        internal string DefaultStorageString
+        {
+            set
+            {
+                _defaultStorageString = value;
+            }
+        }
+
         /// <summary>
         /// Add an existing client for sending messages to an event hub.  Infer the eventHub name from client.path
         /// </summary>
@@ -119,7 +129,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 throw new ArgumentNullException("client");
             }
            
+            // Legacy behavior
             _senders[eventHubName] = client;
+
+            // Endpoint + hubname key
+            var key = GetLookupKey(client);
+            _senders[key] = client;
         }
 
         /// <summary>
@@ -138,12 +153,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 throw new ArgumentNullException("sendConnectionString");
             }
 
-            ServiceBusConnectionStringBuilder sb = new ServiceBusConnectionStringBuilder(sendConnectionString);
-            if (string.IsNullOrWhiteSpace(sb.EntityPath))
-            {
-                sb.EntityPath = eventHubName;
-            }            
-
+            ServiceBusConnectionStringBuilder sb = GetServiceBusConnectionStringBuilder(sendConnectionString, eventHubName);                         
             var client = EventHubClient.CreateFromConnectionString(sb.ToString());
             AddEventHubClient(eventHubName, client);
         }
@@ -188,10 +198,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 throw new ArgumentNullException("receiverConnectionString");
             }
 
-            this._receiverCreds[eventHubName] = new ReceiverCreds
+            var creds = new ReceiverCreds
             {
                  EventHubConnectionString = receiverConnectionString
             };
+
+            AddCreds(creds, eventHubName);
         }
 
         /// <summary>
@@ -215,87 +227,114 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 throw new ArgumentNullException("storageConnectionString");
             }
 
-            this._receiverCreds[eventHubName] = new ReceiverCreds
+            var creds = new ReceiverCreds
             {
                 EventHubConnectionString = receiverConnectionString,
                 StorageConnectionString = storageConnectionString
             };
+
+            AddCreds(creds, eventHubName);
         }
-        
+
         internal EventHubClient GetEventHubClient(string eventHubName, string connection)
-        {
-            EventHubClient client;
-            if (_senders.TryGetValue(eventHubName, out client))             
+        {            
+            if (string.IsNullOrWhiteSpace(connection))
             {
-                return client;
+                if (_senders.TryGetValue(eventHubName, out EventHubClient client))
+                {
+                    return client;
+                }
             }
-            else if (!string.IsNullOrWhiteSpace(connection))
+            else
             {
+                var key = GetLookupKey(eventHubName, connection);
+                if (_senders.TryGetValue(key, out EventHubClient client))
+                {
+                    return client;
+                }
+
                 AddSender(eventHubName, connection);
-                return _senders[eventHubName];
+                return _senders[key];
             }
+
             throw new InvalidOperationException("No event hub sender named " + eventHubName);
+        }
+
+        internal EventProcessorHost GetEventProcessorHost(string eventHubName, string consumerGroup, string connectionString)
+        {            
+            return CreateEventProcessorHost(eventHubName, consumerGroup, connectionString, GetStorageConnectionString(eventHubName, connectionString), _partitionOptions);
         }
 
         // Lookup a listener for receiving events given the name provided in the [EventHubTrigger] attribute. 
         internal EventProcessorHost GetEventProcessorHost(string eventHubName, string consumerGroup)
         {
-            ReceiverCreds creds;
-            if (this._receiverCreds.TryGetValue(eventHubName, out creds))
+            if (this._receiverCreds.TryGetValue(eventHubName, out ReceiverCreds creds))
             {
-                // Common case. Create a new EventProcessorHost instance to listen. 
-                string eventProcessorHostName = Guid.NewGuid().ToString();
+                return CreateEventProcessorHost(eventHubName, consumerGroup, creds.EventHubConnectionString, creds.StorageConnectionString ?? _defaultStorageString, _partitionOptions);
+            }
 
-                if (consumerGroup == null)
-                {
-                    consumerGroup = EventHubConsumerGroup.DefaultGroupName;
-                }
-                var storageConnectionString = creds.StorageConnectionString;
-                if (storageConnectionString == null)
-                {
-                    storageConnectionString = _defaultStorageString;
-                }
-
-                // If the connection string provides a hub name, that takes precedence. 
-                // Note that connection strings *can't* specify a consumerGroup, so must always be passed in. 
-                string actualPath = eventHubName;
-                ServiceBusConnectionStringBuilder sb = new ServiceBusConnectionStringBuilder(creds.EventHubConnectionString);
-                if (sb.EntityPath != null)
-                {
-                    actualPath = sb.EntityPath;
-                    sb.EntityPath = null; // need to remove to use with EventProcessorHost
-                }
-
-                var @namespace = GetServiceBusNamespace(sb);
-                var blobPrefix = GetBlobPrefix(actualPath, @namespace);
-
-                // Use blob prefix support available in EPH starting in 2.2.6 
-                EventProcessorHost host = new EventProcessorHost(
-                    hostName: eventProcessorHostName,
-                    eventHubPath: actualPath,
-                    consumerGroupName: consumerGroup, 
-                    eventHubConnectionString: sb.ToString(),
-                    storageConnectionString: storageConnectionString, 
-                    leaseContainerName: LeaseContainerName,
-                   leaseBlobPrefix: blobPrefix);
-
-                if (_partitionOptions != null)
-                {
-                    host.PartitionManagerOptions = _partitionOptions;
-                }
-
+            // Rare case: a power-user caller specifically provided an event processor host to use. 
+            // Note that in this case the consumer group argument is ignored
+            if (_explicitlyProvidedHosts.TryGetValue(eventHubName, out EventProcessorHost host))
+            {
                 return host;
             }
-            else
+            
+            throw new InvalidOperationException("No event hub receiver named " + eventHubName);
+        }
+
+        private void AddCreds(ReceiverCreds creds, string eventHubName)
+        {
+            // legacy behavior
+            _receiverCreds[eventHubName] = creds;
+
+            // Endpoint + hubname key
+            var key = GetLookupKey(eventHubName, creds.EventHubConnectionString);
+            _receiverCreds[key] = creds;
+        }
+
+        private string GetStorageConnectionString(string eventHubName, string connectionString)
+        {
+            var key = GetLookupKey(eventHubName, connectionString);
+            if (this._receiverCreds.TryGetValue(key, out ReceiverCreds creds))
             {
-                // Rare case: a power-user caller specifically provided an event processor host to use. 
-                EventProcessorHost host;
-                if (_explicitlyProvidedHosts.TryGetValue(eventHubName, out host))
+                if (creds.StorageConnectionString != null)
                 {
-                    return host;
+                    return creds.StorageConnectionString;
                 }
             }
-            throw new InvalidOperationException("No event hub receiver named " + eventHubName);
+
+            return _defaultStorageString;
+        }
+
+        private static EventProcessorHost CreateEventProcessorHost(string eventHubName, string consumerGroup, string connectionString, string storageConnectionString, PartitionManagerOptions partitionOptions)
+        {
+            // If the connection string provides a hub name, that takes precedence. 
+            // Note that connection strings *can't* specify a consumerGroup, so must always be passed in. 
+            string actualPath = eventHubName;
+            ServiceBusConnectionStringBuilder sb = new ServiceBusConnectionStringBuilder(connectionString);
+            if (sb.EntityPath != null)
+            {
+                actualPath = sb.EntityPath;
+                sb.EntityPath = null; // need to remove to use with EventProcessorHost
+            }
+
+            // Use blob prefix support available in EPH starting in 2.2.6 
+            EventProcessorHost host = new EventProcessorHost(
+                hostName: Guid.NewGuid().ToString(),
+                eventHubPath: actualPath,
+                consumerGroupName: consumerGroup ?? EventHubConsumerGroup.DefaultGroupName,
+                eventHubConnectionString: sb.ToString(),
+                storageConnectionString: storageConnectionString,
+                leaseContainerName: LeaseContainerName,
+                leaseBlobPrefix: GetBlobPrefix(actualPath, GetServiceBusNamespace(sb)));
+
+            if (partitionOptions != null)
+            {
+                host.PartitionManagerOptions = partitionOptions;
+            }
+
+            return host;
         }
 
         private static string EscapeStorageCharacter(char character)
@@ -435,6 +474,58 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
         private static EventData ConvertString2EventData(string input) 
             => ConvertBytes2EventData(Encoding.UTF8.GetBytes(input));
+
+        private static string GetLookupKeyFromEndpoint(Uri endpoint, string hubName)
+            => $"{endpoint.Host}:{hubName}";
+
+        private static string GetLookupKey(EventHubClient client)
+            => GetLookupKeyFromEndpoint(GetEndpointFromEventHubClient(client), client.Path);
+
+        private static string GetLookupKey(string eventHubName, string connectionString)
+        {
+            var builder = GetServiceBusConnectionStringBuilder(connectionString, eventHubName);
+            return GetLookupKeyFromEndpoint(builder.Endpoints.Single(), builder.EntityPath);
+        }
+
+        internal static Uri GetEndpointFromEventHubClient(EventHubClient client)
+        {
+            var messagingFactoryProperty = typeof(EventHubClient).GetProperty("MessagingFactory", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (messagingFactoryProperty == null)
+            {
+                throw new InvalidOperationException("Reflection call to obtain EventHubClient.MessagingFactory property info failed. Did a service bus package update occur?");
+            }
+
+            var messagingFactory = messagingFactoryProperty.GetValue(client) as MessagingFactory;
+            if (messagingFactory == null)
+            {
+                throw new InvalidOperationException("Reflection call to obtain value of EventHubClient.MessagingFactory failed. Did a service bus package update occur?");
+            }
+
+            return messagingFactory.Address;
+        }
+
+        internal static ServiceBusConnectionStringBuilder GetServiceBusConnectionStringBuilder(string connectionString, string hubName)
+        {
+            var builder = new ServiceBusConnectionStringBuilder(connectionString);
+
+            if (builder.Endpoints.Count != 1)
+            {
+                throw new ArgumentException("Event Hub connection string must only specify one endpoint.", nameof(connectionString));
+            }
+
+            // If the connection string has a hubname, it takes precedence.
+            if (string.IsNullOrEmpty(builder.EntityPath))
+            {
+                if (string.IsNullOrEmpty(hubName))
+                {
+                    throw new ArgumentException($"A hub name is required, either via the connection string or via the '{nameof(hubName)}' parameter.");
+                }
+
+                builder.EntityPath = hubName;
+            }
+
+            return builder;
+        }
 
         // Hold credentials for a given eventHub name. 
         // Multiple consumer groups (and multiple listeners) on the same hub can share the same credentials. 
