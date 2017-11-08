@@ -44,22 +44,27 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 return Task.FromResult<ITriggerBinding>(null);
             }
 
-            string resolvedEventHubName = _nameResolver.ResolveWholeString(attribute.EventHubName);
+            string resolvedEventHubName = _nameResolver.ResolveWholeString(attribute.EventHubName);            
+            string resolvedConsumerGroup = _nameResolver.ResolveWholeString(attribute.ConsumerGroup ?? EventHubConsumerGroup.DefaultGroupName);
 
-            string consumerGroup = attribute.ConsumerGroup ?? EventHubConsumerGroup.DefaultGroupName;
-            string resolvedConsumerGroup = _nameResolver.ResolveWholeString(consumerGroup);
+            EventProcessorHost eventProcessorHost;
 
             if (!string.IsNullOrWhiteSpace(attribute.Connection))
             {
-                _eventHubConfig.AddReceiver(resolvedEventHubName, _nameResolver.Resolve(attribute.Connection));
+                string resolvedConnectionString = _nameResolver.Resolve(attribute.Connection);
+                _eventHubConfig.AddReceiver(resolvedEventHubName, resolvedConnectionString);
+
+                eventProcessorHost = _eventHubConfig.GetEventProcessorHost(resolvedEventHubName, resolvedConsumerGroup, resolvedConnectionString);
             }
-            
-            var eventHostListener = _eventHubConfig.GetEventProcessorHost(resolvedEventHubName, resolvedConsumerGroup);
+            else
+            {
+                eventProcessorHost = _eventHubConfig.GetEventProcessorHost(resolvedEventHubName, resolvedConsumerGroup);
+            }
 
             Func<ListenerFactoryContext, bool, Task<IListener>> createListener =
              (factoryContext, singleDispatch) =>
              {
-                 IListener listener = new EventHubListener(factoryContext.Executor, eventHostListener, singleDispatch, _eventHubConfig);
+                 IListener listener = new EventHubListener(factoryContext.Executor, eventProcessorHost, singleDispatch, _eventHubConfig);
                  return Task.FromResult(listener);
              };
 
