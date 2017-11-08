@@ -304,11 +304,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         {
             public void Initialize(ExtensionConfigContext context)
             {
-                var bf = context.Config.BindingFactory;
                 // No explicit converters -  just use implicit ones like inheritence
-                var rule1 = bf.BindToInput<Test6Attribute, AlphaDerivedType>(typeof(GeneralBuilder<>));
-                var rule2 = bf.BindToInput<Test6Attribute, object>(this); // 2nd rule
-                context.RegisterBindingRules<Test6Attribute>(rule1, rule2);
+                var rule = context.AddBindingRule<Test6Attribute>();
+                rule.BindToInput<AlphaDerivedType>(typeof(GeneralBuilder<>));
+                rule.BindToInput<object>(this); // 2nd rule
             }
 
             public void Test(TestJobHost<ConfigObjectInheritence> host)

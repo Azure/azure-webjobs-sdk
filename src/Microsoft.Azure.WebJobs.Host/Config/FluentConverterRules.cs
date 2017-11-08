@@ -62,12 +62,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         {
             VerifyNotOpenTypes<TSource, TDestination>();
 
-            FuncConverterBuilder builder = (srcType, destType) =>
-            {
-                // Cast from TDestination --> Object
-                return async (input, attr, ctx) => (object)await func((TSource) input, attr, ctx);
-            };
-
+            FuncConverterBuilder builder = PatternMatcher.GetBuilder(func);
             this.Converters.AddConverter<TSource, TDestination, TAttribute>(builder);
             
             return (TThis)(object)this;
@@ -82,14 +77,10 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         /// <typeparam name="TDestination"></typeparam>
         /// <param name="func"></param>
         /// <returns></returns>
-        public TThis AddOpenConverter<TSource, TDestination>(FuncAsyncConverter<object, TDestination> func)
+        public TThis AddOpenConverter<TSource, TDestination>(FuncAsyncConverter func)
         {
-            FuncConverterBuilder builder = (srcType, destType) =>
-            {
-                // Cast from TDestination --> Object
-                return async (input, attr, ctx) => (object) await func(input, attr, ctx);
-            };
-
+            FuncConverterBuilder builder = PatternMatcher.GetBuilder(func);
+                   
             this.Converters.AddConverter<TSource, TDestination, TAttribute>(builder);
             return (TThis)(object)this;
         }

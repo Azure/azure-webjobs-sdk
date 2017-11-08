@@ -108,6 +108,43 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             return this;
         }
 
+        /// <summary>
+        /// The subsequent Bind* operations only apply when the Attribute's property is not null. 
+        /// </summary>
+        /// <param name="propertyName"></param>
+        /// <returns></returns>
+        public FluentBindingRule<TAttribute> When<TValue>(string propertyName, TValue expected)
+        {
+            var prop = ResolveProperty(propertyName);
+
+            if (!typeof(TValue).IsEnum)
+            {
+                throw new InvalidOperationException($"Rule filter for '{propertyName}' can only be used with enums.");
+            }
+
+            var propType = prop.PropertyType;            
+            if (!propType.IsAssignableFrom(typeof(TValue))) // Handles nullable
+            {
+                throw new InvalidOperationException(
+                    $"Type mismatch. Property '{propertyName}' is type '{TypeUtility.GetFriendlyName(propType)}'. " + 
+                    $"Can't compare to a value of type '{TypeUtility.GetFriendlyName(typeof(TValue))}");
+            }
+
+            Func<TAttribute, bool> func = (attribute) =>
+            {
+                object x = prop.GetValue(attribute);
+                if (x is TValue val) // Handles nullable
+                {
+                    return val.Equals(expected);
+                }
+                return false;
+            };
+            _filters.Add(func);
+            AppendFilter(propertyName, "({0} == '" + expected.ToString() + "')");
+
+            return this;
+        }
+
         internal FluentBindingRule<TAttribute> SetPostResolveHook(Func<TAttribute, ParameterInfo, INameResolver, ParameterDescriptor> hook)
         {
             _hook = hook;
@@ -124,9 +161,8 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         /// <returns></returns>
         public void BindToInput<TType>(IConverter<TAttribute, TType> builderInstance)
         {
-            var bf = _parent.BindingFactory;
-            var rule = bf.BindToInput<TAttribute, TType>(builderInstance);
-            Bind(rule);
+            var pm = PatternMatcher.New(builderInstance);
+            BindToInput<TType>(pm);
         }
 
         /// <summary>
@@ -137,11 +173,8 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         /// <returns></returns>
         public void BindToInput<TType>(IAsyncConverter<TAttribute, TType> builderInstance)
         {
-            var bf = _parent.BindingFactory;
-
             var pm = PatternMatcher.New(builderInstance);
-            var rule = new BindToInputBindingProvider<TAttribute, TType>(bf.NameResolver, bf.ConverterManager, pm);
-            Bind(rule);
+            BindToInput<TType>(pm);
         }
 
         /// <summary>
@@ -157,9 +190,21 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             Type builderType,
             params object[] constructorArgs)
         {
-            var bf = _parent.BindingFactory;
-            var rule = bf.BindToInput<TAttribute, TType>(builderType, constructorArgs);
-            Bind(rule);
+            var pm = PatternMatcher.New(builderType, constructorArgs);
+            BindToInput<TType>(pm);
+        }
+
+        /// <summary>
+        /// Bind an attribute to the given input, using the supplied delegate to build the input from an resolved 
+        /// instance of the attribute. 
+        /// </summary>
+        /// <typeparam name="TType"></typeparam>
+        /// <param name="builder"></param>
+        /// <returns></returns>
+        public void BindToInput<TType>(Func<TAttribute, ValueBindingContext, Task<TType>> builder)        
+        {
+            var pm = PatternMatcher.New(builder);
+            BindToInput<TType>(pm);
         }
 
         /// <summary>
@@ -171,8 +216,8 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         /// <returns></returns>
         public void BindToInput<TType>(Func<TAttribute, CancellationToken, Task<TType>> builder)
         {
-            var builderInstance = new AsyncDelegateConverterBuilder<TAttribute, TType> { BuildFromAttribute = builder };
-            this.BindToInput<TType>(builderInstance);
+            var pm = PatternMatcher.New(builder);
+            BindToInput<TType>(pm);
         }
 
         /// <summary>
@@ -184,8 +229,16 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         /// <returns></returns>
         public void BindToInput<TType>(Func<TAttribute, TType> builder)
         {
-            var builderInstance = new DelegateConverterBuilder<TAttribute, TType> { BuildFromAttribute = builder };
-            this.BindToInput<TType>(builderInstance);
+            var pm = PatternMatcher.New(builder);
+            BindToInput<TType>(pm);
+        }
+
+        // Common worker for BindToInput rules. 
+        private void BindToInput<TType>(PatternMatcher pm)
+        {
+            var bf = _parent.BindingFactory;
+            var rule = new BindToInputBindingProvider<TAttribute, TType>(bf.NameResolver, bf.ConverterManager, pm);
+            Bind(rule);
         }
 
         #endregion // BindToInput
@@ -208,11 +261,13 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         /// It uses the attribute's Access property to determine direction (Read/Write). 
         /// It includes rules for additional types of TextReader,string, byte[], and TextWriter,out string, out byte[].
         /// </summary>
-        /// <param name="builder"></param>
+        /// <param name="func"></param>
         /// <param name="fileAccess"></param>
-        public void BindToStream(FuncAsyncConverter<TAttribute, Stream> builder, FileAccess fileAccess)
+        public void BindToStream(Func<TAttribute, ValueBindingContext, Task<Stream>> func, FileAccess fileAccess)
         {
             var nameResolver = _parent.NameResolver;
+            var pm = PatternMatcher.New(func);
+            var builder = pm.TryGetConverterFunc<TAttribute, Stream>(); // throws 
             var rule = new BindToStreamBindingProvider<TAttribute>(builder, fileAccess, nameResolver, _parent.ConverterManager);
             Bind(rule);
         }
@@ -303,9 +358,8 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         public void BindToCollector<TMessage>(
             Func<TAttribute, IAsyncCollector<TMessage>> buildFromAttribute)
         {
-            var converter = new DelegateConverterBuilder<TAttribute, IAsyncCollector<TMessage>> { BuildFromAttribute = buildFromAttribute };
-
-            BindToCollector(converter);
+            var pm = PatternMatcher.New(buildFromAttribute);
+            BindToCollector<TMessage>(pm);
         }
 
         /// <summary>
@@ -317,11 +371,8 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         public void BindToCollector<TMessage>(
            IConverter<TAttribute, IAsyncCollector<TMessage>> buildFromAttribute)
         {
-            var bf = _parent.BindingFactory;
             var pm = PatternMatcher.New(buildFromAttribute);
-            var rule = new AsyncCollectorBindingProvider<TAttribute, TMessage>(bf.NameResolver, bf.ConverterManager, pm);
-
-            Bind(rule);
+            BindToCollector<TMessage>(pm);
         }
 
         /// <summary>
@@ -335,8 +386,13 @@ namespace Microsoft.Azure.WebJobs.Host.Config
              Type builderType,
              params object[] constructorArgs)
         {
-            var bf = _parent.BindingFactory;
             var pm = PatternMatcher.New(builderType, constructorArgs);
+            BindToCollector<TMessage>(pm);
+        }
+
+        private void BindToCollector<TMessage>(PatternMatcher pm)
+        {
+            var bf = _parent.BindingFactory;
             var rule = new AsyncCollectorBindingProvider<TAttribute, TMessage>(bf.NameResolver, bf.ConverterManager, pm);
             Bind(rule);
         }

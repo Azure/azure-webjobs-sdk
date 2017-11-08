@@ -70,7 +70,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             extensions.RegisterExtension<ITriggerBindingProvider>(triggerBindingProvider);
         }
 
-        private async Task<FakeQueueData> ConvertPocoToFakeQueueMessage(object arg, Attribute attrResolved, ValueBindingContext context)
+        private async Task<object> ConvertPocoToFakeQueueMessage(object arg, Attribute attrResolved, ValueBindingContext context)
         {
             return new FakeQueueData { Message = JObject.FromObject(arg).ToString() };
         }

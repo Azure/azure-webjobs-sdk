@@ -136,6 +136,82 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             }
         }
 
+        // Verify that BindToStream rule still honors [AutoResolve] on the attribute properties.
+        [Fact]
+        public void TestCustom()
+        {
+            TestWorker<ConfigAutoResolve>();
+        }
+
+        public class ConfigCustom : IExtensionConfigProvider, ITest<ConfigCustom>,
+            IConverter<TestStreamAttribute, Stream>
+        {
+            private string _log;
+            private MemoryStream _writeStream;
+
+            const string ReadTag = "xx";
+
+            public void Initialize(ExtensionConfigContext context)
+            {
+                context.AddBindingRule<TestStreamAttribute>().
+                    BindToStream(this, FileAccess.ReadWrite);
+
+                // Override the Stream --> String converter
+                context.AddConverter<Stream, string>(stream => ReadTag); 
+
+                context.AddConverter<Apply<string, Stream>, object> ((pair) =>
+                 {
+                     var val = pair.Value;
+                     var stream = pair.Existing;
+                     using (var sr = new StreamWriter(stream))
+                     {
+                         sr.Write("yy"); // custom
+                         sr.Write(val);
+                     }
+                     return null;
+                 });
+            }
+
+            public void Test(TestJobHost<ConfigCustom> host)
+            {
+                host.Call("Read");
+                Assert.Equal(_log, ReadTag);
+
+                host.Call("Write");
+
+                var content = _writeStream.ToArray(); // safe to call even after Dispose()
+                var str = Encoding.UTF8.GetString(content);
+                Assert.Equal("yya", str);
+            }
+
+            public Stream Convert(TestStreamAttribute input)
+            {
+                if (input.Access == FileAccess.Read)
+                {
+                    var value = input.Path; // Will exercise the [AutoResolve]
+                    var stream = new MemoryStream(Encoding.UTF8.GetBytes(value));
+                    stream.Position = 0;
+                    return stream;
+                }
+                if (input.Access == FileAccess.Write)
+                {
+                    var stream = new MemoryStream();
+                    _writeStream = stream;
+                    return stream;
+                }
+                throw new InvalidOperationException();
+            }
+
+            public void Read([TestStream] string value)
+            {
+                _log = value;
+            }
+            public void Read([TestStream] out string value)
+            {
+                value = "a";
+            }
+        }
+
         // If the file does not exist, we should return null from the converter. 
         // The Framework *can't* assume that an exception translates to NotExist, since there's
         // no standard exception, so the file might exist but throw a permission denied exception. 
@@ -381,11 +457,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 throw new NotImplementedException();
             }
         }
-
-
-        // $$$ Test:
-        // - custom converter 
-        // - overwrite a builtin converter 
 
         // From a JObject (ala the Function.json), generate a strongly-typed attribute. 
         [Fact]

@@ -83,7 +83,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
                         .BindToInput<CloudQueue>(builder);
             }
 
-            private async Task<IStorageQueueMessage> ConvertPocoToCloudQueueMessage(object arg, Attribute attrResolved, ValueBindingContext context)
+            private async Task<object> ConvertPocoToCloudQueueMessage(object arg, Attribute attrResolved, ValueBindingContext context)
             {
                 var attr = (QueueAttribute)attrResolved;
                 var jobj = await SerializeToJobject(arg, attr, context);
