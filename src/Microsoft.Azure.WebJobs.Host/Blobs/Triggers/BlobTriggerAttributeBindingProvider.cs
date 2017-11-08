@@ -77,7 +77,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
     {
         private readonly INameResolver _nameResolver;
         private readonly IStorageAccountProvider _accountProvider;
-        private readonly IBlobArgumentBindingProvider _provider;
         private readonly IHostIdProvider _hostIdProvider;
         private readonly IQueueConfiguration _queueConfiguration;
         private readonly JobHostBlobsConfiguration _blobsConfiguration;
@@ -160,7 +159,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
 
             _nameResolver = nameResolver;
             _accountProvider = accountProvider;
-            _provider = CreateProvider(extensionTypeLocator.GetCloudBlobStreamBinderTypes());
             _hostIdProvider = hostIdProvider;
             _queueConfiguration = queueConfiguration;
             _blobsConfiguration = blobsConfiguration;
@@ -171,34 +169,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             _singletonManager = singletonManager;
             _trace = trace;
             _loggerFactory = loggerFactory;
-        }
-
-        private static IBlobArgumentBindingProvider CreateProvider(IEnumerable<Type> cloudBlobStreamBinderTypes)
-        {
-            List<IBlobArgumentBindingProvider> innerProviders = new List<IBlobArgumentBindingProvider>();
-
-            innerProviders.Add(CreateConverterProvider<ICloudBlob, StorageBlobToCloudBlobConverter>());
-            innerProviders.Add(CreateConverterProvider<CloudBlockBlob, StorageBlobToCloudBlockBlobConverter>());
-            innerProviders.Add(CreateConverterProvider<CloudPageBlob, StorageBlobToCloudPageBlobConverter>());
-            innerProviders.Add(CreateConverterProvider<CloudAppendBlob, StorageBlobToCloudAppendBlobConverter>());
-            innerProviders.Add(new StreamArgumentBindingProvider(defaultAccess: FileAccess.Read));
-            innerProviders.Add(new TextReaderArgumentBindingProvider());
-            innerProviders.Add(new StringArgumentBindingProvider());
-            innerProviders.Add(new ByteArrayArgumentBindingProvider());
-
-            if (cloudBlobStreamBinderTypes != null)
-            {
-                innerProviders.AddRange(cloudBlobStreamBinderTypes.Select(
-                    t => CloudBlobStreamObjectBinder.CreateReadBindingProvider(t)));
-            }
-
-            return new CompositeBlobArgumentBindingProvider(innerProviders);
-        }
-
-        private static IBlobArgumentBindingProvider CreateConverterProvider<TValue, TConverter>()
-            where TConverter : IConverter<IStorageBlob, TValue>, new()
-        {
-            return new ConverterArgumentBindingProvider<TValue>(new TConverter());
         }
 
         public async Task<ITriggerBinding> TryCreateAsync(TriggerBindingProviderContext context)
@@ -214,18 +184,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             string resolvedCombinedPath = Resolve(blobTriggerAttribute.BlobPath);
             IBlobPathSource path = BlobPathSource.Create(resolvedCombinedPath);
 
-            IArgumentBinding<IStorageBlob> argumentBinding = _provider.TryCreate(parameter, access: null);
-            if (argumentBinding == null)
-            {
-                throw new InvalidOperationException("Can't bind BlobTrigger to type '" + parameter.ParameterType + "'.");
-            }
-
             IStorageAccount hostAccount = await _accountProvider.GetStorageAccountAsync(context.CancellationToken);
             IStorageAccount dataAccount = await _accountProvider.GetStorageAccountAsync(blobTriggerAttribute, context.CancellationToken, _nameResolver);
             // premium does not support blob logs, so disallow for blob triggers
             dataAccount.AssertTypeOneOf(StorageAccountType.GeneralPurpose, StorageAccountType.BlobOnly);
 
-            ITriggerBinding binding = new BlobTriggerBinding(parameter, argumentBinding, hostAccount, dataAccount, path,
+            ITriggerBinding binding = new BlobTriggerBinding(parameter, hostAccount, dataAccount, path,
                 _hostIdProvider, _queueConfiguration, _blobsConfiguration, _exceptionHandler, _blobWrittenWatcherSetter,
                 _messageEnqueuedWatcherSetter, _sharedContextProvider, _singletonManager, _trace, _loggerFactory);
 
