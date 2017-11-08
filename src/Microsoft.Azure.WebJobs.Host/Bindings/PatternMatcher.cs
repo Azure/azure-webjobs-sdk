@@ -33,9 +33,47 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return new CreateViaInstance(instance);
         }
 
+        public static PatternMatcher New<TSource, TDest>(Func<TSource, ValueBindingContext, Task<TDest>> func)
+        {
+            FuncAsyncConverter converter = async (src, attr, ctx) => await func((TSource) src, ctx);
+            return new CreateViaDelegate(converter);
+        }
+
+        public static PatternMatcher New<TSource, TDest>(Func<TSource, CancellationToken, Task<TDest>> func)
+        {
+            FuncAsyncConverter converter = async (src, attr, ctx) => await func((TSource)src, ctx.CancellationToken);
+            return new CreateViaDelegate(converter);
+        }
+
+        public static PatternMatcher New<TSource, TDest>(Func<TSource, TDest> func)
+        {
+            FuncAsyncConverter converter = (src, attr, ctx) => Task.FromResult<object>(func((TSource)src));
+            return new CreateViaDelegate(converter);
+        }
+
         public static PatternMatcher NewObj(object instance)
         {
             return new CreateViaInstance(instance);
+        }
+
+        public static FuncConverterBuilder GetBuilder(FuncAsyncConverter func)
+        {
+            FuncConverterBuilder builder = (srcType, destType) =>
+            {
+                // Cast from TDestination --> Object
+                return async (input, attr, ctx) => (object)await func(input, attr, ctx);
+            };
+            return builder;
+        }
+
+        public static FuncConverterBuilder GetBuilder<TSource, TDestination>(FuncAsyncConverter<TSource, TDestination> func)
+        {
+            FuncConverterBuilder builder = (srcType, destType) =>
+            {
+                // Cast from TDestination --> Object
+                return async (input, attr, ctx) => (object)await func((TSource)input, attr, ctx);
+            };
+            return builder;
         }
 
         /// <summary>
@@ -322,7 +360,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 FuncAsyncConverter func = async (input, attr, ctx) =>
                 {
                     TSrc src = (TSrc)input;
-                    var cts = ctx == null ? CancellationToken .None : ctx.CancellationToken;
+                    var cts = ctx == null ? CancellationToken.None : ctx.CancellationToken;
                     TDest result = await converter.ConvertAsync(src, cts);
                     return result;
                 };
@@ -401,6 +439,36 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             protected override object GetInstance(Dictionary<string, Type> genericArgs)
             {
                 return _instance;
+            }
+        }
+
+        // Wrapper for matching against an instance. 
+        private class CreateViaDelegate : PatternMatcher
+        {
+            private readonly FuncAsyncConverter _instance;
+
+            // Caller verified this is either an IAsyncConverter or IConverter
+            public CreateViaDelegate(FuncAsyncConverter instance)
+            {
+                _instance = instance;
+            }
+
+            protected override Type TypeConverter
+            {
+                get
+                {
+                    return null;
+                }
+            }
+
+            public override FuncAsyncConverter TryGetConverterFunc(Type typeSource, Type typeDest)
+            {
+                return _instance;
+            }
+
+            protected override object GetInstance(Dictionary<string, Type> genericArgs)
+            {
+                return null;
             }
         }
     }

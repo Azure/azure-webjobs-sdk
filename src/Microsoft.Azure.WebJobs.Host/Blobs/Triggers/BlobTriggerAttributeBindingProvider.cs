@@ -33,16 +33,17 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             _accountProvider = context.Config.GetService<IStorageAccountProvider>();
 
             var rule = context.AddBindingRule<BlobTriggerAttribute>();
-            rule.BindToTrigger<IStorageBlob>(); // Add listener here too? $$$ Condense with AddBindingRule
+            rule.BindToTrigger<IStorageBlob>();
 
             rule.AddConverter<IStorageBlob, DirectInvokeString>(blob => DirectInvokeString.New(blob.GetBlobPath()));
             rule.AddConverter<DirectInvokeString, IStorageBlob>(ConvertX);
+
+            // Common converters shared between [Blob] and [BlobTrigger]
 
             // Trigger already has the IStorageBlob. Whereas BindToInput defines: Attr-->Stream. 
             //  Converter manager already has Stream-->Byte[],String,TextReader
             context.AddConverter<IStorageBlob, Stream>(this);
 
-            // $$$ Can these overlap BindToInput? IStorageBlob --> X? 
             // Blob type is a property of an existing blob. 
             context.AddConverter(new StorageBlobToCloudBlobConverter());
             context.AddConverter(new StorageBlobToCloudBlockBlobConverter());

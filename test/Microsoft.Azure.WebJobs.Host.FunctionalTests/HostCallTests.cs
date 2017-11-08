@@ -1379,7 +1379,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 // Read() shouldn't be called if the stream is missing. 
                 Assert.False(true, "If stream is missing, should never call Read() converter");
                                 
-                return Task.FromResult< CustomDataObject>(null);
+                return Task.FromResult<CustomDataObject>(null);
             }
 
             public Task WriteToStreamAsync(CustomDataObject value, Stream output, CancellationToken cancellationToken)
@@ -1493,7 +1493,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 // default(T) is blob is missing 
                 Assert.NotNull(value);
                 Assert.Equal(0, value.ValueId);
-                
             }
 
             public static void FuncWithOutValueT([Blob(BlobPath)] out CustomDataValue value)

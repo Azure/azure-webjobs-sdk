@@ -16,7 +16,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
         public static Task<WatchableReadStream> TryBindStreamAsync(IStorageBlob blob, ValueBindingContext context)
         {
             return TryBindStreamAsync(blob, context.CancellationToken);
-
         }
 
         public static async Task<WatchableReadStream> TryBindStreamAsync(IStorageBlob blob, CancellationToken cancellationToken)

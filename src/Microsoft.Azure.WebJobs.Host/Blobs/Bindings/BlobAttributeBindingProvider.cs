@@ -6,29 +6,24 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
-using Microsoft.Azure.WebJobs.Host.Converters;
+using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
+using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
+using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.Azure.WebJobs.Host.Config;
-using System.Threading;
-using System.Collections;
-using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
-using Microsoft.Azure.WebJobs.Host.Protocols;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 {
     internal class BlobExtension : IExtensionConfigProvider,
-        IAsyncConverter<BlobAttribute, Stream>,
-        IAsyncConverter<BlobAttribute, CloudBlobStream>,
         IAsyncConverter<BlobAttribute, CloudBlobContainer>,
         IAsyncConverter<BlobAttribute, CloudBlobDirectory>,
         IAsyncConverter<BlobAttribute, BlobExtension.MultiBlobContext>
-
     {
         private IStorageAccountProvider _accountProvider;
         private IContextGetter<IBlobWrittenWatcher> _blobWrittenWatcherGetter;
@@ -64,12 +59,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
         #region CloudBlob rules 
 
-        // Write-only rule. 
-        async Task<CloudBlobStream> IAsyncConverter<BlobAttribute, CloudBlobStream>.ConvertAsync(
-            BlobAttribute blobAttribute, CancellationToken cancellationToken)
+        // Produce a write only stream.
+        async Task<CloudBlobStream> ConvertToCloudBlobStreamAsync(
+           BlobAttribute blobAttribute, ValueBindingContext context)
         {
-            // $$$ Fix cast. 
-            return (CloudBlobStream)await CreateStreamAsync(blobAttribute, cancellationToken);
+            var stream = await CreateStreamAsync(blobAttribute, context);
+            return (CloudBlobStream)stream;
         }
 
         private async Task<T> CreateBlobReference<T>(BlobAttribute blobAttribute, CancellationToken cancellationToken)
@@ -139,8 +134,11 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
                 foreach (var blobItem in blobItems)
                 {
                     var src = (IStorageBlob)blobItem;
-                 
-                    var converted = await _converter(src, null, null); // $$$ nulls? 
+
+                    var funcCtx = new FunctionBindingContext(Guid.Empty, CancellationToken.None, null);
+                    var valueCtx = new ValueBindingContext(funcCtx, CancellationToken.None);
+
+                    var converted = await _converter(src, null, valueCtx);
 
                     list.Add(converted);
                 }
@@ -170,28 +168,23 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         }
         #endregion
 
-        public async Task<Stream> ConvertAsync(BlobAttribute blobAttribute, CancellationToken cancellationToken)
-        {
-            return await CreateStreamAsync(blobAttribute, cancellationToken);
-        }
 
-        private async Task<Stream> CreateStreamAsync(BlobAttribute blobAttribute, CancellationToken cancellationToken)
+        private async Task<Stream> CreateStreamAsync(
+            BlobAttribute blobAttribute,
+            ValueBindingContext context)
         {
-            var fbc = new FunctionBindingContext(Guid.NewGuid(), cancellationToken, null);
-            var vbc = new ValueBindingContext(fbc, cancellationToken);
-            // $$$ Stamp with FunctionInstaceId, for causality 
-
+            var cancellationToken = context.CancellationToken;
             var blob = await GetBlobAsync(blobAttribute, cancellationToken);
 
             switch (blobAttribute.Access)
             {
                 case FileAccess.Read:
-                    var readStream = await ReadBlobArgumentBinding.TryBindStreamAsync(blob, vbc);
+                    var readStream = await ReadBlobArgumentBinding.TryBindStreamAsync(blob, context);
                     return readStream;
 
                 case FileAccess.Write:
                     var writeStream = await WriteBlobArgumentBinding.BindStreamAsync(blob,
-                    vbc, _blobWrittenWatcherGetter.Value);
+                    context, _blobWrittenWatcherGetter.Value);
                     return writeStream;
 
                 default:
@@ -226,8 +219,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
                 Type requestedType = null)
         {
             IStorageBlobClient client = await GetClientAsync(blobAttribute, cancellationToken);
-
-            // $$$ This handles URL; but we could make it fully handle any SAS  URL, and skip Connection string. 
             BlobPath boundPath = BlobPath.ParseAndValidate(blobAttribute.BlobPath);
 
             IStorageBlobContainer container = client.GetContainerReference(boundPath.ContainerName);
@@ -247,7 +238,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         {
             _accountProvider = context.Config.GetService<IStorageAccountProvider>();
 
-            // $$$ Per-host 
             _blobWrittenWatcherGetter = context.PerHostServices.GetService<ContextAccessor<IBlobWrittenWatcher>>();
             _nameResolver = context.Config.NameResolver;
             _converterManager = context.Config.ConverterManager;
@@ -264,7 +254,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
             // BindToStream will also handle the custom Stream-->T converters.
             rule.SetPostResolveHook(ToBlobDescr).
-                BindToStream(this, FileAccess.ReadWrite); // Precedence, must beat CloudBlobStream
+                BindToStream(CreateStreamAsync, FileAccess.ReadWrite); // Precedence, must beat CloudBlobStream
 
             // Normal blob
             // These are not converters because Blob/Page/Append affects how we *create* the blob. 
@@ -277,12 +267,13 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             rule.SetPostResolveHook(ToBlobDescr).
                  BindToInput<CloudAppendBlob>((attr, cts) => CreateBlobReference<CloudAppendBlob>(attr, cts));
 
-            rule.SetPostResolveHook(ToBlobDescr). // base interface 
+            rule.SetPostResolveHook(ToBlobDescr).
                 BindToInput<ICloudBlob>((attr, cts) => CreateBlobReference<ICloudBlob>(attr, cts));
 
-            // $$$ Only when Access == FileAccess.Write
             // CloudBlobStream's derived functionality is only relevant to writing. 
-            rule.SetPostResolveHook(ToBlobDescr).BindToInput<CloudBlobStream>(this);
+            rule.When("Access", FileAccess.Write).
+                SetPostResolveHook(ToBlobDescr).
+                BindToInput<CloudBlobStream>(ConvertToCloudBlobStreamAsync);
         }
 
         private ParameterDescriptor ToBlobDescr(BlobAttribute attr, ParameterInfo parameter, INameResolver nameResolver)
