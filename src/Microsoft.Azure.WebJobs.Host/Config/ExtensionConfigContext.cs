@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Azure.WebJobs.Description;
+using System.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Config
 {
@@ -63,10 +64,16 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         /// <returns></returns>
         public FluentBindingRule<TAttribute> AddBindingRule<TAttribute>() where TAttribute : Attribute
         {
-            bool hasBindingAttr = typeof(TAttribute).GetCustomAttributes(typeof(BindingAttribute), false).Length > 0;
-            if (!hasBindingAttr)
+            var bindingAttrs = typeof(TAttribute).GetCustomAttributes(typeof(BindingAttribute), false);
+            if (!bindingAttrs.Any())
             {                
                 throw new InvalidOperationException($"Can't add a binding rule for '{typeof(TAttribute).Name}' since it is missing the a {typeof(BindingAttribute).Name}");
+            }
+
+            var isTrigger = typeof(TAttribute).Name.EndsWith("TriggerAttribute", StringComparison.OrdinalIgnoreCase);
+            if (!isTrigger && ((BindingAttribute)bindingAttrs.First()).TriggerHandlesReturnValue)
+            {
+                throw new InvalidOperationException($"Only declare {nameof(BindingAttribute.TriggerHandlesReturnValue)} property true for trigger bindings.");
             }
 
             if (!_existingRules.Add(typeof(TAttribute)))
