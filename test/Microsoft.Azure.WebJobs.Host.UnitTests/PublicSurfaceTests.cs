@@ -172,6 +172,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "BindingTemplate",
                 "BindStepOrder",
                 "FluentBindingRule`1",
+                "FluentBindToInputOptions",
                 "IJobHostMetadataProvider",
                 "FluentConverterRules`2",
                 "IWebHookProvider",

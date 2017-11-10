@@ -56,9 +56,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 this.SetConverters(context);
             }
 
-            IExtensionRegistry extensions = context.Config.GetService<IExtensionRegistry>();
-
-            var bf = new BindingFactory(nameResolver, cm);
+            IExtensionRegistry extensions = context.Config.GetService<IExtensionRegistry>();            
 
             // Binds [FakeQueue] --> IAsyncCollector<FakeQueueData>
             rule.BindToCollector<FakeQueueData>(BuildFromAttr);

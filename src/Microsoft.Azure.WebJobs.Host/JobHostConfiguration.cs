@@ -247,18 +247,6 @@ namespace Microsoft.Azure.WebJobs
         }
 
         /// <summary>
-        /// Gets a helper object for constructing common binding rules for extensions.
-        /// </summary>
-        internal BindingFactory BindingFactory
-        {
-            get
-            {
-                var converterManager = this.GetService<IConverterManager>();
-                return new BindingFactory(this.NameResolver, converterManager);
-            }
-        }
-
-        /// <summary>
         /// Gets the configuration used by <see cref="QueueTriggerAttribute"/>.
         /// </summary>
         public JobHostQueuesConfiguration Queues

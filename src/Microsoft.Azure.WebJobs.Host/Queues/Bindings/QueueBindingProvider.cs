@@ -69,8 +69,9 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
 
                 var builder = new QueueBuilder(this);
 
-                binding.AddValidator(ValidateQueueAttribute)
-                    .SetPostResolveHook(ToWriteParameterDescriptorForCollector)
+                binding.AddValidator(ValidateQueueAttribute);
+
+                binding.SetPostResolveHook(ToWriteParameterDescriptorForCollector)
                         .BindToCollector<IStorageQueueMessage>(BuildFromQueueAttribute);
 
                 binding.SetPostResolveHook(ToReadWriteParameterDescriptorForCollector)

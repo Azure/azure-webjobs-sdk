@@ -11,10 +11,12 @@ using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.UnitTests.Indexers;
 using Newtonsoft.Json;
 using Xunit;
+using Microsoft.Azure.WebJobs.Description;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
     // Tests for the BindToGenericItem rule. 
+    [Binding]
     public class FakeItemAttribute : Attribute
     {
         [AutoResolve]
@@ -82,12 +84,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
         void IExtensionConfigProvider.Initialize(ExtensionConfigContext context)
         {
-            IExtensionRegistry extensions = context.Config.GetService<IExtensionRegistry>();
-            var bf = context.Config.BindingFactory;
-
-            var rule = bf.BindToGenericValueProvider<FakeItemAttribute>(BuildFromAttribute);
-
-            extensions.RegisterBindingRules<FakeItemAttribute>(rule);
+            var rule = context.AddBindingRule<FakeItemAttribute>();
+            rule.BindToValueProvider(BuildFromAttribute);
         }
 
         private Task<IValueBinder> BuildFromAttribute(FakeItemAttribute attr, Type parameterType)

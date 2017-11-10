@@ -39,9 +39,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         {
             public void Initialize(ExtensionConfigContext context)
             {
-                var bf = context.Config.BindingFactory;
-                var rule = bf.BindToInput<Test6Attribute, AlphaType>(typeof(AlphaBuilder));
-                context.RegisterBindingRules<Test6Attribute>(rule);
+                var rule = context.AddBindingRule<Test6Attribute>();
+                rule.BindToInput<AlphaType>(typeof(AlphaBuilder));
             }
 
             public void Test(TestJobHost<ConfigConcreteTypeNoConverter> host)
@@ -130,12 +129,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         {
             public void Initialize(ExtensionConfigContext context)
             {
-                var bf = context.Config.BindingFactory;
-
-                // Replaces BindToGeneric
-                var rule = bf.BindToInput<Test6Attribute, OpenType>(typeof(GeneralBuilder<>));
-                                
-                context.RegisterBindingRules<Test6Attribute>(rule);
+                var rule = context.AddBindingRule<Test6Attribute>();
+                rule.BindToInput<OpenType>(typeof(GeneralBuilder<>));
             }
             
             public void Test(TestJobHost<ConfigOpenTypeNoConverters> host)
@@ -215,10 +210,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         {
             public void Initialize(ExtensionConfigContext context)
             {
-                var bf = context.Config.BindingFactory;
-                var rule1 = bf.BindToInput<Test6Attribute, AlphaType>(typeof(AlphaBuilder));
-                var rule2 = bf.BindToInput<Test6Attribute, BetaType>(typeof(BetaBuilder));
-                context.RegisterBindingRules<Test6Attribute>(rule1, rule2);
+                var rule = context.AddBindingRule<Test6Attribute>();
+                rule.BindToInput<AlphaType>(typeof(AlphaBuilder));
+                rule.BindToInput<BetaType>(typeof(BetaBuilder));
             }
 
             public void Test(TestJobHost<ConfigMultipleRules> host)
@@ -479,13 +473,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         {
             public void Initialize(ExtensionConfigContext context)
             {
-                var bf = context.Config.BindingFactory;
-                
                 // This is an error. The rule specifies OpenType,which allows any type.
                 // But the builder can only produce Alpha types. 
-                var rule = bf.BindToInput<Test6Attribute, OpenType>(typeof(AlphaBuilder));
-
-                context.RegisterBindingRules<Test6Attribute>(rule);
+                var rule = context.AddBindingRule<Test6Attribute>();
+                rule.BindToInput<OpenType>(typeof(AlphaBuilder));
             }
 
             public void Test(TestJobHost<ConfigError1> host)

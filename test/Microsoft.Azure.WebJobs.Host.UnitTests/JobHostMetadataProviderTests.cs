@@ -52,11 +52,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.True(resolved);
             Assert.Same(asm, typeof(Widget).Assembly);
 
-            var attrType = metadataProvider.GetAttributeTypeFromName("Test");
-            Assert.Equal(typeof(TestAttribute), attrType);
+            // This requires the target attribute to be unique within the assembly. 
+            var attrType = metadataProvider.GetAttributeTypeFromName("Test9");
+            Assert.Equal(typeof(Test9Attribute), attrType);
 
             // JObject --> Attribute 
-            var attr = GetAttr<TestAttribute>(metadataProvider, new { Flag = "xyz" });
+            var attr = GetAttr<Test9Attribute>(metadataProvider, new { Flag = "xyz" });
             Assert.Equal("xyz", attr.Flag);
 
             // Getting default type. 
@@ -184,7 +185,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var host = new JobHost(config);
             IJobHostMetadataProvider metadataProvider = host.CreateMetadataProvider();
 
-            var attr = new TestAttribute(null);
+            var attr = new Test9Attribute(null);
             var type = metadataProvider.GetDefaultType(attr, FileAccess.Write, null);
 
             Assert.Equal(typeof(IAsyncCollector<JObject>), type);
@@ -196,14 +197,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             public void Initialize(ExtensionConfigContext context)
             {
                 var ignored = typeof(object); // not used 
-                context.AddBindingRule<TestAttribute>().BindToCollector<OpenType>(ignored);
+                context.AddBindingRule<Test9Attribute>().BindToCollector<OpenType>(ignored);
             }
         }
 
+        // Give this a unique name within the assembly so that the name --> type 
+        // reverse lookup can be unambiguous. 
         [Binding]
-        public class TestAttribute : Attribute
+        public class Test9Attribute : Attribute
         {
-            public TestAttribute(string flag)
+            public Test9Attribute(string flag)
             {
                 this.Flag = flag;
             }
@@ -222,13 +225,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             public void Initialize(ExtensionConfigContext context)
             {
                 _counter++;
-                context.AddBindingRule<TestAttribute>().
+                context.AddBindingRule<Test9Attribute>().
                     BindToInput<Widget>(Builder);
 
                 context.AddConverter<Widget, JObject>(widget => JObject.FromObject(widget));                
             }
 
-            Widget Builder(TestAttribute input)
+            Widget Builder(Test9Attribute input)
             {
                 return new Widget { Value = input.Flag };
             }
@@ -237,7 +240,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public class MyProg
         {
             public string _value;
-            public void Test([Test("f1")] Widget w)
+            public void Test([Test9("f1")] Widget w)
             {
                 _value = w.Value;
             }
