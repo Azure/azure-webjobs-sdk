@@ -114,6 +114,17 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
         }
 
+        /// <summary>
+        /// Get a SAS connection to a blob Container for use with SDK internal operations. 
+        /// </summary>
+        public string InternalSasStorage
+        {
+            get
+            {
+                return _ambientConnectionStringProvider.GetConnectionString(ConnectionStringNames.InternalSasStorage);
+            }
+        }
+
         private IStorageAccount DashboardAccount
         {
             get

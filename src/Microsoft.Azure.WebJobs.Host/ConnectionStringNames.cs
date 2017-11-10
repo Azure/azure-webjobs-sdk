@@ -16,5 +16,8 @@ namespace Microsoft.Azure.WebJobs
 
         /// <summary>Gets the Azure ServiceBus connection string name.</summary>
         public static readonly string ServiceBus = "ServiceBus";
+
+        /// <summary>Gets an Azure Storage SAS connection for a blob container to use with internal operations.</summary>
+        public static readonly string InternalSasStorage = "InternalSasBlobContainer";
     }
 }

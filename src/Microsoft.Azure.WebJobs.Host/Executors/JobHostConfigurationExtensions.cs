@@ -128,9 +128,19 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 IDistributedLockManager lockManager = services.GetService<IDistributedLockManager>();
                 if (lockManager == null)
                 {
-                    lockManager = new BlobLeaseDistributedLockManager(
-                        storageAccountProvider,
-                        logger);
+                    var sas = config.InternalStorageConfiguration;
+                    if (sas != null && sas.InternalContainer != null)
+                    {
+                        lockManager = new BlobLeaseDistributedLockManager.SasContainer(
+                              sas.InternalContainer,
+                              logger);
+                    }
+                    else
+                    {
+                        lockManager = new BlobLeaseDistributedLockManager.DedicatedStorage(
+                            storageAccountProvider,
+                            logger);
+                    }
                     services.AddService<IDistributedLockManager>(lockManager);
                 }
 
@@ -146,7 +156,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             IExtensionRegistry extensions = services.GetExtensions();
             services.AddService<SharedQueueHandler>(new SharedQueueHandler(storageAccountProvider, hostIdProvider, exceptionHandler, 
-                config.LoggerFactory, queueConfiguration, sharedContextProvider, messageEnqueuedWatcherAccessor));
+                                                    config.LoggerFactory, queueConfiguration, sharedContextProvider, messageEnqueuedWatcherAccessor));
             ITriggerBindingProvider triggerBindingProvider = DefaultTriggerBindingProvider.Create(nameResolver,
                 storageAccountProvider, extensionTypeLocator, hostIdProvider, queueConfiguration, blobsConfiguration, exceptionHandler,
                 messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor, sharedContextProvider, extensions, singletonManager, loggerFactory);
