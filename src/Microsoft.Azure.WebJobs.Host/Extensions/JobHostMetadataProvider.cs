@@ -8,7 +8,9 @@ using System.Reflection;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.Indexers;
 using Newtonsoft.Json.Linq;
+using System.Threading;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
@@ -23,8 +25,16 @@ namespace Microsoft.Azure.WebJobs.Host
                 
         private IBindingProvider _root;
 
-        public JobHostMetadataProvider()
+        private readonly Func<IFunctionIndexProvider> _getFunctionIndexProvider;
+
+        public JobHostMetadataProvider(Func<IFunctionIndexProvider> getFunctionIndexProvider)
         {
+            if (getFunctionIndexProvider == null)
+            {
+                throw new ArgumentNullException("getFunctionIndexProvider");
+            }
+
+            _getFunctionIndexProvider = getFunctionIndexProvider;
         }
 
         internal void Initialize(IBindingProvider bindingProvider, ConverterManager converter, IExtensionRegistry extensionRegistry)
@@ -272,6 +282,25 @@ namespace Microsoft.Azure.WebJobs.Host
                     AddAssembly(type.ExactType);
                 }
             }
+        }
+
+        public FunctionMetadata GetFunctionMetadata(string functionName)
+        {
+            FunctionMetadata result = null;
+            var provider = _getFunctionIndexProvider.Invoke();
+            if (provider != null)
+            {
+                var index = provider.GetAsync(CancellationToken.None).GetAwaiter().GetResult();
+                var functionDefinition = index.LookupByName(functionName);
+                if (functionDefinition != null)
+                {
+                    result = new FunctionMetadata()
+                    {
+                        IsDisabled = functionDefinition.Descriptor.IsDisabled
+                    };
+                }
+            }
+            return result;
         }
     }
 }

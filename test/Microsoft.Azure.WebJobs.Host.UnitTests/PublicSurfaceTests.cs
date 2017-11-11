@@ -240,7 +240,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IFunctionExceptionFilter",
                 "IFunctionFilter",
                 "IFunctionInvocationFilter",
-                "LoggerExtensions"
+                "LoggerExtensions",
+                "FunctionMetadata"
             };
 
             AssertPublicTypes(expected, assembly);
