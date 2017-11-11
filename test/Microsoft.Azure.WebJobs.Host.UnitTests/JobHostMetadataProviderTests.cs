@@ -4,11 +4,16 @@
 using System;
 using System.IO;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.Indexers;
+using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Newtonsoft.Json.Linq;
 using Xunit;
+using Moq;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
@@ -168,6 +173,37 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                         
             var t3 = metadataProvider.GetDefaultType(new QueueAttribute("q"), FileAccess.Write, null);
             Assert.Equal(typeof(IAsyncCollector<byte[]>), t3);
+        }
+
+        [Fact]
+        public void GetFunctionMetadata()
+        {
+            JobHostConfiguration config = TestHelpers.NewConfig();
+            var host = new JobHost(config);
+
+            var mockFunctionIndexProvider = new Mock<IFunctionIndexProvider>();
+
+            var functionDescriptor = new FunctionDescriptor()
+            {
+                IsDisabled = true
+            };
+            var mockFunctionIndex = new Mock<IFunctionIndex>();
+            mockFunctionIndex.Setup(i => i.LookupByName("testMethod")).Returns(new FunctionDefinition(functionDescriptor, null, null));
+            var token = new CancellationToken();
+            mockFunctionIndexProvider.Setup(p => p.GetAsync(token)).Returns(Task.FromResult(mockFunctionIndex.Object));
+
+            Func<IFunctionIndexProvider> getter = (() => 
+            {
+                return mockFunctionIndexProvider.Object;
+            });
+
+            IJobHostMetadataProvider provider = new JobHostMetadataProvider(getter);
+
+            var functionMetadata = provider.GetFunctionMetadata("testNotExists");
+            Assert.Equal(functionMetadata, null);
+
+            functionMetadata = provider.GetFunctionMetadata("testMethod");
+            Assert.Equal(functionMetadata.IsDisabled, true);
         }
 
         [Binding]
