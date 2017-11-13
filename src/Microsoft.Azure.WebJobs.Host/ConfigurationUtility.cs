@@ -53,8 +53,8 @@ namespace Microsoft.Azure.WebJobs.Host
         private static IConfigurationRoot BuildConfiguration()
         {
             var configurationBuilder = new ConfigurationBuilder()
-                .AddEnvironmentVariables()
-                .AddJsonFile("appsettings.json", optional: true);
+                .AddJsonFile("appsettings.json", optional: true)
+                .AddEnvironmentVariables();
 
             return configurationBuilder.Build();
         }
