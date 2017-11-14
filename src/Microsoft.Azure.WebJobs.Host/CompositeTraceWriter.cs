@@ -65,7 +65,7 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 string message = traceEvent.Message;
                 if (!string.IsNullOrEmpty(message) &&
-                     message.EndsWith("\r\n", StringComparison.OrdinalIgnoreCase))
+                     message.EndsWith(Environment.NewLine, StringComparison.OrdinalIgnoreCase))
                 {
                     // remove any terminating return+line feed, since we're
                     // calling WriteLine below
