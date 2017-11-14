@@ -45,18 +45,18 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 
             foreach (IFunctionDefinition functionDefinition in _functionDefinitions)
             {
-                IListenerFactory listenerFactory = functionDefinition.ListenerFactory;
-                if (listenerFactory == null)
-                {
-                    continue;
-                }
-
-                // Determine if the function is disabled                
+                // Determine if the function is disabled
                 if (functionDefinition.Descriptor.IsDisabled)
                 {
                     string msg = string.Format("Function '{0}' is disabled", functionDefinition.Descriptor.ShortName);
                     _trace.Info(msg, TraceSource.Host);
                     _logger?.LogInformation(msg);
+                    continue;
+                }
+
+                IListenerFactory listenerFactory = functionDefinition.ListenerFactory;
+                if (listenerFactory == null)
+                {
                     continue;
                 }
 
