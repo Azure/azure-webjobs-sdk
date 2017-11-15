@@ -38,7 +38,29 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         public IEnumerable<BindingRule> GetRules()
         {
-            return BindingRule.Empty;
+            if (typeof(TTriggerValue).IsPublic)
+            {
+                yield return new BindingRule
+                {
+                    SourceAttribute = typeof(TAttribute),
+                    UserType = OpenType.FromType<TTriggerValue>()
+                };
+            }
+
+            var cm = (ConverterManager)_converterManager;
+            var types = cm.GetPossibleDestinationTypesFromSource(typeof(TAttribute), typeof(TTriggerValue));
+
+            var converters = new Type[] { typeof(TTriggerValue) };
+
+            foreach (OpenType type in types)
+            {
+                yield return new BindingRule
+                {
+                    SourceAttribute = typeof(TAttribute),
+                    Converters = converters,
+                    UserType = type
+                };
+            }
         }
 
         public Task<IBinding> TryCreateAsync(BindingProviderContext context)

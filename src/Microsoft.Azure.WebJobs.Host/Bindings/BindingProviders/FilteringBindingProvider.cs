@@ -14,18 +14,15 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     internal class FilteringBindingProvider<TAttribute> : IBindingProvider, IBindingRuleProvider
         where TAttribute : Attribute
     {
-        private readonly Func<TAttribute, Type, bool> _predicate;
         private readonly INameResolver _nameResolver;
         private readonly IBindingProvider _inner;
-        private readonly string _description;
+        private readonly FilterNode _description;
 
         public FilteringBindingProvider(
-            Func<TAttribute, Type, bool> predicate, 
             INameResolver nameResolver,  
             IBindingProvider inner,
-            string description = null)
+            FilterNode description)
         {
-            _predicate = predicate;
             _nameResolver = nameResolver;
             _inner = inner;
             _description = description;
@@ -45,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             var attrNameResolved = cloner.GetNameResolvedAttribute();
 
             // This may do validation and throw too. 
-            bool canBind = _predicate(attrNameResolved, parametertype);
+            bool canBind = _description.Eval(attrNameResolved);
 
             if (!canBind)
             {
@@ -56,13 +53,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         public IEnumerable<BindingRule> GetRules()
         {
-            var filter = _description;
             IBindingRuleProvider inner = _inner as IBindingRuleProvider;
             if (inner != null)
             {
                 foreach (var rule in inner.GetRules())
                 {
-                    rule.Filter = filter;
+                    rule.Filter = FilterNode.And(_description, rule.Filter);
                     yield return rule;
                 }
             }
@@ -75,7 +71,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 return null;
             }
-            bool ok = _predicate(attr, requestedType);
+            bool ok = _description.Eval(attribute);
             if (!ok)
             {
                 return null;

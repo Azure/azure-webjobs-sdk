@@ -10,3 +10,5 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Microsoft.Azure.WebJobs.Host.TestCommon")]
 [assembly: InternalsVisibleTo("Microsoft.Azure.WebJobs.Host.FunctionalTests")]
 [assembly: InternalsVisibleTo("Microsoft.Azure.WebJobs.Host.UnitTests")]
+[assembly: InternalsVisibleTo("ExtensionViewer")]
+[assembly: InternalsVisibleTo("Microsoft.Azure.WebJobs.Analyzer")]

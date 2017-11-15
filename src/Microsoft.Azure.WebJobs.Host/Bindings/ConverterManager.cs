@@ -120,7 +120,13 @@ namespace Microsoft.Azure.WebJobs
         public OpenType[] GetPossibleDestinationTypesFromSource(Type typeAttribute, Type typeSource)
         {
             List<OpenType> typeDestinations = new List<OpenType>();
-                    
+            GetPossibleDestinationTypesFromSource(typeDestinations, typeAttribute, typeSource);
+            return typeDestinations.ToArray();
+        }
+
+
+        private void GetPossibleDestinationTypesFromSource(List<OpenType> typeDestinations, Type typeAttribute, Type typeSource)
+        {
             foreach (var entry in GetEntries())
             {
                 if (entry.IsMatchAttribute(typeAttribute) && entry.Source.IsMatch(typeSource))
@@ -128,17 +134,30 @@ namespace Microsoft.Azure.WebJobs
                     if (entry.Attribute.IsAssignableFrom(typeAttribute))
                     {
                         typeDestinations.Add(entry.Dest);
+
+                        // Counterpart to the GetComposition() calls in GetConverter.
+                        if (entry.Dest is OpenType.ExactMatch exactType)
+                        {
+                            var intermediateType = exactType.ExactType;
+                            if ((intermediateType == typeof(Stream)) ||
+                                (intermediateType == typeof(JObject)) ||
+                                (intermediateType == typeof(IEnumerable<JObject>) ))
+                            {
+                                GetPossibleDestinationTypesFromSource(typeDestinations, typeAttribute, intermediateType);
+                            }
+                        }
                     }
                 }
             }
-                        
-            return typeDestinations.ToArray();
         }
 
         // Get list of possible source types given a destination. 
-        public Type[] GetPossibleSourceTypesFromDestination(Type typeAttribute, Type typeDest)
+        public OpenType[] GetPossibleSourceTypesFromDestination(Type typeAttribute, Type typeDest)
         {
-            var typeSources = new List<Type>();
+            var typeSources = new List<OpenType>();
+
+            // ConverterManager always provides this
+            typeSources.Add(new OpenType.AssignableToOpenType(typeDest));
 
             foreach (var entry in GetEntries())
             {
@@ -148,8 +167,15 @@ namespace Microsoft.Azure.WebJobs
                     {
                         if (entry.Source is OpenType.ExactMatch et)
                         {
-                            typeSources.Add(et.ExactType);
+                            var type = et.ExactType;
+                            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ApplyConversion<,>))
+                            {
+                                // ApplyConversion are a form of output converter. Shouldn't show as a source type.
+                                continue;
+                            }
                         }
+
+                        typeSources.Add(entry.Source);
                     }
                 }
             }
@@ -276,6 +302,18 @@ namespace Microsoft.Azure.WebJobs
             return converter;
         }
                 
+        /// <summary>
+        /// Get a converter from the source to the destination, scoped for the given attribute.
+        /// </summary>
+        /// <typeparam name="TAttribute"></typeparam>
+        /// <param name="typeSource"></param>
+        /// <param name="typeDest"></param>
+        /// <returns></returns>
+        /// <remarks>
+        /// See <seealso cref="GetPossibleSourceTypesFromDestination(Type, Type)"/> and 
+        /// <seealso cref="GetPossibleDestinationTypesFromSource(Type, Type)"/> . 
+        /// These functions are the inverse of this function, used to produce diagnostic messages.
+        /// </remarks>
         public FuncAsyncConverter GetConverter<TAttribute>(Type typeSource, Type typeDest)
             where TAttribute : Attribute
         {
@@ -339,7 +377,7 @@ namespace Microsoft.Azure.WebJobs
 
             // General JSON Serialization rule. 
             // Can we convert from src to dest via a JObject serialization?
-            // Common exampe is Poco --> Jobject --> QueueMessage
+            // Common example is Poco --> Jobject --> QueueMessage
             {
                 var converter = GetComposition<TAttribute, JObject>(typeSource, typeDest);
                 if (converter != null)
