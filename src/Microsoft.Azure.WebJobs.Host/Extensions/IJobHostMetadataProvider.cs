@@ -60,12 +60,5 @@ namespace Microsoft.Azure.WebJobs.Host
         /// </summary>
         /// <param name="output">The <see cref="TextWriter"/> to write the graph to.</param>
         void DebugDumpGraph(TextWriter output);
-
-        /// <summary>
-        /// Gets function metadata.
-        /// </summary>
-        /// <param name="functionName">Name of function to return metadata for.</param>
-        /// <returns></returns>
-        FunctionMetadata GetFunctionMetadata(string functionName);
     }
 }
