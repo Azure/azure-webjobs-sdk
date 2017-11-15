@@ -65,22 +65,65 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         public IEnumerable<BindingRule> GetRules()
         {
+            var accessProp = typeof(TAttribute).GetProperty("access", BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase);
+
             foreach (var type in new Type[]
             {
                 typeof(Stream),
-                typeof(TextReader),
-                typeof(TextWriter),
-                typeof(string),
-                typeof(byte[]),
-                typeof(string).MakeByRefType(),
-                typeof(byte[]).MakeByRefType()
             })
             {
                 yield return new BindingRule
                 {
                     SourceAttribute = typeof(TAttribute),
+                    Filter = FilterNode.NotNull(accessProp), // For stream, Must specify Read vs. Write
                     UserType = OpenType.FromType(type)
                 };
+            }
+
+            // Read 
+            foreach (var filter in new FilterNode[]
+            {
+                FilterNode.IsEqual(accessProp, FileAccess.Read),
+                FilterNode.Null(accessProp) // Not write 
+            })
+            {
+                foreach (var type in new Type[]
+                {
+                typeof(TextReader),
+                typeof(string),
+                typeof(byte[])
+                })
+                {
+                    yield return new BindingRule
+                    {
+                        Filter = filter,
+                        SourceAttribute = typeof(TAttribute),
+                        UserType = OpenType.FromType(type)
+                    };
+                }
+            }
+
+            // Write 
+            foreach (var filter in new FilterNode[]
+            {
+                FilterNode.IsEqual(accessProp, FileAccess.Write),
+                FilterNode.Null(accessProp) // Not Read
+            })
+            {
+                foreach (var type in new Type[]
+                {
+                    typeof(TextWriter),
+                    typeof(string).MakeByRefType(),
+                    typeof(byte[]).MakeByRefType()
+                })
+                {
+                    yield return new BindingRule
+                    {
+                        Filter = filter,
+                        SourceAttribute = typeof(TAttribute),
+                        UserType = OpenType.FromType(type)
+                    };
+                }
             }
         }
 

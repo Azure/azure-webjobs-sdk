@@ -55,16 +55,19 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         {
             var cm = (ConverterManager)_converterManager;
             var types = cm.GetPossibleDestinationTypesFromSource(typeof(TAttribute), typeof(TType));
-                        
-            yield return new BindingRule
+
+            if (typeof(TType).IsPublic)
             {
-                SourceAttribute = typeof(TAttribute),
-                UserType = OpenType.FromType<TType>()
-            };
+                yield return new BindingRule
+                {
+                    SourceAttribute = typeof(TAttribute),
+                    UserType = OpenType.FromType<TType>()
+                };
+            }
 
             var converters = new Type[] { typeof(TType) };
 
-            foreach (var type in types)
+            foreach (OpenType type in types)
             {
                 yield return new BindingRule
                 {

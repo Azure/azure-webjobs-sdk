@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
@@ -242,6 +243,14 @@ namespace Microsoft.Azure.WebJobs.Host
                     ((requestedType != null) ? $"to { requestedType.Name }." : "."));
             }
             return type;
+        }
+
+        public BindingRule[] GetRules()
+        {
+            var providers = this._root;
+
+            IBindingRuleProvider root = (IBindingRuleProvider)providers;
+            return root.GetRules().ToArray();
         }
 
         /// <summary>

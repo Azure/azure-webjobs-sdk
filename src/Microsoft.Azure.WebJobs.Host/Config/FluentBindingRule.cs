@@ -29,8 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         private List<FluentBinder> _binders = new List<FluentBinder>();
 
         // Filters to apply to current binder
-        private List<Func<TAttribute, bool>> _filters = new List<Func<TAttribute, bool>>();
-        private StringBuilder _filterDescription = new StringBuilder();
+        private List<FilterNode> _filterDescription = new List<FilterNode>();
 
         private Func<TAttribute, ParameterInfo, INameResolver, ParameterDescriptor> _hook;
 
@@ -61,13 +60,9 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             return prop;
         }
 
-        private void AppendFilter(string propertyName, string formatString)
+        private void AppendFilter(FilterNode filter)
         {
-            if (_filterDescription.Length > 0)
-            {
-                _filterDescription.Append(" && ");
-            }
-            _filterDescription.AppendFormat(formatString, propertyName);
+            _filterDescription.Add(filter);
         }
          
         /// <summary>
@@ -78,13 +73,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         public FluentBindingRule<TAttribute> WhenIsNull(string propertyName)
         {
             var prop = ResolveProperty(propertyName);
-            Func<TAttribute, bool> func = (attribute) =>
-            {
-                var value = prop.GetValue(attribute);
-                return value == null;
-            };
-            _filters.Add(func);
-            AppendFilter(propertyName, "({0} == null)");
+            AppendFilter(FilterNode.Null(prop));
 
             return this;
         }
@@ -97,13 +86,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         public FluentBindingRule<TAttribute> WhenIsNotNull(string propertyName)
         {
             var prop = ResolveProperty(propertyName);
-            Func<TAttribute, bool> func = (attribute) =>
-            {
-                var value = prop.GetValue(attribute);
-                return value != null;
-            };
-            _filters.Add(func);
-            AppendFilter(propertyName, "({0} != null)");
+            AppendFilter(FilterNode.NotNull(prop));
 
             return this;
         }
@@ -122,26 +105,8 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             {
                 throw new InvalidOperationException($"Rule filter for '{propertyName}' can only be used with enums.");
             }
-
-            var propType = prop.PropertyType;            
-            if (!propType.IsAssignableFrom(typeof(TValue))) // Handles nullable
-            {
-                throw new InvalidOperationException(
-                    $"Type mismatch. Property '{propertyName}' is of type '{TypeUtility.GetFriendlyName(propType)}'. " + 
-                    $"Can't compare to a value of type '{TypeUtility.GetFriendlyName(typeof(TValue))}");
-            }
-
-            Func<TAttribute, bool> func = (attribute) =>
-            {
-                object objValue = prop.GetValue(attribute);
-                if (objValue is TValue val) // Handles nullable
-                {
-                    return val.Equals(expectedEnumValue);
-                }
-                return false;
-            };
-            _filters.Add(func);
-            AppendFilter(propertyName, "({0} == '" + expectedEnumValue.ToString() + "')");
+                     
+            AppendFilter(FilterNode.IsEqual(prop, expectedEnumValue));
 
             return this;
         }
@@ -336,28 +301,14 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             }
 
             // Apply filters
-            if (this._filters.Count > 0)
+            if (this._filterDescription.Count > 0)
             {
-                var filters = this._filters.ToArray(); // produce copy 
-                Func<TAttribute, Type, bool> predicate = (attribute, type) =>
-                {                    
-                    foreach (var filter in filters)
-                    {
-                        if (!filter(attribute))
-                        {
-                            return false;
-                        }
-                    }
-                    return true;
-                };
                 binder = new FilteringBindingProvider<TAttribute>(
-                    predicate, 
                     this._parent.NameResolver, 
                     binder, 
-                    this._filterDescription.ToString());
+                    FilterNode.And(this._filterDescription));
 
                 this._filterDescription.Clear();
-                this._filters.Clear();    
             }
 
             var opts = new FluentBinder(_parent, binder);
@@ -494,7 +445,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             {
                 throw new InvalidOperationException("SetPostResolveHook() should be called before the Bind() it applies to.");
             }
-            if (_filters.Count > 0)
+            if (_filterDescription.Count > 0)
             {
                 throw new InvalidOperationException($"Filters ({_filterDescription}) should be called before the Bind() they apply to.");
             }

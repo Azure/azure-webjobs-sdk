@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ExtensionViewer": {
+      "commandName": "Project",
+      "commandLineArgs": "builtin"
+    }
+  }
+}

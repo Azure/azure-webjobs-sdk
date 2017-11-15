@@ -146,60 +146,57 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return types.Where(type => type != null).ToArray();
         }
 
-        private static void AddRulesForType(Type type, List<BindingRule> rules)
+        private static void AddRulesForType(OpenType target, List<BindingRule> rules)
         {
-            var typeIAC = typeof(IAsyncCollector<>).MakeGenericType(type);
+            // Use a converter 
+            var intermediateType = typeof(IAsyncCollector<TType>);            
 
-            Type intermediateType = null;
-            if (type != typeof(TType))
-            {
-                // Use a converter 
-                intermediateType = typeof(IAsyncCollector<TType>);
-            }
-
+            // IAsyncCollector<T>
             rules.Add(
                 new BindingRule
                 {
                     SourceAttribute = typeof(TAttribute),
                     Converters = MakeArray(intermediateType),
-                    UserType = OpenType.FromType(typeIAC)
+                    UserType = new OpenType.SingleGenericArgOpenType(typeof(IAsyncCollector<>), target)
                 });
 
+            // ICollector<T>
             rules.Add(
                   new BindingRule
                   {
                       SourceAttribute = typeof(TAttribute),
-                      Converters = MakeArray(intermediateType, typeIAC),                      
-                      UserType = OpenType.FromType(typeof(ICollector<>).MakeGenericType(type))
+                      Converters = MakeArray(intermediateType),                      
+                      UserType = new OpenType.SingleGenericArgOpenType(typeof(ICollector<>), target)
                   });
 
+            // out T
             rules.Add(
                   new BindingRule
                   {
                       SourceAttribute = typeof(TAttribute),
-                      Converters = MakeArray(intermediateType, typeIAC),
-                      UserType = OpenType.FromType(type.MakeByRefType())
+                      Converters = MakeArray(intermediateType),
+                      UserType = new OpenType.ByRefOpenType(target)
                   });
 
+            // out T[]
             rules.Add(
                   new BindingRule
                   {
                       SourceAttribute = typeof(TAttribute),
-                      Converters = MakeArray(intermediateType, typeIAC),
-                      UserType = OpenType.FromType(type.MakeArrayType().MakeByRefType())
+                      Converters = MakeArray(intermediateType),
+                      UserType = new OpenType.ByRefOpenType(new OpenType.ArrayOpenType(target))
                   });
         }
 
         public IEnumerable<BindingRule> GetRules()
         {
             var rules = new List<BindingRule>();
-            AddRulesForType(typeof(TType), rules);
-                        
+
             var cm = (ConverterManager)_converterManager;
             var types = cm.GetPossibleSourceTypesFromDestination(typeof(TAttribute), typeof(TType));
                         
-            foreach (var type in types)
-            {
+            foreach (OpenType type in types)
+            {  
                 AddRulesForType(type, rules);
             }
 

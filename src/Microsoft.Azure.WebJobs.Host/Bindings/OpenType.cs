@@ -150,6 +150,46 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return new ExactMatch(t);
         }
 
+        // Converter manager will automatically provide conversions for assignability. 
+        // This OpenType is used by tooling. 
+        internal class AssignableToOpenType : OpenType
+        {
+            private readonly Type _targetType;
+
+            public AssignableToOpenType(Type targetType)
+            {
+                _targetType = targetType;
+            }
+
+            public override bool IsMatch(Type type, OpenTypeMatchContext context)
+            {
+                if (type == null)
+                {
+                    throw new ArgumentNullException(nameof(type));
+                }
+                if (ExactMatch.TypeToString(type) == ExactMatch.TypeToString(_targetType))
+                {
+                    return true;
+                }
+
+                // What if types are in different type universes?
+                // Type is a concrete type. 
+                if (_targetType.IsInterface)
+                {
+                    var iface = type.GetInterface(_targetType.FullName);
+                    return iface != null;
+                }
+                
+                // Fake types? 
+                return false;
+            }
+
+            // Use C# covariance? 
+            internal override string GetDisplayName()
+            {
+                return "+" + ExactMatch.TypeToString(_targetType);
+            }
+        }
 
         // Bind to any type.
         // Like 'T'
@@ -172,9 +212,32 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
             internal Type ExactType => _type;
 
+            // Compare types across Type universes. 
+            // Types may not both be reflection implementations. 
+            public static bool TypeEquals(Type type1, Type type2)
+            {
+                return TypeToString(type1) == TypeToString(type2);
+            }
+
             public override bool IsMatch(Type type, OpenTypeMatchContext context)
             {
-                return type == _type;
+                if (type == _type)
+                {
+                    return true;
+                }
+
+                if (_type.GetType() != type.GetType())
+                {
+                    // Doing a comparison across type-universes. Likely that:
+                    // 'this._type' is a  real reflection type defined by the extension 
+                    // parameter 'type' is a non-reflection implemeentation defined by the tooling.
+                    // To compare equivalence across universes, compare by name. 
+                    if (TypeEquals(type, _type))
+                    {
+                        return true;
+                    }
+                }
+                return false;
             }
 
             internal override string GetDisplayName()
@@ -219,7 +282,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         // Match a generic type with 1 generic arg. 
         // like IEnumerable<T>,  IQueryable<T>, etc. 
-        private class SingleGenericArgOpenType : OpenType
+        internal class SingleGenericArgOpenType : OpenType
         {
             private readonly OpenType _inner;
             private readonly Type _outerType;
@@ -240,8 +303,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 {
                     throw new ArgumentNullException(nameof(context));
                 }
+
                 if (type.IsGenericType &&
-                    type.GetGenericTypeDefinition() == _outerType)
+                    ExactMatch.TypeEquals(type.GetGenericTypeDefinition(), _outerType))
                 {
                     var args = type.GetGenericArguments();
 
@@ -258,8 +322,36 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
         }
 
+
+        // Matches any T& 
+        internal class ByRefOpenType : OpenType
+        {
+            private readonly OpenType _inner;
+            public ByRefOpenType(OpenType inner)
+            {
+                _inner = inner;
+            }
+            public override bool IsMatch(Type type, OpenTypeMatchContext context)
+            {
+                if (type == null)
+                {
+                    throw new ArgumentNullException(nameof(type));
+                }
+                if (type.IsByRef)
+                {
+                    var elementType = type.GetElementType();
+                    return _inner.IsMatch(elementType, context);
+                }
+                return false;
+            }
+
+            internal override string GetDisplayName()
+            {
+                return _inner.GetDisplayName() + "&";
+            }
+        }
         // Matches any T[] 
-        private class ArrayOpenType : OpenType
+        internal class ArrayOpenType : OpenType
         {
             private readonly OpenType _inner;
             public ArrayOpenType(OpenType inner)

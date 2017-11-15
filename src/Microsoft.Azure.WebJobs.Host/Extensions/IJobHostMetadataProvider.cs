@@ -54,13 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="assembly">Assembly that the name is resolved to</param>
         /// <returns>True with a non-null assembly if we were able to resolve. Else false and null assembly</returns>
         bool TryResolveAssembly(string assemblyName, out Assembly assembly);
-
-        /// <summary>
-        /// For diagnostics, dump the registered bindings and converters.
-        /// </summary>
-        /// <param name="output">The <see cref="TextWriter"/> to write the graph to.</param>
-        void DebugDumpGraph(TextWriter output);
-
+        
         /// <summary>
         /// Gets function metadata.
         /// </summary>
