@@ -62,10 +62,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 hostIdProvider = new FixedHostIdProvider(hostId);
             }
 
-            // Need a deferred getter since the IFunctionIndexProvider service isn't created until later. 
-            Func<IFunctionIndexProvider> deferredGetter = () => services.GetService<IFunctionIndexProvider>();
             if (hostIdProvider == null)
             {
+                // Need a deferred getter since the IFunctionIndexProvider service isn't created until later. 
+                Func<IFunctionIndexProvider> deferredGetter = () => services.GetService<IFunctionIndexProvider>();
                 hostIdProvider = new DynamicHostIdProvider(storageAccountProvider, deferredGetter);
             }
             services.AddService<IHostIdProvider>(hostIdProvider);
@@ -90,7 +90,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             services.AddService<TraceWriter>(trace);
 
             // Add built-in extensions 
-            var metadataProvider = new JobHostMetadataProvider(deferredGetter);
+            var metadataProvider = new JobHostMetadataProvider();
             metadataProvider.AddAttributesFromAssembly(typeof(TableAttribute).Assembly);
 
             var exts = config.GetExtensions();
