@@ -60,5 +60,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// </summary>
         /// <param name="output">The <see cref="TextWriter"/> to write the graph to.</param>
         void DebugDumpGraph(TextWriter output);
+
+        string[] CheckBindingErrors(Attribute attribute, Type type);
     }
 }

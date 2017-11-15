@@ -25,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
         public JobHostMetadataProvider()
         {
-        }
+        }        
 
         internal void Initialize(IBindingProvider bindingProvider, ConverterManager converter, IExtensionRegistry extensionRegistry)
         {
@@ -280,6 +280,12 @@ namespace Microsoft.Azure.WebJobs.Host
                     AddAssembly(type.ExactType);
                 }
             }
+        }
+
+        public string[] CheckBindingErrors(Attribute attribute, Type type)
+        {
+            // $$$ implement this
+            return new string[0];
         }
     }
 }
