@@ -1,12 +1,57 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.ServiceBus;
+using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Azure.WebJobs.Logging;
+using System;
+using System.Globalization;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
     internal class ServiceBusAccount
     {
-        public MessagingFactory MessagingFactory { get; set; }
+        private ServiceBusConfiguration _config;
+        private IConnectionProvider _connectionProvider;
+        private string _connectionString;
+
+
+        public ServiceBusAccount(ServiceBusConfiguration config, IConnectionProvider connectionProvider = null)
+        {
+
+
+            _config = config ?? throw new ArgumentNullException(nameof(config));
+            _config = config;
+            _connectionProvider = connectionProvider;
+        }
+
+        internal ServiceBusAccount()
+        {
+        }
+
+        public virtual string ConnectionString
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_connectionString))
+                {
+                    _connectionString = _config.ConnectionString;
+                    if (_connectionProvider != null && !string.IsNullOrEmpty(_connectionProvider.Connection))
+                    {
+                        _connectionString = AmbientConnectionStringProvider.Instance.GetConnectionString(_connectionProvider.Connection);
+                    }
+
+                    if (string.IsNullOrEmpty(_connectionString))
+                    {
+                        throw new InvalidOperationException(
+                            string.Format(CultureInfo.InvariantCulture, "Microsoft Azure WebJobs SDK ServiceBus connection string '{0}{1}' is missing or empty.",
+                            "AzureWebJobs", Sanitizer.Sanitize(_connectionProvider.Connection) ?? ConnectionStringNames.ServiceBus));
+                    }
+                }
+
+                return _connectionString;
+            }
+        }
+
+
     }
 }

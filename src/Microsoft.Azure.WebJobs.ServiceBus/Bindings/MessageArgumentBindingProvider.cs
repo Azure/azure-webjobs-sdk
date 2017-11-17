@@ -2,12 +2,13 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Reflection;
+using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 {
-    internal class BrokeredMessageArgumentBindingProvider : IQueueArgumentBindingProvider
+    internal class MessageArgumentBindingProvider : IQueueArgumentBindingProvider
     {
         public IArgumentBinding<ServiceBusEntity> TryCreate(ParameterInfo parameter)
         {
@@ -16,7 +17,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
                 return null;
             }
 
-            return new BrokeredMessageArgumentBinding();
+            return new MessageArgumentBinding();
         }
     }
 }

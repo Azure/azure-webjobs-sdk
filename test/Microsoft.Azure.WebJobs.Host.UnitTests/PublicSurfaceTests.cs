@@ -75,7 +75,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             AssertPublicTypes(expected, assembly);
         }
 
-#if SERVICE_BUS
         [Fact]
         public void ServiceBusPublicSurface_LimitedToSpecificTypes()
         {
@@ -84,11 +83,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var expected = new[]
             {
                 "EntityType",
-                "EventHubAttribute",
-                "EventHubConfiguration",
-                "EventHubJobHostConfigurationExtensions",
-                "EventHubTriggerAttribute",
-                "EventHubAsyncCollector",
                 "MessageProcessor",
                 "MessagingProvider",
                 "ServiceBusAccountAttribute",
@@ -100,7 +94,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             AssertPublicTypes(expected, assembly);
         }
-#endif
 
         [Fact]
         public void WebJobsPublicSurface_LimitedToSpecificTypes()

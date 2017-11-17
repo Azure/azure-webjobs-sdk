@@ -2,12 +2,11 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Bindings;
-using Microsoft.Azure.WebJobs.Host.Converters;
 using Microsoft.Azure.ServiceBus;
+using Microsoft.Azure.WebJobs.Host.Bindings;
+using System.Diagnostics;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 {
@@ -47,7 +46,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 
         public Task SetValueAsync(object value, CancellationToken cancellationToken)
         {
-            BrokeredMessage message = _converter.Convert((TInput)value);
+            Message message = _converter.Convert((TInput)value);
             Debug.Assert(message != null);
             return _entity.SendAndCreateEntityIfNotExistsAsync(message, _functionInstanceId, cancellationToken);
         }

@@ -3,8 +3,6 @@
 
 using System;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using Microsoft.Azure.WebJobs.Host.Converters;
 using Microsoft.Azure.ServiceBus;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
@@ -19,9 +17,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
                 throw new InvalidOperationException("A brokered message cannot contain a null byte array instance.");
             }
 
-            MemoryStream stream = new MemoryStream(input, writable: false);
-
-            return new Message(stream)
+            return new Message(input)
             {
                 ContentType = ContentTypes.ApplicationOctetStream
             };

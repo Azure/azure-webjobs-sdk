@@ -9,7 +9,6 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.ServiceBus.Listeners;
-using Microsoft.ServiceBus.Messaging;
 using Moq;
 using Xunit;
 
@@ -17,14 +16,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
 {
     public class ServiceBusQueueListenerFactoryTests
     {
-        [Theory]
-        [InlineData(AccessRights.Listen)]
-        [InlineData(AccessRights.Send)]
-        public async Task CreateAsync_AccessRightsNotManage_DoesNotCreateQueue(AccessRights accessRights)
+        [Fact]
+        public async Task CreateAsync_Success()
         {
-            ServiceBusAccount account = new ServiceBusAccount();
+            var config = new ServiceBusConfiguration();
+            var account = new ServiceBusAccount(config);
             Mock<ITriggeredFunctionExecutor> mockExecutor = new Mock<ITriggeredFunctionExecutor>(MockBehavior.Strict);
-            ServiceBusQueueListenerFactory factory = new ServiceBusQueueListenerFactory(account, "testqueue", mockExecutor.Object, accessRights, new ServiceBusConfiguration());
+            ServiceBusQueueListenerFactory factory = new ServiceBusQueueListenerFactory(account, "testqueue", mockExecutor.Object, config);
 
             IListener listener = await factory.CreateAsync(CancellationToken.None);
             Assert.NotNull(listener);

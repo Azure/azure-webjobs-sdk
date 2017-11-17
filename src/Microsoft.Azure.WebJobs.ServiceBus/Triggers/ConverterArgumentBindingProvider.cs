@@ -54,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             {
                 Message clone = value.Clone();
                 object converted = await _converter.ConvertAsync(value, context.CancellationToken);
-                IValueProvider provider = await BrokeredMessageValueProvider.CreateAsync(clone, converted, typeof(T),
+                IValueProvider provider = await MessageValueProvider.CreateAsync(clone, converted, typeof(T),
                     context.CancellationToken);
                 return new TriggerData(provider, null);
             }

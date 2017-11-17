@@ -41,7 +41,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.EventHubs", "src\Mi
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.EventHubs.UnitTests", "test\Microsoft.Azure.WebJobs.EventHubs.UnitTests\WebJobs.EventHubs.UnitTests.csproj", "{27F0E6AC-505E-4BEC-81CA-8DF777DEA9C7}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.ServiceBus", "src\Microsoft.Azure.WebJobs.ServiceBus\WebJobs.ServiceBus.csproj", "{A2B3C676-3DF0-43B4-92A2-7E7DAA7BF439}"
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "WebJobs.Shared", "src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.shproj", "{ADD036F5-2170-4B05-9E0A-C2ED0A08A929}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.ServiceBus.UnitTests", "test\Microsoft.Azure.WebJobs.ServiceBus.UnitTests\WebJobs.ServiceBus.UnitTests.csproj", "{D37637D5-7EF9-43CB-86BE-537473CD613B}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
@@ -108,6 +111,14 @@ Global
 		{27F0E6AC-505E-4BEC-81CA-8DF777DEA9C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{27F0E6AC-505E-4BEC-81CA-8DF777DEA9C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{27F0E6AC-505E-4BEC-81CA-8DF777DEA9C7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A2B3C676-3DF0-43B4-92A2-7E7DAA7BF439}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2B3C676-3DF0-43B4-92A2-7E7DAA7BF439}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2B3C676-3DF0-43B4-92A2-7E7DAA7BF439}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2B3C676-3DF0-43B4-92A2-7E7DAA7BF439}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D37637D5-7EF9-43CB-86BE-537473CD613B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D37637D5-7EF9-43CB-86BE-537473CD613B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D37637D5-7EF9-43CB-86BE-537473CD613B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D37637D5-7EF9-43CB-86BE-537473CD613B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -120,6 +131,7 @@ Global
 		{C8EAAE01-E8CF-4131-9D4B-F0FDF00DA4BE} = {639967B0-0544-4C52-94AC-9A3D25E33256}
 		{340AB554-5482-4B3D-B65F-46DFF5AF1684} = {639967B0-0544-4C52-94AC-9A3D25E33256}
 		{27F0E6AC-505E-4BEC-81CA-8DF777DEA9C7} = {639967B0-0544-4C52-94AC-9A3D25E33256}
+		{D37637D5-7EF9-43CB-86BE-537473CD613B} = {639967B0-0544-4C52-94AC-9A3D25E33256}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {371BFA14-0980-4A43-A18A-CA1C1A9CB784}

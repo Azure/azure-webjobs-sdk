@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
     {
         private static readonly IQueueArgumentBindingProvider InnerProvider =
             new CompositeArgumentBindingProvider(
-                new BrokeredMessageArgumentBindingProvider(),
+                new MessageArgumentBindingProvider(),
                 new StringArgumentBindingProvider(),
                 new ByteArrayArgumentBindingProvider(),
                 new UserTypeArgumentBindingProvider(),
@@ -65,11 +65,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
                 throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Can't bind ServiceBus to type '{0}'.", parameter.ParameterType));
             }
 
-            ServiceBusAccount account = new ServiceBusAccount
-            {
-                MessagingFactory = _config.MessagingProvider.CreateMessagingFactory(queueOrTopicName, attribute.Connection),
-                NamespaceManager = _config.MessagingProvider.CreateNamespaceManager(attribute.Connection)
-            };
+            ServiceBusAccount account = new ServiceBusAccount(_config, attribute);
 
             IBinding binding = new ServiceBusBinding(parameter.Name, argumentBinding, account, path, attribute);
             return Task.FromResult<IBinding>(binding);

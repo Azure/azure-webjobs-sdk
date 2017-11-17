@@ -4,8 +4,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Converters;
-using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.ServiceBus.Core;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
@@ -23,7 +21,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
             _entityType = entityType;
         }
 
-        public async Task<ServiceBusEntity> ConvertAsync(string input, CancellationToken cancellationToken)
+        public Task<ServiceBusEntity> ConvertAsync(string input, CancellationToken cancellationToken)
         {
             string queueOrTopicName;
 
@@ -38,14 +36,15 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            MessageSender messageSender = await _account.MessagingFactory.CreateMessageSenderAsync(queueOrTopicName);
+            var messageSender = new MessageSender(_account.ConnectionString, queueOrTopicName);
 
-            return new ServiceBusEntity
+            var entity = new ServiceBusEntity
             {
-                Account = _account,
                 MessageSender = messageSender,
                 EntityType = _entityType
             };
+
+            return Task.FromResult(entity);
         }
     }
 }

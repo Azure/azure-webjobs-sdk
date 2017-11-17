@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.ServiceBus;
+using Microsoft.Azure.ServiceBus.Core;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -21,21 +22,23 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// <summary>
         /// Constructs a new instance.
         /// </summary>
-        /// <param name="messageOptions">The <see cref="OnMessageOptions"/> to use.</param>
-        public MessageProcessor(MessageHandlerOptions messageOptions)
+        /// <param name="messageReceiver">The <see cref="MessageReceiver"/>.</param>
+        /// <param name="messageOptions">The <see cref="MessageHandlerOptions"/> to use.</param>
+        public MessageProcessor(MessageReceiver messageReceiver, MessageHandlerOptions messageOptions)
         {
-            if (messageOptions == null)
-            {
-                throw new ArgumentNullException("messageOptions");
-            }
-
-            MessageOptions = messageOptions;
+            MessageReceiver = messageReceiver ?? throw new ArgumentNullException(nameof(messageReceiver));
+            MessageOptions = messageOptions ?? throw new ArgumentNullException(nameof(messageOptions));
         }
 
         /// <summary>
-        /// Gets the <see cref="OnMessageOptions"/> that will be used by the <see cref="MessageReceiver"/>.
+        /// Gets the <see cref="MessageHandlerOptions"/> that will be used by the <see cref="MessageReceiver"/>.
         /// </summary>
-        public MessageHandlerOptions MessageOptions { get; protected set; }
+        public MessageHandlerOptions MessageOptions { get; }
+
+        /// <summary>
+        /// Gets or sets the <see cref="MessageReceiver"/> that will be used by the <see cref="MessageReceiver"/>.
+        /// </summary>
+        protected MessageReceiver MessageReceiver { get; set; }
 
         /// <summary>
         /// This method is called when there is a new message to process, before the job function is invoked.
@@ -58,6 +61,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// <returns>A <see cref="Task"/> that will complete the message processing.</returns>
         public virtual async Task CompleteProcessingMessageAsync(Message message, FunctionResult result, CancellationToken cancellationToken)
         {
+            var lockToken = message.SystemProperties.IsLockTokenSet ? message.SystemProperties.LockToken : string.Empty;
+
             if (result.Succeeded)
             {
                 if (!MessageOptions.AutoComplete)
@@ -65,13 +70,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                     // AutoComplete is true by default, but if set to false
                     // we need to complete the message
                     cancellationToken.ThrowIfCancellationRequested();
-                    await message.CompleteAsync();
+                    await MessageReceiver.CompleteAsync(lockToken);
                 }
             }
             else
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                await message.AbandonAsync();
+                await MessageReceiver.AbandonAsync(lockToken);
             }
         }
     }

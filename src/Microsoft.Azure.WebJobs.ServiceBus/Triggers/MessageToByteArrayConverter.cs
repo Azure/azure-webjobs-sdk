@@ -11,10 +11,17 @@ using Microsoft.Azure.ServiceBus;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
 {
-    internal class BrokeredMessageToByteArrayConverter : IAsyncConverter<Message, byte[]>
+    internal class MessageToByteArrayConverter : IAsyncConverter<Message, byte[]>
     {
         public Task<byte[]> ConvertAsync(Message input, CancellationToken cancellationToken)
         {
+            if (input == null)
+            {
+                throw new ArgumentNullException(nameof(input));
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
             return Task.FromResult(input.Body);
         }
     }

@@ -6,8 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.ServiceBus.Triggers;
-using Microsoft.ServiceBus;
-using Microsoft.ServiceBus.Messaging;
+using Microsoft.Azure.ServiceBus;
 using Moq;
 using Xunit;
 
@@ -32,42 +31,36 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
         [Fact]
         public async Task TryCreateAsync_AccountOverride_OverrideIsApplied()
         {
-            _mockMessagingProvider.Setup(p => p.CreateNamespaceManager("testaccount")).Returns<NamespaceManager>(null);
-            _mockMessagingProvider.Setup(p => p.CreateMessagingFactory("test", "testaccount")).Returns<MessagingFactory>(null);
-
             ParameterInfo parameter = GetType().GetMethod("TestJob_AccountOverride").GetParameters()[0];
             TriggerBindingProviderContext context = new TriggerBindingProviderContext(parameter, CancellationToken.None);
 
             ITriggerBinding binding = await _provider.TryCreateAsync(context);
 
-            _mockMessagingProvider.VerifyAll();
+            Assert.NotNull(binding);
         }
 
         [Fact]
         public async Task TryCreateAsync_DefaultAccount()
         {
-            _mockMessagingProvider.Setup(p => p.CreateNamespaceManager(null)).Returns<NamespaceManager>(null);
-            _mockMessagingProvider.Setup(p => p.CreateMessagingFactory("test", null)).Returns<MessagingFactory>(null);
-
             ParameterInfo parameter = GetType().GetMethod("TestJob").GetParameters()[0];
             TriggerBindingProviderContext context = new TriggerBindingProviderContext(parameter, CancellationToken.None);
 
             ITriggerBinding binding = await _provider.TryCreateAsync(context);
 
-            _mockMessagingProvider.VerifyAll();
+            Assert.NotNull(binding);
         }
 
         public static void TestJob_AccountOverride(
             [ServiceBusTriggerAttribute("test"),
-             ServiceBusAccount("testaccount")] BrokeredMessage message)
+             ServiceBusAccount("testaccount")] Message message)
         {
-            message = new BrokeredMessage();
+            message = new Message();
         }
 
         public static void TestJob(
-            [ServiceBusTriggerAttribute("test")] BrokeredMessage message)
+            [ServiceBusTriggerAttribute("test")] Message message)
         {
-            message = new BrokeredMessage();
+            message = new Message();
         }
     }
 }

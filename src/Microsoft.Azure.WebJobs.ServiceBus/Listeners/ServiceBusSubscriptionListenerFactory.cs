@@ -11,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
 {
     internal class ServiceBusSubscriptionListenerFactory : IListenerFactory
     {
-        private readonly MessagingFactory _messagingFactory;
+        private readonly ServiceBusAccount _account;
         private readonly string _topicName;
         private readonly string _subscriptionName;
         private readonly ITriggeredFunctionExecutor _executor;
@@ -19,19 +19,21 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
 
         public ServiceBusSubscriptionListenerFactory(ServiceBusAccount account, string topicName, string subscriptionName, ITriggeredFunctionExecutor executor, ServiceBusConfiguration config)
         {
-            _messagingFactory = account.MessagingFactory;
+            _account = account;
             _topicName = topicName;
             _subscriptionName = subscriptionName;
             _executor = executor;
             _config = config;
         }
 
-        public async Task<IListener> CreateAsync(CancellationToken cancellationToken)
+        public Task<IListener> CreateAsync(CancellationToken cancellationToken)
         {
-            string entityPath = SubscriptionClient.FormatSubscriptionPath(_topicName, _subscriptionName);
+            string entityPath = EntityNameHelper.FormatSubscriptionPath(_topicName, _subscriptionName);
 
             ServiceBusTriggerExecutor triggerExecutor = new ServiceBusTriggerExecutor(_executor);
-            return new ServiceBusListener(_messagingFactory, entityPath, triggerExecutor, _config);
+            var listener = new ServiceBusListener(entityPath, triggerExecutor, _config, _account);
+
+            return Task.FromResult<IListener>(listener);
         }
     }
 }
