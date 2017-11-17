@@ -2,74 +2,79 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
-using Microsoft.ServiceBus.Messaging;
+using Microsoft.Azure.ServiceBus;
+using Microsoft.Azure.ServiceBus.Core;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
 {
     public class MessageProcessorTests
     {
+        private readonly MessageProcessor _processor;
+        private readonly MessageHandlerOptions _options;
+
+        public MessageProcessorTests()
+        {
+            _options = new MessageHandlerOptions(ExceptionReceivedHandler);
+            MessageReceiver receiver = new MessageReceiver("Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=abc123=", "test-entity");
+            _processor = new MessageProcessor(receiver, _options);
+        }
+
         [Fact]
         public async Task CompleteProcessingMessageAsync_Success_CompletesMessage_WhenAutoCompleteFalse()
         {
-            OnMessageOptions options = new OnMessageOptions
-            {
-                AutoComplete = false
-            };
-            MessageProcessor processor = new MessageProcessor(options);
+            _options.AutoComplete = false;
 
-            BrokeredMessage message = new BrokeredMessage();
+            Message message = new Message();
             FunctionResult result = new FunctionResult(true);
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            var ex = await Assert.ThrowsAsync<FormatException>(async () =>
             {
-                await processor.CompleteProcessingMessageAsync(message, result, CancellationToken.None);
+                await _processor.CompleteProcessingMessageAsync(message, result, CancellationToken.None);
             });
 
             // The service bus APIs aren't unit testable, so in this test suite
             // we rely on exception stacks to verify APIs are called as expected.
             // this verifies that we initiated the completion
-            Assert.True(ex.ToString().Contains("Microsoft.ServiceBus.Messaging.BrokeredMessage.BeginComplete"));
+            Assert.True(ex.ToString().Contains("Microsoft.Azure.ServiceBus.Core.MessageReceiver.OnCompleteAsync"));
         }
 
         [Fact]
         public async Task CompleteProcessingMessageAsync_Failure_AbandonsMessage()
         {
-            OnMessageOptions options = new OnMessageOptions
-            {
-                AutoComplete = false
-            };
-            MessageProcessor processor = new MessageProcessor(options);
+            _options.AutoComplete = false;
 
-            BrokeredMessage message = new BrokeredMessage();
+            Message message = new Message();
             FunctionResult result = new FunctionResult(false);
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            var ex = await Assert.ThrowsAsync<FormatException>(async () =>
             {
-                await processor.CompleteProcessingMessageAsync(message, result, CancellationToken.None);
+                await _processor.CompleteProcessingMessageAsync(message, result, CancellationToken.None);
             });
 
             // this verifies that we initiated the abandon
-            Assert.True(ex.ToString().Contains("Microsoft.ServiceBus.Messaging.BrokeredMessage.BeginAbandon"));
+            Assert.True(ex.ToString().Contains("Microsoft.Azure.ServiceBus.Core.MessageReceiver.OnAbandonAsync"));
         }
 
         [Fact]
         public async Task CompleteProcessingMessageAsync_DefaultOnMessageOptions()
         {
-            MessageProcessor processor = new MessageProcessor(new OnMessageOptions());
-
-            BrokeredMessage message = new BrokeredMessage();
+            Message message = new Message();
             FunctionResult result = new FunctionResult(true);
-            await processor.CompleteProcessingMessageAsync(message, result, CancellationToken.None);
+            await _processor.CompleteProcessingMessageAsync(message, result, CancellationToken.None);
         }
 
         [Fact]
         public void MessageOptions_ReturnsOptions()
         {
-            OnMessageOptions options = new OnMessageOptions();
-            MessageProcessor processor = new MessageProcessor(options);
-            Assert.Same(options, processor.MessageOptions);
+            Assert.Same(_options, _processor.MessageOptions);
+        }
+
+        Task ExceptionReceivedHandler(ExceptionReceivedEventArgs eventArgs)
+        {
+            return Task.CompletedTask;
         }
     }
 }

@@ -3,9 +3,6 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Globalization;
-using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.ServiceBus.Core;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
@@ -17,11 +14,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     public class MessagingProvider
     {
         private readonly ServiceBusConfiguration _config;
-
-        /// <summary>
-        /// Cache of <see cref="MessagingFactory"/> instances by connection string.
-        /// </summary>
-        private readonly ConcurrentDictionary<string, MessagingFactory> _messagingFactoryCache = new ConcurrentDictionary<string, MessagingFactory>();
+        private readonly ConcurrentDictionary<string, MessageReceiver> _messageReceiverCache = new ConcurrentDictionary<string, MessageReceiver>();
 
         /// <summary>
         /// Constructs a new instance.
@@ -37,46 +30,18 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         }
 
         /// <summary>
-        /// Creates a <see cref="MessagingFactory"/> for the specified ServiceBus entity.
-        /// </summary>
-        /// <param name="entityPath">The ServiceBus entity to create a <see cref="MessagingFactory"/> for.</param>
-        /// <param name="connectionStringName">Optional connection string name indicating the connection string to use.
-        /// If null, the default connection string on the <see cref="ServiceBusConfiguration"/> will be used.</param>
-        /// <returns>A <see cref="MessagingFactory"/>.</returns>
-        /// <remarks>For performance reasons, factories are cached per connection string.</remarks>
-        public virtual MessagingFactory CreateMessagingFactory(string entityPath, string connectionStringName = null)
-        {
-            if (string.IsNullOrEmpty(entityPath))
-            {
-                throw new ArgumentNullException("entityPath");
-            }
-
-            string connectionString = GetConnectionString(connectionStringName);
-
-            // We cache messaging factories per entity/connection, in accordance with ServiceBus
-            // performance guidelines.
-            // https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-performance-improvements
-            string cacheKey = $"{entityPath}-{connectionString}";
-            var messagingFactory = _messagingFactoryCache.GetOrAdd(cacheKey, (p) =>
-            {
-                return MessagingFactory.CreateFromConnectionString(connectionString);
-            });
-
-            return messagingFactory;
-        }
-
-        /// <summary>
         /// Creates a <see cref="MessageProcessor"/> for the specified ServiceBus entity.
         /// </summary>
         /// <param name="entityPath">The ServiceBus entity to create a <see cref="MessageProcessor"/> for.</param>
         /// <returns>The <see cref="MessageProcessor"/>.</returns>
-        public virtual MessageProcessor CreateMessageProcessor(string entityPath)
+        public virtual MessageProcessor CreateMessageProcessor(string entityPath, string connectionString)
         {
             if (string.IsNullOrEmpty(entityPath))
             {
                 throw new ArgumentNullException("entityPath");
             }
-            return new MessageProcessor(_config.MessageOptions);
+
+            return new MessageProcessor(GetOrAddMessageReceiver(entityPath, connectionString), _config.MessageOptions);
         }
 
         /// <summary>
@@ -88,43 +53,24 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// <param name="factory">The <see cref="MessagingFactory"/> to use.</param>
         /// <param name="entityPath">The ServiceBus entity to create a <see cref="MessageReceiver"/> for.</param>
         /// <returns></returns>
-        public virtual MessageReceiver CreateMessageReceiver(string entityPath)
+        public virtual MessageReceiver CreateMessageReceiver(string entityPath, string connectionString)
         {
             if (string.IsNullOrEmpty(entityPath))
             {
                 throw new ArgumentNullException("entityPath");
             }
 
-            // TODO: FACAVAL - Create receiver, can't rely on the factory anymore
-            //MessageReceiver receiver =  factory.CreateMessageReceiver(entityPath);
-            //receiver.PrefetchCount = _config.PrefetchCount;
-            //return receiver;
-
-            return null;
+            return GetOrAddMessageReceiver(entityPath, connectionString);
         }
 
-        /// <summary>
-        /// Gets the connection string for the specified connection string name.
-        /// If no value is specified, the default connection string will be returned.
-        /// </summary>
-        /// <param name="connectionStringName">The connection string name.</param>
-        /// <returns>The ServiceBus connection string.</returns>
-        protected internal string GetConnectionString(string connectionStringName = null)
+        private MessageReceiver GetOrAddMessageReceiver(string entityPath, string connectionString)
         {
-            string connectionString = _config.ConnectionString;
-            if (!string.IsNullOrEmpty(connectionStringName))
-            {
-                connectionString = AmbientConnectionStringProvider.Instance.GetConnectionString(connectionStringName);
-            }
-
-            if (string.IsNullOrEmpty(connectionString))
-            {
-                throw new InvalidOperationException(
-                    string.Format(CultureInfo.InvariantCulture, "Microsoft Azure WebJobs SDK ServiceBus connection string '{0}{1}' is missing or empty.",
-                    "AzureWebJobs", connectionStringName ?? ConnectionStringNames.ServiceBus));
-            }
-
-            return connectionString;
+            string cacheKey = $"{entityPath}-{connectionString}";
+            return _messageReceiverCache.GetOrAdd(cacheKey,
+                new MessageReceiver(connectionString, entityPath)
+                {
+                    PrefetchCount = _config.PrefetchCount
+                });
         }
     }
 }

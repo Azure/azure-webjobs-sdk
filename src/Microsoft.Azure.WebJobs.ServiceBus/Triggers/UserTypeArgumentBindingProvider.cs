@@ -10,6 +10,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.ServiceBus;
 using Newtonsoft.Json;
+using Microsoft.Azure.ServiceBus.InteropExtensions;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
 {
@@ -52,16 +53,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
                 IValueProvider provider;
                 Message clone = value.Clone();
 
-                TInput contents = await GetBody(value, context);
+                TInput contents = GetBody(value, context);
 
                 if (contents == null)
                 {
-                    provider = await BrokeredMessageValueProvider.CreateAsync(clone, null, ValueType,
+                    provider = await MessageValueProvider.CreateAsync(clone, null, ValueType,
                         context.CancellationToken);
                     return new TriggerData(provider, null);
                 }
 
-                provider = await BrokeredMessageValueProvider.CreateAsync(clone, contents, ValueType,
+                provider = await MessageValueProvider.CreateAsync(clone, contents, ValueType,
                     context.CancellationToken);
 
                 IReadOnlyDictionary<string, object> bindingData = (_bindingDataProvider != null)
@@ -70,7 +71,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
                 return new TriggerData(provider, bindingData);
             }
 
-            private static async Task<TInput> GetBody(Message message, ValueBindingContext context)
+            private static TInput GetBody(Message message, ValueBindingContext context)
             {
                 if (message.ContentType == ContentTypes.ApplicationJson)
                 {

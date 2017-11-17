@@ -19,17 +19,19 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         private readonly ServiceBusTriggerExecutor _triggerExecutor;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly MessageProcessor _messageProcessor;
+        private readonly ServiceBusAccount _serviceBusAccount;
 
         private MessageReceiver _receiver;
         private bool _disposed;
 
-        public ServiceBusListener(string entityPath, ServiceBusTriggerExecutor triggerExecutor, ServiceBusConfiguration config)
+        public ServiceBusListener(string entityPath, ServiceBusTriggerExecutor triggerExecutor, ServiceBusConfiguration config, ServiceBusAccount serviceBusAccount)
         {
             _entityPath = entityPath;
             _triggerExecutor = triggerExecutor;
             _cancellationTokenSource = new CancellationTokenSource();
             _messagingProvider = config.MessagingProvider;
-            _messageProcessor = config.MessagingProvider.CreateMessageProcessor(entityPath);
+            _serviceBusAccount = serviceBusAccount;
+            _messageProcessor = config.MessagingProvider.CreateMessageProcessor(entityPath, _serviceBusAccount.ConnectionString);
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -41,38 +43,25 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
                 throw new InvalidOperationException("The listener has already been started.");
             }
 
-            return StartAsyncCore(cancellationToken);
-        }
-
-        private Task StartAsyncCore(CancellationToken cancellationToken)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            _receiver = _messagingProvider.CreateMessageReceiver(_entityPath);
+            _receiver = _messagingProvider.CreateMessageReceiver(_entityPath, _serviceBusAccount.ConnectionString);
             _receiver.RegisterMessageHandler(ProcessMessageAsync, _messageProcessor.MessageOptions);
 
-            return Task.FromResult(0);
+            return Task.CompletedTask;
         }
 
-        public Task StopAsync(CancellationToken cancellationToken)
+        public async Task StopAsync(CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
 
             if (_receiver == null)
             {
-                throw new InvalidOperationException(
-                    "The listener has not yet been started or has already been stopped.");
+                throw new InvalidOperationException("The listener has not yet been started or has already been stopped.");
             }
 
-            // Signal ProcessMessage to shut down gracefully
+            // cancel our token source to signal any in progress
+            // ProcessMessageAsync invocations to cancel
             _cancellationTokenSource.Cancel();
 
-            return StopAsyncCore(cancellationToken);
-        }
-
-        private async Task StopAsyncCore(CancellationToken cancellationToken)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
             await _receiver.CloseAsync();
             _receiver = null;
         }

@@ -7,21 +7,21 @@ using Microsoft.Azure.ServiceBus;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
 {
-    internal class StringToBrokeredMessageConverterFactory
+    internal class StringTodMessageConverterFactory
     {
         public static IConverter<string, Message> Create(Type parameterType)
         {
             if (parameterType == typeof(Message) || parameterType == typeof(string))
             {
-                return new StringToTextBrokeredMessageConverter();
+                return new StringToTextMessageConverter();
             }
             else if (parameterType == typeof(byte[]))
             {
-                return new StringToBinaryBrokeredMessageConverter();
+                return new StringToBinarydMessageConverter();
             }
             else
             {
-                return new StringToJsonBrokeredMessageConverter();
+                return new StringToJsonMessageConverter();
             }
         }
     }

@@ -5,9 +5,8 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Bindings;
-using Microsoft.Azure.WebJobs.Host.Converters;
 using Microsoft.Azure.ServiceBus;
+using Microsoft.Azure.WebJobs.Host.Bindings;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 {
@@ -54,8 +53,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
             }
 
             Debug.Assert(value is TInput);
-            BrokeredMessage message = _converter.Convert((TInput)value);
+            Message message = _converter.Convert((TInput)value);
             Debug.Assert(message != null);
+
             return _entity.SendAndCreateEntityIfNotExistsAsync(message, _functionInstanceId, cancellationToken);
         }
     }

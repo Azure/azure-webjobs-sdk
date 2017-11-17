@@ -12,13 +12,13 @@ using Microsoft.Azure.ServiceBus;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
 {
-    internal class BrokeredMessageValueProvider : IValueProvider
+    internal class MessageValueProvider : IValueProvider
     {
         private readonly object _value;
         private readonly Type _valueType;
         private readonly string _invokeString;
 
-        private BrokeredMessageValueProvider(object value, Type valueType, string invokeString)
+        private MessageValueProvider(object value, Type valueType, string invokeString)
         {
             if (value != null && !valueType.IsAssignableFrom(value.GetType()))
             {
@@ -45,11 +45,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             return _invokeString;
         }
 
-        public static async Task<BrokeredMessageValueProvider> CreateAsync(Message clone, object value,
+        public static async Task<MessageValueProvider> CreateAsync(Message clone, object value,
             Type valueType, CancellationToken cancellationToken)
         {
             string invokeString = await CreateInvokeStringAsync(clone, cancellationToken);
-            return new BrokeredMessageValueProvider(value, valueType, invokeString);
+            return new MessageValueProvider(value, valueType, invokeString);
         }
 
         private static Task<string> CreateInvokeStringAsync(Message clonedMessage,

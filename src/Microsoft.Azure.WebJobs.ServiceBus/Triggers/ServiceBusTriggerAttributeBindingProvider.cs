@@ -17,9 +17,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         private static readonly IQueueTriggerArgumentBindingProvider InnerProvider =
             new CompositeArgumentBindingProvider(
                 new ConverterArgumentBindingProvider<Message>(
-                    new AsyncConverter<BrokeredMessage, Message>(new IdentityConverter<Message>())),
-                new ConverterArgumentBindingProvider<string>(new BrokeredMessageToStringConverter()),
-                new ConverterArgumentBindingProvider<byte[]>(new BrokeredMessageToByteArrayConverter()),
+                    new AsyncConverter<Message, Message>(new IdentityConverter<Message>())),
+                new ConverterArgumentBindingProvider<string>(new MessageToStringConverter()),
+                new ConverterArgumentBindingProvider<byte[]>(new MessageToByteArrayConverter()),
                 new UserTypeArgumentBindingProvider()); // Must come last, because it will attempt to bind all types.
 
         private readonly INameResolver _nameResolver;
@@ -69,7 +69,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             {
                 topicName = Resolve(attribute.TopicName);
                 subscriptionName = Resolve(attribute.SubscriptionName);
-                entityPath = SubscriptionClient.FormatSubscriptionPath(topicName, subscriptionName);
+                entityPath = EntityNameHelper.FormatSubscriptionPath(topicName, subscriptionName);
             }
 
             ITriggerDataArgumentBinding<Message> argumentBinding = InnerProvider.TryCreate(parameter);
@@ -78,10 +78,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
                 throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Can't bind ServiceBusTrigger to type '{0}'.", parameter.ParameterType));
             }
 
-            ServiceBusAccount account = new ServiceBusAccount
-            {
-                MessagingFactory = _config.MessagingProvider.CreateMessagingFactory(entityPath, attribute.Connection),
-            };
+            ServiceBusAccount account = new ServiceBusAccount(_config, attribute);
 
             ITriggerBinding binding;
             if (queueName != null)

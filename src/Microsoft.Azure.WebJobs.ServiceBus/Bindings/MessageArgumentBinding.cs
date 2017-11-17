@@ -9,7 +9,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 {
-    internal class BrokeredMessageArgumentBinding : IArgumentBinding<ServiceBusEntity>
+    internal class MessageArgumentBinding : IArgumentBinding<ServiceBusEntity>
     {
         public Type ValueType
         {
@@ -60,7 +60,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
             }
 
             /// <summary>
-            /// Sends a BrokeredMessage to the bound queue.
+            /// Sends a Message to the bound queue.
             /// </summary>
             /// <param name="value">BrokeredMessage instance as retrieved from user's WebJobs method argument.</param>
             /// <param name="cancellationToken">a cancellation token</param>
@@ -91,7 +91,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
                     return;
                 }
 
-                BrokeredMessage message = (BrokeredMessage)value;
+                var message = (Message)value;
 
                 await _entity.SendAndCreateEntityIfNotExistsAsync(message, _functionInstanceId, cancellationToken);
             }

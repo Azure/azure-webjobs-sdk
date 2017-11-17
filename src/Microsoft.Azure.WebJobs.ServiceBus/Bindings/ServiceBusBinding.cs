@@ -4,11 +4,10 @@
 using System;
 using System.Globalization;
 using System.Threading.Tasks;
+using Microsoft.Azure.ServiceBus.Core;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Converters;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.Azure.ServiceBus;
-using Microsoft.Azure.ServiceBus.Core;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 {
@@ -17,17 +16,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
         private readonly string _parameterName;
         private readonly IArgumentBinding<ServiceBusEntity> _argumentBinding;
         private readonly ServiceBusAccount _account;
-        private readonly string _namespaceName;
         private readonly IBindableServiceBusPath _path;
         private readonly IAsyncObjectToTypeConverter<ServiceBusEntity> _converter;
         private readonly EntityType _entityType;
+        private readonly ServiceBusConfiguration _config;
 
         public ServiceBusBinding(string parameterName, IArgumentBinding<ServiceBusEntity> argumentBinding, ServiceBusAccount account, IBindableServiceBusPath path, ServiceBusAttribute attr)
         {
             _parameterName = parameterName;
             _argumentBinding = argumentBinding;
             _account = account;
-            _namespaceName = ServiceBusClient.GetNamespaceName(account);
             _path = path;
             _entityType = attr.EntityType;
             _converter = new OutputConverter<string>(
@@ -44,11 +42,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
             context.CancellationToken.ThrowIfCancellationRequested();
 
             string boundQueueName = _path.Bind(context.BindingData);
-            MessageSender messageSender = await _account.MessagingFactory.CreateMessageSenderAsync(boundQueueName);
+            var messageSender = new MessageSender(_account.ConnectionString, boundQueueName);
 
-            ServiceBusEntity entity = new ServiceBusEntity
+            var entity = new ServiceBusEntity
             {
-                Account = _account,
                 MessageSender = messageSender,
                 EntityType = _entityType
             };
@@ -73,7 +70,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
             return new ServiceBusParameterDescriptor
             {
                 Name = _parameterName,
-                NamespaceName = _namespaceName,
                 QueueOrTopicName = _path.QueueOrTopicNamePattern,
                 DisplayHints = CreateParameterDisplayHints(_path.QueueOrTopicNamePattern, false)
             };

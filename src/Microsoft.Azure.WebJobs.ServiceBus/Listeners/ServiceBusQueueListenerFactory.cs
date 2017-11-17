@@ -11,21 +11,25 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
 {
     internal class ServiceBusQueueListenerFactory : IListenerFactory
     {
+        private readonly ServiceBusAccount _account;
         private readonly string _queueName;
         private readonly ITriggeredFunctionExecutor _executor;
         private readonly ServiceBusConfiguration _config;
 
         public ServiceBusQueueListenerFactory(ServiceBusAccount account, string queueName, ITriggeredFunctionExecutor executor, ServiceBusConfiguration config)
         {
+            _account = account;
             _queueName = queueName;
             _executor = executor;
             _config = config;
         }
 
-        public async Task<IListener> CreateAsync(CancellationToken cancellationToken)
+        public Task<IListener> CreateAsync(CancellationToken cancellationToken)
         {
-            ServiceBusTriggerExecutor triggerExecutor = new ServiceBusTriggerExecutor(_executor);
-            return new ServiceBusListener(_messagingFactory, _queueName, triggerExecutor, _config);
+            var triggerExecutor = new ServiceBusTriggerExecutor(_executor);
+            var listener = new ServiceBusListener(_queueName, triggerExecutor, _config, _account);
+
+            return Task.FromResult<IListener>(listener);
         }
     }
 }

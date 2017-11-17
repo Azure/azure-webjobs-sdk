@@ -11,8 +11,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 {
     internal class ServiceBusEntity
     {
-        public ServiceBusAccount Account { get; set; }
-
         public MessageSender MessageSender { get; set; }
 
         public EntityType EntityType { get; set; } = EntityType.Queue;

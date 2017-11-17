@@ -11,7 +11,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.ServiceBus.Triggers;
-using Microsoft.ServiceBus.Messaging;
+using Microsoft.Azure.ServiceBus;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -27,8 +27,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Triggers
             IQueueTriggerArgumentBindingProvider provider = new UserTypeArgumentBindingProvider();
             ParameterInfo pi = new StubParameterInfo("parameterName", typeof(UserDataType));
             var argumentBinding = provider.TryCreate(pi);
-            _queueBinding = new ServiceBusTriggerBinding("parameterName", typeof(UserDataType), argumentBinding, null, AccessRights.Manage, new ServiceBusConfiguration(), "queueName");
-            _topicBinding = new ServiceBusTriggerBinding("parameterName", typeof(UserDataType), argumentBinding, null, AccessRights.Manage, new ServiceBusConfiguration(), "subscriptionName", "topicName");
+            _queueBinding = new ServiceBusTriggerBinding("parameterName", typeof(UserDataType), argumentBinding, null, new ServiceBusConfiguration(), "queueName");
+            _topicBinding = new ServiceBusTriggerBinding("parameterName", typeof(UserDataType), argumentBinding, null, new ServiceBusConfiguration(), "subscriptionName", "topicName");
         }
 
         [Theory]
@@ -51,7 +51,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Triggers
             Action<ITriggerBinding> testBinding = (b) =>
             {
                 // Act
-                BrokeredMessage message = new BrokeredMessage(new MemoryStream(Encoding.UTF8.GetBytes(messageContent)), true);
+                Message message = new Message(Encoding.UTF8.GetBytes(messageContent));
                 message.ContentType = ContentTypes.ApplicationJson;
                 ITriggerData data = _queueBinding.BindAsync(message, context).GetAwaiter().GetResult();
 

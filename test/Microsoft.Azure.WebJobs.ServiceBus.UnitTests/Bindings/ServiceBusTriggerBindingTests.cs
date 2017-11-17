@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Microsoft.Azure.WebJobs.ServiceBus.Triggers;
-using Microsoft.ServiceBus.Messaging;
+using Microsoft.Azure.ServiceBus;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
@@ -30,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
             Assert.Equal(bindingDataContract["To"], typeof(string));
             Assert.Equal(bindingDataContract["Label"], typeof(string));
             Assert.Equal(bindingDataContract["CorrelationId"], typeof(string));
-            Assert.Equal(bindingDataContract["Properties"], typeof(IDictionary<string, object>));
+            Assert.Equal(bindingDataContract["UserProperties"], typeof(IDictionary<string, object>));
 
             // verify that argument binding values override built ins
             argumentContract = new Dictionary<string, Type>
@@ -47,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
         [Fact]
         public void CreateBindingData_ReturnsExpectedValue()
         {
-            BrokeredMessage message = new BrokeredMessage(new MemoryStream(Encoding.UTF8.GetBytes("Test Message")), true);
+            Message message = new Message(Encoding.UTF8.GetBytes("Test Message"));
             message.ReplyTo = "test-queue";
             message.To = "test";
             message.ContentType = "application/json";
@@ -55,15 +55,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
             message.CorrelationId = Guid.NewGuid().ToString();
             IReadOnlyDictionary<string, object> valueBindingData = null;
             var bindingData = ServiceBusTriggerBinding.CreateBindingData(message, valueBindingData);
-            Assert.Equal(8, bindingData.Count);
+            Assert.Equal(7, bindingData.Count);
             Assert.Equal(message.ReplyTo, bindingData["ReplyTo"]);
             Assert.Equal(message.To, bindingData["To"]);
             Assert.Equal(message.MessageId, bindingData["MessageId"]);
-            Assert.Equal(message.DeadLetterSource, bindingData["DeadLetterSource"]);
             Assert.Equal(message.ContentType, bindingData["ContentType"]);
             Assert.Equal(message.Label, bindingData["Label"]);
             Assert.Equal(message.CorrelationId, bindingData["CorrelationId"]);
-            Assert.Same(message.Properties, bindingData["Properties"]);
+            Assert.Same(message.UserProperties, bindingData["UserProperties"]);
 
             // verify that value binding data overrides built ins
             valueBindingData = new Dictionary<string, object>
@@ -72,7 +71,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
                 { "NewProperty", 123 }
             };
             bindingData = ServiceBusTriggerBinding.CreateBindingData(message, valueBindingData);
-            Assert.Equal(9, bindingData.Count);
+            Assert.Equal(8, bindingData.Count);
             Assert.Equal("override", bindingData["ReplyTo"]);
             Assert.Equal(123, bindingData["NewProperty"]);
         }

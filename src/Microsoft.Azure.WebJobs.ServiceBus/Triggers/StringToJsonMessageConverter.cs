@@ -8,7 +8,7 @@ using Microsoft.Azure.ServiceBus;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
 {
-    internal class StringToJsonBrokeredMessageConverter : IConverter<string, Message>
+    internal class StringToJsonMessageConverter : IConverter<string, Message>
     {
         [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         public Message Convert(string input)
