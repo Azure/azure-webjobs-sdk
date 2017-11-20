@@ -92,3 +92,4 @@
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly", Scope = "member", Target = "Microsoft.Azure.WebJobs.Host.Filters.FunctionInvocationContext.#Properties")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1040:AvoidEmptyInterfaces", Scope = "type", Target = "Microsoft.Azure.WebJobs.Host.Filters.IFunctionFilter")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1040:AvoidEmptyInterfaces", Scope = "type", Target = "Microsoft.Azure.WebJobs.Host.IFunctionFilter")]
+[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1804:RemoveUnusedLocals", MessageId = "ignore", Scope = "member", Target = "Microsoft.Azure.WebJobs.JobHost.#EnsureHostInitializedAsync(System.Threading.CancellationToken)")]
