@@ -26,6 +26,8 @@ build_script:
     dotnet pack src\Microsoft.Azure.WebJobs.Logging.ApplicationInsights\WebJobs.Logging.ApplicationInsights.csproj -o ..\..\buildoutput --no-build --version-suffix "-$env:APPVEYOR_BUILD_NUMBER"
 
     dotnet pack src\Microsoft.Azure.WebJobs.ServiceBus\EventHubs\WebJobs.EventHubs.csproj -o ..\..\..\buildoutput --no-build --version-suffix "-$env:APPVEYOR_BUILD_NUMBER"
+
+    dotnet pack src\Microsoft.Azure.WebJobs.ServiceBus\WebJobs.ServiceBus.csproj -o ..\..\buildoutput --no-build --version-suffix "-$env:APPVEYOR_BUILD_NUMBER"
 test_script:
 - ps: >-
     $success = $true
