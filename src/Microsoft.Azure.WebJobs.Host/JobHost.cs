@@ -125,9 +125,11 @@ namespace Microsoft.Azure.WebJobs
 
         private async Task StartAsyncCore(CancellationToken cancellationToken)
         {
-            await EnsureHostStartedAsync(cancellationToken);
+            await EnsureHostInitializedAsync(cancellationToken);
 
             await _listener.StartAsync(cancellationToken);
+
+            OnHostStarted();
 
             string msg = "Job host started";
             _context.Trace.Info(msg, Host.TraceSource.Host);
@@ -283,7 +285,7 @@ namespace Microsoft.Azure.WebJobs
 
             ThrowIfDisposed();
 
-            await EnsureHostStartedAsync(cancellationToken);
+            await EnsureHostInitializedAsync(cancellationToken);
 
             IFunctionDefinition function = _context.FunctionLookup.LookupByName(name);
             Validate(function, name);
@@ -300,7 +302,8 @@ namespace Microsoft.Azure.WebJobs
         private async Task CallAsyncCore(MethodInfo method, IDictionary<string, object> arguments,
             CancellationToken cancellationToken)
         {
-            await EnsureHostStartedAsync(cancellationToken);
+            await EnsureHostInitializedAsync(cancellationToken);
+
             IFunctionDefinition function = _context.FunctionLookup.Lookup(method);
             Validate(function, method);
             IFunctionInstance instance = CreateFunctionInstance(function, arguments);
@@ -380,9 +383,13 @@ namespace Microsoft.Azure.WebJobs
             }
         }
 
-        // If multiple threads call this, only one should do the init. The rest should wait.
-        // When this task is signalled, _context is initialized. 
-        private Task EnsureHostStartedAsync(CancellationToken cancellationToken)
+        /// <summary>
+        /// Ensure all required host services are initialized and the host is ready to start
+        /// processing function invocations. This function does not start the listeners.
+        /// If multiple threads call this, only one should do the initialization. The rest should wait.
+        /// When this task is signalled, _context is initialized.
+        /// </summary>
+        private Task EnsureHostInitializedAsync(CancellationToken cancellationToken)
         {
             if (_context != null)
             {
@@ -404,7 +411,7 @@ namespace Microsoft.Azure.WebJobs
             if (tsc != null)
             {
                 // Ignore the return value and use tsc so that all threads are awaiting the same thing. 
-                Task ignore = RuntimeInitAsync(cancellationToken, tsc);
+                Task ignore = InitializeHostAsync(cancellationToken, tsc);
             }
 
             return _initializationRunning;
@@ -413,14 +420,17 @@ namespace Microsoft.Azure.WebJobs
         // Caller gaurantees this is single-threaded. 
         // Set initializationTask when complete, many threads can wait on that. 
         // When complete, the fields should be initialized to allow runtime usage. 
-        private async Task RuntimeInitAsync(CancellationToken cancellationToken, TaskCompletionSource<bool> initializationTask)
+        private async Task InitializeHostAsync(CancellationToken cancellationToken, TaskCompletionSource<bool> initializationTask)
         {
             try
             {
-                // Do real initialization 
-                PopulateStaticServices();
+                InitializeServices();
 
-                JobHostContext context = await _config.CreateJobHostContextAsync(_services, this, _shutdownTokenSource.Token, cancellationToken);
+                var context = await _config.CreateJobHostContextAsync(_services, this, _shutdownTokenSource.Token, cancellationToken);
+
+                // must call this BEFORE setting the results below
+                // since listener startup is blocking on those members
+                OnHostInitialized();
 
                 _context = context;
                 _listener = context.Listener;
@@ -434,10 +444,25 @@ namespace Microsoft.Azure.WebJobs
             }
         }
 
+        /// <summary>
+        /// Called when host initialization has been completed, but before listeners
+        /// are started.
+        /// </summary>
+        protected virtual void OnHostInitialized()
+        {
+        }
+
+        /// <summary>
+        /// Called when all listeners have started and the host is running.
+        /// </summary>
+        protected virtual void OnHostStarted()
+        {
+        }
+
         // Ensure the static services are initialized. 
         // These are derived from the underlying JobHostConfiguration. 
         // Caller ensures this is single threaded. 
-        private void PopulateStaticServices()
+        private void InitializeServices()
         {
             if (this._services != null)
             {
@@ -456,7 +481,7 @@ namespace Microsoft.Azure.WebJobs
         {
             get
             {
-                PopulateStaticServices();
+                InitializeServices();
                 return _services;
             }
         }
