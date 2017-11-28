@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Microsoft.Azure.WebJobs.Description;
 using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
