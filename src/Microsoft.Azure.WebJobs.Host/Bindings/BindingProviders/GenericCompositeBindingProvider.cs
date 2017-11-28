@@ -37,7 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         {
             var attr = context.Parameter.GetCustomAttribute<TAttribute>();
 
-            if (attr == null)
+            if (attr == null || attr.GetType() != typeof(TAttribute))
             {
                 return null;
             }

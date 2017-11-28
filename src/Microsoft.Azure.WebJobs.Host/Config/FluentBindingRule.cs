@@ -479,7 +479,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             JobHostMetadataProvider.DumpRule(binding, output);
         }
 
-        private IBindingProvider CreateBinding()
+        internal IBindingProvider CreateBinding()
         {
             IBindingProvider[] bindings = _binders.Select(x => x.Binder).ToArray();
             var all = new GenericCompositeBindingProvider<TAttribute>(_validator, this._parent.NameResolver, bindings);
