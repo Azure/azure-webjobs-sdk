@@ -42,8 +42,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Triggers
             UserDataType expectedObject = new UserDataType();
             PropertyInfo userProperty = typeof(UserDataType).GetProperty(userPropertyName);
             var parseMethod = userProperty.PropertyType.GetMethod(
-                "Parse",new Type[]{typeof(string)});
-            object convertedPropertyValue = parseMethod.Invoke(null, new object[]{userPropertyValue});
+                "Parse", new Type[] {typeof(string)});
+            object convertedPropertyValue = parseMethod.Invoke(null, new object[] {userPropertyValue});
             userProperty.SetValue(expectedObject, convertedPropertyValue);
             string messageContent = JsonConvert.SerializeObject(expectedObject);
             ValueBindingContext context = new ValueBindingContext(null, CancellationToken.None);

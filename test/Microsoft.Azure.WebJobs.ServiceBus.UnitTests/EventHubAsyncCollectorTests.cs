@@ -19,11 +19,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
     {
         public class TestEventHubAsyncCollector : EventHubAsyncCollector
         {
-            // A fake connection string for event hubs. This just needs to parse. It won't actually get invoked. 
+            // A fake connection string for event hubs. This just needs to parse. It won't actually get invoked.
             const string FakeConnectionString = "Endpoint=sb://test89123-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey;EntityPath=path2";
             public static EventHubClient _testClient = EventHubClient.CreateFromConnectionString(FakeConnectionString);
 
-            // EventData is disposed after sending. So track raw bytes; not the actual EventData. 
+            // EventData is disposed after sending. So track raw bytes; not the actual EventData.
             public List<byte[]> _sentEvents = new List<byte[]>();
 
             public TestEventHubAsyncCollector() : base(_testClient)
@@ -81,7 +81,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
 
             await collector.FlushAsync();
 
-            // Partitions aren't flushed in a specific order. 
+            // Partitions aren't flushed in a specific order.
             Assert.Equal(2, collector._sentEvents.Count);
             var items = collector._sentEvents.ToArray();
 
@@ -95,7 +95,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         {
             var collector = new TestEventHubAsyncCollector();
 
-            await collector.FlushAsync(); // should be nop. 
+            await collector.FlushAsync(); // should be nop.
 
             var payload = new byte[] { 1, 2, 3 };
             var e1 = new EventData(payload);
@@ -115,7 +115,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         {
             var collector = new TestEventHubAsyncCollector();
 
-            // Sending a bunch of little events 
+            // Sending a bunch of little events
             for (int i = 0; i < 150; i++)
             {
                 var e1 = new EventData(new byte[] { 1, 2, 3 });
@@ -131,7 +131,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         {
             var collector = new TestEventHubAsyncCollector();
 
-            // Trip the 256k EventHub limit. 
+            // Trip the 256k EventHub limit.
             for (int i = 0; i < 10; i++)
             {
                 var e1 = new EventData(new byte[10 * 1024]);
@@ -156,7 +156,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         {
             var collector = new TestEventHubAsyncCollector();
 
-            // event hub max is 256k payload. 
+            // event hub max is 256k payload.
             var hugePayload = new byte[300 * 1024];
             var e1 = new EventData(hugePayload);
 
@@ -167,7 +167,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             }
             catch (InvalidOperationException e)
             {
-                // Exact error message (and serialization byte size) is subject to change. 
+                // Exact error message (and serialization byte size) is subject to change.
                 Assert.Contains("Event is too large", e.Message);
             }
 
@@ -186,7 +186,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             );
         }
 
-        // Send lots of events from multiple threads and ensure that all events are precisely accounted for. 
+        // Send lots of events from multiple threads and ensure that all events are precisely accounted for.
         [Fact]
         public async Task SendLotsOfEvents()
         {
@@ -237,7 +237,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
                 await collector.AddAsync(new EventData(ignoreBytes));
             }
 
-            // Verify that every event we sent is accounted for; and that there are no duplicates. 
+            // Verify that every event we sent is accounted for; and that there are no duplicates.
             int count = 0;
             foreach (var payloadBytes in collector._sentEvents)
             {
