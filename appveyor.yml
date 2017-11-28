@@ -46,7 +46,7 @@ test_script:
 
     # see results in app insights AntaresDemo 'functionse2eai'
 
-    dotnet test .\test\Microsoft.Azure.WebJobs.Host.EndToEndTests\ -v q --no-build -l appinsights
+    dotnet test .\test\Microsoft.Azure.WebJobs.Host.EndToEndTests\ -v q --no-build
 
     $success = $success -and $?
 
