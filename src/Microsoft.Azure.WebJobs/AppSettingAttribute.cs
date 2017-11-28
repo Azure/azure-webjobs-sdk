@@ -3,13 +3,12 @@
 
 using System;
 
-namespace Microsoft.Azure.WebJobs
+namespace Microsoft.Azure.WebJobs.Description
 {
     /// <summary>
     /// Place this on binding attributes properties to tell the binders that that the property
     /// should be automatically resolved as an app setting
     /// </summary>
-    [Obsolete("Not ready for public consumption.")]
     [AttributeUsage(AttributeTargets.Property)]
     public sealed class AppSettingAttribute : Attribute
     {

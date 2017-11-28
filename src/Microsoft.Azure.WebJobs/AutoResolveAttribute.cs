@@ -3,13 +3,12 @@
 
 using System;
 
-namespace Microsoft.Azure.WebJobs
+namespace Microsoft.Azure.WebJobs.Description
 {
     /// <summary>
     /// Attribute used to indicate that a binding attribute property should have
     /// automatic resolution of {} and %% binding expressions applied.
     /// </summary>
-    [Obsolete("Not ready for public consumption.")]
     [AttributeUsage(AttributeTargets.Property)]
     public sealed class AutoResolveAttribute : Attribute
     {
