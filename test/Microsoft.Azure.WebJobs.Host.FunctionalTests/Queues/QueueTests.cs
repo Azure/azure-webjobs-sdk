@@ -298,7 +298,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             TestHelpers.AssertIndexingError(() => host.Call("Func"),
                 "ProgramBadContract.Func",
-                "No binding parameter exists for 'xyz'.");
+                "No binding parameter exists for 'xyz' on the trigger input. For binding to custom properties, see https://go.microsoft.com/fwlink/?linkid=864355");
         }
 
         public class ProgramCantBindToObject

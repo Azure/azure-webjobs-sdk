@@ -204,9 +204,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
             catch (InvalidOperationException e)
             {
-                Assert.Equal("No binding parameter exists for 'name'.", e.Message);
+                Assert.Equal("No binding parameter exists for 'name' on the trigger input. For binding to custom properties, see https://go.microsoft.com/fwlink/?linkid=864355", e.Message);
             }
         }
+
 
         // Test on an attribute that does NOT implement IAttributeInvokeDescriptor
         // Key parameter is a property (not ctor)

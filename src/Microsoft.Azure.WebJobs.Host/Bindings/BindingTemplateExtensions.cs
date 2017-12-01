@@ -74,7 +74,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                     if (!bindingDataContract.ContainsKey(parameterName))
                     {
-                        throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "No binding parameter exists for '{0}'.", parameterName));
+                        throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "No binding parameter exists for '{0}' on the trigger input. For binding to custom properties, see https://go.microsoft.com/fwlink/?linkid=864355", parameterName));
                     }
                 }
             }
