@@ -65,7 +65,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         public async Task DispatchQueueBatchTriggerTest()
         {
             _hostConfiguration.TypeLocator = new FakeTypeLocator(typeof(SampleTrigger));
-            _hostConfiguration.HostId = "bttest"; // use test name
+            // each test will have a unique hostId so that consecutive test run will not be affected by clean up code
+            _hostConfiguration.HostId = "bttest";
 
             using (var host = new JobHost(_hostConfiguration))
             {
@@ -75,8 +76,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 _stopwatch.Restart();
 
-                // it take 2secs to trigger the first function
-                // only one dequeue is happening if batchSize*2 < maxPollingInterval 
                 int twoFuncCount = DispatchQueueTestConfig.batchSize * 2;
                 await TestHelpers.Await(() => _funcInvokation.TotalAdd() >= twoFuncCount || _funcInvokation.HasDuplicate(),
                                         7000, 1000);
@@ -106,7 +105,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 // this test takes long since it does at least 5 dequeue on the poison message
                 // count retries caused by failures and poison queue function process
                 int funcWithExceptionCount = DispatchQueueTestConfig.batchSize + _hostConfiguration.Queues.MaxDequeueCount;
-                await TestHelpers.Await(() => _funcInvokation.TotalAdd() >= funcWithExceptionCount, 10000, 2000);
+                await TestHelpers.Await(() => _funcInvokation.TotalAdd() >= funcWithExceptionCount, 10000, 1000);
 
                 Assert.Equal(funcWithExceptionCount, _funcInvokation.TotalAdd());
                 Assert.True(_funcInvokation.HasDuplicate());
@@ -136,7 +135,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 int order = json["order"].Value<int>();
                 string funcSignature = "PoisonQueueTrigger arg: " + order;
                 _funcInvokation.Add(funcSignature);
-                _output.WriteLine(funcSignature + " elapsed time: " + _stopwatch.ElapsedMilliseconds);
+                _output.WriteLine(funcSignature + " elapsed time: " + _stopwatch.ElapsedMilliseconds + " ms");
                 if (order == 0)
                 {
                     throw new Exception("Can't deal with zero :(");
@@ -152,7 +151,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     poisonQueueResult = true;
                 }
                 _funcInvokation.Add("PosionQueueProcess");
-                _output.WriteLine("PoisonQueueProcess" + " elapsed time: " + _stopwatch.ElapsedMilliseconds);
+                _output.WriteLine("PoisonQueueProcess" + " elapsed time: " + _stopwatch.ElapsedMilliseconds + " ms");
             }
         }
 
@@ -162,14 +161,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 string funcSignature = "DispatchQueueTrigger arg: " + json["order"].Value<int>();
                 _funcInvokation.Add(funcSignature);
-                _output.WriteLine(funcSignature + " elapsed time: " + _stopwatch.ElapsedMilliseconds);
+                _output.WriteLine(funcSignature + " elapsed time: " + _stopwatch.ElapsedMilliseconds + " ms");
             }
 
             public void DispatchQueueTrigger2([DispatchQueueTrigger]JObject json)
             {
                 string funcSignature = "DispatchQueueTrigger2 arg: " + json["order"].Value<int>();
                 _funcInvokation.Add(funcSignature);
-                _output.WriteLine(funcSignature + " elapsed time: " + _stopwatch.ElapsedMilliseconds);
+                _output.WriteLine(funcSignature + " elapsed time: " + _stopwatch.ElapsedMilliseconds + " ms");
             }
         }
     }
