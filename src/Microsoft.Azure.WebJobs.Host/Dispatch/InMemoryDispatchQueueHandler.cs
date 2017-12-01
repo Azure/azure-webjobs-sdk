@@ -21,6 +21,7 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
         {
             // start executing the function
             // ignore the function result, no retry or poisonQueue
+            // we don't wait on this task, exceptions will be logged by functionExecutor
             _messageHandler.TryExecuteAsync(message, cancellationToken);
             return Task.CompletedTask;
         }
