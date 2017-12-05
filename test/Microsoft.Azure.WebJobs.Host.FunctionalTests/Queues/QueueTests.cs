@@ -14,6 +14,7 @@ using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Newtonsoft.Json;
 using Xunit;
+using System.Globalization;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
@@ -298,7 +299,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             TestHelpers.AssertIndexingError(() => host.Call("Func"),
                 "ProgramBadContract.Func",
-                "No binding parameter exists for 'xyz' on the trigger input. For binding to custom properties, see https://go.microsoft.com/fwlink/?linkid=864355");
+                string.Format(CultureInfo.CurrentCulture, Constants.UnableToResolveBindingParameterFormat, "xyz"));
         }
 
         public class ProgramCantBindToObject
