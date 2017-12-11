@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs
     [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class, AllowMultiple = true)]
     public sealed class SingletonAttribute : Attribute
     {
-        private int? _lockAcquisitionTimeout;
+        private int _lockAcquisitionTimeout;
 
         /// <summary>
         /// Constructs a new instance.
@@ -46,6 +46,7 @@ namespace Microsoft.Azure.WebJobs
             ScopeId = scopeId;
             Mode = SingletonMode.Function;
             Scope = scope;
+            _lockAcquisitionTimeout = -1;
         }
 
         /// <summary>
@@ -88,7 +89,7 @@ namespace Microsoft.Azure.WebJobs
         /// When set, this value will override the corresponding global configuration
         /// value set in JobHostConfiguration.Singleton.
         /// </summary>
-        public int? LockAcquisitionTimeout 
+        public int LockAcquisitionTimeout 
         { 
             get
             {
@@ -97,7 +98,7 @@ namespace Microsoft.Azure.WebJobs
 
             set
             {
-                if (value != null && value <= 0)
+                if (value <= 0)
                 {
                     throw new ArgumentOutOfRangeException("value");
                 }

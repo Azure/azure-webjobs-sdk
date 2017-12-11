@@ -89,13 +89,11 @@ namespace Microsoft.Azure.WebJobs.Host
 
         public async virtual Task<RenewableLockHandle> LockAsync(string lockId, string functionInstanceId, SingletonAttribute attribute, CancellationToken cancellationToken)
         {
-            RenewableLockHandle lockHandle = await TryLockAsync(lockId, functionInstanceId, attribute, cancellationToken);
+            var lockHandle = await TryLockAsync(lockId, functionInstanceId, attribute, cancellationToken);
 
             if (lockHandle == null)
             {
-                TimeSpan acquisitionTimeout = attribute.LockAcquisitionTimeout != null
-                    ? TimeSpan.FromSeconds(attribute.LockAcquisitionTimeout.Value) :
-                    _config.LockAcquisitionTimeout;
+                TimeSpan acquisitionTimeout = GetLockAcquisitionTimeout(attribute, _config);
                 throw new TimeoutException(string.Format("Unable to acquire singleton lock blob lease for blob '{0}' (timeout of {1} exceeded).", lockId, acquisitionTimeout.ToString("g")));
             }
 
@@ -111,10 +109,7 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 // Someone else has the lease. Continue trying to periodically get the lease for
                 // a period of time
-                TimeSpan acquisitionTimeout = attribute.LockAcquisitionTimeout != null
-                    ? TimeSpan.FromSeconds(attribute.LockAcquisitionTimeout.Value) :
-                    _config.LockAcquisitionTimeout;
-
+                TimeSpan acquisitionTimeout = GetLockAcquisitionTimeout(attribute, _config);
                 TimeSpan timeWaited = TimeSpan.Zero;
                 while ((handle == null) && (timeWaited < acquisitionTimeout))
                 {
@@ -284,6 +279,15 @@ namespace Microsoft.Azure.WebJobs.Host
             }
 
             return singletonAttribute;
+        }
+
+        internal static TimeSpan GetLockAcquisitionTimeout(SingletonAttribute attribute, SingletonConfiguration config)
+        {
+            TimeSpan acquisitionTimeout = attribute.LockAcquisitionTimeout != -1
+                    ? TimeSpan.FromSeconds(attribute.LockAcquisitionTimeout)
+                    : config.LockAcquisitionTimeout;
+
+            return acquisitionTimeout;
         }
 
         internal static void ValidateSingletonAttribute(SingletonAttribute attribute, SingletonMode mode)

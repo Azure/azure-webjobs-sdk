@@ -552,7 +552,29 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             Assert.Equal(config.LockPeriod, value);
         }
 
+        [Fact]
+        public void GetLockAcquisitionTimeout_ReturnsExpectedValue()
+        {
+            // override via attribute
+            var method = GetType().GetMethod("TestJob_LockAcquisitionTimeoutOverride", BindingFlags.Static | BindingFlags.NonPublic);
+            var attribute = method.GetCustomAttribute<SingletonAttribute>();
+            var config = new SingletonConfiguration();
+            var result = SingletonManager.GetLockAcquisitionTimeout(attribute, config);
+            Assert.Equal(TimeSpan.FromSeconds(5), result);
+
+            // when not set via attribute, defaults to config value
+            attribute = new SingletonAttribute();
+            config.LockAcquisitionTimeout = TimeSpan.FromSeconds(3);
+            result = SingletonManager.GetLockAcquisitionTimeout(attribute, config);
+            Assert.Equal(config.LockAcquisitionTimeout, result);
+        }
+
         private static void TestJob()
+        {
+        }
+
+        [Singleton("Function", Mode = SingletonMode.Function, LockAcquisitionTimeout = 5)]
+        private static void TestJob_LockAcquisitionTimeoutOverride()
         {
         }
 
