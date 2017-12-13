@@ -35,6 +35,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly SingletonManager _singletonManager;
         private readonly ILogger _logger;
         private readonly SharedQueueHandler _sharedQueue;
+        private readonly TimeoutAttribute _defaultTimeout;
 
         public FunctionIndexer(
             ITriggerBindingProvider triggerBindingProvider,
@@ -45,7 +46,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             SingletonManager singletonManager,
             ILoggerFactory loggerFactory,
             INameResolver nameResolver = null,
-            SharedQueueHandler sharedQueue = null)
+            SharedQueueHandler sharedQueue = null,
+            TimeoutAttribute defaultTimeout = null)
         {
             if (triggerBindingProvider == null)
             {
@@ -86,6 +88,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _nameResolver = nameResolver;
             _logger = loggerFactory?.CreateLogger(LogCategories.Startup);
             _sharedQueue = sharedQueue;
+            _defaultTimeout = defaultTimeout;
         }
 
         public async Task IndexTypeAsync(Type type, IFunctionIndexCollector index, CancellationToken cancellationToken)
@@ -359,7 +362,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         internal static FunctionDescriptor FromMethod(
             MethodInfo method,
             IJobActivator jobActivator = null,
-            INameResolver nameResolver = null)
+            INameResolver nameResolver = null,
+            TimeoutAttribute defaultTimeout = null)
         {
             var disabled = HostListenerFactory.IsDisabled(method, nameResolver, jobActivator);
 
@@ -386,7 +390,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 ShortName = shortName,
                 IsDisabled = disabled,
                 HasCancellationToken = hasCancellationToken,
-                TimeoutAttribute = TypeUtility.GetHierarchicalAttributeOrNull<TimeoutAttribute>(method),
+                TimeoutAttribute = TypeUtility.GetHierarchicalAttributeOrNull<TimeoutAttribute>(method) ?? defaultTimeout,
                 SingletonAttributes = method.GetCustomAttributes<SingletonAttribute>(),
                 MethodLevelFilters = method.GetCustomAttributes().OfType<IFunctionFilter>(),
                 ClassLevelFilters = method.DeclaringType.GetCustomAttributes().OfType<IFunctionFilter>()
@@ -396,7 +400,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private FunctionDescriptor CreateFunctionDescriptor(MethodInfo method, string triggerParameterName,
             ITriggerBinding triggerBinding, IReadOnlyDictionary<string, IBinding> nonTriggerBindings)
         {
-            var descr = FromMethod(method, this._activator, _nameResolver);
+            var descr = FromMethod(method, this._activator, _nameResolver, _defaultTimeout);
 
             List<ParameterDescriptor> parameters = new List<ParameterDescriptor>();
 

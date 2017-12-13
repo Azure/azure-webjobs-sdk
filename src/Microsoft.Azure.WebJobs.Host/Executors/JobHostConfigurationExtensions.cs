@@ -281,6 +281,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                 if (functionIndexProvider == null)
                 {
+                    var defaultTimeout = config.FunctionTimeout?.ToAttribute();
                     functionIndexProvider = new FunctionIndexProvider(
                         services.GetService<ITypeLocator>(),
                         triggerBindingProvider,
@@ -290,7 +291,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         extensions,
                         singletonManager,                        
                         loggerFactory,
-                        hostSharedQueue);
+                        hostSharedQueue,
+                        defaultTimeout);
 
                     // Important to set this so that the func we passed to DynamicHostIdProvider can pick it up. 
                     services.AddService<IFunctionIndexProvider>(functionIndexProvider);

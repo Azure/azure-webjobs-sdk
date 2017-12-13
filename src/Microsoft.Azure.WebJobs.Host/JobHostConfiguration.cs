@@ -338,6 +338,12 @@ namespace Microsoft.Azure.WebJobs
         }
 
         /// <summary>
+        /// Default timeout configuration to apply to all functions. 
+        /// If <see cref="TimeoutAttribute"/> is explicitly applied to a function, the values specified by the attribute will take precedence
+        /// </summary>
+        public JobHostFunctionTimeoutConfiguration FunctionTimeout { get; set; }
+
+        /// <summary>
         /// Configures various configuration settings on this <see cref="JobHostConfiguration"/> to
         /// optimize for local development.
         /// </summary>
