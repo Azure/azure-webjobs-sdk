@@ -58,8 +58,16 @@ namespace Microsoft.Azure.WebJobs
         internal static bool HasConverter<TAttribute>(this IConverterManager converterManager, Type typeSource, Type typeDest)
             where TAttribute : Attribute
         {
-            var converter = converterManager.GetConverter<TAttribute>(typeSource, typeDest);
-            return converter != null;
+            try
+            {
+                var converter = converterManager.GetConverter<TAttribute>(typeSource, typeDest);
+                return converter != null;
+            }
+            catch (InvalidOperationException)
+            {
+                // OpenType match could have thrown. 
+                return false;
+            }            
         }
     }
 }
