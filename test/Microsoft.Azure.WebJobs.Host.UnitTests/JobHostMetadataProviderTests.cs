@@ -174,8 +174,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var t2 = metadataProvider.GetDefaultType(new QueueTriggerAttribute("q"), FileAccess.Read, null);
             Assert.Equal(typeof(string), t2);
                         
+            // Very important that this is byte[]. 
+            // Script doesn't require Function.json for JScript to specify datatype. 
+            // JScript can convert Jobject, string to byte[].
+            // But can't convert byte[] to JObject. 
+            // so byte[] is the safest default. 
             var t3 = metadataProvider.GetDefaultType(new QueueAttribute("q"), FileAccess.Write, null);
-            Assert.Equal(typeof(IAsyncCollector<JObject>), t3);
+            Assert.Equal(typeof(IAsyncCollector<byte[]>), t3);
         }
 
         // This is a setup used by CosmoDb. 
@@ -191,7 +196,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var attr = new Test9Attribute(null);
             var type = metadataProvider.GetDefaultType(attr, FileAccess.Write, null);
 
-            Assert.Equal(typeof(IAsyncCollector<JObject>), type);
+            // The collector handles Open type, which means it will first pull byte[]. 
+            Assert.Equal(typeof(IAsyncCollector<byte[]>), type);
         }
 
         // Setup similar to CosmoDb
@@ -202,6 +208,63 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 var ignored = typeof(object); // not used 
                 context.AddBindingRule<Test9Attribute>().BindToCollector<OpenType>(ignored);
             }
+        }
+
+        // Verify for a Jobject-only collector. 
+        [Fact]
+        public void DefaultTypeForJObjectCollector()
+        {
+            var ext = new TestExtension3();
+            var prog = new FakeTypeLocator();
+            JobHostConfiguration config = TestHelpers.NewConfig(prog, ext);
+            var host = new JobHost(config);
+            IJobHostMetadataProvider metadataProvider = host.CreateMetadataProvider();
+
+            var attr = new Test9Attribute(null);
+            var type = metadataProvider.GetDefaultType(attr, FileAccess.Write, null);
+
+            // Explicitly should be Jobject since that's all the collector is registered as.
+            Assert.Equal(typeof(IAsyncCollector<JObject>), type);
+        }
+
+        public class TestExtension3 : IExtensionConfigProvider
+        {
+            public void Initialize(ExtensionConfigContext context)
+            {
+                context.AddBindingRule<Test9Attribute>().
+                    BindToCollector<JObject>(attr => (IAsyncCollector<JObject>)null);
+            }
+        }
+
+        [Fact]
+        public void GetFunctionMetadata()
+        {
+            JobHostConfiguration config = TestHelpers.NewConfig();
+            var host = new JobHost(config);
+
+            var mockFunctionIndexProvider = new Mock<IFunctionIndexProvider>();
+
+            var functionDescriptor = new FunctionDescriptor()
+            {
+                IsDisabled = true
+            };
+            var mockFunctionIndex = new Mock<IFunctionIndex>();
+            mockFunctionIndex.Setup(i => i.LookupByName("testMethod")).Returns(new FunctionDefinition(functionDescriptor, null, null));
+            var token = new CancellationToken();
+            mockFunctionIndexProvider.Setup(p => p.GetAsync(token)).Returns(Task.FromResult(mockFunctionIndex.Object));
+
+            Func<IFunctionIndexProvider> getter = (() =>
+            {
+                return mockFunctionIndexProvider.Object;
+            });
+
+            IJobHostMetadataProvider provider = new JobHostMetadataProvider(getter);
+
+            var functionMetadata = provider.GetFunctionMetadata("testNotExists");
+            Assert.Equal(functionMetadata, null);
+
+            functionMetadata = provider.GetFunctionMetadata("testMethod");
+            Assert.Equal(functionMetadata.IsDisabled, true);
         }
 
         // Give this a unique name within the assembly so that the name --> type 
