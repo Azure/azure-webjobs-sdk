@@ -207,7 +207,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         // Listed in precedence for providing via DefaultType.
-        private static readonly Type[] _defaultTypes = new Type[] { typeof(JObject), typeof(byte[]), typeof(string) };
+        // Precdence is more important than how we produce the default type (a direct conversion vs. a converter)
+        private static readonly Type[] _defaultTypes = new Type[] {
+            typeof(byte[]),
+            typeof(JObject),            
+            typeof(string) };
 
         public Type GetDefaultType(Attribute attribute, FileAccess access, Type requestedType)
         {
@@ -219,23 +223,17 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 var openType = OpenType.FromType<TType>();
 
                 // Check for a direct match. 
+                // Check if there's a converter 
                 // This is critical when there are no converters, such as if TType is an OpenType
                 foreach (var target in _defaultTypes)
                 {
-                    if (openType.IsMatch(target))
+                    if (openType.IsMatch(target) || 
+                        _converterManager.HasConverter<TAttribute>(target, typeof(TType)))
                     {
                         return typeof(IAsyncCollector<>).MakeGenericType(target);
                     }
                 }
-
-                // Check if there's a converter 
-                foreach (var target in _defaultTypes)
-                {
-                    if (_converterManager.HasConverter<TAttribute>(target, typeof(TType)))
-                    {
-                        return typeof(IAsyncCollector<>).MakeGenericType(target);
-                    }
-                }
+             
                 return null;
             }
             return null;
