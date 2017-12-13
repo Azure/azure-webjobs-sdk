@@ -325,6 +325,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 {
                     return false;
                 }
+                if (type.GetInterface("System.IDisposable") != null)
+                {
+                    return false;
+                }
 
                 return true;
             }

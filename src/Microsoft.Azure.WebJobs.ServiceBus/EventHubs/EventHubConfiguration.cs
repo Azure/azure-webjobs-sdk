@@ -8,6 +8,9 @@ using System.Text;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.EventHubs.Processor;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.Bindings;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -390,7 +393,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 .AddConverter<string, EventData>(ConvertString2EventData)
                 .AddConverter<EventData, string>(ConvertEventData2String)
                 .AddConverter<byte[], EventData>(ConvertBytes2EventData)
-                .AddConverter<EventData, byte[]>(ConvertEventData2Bytes);
+                .AddConverter<EventData, byte[]>(ConvertEventData2Bytes)
+                .AddOpenConverter<OpenType.Poco, EventData>(ConvertPocoToEventData);
 
             // register our trigger binding provider
             INameResolver nameResolver = context.Config.NameResolver;
@@ -421,6 +425,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
         private static EventData ConvertString2EventData(string input) 
             => ConvertBytes2EventData(Encoding.UTF8.GetBytes(input));
+
+        private static Task<object> ConvertPocoToEventData(object arg, Attribute attrResolved, ValueBindingContext context)
+        {
+            return Task.FromResult<object>(ConvertString2EventData(JsonConvert.SerializeObject(arg)));
+        }
 
         // Hold credentials for a given eventHub name. 
         // Multiple consumer groups (and multiple listeners) on the same hub can share the same credentials. 
