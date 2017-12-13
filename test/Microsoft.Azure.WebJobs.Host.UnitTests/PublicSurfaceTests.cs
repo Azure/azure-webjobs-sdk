@@ -158,6 +158,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "JobHostInternalStorageConfiguration",
                 "JobHostQueuesConfiguration",
                 "JobHostBlobsConfiguration",
+                "JobHostFunctionTimeoutConfiguration",
                 "IJobActivator",
                 "ITypeLocator",
                 "INameResolver",

@@ -24,6 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly SingletonManager _singletonManager;
         private readonly ILoggerFactory _loggerFactory;
         private readonly SharedQueueHandler _sharedQueue;
+        private readonly TimeoutAttribute _defaultTimeout;
 
         private IFunctionIndex _index;
 
@@ -35,7 +36,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             IExtensionRegistry extensions,
             SingletonManager singletonManager,
             ILoggerFactory loggerFactory,
-            SharedQueueHandler sharedQueue)
+            SharedQueueHandler sharedQueue,
+            TimeoutAttribute defaultTimeout)
         {
 
             _typeLocator = typeLocator ?? throw new ArgumentNullException(nameof(typeLocator));
@@ -48,6 +50,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _sharedQueue = sharedQueue ?? throw new ArgumentNullException(nameof(sharedQueue));
 
             _loggerFactory = loggerFactory;
+            _defaultTimeout = defaultTimeout;
         }
 
         public async Task<IFunctionIndex> GetAsync(CancellationToken cancellationToken)
