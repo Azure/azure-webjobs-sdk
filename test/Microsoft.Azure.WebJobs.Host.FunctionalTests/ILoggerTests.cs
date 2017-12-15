@@ -66,8 +66,8 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var infoMessage = functionLogger.LogMessages[0];
             var errorMessage = functionLogger.LogMessages[1];
 
-            // These get the {OriginalFormat} only
-            Assert.Single(infoMessage.State);
+            Assert.Equal(5, infoMessage.State.Count());
+            Assert.Equal(5, errorMessage.State.Count());
             Assert.Single(errorMessage.State);
 
             //TODO: beef these verifications up
