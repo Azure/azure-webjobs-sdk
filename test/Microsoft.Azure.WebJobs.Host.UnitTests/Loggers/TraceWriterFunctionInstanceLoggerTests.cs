@@ -45,10 +45,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(Host.TraceSource.Execution, traceEvent.Source);
 
             Assert.Equal(string.Format("Executing 'TestJob' (Reason='TestReason', Id={0})", message.FunctionInstanceId), traceEvent.Message);
-            Assert.Equal(3, traceEvent.Properties.Count);
+            Assert.Equal(4, traceEvent.Properties.Count);
             Assert.Equal(message.HostInstanceId, traceEvent.Properties["MS_HostInstanceId"]);
             Assert.Equal(message.FunctionInstanceId, traceEvent.Properties["MS_FunctionInvocationId"]);
             Assert.Same(message.Function, traceEvent.Properties["MS_FunctionDescriptor"]);
+            Assert.Contains(traceEvent.Properties["MS_FunctionName"].ToString(), message.Function.ShortName);
         }
 
         [Fact]

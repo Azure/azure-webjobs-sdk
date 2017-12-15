@@ -66,11 +66,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             Assert.Equal("This should go to the ILogger", infoLog.Message);
             Assert.Null(infoLog.Exception);
-            Assert.Equal(3, infoLog.Properties.Count);
+            Assert.Equal(4, infoLog.Properties.Count);
 
             Assert.Equal("This should go to the ILogger with an Exception!", errorLog.Message);
             Assert.IsType<InvalidOperationException>(errorLog.Exception);
-            Assert.Equal(3, errorLog.Properties.Count);
+            Assert.Equal(4, errorLog.Properties.Count);
 
             // Five loggers are the startup, singleton, executor, results, and function loggers
             Assert.Equal(5, _loggerProvider.CreatedLoggers.Count);
@@ -79,8 +79,8 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var infoMessage = functionLogger.LogMessages[0];
             var errorMessage = functionLogger.LogMessages[1];
             // These get the {OriginalFormat} property as well as the 3 from TraceWriter
-            Assert.Equal(4, infoMessage.State.Count());
-            Assert.Equal(4, errorMessage.State.Count());
+            Assert.Equal(5, infoMessage.State.Count());
+            Assert.Equal(5, errorMessage.State.Count());
             //TODO: beef these verifications up
         }
 

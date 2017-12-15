@@ -335,7 +335,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 if (startedOrEndedMessage || userMessage)
                 {
-                    Assert.Equal(3, traceEvent.Properties.Count);
+                    Assert.Equal(4, traceEvent.Properties.Count);
 
                     Assert.IsType<Guid>(traceEvent.Properties["MS_HostInstanceId"]);
                     Assert.IsType<Guid>(traceEvent.Properties["MS_FunctionInvocationId"]);
@@ -348,6 +348,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         var functionName = message.Substring(start, end);
                         var descriptor = (FunctionDescriptor)traceEvent.Properties["MS_FunctionDescriptor"];
                         Assert.Equal(functionName, descriptor.ShortName);
+                        Assert.Equal((string)traceEvent.Properties["MS_FunctionName"], descriptor.ShortName);
                     }
                 }
                 else
