@@ -39,7 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             // Blob binding provider; otherwise bindings like Do([Blob("a/b")] TextWriter blob) wouldn't work.
             innerProviders.Add(new TraceWriterBindingProvider(loggerFactory));
 
-            innerProviders.Add(new LoggerBindingProvider(loggerFactory));
+            innerProviders.Add(new ILoggerBindingProvider(loggerFactory));
 
             ContextAccessor<IBindingProvider> bindingProviderAccessor = new ContextAccessor<IBindingProvider>();
             innerProviders.Add(new RuntimeBindingProvider(bindingProviderAccessor));

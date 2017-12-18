@@ -4,7 +4,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
@@ -15,7 +14,6 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
     {
         private readonly IListener _listener;
         private readonly FunctionDescriptor _descriptor;
-        private readonly TraceWriter _trace;
         private readonly ILogger _logger;
         private bool _started = false;
 
@@ -24,14 +22,12 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         /// it attempts to recover by passing the exception through the trace pipeline.
         /// </summary>
         /// <param name="listener"></param>
-        /// <param name="descriptor"></param>
-        /// <param name="trace"></param>
+        /// <param name="descriptor"></param>        
         /// <param name="loggerFactory"></param>
-        public FunctionListener(IListener listener, FunctionDescriptor descriptor, TraceWriter trace, ILoggerFactory loggerFactory)
+        public FunctionListener(IListener listener, FunctionDescriptor descriptor, ILoggerFactory loggerFactory)
         {
             _listener = listener;
             _descriptor = descriptor;
-            _trace = trace;
             _logger = loggerFactory?.CreateLogger(LogCategories.Startup);
         }
 
@@ -54,7 +50,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             }
             catch (Exception e)
             {
-                new FunctionListenerException(_descriptor.ShortName, e).TryRecover(_trace, _logger);
+                new FunctionListenerException(_descriptor.ShortName, e).TryRecover(_logger);
             }
         }
 

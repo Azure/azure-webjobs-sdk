@@ -23,18 +23,16 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         private readonly SingletonManager _singletonManager;
         private readonly IJobActivator _activator;
         private readonly INameResolver _nameResolver;
-        private readonly TraceWriter _trace;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger _logger;
 
-        public HostListenerFactory(IEnumerable<IFunctionDefinition> functionDefinitions, SingletonManager singletonManager, IJobActivator activator, INameResolver nameResolver,
-            TraceWriter trace, ILoggerFactory loggerFactory)
+        public HostListenerFactory(IEnumerable<IFunctionDefinition> functionDefinitions, SingletonManager singletonManager, IJobActivator activator,
+            INameResolver nameResolver, ILoggerFactory loggerFactory)
         {
             _functionDefinitions = functionDefinitions;
             _singletonManager = singletonManager;
             _activator = activator;
             _nameResolver = nameResolver;
-            _trace = trace;
             _loggerFactory = loggerFactory;
             _logger = _loggerFactory?.CreateLogger(LogCategories.Startup);
         }
@@ -49,7 +47,6 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                 if (functionDefinition.Descriptor.IsDisabled)
                 {
                     string msg = string.Format("Function '{0}' is disabled", functionDefinition.Descriptor.ShortName);
-                    _trace.Info(msg, TraceSource.Host);
                     _logger?.LogInformation(msg);
                     continue;
                 }
@@ -66,11 +63,11 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                 SingletonAttribute singletonAttribute = SingletonManager.GetListenerSingletonOrNull(listener.GetType(), functionDefinition.Descriptor);
                 if (singletonAttribute != null)
                 {
-                    listener = new SingletonListener(functionDefinition.Descriptor, singletonAttribute, _singletonManager, listener, _trace, _loggerFactory);
+                    listener = new SingletonListener(functionDefinition.Descriptor, singletonAttribute, _singletonManager, listener, _loggerFactory);
                 }
 
                 // wrap the listener with a function listener to handle exceptions
-                listener = new FunctionListener(listener, functionDefinition.Descriptor, _trace, _loggerFactory);
+                listener = new FunctionListener(listener, functionDefinition.Descriptor, _loggerFactory);
                 listeners.Add(listener);
             }
 
@@ -85,7 +82,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             {
                 return true;
             }
-            else 
+            else
             {
                 // Second try to resolve disabled state by attribute
                 ParameterInfo triggerParameter = method.GetParameters().FirstOrDefault();

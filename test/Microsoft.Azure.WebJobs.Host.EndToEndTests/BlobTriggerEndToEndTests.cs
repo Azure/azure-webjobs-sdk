@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json.Linq;
@@ -19,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
     public class BlobTriggerEndToEndTests : IDisposable
     {
         private const string TestArtifactPrefix = "e2etests";
-        
+
         private const string SingleTriggerContainerName = TestArtifactPrefix + "singletrigger-%rnd%";
         private const string PoisonTestContainerName = TestArtifactPrefix + "poison-%rnd%";
         private const string TestBlobName = "test";
@@ -35,6 +36,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private readonly CloudBlobContainer _testContainer;
         private readonly CloudStorageAccount _storageAccount;
         private readonly RandomNameResolver _nameResolver;
+
+        private readonly TestLoggerProvider _loggerProvider = new TestLoggerProvider();
 
         private static object _syncLock = new object();
 
@@ -58,7 +61,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             activator.Add(program);
             config.TypeLocator = new FakeTypeLocator(typeof(TProgram));
             config.JobActivator = activator;
-            
+
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            loggerFactory.AddProvider(_loggerProvider);
+            config.LoggerFactory = loggerFactory;
+
             config.AddServices(services);
             config.AddServices(_nameResolver);
             config.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
@@ -186,10 +193,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task BlobGetsProcessedOnlyOnce_SingleHost()
         {
-            TextWriter hold = Console.Out;
-            StringWriter consoleOutput = new StringWriter();
-            Console.SetOut(consoleOutput);
-
             CloudBlockBlob blob = _testContainer.GetBlockBlobReference(TestBlobName);
             await blob.UploadTextAsync("0");
 
@@ -197,7 +200,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             var prog = new BlobGetsProcessedOnlyOnce_SingleHost_Program();
             var config = NewConfig(prog);
-                        
+
             // Process the blob first
             using (prog._completedEvent = new ManualResetEvent(initialState: false))
             using (JobHost host = new JobHost(config))
@@ -209,13 +212,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 timeToProcess = (int)(DateTime.Now - startTime).TotalMilliseconds;
 
-                Console.SetOut(hold);
-
                 Assert.Equal(1, prog._timesProcessed);
 
-                string[] consoleOutputLines = consoleOutput.ToString().Trim().Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
-                var executions = consoleOutputLines.Where(p => p.Contains("Executing"));
-                Assert.Equal(1, executions.Count());
+                string[] loggerOutputLines = _loggerProvider.GetAllLogMessages()
+                    .Where(p => p.FormattedMessage != null)
+                    .SelectMany(p => p.FormattedMessage.Split(Environment.NewLine, StringSplitOptions.None))
+                    .ToArray();
+
+                var executions = loggerOutputLines.Where(p => p.Contains("Executing"));
+                Assert.Single(executions);
                 Assert.StartsWith(string.Format("Executing 'BlobGetsProcessedOnlyOnce_SingleHost_Program.SingleBlobTrigger' (Reason='New blob detected: {0}/{1}', Id=", blob.Container.Name, blob.Name), executions.Single());
             }
 

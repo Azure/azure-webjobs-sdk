@@ -132,7 +132,6 @@ namespace Microsoft.Azure.WebJobs
             OnHostStarted();
 
             string msg = "Job host started";
-            _context.Trace.Info(msg, Host.TraceSource.Host);
             _logger?.LogInformation(msg);
 
             _state = StateStarted;
@@ -182,7 +181,6 @@ namespace Microsoft.Azure.WebJobs
             }
 
             string msg = "Job host stopped";
-            _context.Trace.Info(msg, Host.TraceSource.Host);
             _logger?.LogInformation(msg);
         }
 
@@ -367,7 +365,7 @@ namespace Microsoft.Azure.WebJobs
         }
 
         private static void Validate(IFunctionDefinition function, object key)
-        { 
+        {
             if (function == null)
             {
                 string msg = String.Format(CultureInfo.CurrentCulture, "'{0}' can't be invoked from Azure WebJobs SDK. Is it missing Azure WebJobs SDK attributes?", key);

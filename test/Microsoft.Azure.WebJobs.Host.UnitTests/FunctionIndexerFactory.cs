@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Diagnostics;
 using System.Threading;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Executors;
@@ -21,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
     internal static class FunctionIndexerFactory
     {
         public static FunctionIndexer Create(CloudStorageAccount account = null, INameResolver nameResolver = null,
-            IExtensionRegistry extensionRegistry = null, TraceWriter traceWriter = null, ILoggerFactory loggerFactory = null)
+            IExtensionRegistry extensionRegistry = null, ILoggerFactory loggerFactory = null)
         {
             IStorageAccountProvider storageAccountProvider = GetStorageAccountProvider(account);
 
@@ -34,15 +33,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             extensionRegistry = services.GetService<IExtensionRegistry>();
 
             SingletonManager singletonManager = new SingletonManager();
-            TraceWriter logger = traceWriter ?? new TestTraceWriter(TraceLevel.Verbose);
             IWebJobsExceptionHandler exceptionHandler = new WebJobsExceptionHandler();
             IFunctionOutputLoggerProvider outputLoggerProvider = new NullFunctionOutputLoggerProvider();
             IFunctionOutputLogger outputLogger = outputLoggerProvider.GetAsync(CancellationToken.None).Result;
 
-            IFunctionExecutor executor = new FunctionExecutor(new NullFunctionInstanceLogger(), outputLogger, exceptionHandler, logger);
+            IFunctionExecutor executor = new FunctionExecutor(new NullFunctionInstanceLogger(), outputLogger, exceptionHandler, loggerFactory: loggerFactory);
 
             return new FunctionIndexer(triggerBindingProvider, bindingProvider, DefaultJobActivator.Instance, executor,
-                extensionRegistry, singletonManager, logger, loggerFactory);
+                extensionRegistry, singletonManager, loggerFactory);
         }
 
         private static IStorageAccountProvider GetStorageAccountProvider(CloudStorageAccount account)

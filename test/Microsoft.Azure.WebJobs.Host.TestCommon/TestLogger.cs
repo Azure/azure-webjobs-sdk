@@ -10,15 +10,17 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
     public class TestLogger : ILogger
     {
         private readonly Func<string, LogLevel, bool> _filter;
+        private Action<LogMessage> _logAction;
 
         public string Category { get; private set; }
 
         public IList<LogMessage> LogMessages = new List<LogMessage>();
 
-        public TestLogger(string category, Func<string, LogLevel, bool> filter = null)
+        public TestLogger(string category, Func<string, LogLevel, bool> filter = null, Action<LogMessage> logAction = null)
         {
             Category = category;
             _filter = filter;
+            _logAction = logAction;
         }
 
         public IDisposable BeginScope<TState>(TState state)
@@ -31,14 +33,14 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             return _filter?.Invoke(Category, logLevel) ?? true;
         }
 
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+        public virtual void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
             if (!IsEnabled(logLevel))
             {
                 return;
             }
 
-            LogMessages.Add(new LogMessage
+            LogMessage logMessage = new LogMessage
             {
                 Level = logLevel,
                 EventId = eventId,
@@ -46,7 +48,10 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                 Exception = exception,
                 FormattedMessage = formatter(state, exception),
                 Category = Category
-            });
+            };
+
+            LogMessages.Add(logMessage);
+            _logAction?.Invoke(logMessage);
         }
     }
 }

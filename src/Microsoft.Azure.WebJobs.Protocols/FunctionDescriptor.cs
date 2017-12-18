@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Collections.Generic;
-using System.Diagnostics;
 
 #if PUBLICPROTOCOL
 namespace Microsoft.Azure.WebJobs.Protocols
@@ -35,28 +34,22 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
 #if PUBLICPROTOCOL
 #else
         /// <summary>Gets or sets the name used for logging. This is 'Method' or the value overwritten by [FunctionName] </summary>
-        [JsonIgnore] 
+        [JsonIgnore]
         internal string LogName { get; set; }
 
         /// <summary>Gets or sets whether this method is disabled. </summary>
         [JsonIgnore]
-        internal bool IsDisabled {get;set;}
+        internal bool IsDisabled { get; set; }
 
         /// <summary>Gets or sets whether this signature includes a cancellation token. 
         /// This indicates whether the method is requesting to be alerted of attempted cancellation. </summary>
-        internal bool HasCancellationToken {get;set;}
+        internal bool HasCancellationToken { get; set; }
 
         /// <summary>
         /// Gets the <see cref="Protocols.TriggerParameterDescriptor"/> for this function
         /// </summary>
         [JsonIgnore]
         internal TriggerParameterDescriptor TriggerParameterDescriptor { get; set; }
-
-        /// <summary>
-        /// Gets the <see cref="System.Diagnostics.TraceLevel"/> for this function
-        /// </summary>
-        [JsonIgnore]
-        internal System.Diagnostics.TraceLevel TraceLevel { get; set; }
 
         /// <summary>
         /// Gets the <see cref="WebJobs.TimeoutAttribute"/> for this function

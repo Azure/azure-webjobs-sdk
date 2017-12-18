@@ -17,6 +17,6 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
 
         IFunctionOutput CreateOutput();
 
-        IRecurrentCommand CreateParameterLogUpdateCommand(IReadOnlyDictionary<string, IWatcher> watches, TraceWriter trace, ILogger logger);
+        IRecurrentCommand CreateParameterLogUpdateCommand(IReadOnlyDictionary<string, IWatcher> watches, ILogger logger);
     }
 }

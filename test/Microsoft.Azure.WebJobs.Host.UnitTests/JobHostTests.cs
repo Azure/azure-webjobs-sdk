@@ -4,12 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
@@ -18,6 +16,7 @@ using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -303,7 +302,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
-         public void Call_WhenMethodThrows_PreservesStackTrace()
+        public void Call_WhenMethodThrows_PreservesStackTrace()
         {
             try
             {
@@ -452,39 +451,48 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
         [Fact]
         [Trait("Category", "secretsrequired")]
-        public void IndexingExceptions_CanBeHandledByTraceWriter()
+        public void IndexingExceptions_CanBeHandledByLogger()
         {
             JobHostConfiguration config = new JobHostConfiguration();
-            TestTraceWriter traceWriter = new TestTraceWriter(TraceLevel.Verbose);
-            config.Tracing.Tracers.Add(traceWriter);
+
             config.TypeLocator = new FakeTypeLocator(typeof(BindingErrorsProgram));
-            FunctionErrorTraceWriter errorTraceWriter = new FunctionErrorTraceWriter(TraceLevel.Error);
-            config.Tracing.Tracers.Add(errorTraceWriter);
+            FunctionErrorLogger errorLogger = new FunctionErrorLogger("TestCategory");
+
             config.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
+
+            Mock<ILoggerProvider> mockProvider = new Mock<ILoggerProvider>(MockBehavior.Strict);
+            mockProvider
+                .Setup(m => m.CreateLogger(It.IsAny<string>()))
+                .Returns(errorLogger);
+
+            ILoggerFactory factory = new LoggerFactory();
+            factory.AddProvider(mockProvider.Object);
+
+            config.LoggerFactory = factory;
 
             JobHost host = new JobHost(config);
             host.Start();
 
             // verify the handled binding error
-            FunctionIndexingException fex = errorTraceWriter.Errors.SingleOrDefault() as FunctionIndexingException;
+            FunctionIndexingException fex = errorLogger.Errors.SingleOrDefault() as FunctionIndexingException;
             Assert.True(fex.Handled);
             Assert.Equal("BindingErrorsProgram.Invalid", fex.MethodName);
 
             // verify that the binding error was logged
-            Assert.Equal(4, traceWriter.Traces.Count);
-            TraceEvent traceEvent = traceWriter.Traces[0];
-            Assert.Equal("Error indexing method 'BindingErrorsProgram.Invalid'", traceEvent.Message);
-            Assert.Same(fex, traceEvent.Exception);
-            Assert.Equal("Invalid container name: invalid$=+1", traceEvent.Exception.InnerException.Message);
+            Assert.Equal(4, errorLogger.LogMessages.Count);
+            LogMessage logMessage = errorLogger.LogMessages.ElementAt(0);
+            Assert.Equal("Error indexing method 'BindingErrorsProgram.Invalid'", logMessage.FormattedMessage);
+            Assert.Same(fex, logMessage.Exception);
+            Assert.Equal("Invalid container name: invalid$=+1", logMessage.Exception.InnerException.Message);
 
             // verify that the valid function was still indexed
-            traceEvent = traceWriter.Traces[1];
-            Assert.True(traceEvent.Message.Contains("Found the following functions"));
-            Assert.True(traceEvent.Message.Contains("BindingErrorsProgram.Valid"));
+            logMessage = errorLogger.LogMessages.ElementAt(1);
+            Assert.True(logMessage.FormattedMessage.Contains("Found the following functions"));
+            Assert.True(logMessage.FormattedMessage.Contains("BindingErrorsProgram.Valid"));
 
             // verify that the job host was started successfully
-            traceEvent = traceWriter.Traces[3];
-            Assert.Equal("Job host started", traceEvent.Message);
+            logMessage = errorLogger.LogMessages.ElementAt(3);
+            Assert.Equal("Job host started", logMessage.FormattedMessage);
 
             host.Stop();
             host.Dispose();
@@ -510,7 +518,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var singletonManager = new SingletonManager();
 
             return TestHelpers.NewConfig(
-                storageAccountProvider, 
+                storageAccountProvider,
                 singletonManager,
                 new NullConsoleProvider(),
                 new FixedHostIdProvider(Guid.NewGuid().ToString("N")),
@@ -627,22 +635,25 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
-        private class FunctionErrorTraceWriter : TraceWriter
+        private class FunctionErrorLogger : TestLogger
         {
             public Collection<Exception> Errors = new Collection<Exception>();
 
-            public FunctionErrorTraceWriter(TraceLevel level) : base(level)
+            public FunctionErrorLogger(string category) :
+                base(category, null)
             {
             }
 
-            public override void Trace(TraceEvent traceEvent)
+            public override void Log<TState>(Extensions.Logging.LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
             {
-                FunctionIndexingException fex = traceEvent.Exception as FunctionIndexingException;
+                FunctionIndexingException fex = exception as FunctionIndexingException;
                 if (fex != null)
                 {
                     fex.Handled = true;
                     Errors.Add(fex);
                 }
+
+                base.Log(logLevel, eventId, state, exception, formatter);
             }
         }
     }

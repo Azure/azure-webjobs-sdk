@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -41,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
                 return null;
             }
             return (SingletonLockHandle)handle.InnerLock;
-        }        
+        }
     }
 
     public class SingletonManagerTests
@@ -62,7 +61,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         private Mock<IStorageAccount> _mockSecondaryStorageAccount;
         private Mock<IWebJobsExceptionHandler> _mockExceptionDispatcher;
         private Mock<IStorageBlockBlob> _mockStorageBlob;
-        private TestTraceWriter _trace = new TestTraceWriter(TraceLevel.Verbose);
         private TestLoggerProvider _loggerProvider;
         private Dictionary<string, string> _mockBlobMetadata;
         private TestNameResolver _nameResolver;
@@ -112,9 +110,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             loggerFactory.AddProvider(_loggerProvider);
 
             var logger = loggerFactory?.CreateLogger(LogCategories.Singleton);
-            _core = new BlobLeaseDistributedLockManager(_mockAccountProvider.Object, _trace, logger);
+            _core = new BlobLeaseDistributedLockManager(_mockAccountProvider.Object, logger);
 
-            _singletonManager = new SingletonManager(_core, _singletonConfig, _trace, _mockExceptionDispatcher.Object, loggerFactory, new FixedHostIdProvider(TestHostId), _nameResolver);
+            _singletonManager = new SingletonManager(_core, _singletonConfig, _mockExceptionDispatcher.Object, loggerFactory, new FixedHostIdProvider(TestHostId), _nameResolver);
 
             _singletonManager.MinimumLeaseRenewalInterval = TimeSpan.FromMilliseconds(250);
         }
@@ -202,10 +200,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             // now release the lock and verify no more renewals
             await _singletonManager.ReleaseLockAsync(lockHandle, cancellationToken);
-
-            // verify the traces
-            Assert.Equal(1, _trace.Traces.Count(p => p.ToString().Contains("Verbose Singleton lock acquired (testid)")));
-            Assert.Equal(1, _trace.Traces.Count(p => p.ToString().Contains("Verbose Singleton lock released (testid)")));
 
             // verify the logger
             TestLogger logger = _loggerProvider.CreatedLoggers.Single() as TestLogger;
@@ -381,7 +375,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         {
             Mock<IHostIdProvider> mockHostIdProvider = new Mock<IHostIdProvider>(MockBehavior.Strict);
             mockHostIdProvider.Setup(p => p.GetHostIdAsync(CancellationToken.None)).ReturnsAsync(TestHostId);
-            SingletonManager singletonManager = new SingletonManager(null, null, null, null, null, mockHostIdProvider.Object);
+            SingletonManager singletonManager = new SingletonManager(null, null, null, null, mockHostIdProvider.Object);
 
             Assert.Equal(TestHostId, singletonManager.HostId);
             Assert.Equal(TestHostId, singletonManager.HostId);

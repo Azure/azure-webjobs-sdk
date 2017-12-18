@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -44,12 +45,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         // A B C Body* --> C' B' A'        
         [Fact]
         public async Task FailInBody()
-        {  
+        {
             var host = TestHelpers.NewJobHost<MyProg3>();
 
             // Fail in body. Post-filters still execute since their corresponding Pre executed.
             _throwAtPhase = "body";
-                        
+
             await CallExpectFailureAsync(host);
 
             var expected =
@@ -124,8 +125,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             Assert.Equal(expected, TestLog.ToString());
 
-            var logger = loggerProvider.CreatedLoggers.Single(p => p.Category == "Host.Executor");
-            string logResult = string.Join("|", logger.LogMessages.Select(p => p.FormattedMessage));
+            var logger = loggerProvider.CreatedLoggers.Single(p => p.Category == LogCategories.CreateFunctionCategory(nameof(MyProg3.Method2)));
+
+            // strip out the 4 messages written by the executor ("Executing", FunctionStartedEvent, "Executed", FunctionCompletedEvent)
+            string logResult = string.Join("|", logger.LogMessages
+                .Where(p => p.EventId.Id == 0 && !p.FormattedMessage.StartsWith("Execut"))
+                .Select(p => p.FormattedMessage));
+
             Assert.Equal(
                 "Pre_global|Pre_class|Pre_m1|Pre_m2|" +
                 "Post_m2|Post_m1|Post_class|Post_global|" +
@@ -194,7 +200,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             MyInvocationFilterAttribute.Counter = 0;
 
             var host = TestHelpers.NewJobHost<MyProgWithClassFilter>();
-                        
+
             await host.CallAsync(nameof(MyProgWithClassFilter.Method));
             Assert.Equal(1, MyInvocationFilterAttribute.Counter);
 
@@ -342,20 +348,20 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                 }
             }
             TestLog.Append("]");
-        }        
+        }
 
         public class MyProgWithMethodFilter
         {
             [MyInvocationFilter]
             [NoAutomaticTrigger]
             public void Method()
-            {                
+            {
             }
         }
 
         [MyInvocationFilter]
         public class MyProgWithClassFilter
-        {            
+        {
             [NoAutomaticTrigger]
             public void Method()
             {
@@ -371,7 +377,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                 Act("New");
             }
 
-            
+
 
             [NoAutomaticTrigger]
             public void Method()
@@ -515,5 +521,5 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                 return Task.CompletedTask;
             }
         }
-    }    
+    }
 }

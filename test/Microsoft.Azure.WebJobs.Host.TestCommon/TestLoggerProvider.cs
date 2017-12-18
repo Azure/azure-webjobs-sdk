@@ -12,17 +12,19 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
     public class TestLoggerProvider : ILoggerProvider
     {
         private readonly Func<string, LogLevel, bool> _filter;
+        private readonly Action<LogMessage> _logAction;
 
         public IList<TestLogger> CreatedLoggers = new List<TestLogger>();
 
-        public TestLoggerProvider(Func<string, LogLevel, bool> filter = null)
+        public TestLoggerProvider(Func<string, LogLevel, bool> filter = null, Action<LogMessage> logAction = null)
         {
             _filter = filter ?? new LogCategoryFilter().Filter;
+            _logAction = logAction;
         }
 
         public ILogger CreateLogger(string categoryName)
         {
-            var logger = new TestLogger(categoryName, _filter);
+            var logger = new TestLogger(categoryName, _filter, _logAction);
             CreatedLoggers.Add(logger);
             return logger;
         }

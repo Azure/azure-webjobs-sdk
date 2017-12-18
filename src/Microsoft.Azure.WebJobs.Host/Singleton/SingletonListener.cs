@@ -18,13 +18,12 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         private readonly SingletonManager _singletonManager;
         private readonly SingletonConfiguration _singletonConfig;
         private readonly IListener _innerListener;
-        private readonly TraceWriter _trace;
         private readonly ILogger _logger;
         private string _lockId;
         private RenewableLockHandle _lockHandle;
         private bool _isListening;
 
-        public SingletonListener(FunctionDescriptor method, SingletonAttribute attribute, SingletonManager singletonManager, IListener innerListener, TraceWriter trace, ILoggerFactory loggerFactory)
+        public SingletonListener(FunctionDescriptor method, SingletonAttribute attribute, SingletonManager singletonManager, IListener innerListener, ILoggerFactory loggerFactory)
         {
             _attribute = attribute;
             _singletonManager = singletonManager;
@@ -35,7 +34,6 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             _lockId = singletonManager.FormatLockId(method, _attribute.Scope, boundScopeId);
             _lockId += ".Listener";
 
-            _trace = trace;
             _logger = loggerFactory?.CreateLogger(LogCategories.Singleton);
         }
 
@@ -52,7 +50,6 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             if (_lockHandle == null)
             {
                 string msg = string.Format(CultureInfo.InvariantCulture, "Unable to acquire Singleton lock ({0}).", _lockId);
-                _trace.Verbose(msg, source: TraceSource.Execution);
                 _logger?.LogDebug(msg);
 
                 // If we're unable to acquire the lock, it means another listener

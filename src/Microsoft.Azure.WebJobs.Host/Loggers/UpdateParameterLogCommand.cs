@@ -18,21 +18,15 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
     {
         private readonly IReadOnlyDictionary<string, IWatcher> _watches;
         private readonly IStorageBlockBlob _parameterLogBlob;
-        private readonly TraceWriter _trace;
         private readonly ILogger _logger;
 
         private string _lastContent;
 
-        public UpdateParameterLogCommand(IReadOnlyDictionary<string, IWatcher> watches,
-            IStorageBlockBlob parameterLogBlob, TraceWriter trace, ILogger logger)
+        public UpdateParameterLogCommand(IReadOnlyDictionary<string, IWatcher> watches, IStorageBlockBlob parameterLogBlob, ILogger logger)
         {
             if (parameterLogBlob == null)
             {
                 throw new ArgumentNullException("parameterLogBlob");
-            }
-            else if (trace == null)
-            {
-                throw new ArgumentNullException("trace");
             }
             else if (watches == null)
             {
@@ -40,7 +34,6 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             }
 
             _parameterLogBlob = parameterLogBlob;
-            _trace = trace;
             _logger = logger;
             _watches = watches;
         }
@@ -95,7 +88,6 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
                 // Not fatal if we can't update parameter status. 
                 // But at least log what happened for diagnostics in case it's an infrastructure bug.
                 string msg = "---- Parameter status update failed ----";
-                _trace.Error(msg, e, TraceSource.Execution);
                 _logger?.LogError(0, e, msg);
                 return false;
             }

@@ -15,24 +15,21 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     {
         private readonly Guid _functionInstanceId;
         private readonly CancellationToken _functionCancellationToken;
-        private readonly TraceWriter _trace;
 
         /// <summary>
         /// Creates a new instance.
         /// </summary>
         /// <param name="functionInstanceId">The instance ID of the function being bound to.</param>
         /// <param name="functionCancellationToken">The <see cref="CancellationToken"/> to use.</param>
-        /// <param name="trace">The trace writer.</param>
+        /// <param name="userLogger">The user logger.</param>
         /// <param name="functionDescriptor">Current function being executed. </param>
         public FunctionBindingContext(
-            Guid functionInstanceId, 
-            CancellationToken functionCancellationToken, 
-            TraceWriter trace,
+            Guid functionInstanceId,
+            CancellationToken functionCancellationToken,
             FunctionDescriptor functionDescriptor = null)
         {
             _functionInstanceId = functionInstanceId;
             _functionCancellationToken = functionCancellationToken;
-            _trace = trace;
 
             this.MethodName = functionDescriptor?.LogName;
         }
@@ -40,26 +37,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// <summary>
         /// Gets the instance ID of the function being bound to.
         /// </summary>
-        public Guid FunctionInstanceId
-        {
-            get { return _functionInstanceId; }
-        }
+        public Guid FunctionInstanceId => _functionInstanceId;
 
         /// <summary>
         /// Gets the <see cref="CancellationToken"/> to use.
         /// </summary>
-        public CancellationToken FunctionCancellationToken
-        {
-            get { return _functionCancellationToken; }
-        }
-
-        /// <summary>
-        /// Gets the output <see cref="TraceWriter"/>.
-        /// </summary>
-        public TraceWriter Trace
-        {
-            get { return _trace; }
-        }
+        public CancellationToken FunctionCancellationToken => _functionCancellationToken;
 
         /// <summary>
         /// The short name of the current function. 

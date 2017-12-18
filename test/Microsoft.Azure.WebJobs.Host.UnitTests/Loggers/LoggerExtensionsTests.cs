@@ -37,18 +37,17 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         public void LogFunctionResult_Succeeded_CreatesCorrectState()
         {
             int logCount = 0;
-            ILogger logger = CreateMockLogger<FormattedLogValuesCollection>((l, e, o, ex, f) =>
-            {
-                logCount++;
-                Assert.Equal(LogLevel.Information, l);
-                Assert.Equal(0, e);
-                Assert.Null(ex);
-                Assert.Equal($"Executed '{_functionFullName}' (Succeeded, Id={_invocationId})", f(o, ex));
+            ILogger logger = CreateMockLogger<IDictionary<string, object>>((l, e, o, ex, f) =>
+             {
+                 logCount++;
+                 Assert.Equal(LogLevel.Information, l);
+                 Assert.Equal(0, e);
+                 Assert.Null(ex);
+                 Assert.Null(f(o, ex));
 
-                var payload = VerifyResultDefaultsAndConvert(o);
-                Assert.True((bool)payload[LogConstants.SucceededKey]);
-                Assert.Equal("Executed '{FullName}' (Succeeded, Id={InvocationId})", payload[LogConstants.OriginalFormatKey]);
-            });
+                 var payload = VerifyResultDefaultsAndConvert(o);
+                 Assert.True((bool)payload[LogConstants.SucceededKey]);
+             });
 
             var result = CreateDefaultInstanceLogEntry();
 
@@ -61,19 +60,18 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         public void LogFunctionResult_Failed_CreatesCorrectState()
         {
             int logCount = 0;
-            ILogger logger = CreateMockLogger<FormattedLogValuesCollection>((l, e, o, ex, f) =>
-            {
-                logCount++;
-                Assert.Equal(LogLevel.Error, l);
-                Assert.Equal(0, e);
-                Assert.NotNull(ex);
-                Assert.IsType<FunctionInvocationException>(ex);
-                Assert.Equal($"Executed '{_functionFullName}' (Failed, Id={_invocationId})", f(o, ex));
+            ILogger logger = CreateMockLogger<IDictionary<string, object>>((l, e, o, ex, f) =>
+             {
+                 logCount++;
+                 Assert.Equal(LogLevel.Error, l);
+                 Assert.Equal(0, e);
+                 Assert.NotNull(ex);
+                 Assert.IsType<FunctionInvocationException>(ex);
+                 Assert.Null(f(o, ex));
 
-                var payload = VerifyResultDefaultsAndConvert(o);
-                Assert.False((bool)payload[LogConstants.SucceededKey]);
-                Assert.Equal("Executed '{FullName}' (Failed, Id={InvocationId})", payload[LogConstants.OriginalFormatKey]);
-            });
+                 var payload = VerifyResultDefaultsAndConvert(o);
+                 Assert.False((bool)payload[LogConstants.SucceededKey]);
+             });
 
             var fex = new FunctionInvocationException("Failed");
             var result = CreateDefaultInstanceLogEntry(fex);
@@ -152,7 +150,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             var payload = enumerable.ToDictionary(k => k.Key, v => v.Value);
 
-            Assert.Equal(9, payload.Count);
+            Assert.Equal(8, payload.Count);
             Assert.Equal(_functionFullName, payload[LogConstants.FullNameKey]);
             Assert.Equal(_functionShortName, payload[LogConstants.NameKey]);
             Assert.Equal(_invocationId, payload[LogConstants.InvocationIdKey]);

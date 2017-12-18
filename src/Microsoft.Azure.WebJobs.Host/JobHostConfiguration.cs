@@ -29,7 +29,6 @@ namespace Microsoft.Azure.WebJobs
         private readonly DefaultStorageAccountProvider _storageAccountProvider;
         private readonly JobHostQueuesConfiguration _queueConfiguration = new JobHostQueuesConfiguration();
         private readonly JobHostBlobsConfiguration _blobsConfiguration = new JobHostBlobsConfiguration();
-        private readonly JobHostTraceConfiguration _traceConfiguration = new JobHostTraceConfiguration();
         private readonly ConcurrentDictionary<Type, object> _services = new ConcurrentDictionary<Type, object>();
 
         private string _hostId;
@@ -295,17 +294,6 @@ namespace Microsoft.Azure.WebJobs
         }
 
         /// <summary>
-        /// Gets the configuration for event tracing.
-        /// </summary>
-        public JobHostTraceConfiguration Tracing
-        {
-            get
-            {
-                return _traceConfiguration;
-            }
-        }
-
-        /// <summary>
         /// get host-level metadata which the extension may read to do configuration.
         /// </summary>
         [Obsolete("Not ready for public consumption.")]
@@ -337,7 +325,6 @@ namespace Microsoft.Azure.WebJobs
         /// </summary>
         public void UseDevelopmentSettings()
         {
-            Tracing.ConsoleLevel = TraceLevel.Verbose;
             Queues.MaxPollingInterval = TimeSpan.FromSeconds(2);
             Singleton.ListenerLockPeriod = TimeSpan.FromSeconds(15);
 

@@ -7,6 +7,7 @@ using System.Linq;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
@@ -17,6 +18,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
     {
         private readonly TelemetryClient _telemetryClient;
         private readonly string _categoryName;
+        private readonly bool _isUserFunction = false;
 
         private const string DefaultCategoryName = "Default";
         private const string DateTimeFormatString = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffK";
@@ -35,6 +37,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 ScopeKeys.Event,
                 ScopeKeys.FunctionInvocationId,
                 ScopeKeys.FunctionName,
+                ScopeKeys.HostInstanceId,
                 OperationContext
             };
 
@@ -42,6 +45,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         {
             _telemetryClient = client;
             _categoryName = categoryName ?? DefaultCategoryName;
+            _isUserFunction = LogCategories.IsFunctionUserCategory(categoryName);
         }
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
@@ -67,8 +71,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 [LogConstants.LogLevelKey] = (LogLevel?)logLevel
             }))
             {
-                // Log a metric
-                if (eventId.Id == LogConstants.MetricEventId)
+                // Log a metric from user logs only
+                if (_isUserFunction && eventId.Id == LogConstants.MetricEventId)
                 {
                     LogMetric(stateValues);
                     return;
@@ -172,6 +176,10 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             if (!string.IsNullOrEmpty(formattedMessage))
             {
                 telemetry.Properties[LogConstants.FormattedMessageKey] = formattedMessage;
+
+                // Also log a trace if there's a formattedMessage. This ensures that the error is visible
+                // in both App Insights analytics tables.
+                LogTrace(logLevel, values, formattedMessage);
             }
 
             ApplyProperties(telemetry, values, LogConstants.CustomPropertyPrefix);
@@ -355,7 +363,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 requestTelemetry.Context.User.UserAgent = userAgentHeader.FirstOrDefault();
             }
 
-            HttpResponse response = GetResponse(request);
+            ObjectResult response = GetResponse(request);
 
             // If a function throws an exception, we don't get a response attached to the request.
             // In that case, we'll consider it a 500.
@@ -469,13 +477,13 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             return address;
         }
 
-        internal static HttpResponse GetResponse(HttpRequest httpRequest)
+        internal static ObjectResult GetResponse(HttpRequest httpRequest)
         {
             // Grab the response stored by functions
             object value = null;
             httpRequest.HttpContext?.Items?.TryGetValue(ApplicationInsightsScopeKeys.FunctionsHttpResponse, out value);
 
-            return value as HttpResponse;
+            return value as ObjectResult;
         }
     }
 }

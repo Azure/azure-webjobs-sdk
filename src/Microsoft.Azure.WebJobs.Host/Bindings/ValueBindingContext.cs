@@ -50,14 +50,6 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         /// <summary>
-        /// Gets the output <see cref="TraceWriter"/>.
-        /// </summary>
-        public TraceWriter Trace
-        {
-            get { return _functionContext.Trace; }
-        }
-
-        /// <summary>
         /// Gets the <see cref="CancellationToken"/> to use.
         /// </summary>
         public CancellationToken CancellationToken

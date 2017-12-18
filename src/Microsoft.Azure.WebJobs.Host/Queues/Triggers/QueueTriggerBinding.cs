@@ -27,7 +27,6 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IContextSetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherSetter;
         private readonly ISharedContextProvider _sharedContextProvider;
-        private readonly TraceWriter _trace;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IObjectToTypeConverter<IStorageQueueMessage> _converter;
 
@@ -38,53 +37,17 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             IWebJobsExceptionHandler exceptionHandler,
             IContextSetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherSetter,
             ISharedContextProvider sharedContextProvider,
-            TraceWriter trace,
             ILoggerFactory loggerFactory)
         {
-            if (queue == null)
-            {
-                throw new ArgumentNullException("queue");
-            }
-
-            if (argumentBinding == null)
-            {
-                throw new ArgumentNullException("argumentBinding");
-            }
-
-            if (queueConfiguration == null)
-            {
-                throw new ArgumentNullException("queueConfiguration");
-            }
-
-            if (exceptionHandler == null)
-            {
-                throw new ArgumentNullException("exceptionHandler");
-            }
-
-            if (messageEnqueuedWatcherSetter == null)
-            {
-                throw new ArgumentNullException("messageEnqueuedWatcherSetter");
-            }
-
-            if (sharedContextProvider == null)
-            {
-                throw new ArgumentNullException("sharedContextProvider");
-            }
-
-            if (trace == null)
-            {
-                throw new ArgumentNullException("trace");
-            }
+            _queue = queue ?? throw new ArgumentNullException(nameof(queue));
+            _argumentBinding = argumentBinding ?? throw new ArgumentNullException(nameof(argumentBinding));
+            _bindingDataContract = CreateBindingDataContract(argumentBinding.BindingDataContract);
+            _queueConfiguration = queueConfiguration ?? throw new ArgumentNullException(nameof(queueConfiguration));
+            _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
+            _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter ?? throw new ArgumentNullException(nameof(messageEnqueuedWatcherSetter));
+            _sharedContextProvider = sharedContextProvider ?? throw new ArgumentNullException(nameof(sharedContextProvider));
 
             _parameterName = parameterName;
-            _queue = queue;
-            _argumentBinding = argumentBinding;
-            _bindingDataContract = CreateBindingDataContract(argumentBinding.BindingDataContract);
-            _queueConfiguration = queueConfiguration;
-            _exceptionHandler = exceptionHandler;
-            _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter;
-            _sharedContextProvider = sharedContextProvider;
-            _trace = trace;
             _loggerFactory = loggerFactory;
             _converter = CreateConverter(queue);
         }
@@ -161,7 +124,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             }
 
             var factory = new QueueListenerFactory(_queue, _queueConfiguration, _exceptionHandler,
-                    _messageEnqueuedWatcherSetter, _sharedContextProvider, _trace, _loggerFactory, context.Executor);
+                    _messageEnqueuedWatcherSetter, _sharedContextProvider, _loggerFactory, context.Executor);
 
             return factory.CreateAsync(context.CancellationToken);
         }

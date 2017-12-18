@@ -37,7 +37,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
         private readonly IContextSetter<IBlobWrittenWatcher> _blobWrittenWatcherSetter;
         private readonly IContextSetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherSetter;
         private readonly ISharedContextProvider _sharedContextProvider;
-        private readonly TraceWriter _trace;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IAsyncObjectToTypeConverter<IStorageBlob> _converter;
         private readonly IReadOnlyDictionary<string, Type> _bindingDataContract;
@@ -55,93 +54,28 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             IContextSetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherSetter,
             ISharedContextProvider sharedContextProvider,
             SingletonManager singletonManager,
-            TraceWriter trace,
             ILoggerFactory loggerFactory)
         {
-            if (parameter == null)
-            {
-                throw new ArgumentNullException("parameter");
-            }
+            _parameter = parameter ?? throw new ArgumentNullException(nameof(parameter));
+            _hostAccount = hostAccount ?? throw new ArgumentNullException(nameof(hostAccount));
+            _dataAccount = dataAccount ?? throw new ArgumentNullException(nameof(dataAccount));
 
-            if (hostAccount == null)
-            {
-                throw new ArgumentNullException("hostAccount");
-            }
-
-            if (dataAccount == null)
-            {
-                throw new ArgumentNullException("dataAccount");
-            }
-
-            if (path == null)
-            {
-                throw new ArgumentNullException("path");
-            }
-
-            if (hostIdProvider == null)
-            {
-                throw new ArgumentNullException("hostIdProvider");
-            }
-
-            if (queueConfiguration == null)
-            {
-                throw new ArgumentNullException("queueConfiguration");
-            }
-
-            if (blobsConfiguration == null)
-            {
-                throw new ArgumentNullException("blobsConfiguration");
-            }
-
-            if (exceptionHandler == null)
-            {
-                throw new ArgumentNullException("exceptionHandler");
-            }
-
-            if (blobWrittenWatcherSetter == null)
-            {
-                throw new ArgumentNullException("blobWrittenWatcherSetter");
-            }
-
-            if (messageEnqueuedWatcherSetter == null)
-            {
-                throw new ArgumentNullException("messageEnqueuedWatcherSetter");
-            }
-
-            if (sharedContextProvider == null)
-            {
-                throw new ArgumentNullException("sharedContextProvider");
-            }
-
-            if (singletonManager == null)
-            {
-                throw new ArgumentNullException("singletonManager");
-            }
-
-            if (trace == null)
-            {
-                throw new ArgumentNullException("trace");
-            }
-
-            _parameter = parameter;
-            _hostAccount = hostAccount;
-            _dataAccount = dataAccount;
             StorageClientFactoryContext context = new StorageClientFactoryContext
             {
                 Parameter = parameter
             };
+
             _blobClient = dataAccount.CreateBlobClient(context);
             _accountName = BlobClient.GetAccountName(_blobClient);
-            _path = path;
-            _hostIdProvider = hostIdProvider;
-            _queueConfiguration = queueConfiguration;
-            _blobsConfiguration = blobsConfiguration;
-            _exceptionHandler = exceptionHandler;
-            _blobWrittenWatcherSetter = blobWrittenWatcherSetter;
-            _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter;
-            _sharedContextProvider = sharedContextProvider;
-            _singletonManager = singletonManager;
-            _trace = trace;
+            _path = path ?? throw new ArgumentNullException(nameof(path));
+            _hostIdProvider = hostIdProvider ?? throw new ArgumentNullException(nameof(hostIdProvider));
+            _queueConfiguration = queueConfiguration ?? throw new ArgumentNullException(nameof(queueConfiguration));
+            _blobsConfiguration = blobsConfiguration ?? throw new ArgumentNullException(nameof(blobsConfiguration));
+            _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
+            _blobWrittenWatcherSetter = blobWrittenWatcherSetter ?? throw new ArgumentNullException(nameof(blobWrittenWatcherSetter));
+            _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter ?? throw new ArgumentNullException(nameof(messageEnqueuedWatcherSetter));
+            _sharedContextProvider = sharedContextProvider ?? throw new ArgumentNullException(nameof(sharedContextProvider));
+            _singletonManager = singletonManager ?? throw new ArgumentNullException(nameof(singletonManager));
             _loggerFactory = loggerFactory;
             _converter = CreateConverter(_blobClient);
             _bindingDataContract = CreateBindingDataContract(path);
@@ -250,7 +184,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             IStorageBlobContainer container = _blobClient.GetContainerReference(_path.ContainerNamePattern);
 
             var factory = new BlobListenerFactory(_hostIdProvider, _queueConfiguration, _blobsConfiguration, _exceptionHandler,
-                _blobWrittenWatcherSetter, _messageEnqueuedWatcherSetter, _sharedContextProvider, _trace, _loggerFactory,
+                _blobWrittenWatcherSetter, _messageEnqueuedWatcherSetter, _sharedContextProvider, _loggerFactory,
                 context.Descriptor.Id, _hostAccount, _dataAccount, container, _path, context.Executor, _singletonManager);
 
             return factory.CreateAsync(context.CancellationToken);

@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
-    internal class ApplicationInsightsLoggerProvider : ILoggerProvider
+    public class ApplicationInsightsLoggerProvider : ILoggerProvider
     {
         private readonly TelemetryClient _client;
         private ITelemetryClientFactory _clientFactory;

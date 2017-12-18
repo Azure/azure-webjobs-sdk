@@ -8,7 +8,7 @@ namespace System.Collections.Generic
         public static T GetValueOrDefault<T>(this IDictionary<string, object> dictionary, string key)
         {
             object value;
-            if (dictionary.TryGetValue(key, out value))
+            if (dictionary != null && dictionary.TryGetValue(key, out value))
             {
                 return (T)value;
             }

@@ -3,20 +3,19 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Newtonsoft.Json;
 using Xunit;
-using Microsoft.Azure.WebJobs.Host.Config;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
@@ -28,10 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             JobHostConfiguration config = new JobHostConfiguration();
 
             Assert.NotNull(config.Singleton);
-
-            Assert.NotNull(config.Tracing);
-            Assert.Equal(System.Diagnostics.TraceLevel.Info, config.Tracing.ConsoleLevel);
-            Assert.Equal(0, config.Tracing.Tracers.Count);
+            Assert.Null(config.LoggerFactory);
             Assert.False(config.Blobs.CentralizedPoisonQueue);
 
             StorageClientFactory clientFactory = config.GetService<StorageClientFactory>();
@@ -150,7 +146,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             JobHostConfiguration configuration = new JobHostConfiguration();
 
             ExceptionAssert.ThrowsArgumentNull(() => configuration.JobActivator = null, "value");
-        }      
+        }
 
         [Fact]
         public void GetService_IExtensionRegistry_ReturnsDefaultRegistry()
@@ -302,7 +298,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
 
             Assert.True(config.UsingDevelopmentSettings);
-            Assert.Equal(System.Diagnostics.TraceLevel.Verbose, config.Tracing.ConsoleLevel);
             Assert.Equal(TimeSpan.FromSeconds(2), config.Queues.MaxPollingInterval);
             Assert.Equal(TimeSpan.FromSeconds(15), config.Singleton.ListenerLockPeriod);
 
@@ -421,13 +416,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
         [Fact]
         public void TestServices()
-        {            
+        {
             // Test configuration similar to how ScriptRuntime works.             
             // - config is created and immediatey passed to a JobHost ctor
             // - config is then initialized, including adding extensions 
             // - extensions may register their own services. 
             JobHostConfiguration config = new JobHostConfiguration();
-            var host = new JobHost(config); 
+            var host = new JobHost(config);
 
             var lockManager = config.GetService<IDistributedLockManager>();
             Assert.Null(lockManager); // Not initialized yet. 
@@ -441,7 +436,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.NotNull(lockManager);
             Assert.IsType<TestLockManager>(lockManager); // verify it's our custom type             
         }
-        
+
         // A test extension. This registers a new service in the initialization path. 
         class TestExtension : IExtensionConfigProvider
         {

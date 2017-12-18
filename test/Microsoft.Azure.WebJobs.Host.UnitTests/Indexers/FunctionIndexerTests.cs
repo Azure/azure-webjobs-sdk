@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -61,23 +60,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             indexMock.Verify(i => i.Add(It.IsAny<IFunctionDefinition>(), It.IsAny<FunctionDescriptor>(), It.IsAny<MethodInfo>()), Times.Never);
         }
 
-        [Theory]
-        [InlineData("TraceLevelOverride_Off", TraceLevel.Off)]
-        [InlineData("TraceLevelOverride_Error", TraceLevel.Error)]
-        [InlineData("ReturnVoid", TraceLevel.Verbose)]
-        public void GetFunctionTraceLevel_ReturnsExpectedLevel(string method, TraceLevel level)
-        {
-            // Arrange
-            var collector = new TestIndexCollector();
-            FunctionIndexer product = CreateProductUnderTest();
-
-            // Act & Assert
-            product.IndexMethodAsync(typeof(FunctionIndexerTests).GetMethod(method),
-                collector, CancellationToken.None).GetAwaiter().GetResult();
-
-            Assert.Equal(level, collector.Functions.First().TraceLevel);
-        }
-
         [Fact]
         public void GetFunctionTimeout_ReturnsExpected()
         {
@@ -119,23 +101,18 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         [Fact]
         public async Task IndexMethod_IfMethodReturnsAsyncVoid_Throws()
         {
-            var traceWriter = new TestTraceWriter(TraceLevel.Verbose);
             var loggerFactory = new LoggerFactory();
             var loggerProvider = new TestLoggerProvider();
             loggerFactory.AddProvider(loggerProvider);
 
             // Arrange
             IFunctionIndexCollector index = CreateStubFunctionIndex();
-            FunctionIndexer product = CreateProductUnderTest(traceWriter: traceWriter, loggerFactory: loggerFactory);
+            FunctionIndexer product = CreateProductUnderTest(loggerFactory: loggerFactory);
 
             // Act & Assert
             await product.IndexMethodAsync(typeof(FunctionIndexerTests).GetMethod("ReturnAsyncVoid"), index, CancellationToken.None);
 
             string expectedMessage = "Function 'ReturnAsyncVoid' is async but does not return a Task. Your function may not run correctly.";
-
-            // Validate TraceWriter
-            var traceWarning = traceWriter.Traces.First(p => p.Level == TraceLevel.Warning);
-            Assert.Equal(expectedMessage, traceWarning.Message);
 
             // Validate Logger
             var logger = loggerProvider.CreatedLoggers.Single(l => l.Category == Logging.LogCategories.Startup);
@@ -298,9 +275,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             return new Mock<IFunctionIndexCollector>(MockBehavior.Strict).Object;
         }
 
-        private static FunctionIndexer CreateProductUnderTest(TraceWriter traceWriter = null, ILoggerFactory loggerFactory = null)
+        private static FunctionIndexer CreateProductUnderTest(ILoggerFactory loggerFactory = null)
         {
-            return FunctionIndexerFactory.Create(traceWriter: traceWriter, loggerFactory: loggerFactory);
+            return FunctionIndexerFactory.Create(loggerFactory: loggerFactory);
         }
 
         private static IFunctionIndexCollector CreateStubFunctionIndex()
@@ -383,18 +360,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         public static async void ReturnAsyncVoid()
         {
             await Task.FromResult(0);
-        }
-
-        [NoAutomaticTrigger]
-        [TraceLevel(TraceLevel.Off)]
-        public static void TraceLevelOverride_Off()
-        {
-        }
-
-        [NoAutomaticTrigger]
-        [TraceLevel(TraceLevel.Error)]
-        public static void TraceLevelOverride_Error()
-        {
         }
 
         [NoAutomaticTrigger]

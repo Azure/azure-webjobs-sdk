@@ -51,14 +51,6 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         /// <summary>
-        /// Gets the output <see cref="TraceWriter"/>.
-        /// </summary>
-        public TraceWriter Trace
-        {
-            get { return _functionContext.Trace; }
-        }
-
-        /// <summary>
         /// Gets the binding data.
         /// </summary>
         public IReadOnlyDictionary<string, object> BindingData

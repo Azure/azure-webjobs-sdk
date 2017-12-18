@@ -10,13 +10,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
     /// <summary>
     /// Binding provider handling bindings to <see cref="ILogger"/>.
-    /// <remarks>
-    /// </remarks>
     /// </summary>
-    internal class LoggerBindingProvider : IBindingProvider
+    internal class ILoggerBindingProvider : IBindingProvider
     {
         private ILoggerFactory _loggerFactory;
-        public LoggerBindingProvider(ILoggerFactory loggerFactory)
+
+        public ILoggerBindingProvider(ILoggerFactory loggerFactory)
         {
             _loggerFactory = loggerFactory;
         }
@@ -39,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 throw new ArgumentException("A parameter of type ILogger cannot be used without a registered ILoggerFactory.");
             }
 
-            IBinding binding = new LoggerBinding(parameter, _loggerFactory);
+            IBinding binding = new ILoggerBinding(parameter, _loggerFactory);
             return Task.FromResult(binding);
         }
     }

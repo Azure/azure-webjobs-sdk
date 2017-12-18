@@ -36,9 +36,11 @@ namespace SampleHost
             {
                 var filter = new LogCategoryFilter();
                 filter.DefaultLevel = LogLevel.Debug;
-                filter.CategoryLevels[LogCategories.Function] = LogLevel.Debug;
                 filter.CategoryLevels[LogCategories.Results] = LogLevel.Debug;
                 filter.CategoryLevels[LogCategories.Aggregator] = LogLevel.Debug;
+
+                // Adjust the LogLevel for a specific Function.
+                filter.CategoryLevels[LogCategories.CreateFunctionCategory(nameof(Functions.ProcessWorkItem))] = LogLevel.Debug;
 
                 config.LoggerFactory = new LoggerFactory()
                     .AddApplicationInsights(instrumentationKey, filter.Filter)

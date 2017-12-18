@@ -16,34 +16,22 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IFunctionIndexLookup _functionLookup;
         private readonly IFunctionExecutor _executor;
         private readonly IListener _listener;
-        private readonly TraceWriter _trace;
         private readonly IAsyncCollector<FunctionInstanceLogEntry> _functionEventCollector; // optional        
         private readonly ILoggerFactory _loggerFactory;
-        
+
         private bool _disposed;
 
         public JobHostContext(IFunctionIndexLookup functionLookup,
             IFunctionExecutor executor,
             IListener listener,
-            TraceWriter trace,
             IAsyncCollector<FunctionInstanceLogEntry> functionEventCollector = null,
             ILoggerFactory loggerFactory = null)
         {
             _functionLookup = functionLookup;
             _executor = executor;
             _listener = listener;
-            _trace = trace;
             _functionEventCollector = functionEventCollector;
             _loggerFactory = loggerFactory;
-        }
-
-        public TraceWriter Trace
-        {
-            get
-            {
-                ThrowIfDisposed();
-                return _trace;
-            }
         }
 
         public IFunctionIndexLookup FunctionLookup
@@ -96,7 +84,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             if (!_disposed)
             {
                 _listener.Dispose();
-                _loggerFactory?.Dispose();
 
                 _disposed = true;
             }

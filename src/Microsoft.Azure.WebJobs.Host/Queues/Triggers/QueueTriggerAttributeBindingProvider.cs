@@ -31,7 +31,6 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IContextSetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherSetter;
         private readonly ISharedContextProvider _sharedContextProvider;
-        private readonly TraceWriter _trace;
         private readonly ILoggerFactory _loggerFactory;
 
         public QueueTriggerAttributeBindingProvider(INameResolver nameResolver,
@@ -40,46 +39,15 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             IWebJobsExceptionHandler exceptionHandler,
             IContextSetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherSetter,
             ISharedContextProvider sharedContextProvider,
-            TraceWriter trace,
             ILoggerFactory loggerFactory)
         {
-            if (accountProvider == null)
-            {
-                throw new ArgumentNullException("accountProvider");
-            }
-
-            if (queueConfiguration == null)
-            {
-                throw new ArgumentNullException("queueConfiguration");
-            }
-
-            if (exceptionHandler == null)
-            {
-                throw new ArgumentNullException("exceptionHandler");
-            }
-
-            if (messageEnqueuedWatcherSetter == null)
-            {
-                throw new ArgumentNullException("messageEnqueuedWatcherSetter");
-            }
-
-            if (sharedContextProvider == null)
-            {
-                throw new ArgumentNullException("sharedContextProvider");
-            }
-
-            if (trace == null)
-            {
-                throw new ArgumentNullException("trace");
-            }
+            _accountProvider = accountProvider ?? throw new ArgumentNullException(nameof(accountProvider));
+            _queueConfiguration = queueConfiguration ?? throw new ArgumentNullException(nameof(queueConfiguration));
+            _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
+            _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter ?? throw new ArgumentNullException(nameof(messageEnqueuedWatcherSetter));
+            _sharedContextProvider = sharedContextProvider ?? throw new ArgumentNullException(nameof(sharedContextProvider));
 
             _nameResolver = nameResolver;
-            _accountProvider = accountProvider;
-            _queueConfiguration = queueConfiguration;
-            _exceptionHandler = exceptionHandler;
-            _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter;
-            _sharedContextProvider = sharedContextProvider;
-            _trace = trace;
             _loggerFactory = loggerFactory;
         }
 
@@ -117,7 +85,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
 
             ITriggerBinding binding = new QueueTriggerBinding(parameter.Name, queue, argumentBinding,
                 _queueConfiguration, _exceptionHandler, _messageEnqueuedWatcherSetter,
-                _sharedContextProvider, _trace, _loggerFactory);
+                _sharedContextProvider, _loggerFactory);
             return binding;
         }
 

@@ -6,19 +6,18 @@ using System.Globalization;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    internal class LoggerBinding : IBinding
+    internal class ILoggerBinding : IBinding
     {
         private readonly ParameterInfo _parameter;
         private readonly ILoggerFactory _loggerFactory;
 
-        public LoggerBinding(ParameterInfo parameter, ILoggerFactory loggerFactory)
+        public ILoggerBinding(ParameterInfo parameter, ILoggerFactory loggerFactory)
         {
             _parameter = parameter;
             _loggerFactory = loggerFactory;
@@ -44,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 throw new ArgumentNullException("context");
             }
 
-            ILogger logger = _loggerFactory.CreateLogger(LogCategories.Function);
+            ILogger logger = _loggerFactory.CreateLogger(LogCategories.CreateFunctionUserCategory(context.ValueContext.FunctionContext.MethodName));
             return BindAsync(logger, context.ValueContext);
         }
 

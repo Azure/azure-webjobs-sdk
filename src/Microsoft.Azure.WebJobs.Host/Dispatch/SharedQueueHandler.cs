@@ -26,7 +26,6 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
         private readonly IHostIdProvider _hostIdProvider;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly ILoggerFactory _loggerFactory;
-        private readonly TraceWriter _trace;
         private readonly IQueueConfiguration _queueConfiguration;
         private readonly ISharedContextProvider _sharedContextProvider;
         private readonly IContextSetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherSetter;
@@ -39,7 +38,6 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
         internal SharedQueueHandler(IStorageAccountProvider accountProvider,
                            IHostIdProvider hostIdProvider,
                            IWebJobsExceptionHandler exceptionHandler,
-                           TraceWriter trace,
                            ILoggerFactory loggerFactory,
                            IQueueConfiguration queueConfiguration,
                            ISharedContextProvider sharedContextProvider,
@@ -48,7 +46,6 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
             _accountProvider = accountProvider;
             _hostIdProvider = hostIdProvider;
             _exceptionHandler = exceptionHandler;
-            _trace = trace;
             _loggerFactory = loggerFactory;
             _queueConfiguration = queueConfiguration;
             _sharedContextProvider = sharedContextProvider;
@@ -120,7 +117,7 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
 
                 // use default poisonQueue setup
                 _sharedQueuelistener = new QueueListener(sharedQueue, sharedPoisonQueue, _triggerExecutor,
-                    _exceptionHandler, _trace, _loggerFactory, sharedQueueWatcher, _queueConfiguration);
+                    _exceptionHandler, _loggerFactory, sharedQueueWatcher, _queueConfiguration);
             }
             catch (Exception ex)
             {
@@ -128,8 +125,7 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
                 string errorMessage = "SharedQueue initialization error, fallback to InMemorySharedQueue";
                 // surface this error to user
                 var logger = _loggerFactory?.CreateLogger(LogCategories.Startup);
-                logger?.LogError(errorMessage, ex);
-                _trace.Error(errorMessage, ex);
+                logger?.LogError(ex, errorMessage);
 
                 // initialization exception make registration a NOOP
                 InitializationEx = ex;

@@ -2,12 +2,12 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
+using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
@@ -17,13 +17,10 @@ using Microsoft.Azure.WebJobs.Host.Storage.Blob;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.Azure.WebJobs.Host.Config;
-using System.Threading;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
 {
-    internal class BlobTriggerExtensionConfig : IExtensionConfigProvider        
+    internal class BlobTriggerExtensionConfig : IExtensionConfigProvider
     {
         private IStorageAccountProvider _accountProvider;
 
@@ -84,7 +81,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
         private readonly IContextSetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherSetter;
         private readonly ISharedContextProvider _sharedContextProvider;
         private readonly SingletonManager _singletonManager;
-        private readonly TraceWriter _trace;
         private readonly ILoggerFactory _loggerFactory;
 
         public BlobTriggerAttributeBindingProvider(INameResolver nameResolver,
@@ -98,75 +94,24 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             IContextSetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherSetter,
             ISharedContextProvider sharedContextProvider,
             SingletonManager singletonManager,
-            TraceWriter trace,
             ILoggerFactory loggerFactory)
         {
-            if (accountProvider == null)
-            {
-                throw new ArgumentNullException("accountProvider");
-            }
-
             if (extensionTypeLocator == null)
             {
-                throw new ArgumentNullException("extensionTypeLocator");
+                throw new ArgumentNullException(nameof(extensionTypeLocator));
             }
 
-            if (hostIdProvider == null)
-            {
-                throw new ArgumentNullException("hostIdProvider");
-            }
-
-            if (queueConfiguration == null)
-            {
-                throw new ArgumentNullException("queueConfiguration");
-            }
-
-            if (blobsConfiguration == null)
-            {
-                throw new ArgumentNullException("blobsConfiguration");
-            }
-
-            if (exceptionHandler == null)
-            {
-                throw new ArgumentNullException("exceptionHandler");
-            }
-
-            if (blobWrittenWatcherSetter == null)
-            {
-                throw new ArgumentNullException("blobWrittenWatcherSetter");
-            }
-
-            if (messageEnqueuedWatcherSetter == null)
-            {
-                throw new ArgumentNullException("messageEnqueuedWatcherSetter");
-            }
-
-            if (sharedContextProvider == null)
-            {
-                throw new ArgumentNullException("sharedContextProvider");
-            }
-
-            if (singletonManager == null)
-            {
-                throw new ArgumentNullException("singletonManager");
-            }
-
-            if (trace == null)
-            {
-                throw new ArgumentNullException("trace");
-            }
+            _accountProvider = accountProvider ?? throw new ArgumentNullException(nameof(accountProvider));
+            _hostIdProvider = hostIdProvider ?? throw new ArgumentNullException(nameof(hostIdProvider));
+            _queueConfiguration = queueConfiguration ?? throw new ArgumentNullException(nameof(queueConfiguration));
+            _blobsConfiguration = blobsConfiguration ?? throw new ArgumentNullException(nameof(blobsConfiguration));
+            _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
+            _blobWrittenWatcherSetter = blobWrittenWatcherSetter ?? throw new ArgumentNullException(nameof(blobWrittenWatcherSetter));
+            _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter ?? throw new ArgumentNullException(nameof(messageEnqueuedWatcherSetter));
+            _sharedContextProvider = sharedContextProvider ?? throw new ArgumentNullException(nameof(sharedContextProvider));
+            _singletonManager = singletonManager ?? throw new ArgumentNullException(nameof(singletonManager));
 
             _nameResolver = nameResolver;
-            _accountProvider = accountProvider;
-            _hostIdProvider = hostIdProvider;
-            _queueConfiguration = queueConfiguration;
-            _blobsConfiguration = blobsConfiguration;
-            _exceptionHandler = exceptionHandler;
-            _blobWrittenWatcherSetter = blobWrittenWatcherSetter;
-            _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter;
-            _sharedContextProvider = sharedContextProvider;
-            _singletonManager = singletonManager;
-            _trace = trace;
             _loggerFactory = loggerFactory;
         }
 
@@ -190,7 +135,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
 
             ITriggerBinding binding = new BlobTriggerBinding(parameter, hostAccount, dataAccount, path,
                 _hostIdProvider, _queueConfiguration, _blobsConfiguration, _exceptionHandler, _blobWrittenWatcherSetter,
-                _messageEnqueuedWatcherSetter, _sharedContextProvider, _singletonManager, _trace, _loggerFactory);
+                _messageEnqueuedWatcherSetter, _sharedContextProvider, _singletonManager, _loggerFactory);
 
             return binding;
         }

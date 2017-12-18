@@ -2,8 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Diagnostics;
-using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Logging;
@@ -19,15 +17,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
         {
             CloudQueue queue = new CloudQueue(new Uri("https://test.queue.core.windows.net/testqueue"));
             CloudQueue poisonQueue = new CloudQueue(new Uri("https://test.queue.core.windows.net/poisonqueue"));
-            TestTraceWriter trace = new TestTraceWriter(TraceLevel.Verbose);
             ILoggerFactory loggerFactory = new LoggerFactory();
             loggerFactory.AddProvider(new TestLoggerProvider());
             JobHostQueuesConfiguration queuesConfig = new JobHostQueuesConfiguration();
 
-            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(queue, trace, loggerFactory, queuesConfig, poisonQueue);
+            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(queue, loggerFactory, queuesConfig, poisonQueue);
 
             Assert.Same(queue, context.Queue);
-            Assert.Same(trace, context.Trace);
             Assert.Same(poisonQueue, context.PoisonQueue);
             Assert.NotNull(context.Logger);
 

@@ -1,16 +1,16 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
-using System.Diagnostics;
-using System.Globalization;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
+using System;
+using System.Diagnostics;
+using System.Globalization;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Queues
 {
@@ -25,7 +25,6 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
     {
         private readonly CloudQueue _queue;
         private readonly CloudQueue _poisonQueue;
-        private readonly TraceWriter _trace;
         private readonly ILogger _logger;
 
         /// <summary>
@@ -41,7 +40,6 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
 
             _queue = context.Queue;
             _poisonQueue = context.PoisonQueue;
-            _trace = context.Trace;
             _logger = context.Logger;
 
             MaxDequeueCount = context.MaxDequeueCount;
@@ -152,7 +150,6 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
         protected virtual async Task CopyMessageToPoisonQueueAsync(CloudQueueMessage message, CloudQueue poisonQueue, CancellationToken cancellationToken)
         {
             string msg = string.Format(CultureInfo.InvariantCulture, "Message has reached MaxDequeueCount of {0}. Moving message to queue '{1}'.", MaxDequeueCount, poisonQueue.Name);
-            _trace.Warning(msg, TraceSource.Execution);
             _logger?.LogWarning(msg);
 
             await AddMessageAndCreateIfNotExistsAsync(poisonQueue, message, cancellationToken);

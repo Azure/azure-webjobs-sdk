@@ -49,21 +49,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 throw new ArgumentNullException("context");
             }
 
-            TraceWriter trace = context.Trace;
+            ILogger logger = _loggerFactory.CreateLogger(LogCategories.CreateFunctionUserCategory(context.ValueContext.FunctionContext.MethodName));
+            TraceWriter trace = new LoggerTraceWriter(logger);
 
-            // If logger functionality is enabled, wrap an ILogger
-            if (_loggerFactory != null)
-            {
-                ILogger logger = _loggerFactory.CreateLogger(LogCategories.Function);
-                trace = new CompositeTraceWriter(new[] { trace, new LoggerTraceWriter(context.Trace.Level, logger) }, null, context.Trace.Level);
-            }
+            object tracer = trace;
 
-            object tracer = null;
-            if (_parameter.ParameterType == typeof(TraceWriter))
-            {
-                tracer = trace;
-            }
-            else
+            if (_parameter.ParameterType == typeof(TextWriter))
             {
                 // bind to an adapter
                 tracer = TextWriterTraceAdapter.Synchronized(trace);

@@ -4,8 +4,6 @@
 using System;
 using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
@@ -18,7 +16,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     {
         private readonly StringBuilder _text;
         private readonly TraceWriter _traceWriter;
-        
+
         private TextWriterTraceAdapter(TraceWriter traceWriter)
             : base(CultureInfo.InvariantCulture)
         {
@@ -60,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
             for (int i = 1; i <= Environment.NewLine.Length; i++)
             {
-                if (_text[_text.Length - i] != Environment.NewLine[Environment.NewLine.Length - i]) 
+                if (_text[_text.Length - i] != Environment.NewLine[Environment.NewLine.Length - i])
                 {
                     return false;
                 }
@@ -68,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
             return true;
         }
-        
+
         public override void Flush()
         {
             if (_text.Length > 0)

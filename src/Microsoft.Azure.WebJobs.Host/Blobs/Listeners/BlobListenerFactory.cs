@@ -26,7 +26,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private readonly IContextSetter<IBlobWrittenWatcher> _blobWrittenWatcherSetter;
         private readonly IContextSetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherSetter;
         private readonly ISharedContextProvider _sharedContextProvider;
-        private readonly TraceWriter _trace;
         private readonly ILoggerFactory _loggerFactory;
         private readonly string _functionId;
         private readonly IStorageAccount _hostAccount;
@@ -43,7 +42,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             IContextSetter<IBlobWrittenWatcher> blobWrittenWatcherSetter,
             IContextSetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherSetter,
             ISharedContextProvider sharedContextProvider,
-            TraceWriter trace,
             ILoggerFactory loggerFactory,
             string functionId,
             IStorageAccount hostAccount,
@@ -53,92 +51,21 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             ITriggeredFunctionExecutor executor,
             SingletonManager singletonManager)
         {
-            if (hostIdProvider == null)
-            {
-                throw new ArgumentNullException("hostIdProvider");
-            }
-
-            if (queueConfiguration == null)
-            {
-                throw new ArgumentNullException("queueConfiguration");
-            }
-
-            if (blobsConfiguration == null)
-            {
-                throw new ArgumentNullException("blobsConfiguration");
-            }
-
-            if (exceptionHandler == null)
-            {
-                throw new ArgumentNullException("exceptionHandler");
-            }
-
-            if (blobWrittenWatcherSetter == null)
-            {
-                throw new ArgumentNullException("blobWrittenWatcherSetter");
-            }
-
-            if (messageEnqueuedWatcherSetter == null)
-            {
-                throw new ArgumentNullException("messageEnqueuedWatcherSetter");
-            }
-
-            if (sharedContextProvider == null)
-            {
-                throw new ArgumentNullException("sharedContextProvider");
-            }
-
-            if (trace == null)
-            {
-                throw new ArgumentNullException("trace");
-            }
-
-            if (hostAccount == null)
-            {
-                throw new ArgumentNullException("hostAccount");
-            }
-
-            if (dataAccount == null)
-            {
-                throw new ArgumentNullException("dataAccount");
-            }
-
-            if (container == null)
-            {
-                throw new ArgumentNullException("container");
-            }
-
-            if (input == null)
-            {
-                throw new ArgumentNullException("input");
-            }
-
-            if (executor == null)
-            {
-                throw new ArgumentNullException("executor");
-            }
-
-            if (singletonManager == null)
-            {
-                throw new ArgumentNullException("singletonManager");
-            }
-
-            _hostIdProvider = hostIdProvider;
-            _queueConfiguration = queueConfiguration;
-            _blobsConfiguration = blobsConfiguration;
-            _exceptionHandler = exceptionHandler;
-            _blobWrittenWatcherSetter = blobWrittenWatcherSetter;
-            _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter;
-            _sharedContextProvider = sharedContextProvider;
-            _trace = trace;
+            _hostIdProvider = hostIdProvider ?? throw new ArgumentNullException(nameof(hostIdProvider));
+            _queueConfiguration = queueConfiguration ?? throw new ArgumentNullException(nameof(queueConfiguration));
+            _blobsConfiguration = blobsConfiguration ?? throw new ArgumentNullException(nameof(blobsConfiguration));
+            _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
+            _blobWrittenWatcherSetter = blobWrittenWatcherSetter ?? throw new ArgumentNullException(nameof(blobWrittenWatcherSetter));
+            _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter ?? throw new ArgumentNullException(nameof(messageEnqueuedWatcherSetter));
+            _sharedContextProvider = sharedContextProvider ?? throw new ArgumentNullException(nameof(sharedContextProvider));
             _loggerFactory = loggerFactory;
             _functionId = functionId;
-            _hostAccount = hostAccount;
-            _dataAccount = dataAccount;
-            _container = container;
-            _input = input;
-            _executor = executor;
-            _singletonManager = singletonManager;
+            _hostAccount = hostAccount ?? throw new ArgumentNullException(nameof(hostAccount));
+            _dataAccount = dataAccount ?? throw new ArgumentNullException(nameof(dataAccount));
+            _container = container ?? throw new ArgumentNullException(nameof(container));
+            _input = input ?? throw new ArgumentNullException(nameof(input));
+            _executor = executor ?? throw new ArgumentNullException(nameof(executor));
+            _singletonManager = singletonManager ?? throw new ArgumentNullException(nameof(singletonManager));
         }
 
         public async Task<IListener> CreateAsync(CancellationToken cancellationToken)
@@ -172,7 +99,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             // notification queue and dispatch to the target job function.
             SharedBlobQueueListener sharedBlobQueueListener = _sharedContextProvider.GetOrCreateInstance<SharedBlobQueueListener>(
                 new SharedBlobQueueListenerFactory(_hostAccount, sharedQueueWatcher, hostBlobTriggerQueue,
-                    _queueConfiguration, _exceptionHandler, _trace, _loggerFactory, sharedBlobListener.BlobWritterWatcher));
+                    _queueConfiguration, _exceptionHandler, _loggerFactory, sharedBlobListener.BlobWritterWatcher));
             var queueListener = new BlobListener(sharedBlobQueueListener);
 
             // determine which client to use for the poison queue

@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -11,9 +10,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
-using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Triggers;
-using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -35,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                 Mock<IFunctionExecutor> executorMock = new Mock<IFunctionExecutor>(MockBehavior.Strict);
 
                 IFunctionIndexCollector stubIndex = new Mock<IFunctionIndexCollector>().Object;
-                
+
                 FunctionIndexer indexer = new FunctionIndexer(
                     new Mock<ITriggerBindingProvider>(MockBehavior.Strict).Object,
                     new Mock<IBindingProvider>(MockBehavior.Strict).Object,
@@ -43,7 +40,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                     executorMock.Object,
                     extensionsMock.Object,
                     new SingletonManager(),
-                    new TestTraceWriter(TraceLevel.Verbose),
                     null);
 
                 Assert.Throws<FunctionIndexingException>(() => indexer.IndexMethodAsync(method, stubIndex, CancellationToken.None).GetAwaiter().GetResult());

@@ -126,7 +126,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "StorageAccountAttribute",
                 "DisableAttribute",
                 "TimeoutAttribute",
-                "TraceLevelAttribute",
                 "ODataFilterResolutionPolicy",
                 "FunctionNameAttribute"
             };
@@ -210,7 +209,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IArgumentBindingProvider`1",
                 "SingletonConfiguration",
                 "TraceWriter",
-                "JobHostTraceConfiguration",
                 "StorageClientFactory",
                 "StorageClientFactoryContext",
                 "BindingDataProvider",
@@ -265,7 +263,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
                 "ITelemetryClientFactory",
                 "DefaultTelemetryClientFactory",
-                "ApplicationInsightsLoggerExtensions"
+                "ApplicationInsightsLoggerExtensions",
+                "ApplicationInsightsLoggerProvider"
             };
 
             AssertPublicTypes(expected, assembly);

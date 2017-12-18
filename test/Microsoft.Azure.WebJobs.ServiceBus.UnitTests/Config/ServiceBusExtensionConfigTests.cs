@@ -1,7 +1,6 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System.Diagnostics;
 using System.Linq;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
@@ -35,8 +34,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
             ExtensionConfigContext context = new ExtensionConfigContext
             {
                 Config = config,
-                Trace = new TestTraceWriter(TraceLevel.Verbose)
             };
+
             serviceBusExtensionConfig.Initialize(context);
 
             // ensure the ServiceBusTriggerAttributeBindingProvider was registered

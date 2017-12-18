@@ -40,18 +40,12 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             IStorageQueue poisonQueue,
             ITriggerExecutor<IStorageQueueMessage> triggerExecutor,
             IWebJobsExceptionHandler exceptionHandler,
-            TraceWriter trace,
             ILoggerFactory loggerFactory,
             SharedQueueWatcher sharedWatcher,
             IQueueConfiguration queueConfiguration,
             QueueProcessor queueProcessor = null,
             TimeSpan? maxPollingInterval = null)
         {
-            if (trace == null)
-            {
-                throw new ArgumentNullException("trace");
-            }
-
             if (queueConfiguration == null)
             {
                 throw new ArgumentNullException("queueConfiguration");
@@ -88,7 +82,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             EventHandler<PoisonMessageEventArgs> poisonMessageEventHandler = _sharedWatcher != null ? OnMessageAddedToPoisonQueue : (EventHandler<PoisonMessageEventArgs>)null;
             _queueProcessor = queueProcessor ?? CreateQueueProcessor(
                 _queue.SdkObject, _poisonQueue != null ? _poisonQueue.SdkObject : null,
-                trace, loggerFactory, _queueConfiguration, poisonMessageEventHandler);
+                loggerFactory, _queueConfiguration, poisonMessageEventHandler);
 
             TimeSpan maximumInterval = _queueProcessor.MaxPollingInterval;
             if (maxPollingInterval.HasValue && maximumInterval > maxPollingInterval.Value)
@@ -310,10 +304,10 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             }
         }
 
-        internal static QueueProcessor CreateQueueProcessor(CloudQueue queue, CloudQueue poisonQueue, TraceWriter trace, ILoggerFactory loggerFactory,
+        internal static QueueProcessor CreateQueueProcessor(CloudQueue queue, CloudQueue poisonQueue, ILoggerFactory loggerFactory,
             IQueueConfiguration queueConfig, EventHandler<PoisonMessageEventArgs> poisonQueueMessageAddedHandler)
         {
-            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(queue, trace, loggerFactory, queueConfig, poisonQueue);
+            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(queue, loggerFactory, queueConfig, poisonQueue);
 
             QueueProcessor queueProcessor = null;
             if (HostQueueNames.IsHostQueue(queue.Name) &&

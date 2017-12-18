@@ -47,7 +47,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             var services = new ServiceProviderWrapper(config);
 
-            var consoleProvider = services.GetService<IConsoleProvider>();
             var nameResolver = services.GetService<INameResolver>();
             IWebJobsExceptionHandler exceptionHandler = services.GetService<IWebJobsExceptionHandler>();
             IQueueConfiguration queueConfiguration = services.GetService<IQueueConfiguration>();
@@ -87,11 +86,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             services.AddService(blobWrittenWatcherAccessor);
             ISharedContextProvider sharedContextProvider = new SharedContextProvider();
 
-            // Create a wrapper TraceWriter that delegates to both the user 
-            // TraceWriters specified via config (if present), as well as to Console
-            TraceWriter trace = new ConsoleTraceWriter(config.Tracing, consoleProvider.Out);
-            services.AddService<TraceWriter>(trace);
-
             // Add built-in extensions 
             var metadataProvider = new JobHostMetadataProvider(deferredGetter);
             metadataProvider.AddAttributesFromAssembly(typeof(TableAttribute).Assembly);
@@ -110,10 +104,17 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 config.AddExtension(new BlobTriggerExtensionConfig());
             }
 
+            ILoggerFactory loggerFactory = services.GetService<ILoggerFactory>();
+
+            if (loggerFactory == null)
+            {
+                loggerFactory = new LoggerFactory();
+                services.AddService<ILoggerFactory>(loggerFactory);
+            }
+
             ExtensionConfigContext context = new ExtensionConfigContext
             {
                 Config = config,
-                Trace = trace,
                 PerHostServices = services
             };
             InvokeExtensionConfigProviders(context);
@@ -122,14 +123,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             if (singletonManager == null)
             {
-                var logger = config.LoggerFactory?.CreateLogger(LogCategories.Singleton);
+                var logger = loggerFactory?.CreateLogger(LogCategories.Singleton);
 
                 IDistributedLockManager lockManager = services.GetService<IDistributedLockManager>();
                 if (lockManager == null)
                 {
                     lockManager = new BlobLeaseDistributedLockManager(
                         storageAccountProvider,
-                        trace,
                         logger);
                     services.AddService<IDistributedLockManager>(lockManager);
                 }
@@ -137,25 +137,24 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 singletonManager = new SingletonManager(
                     lockManager,
                     config.Singleton,
-                    trace,
                     exceptionHandler,
-                    config.LoggerFactory,
+                    loggerFactory,
                     hostIdProvider,
                     services.GetService<INameResolver>());
                 services.AddService<SingletonManager>(singletonManager);
             }
 
             IExtensionRegistry extensions = services.GetExtensions();
-            services.AddService<SharedQueueHandler>(new SharedQueueHandler(storageAccountProvider, hostIdProvider, exceptionHandler, trace,
-                                                    config.LoggerFactory, queueConfiguration, sharedContextProvider, messageEnqueuedWatcherAccessor));
+            services.AddService<SharedQueueHandler>(new SharedQueueHandler(storageAccountProvider, hostIdProvider, exceptionHandler, 
+                config.LoggerFactory, queueConfiguration, sharedContextProvider, messageEnqueuedWatcherAccessor));
             ITriggerBindingProvider triggerBindingProvider = DefaultTriggerBindingProvider.Create(nameResolver,
                 storageAccountProvider, extensionTypeLocator, hostIdProvider, queueConfiguration, blobsConfiguration, exceptionHandler,
-                messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor, sharedContextProvider, extensions, singletonManager, trace, config.LoggerFactory);
+                messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor, sharedContextProvider, extensions, singletonManager, loggerFactory);
             services.AddService<ITriggerBindingProvider>(triggerBindingProvider);
 
             if (bindingProvider == null)
             {
-                bindingProvider = DefaultBindingProvider.Create(nameResolver, config.LoggerFactory, storageAccountProvider, extensionTypeLocator, blobWrittenWatcherAccessor, extensions);
+                bindingProvider = DefaultBindingProvider.Create(nameResolver, loggerFactory, storageAccountProvider, extensionTypeLocator, blobWrittenWatcherAccessor, extensions);
                 services.AddService<IBindingProvider>(bindingProvider);
             }
                         
@@ -201,7 +200,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             IQueueConfiguration queueConfiguration = services.GetService<IQueueConfiguration>();
             var blobsConfiguration = config.Blobs;
 
-            TraceWriter trace = services.GetService<TraceWriter>();
             IAsyncCollector<FunctionInstanceLogEntry> registeredFunctionEventCollector = services.GetService<IAsyncCollector<FunctionInstanceLogEntry>>();
 
             if (registeredFunctionEventCollector != null && aggregator != null)
@@ -234,14 +232,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 if (hasFastTableHook && noDashboardStorage)
                 {
-                    var loggerProvider = new FastTableLoggerProvider(trace);
+                    var loggerProvider = new FastTableLoggerProvider(loggerFactory);
                     hostInstanceLoggerProvider = loggerProvider;
                     functionInstanceLoggerProvider = loggerProvider;
                     functionOutputLoggerProvider = loggerProvider;
                 }
                 else
                 {
-                    var loggerProvider = new DefaultLoggerProvider(storageAccountProvider, trace);
+                    var loggerProvider = new DefaultLoggerProvider(storageAccountProvider, loggerFactory);
                     hostInstanceLoggerProvider = loggerProvider;
                     functionInstanceLoggerProvider = loggerProvider;
                     functionOutputLoggerProvider = loggerProvider;
@@ -260,12 +258,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 IFunctionInstanceLogger functionInstanceLogger = await functionInstanceLoggerProvider.GetAsync(combinedCancellationToken);
                 IFunctionOutputLogger functionOutputLogger = await functionOutputLoggerProvider.GetAsync(combinedCancellationToken);
 
+                loggerFactory.AddProvider(new FunctionOutputLoggerProvider());
+
                 if (functionExecutor == null)
                 {
                     var extensionRegistry = config.GetService<IExtensionRegistry>();
                     var globalFunctionFilters = extensionRegistry.GetFunctionFilters();
 
-                    functionExecutor = new FunctionExecutor(functionInstanceLogger, functionOutputLogger, exceptionHandler, trace, functionEventCollector, loggerFactory, globalFunctionFilters);
+                    functionExecutor = new FunctionExecutor(functionInstanceLogger, functionOutputLogger, exceptionHandler, functionEventCollector, loggerFactory, globalFunctionFilters);
                     services.AddService(functionExecutor);
                 }
 
@@ -278,8 +278,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         activator,
                         functionExecutor,
                         extensions,
-                        singletonManager,
-                        trace,
+                        singletonManager,                        
                         loggerFactory,
                         hostSharedQueue);
 
@@ -288,7 +287,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
 
                 IFunctionIndex functions = await functionIndexProvider.GetAsync(combinedCancellationToken);
-                IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), singletonManager, activator, nameResolver, trace, loggerFactory);
+                IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), singletonManager, activator, nameResolver, loggerFactory);
 
                 IFunctionExecutor hostCallExecutor;
                 IListener listener;
@@ -318,14 +317,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     IStorageQueueClient dashboardQueueClient = dashboardAccount.CreateQueueClient();
                     IStorageQueue sharedQueue = dashboardQueueClient.GetQueueReference(sharedQueueName);
                     IListenerFactory sharedQueueListenerFactory = new HostMessageListenerFactory(sharedQueue,
-                        queueConfiguration, exceptionHandler, trace, loggerFactory, functions,
+                        queueConfiguration, exceptionHandler, loggerFactory, functions,
                         functionInstanceLogger, functionExecutor);
 
                     Guid hostInstanceId = Guid.NewGuid();
                     string instanceQueueName = HostQueueNames.GetHostQueueName(hostInstanceId.ToString("N"));
                     IStorageQueue instanceQueue = dashboardQueueClient.GetQueueReference(instanceQueueName);
                     IListenerFactory instanceQueueListenerFactory = new HostMessageListenerFactory(instanceQueue,
-                        queueConfiguration, exceptionHandler, trace, loggerFactory, functions,
+                        queueConfiguration, exceptionHandler, loggerFactory, functions,
                         functionInstanceLogger, functionExecutor);
 
                     HeartbeatDescriptor heartbeatDescriptor = new HeartbeatDescriptor
@@ -375,7 +374,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 if (config.UsingDevelopmentSettings)
                 {
                     string msg = "Development settings applied";
-                    trace.Verbose(msg);
                     startupLogger?.LogDebug(msg);
                 }
 
@@ -384,7 +382,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     string msg = string.Format("No job functions found. Try making your job classes and methods public. {0}",
                         Constants.ExtensionInitializationMessage);
 
-                    trace.Warning(msg, Host.TraceSource.Indexing);
                     startupLogger?.LogWarning(msg);
                 }
                 else
@@ -397,7 +394,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         functionsTrace.AppendLine(descriptor.FullName);
                     }
                     string msg = functionsTrace.ToString();
-                    trace.Info(msg, Host.TraceSource.Indexing);
                     startupLogger?.LogInformation(msg);
                 }
 
@@ -405,7 +401,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     functions,
                     hostCallExecutor,
                     listener,
-                    trace,
                     functionEventCollector,
                     loggerFactory);
             }

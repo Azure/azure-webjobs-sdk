@@ -22,5 +22,10 @@ namespace Microsoft.Azure.WebJobs.Logging
         /// A key identifying the event starting with the current scope
         /// </summary>
         public const string Event = "MS_Event";
+
+        /// <summary>
+        /// A key identifying the current host instance.
+        /// </summary>
+        public const string HostInstanceId = "MS_HostInstanceId";
     }
 }

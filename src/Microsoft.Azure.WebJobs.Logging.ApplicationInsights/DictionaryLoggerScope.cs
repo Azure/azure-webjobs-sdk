@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading;
 
-namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
+namespace Microsoft.Azure.WebJobs.Logging
 {
     internal class DictionaryLoggerScope
     {

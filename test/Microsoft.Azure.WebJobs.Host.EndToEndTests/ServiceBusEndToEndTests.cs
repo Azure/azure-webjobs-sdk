@@ -3,20 +3,17 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Azure.ServiceBus;
+using Microsoft.Azure.ServiceBus.Core;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.ServiceBus;
-using Microsoft.Azure.ServiceBus;
+using Microsoft.Extensions.Logging;
 using Xunit;
-using System.Text;
-using Microsoft.Azure.ServiceBus.InteropExtensions; // TODO:
-using Microsoft.Azure.ServiceBus.Core;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
@@ -44,11 +41,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private RandomNameResolver _nameResolver;
         private string _secondaryConnectionString;
 
+        TestLoggerProvider _loggerProvider = new TestLoggerProvider();
+        LoggerFactory _loggerFactory = new LoggerFactory();
+
         public ServiceBusEndToEndTests()
         {
             _serviceBusConfig = new ServiceBusConfiguration();
             _nameResolver = new RandomNameResolver();
             _secondaryConnectionString = AmbientConnectionStringProvider.Instance.GetConnectionString("ServiceBusSecondary");
+
+            _loggerFactory.AddProvider(_loggerProvider);
         }
 
         [Fact]
@@ -82,7 +84,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 var count = await CleanUpEntity(BinderQueueName);
 
                 Assert.Equal(numMessages * 3, count);
-            } finally
+            }
+            finally
             {
                 await Cleanup();
             }
@@ -93,25 +96,31 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             try
             {
-                TestTraceWriter trace = new TestTraceWriter(TraceLevel.Info);
+                // Pass in a separate LoggerFactory to the CusomtMessagingProvider to make validation easier.
+                LoggerFactory loggerFactory = new LoggerFactory();
+                TestLoggerProvider loggerProvider = new TestLoggerProvider();
+                loggerFactory.AddProvider(loggerProvider);
+
                 _serviceBusConfig = new ServiceBusConfiguration();
-                _serviceBusConfig.MessagingProvider = new CustomMessagingProvider(_serviceBusConfig, trace);
+                _serviceBusConfig.MessagingProvider = new CustomMessagingProvider(_serviceBusConfig, loggerFactory);
 
                 JobHostConfiguration config = new JobHostConfiguration()
                 {
                     NameResolver = _nameResolver,
-                    TypeLocator = new FakeTypeLocator(typeof(ServiceBusTestJobs))
+                    TypeLocator = new FakeTypeLocator(typeof(ServiceBusTestJobs)),
+                    LoggerFactory = _loggerFactory
                 };
-                config.Tracing.Tracers.Add(trace);
+
                 config.UseServiceBus(_serviceBusConfig);
                 JobHost host = new JobHost(config);
 
                 await ServiceBusEndToEndInternal(typeof(ServiceBusTestJobs), host: host);
 
                 // in addition to verifying that our custom processor was called, we're also
-                // verifying here that extensions can log to the TraceWriter
-                Assert.Equal(4, trace.Traces.Count(p => p.Message.Contains("Custom processor Begin called!")));
-                Assert.Equal(4, trace.Traces.Count(p => p.Message.Contains("Custom processor End called!")));
+                // verifying here that extensions can log
+                IEnumerable<LogMessage> messages = loggerProvider.GetAllLogMessages();
+                Assert.Equal(4, messages.Count(p => p.FormattedMessage.Contains("Custom processor Begin called!")));
+                Assert.Equal(4, messages.Count(p => p.FormattedMessage.Contains("Custom processor End called!")));
             }
             finally
             {
@@ -124,16 +133,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             try
             {
-                TestTraceWriter trace = new TestTraceWriter(TraceLevel.Info);
                 _serviceBusConfig = new ServiceBusConfiguration();
-                _serviceBusConfig.MessagingProvider = new CustomMessagingProvider(_serviceBusConfig, trace);
+                _serviceBusConfig.MessagingProvider = new CustomMessagingProvider(_serviceBusConfig, null);
 
                 JobHostConfiguration config = new JobHostConfiguration()
                 {
                     NameResolver = _nameResolver,
                     TypeLocator = new FakeTypeLocator(typeof(ServiceBusTestJobs))
                 };
-                config.Tracing.Tracers.Add(trace);
                 config.UseServiceBus(_serviceBusConfig);
                 JobHost host = new JobHost(config);
 
@@ -197,7 +204,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             JobHostConfiguration config = new JobHostConfiguration()
             {
                 NameResolver = _nameResolver,
-                TypeLocator = new FakeTypeLocator(jobContainerType)
+                TypeLocator = new FakeTypeLocator(jobContainerType),
+                LoggerFactory = _loggerFactory
             };
             config.UseServiceBus(_serviceBusConfig);
             return new JobHost(config);
@@ -205,15 +213,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private async Task ServiceBusEndToEndInternal(Type jobContainerType, JobHost host = null, bool verifyLogs = true)
         {
-            StringWriter consoleOutput = null;
-            TextWriter hold = null;
-            if (verifyLogs)
-            {
-                consoleOutput = new StringWriter();
-                hold = Console.Out;
-                Console.SetOut(consoleOutput);
-            }
-
             if (host == null)
             {
                 host = CreateHost(jobContainerType);
@@ -241,43 +240,44 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             if (verifyLogs)
             {
-                Console.SetOut(hold);
+                IEnumerable<LogMessage> consoleOutput = _loggerProvider.GetAllLogMessages();
 
-                string[] consoleOutputLines = consoleOutput.ToString().Trim().Split(new string[] { Environment.NewLine }, StringSplitOptions.None).OrderBy(p => p).ToArray();
+                Assert.False(consoleOutput.Any(p => p.Level == LogLevel.Error));
+
+                string[] consoleOutputLines = consoleOutput
+                    .Where(p => p.FormattedMessage != null)
+                    .SelectMany(p => p.FormattedMessage.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries))
+                    .OrderBy(p => p)
+                    .ToArray();
+
                 string[] expectedOutputLines = new string[]
                 {
                     "Found the following functions:",
-                    string.Format("{0}.SBQueue2SBQueue", jobContainerType.FullName),
-                    string.Format("{0}.MultipleAccounts", jobContainerType.FullName),
-                    string.Format("{0}.SBQueue2SBTopic", jobContainerType.FullName),
-                    string.Format("{0}.SBTopicListener1", jobContainerType.FullName),
-                    string.Format("{0}.SBTopicListener2", jobContainerType.FullName),
+                    $"{jobContainerType.FullName}.SBQueue2SBQueue",
+                    $"{jobContainerType.FullName}.MultipleAccounts",
+                    $"{jobContainerType.FullName}.SBQueue2SBTopic",
+                    $"{jobContainerType.FullName}.SBTopicListener1",
+                    $"{jobContainerType.FullName}.SBTopicListener2",
+                    $"{jobContainerType.FullName}.ServiceBusBinderTest",
                     "Job host started",
-                    string.Format("Executing '{0}.SBQueue2SBQueue' (Reason='New ServiceBus message detected on '{1}'.', Id=", jobContainerType.Name, FirstQueueName),
-                    string.Format("Executed '{0}.SBQueue2SBQueue' (Succeeded, Id=", jobContainerType.Name),
-                    string.Format("Executing '{0}.SBQueue2SBTopic' (Reason='New ServiceBus message detected on '{1}'.', Id=", jobContainerType.Name, SecondQueueName),
-                    string.Format("Executed '{0}.SBQueue2SBTopic' (Succeeded, Id=", jobContainerType.Name),
-                    string.Format("Executing '{0}.SBTopicListener1' (Reason='New ServiceBus message detected on '{1}'.', Id=", jobContainerType.Name, EntityNameHelper.FormatSubscriptionPath(TopicName, TopicSubscriptionName1)),
-                    string.Format("Executed '{0}.SBTopicListener1' (Succeeded, Id=", jobContainerType.Name),
-                    string.Format("Executing '{0}.SBTopicListener2' (Reason='New ServiceBus message detected on '{1}'.', Id=", jobContainerType.Name, EntityNameHelper.FormatSubscriptionPath(TopicName, TopicSubscriptionName2)),
-                    string.Format("Executed '{0}.SBTopicListener2' (Succeeded, Id=", jobContainerType.Name),
+                    $"Executing '{jobContainerType.Name}.SBQueue2SBQueue' (Reason='New ServiceBus message detected on '{FirstQueueName}'.', Id=",
+                    $"Executed '{jobContainerType.Name}.SBQueue2SBQueue' (Succeeded, Id=",
+                    $"Executing '{jobContainerType.Name}.SBQueue2SBTopic' (Reason='New ServiceBus message detected on '{SecondQueueName}'.', Id=",
+                    $"Executed '{jobContainerType.Name}.SBQueue2SBTopic' (Succeeded, Id=",
+                    $"Executing '{jobContainerType.Name}.SBTopicListener1' (Reason='New ServiceBus message detected on '{EntityNameHelper.FormatSubscriptionPath(TopicName, TopicSubscriptionName1)}'.', Id=",
+                    $"Executed '{jobContainerType.Name}.SBTopicListener1' (Succeeded, Id=",
+                    $"Executing '{jobContainerType.Name}.SBTopicListener2' (Reason='New ServiceBus message detected on '{EntityNameHelper.FormatSubscriptionPath(TopicName, TopicSubscriptionName2)}'.', Id=",
+                    $"Executed '{jobContainerType.Name}.SBTopicListener2' (Succeeded, Id=",
                     "Job host stopped"
                 }.OrderBy(p => p).ToArray();
 
-                bool hasError = consoleOutputLines.Any(p => p.Contains("Function had errors"));
-                if (!hasError)
-                {
-                    for (int i = 0; i < expectedOutputLines.Length; i++)
-                    {
-                        Assert.StartsWith(expectedOutputLines[i], consoleOutputLines[i]);
-                    }
-                }
+                Action<string>[] inspectors = expectedOutputLines.Select<string, Action<string>>(p => (string m) => m.StartsWith(p)).ToArray();
+                Assert.Collection(consoleOutputLines, inspectors);
             }
         }
 
         private async Task WriteQueueMessage(string connectionString, string queueName, string message)
         {
-
             QueueClient queueClient = new QueueClient(connectionString, queueName);
             await queueClient.SendAsync(new Message(Encoding.UTF8.GetBytes(message)));
             await queueClient.CloseAsync();
@@ -387,13 +387,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private class CustomMessagingProvider : MessagingProvider
         {
             private readonly ServiceBusConfiguration _config;
-            private readonly TraceWriter _trace;
+            private readonly ILogger _logger;
 
-            public CustomMessagingProvider(ServiceBusConfiguration config, TraceWriter trace)
+            public CustomMessagingProvider(ServiceBusConfiguration config, ILoggerFactory loggerFactory)
                 : base(config)
             {
                 _config = config;
-                _trace = trace;
+                _logger = loggerFactory?.CreateLogger("CusomMessagingProvider");
             }
 
             public override MessageProcessor CreateMessageProcessor(string entityPath, string connectionName = null)
@@ -406,28 +406,28 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 var messageReceiver = new MessageReceiver(_config.ConnectionString, entityPath);
 
-                return new CustomMessageProcessor(messageReceiver, options, _trace);
+                return new CustomMessageProcessor(messageReceiver, options, _logger);
             }
 
             private class CustomMessageProcessor : MessageProcessor
             {
-                private readonly TraceWriter _trace;
+                private readonly ILogger _logger;
 
-                public CustomMessageProcessor(MessageReceiver messageReceiver, MessageHandlerOptions messageOptions, TraceWriter trace)
+                public CustomMessageProcessor(MessageReceiver messageReceiver, MessageHandlerOptions messageOptions, ILogger logger)
                     : base(messageReceiver, messageOptions)
                 {
-                    _trace = trace;
+                    _logger = logger;
                 }
 
                 public override async Task<bool> BeginProcessingMessageAsync(Message message, CancellationToken cancellationToken)
                 {
-                    _trace.Info("Custom processor Begin called!");
+                    _logger?.LogInformation("Custom processor Begin called!");
                     return await base.BeginProcessingMessageAsync(message, cancellationToken);
                 }
 
                 public override async Task CompleteProcessingMessageAsync(Message message, Executors.FunctionResult result, CancellationToken cancellationToken)
                 {
-                    _trace.Info("Custom processor End called!");
+                    _logger?.LogInformation("Custom processor End called!");
                     await base.CompleteProcessingMessageAsync(message, result, cancellationToken);
                 }
             }

@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Diagnostics;
 using System.Reflection;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Queues;
@@ -34,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             _binding = new QueueTriggerBinding("parameterName", queue, argumentBinding,
                 new Mock<IQueueConfiguration>(MockBehavior.Strict).Object, exceptionHandler,
                 new Mock<IContextSetter<IMessageEnqueuedWatcher>>(MockBehavior.Strict).Object,
-                new SharedContextProvider(), new TestTraceWriter(System.Diagnostics.TraceLevel.Verbose), null);
+                new SharedContextProvider(), null);
         }
 
         [Theory]

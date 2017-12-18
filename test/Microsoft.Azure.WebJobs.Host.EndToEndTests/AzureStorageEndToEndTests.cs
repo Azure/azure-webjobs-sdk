@@ -3,12 +3,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
@@ -349,9 +347,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // use a custom processor so we can grab the Id and PopReceipt
             hostConfig.Queues.QueueProcessorFactory = new TestQueueProcessorFactory();
 
-            var tracer = new TestTraceWriter(System.Diagnostics.TraceLevel.Verbose);
-            hostConfig.Tracing.Tracers.Add(tracer);
-
             ILoggerFactory loggerFactory = new LoggerFactory();
             TestLoggerProvider loggerProvider = new TestLoggerProvider();
             loggerFactory.AddProvider(loggerProvider);
@@ -417,10 +412,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // Make sure the functions were called correctly
             Assert.Equal(1, _badMessage1Calls);
             Assert.Equal(0, _badMessage2Calls);
-
-            // make sure the exception is being properly logged
-            var errors = tracer.Traces.Where(t => t.Level == System.Diagnostics.TraceLevel.Error);
-            Assert.True(errors.All(t => t.Exception.InnerException.InnerException is FormatException));
 
             // Validate Logger
             var loggerErrors = loggerProvider.GetAllLogMessages().Where(l => l.Level == Microsoft.Extensions.Logging.LogLevel.Error);

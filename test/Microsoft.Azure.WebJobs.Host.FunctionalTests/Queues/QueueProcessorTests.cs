@@ -3,14 +3,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.Storage.Queue;
-using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Moq;
 using Xunit;
@@ -23,17 +20,15 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private CloudQueue _queue;
         private CloudQueue _poisonQueue;
         private QueueProcessor _processor;
-        private TraceWriter _trace;
         private JobHostQueuesConfiguration _queuesConfig;
 
         public QueueProcessorTests(TestFixture fixture)
         {
-            _trace = new TestTraceWriter(TraceLevel.Verbose);
             _queue = fixture.Queue;
             _poisonQueue = fixture.PoisonQueue;
 
             _queuesConfig = new JobHostQueuesConfiguration();
-            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, _trace, null, _queuesConfig);
+            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, null, _queuesConfig);
             _processor = new QueueProcessor(context);
         }
 
@@ -48,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 VisibilityTimeout = TimeSpan.FromSeconds(30),
                 MaxPollingInterval = TimeSpan.FromSeconds(15)
             };
-            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, _trace, null, config);
+            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, null, config);
             QueueProcessor localProcessor = new QueueProcessor(context);
 
             Assert.Equal(config.BatchSize, localProcessor.BatchSize);
@@ -96,7 +91,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         [Fact]
         public async Task CompleteProcessingMessageAsync_MaxDequeueCountExceeded_MovesMessageToPoisonQueue()
         {
-            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, _trace, null, _queuesConfig, _poisonQueue);
+            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, null, _queuesConfig, _poisonQueue);
             QueueProcessor localProcessor = new QueueProcessor(context);
 
             bool poisonMessageHandlerCalled = false;
@@ -136,7 +131,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 // configure a non-zero visibility timeout
                 VisibilityTimeout = TimeSpan.FromMinutes(5)
             };
-            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, _trace, null, queuesConfig, _poisonQueue);
+            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, null, queuesConfig, _poisonQueue);
             QueueProcessor localProcessor = new QueueProcessor(context);
 
             string messageContent = Guid.NewGuid().ToString();

@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Storage.Blob;
-using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
@@ -24,24 +23,21 @@ namespace Microsoft.Azure.WebJobs.Host
 
         private readonly IStorageAccountProvider _accountProvider;
         private readonly ConcurrentDictionary<string, IStorageBlobDirectory> _lockDirectoryMap = new ConcurrentDictionary<string, IStorageBlobDirectory>(StringComparer.OrdinalIgnoreCase);
-                
-        private readonly TraceWriter _trace;
+
         private readonly ILogger _logger;
-      
+
         public BlobLeaseDistributedLockManager(
             IStorageAccountProvider accountProvider,
-            TraceWriter trace,
             ILogger logger)
         {
             _accountProvider = accountProvider;
-            _trace = trace;
             _logger = logger;
         }
 
         public Task<bool> RenewAsync(IDistributedLock lockHandle, CancellationToken cancellationToken)
         {
             SingletonLockHandle singletonLockHandle = (SingletonLockHandle)lockHandle;
-            return singletonLockHandle.RenewAsync(_trace, _logger, cancellationToken);
+            return singletonLockHandle.RenewAsync(_logger, cancellationToken);
         }
 
         public async Task ReleaseLockAsync(IDistributedLock lockHandle, CancellationToken cancellationToken)
@@ -94,7 +90,7 @@ namespace Microsoft.Azure.WebJobs.Host
             }
 
             SingletonLockHandle lockHandle = new SingletonLockHandle(leaseId, lockId, lockBlob, lockPeriod);
-                                    
+
             return lockHandle;
         }
 
@@ -122,8 +118,8 @@ namespace Microsoft.Azure.WebJobs.Host
         }
 
         private static async Task<string> TryAcquireLeaseAsync(
-            IStorageBlockBlob blob, 
-            TimeSpan leasePeriod, 
+            IStorageBlockBlob blob,
+            TimeSpan leasePeriod,
             string proposedLeaseId,
             CancellationToken cancellationToken)
         {
@@ -253,7 +249,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
             Debug.Assert(isContainerNotFoundException);
 
-            var container = blob.Container;            
+            var container = blob.Container;
             try
             {
                 await container.CreateIfNotExistsAsync(cancellationToken);
@@ -338,7 +334,7 @@ namespace Microsoft.Azure.WebJobs.Host
             public string LockId { get; internal set; }
             public IStorageBlockBlob Blob { get; internal set; }
 
-            public async Task<bool> RenewAsync(TraceWriter trace, ILogger logger, CancellationToken cancellationToken)
+            public async Task<bool> RenewAsync(ILogger logger, CancellationToken cancellationToken)
             {
                 try
                 {
@@ -360,7 +356,6 @@ namespace Microsoft.Azure.WebJobs.Host
                     {
                         string msg = string.Format(CultureInfo.InvariantCulture, "Singleton lock renewal failed for blob '{0}' with error code {1}.",
                             this.LockId, FormatErrorCode(exception));
-                        trace.Warning(msg, source: TraceSource.Execution);
                         logger?.LogWarning(msg);
                         return false; // The next execution should occur more quickly (try to renew the lease before it expires).
                     }
@@ -374,14 +369,13 @@ namespace Microsoft.Azure.WebJobs.Host
 
                         string msg = string.Format(CultureInfo.InvariantCulture, "Singleton lock renewal failed for blob '{0}' with error code {1}. The last successful renewal completed at {2} ({3} milliseconds ago) with a duration of {4} milliseconds. The lease period was {5} milliseconds.",
                             this.LockId, FormatErrorCode(exception), lastRenewalFormatted, millisecondsSinceLastSuccess, lastRenewalMilliseconds, leasePeriodMilliseconds);
-                        trace.Error(msg);
                         logger?.LogError(msg);
-                        
+
                         // If we've lost the lease or cannot re-establish it, we want to fail any
                         // in progress function execution
                         throw;
                     }
-                }                
+                }
             }
 
             private static string FormatErrorCode(StorageException exception)
@@ -402,7 +396,7 @@ namespace Microsoft.Azure.WebJobs.Host
                 }
 
                 return message;
-            }            
+            }
         }
     }
 }

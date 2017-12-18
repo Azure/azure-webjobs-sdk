@@ -22,7 +22,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private readonly IStorageQueue _hostBlobTriggerQueue;
         private readonly IQueueConfiguration _queueConfiguration;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
-        private readonly TraceWriter _trace;
         private readonly IBlobWrittenWatcher _blobWrittenWatcher;
         private readonly IStorageAccount _hostAccount;
         private readonly ILoggerFactory _loggerFactory;
@@ -33,53 +32,16 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             IStorageQueue hostBlobTriggerQueue,
             IQueueConfiguration queueConfiguration,
             IWebJobsExceptionHandler exceptionHandler,
-            TraceWriter trace,
             ILoggerFactory loggerFactory,
             IBlobWrittenWatcher blobWrittenWatcher)
         {
-            if (hostAccount == null)
-            {
-                throw new ArgumentNullException("hostAccount");
-            }
-
-            if (sharedQueueWatcher == null)
-            {
-                throw new ArgumentNullException("sharedQueueWatcher");
-            }
-
-            if (hostBlobTriggerQueue == null)
-            {
-                throw new ArgumentNullException("hostBlobTriggerQueue");
-            }
-
-            if (queueConfiguration == null)
-            {
-                throw new ArgumentNullException("queueConfiguration");
-            }
-
-            if (exceptionHandler == null)
-            {
-                throw new ArgumentNullException("exceptionHandler");
-            }
-
-            if (trace == null)
-            {
-                throw new ArgumentNullException("trace");
-            }
-
-            if (blobWrittenWatcher == null)
-            {
-                throw new ArgumentNullException("blobWrittenWatcher");
-            }
-
-            _hostAccount = hostAccount;
-            _sharedQueueWatcher = sharedQueueWatcher;
-            _hostBlobTriggerQueue = hostBlobTriggerQueue;
-            _queueConfiguration = queueConfiguration;
-            _exceptionHandler = exceptionHandler;
-            _trace = trace;
+            _hostAccount = hostAccount ?? throw new ArgumentNullException(nameof(hostAccount));
+            _sharedQueueWatcher = sharedQueueWatcher ?? throw new ArgumentNullException(nameof(sharedQueueWatcher));
+            _hostBlobTriggerQueue = hostBlobTriggerQueue ?? throw new ArgumentNullException(nameof(hostBlobTriggerQueue));
+            _queueConfiguration = queueConfiguration ?? throw new ArgumentNullException(nameof(queueConfiguration));
+            _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
             _loggerFactory = loggerFactory;
-            _blobWrittenWatcher = blobWrittenWatcher;
+            _blobWrittenWatcher = blobWrittenWatcher ?? throw new ArgumentNullException(nameof(blobWrittenWatcher));
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
@@ -97,12 +59,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 
             // this special queue bypasses the QueueProcessorFactory - we don't want people to
             // override this
-            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_hostBlobTriggerQueue.SdkObject, _trace, _loggerFactory,
+            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_hostBlobTriggerQueue.SdkObject, _loggerFactory,
                 _queueConfiguration, defaultPoisonQueue.SdkObject);
             SharedBlobQueueProcessor queueProcessor = new SharedBlobQueueProcessor(context, triggerExecutor);
 
-            IListener listener = new QueueListener(_hostBlobTriggerQueue, defaultPoisonQueue, triggerExecutor,
-                _exceptionHandler, _trace, _loggerFactory, _sharedQueueWatcher, _queueConfiguration, queueProcessor);
+            IListener listener = new QueueListener(_hostBlobTriggerQueue, defaultPoisonQueue, triggerExecutor, _exceptionHandler, _loggerFactory,
+                _sharedQueueWatcher, _queueConfiguration, queueProcessor);
 
             return new SharedBlobQueueListener(listener, triggerExecutor);
         }

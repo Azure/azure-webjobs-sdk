@@ -1,11 +1,10 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
-using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage.Queue;
+using System;
 
 namespace Microsoft.Azure.WebJobs.Host.Queues
 {
@@ -17,24 +16,18 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
         /// <summary>
         /// Constructs a new instance.
         /// </summary>
-        /// <param name="queue">The <see cref="CloudQueue"/> the <see cref="QueueProcessor"/> will operate on.</param>
-        /// <param name="trace">The <see cref="TraceWriter"/> to trace events to.</param>
+        /// <param name="queue">The <see cref="CloudQueue"/> the <see cref="QueueProcessor"/> will operate on.</param>        
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> to create an <see cref="ILogger"/> from.</param>
         /// <param name="poisonQueue">The queue to move messages to when unable to process a message after the maximum dequeue count has been exceeded. May be null.</param>
-        public QueueProcessorFactoryContext(CloudQueue queue, TraceWriter trace, ILoggerFactory loggerFactory, CloudQueue poisonQueue = null)
+        public QueueProcessorFactoryContext(CloudQueue queue, ILoggerFactory loggerFactory, CloudQueue poisonQueue = null)
         {
             if (queue == null)
             {
                 throw new ArgumentNullException("queue");
             }
-            if (trace == null)
-            {
-                throw new ArgumentNullException("trace");
-            }
 
             Queue = queue;
             PoisonQueue = poisonQueue;
-            Trace = trace;
             Logger = loggerFactory?.CreateLogger(LogCategories.CreateTriggerCategory("Queue"));
         }
 
@@ -42,12 +35,11 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
         /// Constructs a new instance.
         /// </summary>
         /// <param name="queue">The <see cref="CloudQueue"/> the <see cref="QueueProcessor"/> will operate on.</param>
-        /// <param name="trace">The <see cref="TraceWriter"/> to write to.</param>
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> to create an <see cref="ILogger"/> from.</param>
         /// <param name="queueConfiguration">The queue configuration.</param>
         /// <param name="poisonQueue">The queue to move messages to when unable to process a message after the maximum dequeue count has been exceeded. May be null.</param>
-        internal QueueProcessorFactoryContext(CloudQueue queue, TraceWriter trace, ILoggerFactory loggerFactory, IQueueConfiguration queueConfiguration, CloudQueue poisonQueue = null)
-            : this(queue, trace, loggerFactory, poisonQueue)
+        internal QueueProcessorFactoryContext(CloudQueue queue, ILoggerFactory loggerFactory, IQueueConfiguration queueConfiguration, CloudQueue poisonQueue = null)
+            : this(queue, loggerFactory, poisonQueue)
         {
             BatchSize = queueConfiguration.BatchSize;
             MaxDequeueCount = queueConfiguration.MaxDequeueCount;
@@ -66,11 +58,6 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
         /// May be null.
         /// </summary>
         public CloudQueue PoisonQueue { get; private set; }
-
-        /// <summary>
-        /// Gets the <see cref="TraceWriter"/>.
-        /// </summary>
-        public TraceWriter Trace { get; private set; }
 
         /// <summary>
         /// Gets the <see cref="ILogger"/>. 

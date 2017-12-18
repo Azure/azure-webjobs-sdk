@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,68 +18,58 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
     public class ILoggerTests
     {
-        TestTraceWriter _trace = new TestTraceWriter(TraceLevel.Info);
         TestLoggerProvider _loggerProvider = new TestLoggerProvider();
 
         [Fact]
         public void ILogger_Succeeds()
         {
+            string functionName = nameof(ILoggerFunctions.ILogger);
             using (JobHost host = new JobHost(CreateConfig()))
             {
-                var method = typeof(ILoggerFunctions).GetMethod(nameof(ILoggerFunctions.ILogger));
+                var method = typeof(ILoggerFunctions).GetMethod(functionName);
                 host.Call(method);
             }
 
-            // Five loggers are the startup, singleton, executor, results, and function loggers
+            // Six loggers are the startup, singleton, results, function and function.user
             Assert.Equal(5, _loggerProvider.CreatedLoggers.Count);
 
-            var functionLogger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Function).Single();
+            var functionLogger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.CreateFunctionUserCategory(functionName)).Single();
             var resultsLogger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Results).Single();
 
             Assert.Equal(2, functionLogger.LogMessages.Count);
             var infoMessage = functionLogger.LogMessages[0];
             var errorMessage = functionLogger.LogMessages[1];
-            
-            // These get the {OriginalFormat} property as well as the 3 from TraceWriter
+
+            // These get the {OriginalFormat} property as well as the 2 from structured log properties
             Assert.Equal(3, infoMessage.State.Count());
             Assert.Equal(3, errorMessage.State.Count());
 
             Assert.Equal(1, resultsLogger.LogMessages.Count);
-           
+
             // TODO: beef these verifications up
         }
 
         [Fact]
         public void TraceWriter_ForwardsTo_ILogger()
         {
+            string functionName = nameof(ILoggerFunctions.TraceWriterWithILoggerFactory);
             using (JobHost host = new JobHost(CreateConfig()))
             {
-                var method = typeof(ILoggerFunctions).GetMethod(nameof(ILoggerFunctions.TraceWriterWithILoggerFactory));
+                var method = typeof(ILoggerFunctions).GetMethod(functionName);
                 host.Call(method);
             }
 
-            Assert.Equal(5, _trace.Traces.Count);
-            // The third and fourth traces are from our function
-            var infoLog = _trace.Traces[2];
-            var errorLog = _trace.Traces[3];
-
-            Assert.Equal("This should go to the ILogger", infoLog.Message);
-            Assert.Null(infoLog.Exception);
-            Assert.Equal(3, infoLog.Properties.Count);
-
-            Assert.Equal("This should go to the ILogger with an Exception!", errorLog.Message);
-            Assert.IsType<InvalidOperationException>(errorLog.Exception);
-            Assert.Equal(3, errorLog.Properties.Count);
-
-            // Five loggers are the startup, singleton, executor, results, and function loggers
+            // Five loggers are the startup, singleton, results, function and function.user
             Assert.Equal(5, _loggerProvider.CreatedLoggers.Count);
-            var functionLogger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Function).Single();
+            var functionLogger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.CreateFunctionUserCategory(functionName)).Single();
             Assert.Equal(2, functionLogger.LogMessages.Count);
             var infoMessage = functionLogger.LogMessages[0];
             var errorMessage = functionLogger.LogMessages[1];
-            // These get the {OriginalFormat} property as well as the 3 from TraceWriter
-            Assert.Equal(4, infoMessage.State.Count());
-            Assert.Equal(4, errorMessage.State.Count());
+
+            // These get the {OriginalFormat} only
+            Assert.Single(infoMessage.State);
+            Assert.Single(errorMessage.State);
+
             //TODO: beef these verifications up
         }
 
@@ -195,7 +184,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var config = new JobHostConfiguration();
             config.AddService(accountProvider);
             config.TypeLocator = new FakeTypeLocator(new[] { typeof(ILoggerFunctions) });
-            config.Tracing.Tracers.Add(_trace);
             config.AddService(factory);
             config.Aggregator.IsEnabled = false; // disable aggregator
 

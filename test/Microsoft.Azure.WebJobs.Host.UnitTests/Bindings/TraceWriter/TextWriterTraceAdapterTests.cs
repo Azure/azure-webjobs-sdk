@@ -7,7 +7,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
-using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Moq;
 using Xunit;
 
@@ -95,8 +94,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
         public async Task TestMultipleThreads()
         {
             // This validates a bug where writing from multiple threads throws an exception.             
-            TestTraceWriter trace = new TestTraceWriter(TraceLevel.Verbose);
-            TextWriter adapter = TextWriterTraceAdapter.Synchronized(trace);
+            List<TraceEvent> traces = new List<TraceEvent>();
+            _mockTraceWriter
+                .Setup(p => p.Trace(It.IsAny<TraceEvent>()))
+                .Callback<TraceEvent>((e) => traces.Add(e));
+
+            TextWriter adapter = TextWriterTraceAdapter.Synchronized(_mockTraceWriter.Object);
 
             // Start Tasks to write
             List<Task> tasks = new List<Task>();
@@ -107,7 +110,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
 
             await Task.WhenAll(tasks);
 
-            Assert.Equal(1000, trace.Traces.Count);
+            Assert.Equal(1000, traces.Count);
         }
     }
 }

@@ -3,14 +3,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Microsoft.Azure.WebJobs.Host.Storage.Queue;
-using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Moq;
@@ -30,7 +28,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Queues
         [Fact]
         public async Task UpdatedQueueMessage_RetainsOriginalProperties()
         {
-            TraceWriter trace = new TestTraceWriter(TraceLevel.Verbose);
             CloudQueue queue = Fixture.CreateNewQueue();
             CloudQueue poisonQueue = Fixture.CreateNewQueue();
 
@@ -45,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Queues
             await queue.AddMessageAsync(message, null, null, null, null, CancellationToken.None);
             CloudQueueMessage messageFromCloud = await queue.GetMessageAsync();
 
-            QueueListener listener = new QueueListener(storageQueue, storagePoisonQueue, mockTriggerExecutor.Object, new WebJobsExceptionHandler(), trace,
+            QueueListener listener = new QueueListener(storageQueue, storagePoisonQueue, mockTriggerExecutor.Object, new WebJobsExceptionHandler(),
                 null, null, queuesConfig);
 
             mockTriggerExecutor
@@ -74,7 +71,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Queues
         [Fact]
         public async Task RenewedQueueMessage_DeletesCorrectly()
         {
-            TraceWriter trace = new TestTraceWriter(TraceLevel.Verbose);
             CloudQueue queue = Fixture.CreateNewQueue();
 
             StorageQueue storageQueue = new StorageQueue(new StorageQueueClient(Fixture.QueueClient), queue);
@@ -85,7 +81,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Queues
             await queue.AddMessageAsync(message, null, null, null, null, CancellationToken.None);
             CloudQueueMessage messageFromCloud = await queue.GetMessageAsync();
 
-            QueueListener listener = new QueueListener(storageQueue, null, mockTriggerExecutor.Object, new WebJobsExceptionHandler(), trace,
+            QueueListener listener = new QueueListener(storageQueue, null, mockTriggerExecutor.Object, new WebJobsExceptionHandler(),
                 null, null, new JobHostQueuesConfiguration());
             listener.MinimumVisibilityRenewalInterval = TimeSpan.FromSeconds(1);
 

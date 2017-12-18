@@ -19,7 +19,6 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         private readonly IStorageQueue _queue;
         private readonly IQueueConfiguration _queueConfiguration;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
-        private readonly TraceWriter _trace;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IFunctionIndexLookup _functionLookup;
         private readonly IFunctionInstanceLogger _functionInstanceLogger;
@@ -28,55 +27,19 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         public HostMessageListenerFactory(IStorageQueue queue,
             IQueueConfiguration queueConfiguration,
             IWebJobsExceptionHandler exceptionHandler,
-            TraceWriter trace,
             ILoggerFactory loggerFactory,
             IFunctionIndexLookup functionLookup,
             IFunctionInstanceLogger functionInstanceLogger,
             IFunctionExecutor executor)
         {
-            if (queue == null)
-            {
-                throw new ArgumentNullException("queue");
-            }
+            _queue = queue ?? throw new ArgumentNullException(nameof(queue));
+            _queueConfiguration = queueConfiguration ?? throw new ArgumentNullException(nameof(queueConfiguration));
+            _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
+            _functionLookup = functionLookup ?? throw new ArgumentNullException(nameof(functionLookup));
+            _functionInstanceLogger = functionInstanceLogger ?? throw new ArgumentNullException(nameof(functionInstanceLogger));
+            _executor = executor ?? throw new ArgumentNullException(nameof(executor));
 
-            if (queueConfiguration == null)
-            {
-                throw new ArgumentNullException("queueConfiguration");
-            }
-
-            if (exceptionHandler == null)
-            {
-                throw new ArgumentNullException("exceptionHandler");
-            }
-
-            if (trace == null)
-            {
-                throw new ArgumentNullException("trace");
-            }
-
-            if (functionLookup == null)
-            {
-                throw new ArgumentNullException("functionLookup");
-            }
-
-            if (functionInstanceLogger == null)
-            {
-                throw new ArgumentNullException("functionInstanceLogger");
-            }
-
-            if (executor == null)
-            {
-                throw new ArgumentNullException("executor");
-            }
-
-            _queue = queue;
-            _queueConfiguration = queueConfiguration;
-            _exceptionHandler = exceptionHandler;
-            _trace = trace;
             _loggerFactory = loggerFactory;
-            _functionLookup = functionLookup;
-            _functionInstanceLogger = functionInstanceLogger;
-            _executor = executor;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
@@ -92,7 +55,6 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
                 poisonQueue: null,
                 triggerExecutor: triggerExecutor,
                 exceptionHandler: _exceptionHandler,
-                trace: _trace,
                 loggerFactory: _loggerFactory,
                 sharedWatcher: null,
                 queueConfiguration: _queueConfiguration,

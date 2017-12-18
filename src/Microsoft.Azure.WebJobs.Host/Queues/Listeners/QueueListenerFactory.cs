@@ -23,7 +23,6 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IContextSetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherSetter;
         private readonly ISharedContextProvider _sharedContextProvider;
-        private readonly TraceWriter _trace;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ITriggeredFunctionExecutor _executor;
 
@@ -32,54 +31,18 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             IWebJobsExceptionHandler exceptionHandler,
             IContextSetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherSetter,
             ISharedContextProvider sharedContextProvider,
-            TraceWriter trace,
             ILoggerFactory loggerFactory,
             ITriggeredFunctionExecutor executor)
         {
-            if (queue == null)
-            {
-                throw new ArgumentNullException("queue");
-            }
+            _queue = queue ?? throw new ArgumentNullException(nameof(queue));
+            _queueConfiguration = queueConfiguration ?? throw new ArgumentNullException(nameof(queueConfiguration));
+            _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
+            _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter ?? throw new ArgumentNullException(nameof(messageEnqueuedWatcherSetter));
+            _sharedContextProvider = sharedContextProvider ?? throw new ArgumentNullException(nameof(sharedContextProvider));
+            _executor = executor ?? throw new ArgumentNullException(nameof(executor));
 
-            if (queueConfiguration == null)
-            {
-                throw new ArgumentNullException("queueConfiguration");
-            }
-
-            if (exceptionHandler == null)
-            {
-                throw new ArgumentNullException("exceptionHandler");
-            }
-
-            if (messageEnqueuedWatcherSetter == null)
-            {
-                throw new ArgumentNullException("messageEnqueuedWatcherSetter");
-            }
-
-            if (sharedContextProvider == null)
-            {
-                throw new ArgumentNullException("sharedContextProvider");
-            }
-
-            if (trace == null)
-            {
-                throw new ArgumentNullException("trace");
-            }
-
-            if (executor == null)
-            {
-                throw new ArgumentNullException("executor");
-            }
-
-            _queue = queue;
             _poisonQueue = CreatePoisonQueueReference(queue.ServiceClient, queue.Name);
-            _queueConfiguration = queueConfiguration;
-            _exceptionHandler = exceptionHandler;
-            _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter;
-            _sharedContextProvider = sharedContextProvider;
-            _trace = trace;
             _loggerFactory = loggerFactory;
-            _executor = executor;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
@@ -90,8 +53,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             SharedQueueWatcher sharedWatcher = _sharedContextProvider.GetOrCreateInstance<SharedQueueWatcher>(
                 new SharedQueueWatcherFactory(_messageEnqueuedWatcherSetter));
 
-            IListener listener = new QueueListener(_queue, _poisonQueue, triggerExecutor,
-                _exceptionHandler, _trace, _loggerFactory, sharedWatcher, _queueConfiguration);
+            IListener listener = new QueueListener(_queue, _poisonQueue, triggerExecutor, _exceptionHandler, _loggerFactory,
+                sharedWatcher, _queueConfiguration);
 
             return Task.FromResult(listener);
         }

@@ -3,8 +3,8 @@
 
 using System;
 using System.Collections.Generic;
-using Microsoft.Azure.WebJobs.Description;
 using System.Linq;
+using Microsoft.Azure.WebJobs.Description;
 
 namespace Microsoft.Azure.WebJobs.Host.Config
 {
@@ -27,10 +27,6 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         /// </summary>
         public JobHostConfiguration Config { get; set; }
 
-        /// <summary>
-        /// Gets or sets the <see cref="TraceWriter"/>.
-        /// </summary>
-        public TraceWriter Trace { get; set; }
 
         internal override ConverterManager ConverterManager
         {
@@ -53,8 +49,8 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             if (webhook == null)
             {
                 return null;
-            }            
-            return webhook.GetUrl(this.Current);            
+            }
+            return webhook.GetUrl(this.Current);
         }
 
         // Ensure that multiple attempts bind to the same attribute, they get the same rule object. 
@@ -89,7 +85,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         {
             var bindingAttrs = typeof(TAttribute).GetCustomAttributes(typeof(BindingAttribute), false);
             if (!bindingAttrs.Any())
-            {                
+            {
                 throw new InvalidOperationException($"Can't add a binding rule for '{typeof(TAttribute).Name}' since it is missing the a {typeof(BindingAttribute).Name}");
             }
 
@@ -112,5 +108,5 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             }
             _updates.Clear();
         }
-    }    
+    }
 }

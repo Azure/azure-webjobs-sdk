@@ -33,7 +33,6 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly IFunctionExecutor _executor;
         private readonly HashSet<Assembly> _jobAttributeAssemblies;
         private readonly SingletonManager _singletonManager;
-        private readonly TraceWriter _trace;
         private readonly ILogger _logger;
         private readonly SharedQueueHandler _sharedQueue;
 
@@ -44,7 +43,6 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             IFunctionExecutor executor,
             IExtensionRegistry extensions,
             SingletonManager singletonManager,
-            TraceWriter trace,
             ILoggerFactory loggerFactory,
             INameResolver nameResolver = null,
             SharedQueueHandler sharedQueue = null)
@@ -79,11 +77,6 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 throw new ArgumentNullException("singletonManager");
             }
 
-            if (trace == null)
-            {
-                throw new ArgumentNullException("trace");
-            }
-
             _triggerBindingProvider = triggerBindingProvider;
             _bindingProvider = bindingProvider;
             _activator = activator;
@@ -91,7 +84,6 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _singletonManager = singletonManager;
             _jobAttributeAssemblies = GetJobAttributeAssemblies(extensions);
             _nameResolver = nameResolver;
-            _trace = trace;
             _logger = loggerFactory?.CreateLogger(LogCategories.Startup);
             _sharedQueue = sharedQueue;
         }
@@ -106,7 +98,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 }
                 catch (FunctionIndexingException fex)
                 {
-                    fex.TryRecover(_trace, _logger);
+                    fex.TryRecover(_logger);
                     // If recoverable, continue to the rest of the methods.
                     // The method in error simply won't be running in the JobHost.
                     continue;
@@ -312,7 +304,6 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             if (TypeUtility.IsAsyncVoid(method))
             {
                 string msg = $"Function '{method.Name}' is async but does not return a Task. Your function may not run correctly.";
-                _trace.Warning(msg);
                 _logger?.LogWarning(msg);
             }
 
@@ -372,9 +363,6 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         {
             var disabled = HostListenerFactory.IsDisabled(method, nameResolver, jobActivator);
 
-            // Determine the TraceLevel for this function (affecting both Console as well as Dashboard logging)
-            TraceLevelAttribute traceAttribute = TypeUtility.GetHierarchicalAttributeOrNull<TraceLevelAttribute>(method);
-
             bool hasCancellationToken = method.GetParameters().Any(p => p.ParameterType == typeof(CancellationToken));
 
             string logName = method.Name;
@@ -398,7 +386,6 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 ShortName = shortName,
                 IsDisabled = disabled,
                 HasCancellationToken = hasCancellationToken,
-                TraceLevel = traceAttribute?.Level ?? TraceLevel.Verbose,
                 TimeoutAttribute = TypeUtility.GetHierarchicalAttributeOrNull<TimeoutAttribute>(method),
                 SingletonAttributes = method.GetCustomAttributes<SingletonAttribute>(),
                 MethodLevelFilters = method.GetCustomAttributes().OfType<IFunctionFilter>(),

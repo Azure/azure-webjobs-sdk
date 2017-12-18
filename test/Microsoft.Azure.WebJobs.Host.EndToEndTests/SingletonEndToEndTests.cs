@@ -63,7 +63,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // make a bunch of parallel invocations
             int numInvocations = 20;
             List<Task> invokeTasks = new List<Task>();
-            MethodInfo method = typeof(TestJobs).GetMethod("SingletonJob");
+            MethodInfo method = typeof(TestJobs).GetMethod(nameof(TestJobs.SingletonJob));
             for (int i = 0; i < numInvocations; i++)
             {
                 int zone = _rand.Next(3) + 1;
@@ -78,7 +78,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 };
                 invokeTasks.Add(host.CallAsync(method, new { workItem = workItem }));
             }
-            await Task.WhenAll(invokeTasks.ToArray());
+
+            await Task.WhenAll(invokeTasks);
 
             Assert.False(TestJobs.FailureDetected);
             Assert.Equal(numInvocations, TestJobs.JobInvocations[1]);
@@ -389,7 +390,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             public async Task SingletonTriggerJob([QueueTrigger(Queue2Name)] WorkItem workItem)
             {
                 await VerifyLeaseState(
-                    GetType().GetMethod("SingletonTriggerJob"),
+                    GetType().GetMethod(nameof(SingletonTriggerJob)),
                     SingletonScope.Function,
                     string.Format("{0}/{1}", workItem.Region, workItem.Zone),
                     LeaseState.Leased, LeaseStatus.Locked);
@@ -409,7 +410,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             public async Task SingletonJob(WorkItem workItem)
             {
                 await VerifyLeaseState(
-                    GetType().GetMethod("SingletonJob"),
+                    GetType().GetMethod(nameof(SingletonJob)),
                     SingletonScope.Function,
                     "TestValue",
                     LeaseState.Leased, LeaseStatus.Locked);

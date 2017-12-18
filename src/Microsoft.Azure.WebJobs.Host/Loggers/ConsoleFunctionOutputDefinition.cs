@@ -32,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             return new ConsoleFunctionOutputLog();
         }
 
-        public IRecurrentCommand CreateParameterLogUpdateCommand(IReadOnlyDictionary<string, IWatcher> watches, TraceWriter trace, ILogger logger)
+        public IRecurrentCommand CreateParameterLogUpdateCommand(IReadOnlyDictionary<string, IWatcher> watches, ILogger logger)
         {
             return null;
         }

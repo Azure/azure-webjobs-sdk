@@ -37,27 +37,20 @@ namespace Microsoft.Extensions.Logging
         {
             bool succeeded = logEntry.Exception == null;
 
-            // build the string and values
-            string result = succeeded ? "Succeeded" : "Failed";
-            string logString = $"Executed '{{{LogConstants.FullNameKey}}}' ({result}, Id={{{LogConstants.InvocationIdKey}}})";
-            object[] values = new object[]
-            {
-                logEntry.FunctionName,
-                logEntry.FunctionInstanceId
-            };
+            IDictionary<string, object> payload = new Dictionary<string, object>();
+            payload.Add(LogConstants.FullNameKey, logEntry.FunctionName);
+            payload.Add(LogConstants.InvocationIdKey, logEntry.FunctionInstanceId);
+            payload.Add(LogConstants.NameKey, logEntry.LogName);
+            payload.Add(LogConstants.TriggerReasonKey, logEntry.TriggerReason);
+            payload.Add(LogConstants.StartTimeKey, logEntry.StartTime);
+            payload.Add(LogConstants.EndTimeKey, logEntry.EndTime);
+            payload.Add(LogConstants.DurationKey, logEntry.Duration);
+            payload.Add(LogConstants.SucceededKey, succeeded);
 
-            // generate additional payload that is not in the string
-            IDictionary<string, object> properties = new Dictionary<string, object>();
-            properties.Add(LogConstants.NameKey, logEntry.LogName);
-            properties.Add(LogConstants.TriggerReasonKey, logEntry.TriggerReason);
-            properties.Add(LogConstants.StartTimeKey, logEntry.StartTime);
-            properties.Add(LogConstants.EndTimeKey, logEntry.EndTime);
-            properties.Add(LogConstants.DurationKey, logEntry.Duration);
-            properties.Add(LogConstants.SucceededKey, succeeded);
-
-            FormattedLogValuesCollection payload = new FormattedLogValuesCollection(logString, values, new ReadOnlyDictionary<string, object>(properties));
             LogLevel level = succeeded ? LogLevel.Information : LogLevel.Error;
-            logger.Log(level, 0, payload, logEntry.Exception, (s, e) => s.ToString());
+
+            // Only pass the state dictionary; no string message.
+            logger.Log(level, 0, payload, logEntry.Exception, (s, e) => null);
         }
 
         internal static void LogFunctionResultAggregate(this ILogger logger, FunctionResultAggregate resultAggregate)
@@ -66,14 +59,15 @@ namespace Microsoft.Extensions.Logging
             logger.Log(LogLevel.Information, 0, resultAggregate.ToReadOnlyDictionary(), null, (s, e) => null);
         }
 
-        internal static IDisposable BeginFunctionScope(this ILogger logger, IFunctionInstance functionInstance)
+        internal static IDisposable BeginFunctionScope(this ILogger logger, IFunctionInstance functionInstance, Guid hostInstanceId)
         {
             return logger?.BeginScope(
                 new Dictionary<string, object>
                 {
                     [ScopeKeys.FunctionInvocationId] = functionInstance?.Id.ToString(),
                     [ScopeKeys.FunctionName] = functionInstance?.FunctionDescriptor?.LogName,
-                    [ScopeKeys.Event] = LogConstants.FunctionStartEvent
+                    [ScopeKeys.Event] = LogConstants.FunctionStartEvent,
+                    [ScopeKeys.HostInstanceId] = hostInstanceId.ToString()
                 });
         }
     }

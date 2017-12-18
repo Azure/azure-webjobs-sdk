@@ -8,6 +8,7 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Storage.Blob;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Loggers
 {
@@ -19,21 +20,12 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
         private IHostInstanceLogger _hostInstanceLogger;
         private IFunctionInstanceLogger _functionInstanceLogger;
         private IFunctionOutputLogger _functionOutputLogger;
-        private TraceWriter _trace;
+        private ILoggerFactory _loggerFactory;
 
-        public DefaultLoggerProvider(IStorageAccountProvider storageAccountProvider, TraceWriter trace)
+        public DefaultLoggerProvider(IStorageAccountProvider storageAccountProvider, ILoggerFactory loggerFactory)
         {
-            if (storageAccountProvider == null)
-            {
-                throw new ArgumentNullException("storageAccountProvider");
-            }
-            if (trace == null)
-            {
-                throw new ArgumentNullException("trace");
-            }
-
-            _storageAccountProvider = storageAccountProvider;
-            _trace = trace;
+            _storageAccountProvider = storageAccountProvider ?? throw new ArgumentNullException(nameof(storageAccountProvider));
+            _loggerFactory = loggerFactory;
         }
 
         async Task<IHostInstanceLogger> IHostInstanceLoggerProvider.GetAsync(CancellationToken cancellationToken)
@@ -62,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             }
 
             IStorageAccount dashboardAccount = await _storageAccountProvider.GetDashboardAccountAsync(cancellationToken);
-            IFunctionInstanceLogger traceWriterFunctionLogger = new TraceWriterFunctionInstanceLogger(_trace);
+            IFunctionInstanceLogger functionLogger = new FunctionInstanceLogger(_loggerFactory);
 
             if (dashboardAccount != null)
             {
@@ -71,14 +63,14 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
                 IPersistentQueueWriter<PersistentQueueMessage> queueWriter = new PersistentQueueWriter<PersistentQueueMessage>(dashboardBlobClient);
                 PersistentQueueLogger queueLogger = new PersistentQueueLogger(queueWriter);
                 _hostInstanceLogger = queueLogger;
-                _functionInstanceLogger = new CompositeFunctionInstanceLogger(queueLogger, traceWriterFunctionLogger);
+                _functionInstanceLogger = new CompositeFunctionInstanceLogger(queueLogger, functionLogger);
                 _functionOutputLogger = new BlobFunctionOutputLogger(dashboardBlobClient);
             }
             else
             {
                 // No auxillary logging. Logging interfaces are nops or in-memory.
                 _hostInstanceLogger = new NullHostInstanceLogger();
-                _functionInstanceLogger = traceWriterFunctionLogger;
+                _functionInstanceLogger = functionLogger;
                 _functionOutputLogger = new ConsoleFunctionOutputLogger();
             }
 

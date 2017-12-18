@@ -16,19 +16,19 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
 {
     // Disable most SDK logging. Useful when we don't have a storage account and Fast-logging is enabled. 
     // This wires in an output logger to aide in capturing the TextWriter log output in memory and saving to the fast tables. 
-    internal class FastTableLoggerProvider : 
-        IHostInstanceLoggerProvider, 
-        IFunctionInstanceLoggerProvider, 
+    internal class FastTableLoggerProvider :
+        IHostInstanceLoggerProvider,
+        IFunctionInstanceLoggerProvider,
         IFunctionOutputLoggerProvider,
         IFunctionOutputLogger
     {
         private IHostInstanceLogger _hostInstanceLogger;
-        private IFunctionInstanceLogger _traceWriterFunctionLogger;
+        private IFunctionInstanceLogger _functionLogger;
 
-        public FastTableLoggerProvider(TraceWriter trace)
+        public FastTableLoggerProvider(ILoggerFactory loggerFactory)
         {
             _hostInstanceLogger = new NullHostInstanceLogger();
-            _traceWriterFunctionLogger = new TraceWriterFunctionInstanceLogger(trace);
+            _functionLogger = new FunctionInstanceLogger(loggerFactory);
         }
 
         Task<IFunctionOutputLogger> IFunctionOutputLoggerProvider.GetAsync(CancellationToken cancellationToken)
@@ -44,7 +44,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
 
         Task<IFunctionInstanceLogger> IFunctionInstanceLoggerProvider.GetAsync(CancellationToken cancellationToken)
         {
-            return Task.FromResult<IFunctionInstanceLogger>(_traceWriterFunctionLogger);
+            return Task.FromResult<IFunctionInstanceLogger>(_functionLogger);
         }
 
         Task<IFunctionOutputDefinition> IFunctionOutputLogger.CreateAsync(IFunctionInstance instance, CancellationToken cancellationToken)
@@ -103,7 +103,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
                 return this;
             }
 
-            public IRecurrentCommand CreateParameterLogUpdateCommand(IReadOnlyDictionary<string, IWatcher> watches, TraceWriter trace, ILogger logger)
+            public IRecurrentCommand CreateParameterLogUpdateCommand(IReadOnlyDictionary<string, IWatcher> watches, ILogger logger)
             {
                 return null;
             }
@@ -111,18 +111,20 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2213:DisposableFieldsShouldBeDisposed", MessageId = "_writer")]
             [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2213:DisposableFieldsShouldBeDisposed", MessageId = "_ms")]
             public void Dispose()
-            {                
+            {
             }
 
             public Task SaveAndCloseAsync(FunctionInstanceLogEntry item, CancellationToken cancellationToken)
             {
+                _writer.Flush();
+
                 if (item != null)
                 {
                     var str = Encoding.UTF8.GetString(_ms.ToArray());
 
                     // Truncate. 
                     if (str.Length > FunctionInstanceLogEntry.MaxLogOutputLength)
-                    {                        
+                    {
                         // 0123456789
                         // abcdefghij
                         str = str.Substring(0, FunctionInstanceLogEntry.MaxLogOutputLength - 1) + "…";

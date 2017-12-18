@@ -2,16 +2,11 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Storage.Blob;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.Host.Loggers
 {
@@ -47,9 +42,9 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             return UpdateOutputLogCommand.Create(blob);
         }
 
-        public IRecurrentCommand CreateParameterLogUpdateCommand(IReadOnlyDictionary<string, IWatcher> watches, TraceWriter trace, ILogger logger)
+        public IRecurrentCommand CreateParameterLogUpdateCommand(IReadOnlyDictionary<string, IWatcher> watches, ILogger logger)
         {
-            return new UpdateParameterLogCommand(watches, GetBlockBlobReference(_parameterLogBlob), trace, logger);
+            return new UpdateParameterLogCommand(watches, GetBlockBlobReference(_parameterLogBlob), logger);
         }
 
         private IStorageBlockBlob GetBlockBlobReference(LocalBlobDescriptor descriptor)

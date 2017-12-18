@@ -22,15 +22,14 @@ namespace Microsoft.Azure.WebJobs.Host
     /// Encapsulates and manages blob leases for Singleton locks.
     /// </summary>
     internal class SingletonManager
-    {        
+    {
         private readonly INameResolver _nameResolver;
-        private readonly SingletonConfiguration _config;        
+        private readonly SingletonConfiguration _config;
         private readonly ILogger _logger;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IDistributedLockManager _lockManager;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
 
-        private TraceWriter _trace;
         private IHostIdProvider _hostIdProvider;
         private string _hostId;
 
@@ -41,13 +40,12 @@ namespace Microsoft.Azure.WebJobs.Host
         {
         }
 
-        public SingletonManager(IDistributedLockManager lockManager, SingletonConfiguration config,
-            TraceWriter trace, IWebJobsExceptionHandler exceptionHandler, ILoggerFactory loggerFactory, IHostIdProvider hostIdProvider, INameResolver nameResolver = null)
+        public SingletonManager(IDistributedLockManager lockManager, SingletonConfiguration config, IWebJobsExceptionHandler exceptionHandler,
+            ILoggerFactory loggerFactory, IHostIdProvider hostIdProvider, INameResolver nameResolver = null)
         {
             _lockManager = lockManager;
             _nameResolver = nameResolver;
             _config = config;
-            _trace = trace;
             _loggerFactory = loggerFactory;
             _exceptionHandler = exceptionHandler;
             _logger = _loggerFactory?.CreateLogger(LogCategories.Singleton);
@@ -131,7 +129,6 @@ namespace Microsoft.Azure.WebJobs.Host
             renewal.Start();
 
             string msg = string.Format(CultureInfo.InvariantCulture, "Singleton lock acquired ({0})", lockId);
-            _trace.Verbose(msg, source: TraceSource.Execution);
             _logger?.LogDebug(msg);
 
             return new RenewableLockHandle(handle, renewal);
@@ -159,11 +156,10 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 await handle.LeaseRenewalTimer.StopAsync(cancellationToken);
             }
-                        
+
             await _lockManager.ReleaseLockAsync(handle.InnerLock, cancellationToken);
 
             string msg = string.Format(CultureInfo.InvariantCulture, "Singleton lock released ({0})", handle.InnerLock.LockId);
-            _trace.Verbose(msg, source: TraceSource.Execution);
             _logger?.LogDebug(msg);
         }
 
@@ -251,7 +247,7 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 Mode = SingletonMode.Listener
             };
-            return new SingletonListener(null, singletonAttribute, this, innerListener, _trace, _loggerFactory);
+            return new SingletonListener(null, singletonAttribute, this, innerListener, _loggerFactory);
         }
 
         public static SingletonAttribute GetListenerSingletonOrNull(Type listenerType, FunctionDescriptor method)
@@ -322,12 +318,12 @@ namespace Microsoft.Azure.WebJobs.Host
             }
 
             public async Task<TaskSeriesCommandResult> ExecuteAsync(CancellationToken cancellationToken)
-            {                
+            {
                 // Exceptions wil propagate 
                 bool executionSucceeded = await _lockManager.RenewAsync(_lock, cancellationToken);
 
                 TimeSpan delay = _speedupStrategy.GetNextDelay(executionSucceeded: true);
-                return new TaskSeriesCommandResult(wait: Task.Delay(delay));                
+                return new TaskSeriesCommandResult(wait: Task.Delay(delay));
             }
         }
     }

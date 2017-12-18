@@ -10,9 +10,7 @@ using Microsoft.Extensions.Logging;
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
     /// <summary>
-    /// Binding provider handling bindings to both <see cref="TraceWriter"/> and <see cref="TextWriter"/>.
-    /// <remarks>
-    /// </remarks>
+    /// Binding provider handling bindings to <see cref="TraceWriter"/> and <see cref="TextWriter"/>.
     /// </summary>
     internal class TraceWriterBindingProvider : IBindingProvider
     {

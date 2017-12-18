@@ -71,17 +71,11 @@ namespace Microsoft.Azure.WebJobs.Host
         /// Tries to recover by propagating exception through trace pipeline.
         /// Recovers if exception is handled by trace pipeline, else throws.
         /// </summary>
-        /// <param name="trace"></param>
         /// <param name="logger"></param>
-        internal void TryRecover(TraceWriter trace, ILogger logger)
+        internal void TryRecover(ILogger logger)
         {
-            if (trace == null)
-            {
-                throw this;
-            }
+            logger.LogError(0, this, Message);
 
-            trace.Error(Message, this);
-            logger?.LogError(0, this, Message);
             if (!Handled)
             {
                 throw this;

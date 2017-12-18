@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -46,7 +45,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             Mock<IFunctionInstanceFactory> mockInstanceFactory = new Mock<IFunctionInstanceFactory>(MockBehavior.Strict);
             Mock<IListenerFactory> mockListenerFactory = new Mock<IListenerFactory>(MockBehavior.Strict);
             SingletonManager singletonManager = new SingletonManager();
-            TestTraceWriter traceWriter = new TestTraceWriter(TraceLevel.Verbose);
 
             ILoggerFactory loggerFactory = new LoggerFactory();
             TestLoggerProvider loggerProvider = new TestLoggerProvider();
@@ -55,22 +53,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             // create a bunch of function definitions that are disabled
             List<FunctionDefinition> functions = new List<FunctionDefinition>();
             var method = jobType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Static);
-            FunctionDescriptor descriptor = FunctionIndexer.FromMethod(method, DefaultJobActivator.Instance); 
+            FunctionDescriptor descriptor = FunctionIndexer.FromMethod(method, DefaultJobActivator.Instance);
             FunctionDefinition definition = new FunctionDefinition(descriptor, mockInstanceFactory.Object, mockListenerFactory.Object);
             functions.Add(definition);
 
             // Create the composite listener - this will fail if any of the
             // function definitions indicate that they are not disabled
-            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, DefaultJobActivator.Instance, null, traceWriter, loggerFactory);
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, DefaultJobActivator.Instance, null, loggerFactory);
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 
             string expectedMessage = $"Function '{descriptor.ShortName}' is disabled";
-
-            // Validate TraceWriter
-            Assert.Equal(1, traceWriter.Traces.Count);
-            Assert.Equal(TraceLevel.Info, traceWriter.Traces[0].Level);
-            Assert.Equal(TraceSource.Host, traceWriter.Traces[0].Source);
-            Assert.Equal(expectedMessage, traceWriter.Traces[0].Message);
 
             // Validate Logger
             var logMessage = loggerProvider.CreatedLoggers.Single().LogMessages.Single();
@@ -182,8 +174,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             {
             }
 
-        public static void TestJob(
-                [QueueTrigger("test")] string message)
+            public static void TestJob(
+                    [QueueTrigger("test")] string message)
             {
             }
         }

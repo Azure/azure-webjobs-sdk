@@ -1,11 +1,11 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Logging
 {
@@ -19,10 +19,9 @@ namespace Microsoft.Azure.WebJobs.Logging
         /// <summary>
         /// Creates an instance.
         /// </summary>
-        /// <param name="level">The <see cref="TraceLevel"/> to use when filtering logs.</param>
-        /// <param name="logger">The <see cref="ILogger"/> used to log the traces.</param>
-        public LoggerTraceWriter(TraceLevel level, ILogger logger)
-            : base(level)
+        /// <param name="level">The <see cref="TraceLevel"/> to use when filtering logs.</param>        
+        public LoggerTraceWriter(ILogger logger)
+            : base(TraceLevel.Verbose)
         {
             _logger = logger;
         }
@@ -35,14 +34,9 @@ namespace Microsoft.Azure.WebJobs.Logging
                 throw new ArgumentNullException(nameof(traceEvent));
             }
 
-            if (traceEvent.Level > Level)
-            {
-                return;
-            }
-
             LogLevel level = GetLogLevel(traceEvent.Level);
             FormattedLogValuesCollection logState = new FormattedLogValuesCollection(traceEvent.Message, null, new ReadOnlyDictionary<string, object>(traceEvent.Properties));
-            _logger.Log(level, 0, logState, traceEvent.Exception, (s, e) => s.ToString());
+            _logger?.Log(level, 0, logState, traceEvent.Exception, (s, e) => s.ToString());
         }
 
         internal static LogLevel GetLogLevel(TraceLevel traceLevel)
