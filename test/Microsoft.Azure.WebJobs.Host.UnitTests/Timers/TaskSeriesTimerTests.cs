@@ -461,21 +461,30 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
                 Task stop = null;
                 bool executedOnce = false;
                 bool executedTwice = false;
+                Exception caughtException = null;
 
                 ITaskSeriesCommand command = CreateCommand(() =>
                 {
-                    if (!executedOnce)
+                    try
                     {
-                        stop = product.StopAsync(CancellationToken.None);
-                        Assert.True(executedOnceWaitHandle.Set()); // Guard
-                        executedOnce = true;
-                        return new TaskSeriesCommandResult(wait: Task.Delay(0));
+                        if (!executedOnce)
+                        {
+                            stop = product.StopAsync(CancellationToken.None);
+
+                            Assert.True(executedOnceWaitHandle.Set()); // Guard
+                            executedOnce = true;
+                        }
+                        else
+                        {
+                            executedTwice = true;
+                        }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        executedTwice = true;
-                        return new TaskSeriesCommandResult(wait: Task.Delay(0));
+                        caughtException = ex;
                     }
+
+                    return new TaskSeriesCommandResult(wait: Task.Delay(0));
                 });
 
                 using (product = CreateProductUnderTest(command))
@@ -485,8 +494,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
                     // Act
                     bool executed = executedOnceWaitHandle.WaitOne(3000);
 
-                    // Assert
-                    Assert.True(executed); // Guard
+                    // Assert                    
+                    Assert.True(executed, $"{caughtException}"); // Guard
                     Assert.NotNull(stop);
                     stop.GetAwaiter().GetResult();
                     Assert.False(executedTwice);
