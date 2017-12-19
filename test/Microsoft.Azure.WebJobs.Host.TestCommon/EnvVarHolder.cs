@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using Microsoft.Azure.WebJobs.Host;
 using System;
 
 namespace Microsoft.Azure.WebJobs
@@ -10,6 +11,8 @@ namespace Microsoft.Azure.WebJobs
     {
         public static IDisposable Set(string name, string value)
         {
+            ConfigurationUtility.Reset();
+
             string prevStorage = Environment.GetEnvironmentVariable(name);
 
             Environment.SetEnvironmentVariable(name, value);
@@ -29,6 +32,7 @@ namespace Microsoft.Azure.WebJobs
             public void Dispose()
             {
                 Environment.SetEnvironmentVariable(_name, _value);
+                ConfigurationUtility.Reset();
             }
         }
     }

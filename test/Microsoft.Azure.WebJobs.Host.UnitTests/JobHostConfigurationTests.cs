@@ -19,17 +19,8 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
-    public class JobHostConfigurationTests : IDisposable
+    public class JobHostConfigurationTests
     {
-        public JobHostConfigurationTests()
-        {
-            ConfigurationUtility.Reset();
-        }
-        void IDisposable.Dispose()
-        {
-            ConfigurationUtility.Reset();
-        }
-
         [Fact]
         public void ConstructorDefaults()
         {

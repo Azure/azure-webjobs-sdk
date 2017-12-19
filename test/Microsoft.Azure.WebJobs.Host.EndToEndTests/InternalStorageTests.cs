@@ -35,7 +35,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var account1 = CloudStorageAccount.Parse(acs);
             var client = account1.CreateCloudBlobClient();
             var container = client.GetContainerReference(containerName);
-            await container.CreateIfNotExistsAsync();
+            await container.CreateIfNotExistsAsync(); // this will throw if acs is bad
 
             var now = DateTime.UtcNow;
             var sig = container.GetSharedAccessSignature(new SharedAccessBlobPolicy
@@ -46,7 +46,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             });
 
             var fakeSasUri = container.Uri + sig;
-
+            
             // Set env to the SAS container and clear out all other storage. 
             using (EnvVarHolder.Set("AzureWebJobsInternalSasBlobContainer", fakeSasUri))
             using (EnvVarHolder.Set("AzureWebJobsStorage", null))
