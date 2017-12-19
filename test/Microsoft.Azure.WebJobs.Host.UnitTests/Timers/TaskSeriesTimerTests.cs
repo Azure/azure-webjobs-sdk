@@ -483,7 +483,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
                     product.Start();
 
                     // Act
-                    bool executed = executedOnceWaitHandle.WaitOne(1000);
+                    bool executed = executedOnceWaitHandle.WaitOne(3000);
 
                     // Assert
                     Assert.True(executed); // Guard
