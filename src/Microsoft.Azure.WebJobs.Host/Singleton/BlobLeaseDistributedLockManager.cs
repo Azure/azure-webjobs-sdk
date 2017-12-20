@@ -17,20 +17,17 @@ using Microsoft.WindowsAzure.Storage.Blob;
 namespace Microsoft.Azure.WebJobs.Host
 {
     // Provides a blob-leased based implementation 
-    internal class BlobLeaseDistributedLockManager : IDistributedLockManager
+    internal abstract class BlobLeaseDistributedLockManager : IDistributedLockManager
     {
         internal const string FunctionInstanceMetadataKey = "FunctionInstance";
 
-        private readonly IStorageAccountProvider _accountProvider;
         private readonly ConcurrentDictionary<string, IStorageBlobDirectory> _lockDirectoryMap = new ConcurrentDictionary<string, IStorageBlobDirectory>(StringComparer.OrdinalIgnoreCase);
 
         private readonly ILogger _logger;
 
         public BlobLeaseDistributedLockManager(
-            IStorageAccountProvider accountProvider,
             ILogger logger)
         {
-            _accountProvider = accountProvider;
             _logger = logger;
         }
 
@@ -94,6 +91,8 @@ namespace Microsoft.Azure.WebJobs.Host
             return lockHandle;
         }
 
+        protected abstract IStorageBlobContainer GetContainer(string accountName);
+
         internal IStorageBlobDirectory GetLockDirectory(string accountName)
         {
             if (string.IsNullOrEmpty(accountName))
@@ -104,13 +103,9 @@ namespace Microsoft.Azure.WebJobs.Host
             IStorageBlobDirectory storageDirectory = null;
             if (!_lockDirectoryMap.TryGetValue(accountName, out storageDirectory))
             {
-                Task<IStorageAccount> task = _accountProvider.GetStorageAccountAsync(accountName, CancellationToken.None);
-                IStorageAccount storageAccount = task.Result;
-                // singleton requires block blobs, cannot be premium
-                storageAccount.AssertTypeOneOf(StorageAccountType.GeneralPurpose, StorageAccountType.BlobOnly);
-                IStorageBlobClient blobClient = storageAccount.CreateBlobClient();
-                storageDirectory = blobClient.GetContainerReference(HostContainerNames.Hosts)
-                                       .GetDirectoryReference(HostDirectoryNames.SingletonLocks);
+                IStorageBlobContainer container = this.GetContainer(accountName);
+
+                storageDirectory = container.GetDirectoryReference(HostDirectoryNames.SingletonLocks);
                 _lockDirectoryMap[accountName] = storageDirectory;
             }
 
@@ -396,6 +391,49 @@ namespace Microsoft.Azure.WebJobs.Host
                 }
 
                 return message;
+            }
+        }
+        // BlobLease manager based on a SAS connection to a container. 
+        // This lets many hosts share a singel storage container. 
+        public class SasContainer : BlobLeaseDistributedLockManager
+        {
+            private readonly StorageBlobContainer _container;
+
+            public SasContainer(
+                CloudBlobContainer container,
+                ILogger logger) : base(logger)
+            {
+                _container = new StorageBlobContainer(null, container);
+            }
+
+            protected override IStorageBlobContainer GetContainer(string accountName)
+            {
+                return _container;
+            }
+        }
+
+        // BlobLease manager based on a storage connection string. 
+        public class DedicatedStorage : BlobLeaseDistributedLockManager
+        {
+            private readonly IStorageAccountProvider _accountProvider;
+
+            public DedicatedStorage(
+                IStorageAccountProvider accountProvider,
+                ILogger logger) : base(logger)
+            {
+                _accountProvider = accountProvider;
+            }
+
+            protected override IStorageBlobContainer GetContainer(string accountName)
+            {
+                // Get the container via a full connection string 
+                Task<IStorageAccount> task = _accountProvider.GetStorageAccountAsync(accountName, CancellationToken.None);
+                IStorageAccount storageAccount = task.Result;
+                // singleton requires block blobs, cannot be premium
+                storageAccount.AssertTypeOneOf(StorageAccountType.GeneralPurpose, StorageAccountType.BlobOnly);
+                IStorageBlobClient blobClient = storageAccount.CreateBlobClient();
+                var container = blobClient.GetContainerReference(HostContainerNames.Hosts);
+                return container;
             }
         }
     }

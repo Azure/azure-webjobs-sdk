@@ -40,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
                 return null;
             }
             return (SingletonLockHandle)handle.InnerLock;
-        }
+    }
     }
 
     public class SingletonManagerTests
@@ -110,7 +110,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             loggerFactory.AddProvider(_loggerProvider);
 
             var logger = loggerFactory?.CreateLogger(LogCategories.Singleton);
-            _core = new BlobLeaseDistributedLockManager(_mockAccountProvider.Object, logger);
+            _core = new BlobLeaseDistributedLockManager.DedicatedStorage(_mockAccountProvider.Object, logger);
 
             _singletonManager = new SingletonManager(_core, _singletonConfig, _mockExceptionDispatcher.Object, loggerFactory, new FixedHostIdProvider(TestHostId), _nameResolver);
 

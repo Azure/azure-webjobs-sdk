@@ -271,37 +271,30 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [InlineData("development", true)]
         public void IsDevelopment_ReturnsCorrectValue(string settingValue, bool expected)
         {
-            // Forces configuration to be re-read:
-            ConfigurationUtility.Reset();
-
-            string prev = Environment.GetEnvironmentVariable(Constants.EnvironmentSettingName);
-            Environment.SetEnvironmentVariable(Constants.EnvironmentSettingName, settingValue);
-
-            JobHostConfiguration config = new JobHostConfiguration();
-            Assert.Equal(config.IsDevelopment, expected);
-
-            Environment.SetEnvironmentVariable(Constants.EnvironmentSettingName, prev);
+            using (EnvVarHolder.Set(Constants.EnvironmentSettingName, settingValue))
+            {
+                JobHostConfiguration config = new JobHostConfiguration();
+                Assert.Equal(config.IsDevelopment, expected);
+            }
         }
 
         public void UseDevelopmentSettings_ConfiguresCorrectValues()
         {
-            ConfigurationUtility.Reset();
-            string prev = Environment.GetEnvironmentVariable(Constants.EnvironmentSettingName);
-            Environment.SetEnvironmentVariable(Constants.EnvironmentSettingName, "Development");
-
-            JobHostConfiguration config = new JobHostConfiguration();
-            Assert.False(config.UsingDevelopmentSettings);
-
-            if (config.IsDevelopment)
+            using (EnvVarHolder.Set(Constants.EnvironmentSettingName, "Development"))
             {
-                config.UseDevelopmentSettings();
+                JobHostConfiguration config = new JobHostConfiguration();
+                Assert.False(config.UsingDevelopmentSettings);
+
+                if (config.IsDevelopment)
+                {
+                    config.UseDevelopmentSettings();
+                }
+
+                Assert.True(config.UsingDevelopmentSettings);
+                Assert.Equal(TimeSpan.FromSeconds(2), config.Queues.MaxPollingInterval);
+                Assert.Equal(TimeSpan.FromSeconds(15), config.Singleton.ListenerLockPeriod);
+
             }
-
-            Assert.True(config.UsingDevelopmentSettings);
-            Assert.Equal(TimeSpan.FromSeconds(2), config.Queues.MaxPollingInterval);
-            Assert.Equal(TimeSpan.FromSeconds(15), config.Singleton.ListenerLockPeriod);
-
-            Environment.SetEnvironmentVariable(Constants.EnvironmentSettingName, prev);
         }
 
         private static void TestHostIdThrows(string hostId)
@@ -343,22 +336,38 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
+        // Verify that JobHostConfig pulls a Sas container from appsettings. 
+        [Fact]
+        public void JobHost_UsesSas()
+        {
+            var fakeSasUri = "https://contoso.blob.core.windows.net/myContainer?signature=foo";
+            using (EnvVarHolder.Set("AzureWebJobsInternalSasBlobContainer", fakeSasUri))
+            {
+                JobHostConfiguration config = new JobHostConfiguration();
+
+                Assert.NotNull(config.InternalStorageConfiguration); // Env var should cause this to get initialized 
+
+                var container = config.InternalStorageConfiguration.InternalContainer;
+                Assert.NotNull(container);
+
+                Assert.Equal(container.Name, "myContainer"); // specified in sas. 
+            }
+        }
+
         // Test that we can explicitly disable storage and call through a function
         // And enable the fast table logger and ensure that's getting events.
         [Fact]
         public void JobHost_NoStorage_Succeeds()
         {
-            string prevStorage = Environment.GetEnvironmentVariable("AzureWebJobsStorage");
-            string prevDashboard = Environment.GetEnvironmentVariable("AzureWebJobsDashboard");
-            try
+            using (EnvVarHolder.Set("AzureWebJobsStorage", null))
+            using (EnvVarHolder.Set("AzureWebJobsDashboard", null))
             {
-                Environment.SetEnvironmentVariable("AzureWebJobsStorage", null);
-                Environment.SetEnvironmentVariable("AzureWebJobsDashboard", null);
-
                 JobHostConfiguration config = new JobHostConfiguration()
                 {
                     TypeLocator = new FakeTypeLocator(typeof(BasicTest))
                 };
+                Assert.Null(config.InternalStorageConfiguration);
+
                 // Explicitly disalbe storage.
                 config.HostId = Guid.NewGuid().ToString("n");
                 config.DashboardConnectionString = null;
@@ -406,11 +415,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 Assert.Equal("val=" + randomValue, endMsg.LogOutput.Trim());
 
                 Assert.Same(FastLogger.FlushEntry, fastLogger.List[2]);
-            }
-            finally
-            {
-                Environment.SetEnvironmentVariable("AzureWebJobsStorage", prevStorage);
-                Environment.SetEnvironmentVariable("AzureWebJobsDashboard", prevDashboard);
             }
         }
 

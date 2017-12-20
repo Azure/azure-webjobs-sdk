@@ -155,6 +155,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "ConnectionStringNames",
                 "JobHost",
                 "JobHostConfiguration",
+                "JobHostInternalStorageConfiguration",
                 "JobHostQueuesConfiguration",
                 "JobHostBlobsConfiguration",
                 "IJobActivator",

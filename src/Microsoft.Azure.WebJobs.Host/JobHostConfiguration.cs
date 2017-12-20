@@ -16,6 +16,7 @@ using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Microsoft.Extensions.Configuration;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs
 {
@@ -82,6 +83,18 @@ namespace Microsoft.Azure.WebJobs
             else
             {
                 _storageAccountProvider = new DefaultStorageAccountProvider(this);
+            }
+
+            var sasBlobContainer = _storageAccountProvider.InternalSasStorage;
+            if (sasBlobContainer != null)
+            {
+                var uri = new Uri(sasBlobContainer);
+                var sdkContainer = new CloudBlobContainer(uri);
+
+                this.InternalStorageConfiguration = new JobHostInternalStorageConfiguration
+                {
+                     InternalContainer = sdkContainer
+                };
             }
 
             Singleton = new SingletonConfiguration();
@@ -195,6 +208,11 @@ namespace Microsoft.Azure.WebJobs
             get { return _storageAccountProvider.StorageConnectionString; }
             set { _storageAccountProvider.StorageConnectionString = value; }
         }
+
+        /// <summary>
+        /// Gets or sets a the storage configuration that the runtime needs for its internal operations.
+        /// </summary>
+        public JobHostInternalStorageConfiguration InternalStorageConfiguration { get; set; }
 
         /// <summary>Gets or sets the type locator.</summary>
         public ITypeLocator TypeLocator
