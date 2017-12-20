@@ -14,6 +14,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         private const string AssemblyLoadErrorWithAllowedToken = "System.AggregateException: aggregate error --->System.IO.FileNotFoundException: Could not load file or assembly 'Microsoft.Azure.WebJobs.Host, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35' or one of its dependencies.The system cannot find the file specified.at System.Reflection.RuntimeAssembly._nLoad(AssemblyName fileName, String codeBase, Evidence assemblySecurity, RuntimeAssembly locationHint, StackCrawlMark & stackMark, IntPtr pPrivHostBinder, Boolean throwOnFileNotFound, Boolean forIntrospection, Boolean suppressSecurityChecks)";
         private const string AssemblyLoadError = "System.AggregateException: aggregate error --->System.IO.FileNotFoundException: Could not load file or assembly 'Microsoft.Azure.WebJobs.Host, Version=2.0.0.0, Culture=neutral, Token=31bf3856ad364e35' or one of its dependencies.The system cannot find the file specified.at System.Reflection.RuntimeAssembly._nLoad(AssemblyName fileName, String codeBase, Evidence assemblySecurity, RuntimeAssembly locationHint, StackCrawlMark & stackMark, IntPtr pPrivHostBinder, Boolean throwOnFileNotFound, Boolean forIntrospection, Boolean suppressSecurityChecks)";
         private const string AssemblyLoadErrorSanitized = "System.AggregateException: aggregate error --->System.IO.FileNotFoundException: Could not load file or assembly 'Microsoft.Azure.WebJobs.Host, Version=2.0.0.0, Culture=neutral, [Hidden Credential]' or one of its dependencies.The system cannot find the file specified.at System.Reflection.RuntimeAssembly._nLoad(AssemblyName fileName, String codeBase, Evidence assemblySecurity, RuntimeAssembly locationHint, StackCrawlMark & stackMark, IntPtr pPrivHostBinder, Boolean throwOnFileNotFound, Boolean forIntrospection, Boolean suppressSecurityChecks)";
+        private const string TestStrigWithAllowedTokenAndSecretToken = "Test String \"PublicKeyToken=31bf3856ad364e35 Token=31bf3856ad364e35\"";
+        private const string TestStrigWithAllowedTokenAndSecretTokenSanitized = "Test String \"PublicKeyToken=31bf3856ad364e35 [Hidden Credential]\"";
 
         [Fact]
         public void Sanitizes_Properties()
@@ -29,6 +31,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             telemetry.Properties.Add("4", $"Nested {StorageString} String");
             telemetry.Properties.Add("5", AssemblyLoadErrorWithAllowedToken);
             telemetry.Properties.Add("6", AssemblyLoadError);
+            telemetry.Properties.Add("7", TestStrigWithAllowedTokenAndSecretToken);
 
             initializer.Initialize(telemetry);
 
@@ -43,8 +46,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(telemetry.Properties["5"], AssemblyLoadErrorWithAllowedToken);
 
             Assert.Equal(telemetry.Properties["6"], AssemblyLoadErrorSanitized);
-
-
+            Assert.Equal(telemetry.Properties["7"], TestStrigWithAllowedTokenAndSecretTokenSanitized);
         }
 
         [Fact]
