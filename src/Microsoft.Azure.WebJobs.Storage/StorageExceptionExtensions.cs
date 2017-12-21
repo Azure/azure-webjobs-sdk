@@ -815,5 +815,29 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
 
             return extendedInformation.ErrorCode;
         }
+
+        /// <summary>
+        /// Returns a custom detailed error message for Storage Exceptions
+        /// </summary>
+        /// <param name="exception">The storage exception.</param>
+        /// <returns>The error message.</returns>
+        public static string GetDetailedErrorMessage(this StorageException exception)
+        {
+            if (exception == null)
+            {
+                throw new ArgumentNullException("exception");
+            }
+
+            string message = exception.Message;
+            if (exception.RequestInformation != null)
+            {
+                message += String.Format(" (HTTP status code {0}: {1}. {2})",
+                    exception.RequestInformation.HttpStatusCode.ToString(),
+                    exception.RequestInformation.ExtendedErrorInformation?.ErrorCode,
+                    exception.RequestInformation.ExtendedErrorInformation?.ErrorMessage);
+            }
+
+            return message;
+        }
     }
 }
