@@ -23,14 +23,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var hostInstanceId = Guid.NewGuid();
 
             var instanceWriter = new FunctionInstanceTraceWriter(instance, hostInstanceId, writer, functionTraceLevel);
-
             instanceWriter.Info("Test Info");
-
             var traceEvent = writer.Traces.Single();
-            Assert.Equal(3, traceEvent.Properties.Count);
+
+            Assert.Equal(4, traceEvent.Properties.Count);
             Assert.Equal(instance.Id, traceEvent.Properties["MS_FunctionInvocationId"]);
             Assert.Equal(hostInstanceId, traceEvent.Properties["MS_HostInstanceId"]);
             Assert.Equal(descriptor, traceEvent.Properties["MS_FunctionDescriptor"]);
+            Assert.Equal(descriptor.ShortName, traceEvent.Properties["MS_FunctionName"]);
         }
     }
 }

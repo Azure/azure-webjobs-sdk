@@ -11,12 +11,14 @@ namespace Microsoft.Azure.WebJobs.Host
         private const string FunctionDescriptorKey = "MS_FunctionDescriptor";
         private const string FunctionInvocationIdKey = "MS_FunctionInvocationId";
         private const string HostInstanceIdKey = "MS_HostInstanceId";
+        public const string FunctionNameKey = "MS_FunctionName";
 
         public static void AddFunctionInstanceDetails(this TraceEvent traceEvent, Guid hostInstanceId, FunctionDescriptor descriptor, Guid functionId)
         {
             traceEvent.Properties[HostInstanceIdKey] = hostInstanceId;
             traceEvent.Properties[FunctionDescriptorKey] = descriptor;
             traceEvent.Properties[FunctionInvocationIdKey] = functionId;
+            traceEvent.Properties[FunctionNameKey] = descriptor.ShortName;
         }
     }
 }
