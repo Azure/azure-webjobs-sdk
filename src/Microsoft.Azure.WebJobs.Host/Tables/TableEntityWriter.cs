@@ -180,8 +180,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
 
                 if (exception != null)
                 {
-                    // Commit the batch
-                    await _table.ExecuteBatchAsync(batch, cancellationToken);
+                    await CreateTableAndExecuteBatch(batch, cancellationToken);
                 }
             }
         }
