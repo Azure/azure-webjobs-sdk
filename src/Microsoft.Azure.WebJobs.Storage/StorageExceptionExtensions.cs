@@ -801,7 +801,8 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
         }
 
         /// <summary>
-        /// Returns a custom detailed error message for Storage Exceptions
+        /// Returns a custom detailed error message for a StorageException. This is a workaround for bad error messages
+        /// returned by Azure Storage.
         /// </summary>
         /// <param name="exception">The storage exception.</param>
         /// <returns>The error message.</returns>
@@ -813,6 +814,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
             }
 
             string message = exception.Message;
+
             if (exception.RequestInformation != null)
             {
                 message += String.Format(" (HTTP status code {0}: {1}. {2})",
