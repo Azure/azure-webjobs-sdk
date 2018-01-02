@@ -6,6 +6,7 @@
 |master|[![Build status](https://ci.appveyor.com/api/projects/status/3qmk6ukn942q220j/branch/master?svg=true)](https://ci.appveyor.com/project/appsvc/azure-webjobs-sdk-rqm4t/branch/master)|[![Build Status](https://travis-ci.org/Azure/azure-webjobs-sdk.svg?branch=master)](https://travis-ci.org/Azure/azure-webjobs-sdk)
 |dev|[![Build status](https://ci.appveyor.com/api/projects/status/3qmk6ukn942q220j/branch/dev?svg=true)](https://ci.appveyor.com/project/appsvc/azure-webjobs-sdk-rqm4t/branch/dev)|[![Build Status](https://travis-ci.org/Azure/azure-webjobs-sdk.svg?branch=dev)](https://travis-ci.org/Azure/azure-webjobs-sdk)|
 |v2.x|[![Build status](https://ci.appveyor.com/api/projects/status/3qmk6ukn942q220j/branch/v2.x?svg=true)](https://ci.appveyor.com/project/appsvc/azure-webjobs-sdk-rqm4t/branch/v2.x)|-|
+[![Help Contribute to Open Source](https://www.codetriage.com/azure/azure-webjobs-sdk/badges/users.svg)](https://www.codetriage.com/azure/azure-webjobs-sdk)
 
 [![Help Contribute to Open Source](https://www.codetriage.com/azure/azure-webjobs-sdk/badges/users.svg)](https://www.codetriage.com/azure/azure-webjobs-sdk)
 
