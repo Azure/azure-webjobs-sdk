@@ -14,7 +14,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
     /// <summary>
     /// Extension configuration provider used to register ServiceBus triggers and binders
     /// </summary>
-    internal class ServiceBusExtensionConfig : IExtensionConfigProvider
+    public class ServiceBusExtensionConfig : IExtensionConfigProvider
     {
         private ServiceBusConfiguration _serviceBusConfig;
 
