@@ -356,7 +356,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         var functionName = message.Substring(start, end);
                         var descriptor = (FunctionDescriptor)traceEvent.Properties["MS_FunctionDescriptor"];
                         Assert.Equal(functionName, descriptor.ShortName);
-                        Assert.Equal((string)traceEvent.Properties["MS_FunctionName"], "QueueToQueueAsync");
+
+                        // LogName is internal, but we can still calculate it.
+                        var logName = descriptor.ShortName.Split('.').Last();
+                        Assert.Equal((string)traceEvent.Properties["MS_FunctionName"], logName);
                     }
                 }
                 else
