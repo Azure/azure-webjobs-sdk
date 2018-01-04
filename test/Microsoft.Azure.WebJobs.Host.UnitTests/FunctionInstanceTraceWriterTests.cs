@@ -30,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.Equal(instance.Id, traceEvent.Properties["MS_FunctionInvocationId"]);
             Assert.Equal(hostInstanceId, traceEvent.Properties["MS_HostInstanceId"]);
             Assert.Equal(descriptor, traceEvent.Properties["MS_FunctionDescriptor"]);
-            Assert.Equal(descriptor.ShortName, traceEvent.Properties["MS_FunctionName"]);
+            Assert.Equal(descriptor.LogName, traceEvent.Properties["MS_FunctionName"]);
         }
     }
 }
