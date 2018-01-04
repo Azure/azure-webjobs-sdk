@@ -18,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Host
             traceEvent.Properties[HostInstanceIdKey] = hostInstanceId;
             traceEvent.Properties[FunctionDescriptorKey] = descriptor;
             traceEvent.Properties[FunctionInvocationIdKey] = functionId;
-            traceEvent.Properties[FunctionNameKey] = descriptor.ShortName;
+            traceEvent.Properties[FunctionNameKey] = descriptor.LogName;
         }
     }
 }
