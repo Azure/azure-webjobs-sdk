@@ -19,17 +19,20 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
         private ServiceBusConfiguration _serviceBusConfig;
 
         /// <summary>
+        /// default constructor. Callers can reference this without having any assembly references to service bus assemblies. 
+        /// </summary>
+        public ServiceBusExtensionConfig()
+            : this(null)
+        {
+        }
+
+        /// <summary>
         /// Creates a new <see cref="ServiceBusExtensionConfig"/> instance.
         /// </summary>
         /// <param name="serviceBusConfig">The <see cref="ServiceBusConfiguration"></see> to use./></param>
         public ServiceBusExtensionConfig(ServiceBusConfiguration serviceBusConfig)
         {
-            if (serviceBusConfig == null)
-            {
-                throw new ArgumentNullException("serviceBusConfig");
-            }
-
-            _serviceBusConfig = serviceBusConfig;
+            _serviceBusConfig = serviceBusConfig != null ? serviceBusConfig : new ServiceBusConfiguration();
         }
 
         /// <summary>
