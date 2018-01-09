@@ -74,9 +74,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             if (context.BindingErrors.Count > 0)
             {
                 exceptionMessage.AppendLine().AppendLine("Possible causes:");
-                foreach (var error in context.BindingErrors.Select((value, index) => new { Value = value, Index = index + 1 }))
+
+                var index = 0;
+                foreach (var error in context.BindingErrors)
                 {
-                    exceptionMessage.AppendLine($"{error.Index}) {error.Value}");
+                    exceptionMessage.AppendLine($"{++index}) {error}");
                 }
             }
 
