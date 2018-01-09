@@ -165,10 +165,25 @@ namespace Microsoft.Azure.WebJobs.Host
             if (attributeType == typeof(BlobAttribute) ||
                 attributeType == typeof(BlobTriggerAttribute))
             {
-                // Path --> BlobPath                
+                // Path --> BlobPath
                 if (metadata.TryGetValue("path", StringComparison.OrdinalIgnoreCase, out token))
                 {
                     metadata["BlobPath"] = token;
+                }
+            }
+
+            if (string.Equals(attributeType.Name, "ServiceBusAttribute", StringComparison.OrdinalIgnoreCase))
+            {
+                // queueName --> queueOrTopicName, topicName --> queueOrTopicName
+                if (metadata.TryGetValue("queueName", StringComparison.OrdinalIgnoreCase, out token))
+                {
+                    metadata["queueOrTopicName"] = token;
+                    metadata["entityType"] = "Queue";
+                }
+                else if (metadata.TryGetValue("topicName", StringComparison.OrdinalIgnoreCase, out token))
+                {
+                    metadata["queueOrTopicName"] = token;
+                    metadata["entityType"] = "Topic";
                 }
             }
 
