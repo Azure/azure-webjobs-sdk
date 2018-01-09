@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
@@ -67,7 +68,19 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 resourceName = resourceName.Substring(0, resourceName.Length - Suffix.Length);
             }
-            throw new InvalidOperationException("Can't bind " + resourceName + " to type '" + context.Parameter.ParameterType + "'.");
+
+            StringBuilder exceptionMessage = new StringBuilder($"Can't bind {resourceName} to type '{context.Parameter.ParameterType}'.");
+
+            if (context.BindingErrors.Count > 0)
+            {
+                exceptionMessage.AppendLine().AppendLine("Possible causes:");
+                foreach (var error in context.BindingErrors.Select((value, index) => new { Value = value, Index = index + 1 }))
+                {
+                    exceptionMessage.AppendLine($"{error.Index}) {error.Value}");
+                }
+            }
+
+            throw new InvalidOperationException(exceptionMessage.ToString());
         }
 
         public IEnumerable<BindingRule> GetRules()

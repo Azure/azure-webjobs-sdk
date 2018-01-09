@@ -22,10 +22,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         private readonly IConverterManager _converterManager;
         private readonly PatternMatcher _patternMatcher;
 
-         public AsyncCollectorBindingProvider(
-            INameResolver nameResolver,
-            IConverterManager converterManager,
-            PatternMatcher patternMatcher)
+        public AsyncCollectorBindingProvider(
+           INameResolver nameResolver,
+           IConverterManager converterManager,
+           PatternMatcher patternMatcher)
         {
             this._nameResolver = nameResolver;
             this._converterManager = converterManager;
@@ -55,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 return Task.FromResult<IBinding>(null);
             }
-            
+
             var type = typeof(ExactBinding<>).MakeGenericType(typeof(TAttribute), typeof(TType), mode.ElementType);
             var method = type.GetMethod("TryBuild", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
             var binding = BindingFactoryHelpers.MethodInvoke<IBinding>(method, this, mode.Mode, context);
@@ -110,7 +110,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 if (validator.IsMatch(elementType))
                 {
                     // out T, t is not an array 
-                    return new CollectorBindingPattern(Mode.OutSingle, elementType);                    
+                    return new CollectorBindingPattern(Mode.OutSingle, elementType);
                 }
 
                 // For out-param ,we don't expect another rule to claim it. So give some rich errors on mismatch.
@@ -126,7 +126,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
 
             // No match. Let another rule claim it
-            return null;            
+            return null;
         }
 
         // Represent the different possible flavors for binding to an async collector
@@ -149,7 +149,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         private static void AddRulesForType(OpenType target, List<BindingRule> rules)
         {
             // Use a converter 
-            var intermediateType = typeof(IAsyncCollector<TType>);            
+            var intermediateType = typeof(IAsyncCollector<TType>);
 
             // IAsyncCollector<T>
             rules.Add(
@@ -165,7 +165,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                   new BindingRule
                   {
                       SourceAttribute = typeof(TAttribute),
-                      Converters = MakeArray(intermediateType),                      
+                      Converters = MakeArray(intermediateType),
                       UserType = new OpenType.SingleGenericArgOpenType(typeof(ICollector<>), target)
                   });
 
@@ -194,9 +194,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
             var cm = (ConverterManager)_converterManager;
             var types = cm.GetPossibleSourceTypesFromDestination(typeof(TAttribute), typeof(TType));
-                        
+
             foreach (OpenType type in types)
-            {  
+            {
                 AddRulesForType(type, rules);
             }
 
@@ -207,7 +207,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         // Precdence is more important than how we produce the default type (a direct conversion vs. a converter)
         private static readonly Type[] _defaultTypes = new Type[] {
             typeof(byte[]),
-            typeof(JObject),            
+            typeof(JObject),
             typeof(string) };
 
         public Type GetDefaultType(Attribute attribute, FileAccess access, Type requestedType)
@@ -224,13 +224,13 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 // This is critical when there are no converters, such as if TType is an OpenType
                 foreach (var target in _defaultTypes)
                 {
-                    if (openType.IsMatch(target) || 
+                    if (openType.IsMatch(target) ||
                         _converterManager.HasConverter<TAttribute>(target, typeof(TType)))
                     {
                         return typeof(IAsyncCollector<>).MakeGenericType(target);
                     }
                 }
-             
+
                 return null;
             }
             return null;
@@ -260,7 +260,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 AsyncCollectorBindingProvider<TAttribute, TType> parent,
                 Mode mode,
                 BindingProviderContext context)
-            {                
+            {
                 var patternMatcher = parent._patternMatcher;
 
                 var parameter = context.Parameter;
@@ -299,6 +299,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                 if (buildFromAttribute == null)
                 {
+                    context.BindingErrors.Add(String.Format(Constants.BindingAssemblyConflictMessage, typeof(TType).AssemblyQualifiedName, typeof(TMessage).AssemblyQualifiedName));
                     return null;
                 }
 
@@ -345,7 +346,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 string invokeString = Cloner.GetInvokeString(attrResolved);
 
                 object obj = await _buildFromAttribute(attrResolved, null, context);
-                
+
                 IAsyncCollector<TMessage> collector;
                 if (_converter != null)
                 {
@@ -378,13 +379,13 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                     case Mode.OutArray:
                         return new OutArrayValueProvider<TMessage>(collector, invokeString);
-                        
+
                     case Mode.OutSingle:
                         return new OutValueProvider<TMessage>(collector, invokeString);
-                        
+
                     default:
                         throw new NotImplementedException($"mode ${mode} not implemented");
-                }             
+                }
             }
         }
     }

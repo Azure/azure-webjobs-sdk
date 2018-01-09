@@ -19,8 +19,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     {
         private readonly INameResolver _nameResolver;
         private readonly IConverterManager _converterManager;
-        private readonly PatternMatcher _patternMatcher; 
-        
+        private readonly PatternMatcher _patternMatcher;
+
         public BindToInputBindingProvider(
             INameResolver nameResolver,
             IConverterManager converterManager,
@@ -47,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
 
             var binding = ExactBinding.TryBuild(this, context);
-                
+
             return Task.FromResult<IBinding>(binding);
         }
 
@@ -79,7 +79,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         // DefaultTypes (in precedence order) that we check for input bindings. 
-        private static readonly Type[] DefaultTypes = new Type[] 
+        private static readonly Type[] DefaultTypes = new Type[]
         {
             typeof(string),
             typeof(JObject),
@@ -112,7 +112,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     }
                 }
             }
-        
+
             return null;
         }
 
@@ -149,7 +149,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                 FuncAsyncConverter buildFromAttribute;
                 FuncAsyncConverter converter = null;
-                                
+
                 // Prefer the shortest route to creating the user type.
                 // If TType matches the user type directly, then we should be able to directly invoke the builder in a single step. 
                 //   TAttribute --> TUserType
@@ -166,12 +166,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     converter = cm.GetConverter<TAttribute>(typeof(TType), userType);
                     if (converter == null)
                     {
+                        var targetType = typeof(TType);
+                        context.BindingErrors.Add(String.Format(Constants.BindingAssemblyConflictMessage, targetType.AssemblyQualifiedName, userType.AssemblyQualifiedName));
                         return null;
                     }
 
                     buildFromAttribute = patternMatcher.TryGetConverterFunc(typeof(TAttribute), typeof(TType));
                 }
-                
+
                 if (buildFromAttribute == null)
                 {
                     return null;
@@ -198,7 +200,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
 
             protected override async Task<IValueProvider> BuildAsync(
-                TAttribute attrResolved, 
+                TAttribute attrResolved,
                 ValueBindingContext context)
             {
                 string invokeString = Cloner.GetInvokeString(attrResolved);
@@ -210,7 +212,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     finalObj = obj;
                 }
                 else
-                {                    
+                {
                     finalObj = await _converter(obj, attrResolved, context);
                 }
 
