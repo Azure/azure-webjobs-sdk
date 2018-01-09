@@ -78,7 +78,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             catch (FunctionIndexingException e)
             {
                 Assert.Equal("Error indexing method '" + functionName + "'", e.Message);
-                Assert.Equal(expectedErrorMessage, e.InnerException.Message);
+                Assert.StartsWith(expectedErrorMessage, e.InnerException.Message);
                 return;
             }
             Assert.True(false, "Invoker should have failed");
