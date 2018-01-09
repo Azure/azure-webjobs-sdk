@@ -29,8 +29,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         public BindToStreamBindingProvider(
             PatternMatcher patternMatcher,
-            FileAccess access, 
-            INameResolver nameResolver, 
+            FileAccess access,
+            INameResolver nameResolver,
             IConverterManager converterManager)
         {
             _builder = patternMatcher.TryGetConverterFunc<TAttribute, Stream>();
@@ -40,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         public Type GetDefaultType(Attribute attribute, FileAccess access, Type requestedType)
-        {            
+        {
             if (attribute is TAttribute)
             {
                 if (access == FileAccess.Read)
@@ -55,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     if (CanWrite(this._access))
                     {
                         return typeof(Stream);
-                    }    
+                    }
                 }
                 // Read-write stream are not supported.
             }
@@ -190,9 +190,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
             if (typeUser.IsByRef)
             {
-                typeUser = typeUser.GetElementType(); // Can't generic instantiate  a ByRef. 
+                typeUser = typeUser.GetElementType(); // Can't generic instantiate a ByRef. 
             }
-                        
+
             var type = typeof(StreamBinding);
             var method = type.GetMethod("TryBuild", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
             method = method.MakeGenericMethod(typeUser);
@@ -362,6 +362,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                         {
                             // This rule can't bind. 
                             // Let another try. 
+                            context.BindingErrors.Add(String.Format(Constants.BindingAssemblyConflictMessage, typeof(Stream).AssemblyQualifiedName, typeof(TUserType).AssemblyQualifiedName));
                             return null;
                         }
                     }
@@ -397,7 +398,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                 return binding;
             }
-                        
+
             protected override async Task<IValueProvider> BuildAsync(TAttribute attrResolved, ValueBindingContext context)
             {
                 // set FileAccess beofre calling into the converter. Don't want converters to need to deal with a null FileAccess.
@@ -465,7 +466,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     // to do the check. 
                     disposable.Dispose();
                 }
-                                
+
                 if (_stream != null)
                 {
                     // 1. Close() / Dispose()  are sync. So we want to FlushAsync() first to do any long-running operations async,
@@ -501,7 +502,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             public ValueProvider(object converter)
             {
                 _converter = (FuncAsyncConverter<Stream, TUserType>)converter;
-            }                       
+            }
 
             protected override async Task<object> CreateUserArgAsync()
             {
@@ -519,7 +520,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return result;
             }
         }
-                
+
         // Base class for 'out T' stream bindings. 
         // These are special in that they don't create the stream until after the function returns. 
         private class OutArgBaseValueProvider<TUserType> : BaseValueProvider
