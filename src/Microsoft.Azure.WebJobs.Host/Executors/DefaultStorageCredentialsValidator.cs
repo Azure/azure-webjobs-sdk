@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Net;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Storage;
@@ -47,6 +48,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             catch (Exception e)
             {
                 var storageException = e as StorageException;
+                var isDevStoreAccount = GetIsDevStoreAccountFromCloudStorageAccount(account.SdkObject);
+
                 if (storageException?.RequestInformation?.HttpStatusCode == 400 &&
                     storageException?.RequestInformation?.ExtendedErrorInformation?.ErrorCode == "InvalidQueryParameterValue")
                 {
@@ -54,6 +57,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     // If we see this error response classify the account as a premium account
                     account.Type = StorageAccountType.Premium;
                     return;
+                }
+                else if (isDevStoreAccount)
+                {
+                    // If using the storage emulator, it might not be running
+                    throw new InvalidOperationException(Constants.CheckAzureStorageEmulatorMessage);
                 }
                 else
                 {
@@ -87,6 +95,24 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
                 throw;
             }
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId = "IsDevStoreAccount")]
+        internal static bool GetIsDevStoreAccountFromCloudStorageAccount(CloudStorageAccount account)
+        {
+            var isDevStoreAccountProperty = typeof(CloudStorageAccount).GetProperty("IsDevStoreAccount", BindingFlags.NonPublic | BindingFlags.Instance);
+            if (isDevStoreAccountProperty == null)
+            {
+                throw new InvalidOperationException("Reflection call to obtain CloudStorageAccount.IsDevStoreAccount property info failed. Did a storage package update occur?");
+            }
+
+            var isDevStoreAccount = isDevStoreAccountProperty.GetValue(account);
+            if (isDevStoreAccount == null)
+            {
+                throw new InvalidOperationException("Reflection call to obtain value of CloudStorageAccount.IsDevStoreAccount failed. Did a storage package update occur?");
+            }
+
+            return (bool)isDevStoreAccount;
         }
     }
 }
