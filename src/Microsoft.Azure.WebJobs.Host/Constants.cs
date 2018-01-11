@@ -9,5 +9,6 @@ namespace Microsoft.Azure.WebJobs.Host
         public const string DevelopmentEnvironmentValue = "Development";
         public const string ExtensionInitializationMessage = "If you're using binding extensions (e.g. ServiceBus, Timers, etc.) make sure you've called the registration method for the extension(s) in your startup code (e.g. config.UseServiceBus(), config.UseTimers(), etc.).";
         public const string UnableToBindParameterFormat = "Cannot bind parameter '{0}' to type {1}. Make sure the parameter Type is supported by the binding. {2}";
+        public const string CheckAzureStorageEmulatorMessage = "Please verify that the Azure Storage Emulator is running.";
     }
 }
