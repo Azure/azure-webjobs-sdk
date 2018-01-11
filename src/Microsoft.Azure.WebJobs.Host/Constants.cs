@@ -11,5 +11,6 @@ namespace Microsoft.Azure.WebJobs.Host
         public const string UnableToBindParameterFormat = "Cannot bind parameter '{0}' to type {1}. Make sure the parameter Type is supported by the binding. {2}";
         public const string UnableToResolveBindingParameterFormat = "Unable to resolve binding parameter '{0}'. Binding expressions must map to either a value provided by the trigger or a property of the value the trigger is bound to, or must be a system binding expression (e.g. sys.randguid, sys.utcnow, etc.).";
         public const string BindingAssemblyConflictMessage = "Tried binding to '{0}' but user type assembly was '{1}.";
+        public const string CheckAzureStorageEmulatorMessage = "Please verify that the Azure Storage Emulator is running.";
     }
 }
