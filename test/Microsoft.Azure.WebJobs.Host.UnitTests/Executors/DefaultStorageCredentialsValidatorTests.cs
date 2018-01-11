@@ -3,6 +3,7 @@
 
 using System;
 using System.Net;
+using System.Reflection;
 using System.Threading;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Storage;
@@ -19,6 +20,45 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
     public class DefaultStorageCredentialsValidatorTests
     {
         [Fact]
+        public void UseReflectionToAccessIsDevStoreAccountFromCloudStorageAccount()
+        {
+            var isDevStoreAccountProperty = typeof(CloudStorageAccount).GetProperty("IsDevStoreAccount", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.NotNull(isDevStoreAccountProperty);
+        }
+
+        [Fact]
+        public void StorageAccount_IsDevStoreAccount_StorageEmulatorRunning()
+        {
+            var validator = new DefaultStorageCredentialsValidator();
+
+            var storageMock = new Mock<IStorageAccount>(MockBehavior.Strict);
+            var blobClientMock = new Mock<IStorageBlobClient>();
+            var queueClientMock = new Mock<IStorageQueueClient>();
+            var queueMock = new Mock<IStorageQueue>();
+
+            storageMock.Setup(s => s.Credentials)
+                .Returns(new StorageCredentials("name", string.Empty));
+
+            storageMock.Setup(s => s.CreateBlobClient(null))
+                .Returns(blobClientMock.Object)
+                .Verifiable();
+
+            storageMock.Setup(s => s.SdkObject)
+                .Returns(() => {
+                    var account = new CloudStorageAccount(new StorageCredentials("name", string.Empty), false);
+                    typeof(CloudStorageAccount).GetProperty("IsDevStoreAccount", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(account, true);
+                    return account;
+                });
+
+            blobClientMock.Setup(b => b.GetServicePropertiesAsync(It.IsAny<CancellationToken>()))
+                .Throws(new StorageException(""));
+
+            var exception = Assert.Throws<InvalidOperationException>(() => validator.ValidateCredentialsAsync(storageMock.Object, It.IsAny<CancellationToken>()).GetAwaiter().GetResult());
+            Assert.Equal(Constants.CheckAzureStorageEmulatorMessage, exception.Message);
+            storageMock.Verify();
+        }
+
+        [Fact]
         public void StorageAccount_GetPropertiesThrows_InvalidCredentials()
         {
             var validator = new DefaultStorageCredentialsValidator();
@@ -34,6 +74,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             storageMock.Setup(s => s.CreateBlobClient(null))
                 .Returns(blobClientMock.Object)
                 .Verifiable();
+
+            storageMock.Setup(s => s.SdkObject)
+                .Returns(new CloudStorageAccount(new StorageCredentials("name", string.Empty), false));
 
             blobClientMock.Setup(b => b.GetServicePropertiesAsync(It.IsAny<CancellationToken>()))
                 .Throws(new StorageException(""));
