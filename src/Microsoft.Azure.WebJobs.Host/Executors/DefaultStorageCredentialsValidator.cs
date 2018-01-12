@@ -97,7 +97,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId = "IsDevStoreAccount")]
         internal static bool GetIsDevStoreAccountFromCloudStorageAccount(CloudStorageAccount account)
         {
             var isDevStoreAccountProperty = typeof(CloudStorageAccount).GetProperty("IsDevStoreAccount", BindingFlags.NonPublic | BindingFlags.Instance);

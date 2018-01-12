@@ -26,8 +26,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             Assert.NotNull(isDevStoreAccountProperty);
         }
 
-        [Fact]
-        public void StorageAccount_IsDevStoreAccount_StorageEmulatorRunning()
+        [Theory]
+        [InlineData("UseDevelopmentStorage=true")]
+        [InlineData("UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://myProxyUri")]
+        public void StorageAccount_IsDevStoreAccount_StorageEmulatorRunning(string connectionString)
         {
             var validator = new DefaultStorageCredentialsValidator();
 
@@ -44,11 +46,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                 .Verifiable();
 
             storageMock.Setup(s => s.SdkObject)
-                .Returns(() => {
-                    var account = new CloudStorageAccount(new StorageCredentials("name", string.Empty), false);
-                    typeof(CloudStorageAccount).GetProperty("IsDevStoreAccount", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(account, true);
-                    return account;
-                });
+                .Returns(() => CloudStorageAccount.Parse(connectionString));
 
             blobClientMock.Setup(b => b.GetServicePropertiesAsync(It.IsAny<CancellationToken>()))
                 .Throws(new StorageException(""));
