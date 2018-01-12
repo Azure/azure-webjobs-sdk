@@ -67,7 +67,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             TestWorker<ConfigTestDefaultToMethodName>();
         }
 
-        public class ConfigTestDefaultToMethodName : BindingPathAttribute.Extension, ITest<ConfigTestDefaultToMethodName>
+        public class ConfigTestDefaultToMethodName : IExtensionConfigProvider, ITest<ConfigTestDefaultToMethodName>
         {
             public void Test(TestJobHost<ConfigTestDefaultToMethodName> host)
             {
@@ -83,7 +83,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
 
             string _log;
 
-            public void Func([BindingPath(Path = "{k}*{sys.randGuid:N}*{sys.randGuid:B}*{sys.UtcNow:yyyy}")] string w)
+            public void Func([BindingExpression("{k}*{sys.randGuid:N}*{sys.randGuid:B}*{sys.UtcNow:yyyy}")] string w)
             {
                 var parts = w.Split('*');
                 string k = parts[0];
@@ -105,16 +105,20 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             }
 
             // Missing path, will default to method name 
-            public void Func2([BindingPath] string w)
+            public void Func2([BindingExpression("{sys.methodname}")] string w)
             {
                 _log = w;
             }
 
             // Missing path, will default to method name 
             [FunctionName("newname")]
-            public void FuncRename([BindingPath] string w)
+            public void FuncRename([BindingExpression("{sys.methodname}")] string w)
             {
                 _log = w;
+            }
+
+            public void Initialize(ExtensionConfigContext context)
+            {                
             }
         }
 

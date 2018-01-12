@@ -98,6 +98,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 AddStreamConverters(extensionTypeLocator, converterManager);
 
+                config.AddExtension(new BindingExpressionExtensionConfigProvider());
                 config.AddExtension(new TableExtension());
                 config.AddExtension(new QueueExtension());
                 config.AddExtension(new Blobs.Bindings.BlobExtensionConfig());
