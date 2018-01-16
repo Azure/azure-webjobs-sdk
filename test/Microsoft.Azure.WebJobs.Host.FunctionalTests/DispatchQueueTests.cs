@@ -77,9 +77,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 ThrowsAsync(new Exception(error));
 
             await _sharedQueue.InitializeAsync(CancellationToken.None);
-            Assert.Equal(error, _sharedQueue.InitializationEx.Message);
-            // make sure initialization error is traced
-            Assert.Equal(error, _loggerProvider.GetAllLogMessages().Single().Exception.Message);
+            Assert.Empty(_loggerProvider.GetAllLogMessages());
 
             // listenercontext should return inMemoryDispatchQueueHandler when there's no storage account
             var descriptorMock = new Mock<FunctionDescriptor>();
@@ -99,7 +97,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                     condition.Set();  // will run asynchronously
                     return new FunctionResult(true);
                 });
+
             var dispatchQueue = context.GetDispatchQueue(messageHandlerMock.Object);
+            // make sure initialization error is traced
+            Assert.Equal(error, _loggerProvider.GetAllLogMessages().Single().Exception.Message);
+            Assert.Equal(SharedQueueHandler.InitErrorMessage, _loggerProvider.GetAllLogMessages().Single().FormattedMessage);
             Assert.IsType<InMemoryDispatchQueueHandler>(dispatchQueue);
 
             await dispatchQueue.EnqueueAsync(JObject.Parse("{}"), CancellationToken.None);
@@ -115,9 +117,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         [Fact]
         public async Task QueueInitializationTest()
         {
-            await _sharedQueue.InitializeAsync(CancellationToken.None);
             // first initialization should be fine
-            Assert.Equal(null, _sharedQueue.InitializationEx);
+            await _sharedQueue.InitializeAsync(CancellationToken.None);
+
             // should not initialize twice
             var exception = await Assert.ThrowsAsync<InvalidOperationException>(
                             () => _sharedQueue.InitializeAsync(CancellationToken.None));
@@ -138,7 +140,8 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                     calls++; // executed sequentially, no need interlocked
                     return new FunctionResult(true);
                 });
-            _sharedQueue.RegisterHandler("mockFunction1", messageHandlerMock.Object);
+
+            Assert.True(_sharedQueue.RegisterHandler("mockFunction1", messageHandlerMock.Object));
 
             // register another INotificationHandler to sharedQueueWatcher
             // so that we can tell when the sharedQueueListener is notified
@@ -231,7 +234,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                     .ReturnsAsync(() => { testcase.CallCount++; return new FunctionResult(true); });
                 if (testcase.Register)
                 {
-                    _sharedQueue.RegisterHandler(index.ToString(), functionMock.Object);
+                    Assert.True(_sharedQueue.RegisterHandler(index.ToString(), functionMock.Object));
                 }
                 for (int i = 0; i < testcase.TotalEnqueues; i++)
                 {
