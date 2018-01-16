@@ -61,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 else if (isDevStoreAccount)
                 {
                     // If using the storage emulator, it might not be running
-                    throw new InvalidOperationException(Constants.CheckAzureStorageEmulatorMessage);
+                    throw new InvalidOperationException(Constants.CheckAzureStorageEmulatorMessage, e);
                 }
                 else
                 {
@@ -69,7 +69,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     string message = String.Format(CultureInfo.CurrentCulture,
                         "Invalid storage account '{0}'. Please make sure your credentials are correct.",
                         account.Credentials.AccountName);
-                    throw new InvalidOperationException(message);
+                    throw new InvalidOperationException(message, e);
                 }
             }
 
