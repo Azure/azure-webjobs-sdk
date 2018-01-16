@@ -22,6 +22,8 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
 {
     internal class SharedQueueHandler
     {
+        internal const string InitErrorMessage = "Shared queue initialization error, fallback to in memory implementation";
+
         private readonly IStorageAccountProvider _accountProvider;
         private readonly IHostIdProvider _hostIdProvider;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
@@ -30,6 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
         private readonly ISharedContextProvider _sharedContextProvider;
         private readonly IContextSetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherSetter;
 
+        private Exception _initializationEx; // delay initialization error until consumer showed up
         private SharedQueueExecutor _triggerExecutor;
         private State _state;
         private QueueListener _sharedQueuelistener;
@@ -62,8 +65,6 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
             Started,
             Stopped,
         }
-
-        internal Exception InitializationEx { get; private set; }
 
         internal async Task StopQueueAsync(CancellationToken cancellationToken)
         {
@@ -121,14 +122,8 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
             }
             catch (Exception ex)
             {
-                // possible issue with the connection String "TriggerTests.TestByteArrayDispatch"
-                string errorMessage = "SharedQueue initialization error, fallback to InMemorySharedQueue";
-                // surface this error to user
-                var logger = _loggerFactory?.CreateLogger(LogCategories.Startup);
-                logger?.LogError(ex, errorMessage);
-
-                // initialization exception make registration a NOOP
-                InitializationEx = ex;
+                // initialization exception will fail all registrations
+                _initializationEx = ex;
             }
 
             _state = State.Initialized;
@@ -150,8 +145,9 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
             _state = State.Started;
         }
 
-        // assume if we have initialization error, this method will not be called
-        internal void RegisterHandler(string functionId, IMessageHandler handler)
+        // Calling this method to register consumers of sharedQueue
+        // if there were an initialization error, this method will return false and log out exception
+        internal bool RegisterHandler(string functionId, IMessageHandler handler)
         {
             if (_state != State.Initialized)
             {
@@ -159,7 +155,18 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
                 // this makes it easier to determine whether we should start queuelistener or just pretending
                 throw new InvalidOperationException(ErrorMessage(State.Initialized, _state));
             }
+
+            if (_initializationEx != null)
+            {
+                // possible issue with the connection String "TriggerTests.TestByteArrayDispatch"
+                // surface this error to developer
+                var logger = _loggerFactory?.CreateLogger(LogCategories.Startup);
+                logger?.LogWarning(_initializationEx, InitErrorMessage);
+
+                return false;
+            }
             _triggerExecutor.Register(functionId, handler);
+            return true;
         }
 
         // assume functionId is already registered with _triggerExecutor

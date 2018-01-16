@@ -66,14 +66,13 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                     throw new InvalidOperationException("Please provide a call back function");
                 }
 
-                if (_sharedQueue.InitializationEx == null)
+                if (_sharedQueue.RegisterHandler(Descriptor.Id, handler))
                 {
-                    _sharedQueue.RegisterHandler(Descriptor.Id, handler);
                     _dispatchQueue = new DispatchQueueHandler(_sharedQueue, Descriptor.Id);
                 }
                 else
                 {
-                    // failed to initialize sharedQueue, fall back to in memory implementation
+                    // failed to register messageHandler, fall back to in memory implementation
                     _dispatchQueue = new InMemoryDispatchQueueHandler(handler);
                 }
             }
