@@ -172,7 +172,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
                 {
                     if (!e.IsNotFoundTableNotFound())
                     {
-                        throw;
+                        throw new StorageException(e.GetDetailedErrorMessage(), e);
                     }
 
                     exception = e;
@@ -180,12 +180,24 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
 
                 if (exception != null)
                 {
-                    // Make sure the table exists
-                    await _table.CreateIfNotExistsAsync(cancellationToken);
-
-                    // Commit the batch
-                    await _table.ExecuteBatchAsync(batch, cancellationToken);
+                    await CreateTableAndExecuteBatch(batch, cancellationToken);
                 }
+            }
+        }
+
+        private async Task CreateTableAndExecuteBatch(IStorageTableBatchOperation batch, CancellationToken cancellationToken)
+        {
+            // Make sure the table exists
+            await _table.CreateIfNotExistsAsync(cancellationToken);
+
+            // Commit the batch
+            try
+            {
+                await _table.ExecuteBatchAsync(batch, cancellationToken);
+            }
+            catch (StorageException e)
+            {
+                throw new StorageException(e.GetDetailedErrorMessage(), e);
             }
         }
 
