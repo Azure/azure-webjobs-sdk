@@ -93,4 +93,4 @@
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1040:AvoidEmptyInterfaces", Scope = "type", Target = "Microsoft.Azure.WebJobs.Host.Filters.IFunctionFilter")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1040:AvoidEmptyInterfaces", Scope = "type", Target = "Microsoft.Azure.WebJobs.Host.IFunctionFilter")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1804:RemoveUnusedLocals", MessageId = "ignore", Scope = "member", Target = "Microsoft.Azure.WebJobs.JobHost.#EnsureHostInitializedAsync(System.Threading.CancellationToken)")]
-[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId = "IsDevStoreAccount")] 
+[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId = "IsDevStoreAccount", Scope = "member", Target = "Microsoft.Azure.WebJobs.Host.Executors.DefaultStorageCredentialsValidator.#GetIsDevStoreAccountFromCloudStorageAccount(Microsoft.WindowsAzure.Storage.CloudStorageAccount)")]
