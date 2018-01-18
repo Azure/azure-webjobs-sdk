@@ -131,7 +131,7 @@ namespace Microsoft.Azure.WebJobs.Analyzer
             // Traverseing the exported types will cause type loads and possible type-load failures. 
             foreach (var type in assembly.ExportedTypes)
             {
-                if (!typeof(IExtensionConfigProvider).IsAssignableFrom(type))
+                if (type.IsAbstract || !typeof(IExtensionConfigProvider).IsAssignableFrom(type))
                 {
                     continue;
                 }
