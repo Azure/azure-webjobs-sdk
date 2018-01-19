@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Storage.Blob;
-using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
@@ -24,10 +23,10 @@ namespace Microsoft.Azure.WebJobs.Host
 
         private readonly IStorageAccountProvider _accountProvider;
         private readonly ConcurrentDictionary<string, IStorageBlobDirectory> _lockDirectoryMap = new ConcurrentDictionary<string, IStorageBlobDirectory>(StringComparer.OrdinalIgnoreCase);
-                
+
         private readonly TraceWriter _trace;
         private readonly ILogger _logger;
-      
+
         public BlobLeaseDistributedLockManager(
             IStorageAccountProvider accountProvider,
             TraceWriter trace,
@@ -94,7 +93,7 @@ namespace Microsoft.Azure.WebJobs.Host
             }
 
             SingletonLockHandle lockHandle = new SingletonLockHandle(leaseId, lockId, lockBlob, lockPeriod);
-                                    
+
             return lockHandle;
         }
 
@@ -122,8 +121,8 @@ namespace Microsoft.Azure.WebJobs.Host
         }
 
         private static async Task<string> TryAcquireLeaseAsync(
-            IStorageBlockBlob blob, 
-            TimeSpan leasePeriod, 
+            IStorageBlockBlob blob,
+            TimeSpan leasePeriod,
             string proposedLeaseId,
             CancellationToken cancellationToken)
         {
@@ -163,7 +162,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
                 try
                 {
-                    return await blob.AcquireLeaseAsync(leasePeriod, null, cancellationToken);
+                    return await blob.AcquireLeaseAsync(leasePeriod, proposedLeaseId, cancellationToken);
                 }
                 catch (StorageException exception)
                 {
@@ -253,7 +252,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
             Debug.Assert(isContainerNotFoundException);
 
-            var container = blob.Container;            
+            var container = blob.Container;
             try
             {
                 await container.CreateIfNotExistsAsync(cancellationToken);
@@ -376,12 +375,12 @@ namespace Microsoft.Azure.WebJobs.Host
                             this.LockId, FormatErrorCode(exception), lastRenewalFormatted, millisecondsSinceLastSuccess, lastRenewalMilliseconds, leasePeriodMilliseconds);
                         trace.Error(msg);
                         logger?.LogError(msg);
-                        
+
                         // If we've lost the lease or cannot re-establish it, we want to fail any
                         // in progress function execution
                         throw;
                     }
-                }                
+                }
             }
 
             private static string FormatErrorCode(StorageException exception)
@@ -402,7 +401,7 @@ namespace Microsoft.Azure.WebJobs.Host
                 }
 
                 return message;
-            }            
+            }
         }
     }
 }
