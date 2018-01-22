@@ -14,5 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         {
             this.Value = value;
         }
+
+        public static DirectInvokeString None = new DirectInvokeString("???");
     }
 }
