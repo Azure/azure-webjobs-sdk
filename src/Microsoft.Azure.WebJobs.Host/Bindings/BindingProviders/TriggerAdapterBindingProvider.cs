@@ -116,12 +116,34 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 {
                     _converter = converter,
                     _directInvoker = GetDirectInvoker(cm),
-                    _getInvokeString = cm.GetConverter<TTriggerValue, DirectInvokeString, TAttribute>(),
+                    _getInvokeString = GetDirectInvokeString(cm),
                     _attribute = attributeSource
                 };
             }
 
-            private static FuncAsyncConverter<DirectInvokeString, TTriggerValue> GetDirectInvoker(IConverterManager cm)
+            private static FuncAsyncConverter<TTriggerValue, DirectInvokeString> GetDirectInvokeString(IConverterManager cm)
+            {
+                var converter = cm.GetConverter<TTriggerValue, DirectInvokeString, TAttribute>();
+                if (converter!= null)
+                {
+                    return converter;
+                }
+                
+                var strConverter = cm.GetConverter<TTriggerValue, string, TAttribute>();
+                if (strConverter != null)
+                {
+                    return async (input, attr, ctx) =>
+                    {
+                        var str = await strConverter(input, attr, ctx);
+                        return new DirectInvokeString(str);
+                    };
+                }
+
+                // No converter. Provide something to display in UI
+                return (input, attr, ctx) => Task.FromResult(DirectInvokeString.None);
+            }
+
+                private static FuncAsyncConverter<DirectInvokeString, TTriggerValue> GetDirectInvoker(IConverterManager cm)
             {
                 var direct = cm.GetConverter<DirectInvokeString, TTriggerValue, TAttribute>();
                 if (direct != null)
