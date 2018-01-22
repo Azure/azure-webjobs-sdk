@@ -58,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await host.StopAsync();
             }
 
-            Assert.Equal(7, _channel.Telemetries.Count);
+            Assert.Equal(8, _channel.Telemetries.Count);
 
             // Validate the traces. Order by message string as the requests may come in
             // slightly out-of-order or on different threads
@@ -71,7 +71,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             ValidateTrace(telemetries[1], "Job host started", LogCategories.Startup);
             ValidateTrace(telemetries[2], "Job host stopped", LogCategories.Startup);
             ValidateTrace(telemetries[3], "Logger", LogCategories.Function, testName, hasCustomScope: true);
-            ValidateTrace(telemetries[4], "Trace", LogCategories.Function, testName);
+            ValidateTrace(telemetries[4], "ServicePointManager.DefaultConnectionLimit", LogCategories.Startup, expectedLevel: SeverityLevel.Warning);
+            ValidateTrace(telemetries[5], "Trace", LogCategories.Function, testName);
 
             // We should have 1 custom metric.
             MetricTelemetry metric = _channel.Telemetries
@@ -112,27 +113,29 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await host.StopAsync();
             }
 
-            Assert.Equal(8, _channel.Telemetries.Count);
+            Assert.Equal(9, _channel.Telemetries.Count);
 
             // Validate the traces. Order by message string as the requests may come in
             // slightly out-of-order or on different threads
             TraceTelemetry[] telemetries = _channel.Telemetries
              .OfType<TraceTelemetry>()
              .OrderBy(t => t.Message)
+
              .ToArray();
 
             ValidateTrace(telemetries[0], "Found the following functions:\r\n", LogCategories.Startup);
             ValidateTrace(telemetries[1], "Job host started", LogCategories.Startup);
             ValidateTrace(telemetries[2], "Job host stopped", LogCategories.Startup);
             ValidateTrace(telemetries[3], "Logger", LogCategories.Function, testName, hasCustomScope: true);
-            ValidateTrace(telemetries[4], "Trace", LogCategories.Function, testName);
+            ValidateTrace(telemetries[4], "ServicePointManager.DefaultConnectionLimit", LogCategories.Startup, expectedLevel: SeverityLevel.Warning);
+            ValidateTrace(telemetries[5], "Trace", LogCategories.Function, testName);
 
             // Validate the exception
             ExceptionTelemetry[] exceptions = _channel.Telemetries
                 .OfType<ExceptionTelemetry>()
                 .OrderBy(t => t.Timestamp)
                 .ToArray();
-            Assert.Equal(2, exceptions.Length);            
+            Assert.Equal(2, exceptions.Length);
             ValidateException(exceptions[0], LogCategories.Function, testName);
             ValidateException(exceptions[1], LogCategories.Results, testName);
 
@@ -145,8 +148,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         [Theory]
         [InlineData(LogLevel.None, 0)]
-        [InlineData(LogLevel.Information, 18)]
-        [InlineData(LogLevel.Warning, 10)]
+        [InlineData(LogLevel.Information, 19)]
+        [InlineData(LogLevel.Warning, 11)]
         public async Task QuickPulse_Works_EvenIfFiltered(LogLevel defaultLevel, int expectedTelemetryItems)
         {
             LogCategoryFilter filter = new LogCategoryFilter();
@@ -394,11 +397,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
-        private static void ValidateTrace(TraceTelemetry telemetry, string expectedMessageStartsWith,
-            string expectedCategory, string expectedOperationName = null, bool hasCustomScope = false)
+        private static void ValidateTrace(TraceTelemetry telemetry, string expectedMessageStartsWith, string expectedCategory,
+            string expectedOperationName = null, bool hasCustomScope = false, SeverityLevel expectedLevel = SeverityLevel.Information)
         {
             Assert.StartsWith(expectedMessageStartsWith, telemetry.Message);
-            Assert.Equal(SeverityLevel.Information, telemetry.SeverityLevel);
+            Assert.Equal(expectedLevel, telemetry.SeverityLevel);
 
             Assert.Equal(expectedCategory, telemetry.Properties[LogConstants.CategoryNameKey]);
 

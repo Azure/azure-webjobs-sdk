@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -394,6 +395,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     string msg = functionsTrace.ToString();
                     trace.Info(msg, Host.TraceSource.Indexing);
                     startupLogger?.LogInformation(msg);
+                }
+
+                if (ServicePointManager.DefaultConnectionLimit == ServicePointManager.DefaultPersistentConnectionLimit)
+                {
+                    string message = $"{nameof(ServicePointManager)}.{nameof(ServicePointManager.DefaultConnectionLimit)} is set to the default value of {ServicePointManager.DefaultPersistentConnectionLimit}. This can limit the connection throughput to services like Azure Storage. For more information, see https://aka.ms/webjobs-connections.";
+                    trace.Warning(message);
+                    startupLogger?.LogWarning(message);
                 }
 
                 return new JobHostContext(
