@@ -833,10 +833,9 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
 
             if (exception.RequestInformation != null)
             {
-                message += String.Format(" (HTTP status code {0}: {1}. {2})",
-                    exception.RequestInformation.HttpStatusCode.ToString(),
-                    exception.RequestInformation.ExtendedErrorInformation?.ErrorCode,
-                    exception.RequestInformation.ExtendedErrorInformation?.ErrorMessage);
+                message += $" (HTTP status code {exception.RequestInformation.HttpStatusCode.ToString()}: "
+                    + $"{exception.RequestInformation.ExtendedErrorInformation?.ErrorCode}. "
+                    + $"{exception.RequestInformation.ExtendedErrorInformation?.ErrorMessage})";
             }
 
             return message;
