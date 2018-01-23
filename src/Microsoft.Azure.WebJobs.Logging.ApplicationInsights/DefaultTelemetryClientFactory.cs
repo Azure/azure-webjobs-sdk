@@ -7,6 +7,9 @@ using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
+using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
+using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
+using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.Implementation;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
@@ -17,6 +20,9 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
     public class DefaultTelemetryClientFactory : ITelemetryClientFactory
     {
         private readonly string _instrumentationKey;
+        private readonly SamplingPercentageEstimatorSettings _samplingSettings;
+
+        private QuickPulseTelemetryModule _quickPulseModule;
         private TelemetryConfiguration _config;
         private bool _disposed;
         private Func<string, LogLevel, bool> _filter;
@@ -25,9 +31,12 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// Instantiates an instance.
         /// </summary>
         /// <param name="instrumentationKey">The Application Insights instrumentation key.</param>
-        public DefaultTelemetryClientFactory(string instrumentationKey, Func<string, LogLevel, bool> filter)
+        /// <param name="samplingSettings">The <see cref="SamplingPercentageEstimatorSettings"/> to use for configuring adaptive sampling. If null, sampling is disabled.</param>
+        /// <param name="filter"></param>
+        public DefaultTelemetryClientFactory(string instrumentationKey, SamplingPercentageEstimatorSettings samplingSettings, Func<string, LogLevel, bool> filter)
         {
             _instrumentationKey = instrumentationKey;
+            _samplingSettings = samplingSettings;
             _filter = filter;
         }
 
@@ -62,9 +71,32 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
             AddInitializers(config);
 
-            // TODO: FACAVAL - We're losing a lot of AI capability with the port to core.
-            // A lot of the features we use are defined in the WindowsServer package, which is not currently being ported.
-            // Woring with brettsam and the AI team to address the gaps.
+            // Plug in Live stream and adaptive sampling
+            QuickPulseTelemetryProcessor processor = null;
+            TelemetryProcessorChainBuilder builder = config.TelemetryProcessorChainBuilder
+                .Use((next) =>
+                {
+                    processor = new QuickPulseTelemetryProcessor(next);
+                    return processor;
+                })
+                .Use((next) =>
+                {
+                    return new FilteringTelemetryProcessor(_filter, next);
+                });
+
+            if (_samplingSettings != null)
+            {
+                builder.Use((next) =>
+                {
+                    return new AdaptiveSamplingTelemetryProcessor(_samplingSettings, null, next);
+                });
+            }
+
+            builder.Build();
+
+            _quickPulseModule = CreateQuickPulseTelemetryModule();
+            _quickPulseModule.Initialize(config);
+            _quickPulseModule.RegisterTelemetryProcessor(processor);
 
             // Configure the TelemetryChannel
             ITelemetryChannel channel = CreateTelemetryChannel();
@@ -77,7 +109,6 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
             config.TelemetryChannel = channel;
 
-
             return config;
         }
 
@@ -89,7 +120,16 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// <returns>The <see cref="ITelemetryChannel"/></returns>
         protected virtual ITelemetryChannel CreateTelemetryChannel()
         {
-            return new InMemoryChannel();
+            return new ServerTelemetryChannel();
+        }
+
+        /// <summary>
+        /// Creates the <see cref="QuickPulseTelemetryModule"/> to be used by the <see cref="TelemetryClient"/>.
+        /// </summary>
+        /// <returns>The <see cref="QuickPulseTelemetryModule"/>.</returns>
+        protected virtual QuickPulseTelemetryModule CreateQuickPulseTelemetryModule()
+        {
+            return new QuickPulseTelemetryModule();
         }
 
         internal static void AddInitializers(TelemetryConfiguration config)
@@ -122,6 +162,9 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 // TelemetryConfiguration.Dispose will dispose the Channel and the TelemetryProcessors
                 // registered with the TelemetryProcessorChainBuilder.
                 _config?.Dispose();
+
+                _quickPulseModule?.Dispose();
+
                 _disposed = true;
             }
         }

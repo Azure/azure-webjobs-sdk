@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Linq;
-using Microsoft.ApplicationInsights.Channel;
+using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
 using Xunit;
 
@@ -13,7 +13,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         [Fact]
         public void InitializeConfiguguration_Configures()
         {
-            var factory = new DefaultTelemetryClientFactory(string.Empty, null);
+            var factory = new DefaultTelemetryClientFactory(string.Empty, null, null);
             var config = factory.InitializeConfiguration();
 
             // Verify Initializers
@@ -23,8 +23,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             config.TelemetryInitializers.OfType<WebJobsTelemetryInitializer>().Single();
             config.TelemetryInitializers.OfType<WebJobsSanitizingInitializer>().Single();
 
-            // Verify Channel            
-            Assert.IsType<InMemoryChannel>(config.TelemetryChannel);
+            // Verify Channel
+            Assert.IsType<ServerTelemetryChannel>(config.TelemetryChannel);
         }
     }
 }

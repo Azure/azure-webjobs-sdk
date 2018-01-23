@@ -149,6 +149,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 throw new NotImplementedException();
             }
 
+            public ITelemetry DeepClone()
+            {
+                throw new NotImplementedException();
+            }
+
             public IDictionary<string, string> Properties { get; } = new Dictionary<string, string>();
         }
     }

@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.Implementation;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
 
 namespace Microsoft.Extensions.Logging
@@ -25,7 +26,8 @@ namespace Microsoft.Extensions.Logging
             string instrumentationKey,
             Func<string, LogLevel, bool> filter)
         {
-            ITelemetryClientFactory defaultFactory = new DefaultTelemetryClientFactory(instrumentationKey, filter);
+            ITelemetryClientFactory defaultFactory = new DefaultTelemetryClientFactory(instrumentationKey,
+                new SamplingPercentageEstimatorSettings(), filter);
 
             return AddApplicationInsights(loggerFactory, defaultFactory);
         }
