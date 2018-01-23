@@ -172,7 +172,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
                 {
                     if (!e.IsNotFoundTableNotFound())
                     {
-                        throw new StorageException(e.GetDetailedErrorMessage(), e);
+                        throw new StorageException(e.GetDetailedErrorMessage());
                     }
 
                     exception = e;
@@ -197,7 +197,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
             }
             catch (StorageException e)
             {
-                throw new StorageException(e.GetDetailedErrorMessage(), e);
+                throw new StorageException(e.GetDetailedErrorMessage());
             }
         }
 
