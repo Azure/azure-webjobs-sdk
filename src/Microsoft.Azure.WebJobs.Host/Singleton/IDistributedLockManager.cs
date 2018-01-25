@@ -15,6 +15,7 @@ namespace Microsoft.Azure.WebJobs.Host
     /// 1. Account can be null or it may be a storage account name intended for <see cref="IStorageAccountProvider"/>. 
     /// 2. lockId has the same naming restrictions as blobs.     
     /// </remarks>    
+    [Obsolete("Not ready for public consumption.")]
     public interface IDistributedLockManager
     {        
         /// <summary>

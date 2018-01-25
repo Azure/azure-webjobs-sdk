@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
@@ -12,6 +13,7 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
     /// these messages will be distributed to multiple worker instance
     /// for later processing
     /// </summary>
+    [Obsolete("Not ready for public consumption.")]
     public interface IDispatchQueueHandler
     {
         /// <summary> Add a message to the shared queue.</summary>

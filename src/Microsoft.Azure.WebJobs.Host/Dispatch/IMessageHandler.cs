@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
@@ -10,9 +11,10 @@ using Newtonsoft.Json.Linq;
 namespace Microsoft.Azure.WebJobs.Host.Dispatch
 {
     /// <summary>
-    /// Defining the contract for executing a triggered function with shared queue message.
+    /// Defines the contract for executing a triggered function using a dispatch queue.
     /// <see cref="ListenerFactoryContext.GetDispatchQueue(IMessageHandler)"/>
     /// </summary>
+    [Obsolete("Not ready for public consumption.")]
     public interface IMessageHandler
     {
         /// <summary>

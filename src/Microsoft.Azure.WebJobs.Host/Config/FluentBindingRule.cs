@@ -6,8 +6,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Triggers;
@@ -19,6 +17,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
     /// Helpers for adding binding rules to a given attribute.
     /// </summary>
     /// <typeparam name="TAttribute"></typeparam>
+    [Obsolete("Not ready for public consumption.")]
     public class FluentBindingRule<TAttribute> : FluentConverterRules<TAttribute, FluentBindingRule<TAttribute>>
         where TAttribute : Attribute
     {

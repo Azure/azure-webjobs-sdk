@@ -210,6 +210,7 @@ namespace Microsoft.Azure.WebJobs
         /// Get the converter manager, which can be used to register additional conversions for 
         /// customizing model binding. 
         /// </summary>
+        [Obsolete("Not ready for public consumption.")]
         public IConverterManager ConverterManager
         {
             get
@@ -221,6 +222,7 @@ namespace Microsoft.Azure.WebJobs
         /// <summary>
         /// Gets a helper object for constructing common binding rules for extensions.
         /// </summary>
+        [Obsolete("Not ready for public consumption.")]
         public BindingFactory BindingFactory
         {
             get

@@ -6,12 +6,10 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings.Path;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
-{    
+{
     using BindingData = IReadOnlyDictionary<string, object>;
     using BindingDataContract = IReadOnlyDictionary<string, System.Type>;
     // Func to transform Attribute,BindingData into value for cloned attribute property/constructor arg

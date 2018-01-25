@@ -18,7 +18,14 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         private readonly SharedQueueHandler _sharedQueue;
         private IDispatchQueueHandler _dispatchQueue;
 
-        internal ListenerFactoryContext(FunctionDescriptor descriptor, ITriggeredFunctionExecutor executor, SharedQueueHandler sharedQueue, CancellationToken cancellationToken)
+        /// <summary>
+        /// Creates a new instance
+        /// </summary>
+        /// <param name="descriptor">The <see cref="FunctionDescriptor"/> to create a listener for.</param>
+        /// <param name="executor">The <see cref="ITriggeredFunctionExecutor"/> that should be used to invoke the
+        /// target job function when the trigger fires.</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to use.</param>
+        public ListenerFactoryContext(FunctionDescriptor descriptor, ITriggeredFunctionExecutor executor, CancellationToken cancellationToken)
         {
             if (descriptor == null)
             {
@@ -27,8 +34,21 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 
             Descriptor = descriptor;
             Executor = executor;
-            _sharedQueue = sharedQueue;
             CancellationToken = cancellationToken;
+        }
+
+        /// <summary>
+        /// Creates a new instance
+        /// </summary>
+        /// <param name="descriptor">The <see cref="FunctionDescriptor"/> to create a listener for.</param>
+        /// <param name="executor">The <see cref="ITriggeredFunctionExecutor"/> that should be used to invoke the
+        /// target job function when the trigger fires.</param>
+        /// <param name="sharedQueue">The shared queue.</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to use.</param>
+        internal ListenerFactoryContext(FunctionDescriptor descriptor, ITriggeredFunctionExecutor executor, SharedQueueHandler sharedQueue, CancellationToken cancellationToken)
+            : this(descriptor, executor, cancellationToken)
+        {
+            _sharedQueue = sharedQueue;
         }
 
         /// <summary>
@@ -57,6 +77,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         /// If you have registered once, you can retrieve the same queue by passing a null to this function
         /// </param>
         /// <returns> The <see cref="IDispatchQueueHandler"/> is used to enqueue messages </returns>
+        [Obsolete("Not ready for public consumption.")]
         public IDispatchQueueHandler GetDispatchQueue(IMessageHandler handler)
         {
             if (_dispatchQueue == null)
@@ -80,6 +101,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             {
                 throw new InvalidOperationException("Cannot register more than one handler with a single function");
             }
+
             return _dispatchQueue;
         }
     }

@@ -25,18 +25,22 @@ namespace Microsoft.Azure.WebJobs.Host
             return HostBlobTriggerQueuePrefix + hostId;
         }
 
-        /// <summary>Gets the shared host queue name.</summary>
+        /// <summary>
+        /// Gets the shared host queue name.
+        /// </summary>
         /// <param name="hostId">The host ID.</param>
         /// <returns>The shared host queue name.</returns>
-        public static string GetHostSharedQueueName(string hostId)
+        internal static string GetHostSharedQueueName(string hostId)
         {
             return HostSharedQueuePrefix + hostId;
         }
 
-        /// <summary>Gets the shared host poison queue name.</summary>
+        /// <summary>
+        /// Gets the shared host poison queue name.
+        /// </summary>
         /// <param name="hostId">The host ID.</param>
         /// <returns>The shared host poison queue name.</returns>
-        public static string GetHostSharedPoisonQueueName(string hostId)
+        internal static string GetHostSharedPoisonQueueName(string hostId)
         {
             return HostSharedPoisonPrefix + hostId;
         }
