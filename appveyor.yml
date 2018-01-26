@@ -14,5 +14,3 @@ test_script:
 on_finish:
 - ps: .\tools\PollSigningResults.ps1 
 hosts:
-  api.nuget.org: 93.184.221.200
-  dist.nuget.org: 93.184.221.200
