@@ -13,4 +13,3 @@ test_script:
 - cmd: "vstest.console /logger:Appveyor /TestAdapterPath:bin test/Microsoft.Azure.WebJobs.Host.UnitTests/bin/Release/Microsoft.Azure.WebJobs.Host.UnitTests.dll test/Microsoft.Azure.WebJobs.Host.FunctionalTests/bin/Release/Microsoft.Azure.WebJobs.Host.FunctionalTests.dll test/Microsoft.Azure.WebJobs.ServiceBus.UnitTests/bin/Release/Microsoft.Azure.WebJobs.ServiceBus.UnitTests.dll test/Dashboard.UnitTests/bin/Release/Dashboard.UnitTests.dll \n\nvstest.console /logger:Appveyor /TestAdapterPath:bin test/Microsoft.Azure.WebJobs.Host.EndToEndTests/bin/Release/Microsoft.Azure.WebJobs.Host.EndToEndTests.dll"
 on_finish:
 - ps: .\tools\PollSigningResults.ps1 
-hosts:
