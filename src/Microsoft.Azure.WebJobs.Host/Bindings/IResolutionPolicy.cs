@@ -13,6 +13,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     /// The default policy is a direct substitution for the binding data.
     /// Derived policies can enforce formatting or escaping when they do injection.
     /// </summary>
+    [Obsolete("Not ready for public consumption.")]
     public interface IResolutionPolicy
     {
         /// <summary>

@@ -11,6 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host
     /// <summary>
     /// Interface for providing <see cref="JobHost"/> function binding metadata.
     /// </summary>
+    [Obsolete("Not ready for public consumption.")]
     public interface IJobHostMetadataProvider
     {
         /// <summary>

@@ -7,10 +7,13 @@ using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Dispatch
 {
-    // an implementation of DispatchQueueHandler without azure storage account
+    /// <summary>
+    /// An implementation of DispatchQueueHandler that doesn't rely on Azure Storage.
+    /// </summary>
     internal class InMemoryDispatchQueueHandler : IDispatchQueueHandler
     {
         private readonly IMessageHandler _messageHandler;
+
         internal InMemoryDispatchQueueHandler(IMessageHandler messageHandler)
         {
             _messageHandler = messageHandler;

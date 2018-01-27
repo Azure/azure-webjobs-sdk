@@ -15,6 +15,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
     /// </summary>
     /// <typeparam name="TAttribute">The attribute type this applies to. Literally <see cref="Attribute"/> if it applies to all attributes.</typeparam>
     /// <typeparam name="TThis">For fluent API, the type to return</typeparam>
+    [Obsolete("Not ready for public consumption.")]
     public abstract class FluentConverterRules<TAttribute, TThis> where TAttribute : Attribute
     {
         // Access the converter manager that we're adding rules to. 

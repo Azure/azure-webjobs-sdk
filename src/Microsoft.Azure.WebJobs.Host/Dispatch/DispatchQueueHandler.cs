@@ -7,14 +7,19 @@ using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Dispatch
 {
-    /// It is a wrapper around <see cref="SharedQueueHandler"/>
+    /// <summary>
+    /// Wrapper around <see cref="SharedQueueHandler"/>
+    /// </summary>
+    /// <remarks>
+    /// The main purpose of this class is to encapsulate the function ID
+    /// so that when the user enqueues an invocation they only need to
+    /// worry about the message content.
+    /// </remarks>
     internal class DispatchQueueHandler : IDispatchQueueHandler
     {
         private readonly SharedQueueHandler _sharedQueue;
         private readonly string _functionId;
-        // the main purpose of this class is to encapsulate _functionId
-        // so that when user try to enqueue function triggering message
-        // they will only need to worry about the message content
+
         internal DispatchQueueHandler(SharedQueueHandler sharedQueue, string functionId)
         {
             _sharedQueue = sharedQueue;

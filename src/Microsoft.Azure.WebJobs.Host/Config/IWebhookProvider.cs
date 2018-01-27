@@ -8,7 +8,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
     /// <summary>
     /// Allow a host to expose a HTTP web hook for extensions. 
     /// </summary>
-    [Obsolete("preview")]
+    [Obsolete("Not ready for public consumption.")]
     public interface IWebHookProvider
     {
         /// <summary>

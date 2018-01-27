@@ -24,6 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         /// <summary>
         /// Optional handler function for processing the invocation.
         /// </summary>
+        [Obsolete("Not ready for public consumption.")]
         public Func<Func<Task>, Task> InvokeHandler { get; set; }
     }
 }
