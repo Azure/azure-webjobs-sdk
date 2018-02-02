@@ -249,51 +249,46 @@ namespace Microsoft.Azure.WebJobs.Logging
             }
         }
 
-
-        private FunctionInstanceLogItem[] Update()
-        {
-            FunctionInstanceLogItem[] items;
-            lock (_lock)
-            {
-                items = _activeFuncs.Values.ToArray();
-            }
-            foreach (var item in items)
-            {
-                item.Refresh(_flushInterval);
-            }
-            return items;
-        }
-
         // Could flush on a timer. 
         private async Task FlushIntancesAsync()
         {
+            FunctionInstanceLogItem[] itemsSnapshot;
+            Guid[] completedSnapshot;
+            FunctionDefinitionEntity[] functionDefinitionSnapshot;
+
+            // Get snapshots while under the lock. 
+            lock (_lock)
+            {
+                itemsSnapshot = _activeFuncs.Values.ToArray();
+                completedSnapshot = _completedFunctions.ToArray();
+                functionDefinitionSnapshot = _funcDefs.ToArray();
+                _funcDefs.Clear();
+            }
+
             // Before writing, give items a chance to refresh 
-            var itemsSnapshot = Update();
+            foreach (var item in itemsSnapshot)
+            {
+                item.Refresh(_flushInterval);
+            }
 
             // Write entries
             var instances = itemsSnapshot.Select(item => InstanceTableEntity.New(item));
             var recentInvokes = itemsSnapshot.Select(item => RecentPerFuncEntity.New(_machineName, item));
 
-            FunctionDefinitionEntity[] functionDefinitions;
-
-            lock (_lock)
-            {
-                functionDefinitions = _funcDefs.ToArray();
-                _funcDefs.Clear();
-            }
+             
             Task t1 = WriteBatchAsync(instances);
             Task t2 = WriteBatchAsync(recentInvokes);
-            Task t3 = WriteBatchAsync(functionDefinitions);
+            Task t3 = WriteBatchAsync(functionDefinitionSnapshot);
             await Task.WhenAll(t1, t2, t3);
 
             // After we write to table, remove all completed functions. 
             lock (_lock)
             {
-                foreach (var completedId in _completedFunctions)
+                foreach (var completedId in completedSnapshot)
                 {
                     _activeFuncs.Remove(completedId);
+                    _completedFunctions.Remove(completedId);
                 }
-                _completedFunctions.Clear();
             }
         }
 
