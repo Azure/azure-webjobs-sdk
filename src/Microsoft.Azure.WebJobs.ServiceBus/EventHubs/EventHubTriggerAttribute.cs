@@ -16,10 +16,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// <summary>
         /// Create an instance of this attribute.
         /// </summary>
-        /// <param name="eventHubName">Event hub to listen on for messages. </param>
-        public EventHubTriggerAttribute(string eventHubName)
+        /// <param name="path">Event hub to listen on for messages. </param>
+        public EventHubTriggerAttribute(string path)
         {
-            this.EventHubName = eventHubName;
+            this.EventHubName = path;
         }
 
         /// <summary>
