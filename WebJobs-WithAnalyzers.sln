@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27130.2024
+VisualStudioVersion = 15.0.27004.2010
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{639967B0-0544-4C52-94AC-9A3D25E33256}"
 EndProject
@@ -46,6 +46,14 @@ EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "WebJobs.Shared", "src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.shproj", "{ADD036F5-2170-4B05-9E0A-C2ED0A08A929}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.ServiceBus.UnitTests", "test\Microsoft.Azure.WebJobs.ServiceBus.UnitTests\WebJobs.ServiceBus.UnitTests.csproj", "{D37637D5-7EF9-43CB-86BE-537473CD613B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Analyzer", "Analyzer", "{07D2801E-DFE3-4B62-856A-B7F3127AAA5F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebJobs.VSAnalyzer.Core", "src\Analyzer\WebJobs.VSAnalyzer.Core\WebJobs.VSAnalyzer.Core.csproj", "{D8D0281F-583F-4BA4-89CD-ECAFD6BD22A8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Analyzer2.Vsix", "src\Analyzer\WebJobs.VSAnalyzer.Vsix\Analyzer2.Vsix.csproj", "{5745C753-CFD5-4BF6-B446-7C98F040D492}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExtensionViewer", "src\Analyzer\ExtensionViewer\ExtensionViewer.csproj", "{DBA4C5BA-70D0-445E-9380-9FD3E1FB8926}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
@@ -120,6 +128,18 @@ Global
 		{D37637D5-7EF9-43CB-86BE-537473CD613B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D37637D5-7EF9-43CB-86BE-537473CD613B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D37637D5-7EF9-43CB-86BE-537473CD613B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D8D0281F-583F-4BA4-89CD-ECAFD6BD22A8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D8D0281F-583F-4BA4-89CD-ECAFD6BD22A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D8D0281F-583F-4BA4-89CD-ECAFD6BD22A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D8D0281F-583F-4BA4-89CD-ECAFD6BD22A8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5745C753-CFD5-4BF6-B446-7C98F040D492}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5745C753-CFD5-4BF6-B446-7C98F040D492}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5745C753-CFD5-4BF6-B446-7C98F040D492}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5745C753-CFD5-4BF6-B446-7C98F040D492}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DBA4C5BA-70D0-445E-9380-9FD3E1FB8926}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DBA4C5BA-70D0-445E-9380-9FD3E1FB8926}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DBA4C5BA-70D0-445E-9380-9FD3E1FB8926}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DBA4C5BA-70D0-445E-9380-9FD3E1FB8926}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -133,6 +153,9 @@ Global
 		{340AB554-5482-4B3D-B65F-46DFF5AF1684} = {639967B0-0544-4C52-94AC-9A3D25E33256}
 		{27F0E6AC-505E-4BEC-81CA-8DF777DEA9C7} = {639967B0-0544-4C52-94AC-9A3D25E33256}
 		{D37637D5-7EF9-43CB-86BE-537473CD613B} = {639967B0-0544-4C52-94AC-9A3D25E33256}
+		{D8D0281F-583F-4BA4-89CD-ECAFD6BD22A8} = {07D2801E-DFE3-4B62-856A-B7F3127AAA5F}
+		{5745C753-CFD5-4BF6-B446-7C98F040D492} = {07D2801E-DFE3-4B62-856A-B7F3127AAA5F}
+		{DBA4C5BA-70D0-445E-9380-9FD3E1FB8926} = {07D2801E-DFE3-4B62-856A-B7F3127AAA5F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {371BFA14-0980-4A43-A18A-CA1C1A9CB784}

@@ -1,5 +1,5 @@
  #!/usr/bin/env bash
- dotnet build 
+ dotnet build WebJobs.sln
 
  dotnet test ./test/Microsoft.Azure.WebJobs.Host.UnitTests/ -v q --no-build --filter Category!=secretsrequired
 
