@@ -15,7 +15,7 @@ build_script:
 - ps: >
     dotnet --version
 
-    dotnet build -v q
+    dotnet build WebJobs.sln -v q
 
     dotnet pack src\Microsoft.Azure.WebJobs\WebJobs.csproj -o ..\..\buildoutput --no-build --version-suffix "-$env:APPVEYOR_BUILD_NUMBER"
 
