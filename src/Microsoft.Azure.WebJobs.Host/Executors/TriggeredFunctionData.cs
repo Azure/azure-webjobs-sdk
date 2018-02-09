@@ -12,6 +12,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     public class TriggeredFunctionData
     {
         /// <summary>
+        /// The ID for the triggered function invocation
+        /// </summary>
+        public Guid? Id { get; set; }
+        /// <summary>
         /// The parent ID for the triggered function invocation.
         /// </summary>
         public Guid? ParentId { get; set; }

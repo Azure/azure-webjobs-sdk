@@ -30,10 +30,15 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                 throw new ArgumentNullException(nameof(context));
             }
 
+            if (context.Id == null)
+            {
+                throw new ArgumentNullException($"{nameof(context)}.id");
+            }
+
             IBindingSource bindingSource = new TriggerBindingSource<TTriggerValue>(_binding, context.TriggerValue);
             var invoker = CreateInvoker(context);
 
-            return new FunctionInstance(Guid.NewGuid(), context.ParentId, ExecutionReason.AutomaticTrigger, bindingSource, invoker, _descriptor);
+            return new FunctionInstance(context.Id, context.ParentId, ExecutionReason.AutomaticTrigger, bindingSource, invoker, _descriptor);
         }
 
         public IFunctionInstance Create(FunctionInstanceFactoryContext context)
