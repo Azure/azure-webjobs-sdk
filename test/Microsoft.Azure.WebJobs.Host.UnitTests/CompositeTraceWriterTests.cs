@@ -2,9 +2,11 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Moq;
 using Xunit;
 
@@ -94,6 +96,29 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             _mockTextWriter.VerifyAll();
             _mockTraceWriter.VerifyAll();
+        }
+        [Fact]
+        public void Constructor_CreatesCopyOfCollection()
+        {
+            var textWriter = new StringWriter();
+            var t1 = new TestTraceWriter(TraceLevel.Verbose);
+            var t2 = new TestTraceWriter(TraceLevel.Verbose);
+            List<TraceWriter> traceWriters = new List<TraceWriter> { t1, t2 };
+            var traceWriter = new CompositeTraceWriter(traceWriters, textWriter);
+
+            traceWriter.Info("Test");
+            Assert.Equal(1, t1.Traces.Count);
+            Assert.Equal(1, t2.Traces.Count);
+            Assert.Equal(1, textWriter.ToString().Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries).Length);
+
+            var t3 = new TestTraceWriter(TraceLevel.Verbose);
+            traceWriters.Add(t3);
+
+            traceWriter.Info("Test");
+            Assert.Equal(2, t1.Traces.Count);
+            Assert.Equal(2, t2.Traces.Count);
+            Assert.Equal(2, textWriter.ToString().Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries).Length);
+            Assert.Equal(0, t3.Traces.Count);
         }
     }
 }

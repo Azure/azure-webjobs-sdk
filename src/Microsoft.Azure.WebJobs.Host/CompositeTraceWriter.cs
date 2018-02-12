@@ -3,10 +3,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using Microsoft.Azure.WebJobs.Host.Executors;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
@@ -15,21 +15,22 @@ namespace Microsoft.Azure.WebJobs.Host
     /// </summary>
     internal class CompositeTraceWriter : TraceWriter
     {
-        private readonly IEnumerable<TraceWriter> _innerTraceWriters;
+        private readonly ReadOnlyCollection<TraceWriter> _innerTraceWriters;
         private readonly TextWriter _innerTextWriter;
 
         public CompositeTraceWriter(IEnumerable<TraceWriter> traceWriters, TextWriter textWriter, TraceLevel traceLevel = TraceLevel.Verbose)
             : base(traceLevel)
         {
-            _innerTraceWriters = traceWriters ?? Enumerable.Empty<TraceWriter>();
+            // create a copy of the collection to ensure it isn't modified
+            var traceWritersCopy = traceWriters?.ToList() ?? new List<TraceWriter>();
+            _innerTraceWriters = traceWritersCopy.AsReadOnly();
+
             _innerTextWriter = textWriter;
         }
 
         public CompositeTraceWriter(TraceWriter traceWriter, TextWriter textWriter, TraceLevel traceLevel = TraceLevel.Verbose)
-            : base(traceLevel)
+            : this(traceWriter != null ? new List<TraceWriter> { traceWriter } : null, textWriter, traceLevel)
         {
-            _innerTraceWriters = traceWriter != null ? new TraceWriter[] { traceWriter } : Enumerable.Empty<TraceWriter>();
-            _innerTextWriter = textWriter;
         }
 
         public override void Trace(TraceEvent traceEvent)
