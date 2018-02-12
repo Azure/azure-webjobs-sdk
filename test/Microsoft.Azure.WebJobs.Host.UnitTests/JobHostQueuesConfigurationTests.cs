@@ -32,6 +32,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             // on the current BatchSize
             config.BatchSize = 20;
             Assert.Equal(10, config.NewBatchThreshold);
+            config.BatchSize = 1;
+            Assert.Equal(0, config.NewBatchThreshold);
             config.BatchSize = 32;
             Assert.Equal(16, config.NewBatchThreshold);
 
@@ -40,6 +42,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.Equal(1000, config.NewBatchThreshold);
             config.BatchSize = 8;
             Assert.Equal(1000, config.NewBatchThreshold);
+
+            config.NewBatchThreshold = 0;
+            Assert.Equal(0, config.NewBatchThreshold);
         }
 
         [Fact]
