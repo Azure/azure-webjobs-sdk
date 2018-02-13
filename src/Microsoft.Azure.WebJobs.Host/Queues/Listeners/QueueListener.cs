@@ -149,7 +149,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             IEnumerable<IStorageQueueMessage> batch  = null;
             try
             {
-                if (!_queueExists.HasValue || !_queueExists.Value)
+                if (!_queueExists.GetValueOrDefault(false))
                 {
                     // Before querying the queue, determine if it exists. This
                     // avoids generating unecessary exceptions (which pollute AppInsights logs)
