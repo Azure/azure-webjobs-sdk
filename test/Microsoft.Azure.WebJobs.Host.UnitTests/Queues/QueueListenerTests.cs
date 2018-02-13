@@ -3,6 +3,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
@@ -155,11 +156,62 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
                 string.Empty,
                 new Exception());
 
+            _mockQueue.Setup(p => p.ExistsAsync(cancellationToken)).ReturnsAsync(true);
             _mockQueue.Setup(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), null, null, cancellationToken)).Throws(exception);
 
             var result = await _listener.ExecuteAsync(cancellationToken);
             Assert.NotNull(result);
             await result.Wait;
+        }
+
+        [Fact]
+        public async Task GetMessages_ChecksQueueExistence_UntilQueueExists()
+        {
+            var cancellationToken = new CancellationToken();
+            bool queueExists = false;
+            _mockQueue.Setup(p => p.ExistsAsync(cancellationToken)).ReturnsAsync(() => queueExists);
+            _mockQueue.Setup(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), null, null, cancellationToken)).ReturnsAsync(Enumerable.Empty<IStorageQueueMessage>());
+
+            int numIterations = 5;
+            int numFailedExistenceChecks = 2;
+            for (int i = 0; i < numIterations; i++)
+            {
+                if (i >= numFailedExistenceChecks)
+                {
+                    // after the second failed check, simulate the queue
+                    // being added
+                    queueExists = true;
+                }
+
+                var result = await _listener.ExecuteAsync(cancellationToken);
+                await result.Wait;
+            }
+
+            _mockQueue.Verify(p => p.ExistsAsync(cancellationToken), Times.Exactly(numIterations - numFailedExistenceChecks));
+            _mockQueue.Verify(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), null, null, cancellationToken), Times.Exactly(numIterations - numFailedExistenceChecks));
+        }
+
+        [Fact]
+        public async Task GetMessages_ResetsQueueExistenceCheck_OnException()
+        {
+            var cancellationToken = new CancellationToken();
+            _mockQueue.Setup(p => p.ExistsAsync(cancellationToken)).ReturnsAsync(true);
+            var exception = new StorageException(
+                new RequestResult
+                {
+                    HttpStatusCode = 503
+                },
+                string.Empty, new Exception());
+            _mockQueue.Setup(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), null, null, cancellationToken)).Throws(exception);
+
+            for (int i = 0; i < 5; i++)
+            {
+                var result = await _listener.ExecuteAsync(cancellationToken);
+                await result.Wait;
+            }
+
+            _mockQueue.Verify(p => p.ExistsAsync(cancellationToken), Times.Exactly(5));
+            _mockQueue.Verify(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), null, null, cancellationToken), Times.Exactly(5));
         }
 
         [Fact]
