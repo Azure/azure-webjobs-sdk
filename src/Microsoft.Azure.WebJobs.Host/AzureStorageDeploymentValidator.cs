@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Linq;
 using Microsoft.WindowsAzure.Storage.Table;
 using Microsoft.WindowsAzure.Storage.Table.DataServices;
 
@@ -22,7 +23,11 @@ namespace Microsoft.Azure.WebJobs.Host
         {
             try
             {
-                VerifyTableServiceAssemblyLoad();
+                // Later versions of the Storage SDK removed the dependencies on these assemblies, so this check is skipped in those cases.
+                if (typeof(CloudTableClient).Assembly.GetReferencedAssemblies().Any(a => a.Name == "Microsoft.Data.Services.Client"))
+                {
+                    VerifyTableServiceAssemblyLoad();
+                }
             }
             catch (Exception ex)
             {
