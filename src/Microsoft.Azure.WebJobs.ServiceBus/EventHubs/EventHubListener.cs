@@ -10,6 +10,7 @@ using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.EventHubs.Processor;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -21,19 +22,21 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         private readonly bool _singleDispatch;
         private readonly EventProcessorOptions _options;
         private readonly EventHubConfiguration _config;
+        private readonly ILogger _logger;
 
-        public EventHubListener(ITriggeredFunctionExecutor executor, EventProcessorHost eventListener, bool single, EventHubConfiguration config)
+        public EventHubListener(ITriggeredFunctionExecutor executor, EventProcessorHost eventListener, bool single, EventHubConfiguration config, ILogger logger)
         {
-            this._executor = executor;
-            this._eventListener = eventListener;
-            this._singleDispatch = single;
-            this._options = config.GetOptions();
-            this._config = config;
+            _executor = executor;
+            _eventListener = eventListener;
+            _singleDispatch = single;
+            _options = config.GetOptions();
+            _config = config;
+            _logger = logger;
         }
 
         void IListener.Cancel()
         {
-            this.StopAsync(CancellationToken.None).Wait();
+            StopAsync(CancellationToken.None).Wait();
         }
 
         void IDisposable.Dispose() // via IListener
@@ -55,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         // This will get called per-partition. 
         IEventProcessor IEventProcessorFactory.CreateEventProcessor(PartitionContext context)
         {
-            return new Listener(this);
+            return new Listener(this, _logger);
         }
 
         internal static Func<Func<Task>, Task> CreateCheckpointStrategy(int batchCheckpointFrequency)
@@ -88,19 +91,22 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         private class Listener : IEventProcessor
         {
             private readonly EventHubListener _parent;
+            private readonly ILogger _logger;
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
             private readonly Func<PartitionContext, Task> _checkpoint;
 
-            public Listener(EventHubListener parent)
+
+            public Listener(EventHubListener parent, ILogger logger)
             {
-                this._parent = parent;
+                _parent = parent;
                 var checkpointStrategy = CreateCheckpointStrategy(parent._config.BatchCheckpointFrequency);
                 _checkpoint = (context) => checkpointStrategy(context.CheckpointAsync);
+                _logger = logger;
             }
 
             public async Task CloseAsync(PartitionContext context, CloseReason reason)
             {
-                this._cts.Cancel(); // Signal interuption to ProcessEventsAsync()
+                _cts.Cancel(); // Signal interuption to ProcessEventsAsync()
 
                 // Finish listener
                 if (reason == CloseReason.Shutdown)
@@ -116,7 +122,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
             public Task ProcessErrorAsync(PartitionContext context, Exception error)
             {
-                // TODO: log underlying event hubs error
+                string errorMessage = $"Error processing EventHub message from Partition Id:{context.PartitionId}, Owner:{context.Owner}, EventHubPath:{context.EventHubPath}";
+                _logger.LogError(error, errorMessage);
                 return Task.CompletedTask;
             }
 
@@ -149,7 +156,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                                 ParentId = null,
                                 TriggerValue = value.GetSingleEventTriggerInput(i)
                             };
-                            Task task = this._parent._executor.TryExecuteAsync(input, _cts.Token);
+                            Task task = _parent._executor.TryExecuteAsync(input, _cts.Token);
                             dispatches.Add(task);
                         }
                     }
@@ -169,7 +176,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                         TriggerValue = value
                     };
 
-                    FunctionResult result = await this._parent._executor.TryExecuteAsync(input, CancellationToken.None);
+                    FunctionResult result = await _parent._executor.TryExecuteAsync(input, CancellationToken.None);
                 }
 
                 bool hasEvents = false;

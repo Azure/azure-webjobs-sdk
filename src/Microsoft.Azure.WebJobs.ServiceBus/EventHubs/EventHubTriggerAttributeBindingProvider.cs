@@ -9,23 +9,28 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.EventHubs;
+using Microsoft.Extensions.Logging;
+using Microsoft.Azure.WebJobs.Logging;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
     internal class EventHubTriggerAttributeBindingProvider : ITriggerBindingProvider
     {
         private readonly INameResolver _nameResolver;
+        private readonly ILogger _logger;
         private readonly EventHubConfiguration _eventHubConfig;
         private readonly IConverterManager _converterManager;
 
         public EventHubTriggerAttributeBindingProvider(
             INameResolver nameResolver,
             IConverterManager converterManager,
-            EventHubConfiguration eventHubConfig)
+            EventHubConfiguration eventHubConfig,
+            ILoggerFactory loggerFactory)
         {
-            this._nameResolver = nameResolver;
-            this._converterManager = converterManager;
-            this._eventHubConfig = eventHubConfig;
+            _nameResolver = nameResolver;
+            _converterManager = converterManager;
+            _eventHubConfig = eventHubConfig;
+            _logger = loggerFactory?.CreateLogger(LogCategories.CreateTriggerCategory("EventHub"));
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
@@ -59,7 +64,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             Func<ListenerFactoryContext, bool, Task<IListener>> createListener =
              (factoryContext, singleDispatch) =>
              {
-                 IListener listener = new EventHubListener(factoryContext.Executor, eventHostListener, singleDispatch, _eventHubConfig);
+                 IListener listener = new EventHubListener(factoryContext.Executor, eventHostListener, singleDispatch, _eventHubConfig, _logger);
                  return Task.FromResult(listener);
              };
 

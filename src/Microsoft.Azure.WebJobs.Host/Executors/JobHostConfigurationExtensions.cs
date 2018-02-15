@@ -104,14 +104,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 config.AddExtension(new BlobTriggerExtensionConfig());
             }
 
-            ILoggerFactory loggerFactory = services.GetService<ILoggerFactory>();
-
-            if (loggerFactory == null)
-            {
-                loggerFactory = new LoggerFactory();
-                services.AddService<ILoggerFactory>(loggerFactory);
-            }
-
             ExtensionConfigContext context = new ExtensionConfigContext
             {
                 Config = config,
@@ -123,7 +115,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             if (singletonManager == null)
             {
-                var logger = loggerFactory?.CreateLogger(LogCategories.Singleton);
+                var logger = config.LoggerFactory?.CreateLogger(LogCategories.Singleton);
 
                 IDistributedLockManager lockManager = services.GetService<IDistributedLockManager>();
                 if (lockManager == null)
@@ -148,7 +140,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     lockManager,
                     config.Singleton,
                     exceptionHandler,
-                    loggerFactory,
+                    config.LoggerFactory,
                     hostIdProvider,
                     services.GetService<INameResolver>());
                 services.AddService<SingletonManager>(singletonManager);
@@ -159,12 +151,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                                                     config.LoggerFactory, queueConfiguration, sharedContextProvider, messageEnqueuedWatcherAccessor));
             ITriggerBindingProvider triggerBindingProvider = DefaultTriggerBindingProvider.Create(nameResolver,
                 storageAccountProvider, extensionTypeLocator, hostIdProvider, queueConfiguration, blobsConfiguration, exceptionHandler,
-                messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor, sharedContextProvider, extensions, singletonManager, loggerFactory);
+                messageEnqueuedWatcherAccessor, blobWrittenWatcherAccessor, sharedContextProvider, extensions, singletonManager, config.LoggerFactory);
             services.AddService<ITriggerBindingProvider>(triggerBindingProvider);
 
             if (bindingProvider == null)
             {
-                bindingProvider = DefaultBindingProvider.Create(nameResolver, loggerFactory, storageAccountProvider, extensionTypeLocator, blobWrittenWatcherAccessor, extensions);
+                bindingProvider = DefaultBindingProvider.Create(nameResolver, config.LoggerFactory, storageAccountProvider, extensionTypeLocator, blobWrittenWatcherAccessor, extensions);
                 services.AddService<IBindingProvider>(bindingProvider);
             }
                         
