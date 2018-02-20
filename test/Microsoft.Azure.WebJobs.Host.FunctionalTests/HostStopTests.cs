@@ -33,6 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             // Assert
             Assert.True(result);
+
             stopTask.WaitUntilCompleted(3 * 1000);
             Assert.Equal(TaskStatus.RanToCompletion, stopTask.Status);
         }
@@ -106,11 +107,16 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             public static Task Start { get; set; }
             public static TaskCompletionSource<bool> TaskSource { get; set; }
 
-            public static void CallbackCancellationToken([QueueTrigger(QueueName)] string ignore,
+            public static async Task CallbackCancellationToken([QueueTrigger(QueueName)] string ignore,
                 CancellationToken cancellationToken)
             {
                 bool started = Start.WaitUntilCompleted(3 * 1000);
                 Assert.True(started); // Guard
+
+                // Prevent a race between the host stopping and the result being set.
+                await TestHelpers.Await(() => cancellationToken.IsCancellationRequested,
+                    timeout: 3000, pollingInterval: 10);
+
                 TaskSource.TrySetResult(cancellationToken.IsCancellationRequested);
             }
         }
