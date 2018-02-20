@@ -136,8 +136,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "User TextWriter log (TestParam)"
                 }.OrderBy(p => p).ToArray();
 
-                bool hasError = consoleOutputLines.Any(p => p.Contains("Function had errors"));
-                Assert.False(hasError);
+                var errors = consoleOutputLines.Where(p => p.Contains("Function had errors"));
+                Assert.False(errors.Any(), string.Join(Environment.NewLine, errors));
 
                 // Validate console output
                 for (int i = 0; i < expectedOutputLines.Length; i++)
