@@ -4,6 +4,7 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.ExceptionServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
@@ -760,6 +761,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
         {
             // Arrange
             TimeSpan interval = TimeSpan.Zero;
+            StringBuilder failureLog = new StringBuilder();
 
             using (EventWaitHandle executeStarted = new ManualResetEvent(initialState: false))
             using (EventWaitHandle executeFinished = new ManualResetEvent(initialState: false))
@@ -769,8 +771,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
                 ITaskSeriesCommand command = CreateCommand((cancellationToken) =>
                 {
                     Assert.True(executeStarted.Set()); // Guard
+                    failureLog.AppendLine("executeStarted is set");
                     cancellationTokenSignalled = cancellationToken.WaitHandle.WaitOne(1000);
+                    failureLog.AppendLine($"cancellationTokenSignalled is set; result: {cancellationTokenSignalled}");
                     Assert.True(executeFinished.Set()); // Guard
+                    failureLog.AppendLine("executeFinished is set");
                     return new TaskSeriesCommandResult(wait: Task.Delay(0));
                 });
 
@@ -783,8 +788,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
                     product.Dispose();
 
                     // Assert
-                    Assert.True(executeFinished.WaitOne(1000)); // Guard
-                    Assert.True(cancellationTokenSignalled);
+                    Assert.True(executeFinished.WaitOne(1000), failureLog.ToString()); // Guard
+                    Assert.True(cancellationTokenSignalled, failureLog.ToString());
                 }
             }
         }
