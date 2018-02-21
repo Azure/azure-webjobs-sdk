@@ -763,6 +763,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
             TimeSpan interval = TimeSpan.Zero;
             StringBuilder failureLog = new StringBuilder();
 
+            Stopwatch sw = Stopwatch.StartNew();
+
+            string GetLogHeader()
+            {
+                return $"[{sw.ElapsedTicks} ticks][TID {Thread.CurrentThread.ManagedThreadId}]";
+            }
+
             using (EventWaitHandle executeStarted = new ManualResetEvent(initialState: false))
             using (EventWaitHandle executeFinished = new ManualResetEvent(initialState: false))
             {
@@ -770,25 +777,40 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
 
                 ITaskSeriesCommand command = CreateCommand((cancellationToken) =>
                 {
-                    Assert.True(executeStarted.Set()); // Guard
-                    failureLog.AppendLine("executeStarted is set");
-                    cancellationTokenSignalled = cancellationToken.WaitHandle.WaitOne(1000);
-                    failureLog.AppendLine($"cancellationTokenSignalled is set; result: {cancellationTokenSignalled}");
-                    Assert.True(executeFinished.Set()); // Guard
-                    failureLog.AppendLine("executeFinished is set");
-                    return new TaskSeriesCommandResult(wait: Task.Delay(0));
+                    try
+                    {
+                        Assert.True(executeStarted.Set()); // Guard
+                        failureLog.AppendLine($"{GetLogHeader()} executeStarted is set");
+
+                        cancellationTokenSignalled = cancellationToken.WaitHandle.WaitOne(1000);
+                        failureLog.AppendLine($"{GetLogHeader()} cancellationTokenSignalled is set; result: {cancellationTokenSignalled}");
+                        Assert.True(executeFinished.Set()); // Guard
+                        failureLog.AppendLine($"{GetLogHeader()} executeFinished is set");
+                        return new TaskSeriesCommandResult(wait: Task.Delay(0));
+                    }
+                    catch (Exception ex)
+                    {
+                        failureLog.AppendLine($"{GetLogHeader()} {ex.ToString()}");
+                        throw;
+                    }
                 });
 
                 using (ITaskSeriesTimer product = CreateProductUnderTest(command))
                 {
                     product.Start();
-                    Assert.True(executeStarted.WaitOne(1000)); // Guard
+                    failureLog.AppendLine($"{GetLogHeader()} starting to wait for executeStarted");
+                    Assert.True(executeStarted.WaitOne(1000), failureLog.ToString()); // Guard
+                    failureLog.AppendLine($"{GetLogHeader()} executeStarted completed");
 
                     // Act
                     product.Dispose();
+                    failureLog.AppendLine($"{GetLogHeader()} product disposed");
 
                     // Assert
+                    failureLog.AppendLine($"{GetLogHeader()} starting to wait for executeFinished");
                     Assert.True(executeFinished.WaitOne(1000), failureLog.ToString()); // Guard
+                    failureLog.AppendLine($"{GetLogHeader()} executeStarted completed");
+
                     Assert.True(cancellationTokenSignalled, failureLog.ToString());
                 }
             }
