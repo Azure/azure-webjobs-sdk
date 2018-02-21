@@ -78,9 +78,6 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
                 binding.SetPostResolveHook(ToReadWriteParameterDescriptorForCollector)
                         .BindToInput<CloudQueue>(builder);
 
-                binding.SetPostResolveHook(ToReadWriteParameterDescriptorForCollector)
-                        .BindToInput<CloudQueue>(builder);
-
                 IConverterManager converterManager = context.Config.ConverterManager;
                 converterManager.AddConverter<object, JObject, QueueAttribute>(SerializeToJobject);
             }
