@@ -4,7 +4,6 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.ExceptionServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
@@ -757,40 +756,42 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
         }
 
         [Fact]
-        public void Dispose_TriggersCommandCancellationToken()
+        public async Task Dispose_TriggersCommandCancellationToken()
         {
             // Arrange
-            TimeSpan interval = TimeSpan.Zero;
-            StringBuilder failureLog = new StringBuilder();
+            TaskCompletionSource<object> commandStarted = new TaskCompletionSource<object>();
+            TaskCompletionSource<object> cancellationSet = new TaskCompletionSource<object>();
 
-            using (EventWaitHandle executeStarted = new ManualResetEvent(initialState: false))
-            using (EventWaitHandle executeFinished = new ManualResetEvent(initialState: false))
+            ITaskSeriesCommand command = CreateCommand(async (cancellationToken) =>
             {
-                bool cancellationTokenSignalled = false;
-
-                ITaskSeriesCommand command = CreateCommand((cancellationToken) =>
+                try
                 {
-                    Assert.True(executeStarted.Set()); // Guard
-                    failureLog.AppendLine("executeStarted is set");
-                    cancellationTokenSignalled = cancellationToken.WaitHandle.WaitOne(1000);
-                    failureLog.AppendLine($"cancellationTokenSignalled is set; result: {cancellationTokenSignalled}");
-                    Assert.True(executeFinished.Set()); // Guard
-                    failureLog.AppendLine("executeFinished is set");
-                    return new TaskSeriesCommandResult(wait: Task.Delay(0));
-                });
+                    commandStarted.SetResult(null);
 
-                using (ITaskSeriesTimer product = CreateProductUnderTest(command))
-                {
-                    product.Start();
-                    Assert.True(executeStarted.WaitOne(1000)); // Guard
+                    await TestHelpers.Await(() => cancellationToken.IsCancellationRequested,
+                        timeout: 1000, pollingInterval: 10, userMessage: "CancellationToken was not set.");
 
-                    // Act
-                    product.Dispose();
-
-                    // Assert
-                    Assert.True(executeFinished.WaitOne(1000), failureLog.ToString()); // Guard
-                    Assert.True(cancellationTokenSignalled, failureLog.ToString());
+                    cancellationSet.SetResult(null);
                 }
+                catch (Exception ex)
+                {
+                    cancellationSet.TrySetException(ex);
+                }
+
+                return new TaskSeriesCommandResult(wait: Task.Delay(0));
+            });
+
+            using (ITaskSeriesTimer product = CreateProductUnderTest(command))
+            {
+                product.Start();
+                await commandStarted.Task; // Guard
+
+                // Act
+                product.Dispose();
+
+                // Assert
+                // This will throw if Await() in the command failed
+                await cancellationSet.Task;
             }
         }
 
@@ -868,6 +869,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
             mock
                 .Setup(c => c.ExecuteAsync(It.IsAny<CancellationToken>()))
                 .Returns(() => execute.Invoke());
+            return mock.Object;
+        }
+
+        private static ITaskSeriesCommand CreateCommand(Func<CancellationToken, Task<TaskSeriesCommandResult>> execute)
+        {
+            Mock<ITaskSeriesCommand> mock = new Mock<ITaskSeriesCommand>(MockBehavior.Strict);
+            mock
+                .Setup(c => c.ExecuteAsync(It.IsAny<CancellationToken>()))
+                .Returns<CancellationToken>((c) => execute.Invoke(c));
             return mock.Object;
         }
 

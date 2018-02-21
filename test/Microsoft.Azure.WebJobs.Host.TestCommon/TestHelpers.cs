@@ -1,6 +1,12 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
+using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
@@ -9,27 +15,28 @@ using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Linq;
-using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.TestCommon
 {
     public static class TestHelpers
     {
-        public static async Task Await(Func<bool> condition, int timeout = 60 * 1000, int pollingInterval = 2 * 1000)
+        public static async Task Await(Func<bool> condition, int timeout = 60 * 1000, int pollingInterval = 2 * 1000, bool throwWhenDebugging = false, string userMessage = null)
         {
             DateTime start = DateTime.Now;
             while (!condition())
             {
                 await Task.Delay(pollingInterval);
 
-                if ((DateTime.Now - start).TotalMilliseconds > timeout)
+                bool shouldThrow = !Debugger.IsAttached || (Debugger.IsAttached && throwWhenDebugging);
+                if (shouldThrow && (DateTime.Now - start).TotalMilliseconds > timeout)
                 {
-                    throw new ApplicationException("Condition not reached within timeout.");
+                    string error = "Condition not reached within timeout.";
+                    if (userMessage != null)
+                    {
+                        error += " " + userMessage;
+                    }
+                    throw new ApplicationException(error);
                 }
             }
         }
@@ -41,7 +48,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             {
                 // timeout. Event not signaled in time. 
                 throw new ApplicationException("Condition not reached within timeout.");
-            }         
+            }
         }
 
         public static void SetField(object target, string fieldName, object value)
@@ -80,7 +87,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             return host;
         }
 
-        public static JobHostConfiguration NewConfig<TProgram>(          
+        public static JobHostConfiguration NewConfig<TProgram>(
           params object[] services
           )
         {
@@ -218,7 +225,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                     continue;
                 }
 
-                throw new InvalidOperationException("Test bug: Unrecognized type: " + obj.GetType().FullName);                
+                throw new InvalidOperationException("Test bug: Unrecognized type: " + obj.GetType().FullName);
             }
         }
 
