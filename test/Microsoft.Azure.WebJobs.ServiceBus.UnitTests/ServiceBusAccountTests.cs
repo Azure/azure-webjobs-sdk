@@ -36,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
                 var account = new ServiceBusAccount(config, attribute);
                 var cs = account.ConnectionString;
             });
-            Assert.Equal("Microsoft Azure WebJobs SDK ServiceBus connection string 'AzureWebJobsMissingConnection' is missing or empty.", ex.Message);
+            Assert.Equal("Microsoft Azure WebJobs SDK ServiceBus connection string 'MissingConnection' is missing or empty.", ex.Message);
 
             attribute.Connection = null;
             config.ConnectionString = null;
