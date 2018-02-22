@@ -189,8 +189,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await Task.Delay(2000);
 
                 // Sum up all req/sec calls that we've received.
-                var reqPerSec = listener
-                    .QuickPulseItems.Select(p => p.Metrics.Where(q => q.Name == @"\ApplicationInsights\Requests/Sec").Single());
+                var reqPerSec = listener.GetQuickPulseItems()
+                    .Select(p => p.Metrics.Where(q => q.Name == @"\ApplicationInsights\Requests/Sec").Single());
                 double sum = reqPerSec.Sum(p => p.Value);
 
                 // All requests will go to QuickPulse.
@@ -278,11 +278,18 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private class ApplicationInsightsTestListener : IDisposable
         {
-
             private readonly HttpListener _applicationInsightsListener = new HttpListener();
+            private readonly List<QuickPulsePayload> _quickPulseItems = new List<QuickPulsePayload>();
+            private readonly object _syncLock = new object();
             private Thread _listenerThread;
 
-            public List<QuickPulsePayload> QuickPulseItems { get; } = new List<QuickPulsePayload>();
+            public IEnumerable<QuickPulsePayload> GetQuickPulseItems()
+            {
+                lock (_syncLock)
+                {
+                    return _quickPulseItems.ToList();
+                }
+            }
 
             public void StartListening()
             {
@@ -344,7 +351,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 if (request.Url.LocalPath == "/QuickPulseService.svc/post")
                 {
                     QuickPulsePayload[] quickPulse = JsonConvert.DeserializeObject<QuickPulsePayload[]>(result);
-                    QuickPulseItems.AddRange(quickPulse);
+                    lock (_syncLock)
+                    {
+                        _quickPulseItems.AddRange(quickPulse);
+                    }
                 }
             }
 
