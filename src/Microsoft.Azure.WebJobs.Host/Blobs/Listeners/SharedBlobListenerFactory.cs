@@ -14,10 +14,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IContextSetter<IBlobWrittenWatcher> _blobWrittenWatcherSetter;
         private readonly string _hostId;
+        private readonly TraceWriter _trace;
 
         public SharedBlobListenerFactory(string hostId, IStorageAccount account,
             IWebJobsExceptionHandler exceptionHandler,
-            IContextSetter<IBlobWrittenWatcher> blobWrittenWatcherSetter)
+            IContextSetter<IBlobWrittenWatcher> blobWrittenWatcherSetter,
+            TraceWriter trace)
         {
             if (account == null)
             {
@@ -38,12 +40,13 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             _account = account;
             _exceptionHandler = exceptionHandler;
             _blobWrittenWatcherSetter = blobWrittenWatcherSetter;
+            _trace = trace;
         }
 
         [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         public SharedBlobListener Create()
         {
-            SharedBlobListener listener = new SharedBlobListener(_hostId, _account, _exceptionHandler);
+            SharedBlobListener listener = new SharedBlobListener(_hostId, _account, _exceptionHandler, _trace);
             _blobWrittenWatcherSetter.SetValue(listener.BlobWritterWatcher);
             return listener;
         }
