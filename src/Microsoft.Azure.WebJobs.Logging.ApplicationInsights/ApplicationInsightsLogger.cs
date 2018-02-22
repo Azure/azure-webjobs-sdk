@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
-using Microsoft.Net.Http.Headers;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
@@ -318,12 +317,6 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
             ApplyFunctionResultProperties(requestTelemetry, values);
 
-            // Functions attaches the HttpRequest, which allows us to log richer request details.
-            if (scopeProps.TryGetValue(ApplicationInsightsScopeKeys.HttpRequest, out object request))
-            {
-                ApplyHttpRequestProperties(requestTelemetry, request as HttpRequest);
-            }
-
             // log associated exception details
             if (exception != null)
             {
@@ -333,48 +326,6 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             // Note: we do not have to set Duration, StartTime, etc. These are handled by the call to Stop()
             requestTelemetry.Stop();
             _telemetryClient.TrackRequest(requestTelemetry);
-        }
-
-        private static void ApplyHttpRequestProperties(RequestTelemetry requestTelemetry, HttpRequest request)
-        {
-            if (request == null)
-            {
-                return;
-            }
-
-            var uriBuilder = new UriBuilder
-            {
-                Scheme = request.Scheme,
-                Host = request.Host.Host,
-                Path = request.Path
-            };
-
-            if (request.Host.Port.HasValue)
-            {
-                uriBuilder.Port = request.Host.Port.Value;
-            }
-
-            requestTelemetry.Url = uriBuilder.Uri;
-            requestTelemetry.Properties[LogConstants.HttpMethodKey] = request.Method;
-
-            requestTelemetry.Context.Location.Ip = GetIpAddress(request);
-            if (request.Headers.TryGetValue(HeaderNames.UserAgent, out StringValues userAgentHeader))
-            {
-                requestTelemetry.Context.User.UserAgent = userAgentHeader.FirstOrDefault();
-            }
-
-            ObjectResult response = GetResponse(request);
-
-            // If a function throws an exception, we don't get a response attached to the request.
-            // In that case, we'll consider it a 500.
-            if (response?.StatusCode != null)
-            {
-                requestTelemetry.ResponseCode = response.StatusCode.ToString();
-            }
-            else
-            {
-                requestTelemetry.ResponseCode = "500";
-            }
         }
 
         private static void ApplyFunctionResultProperties(RequestTelemetry requestTelemetry, IEnumerable<KeyValuePair<string, object>> stateValues)

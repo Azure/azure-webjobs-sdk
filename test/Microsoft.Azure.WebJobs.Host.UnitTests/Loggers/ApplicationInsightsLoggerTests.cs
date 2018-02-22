@@ -11,7 +11,6 @@ using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Loggers;
@@ -175,125 +174,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(2, metric.Properties.Count);
             Assert.Equal(expectedCategory, metric.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(expectedLevel.ToString(), metric.Properties[LogConstants.LogLevelKey]);
-        }
-
-        [Fact]
-        public void LogFunctionResult_HttpRequest_SendsCorrectTelemetry()
-        {
-            // If the scope has an HttpRequestMessage, we'll use the proper values
-            // for the RequestTelemetry
-            DateTime now = DateTime.UtcNow;
-            var result = CreateDefaultInstanceLogEntry();
-
-            var request = new Mock<HttpRequest>();
-            request.SetupGet(r => r.Scheme).Returns("http");
-            request.SetupGet(r => r.Path).Returns("/api/path");
-            request.SetupGet(r => r.Host).Returns(new HostString("someuri"));
-            request.SetupGet(r => r.Method).Returns("POST");
-
-            var headers = new HeaderDictionary
-            {
-                { "User-Agent", "my custom user agent" }
-            };
-            request.SetupGet(r => r.Headers).Returns(headers);
-
-            var response = new OkObjectResult(null);
-            var items = new Dictionary<object, object> { { ApplicationInsightsScopeKeys.FunctionsHttpResponse, response } };
-
-            MockHttpRequest(request, "1.2.3.4", items);
-
-            ILogger logger = CreateLogger(LogCategories.Results);
-            var scopeProps = CreateScopeDictionary(_invocationId.ToString(), _functionShortName);
-            scopeProps[ApplicationInsightsScopeKeys.HttpRequest] = request.Object;
-
-            using (logger.BeginScope(scopeProps))
-            {
-                using (logger.BeginFunctionScope(CreateFunctionInstance(_invocationId), _hostInstanceId))
-                {
-                    logger.LogFunctionResult(result);
-                }
-            }
-
-            RequestTelemetry telemetry = _channel.Telemetries.Single() as RequestTelemetry;
-
-            Assert.Equal(_invocationId.ToString(), telemetry.Id);
-            Assert.Equal(_invocationId.ToString(), telemetry.Context.Operation.Id);
-            Assert.Equal(_functionShortName, telemetry.Name);
-            Assert.Equal(_functionShortName, telemetry.Context.Operation.Name);
-            Assert.Equal("1.2.3.4", telemetry.Context.Location.Ip);
-            Assert.Equal("POST", telemetry.Properties[LogConstants.HttpMethodKey]);
-            Assert.Equal(new Uri("http://someuri/api/path"), telemetry.Url);
-            Assert.Equal("my custom user agent", telemetry.Context.User.UserAgent);
-            Assert.Equal("200", telemetry.ResponseCode);
-            Assert.Equal(LogCategories.Results, telemetry.Properties[LogConstants.CategoryNameKey]);
-            Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
-            // TODO: Beef up validation to include properties
-        }
-
-        [Fact]
-        public void LogFunctionResult_HttpRequest_WithException_SendsCorrectTelemetry()
-        {
-            // If the scope has an HttpRequestMessage, we'll use the proper values
-            // for the RequestTelemetry
-            Exception fex = new Exception("Boom");
-            DateTime now = DateTime.UtcNow;
-            var result = CreateDefaultInstanceLogEntry(fex);
-
-            var request = new Mock<HttpRequest>();
-            request.SetupGet(r => r.Scheme).Returns("http");
-            request.SetupGet(r => r.Path).Returns("/api/path");
-            request.SetupGet(r => r.Host).Returns(new HostString("someuri"));
-            request.SetupGet(r => r.Method).Returns("POST");
-
-            var headers = new HeaderDictionary
-            {
-                { "User-Agent", "my custom user agent" }
-            };
-
-            request.SetupGet(r => r.Headers).Returns(headers);
-
-            // In the case of an exception being thrown, no response is attached
-
-            MockHttpRequest(request, "1.2.3.4");
-
-            ILogger logger = CreateLogger(LogCategories.Results);
-            var scopeProps = CreateScopeDictionary(_invocationId.ToString(), _functionShortName);
-            scopeProps[ApplicationInsightsScopeKeys.HttpRequest] = request.Object;
-
-            // simulate HttpTrigger, which wraps the function call with HTTP details.
-            using (logger.BeginScope(scopeProps))
-            {
-                using (logger.BeginFunctionScope(CreateFunctionInstance(_invocationId), _hostInstanceId))
-                {
-                    logger.LogFunctionResult(result);
-                }
-            }
-
-            // one Exception, one Request
-            Assert.Equal(2, _channel.Telemetries.Count);
-
-            RequestTelemetry requestTelemetry = _channel.Telemetries.Where(t => t is RequestTelemetry).Single() as RequestTelemetry;
-            ExceptionTelemetry exceptionTelemetry = _channel.Telemetries.Where(t => t is ExceptionTelemetry).Single() as ExceptionTelemetry;
-
-            Assert.Equal(_invocationId.ToString(), requestTelemetry.Id);
-            Assert.Equal(_invocationId.ToString(), requestTelemetry.Context.Operation.Id);
-            Assert.Equal(_functionShortName, requestTelemetry.Name);
-            Assert.Equal(_functionShortName, requestTelemetry.Context.Operation.Name);
-            Assert.Equal("1.2.3.4", requestTelemetry.Context.Location.Ip);
-            Assert.Equal("POST", requestTelemetry.Properties[LogConstants.HttpMethodKey]);
-            Assert.Equal(new Uri("http://someuri/api/path"), requestTelemetry.Url);
-            Assert.Equal("my custom user agent", requestTelemetry.Context.User.UserAgent);
-            Assert.Equal("500", requestTelemetry.ResponseCode);
-            Assert.Equal(LogCategories.Results, requestTelemetry.Properties[LogConstants.CategoryNameKey]);
-            Assert.Equal(LogLevel.Error.ToString(), requestTelemetry.Properties[LogConstants.LogLevelKey]);
-
-            // Exception needs to have associated id
-            Assert.Equal(_invocationId.ToString(), exceptionTelemetry.Context.Operation.Id);
-            Assert.Equal(_functionShortName, exceptionTelemetry.Context.Operation.Name);
-            Assert.Same(fex, exceptionTelemetry.Exception);
-            Assert.Equal(LogCategories.Results, exceptionTelemetry.Properties[LogConstants.CategoryNameKey]);
-            Assert.Equal(LogLevel.Error.ToString(), exceptionTelemetry.Properties[LogConstants.LogLevelKey]);
-            // TODO: Beef up validation to include properties
         }
 
         [Fact]
