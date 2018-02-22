@@ -133,9 +133,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
             if (string.IsNullOrEmpty(connectionString))
             {
+                var defaultConnectionName = "AzureWebJobs" + ConnectionStringNames.ServiceBus;
                 throw new InvalidOperationException(
-                    string.Format(CultureInfo.InvariantCulture, "Microsoft Azure WebJobs SDK ServiceBus connection string '{0}{1}' is missing or empty.",
-                    "AzureWebJobs", connectionStringName ?? ConnectionStringNames.ServiceBus));
+                    string.Format(CultureInfo.InvariantCulture, "Microsoft Azure WebJobs SDK ServiceBus connection string '{0}' is missing or empty.",
+                    connectionStringName ?? defaultConnectionName));
             }
 
             return connectionString;
