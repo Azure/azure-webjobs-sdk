@@ -4,7 +4,6 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.ExceptionServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
@@ -761,14 +760,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
         {
             // Arrange
             TimeSpan interval = TimeSpan.Zero;
-            StringBuilder failureLog = new StringBuilder();
-
-            Stopwatch sw = Stopwatch.StartNew();
-
-            string GetLogHeader()
-            {
-                return $"[{sw.ElapsedTicks} ticks][TID {Thread.CurrentThread.ManagedThreadId}]";
-            }
+            Exception backgroundException = null;
 
             using (EventWaitHandle executeStarted = new ManualResetEvent(initialState: false))
             using (EventWaitHandle executeFinished = new ManualResetEvent(initialState: false))
@@ -780,17 +772,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
                     try
                     {
                         Assert.True(executeStarted.Set()); // Guard
-                        failureLog.AppendLine($"{GetLogHeader()} executeStarted is set");
-
                         cancellationTokenSignalled = cancellationToken.WaitHandle.WaitOne(1000);
-                        failureLog.AppendLine($"{GetLogHeader()} cancellationTokenSignalled is set; result: {cancellationTokenSignalled}");
                         Assert.True(executeFinished.Set()); // Guard
-                        failureLog.AppendLine($"{GetLogHeader()} executeFinished is set");
+
                         return new TaskSeriesCommandResult(wait: Task.Delay(0));
                     }
                     catch (Exception ex)
                     {
-                        failureLog.AppendLine($"{GetLogHeader()} {ex.ToString()}");
+                        backgroundException = ex;
                         throw;
                     }
                 });
@@ -798,20 +787,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
                 using (ITaskSeriesTimer product = CreateProductUnderTest(command))
                 {
                     product.Start();
-                    failureLog.AppendLine($"{GetLogHeader()} starting to wait for executeStarted");
-                    Assert.True(executeStarted.WaitOne(1000), failureLog.ToString()); // Guard
-                    failureLog.AppendLine($"{GetLogHeader()} executeStarted completed");
+                    Assert.True(executeStarted.WaitOne(1000), backgroundException?.ToString()); // Guard
 
                     // Act
                     product.Dispose();
-                    failureLog.AppendLine($"{GetLogHeader()} product disposed");
 
                     // Assert
-                    failureLog.AppendLine($"{GetLogHeader()} starting to wait for executeFinished");
-                    Assert.True(executeFinished.WaitOne(1000), failureLog.ToString()); // Guard
-                    failureLog.AppendLine($"{GetLogHeader()} executeStarted completed");
-
-                    Assert.True(cancellationTokenSignalled, failureLog.ToString());
+                    Assert.True(executeFinished.WaitOne(1000), backgroundException?.ToString()); // Guard
+                    Assert.True(cancellationTokenSignalled, backgroundException?.ToString());
+                    Assert.True(backgroundException == null, backgroundException?.ToString());
                 }
             }
         }
