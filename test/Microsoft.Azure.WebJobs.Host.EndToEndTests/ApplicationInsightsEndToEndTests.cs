@@ -191,40 +191,38 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     await host.StartAsync();
 
                     var methodInfo = GetType().GetMethod(nameof(TestApplicationInsightsWarning), BindingFlags.Public | BindingFlags.Static);
+                    List<Task> invokeTasks = new List<Task>();
 
                     for (int i = 0; i < requests; i++)
                     {
-                        await host.CallAsync(methodInfo);
+                        invokeTasks.Add(host.CallAsync(methodInfo));
                     }
 
+                    await Task.WhenAll(invokeTasks);
+                    // let the flushes occur
+                    await Task.Delay(1000);
                     await host.StopAsync();
                 }
+
+                loggerFactory.Dispose();
             }
             finally
             {
                 listener.StopListening();
             }
 
-            // wait for everything to flush
-            await Task.Delay(2000);
-
-                // Sum up all req/sec calls that we've received.
-                var reqPerSec = listener.GetQuickPulseItems()
+            // Sum up all req/sec calls that we've received.
+            var reqPerSec = listener.GetQuickPulseItems()
                     .Select(p => p.Metrics.Where(q => q.Name == @"\ApplicationInsights\Requests/Sec").Single());
-                double sum = reqPerSec.Sum(p => p.Value);
+            double sum = reqPerSec.Sum(p => p.Value);
 
             // All requests will go to QuickPulse.
             // The calculated RPS may off, so give some wiggle room. The important thing is that it's generating 
-            // RequestTelemetry and not being filtered.
-            double max = requests + 3;
+            // RequestTelemetry and not being filtered.                
             double min = requests - 2;
-            Assert.True(sum > min && sum < max, $"Expected sum to be greater than {min} and less than {max}. DefaultLevel: {defaultLevel}. Actual: {sum}");
+            Assert.True(sum >= min, $"Expected sum to be greater than {min}. DefaultLevel: {defaultLevel}. Actual: {sum}");
 
             // These will be filtered based on the default filter.
-            var infos = _channel.Telemetries.OfType<TraceTelemetry>().Where(t => t.SeverityLevel == SeverityLevel.Information);
-            var warns = _channel.Telemetries.OfType<TraceTelemetry>().Where(t => t.SeverityLevel == SeverityLevel.Warning);
-            var errs = _channel.Telemetries.OfType<TraceTelemetry>().Where(t => t.SeverityLevel == SeverityLevel.Error);
-
             Assert.Equal(expectedTelemetryItems, _channel.Telemetries.Count());
         }
 
