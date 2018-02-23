@@ -159,7 +159,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             ValidateRequest(request, testName, false);
         }
 
-        [Theory]
+        [Theory(Skip = "Skipping flaky tests")]
         [InlineData(LogLevel.None, 0)]
         [InlineData(LogLevel.Information, 28)]
         [InlineData(LogLevel.Warning, 10)]
