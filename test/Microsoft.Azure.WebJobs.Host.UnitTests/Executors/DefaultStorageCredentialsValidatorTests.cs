@@ -160,43 +160,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         }
 
         [Fact]
-        public void StorageAccount_QueueCheckThrows_BlobOnly_WhenCatchingServiceUnavailable()
-        {
-            var validator = new DefaultStorageCredentialsValidator();
-
-            var storageMock = new Mock<IStorageAccount>(MockBehavior.Strict);
-            var blobClientMock = new Mock<IStorageBlobClient>();
-            var queueClientMock = new Mock<IStorageQueueClient>();
-            var queueMock = new Mock<IStorageQueue>();
-
-            storageMock.Setup(s => s.Credentials)
-                .Returns(new StorageCredentials());
-
-            storageMock.Setup(s => s.CreateBlobClient(null))
-                .Returns(blobClientMock.Object)
-                .Verifiable();
-
-            blobClientMock.Setup(b => b.GetServicePropertiesAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync((ServiceProperties)null);
-
-            storageMock.Setup(s => s.CreateQueueClient(null))
-                .Returns(queueClientMock.Object)
-                .Verifiable();
-
-            queueClientMock.Setup(q => q.GetQueueReference(It.IsAny<string>()))
-                .Returns(queueMock.Object);
-
-            queueMock.Setup(q => q.ExistsAsync(It.IsAny<CancellationToken>()))
-                .Throws(new StorageException(new RequestResult { HttpStatusCode = 503 }, "", null));
-
-            storageMock.SetupSet(s => s.Type = StorageAccountType.BlobOnly);
-
-            validator.ValidateCredentialsAsync(storageMock.Object, It.IsAny<CancellationToken>()).GetAwaiter().GetResult();
-
-            storageMock.Verify();
-        }
-
-        [Fact]
         public void StorageAccount_QueueCheckThrowsUnexpectedStorage()
         {
             var validator = new DefaultStorageCredentialsValidator();

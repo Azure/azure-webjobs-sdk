@@ -86,7 +86,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private static bool IsBlobOnlyStorageException(StorageException storageException)
         {
             const int errorWinhttpNameNotResolved = 0x2ee7;
-            const int serviceUnavailable = 503;
 
             switch (storageException.InnerException)
             {
@@ -96,9 +95,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 // Inner exception when using WindowsAzure.Storage for netstandard1.3 as WebException does not exist
                 case System.Net.Http.HttpRequestException httpRequestException:
                     return (httpRequestException.HResult & 0xFFFF) == errorWinhttpNameNotResolved;
-                // When running behind a proxy
-                case null:
-                    return storageException.RequestInformation?.HttpStatusCode == serviceUnavailable;
                 default:
                     return false;
             }
