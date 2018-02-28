@@ -252,7 +252,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     stringValue = property.Value.ToString();
                 }
 
-                //use 
+                //only used when duplicate keys are detected
                 var duplicateKeyQuantifier = 0;
                 while(true) 
                 {
