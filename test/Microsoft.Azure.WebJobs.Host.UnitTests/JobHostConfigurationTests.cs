@@ -27,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             JobHostConfiguration config = new JobHostConfiguration();
 
             Assert.NotNull(config.Singleton);
-            Assert.Null(config.LoggerFactory);
+            Assert.NotNull(config.LoggerFactory);
             Assert.False(config.Blobs.CentralizedPoisonQueue);
 
             StorageClientFactory clientFactory = config.GetService<StorageClientFactory>();

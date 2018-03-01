@@ -11,6 +11,9 @@ using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Microsoft.Extensions.Logging;
+using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Azure.WebJobs.Host;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -29,6 +32,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         private readonly Dictionary<string, EventProcessorHost> _explicitlyProvidedHosts = new Dictionary<string, EventProcessorHost>(StringComparer.OrdinalIgnoreCase);
 
         private readonly EventProcessorOptions _options;
+        private ILogger _logger;
 
         private string _defaultStorageString; // set to JobHostConfig.StorageConnectionString
         private int _batchCheckpointFrequency = 1;
@@ -59,7 +63,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 options.MaxBatchSize = 64;
                 options.PrefetchCount = options.MaxBatchSize * 4;
             }
-
             _options = options;
         }
 
@@ -387,7 +390,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             // apply at config level (batchCheckpointFrequency)
             context.ApplyConfig(this, "eventHub");
 
-            _defaultStorageString = context.Config.StorageConnectionString;
+           _defaultStorageString = context.Config.StorageConnectionString;
 
             context
                 .AddConverter<string, EventData>(ConvertString2EventData)
@@ -399,7 +402,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             // register our trigger binding provider
             INameResolver nameResolver = context.Config.NameResolver;
             IConverterManager cm = context.Config.GetService<IConverterManager>();
-            var triggerBindingProvider = new EventHubTriggerAttributeBindingProvider(nameResolver, cm, this);
+            var triggerBindingProvider = new EventHubTriggerAttributeBindingProvider(nameResolver, cm, this, context.Config.LoggerFactory);
             context.AddBindingRule<EventHubTriggerAttribute>()
                 .BindToTrigger(triggerBindingProvider);
 

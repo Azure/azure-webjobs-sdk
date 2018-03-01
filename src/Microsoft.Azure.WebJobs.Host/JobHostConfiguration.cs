@@ -108,6 +108,7 @@ namespace Microsoft.Azure.WebJobs
 
             AddService<IQueueConfiguration>(_queueConfiguration);
             AddService<IConsoleProvider>(ConsoleProvider);
+            AddService<ILoggerFactory>(new LoggerFactory());
             AddService<IStorageAccountProvider>(_storageAccountProvider);
             AddService<IExtensionRegistry>(extensions);
             AddService<StorageClientFactory>(new StorageClientFactory());

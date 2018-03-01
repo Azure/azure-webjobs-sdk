@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.EventHubs.Processor;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Xunit;
 using static Microsoft.Azure.EventHubs.EventData;
-using Microsoft.Azure.WebJobs.Host.TestCommon;
-using System.Reflection;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
 {
@@ -230,22 +231,23 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
 #pragma warning restore CS0618 // Type or member is obsolete
                     {
                         {
-                            "EventHub", new JObject {
+                            "EventHub", new JObject
+                            {
                                 { "MaxBatchSize", 100 },
                                 { "PrefetchCount", 200 },
                                 { "BatchCheckpointFrequency", 5 }
                             }
-                        }
-                    }
+                        },
+                    } 
                 }
             };
-
+            context.Config.AddService<ILoggerFactory>(new LoggerFactory());
             (config as IExtensionConfigProvider).Initialize(context);
 
             var options = config.GetOptions();
-            Assert.Equal(options.MaxBatchSize, 100);
-            Assert.Equal(options.PrefetchCount, 200);
-            Assert.Equal(config.BatchCheckpointFrequency, 5);
+            Assert.Equal(100, options.MaxBatchSize);
+            Assert.Equal(200, options.PrefetchCount);
+            Assert.Equal(5, config.BatchCheckpointFrequency);
         }
 
         private PartitionContext GetPartitionContext()
