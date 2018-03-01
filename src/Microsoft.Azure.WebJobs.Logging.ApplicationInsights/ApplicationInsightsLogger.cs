@@ -259,8 +259,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     //if there are duplicates then append the quantifier to the prop key
                     var quantifier_str = duplicateKeyQuantifier == 0 ? String.Empty : duplicateKeyQuantifier.ToString();
                     var key = $"{propertyPrefix}{quantifier_str}{property.Key}";
-                    
-                    if(telemetry.Properties.ContainsKey(key))
+
+                    if(!telemetry.Properties.ContainsKey(key))
                     {
                         telemetry.Properties[key] = stringValue;
                         break;
