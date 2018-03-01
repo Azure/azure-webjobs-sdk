@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Net;
 using System.Reflection;
@@ -12,7 +11,6 @@ using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Storage.Blob;
 using Microsoft.Azure.WebJobs.Host.Storage.Queue;
 using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Auth;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
@@ -79,21 +77,26 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 await queue.ExistsAsync(cancellationToken);
             }
-            catch (OperationCanceledException)
+            catch (StorageException exception) when (IsBlobOnlyStorageException(exception))
             {
-                throw;
+                account.Type = StorageAccountType.BlobOnly;
             }
-            catch (StorageException exception)
+        }
+
+        private static bool IsBlobOnlyStorageException(StorageException storageException)
+        {
+            const int errorWinhttpNameNotResolved = 0x2ee7;
+
+            switch (storageException.InnerException)
             {
-                WebException webException = exception.GetBaseException() as WebException;
-                if (webException?.Status == WebExceptionStatus.NameResolutionFailure)
-                {
-                    // Blob-only storage accounts do not support services other than Blob.  
-                    // If we see a name resolution failure on the queue endpoint classify as a blob-only account
-                    account.Type = StorageAccountType.BlobOnly;
-                    return;
-                }
-                throw;
+                // Inner exception when using WindowsAzure.Storage for net45
+                case WebException webException:
+                    return webException.Status == WebExceptionStatus.NameResolutionFailure;
+                // Inner exception when using WindowsAzure.Storage for netstandard1.3 as WebException does not exist
+                case System.Net.Http.HttpRequestException httpRequestException:
+                    return (httpRequestException.HResult & 0xFFFF) == errorWinhttpNameNotResolved;
+                default:
+                    return false;
             }
         }
 
