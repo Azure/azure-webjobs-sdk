@@ -35,7 +35,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         }
 
         [Fact]
-        public async Task CompleteProcessingMessageAsync_Failure_AbandonsMessage()
+        public async Task CompleteProcessingMessageAsync_Failure_PropagatesException()
         {
             OnMessageOptions options = new OnMessageOptions
             {
@@ -44,14 +44,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             MessageProcessor processor = new MessageProcessor(options);
 
             BrokeredMessage message = new BrokeredMessage();
-            FunctionResult result = new FunctionResult(false);
+            var functionException = new InvalidOperationException("Kaboom!");
+            FunctionResult result = new FunctionResult(functionException);
             var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             {
                 await processor.CompleteProcessingMessageAsync(message, result, CancellationToken.None);
             });
 
-            // this verifies that we initiated the abandon
-            Assert.True(ex.ToString().Contains("Microsoft.ServiceBus.Messaging.BrokeredMessage.BeginAbandon"));
+            Assert.Same(functionException, ex);
         }
 
         [Fact]
