@@ -2,6 +2,7 @@ bin
 obj
 csx
 .vs
+.vscode
 
 *.user
 *.suo
