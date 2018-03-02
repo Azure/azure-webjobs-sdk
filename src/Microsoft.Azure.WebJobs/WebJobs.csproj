@@ -84,7 +84,6 @@
     <Compile Include="IConnectionProvider.cs" />
     <Compile Include="TableAttribute.cs" />
     <Compile Include="NoAutomaticTriggerAttribute.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TimeoutAttribute.cs" />
     <Compile Include="TraceLevelAttribute.cs" />
   </ItemGroup>

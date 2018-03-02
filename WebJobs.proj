@@ -124,8 +124,36 @@
       </Binplace>
     </ItemGroup>
   </Target>
+    
+  <Target Name="UpdateAssemblyInfo">   
+    <PropertyGroup>
+      <CommonAssemblyInfoFile>$(MSBuildProjectDirectory)\src\Common\CommonAssemblyInfo.cs</CommonAssemblyInfoFile>
+      <BuildMessage Condition="'$(BuildNumber)' != ''">build $(BuildNumber), </BuildMessage>
+      <CommitMessage Condition="'$(CommitHash)' != ''">$(BuildMessage)commit $(CommitHash)</CommitMessage>
+    </PropertyGroup>
+    
+    <Message 
+      Condition="'$(BuildNumber)' != ''"
+      Importance="High"
+      Text="Updating the AssemblyFileVersion to include the build number: $(BuildNumber)" />     
+    <ReplaceFileText 
+      Condition="'$(BuildNumber)' != ''"
+      FileName="$(CommonAssemblyInfoFile)"
+      MatchExpression="(?&lt;=\[assembly: AssemblyFileVersion\(&quot;\d+.\d+.)\d+(?=.\d+&quot;\)\])"      
+      ReplacementText="$(BuildNumber)" />
 
-  <Target Name="Build" DependsOnTargets="RestorePackages;GetBinplace">
+    <Message 
+      Condition="'$(CommitHash)' != ''"
+      Importance="High"
+      Text="Updating the AssemblyInformationalVersion to include: '$(CommitMessage)'" />
+    <ReplaceFileText 
+      Condition="'$(CommitHash)' != ''"
+      FileName="$(CommonAssemblyInfoFile)"
+      MatchExpression="(?&lt;=\[assembly: AssemblyInformationalVersion\(&quot;).*(?=&quot;\)\])" 
+      ReplacementText="$(CommitMessage)" />
+  </Target>
+
+  <Target Name="Build" DependsOnTargets="RestorePackages;GetBinplace;UpdateAssemblyInfo">
     <MSBuild Projects="@(Binplace)"
              BuildInParallel="$(BuildInParallel)"/>
   </Target>
@@ -294,4 +322,23 @@
       </Code>
     </Task>
   </UsingTask>
+  
+  <UsingTask TaskName="ReplaceFileText" TaskFactory="CodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.v4.0.dll">
+  <ParameterGroup>
+    <FileName ParameterType="System.String" Required="true" />    
+    <MatchExpression ParameterType="System.String" Required="true" />
+    <ReplacementText ParameterType="System.String" Required="true" />
+  </ParameterGroup>
+  <Task>
+    <Reference Include="System.Core" />
+    <Using Namespace="System" />
+    <Using Namespace="System.IO" />
+    <Using Namespace="System.Text.RegularExpressions" />
+    <Code Type="Fragment" Language="cs">
+      <![CDATA[
+            File.WriteAllText(FileName, Regex.Replace(File.ReadAllText(FileName), MatchExpression, ReplacementText));
+          ]]>
+    </Code>
+  </Task>
+</UsingTask>
 </Project>

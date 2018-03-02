@@ -13,13 +13,13 @@ branches:
   - master
   - v2.x
 image: Visual Studio 2017
+max_jobs: 1
 configuration: Release
 platform: x86
 clone_folder: c:\projects\azure-webjobs-sdk
-environment:
-  IncludeBuildNumberInVersion: 1
 build_script:
-- cmd: msbuild "WebJobs.proj" /t:GetBitsToSign;BuildTestBinaries /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" /property:Configuration=Release;Platform=AnyCPU
+- cmd: IF "%APPVEYOR_REPO_TAG_NAME%"=="" SET PackageSuffixCmd=/p:PackageSuffix=-%APPVEYOR_BUILD_NUMBER%
+- cmd: msbuild "WebJobs.proj" /verbosity:minimal /t:GetBitsToSign;BuildTestBinaries /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" /p:Configuration=Release;Platform=AnyCPU /p:BuildNumber=%APPVEYOR_BUILD_NUMBER% /p:CommitHash=%APPVEYOR_REPO_COMMIT% %PackageSuffixCmd%    
 test_script:
 - cmd: "vstest.console /logger:Appveyor /TestAdapterPath:bin test/Microsoft.Azure.WebJobs.Host.UnitTests/bin/Release/Microsoft.Azure.WebJobs.Host.UnitTests.dll test/Microsoft.Azure.WebJobs.Host.FunctionalTests/bin/Release/Microsoft.Azure.WebJobs.Host.FunctionalTests.dll test/Microsoft.Azure.WebJobs.ServiceBus.UnitTests/bin/Release/Microsoft.Azure.WebJobs.ServiceBus.UnitTests.dll test/Dashboard.UnitTests/bin/Release/Dashboard.UnitTests.dll \n\nvstest.console /logger:Appveyor /TestAdapterPath:bin test/Microsoft.Azure.WebJobs.Host.EndToEndTests/bin/Release/Microsoft.Azure.WebJobs.Host.EndToEndTests.dll"
 on_finish:
