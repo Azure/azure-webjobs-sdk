@@ -184,21 +184,28 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     }
 
                     await Task.WhenAll(invokeTasks);
+
+                    // If we stop the host too early, the QuickPulse items may not all be flushed. So wait until 
+                    // we see them before continuing. 
+                    double min = requests - 2;
+                    await TestHelpers.Await(() =>
+                    {
+                        // Sum up all req/sec calls that we've received.
+                        var reqPerSec = listener.GetQuickPulseItems()
+                            .Select(p => p.Metrics.Where(q => q.Name == @"\ApplicationInsights\Requests/Sec").Single());
+                        double sum = reqPerSec.Sum(p => p.Value);
+
+                        // All requests will go to QuickPulse.
+                        // The calculated RPS may off, so give some wiggle room. The important thing is that it's generating 
+                        // RequestTelemetry and not being filtered.
+                        return sum >= min;
+                    }, timeout: 3000, pollingInterval: 100,
+                    userMessage: $"Expected sum to be greater than {min}. DefaultLevel: {defaultLevel}.");
+
                     await host.StopAsync();
                 }
 
                 loggerFactory.Dispose();
-             
-                // Sum up all req/sec calls that we've received.
-                var reqPerSec = listener.GetQuickPulseItems()
-                    .Select(p => p.Metrics.Where(q => q.Name == @"\ApplicationInsights\Requests/Sec").Single());
-                double sum = reqPerSec.Sum(p => p.Value);
-
-                // All requests will go to QuickPulse.
-                // The calculated RPS may off, so give some wiggle room. The important thing is that it's generating 
-                // RequestTelemetry and not being filtered.                
-                double min = requests - 2;
-                Assert.True(sum >= min, $"Expected sum to be greater than {min}. DefaultLevel: {defaultLevel}. Actual: {sum}");
 
                 // These will be filtered based on the default filter.
                 Assert.Equal(expectedTelemetryItems, _channel.Telemetries.Count());
