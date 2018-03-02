@@ -2,12 +2,11 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.ServiceBus.Core;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
@@ -43,19 +42,19 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         }
 
         [Fact]
-        public async Task CompleteProcessingMessageAsync_Failure_AbandonsMessage()
+        public async Task CompleteProcessingMessageAsync_Failure_PropagatesException()
         {
             _options.AutoComplete = false;
 
             Message message = new Message();
-            FunctionResult result = new FunctionResult(false);
-            var ex = await Assert.ThrowsAsync<FormatException>(async () =>
+            var functionException = new InvalidOperationException("Kaboom!");
+            FunctionResult result = new FunctionResult(functionException);
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             {
                 await _processor.CompleteProcessingMessageAsync(message, result, CancellationToken.None);
             });
 
-            // this verifies that we initiated the abandon
-            Assert.True(ex.ToString().Contains("Microsoft.Azure.ServiceBus.Core.MessageReceiver.OnAbandonAsync"));
+            Assert.Same(functionException, ex);
         }
 
         [Fact]

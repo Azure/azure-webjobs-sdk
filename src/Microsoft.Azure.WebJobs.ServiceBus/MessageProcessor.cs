@@ -75,8 +75,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             }
             else
             {
+                // if the invocation failed, we must propagate the
+                // exception back to SB so it can handle message state
+                // correctly
                 cancellationToken.ThrowIfCancellationRequested();
-                await MessageReceiver.AbandonAsync(lockToken);
+                throw result.Exception;
             }
         }
     }
