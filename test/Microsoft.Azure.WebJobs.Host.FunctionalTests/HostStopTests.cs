@@ -27,9 +27,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             // Act
             Task stopTask = null;
+            CallbackCancellationTokenProgram.FunctionStartedTaskSource = new TaskCompletionSource<object>();
             bool result = RunTrigger<bool>(account, typeof(CallbackCancellationTokenProgram),
                 (s) => CallbackCancellationTokenProgram.TaskSource = s,
-                (t) => CallbackCancellationTokenProgram.Start = t, (h) => stopTask = h.StopAsync());
+                CallbackCancellationTokenProgram.FunctionStartedTaskSource.Task,
+                (t) => CallbackCancellationTokenProgram.HostStoppedTask = t,
+                (h) => stopTask = h.StopAsync());
 
             // Assert
             Assert.True(result);
@@ -52,8 +55,13 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         // Stops running the host as soon as the program marks the task as completed.
-        private static TResult RunTrigger<TResult>(IStorageAccount account, Type programType,
-            Action<TaskCompletionSource<TResult>> setTaskSource, Action<Task> setStartTask, Action<JobHost> callback)
+        private static TResult RunTrigger<TResult>(
+            IStorageAccount account,
+            Type programType,
+            Action<TaskCompletionSource<TResult>> setTaskSource,
+            Task functionStartedTask,
+            Action<Task> setStartTask,
+            Action<JobHost> callback)
         {
             TaskCompletionSource<object> startTaskSource = new TaskCompletionSource<object>();
             setStartTask.Invoke(startTaskSource.Task);
@@ -69,12 +77,19 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
                 try
                 {
-                    // Arrange
+                    // Arrange                    
+                    int secondsToWait = 5;
                     JobHost host = new JobHost(serviceProvider);
                     host.Start();
+
+                    // Don't invoke the callback until we know the listener has fired to start the function.
+                    functionStartedTask.WaitUntilCompleted(secondsToWait * 1000);
+
+                    // Now stop the host while we're mid-function invocation
                     callback.Invoke(host);
+
+                    // Signal to let the function complete and check the cancellation token.
                     startTaskSource.TrySetResult(null);
-                    int secondsToWait = 5;
 
                     // Act
                     bool completed = task.WaitUntilCompleted(secondsToWait * 1000);
@@ -104,18 +119,20 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         private class CallbackCancellationTokenProgram
         {
-            public static Task Start { get; set; }
+            public static TaskCompletionSource<object> FunctionStartedTaskSource { get; set; }
+
+            public static Task HostStoppedTask { get; set; }
             public static TaskCompletionSource<bool> TaskSource { get; set; }
 
-            public static async Task CallbackCancellationToken([QueueTrigger(QueueName)] string ignore,
+            public static void CallbackCancellationToken([QueueTrigger(QueueName)] string ignore,
                 CancellationToken cancellationToken)
             {
-                bool started = Start.WaitUntilCompleted(3 * 1000);
-                Assert.True(started); // Guard
+                // Let the test know that we've started.
+                FunctionStartedTaskSource.TrySetResult(null);
 
-                // Prevent a race between the host stopping and the result being set.
-                await TestHelpers.Await(() => cancellationToken.IsCancellationRequested,
-                    timeout: 3000, pollingInterval: 10);
+                // Wait for the host to be stopped before continuing.
+                bool hostStopped = HostStoppedTask.WaitUntilCompleted(3 * 1000);
+                Assert.True(hostStopped);
 
                 TaskSource.TrySetResult(cancellationToken.IsCancellationRequested);
             }
