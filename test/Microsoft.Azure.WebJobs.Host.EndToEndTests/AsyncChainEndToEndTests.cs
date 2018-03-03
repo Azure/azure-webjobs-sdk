@@ -284,7 +284,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 JobHost host = new JobHost(_hostConfig);
 
                 await host.StartAsync();
-                await host.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod("WriteStartDataMessageToQueue"));
+                await host.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod(nameof(WriteStartDataMessageToQueue)));
 
                 _functionCompletedEvent.WaitOne();
 
@@ -295,7 +295,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 // Make sure the aggregator was logged to
                 var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Aggregator).Single();
-                Assert.Equal(4, logger.LogMessages.Count);
+                var count = logger.LogMessages.Count;
+
+                // Pull the name of the function out for a more descriptive failure message.
+                var names = logger.LogMessages.Select(p => p.State.Single(s => s.Key == "Name").Value.ToString());
+                var failureMessage = string.Join(Environment.NewLine, names);
+
+                Assert.True(count == 4, $"Expected 4. Actual {count}. {failureMessage}");
             }
         }
 
