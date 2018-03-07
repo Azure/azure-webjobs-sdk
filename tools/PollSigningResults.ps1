@@ -30,8 +30,15 @@ if (-not $isPr -and $env:SkipAssemblySigning -ne "true") {
   Expand-Archive "$PSScriptRoot/../bin/signed.zip" "$PSScriptRoot/../bin/sign"
 
   MSBuild.exe "$PSScriptRoot/../WebJobs.proj" /t:ReplaceDlls /p:Configuration=Release
-
-  MSBuild.exe "$PSScriptRoot/../src/Packages/Packages.csproj" /t:Rebuild "/p:Configuration=Release;BUILD_NUMBER=$env:APPVEYOR_BUILD_VERSION;OutputPath=$PSScriptRoot/../bin/Packages;RunCodeAnalysis=false"
+    
+  $packageSuffixCmd = ""
+  $isOfficialBuild = Test-Path env:APPVEYOR_REPO_TAG_NAME
+  if (-not $isOfficialBuild)
+  {
+    $packageSuffixCmd = "/p:PackageSuffix=-$env:APPVEYOR_BUILD_NUMBER"
+  }
+  
+  MSBuild.exe "$PSScriptRoot/../src/Packages/Packages.csproj" /v:minimal /t:Rebuild "/p:Configuration=Release;OutputPath=$PSScriptRoot/../bin/Packages;RunCodeAnalysis=false" $packageSuffixCmd
 
   Get-ChildItem "$PSScriptRoot/../bin/PackagesNuGet" | % {
     Push-AppveyorArtifact $_.FullName
