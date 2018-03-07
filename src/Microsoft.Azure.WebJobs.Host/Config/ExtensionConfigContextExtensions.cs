@@ -27,7 +27,8 @@ namespace Microsoft.Azure.WebJobs.Host.Config
                 throw new ArgumentNullException(nameof(context));
             }
 
-            JObject hostMetadata = context.Config.HostConfigMetadata;
+            // TODO: FACAVAL update this... extensions should use options/iconfiguration
+            JObject hostMetadata = null;
             if (hostMetadata == null)
             {
                 return null;

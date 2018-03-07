@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
     {
         private readonly SharedQueueWatcher _sharedQueueWatcher;
         private readonly IStorageQueue _hostBlobTriggerQueue;
-        private readonly IQueueConfiguration _queueConfiguration;
+        private readonly JobHostQueuesOptions _queueOptions;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IBlobWrittenWatcher _blobWrittenWatcher;
         private readonly IStorageAccount _hostAccount;
@@ -30,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             IStorageAccount hostAccount,
             SharedQueueWatcher sharedQueueWatcher,
             IStorageQueue hostBlobTriggerQueue,
-            IQueueConfiguration queueConfiguration,
+            JobHostQueuesOptions queueOptions,
             IWebJobsExceptionHandler exceptionHandler,
             ILoggerFactory loggerFactory,
             IBlobWrittenWatcher blobWrittenWatcher)
@@ -38,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             _hostAccount = hostAccount ?? throw new ArgumentNullException(nameof(hostAccount));
             _sharedQueueWatcher = sharedQueueWatcher ?? throw new ArgumentNullException(nameof(sharedQueueWatcher));
             _hostBlobTriggerQueue = hostBlobTriggerQueue ?? throw new ArgumentNullException(nameof(hostBlobTriggerQueue));
-            _queueConfiguration = queueConfiguration ?? throw new ArgumentNullException(nameof(queueConfiguration));
+            _queueOptions = queueOptions ?? throw new ArgumentNullException(nameof(queueOptions));
             _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
             _loggerFactory = loggerFactory;
             _blobWrittenWatcher = blobWrittenWatcher ?? throw new ArgumentNullException(nameof(blobWrittenWatcher));
@@ -60,11 +60,11 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             // this special queue bypasses the QueueProcessorFactory - we don't want people to
             // override this
             QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_hostBlobTriggerQueue.SdkObject, _loggerFactory,
-                _queueConfiguration, defaultPoisonQueue.SdkObject);
+                _queueOptions, defaultPoisonQueue.SdkObject);
             SharedBlobQueueProcessor queueProcessor = new SharedBlobQueueProcessor(context, triggerExecutor);
 
             IListener listener = new QueueListener(_hostBlobTriggerQueue, defaultPoisonQueue, triggerExecutor, _exceptionHandler, _loggerFactory,
-                _sharedQueueWatcher, _queueConfiguration, queueProcessor);
+                _sharedQueueWatcher, _queueOptions, queueProcessor);
 
             return new SharedBlobQueueListener(listener, triggerExecutor);
         }

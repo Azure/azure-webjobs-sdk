@@ -23,9 +23,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
                 new UserTypeArgumentBindingProvider()); // Must come last, because it will attempt to bind all types.
 
         private readonly INameResolver _nameResolver;
-        private readonly ServiceBusConfiguration _config;
+        private readonly ServiceBusOptions _config;
 
-        public ServiceBusTriggerAttributeBindingProvider(INameResolver nameResolver, ServiceBusConfiguration config)
+        public ServiceBusTriggerAttributeBindingProvider(INameResolver nameResolver, ServiceBusOptions config)
         {
             if (nameResolver == null)
             {

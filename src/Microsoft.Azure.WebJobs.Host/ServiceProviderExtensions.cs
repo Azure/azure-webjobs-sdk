@@ -10,10 +10,10 @@ namespace Microsoft.Azure.WebJobs.Host
     {
         public static IExtensionRegistry GetExtensions(this IServiceProvider serviceProvider)
         {
-            return GetService<IExtensionRegistry>(serviceProvider);
+            return GetService_<IExtensionRegistry>(serviceProvider);
         }
 
-        public static T GetService<T>(this IServiceProvider serviceProvider) where T : class
+        public static T GetService_<T>(this IServiceProvider serviceProvider) where T : class
         {
             if (serviceProvider == null)
             {

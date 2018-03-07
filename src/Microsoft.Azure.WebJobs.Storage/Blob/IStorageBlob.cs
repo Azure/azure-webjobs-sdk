@@ -16,12 +16,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Blob
 #endif
 {
     /// <summary>Defines a blob.</summary>
-#if PUBLICSTORAGE
-    
     public interface IStorageBlob : IStorageListBlobItem
-#else
-    internal interface IStorageBlob : IStorageListBlobItem
-#endif
     {
         /// <summary>Gets the type of the blob.</summary>
         StorageBlobType BlobType { get; }

@@ -30,6 +30,16 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         private INameResolver _nameResolver;
         private IConverterManager _converterManager;
 
+        public BlobExtensionConfig(IStorageAccountProvider accountProvider,
+            IContextGetter<IBlobWrittenWatcher> contextAccessor,
+            INameResolver nameResolver,
+            IConverterManager converterManager)
+        {
+            _accountProvider = accountProvider;
+            _blobWrittenWatcherGetter = contextAccessor;
+            _nameResolver = nameResolver;
+            _converterManager = converterManager;
+        }
 
         #region Container rules
         async Task<CloudBlobContainer> IAsyncConverter<BlobAttribute, CloudBlobContainer>.ConvertAsync(
@@ -236,12 +246,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
         public void Initialize(ExtensionConfigContext context)
         {
-            _accountProvider = context.Config.GetService<IStorageAccountProvider>();
-
-            _blobWrittenWatcherGetter = context.PerHostServices.GetService<ContextAccessor<IBlobWrittenWatcher>>();
-            _nameResolver = context.Config.NameResolver;
-            _converterManager = context.Config.ConverterManager;
-
             var rule = context.AddBindingRule<BlobAttribute>();
 
             // Bind to multiple blobs (either via a container; a blob directory, an IEnumerable<T>)

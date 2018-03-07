@@ -10,12 +10,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Blob
 #endif
 {
     /// <summary>Defines a blob directory.</summary>
-#if PUBLICSTORAGE
-    
     public interface IStorageBlobDirectory : IStorageListBlobItem
-#else
-    internal interface IStorageBlobDirectory : IStorageListBlobItem
-#endif
     {
         /// <summary>Gets the container for the blob.</summary>
         IStorageBlobContainer Container { get; }

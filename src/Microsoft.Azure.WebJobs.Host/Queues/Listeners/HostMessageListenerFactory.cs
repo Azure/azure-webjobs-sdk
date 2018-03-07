@@ -17,7 +17,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
     internal class HostMessageListenerFactory : IListenerFactory
     {
         private readonly IStorageQueue _queue;
-        private readonly IQueueConfiguration _queueConfiguration;
+        private readonly JobHostQueuesOptions _queueConfiguration;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IFunctionIndexLookup _functionLookup;
@@ -25,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         private readonly IFunctionExecutor _executor;
 
         public HostMessageListenerFactory(IStorageQueue queue,
-            IQueueConfiguration queueConfiguration,
+            JobHostQueuesOptions queueOptions,
             IWebJobsExceptionHandler exceptionHandler,
             ILoggerFactory loggerFactory,
             IFunctionIndexLookup functionLookup,
@@ -33,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             IFunctionExecutor executor)
         {
             _queue = queue ?? throw new ArgumentNullException(nameof(queue));
-            _queueConfiguration = queueConfiguration ?? throw new ArgumentNullException(nameof(queueConfiguration));
+            _queueConfiguration = queueOptions ?? throw new ArgumentNullException(nameof(queueOptions));
             _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
             _functionLookup = functionLookup ?? throw new ArgumentNullException(nameof(functionLookup));
             _functionInstanceLogger = functionInstanceLogger ?? throw new ArgumentNullException(nameof(functionInstanceLogger));
@@ -57,7 +57,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
                 exceptionHandler: _exceptionHandler,
                 loggerFactory: _loggerFactory,
                 sharedWatcher: null,
-                queueConfiguration: _queueConfiguration,
+                queueOptions: _queueConfiguration,
                 maxPollingInterval: maxPollingInterval);
 
             return Task.FromResult(listener);

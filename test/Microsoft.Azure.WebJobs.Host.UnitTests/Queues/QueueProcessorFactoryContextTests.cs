@@ -19,7 +19,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             CloudQueue poisonQueue = new CloudQueue(new Uri("https://test.queue.core.windows.net/poisonqueue"));
             ILoggerFactory loggerFactory = new LoggerFactory();
             loggerFactory.AddProvider(new TestLoggerProvider());
-            JobHostQueuesConfiguration queuesConfig = new JobHostQueuesConfiguration();
+            JobHostQueuesOptions queuesConfig = new JobHostQueuesOptions();
 
             QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(queue, loggerFactory, queuesConfig, poisonQueue);
 

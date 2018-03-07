@@ -13,7 +13,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
     /// <summary>
     /// Defines a storage account.
     /// </summary>
-    internal interface IStorageAccount
+    public interface IStorageAccount
     {
         /// <summary>Gets the primary endpoint for the blob service.</summary>
         Uri BlobEndpoint { get; }

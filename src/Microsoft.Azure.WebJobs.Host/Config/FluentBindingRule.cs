@@ -22,8 +22,9 @@ namespace Microsoft.Azure.WebJobs.Host.Config
     public class FluentBindingRule<TAttribute> : FluentConverterRules<TAttribute, FluentBindingRule<TAttribute>>
         where TAttribute : Attribute
     {
-        private readonly JobHostConfiguration _parent;
-
+        private readonly JobHostOptions _parent;
+        private readonly IConverterManager _converterManager;
+        private readonly IExtensionRegistry _extensionRegistry;
         private List<FluentBinder> _binders = new List<FluentBinder>();
 
         // Filters to apply to current binder
@@ -33,16 +34,18 @@ namespace Microsoft.Azure.WebJobs.Host.Config
 
         private Action<TAttribute, Type> _validator;
 
-        internal FluentBindingRule(JobHostConfiguration parent)
+        internal FluentBindingRule(JobHostOptions parent, IConverterManager converterManager, IExtensionRegistry extensionRegistry)
         {
             _parent = parent;
+            _converterManager = converterManager;
+            _extensionRegistry = extensionRegistry;
         }
 
         internal override ConverterManager ConverterManager
         {
             get
             {
-                return (ConverterManager) _parent.ConverterManager;
+                return (ConverterManager) _converterManager;
             }
         }
 
@@ -200,7 +203,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         // Common worker for BindToInput rules. 
         private FluentBinder BindToInput<TType>(PatternMatcher pm)
         {
-            var rule = new BindToInputBindingProvider<TAttribute, TType>(_parent.NameResolver, _parent.ConverterManager, pm);
+            var rule = new BindToInputBindingProvider<TAttribute, TType>(_parent.NameResolver, _converterManager, pm);
             return Bind(rule);
         }
 
@@ -250,7 +253,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         private void BindToStream(PatternMatcher patternMatcher, FileAccess fileAccess)
         {
             // This will throw immediately if it can't match an ATtribute-->Stream converter. 
-            var rule = new BindToStreamBindingProvider<TAttribute>(patternMatcher, fileAccess, _parent.NameResolver, _parent.ConverterManager);
+            var rule = new BindToStreamBindingProvider<TAttribute>(patternMatcher, fileAccess, _parent.NameResolver, _converterManager);
             Bind(rule);
         }
 
@@ -371,7 +374,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
 
         private void BindToCollector<TMessage>(PatternMatcher pm)
         {
-            var rule = new AsyncCollectorBindingProvider<TAttribute, TMessage>(_parent.NameResolver, _parent.ConverterManager, pm);
+            var rule = new AsyncCollectorBindingProvider<TAttribute, TMessage>(_parent.NameResolver, _converterManager, pm);
             Bind(rule);
         }
 
@@ -387,8 +390,8 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             {
                 throw new InvalidOperationException($"The same attribute can't be bound to trigger and non-trigger bindings");
             }
-            IExtensionRegistry extensions = _parent.GetService<IExtensionRegistry>();
-            extensions.RegisterExtension<ITriggerBindingProvider>(trigger);
+            
+            _extensionRegistry.RegisterExtension<ITriggerBindingProvider>(trigger);
         }
 
         public void BindToTrigger<TTriggerValue>(ITriggerBindingProvider trigger = null)
@@ -401,7 +404,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
 
             var triggerBinder = new TriggerAdapterBindingProvider<TAttribute, TTriggerValue>(
                 this._parent.NameResolver,
-                this._parent.ConverterManager);
+                _converterManager);
             Bind(triggerBinder);
         }
 
@@ -450,9 +453,8 @@ namespace Microsoft.Azure.WebJobs.Host.Config
 
             if (_binders.Count > 0)
             {
-                IExtensionRegistry extensions = _parent.GetService<IExtensionRegistry>();  
                 var binding = CreateBinding();
-                extensions.RegisterExtension<IBindingProvider>(binding);
+                _extensionRegistry.RegisterExtension<IBindingProvider>(binding);
                 _binders.Clear();
             }
         }
@@ -461,9 +463,9 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         // These apply after the binder has matched.
         public class FluentBinder
         {
-            private readonly JobHostConfiguration _parent;
+            private readonly JobHostOptions _parent;
 
-            internal FluentBinder(JobHostConfiguration parent, IBindingProvider binder)
+            internal FluentBinder(JobHostOptions parent, IBindingProvider binder)
             {
                 this._parent = parent;
                 this.Binder = binder;

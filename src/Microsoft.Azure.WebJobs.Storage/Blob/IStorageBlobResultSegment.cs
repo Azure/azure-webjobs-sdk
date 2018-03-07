@@ -12,12 +12,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Blob
 #endif
 {
     /// <summary>Defines a segment of blob list results.</summary>
-#if PUBLICSTORAGE
-    
     public interface IStorageBlobResultSegment
-#else
-    internal interface IStorageBlobResultSegment
-#endif
     {
         /// <summary>Gets the continuation token to use to retrieve the next segment of results.</summary>
         BlobContinuationToken ContinuationToken { get; }

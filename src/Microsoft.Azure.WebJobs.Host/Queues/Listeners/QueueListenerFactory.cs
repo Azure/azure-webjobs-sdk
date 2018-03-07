@@ -19,7 +19,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
 
         private readonly IStorageQueue _queue;
         private readonly IStorageQueue _poisonQueue;
-        private readonly IQueueConfiguration _queueConfiguration;
+        private readonly JobHostQueuesOptions _queueOptions;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IContextSetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherSetter;
         private readonly ISharedContextProvider _sharedContextProvider;
@@ -27,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         private readonly ITriggeredFunctionExecutor _executor;
 
         public QueueListenerFactory(IStorageQueue queue,
-            IQueueConfiguration queueConfiguration,
+            JobHostQueuesOptions queueOptions,
             IWebJobsExceptionHandler exceptionHandler,
             IContextSetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherSetter,
             ISharedContextProvider sharedContextProvider,
@@ -35,7 +35,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             ITriggeredFunctionExecutor executor)
         {
             _queue = queue ?? throw new ArgumentNullException(nameof(queue));
-            _queueConfiguration = queueConfiguration ?? throw new ArgumentNullException(nameof(queueConfiguration));
+            _queueOptions = queueOptions ?? throw new ArgumentNullException(nameof(queueOptions));
             _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
             _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter ?? throw new ArgumentNullException(nameof(messageEnqueuedWatcherSetter));
             _sharedContextProvider = sharedContextProvider ?? throw new ArgumentNullException(nameof(sharedContextProvider));
@@ -54,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
                 new SharedQueueWatcherFactory(_messageEnqueuedWatcherSetter));
 
             IListener listener = new QueueListener(_queue, _poisonQueue, triggerExecutor, _exceptionHandler, _loggerFactory,
-                sharedWatcher, _queueConfiguration);
+                sharedWatcher, _queueOptions);
 
             return Task.FromResult(listener);
         }

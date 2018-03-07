@@ -15,9 +15,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         private readonly string _topicName;
         private readonly string _subscriptionName;
         private readonly ITriggeredFunctionExecutor _executor;
-        private readonly ServiceBusConfiguration _config;
+        private readonly ServiceBusOptions _config;
 
-        public ServiceBusSubscriptionListenerFactory(ServiceBusAccount account, string topicName, string subscriptionName, ITriggeredFunctionExecutor executor, ServiceBusConfiguration config)
+        public ServiceBusSubscriptionListenerFactory(ServiceBusAccount account, string topicName, string subscriptionName, ITriggeredFunctionExecutor executor, ServiceBusOptions config)
         {
             _account = account;
             _topicName = topicName;

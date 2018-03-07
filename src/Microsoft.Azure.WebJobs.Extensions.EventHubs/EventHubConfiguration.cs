@@ -14,6 +14,10 @@ using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Logging;
 using Newtonsoft.Json;
 using Microsoft.Extensions.Logging;
+using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -34,7 +38,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         private readonly Dictionary<string, ReceiverCreds> _receiverCreds = new Dictionary<string, ReceiverCreds>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, EventProcessorHost> _explicitlyProvidedHosts = new Dictionary<string, EventProcessorHost>(StringComparer.OrdinalIgnoreCase);
 
-        private string _defaultStorageString;
+        private readonly EventProcessorOptions _options;
+        private readonly IStorageAccountProvider _accountProvider;
+        private IConverterManager _converterManager;
+        private readonly ILoggerFactory _loggerFactory;
+        private ILogger _logger;
+
+        private string _defaultStorageString; // set to JobHostConfig.StorageConnectionString
         private int _batchCheckpointFrequency = 1;
 
         /// <summary>
@@ -47,14 +57,26 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// Constructs a new instance.
         /// </summary>
         public EventHubConfiguration()
+            : this(null, null, null, NullLoggerFactory.Instance)
         {
-            // Our default options will delegate to our own exception
-            // logger. Customers can override this completely by setting their
-            // own EventProcessorOptions instance.
-            EventProcessorOptions = EventProcessorOptions.DefaultOptions;
-            EventProcessorOptions.MaxBatchSize = 64;
-            EventProcessorOptions.PrefetchCount = EventProcessorOptions.MaxBatchSize * 4;
-            EventProcessorOptions.SetExceptionHandler(ExceptionReceivedHandler);
+        }
+
+        /// <summary>
+        /// Constructs a new instance.
+        /// </summary>
+        /// <param name="options">The optional <see cref="EventProcessorOptions"/> to use when receiving events.</param>
+        public EventHubConfiguration(EventProcessorOptions options, IStorageAccountProvider accountProvider, IConverterManager converterManager, ILoggerFactory loggerFactory)
+        {
+            if (options == null)
+            {
+                options = EventProcessorOptions.DefaultOptions;
+                options.MaxBatchSize = 64;
+                options.PrefetchCount = options.MaxBatchSize * 4;
+            }
+            _options = options;
+            _accountProvider = accountProvider;
+            _converterManager = converterManager;
+            _loggerFactory = loggerFactory;
         }
 
         /// <summary>
@@ -382,7 +404,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             // apply at config level (batchCheckpointFrequency)
             context.ApplyConfig(this, "eventHub");
 
-           _defaultStorageString = context.Config.StorageConnectionString;
+           _defaultStorageString = _accountProvider?.StorageConnectionString;
 
             context
                 .AddConverter<string, EventData>(ConvertString2EventData)
@@ -393,8 +415,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
             // register our trigger binding provider
             INameResolver nameResolver = context.Config.NameResolver;
-            IConverterManager cm = context.Config.GetService<IConverterManager>();
-            var triggerBindingProvider = new EventHubTriggerAttributeBindingProvider(nameResolver, cm, this, context.Config.LoggerFactory);
+            var triggerBindingProvider = new EventHubTriggerAttributeBindingProvider(nameResolver, _converterManager, this, _loggerFactory);
             context.AddBindingRule<EventHubTriggerAttribute>()
                 .BindToTrigger(triggerBindingProvider);
 

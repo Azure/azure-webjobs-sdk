@@ -23,9 +23,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
                 new AsyncCollectorArgumentBindingProvider());
 
         private readonly INameResolver _nameResolver;
-        private readonly ServiceBusConfiguration _config;
+        private readonly ServiceBusOptions _config;
 
-        public ServiceBusAttributeBindingProvider(INameResolver nameResolver, ServiceBusConfiguration config)
+        public ServiceBusAttributeBindingProvider(INameResolver nameResolver, ServiceBusOptions config)
         {
             if (nameResolver == null)
             {

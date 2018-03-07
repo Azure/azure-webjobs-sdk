@@ -10,12 +10,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 {
     internal class ServiceBusAccount
     {
-        private ServiceBusConfiguration _config;
+        private ServiceBusOptions _config;
         private IConnectionProvider _connectionProvider;
         private string _connectionString;
 
 
-        public ServiceBusAccount(ServiceBusConfiguration config, IConnectionProvider connectionProvider = null)
+        public ServiceBusAccount(ServiceBusOptions config, IConnectionProvider connectionProvider = null)
         {
 
 

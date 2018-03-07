@@ -14,12 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Blob
 #endif
 {
     /// <summary>Defines a blob container.</summary>
-#if PUBLICSTORAGE
-    
     public interface IStorageBlobContainer
-#else
-    internal interface IStorageBlobContainer
-#endif
     {
         /// <summary>Gets the name of the container.</summary>
         string Name { get; }

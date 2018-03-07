@@ -15,11 +15,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Blob
 #endif
 {
     /// <summary>Defines an item returned from a blob listing operation.</summary>
-#if PUBLICSTORAGE
     public interface IStorageListBlobItem
-#else
-    internal interface IStorageListBlobItem
-#endif
     {
     }
 }

@@ -19,10 +19,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     internal class DynamicHostIdProvider : IHostIdProvider
     {
         private readonly IStorageAccountProvider _storageAccountProvider;
-        private readonly Func<IFunctionIndexProvider> _getFunctionIndexProvider;
+        private readonly IFunctionIndexProvider _getFunctionIndexProvider;
 
-        public DynamicHostIdProvider(IStorageAccountProvider storageAccountProvider,
-            Func<IFunctionIndexProvider> getFunctionIndexProvider)
+        public DynamicHostIdProvider(IStorageAccountProvider storageAccountProvider, IFunctionIndexProvider getFunctionIndexProvider)
         {
             if (storageAccountProvider == null)
             {
@@ -53,7 +52,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     "connection string.", exception);
             }
 
-            IFunctionIndex index = await _getFunctionIndexProvider.Invoke().GetAsync(cancellationToken);
+            IFunctionIndex index = await _getFunctionIndexProvider.GetAsync(cancellationToken);
             IEnumerable<MethodInfo> indexedMethods = index.ReadAllMethods();
 
             string sharedHostName = GetSharedHostName(indexedMethods, account);

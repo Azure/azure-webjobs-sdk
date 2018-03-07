@@ -3,7 +3,7 @@
 
 namespace Microsoft.Azure.WebJobs.Host.Storage
 {
-    internal enum StorageAccountType
+    public enum StorageAccountType
     {
         // Supports blob/table/queue.
         // Can be used as primary or secondary storage.

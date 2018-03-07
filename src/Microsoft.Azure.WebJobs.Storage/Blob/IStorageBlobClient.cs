@@ -16,12 +16,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Blob
 #endif
 {
     /// <summary>Defines a blob client.</summary>
-#if PUBLICSTORAGE
-    
     public interface IStorageBlobClient
-#else
-    internal interface IStorageBlobClient
-#endif
     {
         /// <summary>Gets the credentials used to connect to the account.</summary>
         StorageCredentials Credentials { get; }

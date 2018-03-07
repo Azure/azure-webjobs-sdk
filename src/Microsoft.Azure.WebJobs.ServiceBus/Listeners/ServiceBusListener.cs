@@ -25,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         private bool _disposed;
         private bool _started;
 
-        public ServiceBusListener(string entityPath, ServiceBusTriggerExecutor triggerExecutor, ServiceBusConfiguration config, ServiceBusAccount serviceBusAccount)
+        public ServiceBusListener(string entityPath, ServiceBusTriggerExecutor triggerExecutor, ServiceBusOptions config, ServiceBusAccount serviceBusAccount)
         {
             _entityPath = entityPath;
             _triggerExecutor = triggerExecutor;

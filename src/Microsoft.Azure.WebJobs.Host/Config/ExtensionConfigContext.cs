@@ -14,29 +14,38 @@ namespace Microsoft.Azure.WebJobs.Host.Config
     /// </summary>
     public class ExtensionConfigContext : FluentConverterRules<Attribute, ExtensionConfigContext>
     {
+        
         // List of actions to flush from the fluent configuration. 
         private List<Action> _updates = new List<Action>();
 
         // Map of tyepof(TAttribute) --> FluentBindingRule<TAttribute>
         private Dictionary<Type, object> _rules = new Dictionary<Type, object>();
+        private readonly IConverterManager _converterManager;
+        private readonly IWebHookProvider _webHookProvider;
+        private readonly IExtensionRegistry _extensionRegistry;
+
+        public ExtensionConfigContext(IConverterManager converterManager, IWebHookProvider webHookProvider, IExtensionRegistry extensionRegistry)
+        {
+            _converterManager = converterManager;
+            _webHookProvider = webHookProvider;
+            _extensionRegistry = extensionRegistry;
+        }
 
         internal IExtensionConfigProvider Current { get; set; }
 
         /// <summary>
-        /// Gets or sets the <see cref="JobHostConfiguration"/>.
+        /// Gets or sets the <see cref="JobHostOptions"/>.
         /// </summary>
-        public JobHostConfiguration Config { get; set; }
+        public JobHostOptions Config { get; set; }
 
 
         internal override ConverterManager ConverterManager
         {
             get
             {
-                return (ConverterManager) this.Config.ConverterManager;
+                return (ConverterManager) _converterManager;
             }
         }
-
-        internal ServiceProviderWrapper PerHostServices { get; set; }
 
         /// <summary>
         /// Get a fully qualified URL that the host will resolve to this extension 
@@ -45,12 +54,11 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         [Obsolete("preview")]
         public Uri GetWebhookHandler()
         {
-            var webhook = this.Config.GetService<IWebHookProvider>();
-            if (webhook == null)
+            if (_webHookProvider == null)
             {
                 return null;
             }
-            return webhook.GetUrl(this.Current);
+            return _webHookProvider.GetUrl(this.Current);
         }
 
         // Ensure that multiple attempts bind to the same attribute, they get the same rule object. 
@@ -62,7 +70,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             if (!this._rules.TryGetValue(typeof(TAttribute), out temp))
             {
                 // Create and register
-                rule = new FluentBindingRule<TAttribute>(this.Config);
+                rule = new FluentBindingRule<TAttribute>(this.Config, _converterManager, _extensionRegistry);
                 this._rules[typeof(TAttribute)] = rule;
 
                 _updates.Add(rule.ApplyRules);
