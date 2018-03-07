@@ -13,14 +13,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     /// </summary>
     public class MessagingProvider
     {
-        private readonly ServiceBusConfiguration _config;
+        private readonly ServiceBusOptions _config;
         private readonly ConcurrentDictionary<string, MessageReceiver> _messageReceiverCache = new ConcurrentDictionary<string, MessageReceiver>();
 
         /// <summary>
         /// Constructs a new instance.
         /// </summary>
-        /// <param name="config">The <see cref="ServiceBusConfiguration"/>.</param>
-        public MessagingProvider(ServiceBusConfiguration config)
+        /// <param name="config">The <see cref="ServiceBusOptions"/>.</param>
+        public MessagingProvider(ServiceBusOptions config)
         {
             if (config == null)
             {

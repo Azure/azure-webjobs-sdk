@@ -14,9 +14,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         private readonly ServiceBusAccount _account;
         private readonly string _queueName;
         private readonly ITriggeredFunctionExecutor _executor;
-        private readonly ServiceBusConfiguration _config;
+        private readonly ServiceBusOptions _config;
 
-        public ServiceBusQueueListenerFactory(ServiceBusAccount account, string queueName, ITriggeredFunctionExecutor executor, ServiceBusConfiguration config)
+        public ServiceBusQueueListenerFactory(ServiceBusAccount account, string queueName, ITriggeredFunctionExecutor executor, ServiceBusOptions config)
         {
             _account = account;
             _queueName = queueName;

@@ -11,12 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Blob
 #endif
 {
     /// <summary>Defines the system properties of a blob.</summary>
-#if PUBLICSTORAGE
-    
     public interface IStorageBlobProperties
-#else
-    internal interface IStorageBlobProperties
-#endif
     {
         /// <summary>
         /// Gets the ETag of the blob.

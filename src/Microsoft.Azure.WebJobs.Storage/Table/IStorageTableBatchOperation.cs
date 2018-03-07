@@ -11,12 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Table
 #endif
 {
     /// <summary>Defines an atomic batch operation on a table.</summary>
-#if PUBLICSTORAGE
-    
     public interface IStorageTableBatchOperation : IReadOnlyList<IStorageTableOperation>
-#else
-    internal interface IStorageTableBatchOperation : IReadOnlyList<IStorageTableOperation>
-#endif
     {
         /// <summary>Adds an operation to the batch.</summary>
         /// <param name="operation">The operation to add.</param>

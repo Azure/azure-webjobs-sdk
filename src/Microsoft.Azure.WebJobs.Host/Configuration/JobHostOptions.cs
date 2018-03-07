@@ -25,21 +25,7 @@ namespace Microsoft.Azure.WebJobs
     /// </summary>
     public sealed class JobHostOptions
     {
-
-        private readonly JobHostQueuesConfiguration _queueConfiguration = new JobHostQueuesConfiguration();
-        private readonly JobHostBlobsConfiguration _blobsConfiguration = new JobHostBlobsConfiguration();
-        private readonly ConcurrentDictionary<Type, object> _services = new ConcurrentDictionary<Type, object>();
-
         private string _hostId;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="JobHostConfiguration"/> class.
-        /// </summary>
-        public JobHostOptions()
-        {
-            Singleton = new SingletonConfiguration();
-            Aggregator = new FunctionResultAggregatorOptions();
-        }
 
         /// <summary>
         /// Returns true if <see cref="UseDevelopmentSettings"/> has been called on this instance.
@@ -81,38 +67,6 @@ namespace Microsoft.Azure.WebJobs
             }
         }
 
-        /// <summary>
-        /// Gets the configuration used by <see cref="QueueTriggerAttribute"/>.
-        /// </summary>
-        public JobHostQueuesConfiguration Queues
-        {
-            get { return _queueConfiguration; }
-        }
-
-        /// <summary>
-        /// Gets the configuration used by <see cref="BlobTriggerAttribute"/>.
-        /// </summary>
-        public JobHostBlobsConfiguration Blobs
-        {
-            get { return _blobsConfiguration; }
-        }
-
-        /// <summary>
-        /// Gets the configuration used by <see cref="SingletonAttribute"/>.
-        /// </summary>
-        public SingletonConfiguration Singleton
-        {
-            get;
-            private set;
-        }
-
-        /// <summary>
-        /// Gets the configuration used by the logging aggregator.
-        /// </summary>
-        public FunctionResultAggregatorOptions Aggregator
-        {
-            get;
-            private set;
-        }
+        public INameResolver NameResolver { get; set; }
     }
 }

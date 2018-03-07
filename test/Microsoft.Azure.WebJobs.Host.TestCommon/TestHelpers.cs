@@ -269,7 +269,8 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 
         public static IJobHostMetadataProvider CreateMetadataProvider(this JobHost host)
         {
-            return host.Services.GetService<IJobHostMetadataProvider>();
+            throw new NotImplementedException();
+            // return host.Services.GetService<IJobHostMetadataProvider>();
         }
     }
 }

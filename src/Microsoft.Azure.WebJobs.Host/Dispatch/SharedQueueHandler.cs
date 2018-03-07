@@ -15,6 +15,7 @@ using Microsoft.Azure.WebJobs.Host.Storage.Queue;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -28,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
         private readonly IHostIdProvider _hostIdProvider;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly ILoggerFactory _loggerFactory;
-        private readonly IQueueConfiguration _queueConfiguration;
+        private readonly IOptions<JobHostQueuesOptions> _queueOptions;
         private readonly ISharedContextProvider _sharedContextProvider;
         private readonly IContextSetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherSetter;
 
@@ -38,11 +39,11 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
         private QueueListener _sharedQueuelistener;
         private SharedQueueWriter _sharedQueueWriter;
 
-        internal SharedQueueHandler(IStorageAccountProvider accountProvider,
+        public SharedQueueHandler(IStorageAccountProvider accountProvider,
                            IHostIdProvider hostIdProvider,
                            IWebJobsExceptionHandler exceptionHandler,
                            ILoggerFactory loggerFactory,
-                           IQueueConfiguration queueConfiguration,
+                           IOptions<JobHostQueuesOptions> queueOptions,
                            ISharedContextProvider sharedContextProvider,
                            IContextSetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherSetter)
         {
@@ -50,7 +51,7 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
             _hostIdProvider = hostIdProvider;
             _exceptionHandler = exceptionHandler;
             _loggerFactory = loggerFactory;
-            _queueConfiguration = queueConfiguration;
+            _queueOptions = queueOptions;
             _sharedContextProvider = sharedContextProvider;
             _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter;
             _state = State.Created;
@@ -118,7 +119,7 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
 
                 // use default poisonQueue setup
                 _sharedQueuelistener = new QueueListener(sharedQueue, sharedPoisonQueue, _triggerExecutor,
-                    _exceptionHandler, _loggerFactory, sharedQueueWatcher, _queueConfiguration);
+                    _exceptionHandler, _loggerFactory, sharedQueueWatcher, _queueOptions.Value);
             }
             catch (Exception ex)
             {

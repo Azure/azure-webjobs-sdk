@@ -39,11 +39,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             _loggerFactory = new LoggerFactory();
             _loggerFactory.AddProvider(new TestLoggerProvider());
             Mock<IQueueProcessorFactory> mockQueueProcessorFactory = new Mock<IQueueProcessorFactory>(MockBehavior.Strict);
-            JobHostQueuesConfiguration queuesConfig = new JobHostQueuesConfiguration();
+            JobHostQueuesOptions queuesConfig = new JobHostQueuesOptions();
             QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(queue, _loggerFactory, queuesConfig);
 
             _mockQueueProcessor = new Mock<QueueProcessor>(MockBehavior.Strict, context);
-            JobHostQueuesConfiguration queueConfig = new JobHostQueuesConfiguration
+            JobHostQueuesOptions queueConfig = new JobHostQueuesOptions
             {
                 MaxDequeueCount = 5,
                 QueueProcessorFactory = mockQueueProcessorFactory.Object
@@ -64,7 +64,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             bool poisonMessageHandlerInvoked = false;
             EventHandler<PoisonMessageEventArgs> poisonMessageEventHandler = (sender, e) => { poisonMessageHandlerInvoked = true; };
             Mock<IQueueProcessorFactory> mockQueueProcessorFactory = new Mock<IQueueProcessorFactory>(MockBehavior.Strict);
-            JobHostQueuesConfiguration queueConfig = new JobHostQueuesConfiguration
+            JobHostQueuesOptions queueConfig = new JobHostQueuesOptions
             {
                 MaxDequeueCount = 7,
                 QueueProcessorFactory = mockQueueProcessorFactory.Object

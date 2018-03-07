@@ -12,12 +12,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Queue
 #endif
 {
     /// <summary>Defines a queue client.</summary>
-#if PUBLICSTORAGE
-    
     public interface IStorageQueueClient
-#else
-    internal interface IStorageQueueClient
-#endif
     {
         /// <summary>Gets the credentials used to connect to the account.</summary>
         StorageCredentials Credentials { get; }

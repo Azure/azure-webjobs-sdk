@@ -27,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
 
         private readonly INameResolver _nameResolver;
         private readonly IStorageAccountProvider _accountProvider;
-        private readonly IQueueConfiguration _queueConfiguration;
+        private readonly JobHostQueuesOptions _queueOptions;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IContextSetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherSetter;
         private readonly ISharedContextProvider _sharedContextProvider;
@@ -35,14 +35,14 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
 
         public QueueTriggerAttributeBindingProvider(INameResolver nameResolver,
             IStorageAccountProvider accountProvider,
-            IQueueConfiguration queueConfiguration,
+            JobHostQueuesOptions queueOptions,
             IWebJobsExceptionHandler exceptionHandler,
             IContextSetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherSetter,
             ISharedContextProvider sharedContextProvider,
             ILoggerFactory loggerFactory)
         {
             _accountProvider = accountProvider ?? throw new ArgumentNullException(nameof(accountProvider));
-            _queueConfiguration = queueConfiguration ?? throw new ArgumentNullException(nameof(queueConfiguration));
+            _queueOptions = queueOptions ?? throw new ArgumentNullException(nameof(queueOptions));
             _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
             _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter ?? throw new ArgumentNullException(nameof(messageEnqueuedWatcherSetter));
             _sharedContextProvider = sharedContextProvider ?? throw new ArgumentNullException(nameof(sharedContextProvider));
@@ -84,7 +84,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             IStorageQueue queue = client.GetQueueReference(queueName);
 
             ITriggerBinding binding = new QueueTriggerBinding(parameter.Name, queue, argumentBinding,
-                _queueConfiguration, _exceptionHandler, _messageEnqueuedWatcherSetter,
+                _queueOptions, _exceptionHandler, _messageEnqueuedWatcherSetter,
                 _sharedContextProvider, _loggerFactory);
             return binding;
         }

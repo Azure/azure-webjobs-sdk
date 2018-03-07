@@ -9,7 +9,7 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 namespace Microsoft.Azure.WebJobs.Host
 {
     /// <summary>
-    /// Manage distributed lock. A lock is specified by (account, lockId).  Interface implementations should cooperate with <see cref="SingletonConfiguration"/>
+    /// Manage distributed lock. A lock is specified by (account, lockId).  Interface implementations should cooperate with <see cref="SingletonOptions"/>
     /// </summary>
     /// <remarks>
     /// 1. Account can be null or it may be a storage account name intended for <see cref="IStorageAccountProvider"/>. 
@@ -42,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host
             CancellationToken cancellationToken);
 
         /// <summary>
-        /// Called by the client to renew the lease. The timing internals here are determined by <see cref="SingletonConfiguration"/>
+        /// Called by the client to renew the lease. The timing internals here are determined by <see cref="SingletonOptions"/>
         /// </summary>
         /// <param name="lockHandle"></param>
         /// <param name="cancellationToken"></param>

@@ -15,12 +15,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Blob
 #endif
 {
     /// <summary>Defines a block blob.</summary>
-#if PUBLICSTORAGE
-    
     public interface IStorageBlockBlob : IStorageBlob
-#else
-    internal interface IStorageBlockBlob : IStorageBlob
-#endif
     {
         /// <summary>Gets the underlying <see cref="CloudBlockBlob"/>.</summary>
         new CloudBlockBlob SdkObject { get; }

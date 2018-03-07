@@ -11,12 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Queue
 #endif
 {
     /// <summary>Defines a queue message.</summary>
-#if PUBLICSTORAGE
-    
     public interface IStorageQueueMessage
-#else
-    internal interface IStorageQueueMessage
-#endif
     {
         /// <summary>Get the message contents as a byte array.</summary>
         byte[] AsBytes { get; }

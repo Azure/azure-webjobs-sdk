@@ -7,7 +7,7 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 
 namespace Microsoft.Azure.WebJobs.Host.Indexers
 {
-    internal interface IFunctionDefinition
+    public interface IFunctionDefinition
     {
         FunctionDescriptor Descriptor { get; }
 

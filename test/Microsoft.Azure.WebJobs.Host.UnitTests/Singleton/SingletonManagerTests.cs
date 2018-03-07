@@ -16,6 +16,7 @@ using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Moq;
@@ -53,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
         private BlobLeaseDistributedLockManager _core;
         private SingletonManager _singletonManager;
-        private SingletonConfiguration _singletonConfig;
+        private SingletonOptions _singletonConfig;
         private Mock<IStorageAccountProvider> _mockAccountProvider;
         private Mock<IStorageBlobDirectory> _mockBlobDirectory;
         private Mock<IStorageBlobDirectory> _mockSecondaryBlobDirectory;
@@ -94,7 +95,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             _mockBlobMetadata = new Dictionary<string, string>();
             _mockBlobDirectory.Setup(p => p.GetBlockBlobReference(TestLockId)).Returns(_mockStorageBlob.Object);
 
-            _singletonConfig = new SingletonConfiguration();
+            _singletonConfig = new SingletonOptions();
 
             // use reflection to bypass the normal validations (so tests can run fast)
             TestHelpers.SetField(_singletonConfig, "_lockAcquisitionPollingInterval", TimeSpan.FromMilliseconds(25));
@@ -112,7 +113,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             var logger = loggerFactory?.CreateLogger(LogCategories.Singleton);
             _core = new BlobLeaseDistributedLockManager.DedicatedStorage(_mockAccountProvider.Object, logger);
 
-            _singletonManager = new SingletonManager(_core, _singletonConfig, _mockExceptionDispatcher.Object, loggerFactory, new FixedHostIdProvider(TestHostId), _nameResolver);
+            _singletonManager = new SingletonManager(_core, new OptionsWrapper<SingletonOptions>(_singletonConfig), _mockExceptionDispatcher.Object, loggerFactory, new FixedHostIdProvider(TestHostId), _nameResolver);
 
             _singletonManager.MinimumLeaseRenewalInterval = TimeSpan.FromMilliseconds(250);
         }
@@ -532,7 +533,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             {
                 Mode = SingletonMode.Listener
             };
-            SingletonConfiguration config = new SingletonConfiguration()
+            var config = new SingletonOptions()
             {
                 LockPeriod = TimeSpan.FromSeconds(16),
                 ListenerLockPeriod = TimeSpan.FromSeconds(17)
@@ -552,7 +553,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             // override via attribute
             var method = GetType().GetMethod("TestJob_LockAcquisitionTimeoutOverride", BindingFlags.Static | BindingFlags.NonPublic);
             var attribute = method.GetCustomAttribute<SingletonAttribute>();
-            var config = new SingletonConfiguration();
+            var config = new SingletonOptions();
             var result = SingletonManager.GetLockAcquisitionTimeout(attribute, config);
             Assert.Equal(TimeSpan.FromSeconds(5), result);
 

@@ -41,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             var configuration = CreateConfiguration();
 
-            using (JobHost host = new JobHost(configuration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
             {
                 try
                 {
@@ -64,7 +64,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void StartAsync_WhenNotStarted_DoesNotThrow()
         {
             // Arrange
-            using (JobHost host = new JobHost(CreateConfiguration(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
             {
                 // Act & Assert
                 host.StartAsync().GetAwaiter().GetResult();
@@ -74,7 +74,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void StartAsync_WhenStarted_Throws()
         {
             // Arrange
-            using (JobHost host = new JobHost(CreateConfiguration(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
             {
                 host.Start();
 
@@ -86,7 +86,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void StartAsync_WhenStopped_Throws()
         {
             // Arrange
-            using (JobHost host = new JobHost(CreateConfiguration(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
             {
                 host.Start();
                 host.Stop();
@@ -100,10 +100,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             // Arrange
             TaskCompletionSource<IStorageAccount> getAccountTaskSource = new TaskCompletionSource<IStorageAccount>();
-            JobHostConfiguration configuration = CreateConfiguration(new LambdaStorageAccountProvider(
+            JobHostOptions configuration = CreateConfiguration(new LambdaStorageAccountProvider(
                     (i1, i2) => getAccountTaskSource.Task));
 
-            using (JobHost host = new JobHost(configuration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
             {
                 Task starting = host.StartAsync();
                 Assert.False(starting.IsCompleted); // Guard
@@ -120,7 +120,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void StartAsync_WhenStopping_Throws()
         {
             // Arrange
-            using (JobHost host = new JobHost(CreateConfiguration(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
             {
                 host.Start();
 
@@ -148,7 +148,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void StopAsync_WhenStarted_DoesNotThrow()
         {
             // Arrange
-            using (JobHost host = new JobHost(CreateConfiguration(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
             {
                 host.Start();
 
@@ -160,7 +160,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void StopAsync_WhenStopped_DoesNotThrow()
         {
             // Arrange
-            using (JobHost host = new JobHost(CreateConfiguration(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
             {
                 host.Start();
                 host.Stop();
@@ -173,7 +173,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void StopAsync_WhenNotStarted_Throws()
         {
             // Arrange
-            using (JobHost host = new JobHost(CreateConfiguration(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
             {
                 // Act & Assert
                 ExceptionAssert.ThrowsInvalidOperation(() => host.StopAsync(), "The host has not yet started.");
@@ -184,10 +184,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             // Arrange
             TaskCompletionSource<IStorageAccount> getAccountTaskSource = new TaskCompletionSource<IStorageAccount>();
-            JobHostConfiguration configuration = CreateConfiguration(new LambdaStorageAccountProvider(
+            JobHostOptions configuration = CreateConfiguration(new LambdaStorageAccountProvider(
                     (i1, i2) => getAccountTaskSource.Task));
 
-            using (JobHost host = new JobHost(configuration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(configuration), new Mock<IJobHostContextFactory>().Object))
             {
                 Task starting = host.StartAsync();
                 Assert.False(starting.IsCompleted); // Guard
@@ -204,7 +204,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void StopAsync_WhenWaiting_ReturnsIncompleteTask()
         {
             // Arrange
-            using (JobHost host = new JobHost(CreateConfiguration(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
             {
                 host.Start();
 
@@ -233,7 +233,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void StopAsync_WhenAlreadyStopping_ReturnsSameTask()
         {
             // Arrange
-            using (JobHost host = new JobHost(CreateConfiguration(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(CreateConfiguration()), new Mock<IJobHostContextFactory>().Object))
             {
                 host.Start();
 
@@ -454,12 +454,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Trait("Category", "secretsrequired")]
         public void IndexingExceptions_CanBeHandledByLogger()
         {
-            JobHostConfiguration config = new JobHostConfiguration();
+            var config = new JobHostOptions();
 
-            config.TypeLocator = new FakeTypeLocator(typeof(BindingErrorsProgram));
+            // TODO: DI WORK
+            // Fix this
+            // config.TypeLocator = new FakeTypeLocator(typeof(BindingErrorsProgram));
             FunctionErrorLogger errorLogger = new FunctionErrorLogger("TestCategory");
 
-            config.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
+            // TODO: DI WORK - Make sure services are available
+            //config.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
 
             Mock<ILoggerProvider> mockProvider = new Mock<ILoggerProvider>(MockBehavior.Strict);
             mockProvider
@@ -469,9 +472,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             ILoggerFactory factory = new LoggerFactory();
             factory.AddProvider(mockProvider.Object);
 
-            config.LoggerFactory = factory;
-
-            JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object);
             host.Start();
 
             // verify the handled binding error
@@ -502,7 +503,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             host.Dispose();
         }
 
-        private static JobHostConfiguration CreateConfiguration()
+        private static JobHostOptions CreateConfiguration()
         {
             Mock<IServiceProvider> services = new Mock<IServiceProvider>(MockBehavior.Strict);
             StorageClientFactory clientFactory = new StorageClientFactory();
@@ -517,7 +518,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             return CreateConfiguration(storageAccountProvider);
         }
 
-        private static JobHostConfiguration CreateConfiguration(IStorageAccountProvider storageAccountProvider)
+        private static JobHostOptions CreateConfiguration(IStorageAccountProvider storageAccountProvider)
         {
             var singletonManager = new SingletonManager();
 
@@ -561,6 +562,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
                 _getAccountAsync = getAccountAsync;
             }
+
+            public string StorageConnectionString => throw new NotImplementedException();
+
+            public string DashboardConnectionString => throw new NotImplementedException();
 
             public Task<IStorageAccount> TryGetAccountAsync(string connectionStringName,
                 CancellationToken cancellationToken)

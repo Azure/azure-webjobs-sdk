@@ -15,12 +15,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage.Queue
 #endif
 {
     /// <summary>Defines a queue.</summary>
-#if PUBLICSTORAGE
-    
     public interface IStorageQueue
-#else
-    internal interface IStorageQueue
-#endif
     {
         /// <summary>Gets the name of the queue.</summary>
         string Name { get; }

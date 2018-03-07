@@ -27,10 +27,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         private readonly string _topicName;
         private readonly string _subscriptionName;
         private readonly string _entityPath;
-        private readonly ServiceBusConfiguration _config;
+        private readonly ServiceBusOptions _config;
 
         public ServiceBusTriggerBinding(string parameterName, Type parameterType, ITriggerDataArgumentBinding<Message> argumentBinding, ServiceBusAccount account,
-            ServiceBusConfiguration config, string queueName)
+            ServiceBusOptions config, string queueName)
             : this(parameterName, parameterType, argumentBinding, account, config)
         {
             _queueName = queueName;
@@ -38,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         }
 
         public ServiceBusTriggerBinding(string parameterName, Type parameterType, ITriggerDataArgumentBinding<Message> argumentBinding, ServiceBusAccount account,
-            ServiceBusConfiguration config, string topicName, string subscriptionName)
+            ServiceBusOptions config, string topicName, string subscriptionName)
             : this(parameterName, parameterType, argumentBinding, account, config)
         {
             _topicName = topicName;
@@ -47,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         }
 
         private ServiceBusTriggerBinding(string parameterName, Type parameterType, ITriggerDataArgumentBinding<Message> argumentBinding,
-            ServiceBusAccount account, ServiceBusConfiguration config)
+            ServiceBusAccount account, ServiceBusOptions config)
         {
             _parameterName = parameterName;
             _converter = CreateConverter(parameterType);

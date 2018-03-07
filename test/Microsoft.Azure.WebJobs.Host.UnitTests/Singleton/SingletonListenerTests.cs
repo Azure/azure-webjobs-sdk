@@ -17,7 +17,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
     public class SingletonListenerTests
     {
         private readonly string testHostId = "testhostid";
-        private readonly SingletonConfiguration _config;
+        private readonly SingletonOptions _config;
         private readonly Mock<SingletonManager> _mockSingletonManager;
         private readonly Mock<IListener> _mockInnerListener;
         private readonly SingletonListener _listener;
@@ -29,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             MethodInfo methodInfo = this.GetType().GetMethod("TestJob", BindingFlags.Static | BindingFlags.NonPublic);
             var descriptor = FunctionIndexer.FromMethod(methodInfo);
             _attribute = new SingletonAttribute();
-            _config = new SingletonConfiguration
+            _config = new SingletonOptions
             {
                 LockPeriod = TimeSpan.FromSeconds(20)
             };

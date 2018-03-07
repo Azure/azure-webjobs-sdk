@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Configuration;
+using System.Collections.Generic;
 
 namespace SampleHost
 {
@@ -21,12 +22,17 @@ namespace SampleHost
                 .ConfigureWebJobsHost(o =>
                 {
                     // Example setting options properties:
-                    o.HostId = "testhostid";
+                    // o.HostId = "testhostid";
                 })
                 .ConfigureAppConfiguration(config =>
                 {
                     // Adding command line as a configuration source
                     config.AddCommandLine(args);
+                    config.AddInMemoryCollection(new Dictionary<string, string>()
+                    {
+                        // Configuration options set from configuration providers:
+                        { "HostId", "testhostidfromprovider" }
+                    });
                 })
                 .ConfigureLogging(b =>
                 {

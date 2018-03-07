@@ -69,7 +69,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 // Add [FakeQueueTrigger] support.                 
                 context.AddConverter<string, FakeQueueData>(x => new FakeQueueData { Message = x });
                 context.AddConverter<FakeQueueData, string>(msg => msg.Message);
-
+                
                 var cm = context.Config.ConverterManager;
                 var triggerBindingProvider = new FakeQueueTriggerBindingProvider(new FakeQueueClient(), cm);
                 context.AddBindingRule<FakeQueueTriggerAttribute>().BindToTrigger(triggerBindingProvider);
