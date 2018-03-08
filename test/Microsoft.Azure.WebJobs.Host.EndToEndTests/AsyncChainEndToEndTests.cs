@@ -372,7 +372,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 else
                 {
                     int count = traceEvent.Properties.Count;
-                    string errorMessage = $"Expected 0 properties. Actual: {count}. Message: '{traceEvent.Message}'. Properties: {Environment.NewLine}";
+                    string errorMessage = $"Expected 0 properties. Actual: {count}. Message: '{traceEvent.Message}'. Exception: '{traceEvent.Exception?.ToString()}'. Properties: {Environment.NewLine}";
                     errorMessage += string.Join(Environment.NewLine, traceEvent.Properties.Select(p => $"{p.Key}: {p.Value}"));
                     Assert.True(count == 0, errorMessage);
                 }
