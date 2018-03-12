@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -47,7 +48,12 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
         private void Log(LogLevel level, FunctionDescriptor descriptor, Guid functionId, string message, Exception exception = null)
         {
             ILogger logger = _loggerFactory?.CreateLogger(LogCategories.CreateFunctionCategory(descriptor.LogName));
-            logger?.Log(level, 0, message, exception, (s, e) => s);
+            var logData = new Dictionary<string, object>
+            {
+                [LogConstants.LogSummaryKey] = message,
+                [ScopeKeys.FunctionInvocationId] = functionId.ToString(),
+            };
+            logger?.Log(level, 0, logData, exception, (state, ex) => state[LogConstants.LogSummaryKey].ToString());
         }
 
         public Task DeleteLogFunctionStartedAsync(string startedMessageId, CancellationToken cancellationToken)
