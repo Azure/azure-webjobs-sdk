@@ -45,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             await _instanceLogger.LogFunctionStartedAsync(message, CancellationToken.None);
 
-            string expectedCategory = LogCategories.CreateFunctionCategory(message.Function.ShortName);
+            string expectedCategory = LogCategories.CreateFunctionCategory(message.Function.LogName);
 
             LogMessage logMessage = _provider.GetAllLogMessages().Single();
             Assert.Equal(LogLevel.Information, logMessage.Level);
