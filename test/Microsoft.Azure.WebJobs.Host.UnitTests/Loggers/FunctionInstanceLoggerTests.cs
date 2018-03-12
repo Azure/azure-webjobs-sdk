@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -44,14 +45,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             await _instanceLogger.LogFunctionStartedAsync(message, CancellationToken.None);
 
-            string expectedCategory = LogCategories.CreateFunctionCategory("TestJob");
+            string expectedCategory = LogCategories.CreateFunctionCategory(message.Function.ShortName);
 
             LogMessage logMessage = _provider.GetAllLogMessages().Single();
             Assert.Equal(LogLevel.Information, logMessage.Level);
             Assert.Equal(expectedCategory, logMessage.Category);
 
-            Assert.Null(logMessage.State);
-            Assert.Equal($"Executing 'Function.TestJob' (Reason='TestReason', Id={message.FunctionInstanceId})", logMessage.FormattedMessage);
+            Assert.Equal($"Executing '{message.Function.ShortName}' (Reason='TestReason', Id={message.FunctionInstanceId})", logMessage.FormattedMessage);
+            VerifyLogMessageState(logMessage, message.FunctionInstanceId.ToString());
         }
 
         [Fact]
@@ -90,15 +91,27 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             LogMessage logMessage = logMessages[0];
             Assert.Equal(LogLevel.Information, logMessage.Level);
             Assert.Equal(expectedCategory, logMessage.Category);
-            Assert.Equal($"Executed 'Function.TestJob' (Succeeded, Id={successMessage.FunctionInstanceId})", logMessage.FormattedMessage);
-            Assert.Null(logMessage.State);
+            Assert.Equal($"Executed '{failureMessage.Function.ShortName}' (Succeeded, Id={successMessage.FunctionInstanceId})", logMessage.FormattedMessage);
+            VerifyLogMessageState(logMessage, successMessage.FunctionInstanceId.ToString());
 
             logMessage = logMessages[1];
             Assert.Equal(LogLevel.Error, logMessage.Level);
             Assert.Equal(expectedCategory, logMessage.Category);
-            Assert.Equal($"Executed 'Function.TestJob' (Failed, Id={failureMessage.FunctionInstanceId})", logMessage.FormattedMessage);
+            Assert.Equal($"Executed '{failureMessage.Function.ShortName}' (Failed, Id={failureMessage.FunctionInstanceId})", logMessage.FormattedMessage);
             Assert.Same(ex, logMessage.Exception);
-            Assert.Null(logMessage.State);
+            VerifyLogMessageState(logMessage, failureMessage.FunctionInstanceId.ToString());
+        }
+
+        private static void VerifyLogMessageState(LogMessage logMessage, string functionInvocationId)
+        {
+            if (logMessage.State is IEnumerable<KeyValuePair<string, object>> stateDict)
+            {
+                var kvps = stateDict.Where(k => string.Equals(k.Key, LogConstants.LogSummaryKey, StringComparison.OrdinalIgnoreCase)).LastOrDefault();
+                Assert.NotNull(kvps);
+                kvps = stateDict.Where(k => string.Equals(k.Key, ScopeKeys.FunctionInvocationId, StringComparison.OrdinalIgnoreCase)).LastOrDefault();
+                Assert.NotNull(kvps);
+                Assert.True(functionInvocationId ==(string) kvps.Value);
+            }
         }
     }
 }
