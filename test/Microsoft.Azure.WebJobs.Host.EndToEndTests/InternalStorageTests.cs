@@ -40,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var now = DateTime.UtcNow;
             var sig = container.GetSharedAccessSignature(new SharedAccessBlobPolicy
             {
-                 Permissions = SharedAccessBlobPermissions.Read | SharedAccessBlobPermissions.Write | SharedAccessBlobPermissions.List ,
+                 Permissions = SharedAccessBlobPermissions.Read | SharedAccessBlobPermissions.Write | SharedAccessBlobPermissions.List,
                  SharedAccessStartTime = now.AddDays(-10),
                  SharedAccessExpiryTime = now.AddDays(10)
             });

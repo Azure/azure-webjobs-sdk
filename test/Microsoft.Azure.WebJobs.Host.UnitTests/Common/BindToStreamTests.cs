@@ -159,7 +159,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 // Override the Stream --> String converter
                 context.AddConverter<Stream, string>(stream => ReadTag); 
 
-                context.AddConverter<ApplyConversion<string, Stream>, object> ((pair) =>
+                context.AddConverter<ApplyConversion<string, Stream>, object>((pair) =>
                  {
                      var val = pair.Value;
                      var stream = pair.Existing;

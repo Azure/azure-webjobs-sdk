@@ -118,13 +118,13 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
         public async Task ReadNoTable()
         {
             ILogReader reader = LogFactory.NewReader(this);
-            Assert.Equal(0, this._tables.Count); // no tables yet. 
+            Assert.Empty(_tables); // no tables yet. 
 
             var segmentDef = await reader.GetFunctionDefinitionsAsync(null, null);
-            Assert.Equal(0, segmentDef.Results.Length);
+            Assert.Empty(segmentDef.Results);
 
             var segmentTimeline = await reader.GetActiveContainerTimelineAsync(DateTime.MinValue, DateTime.MaxValue, null);
-            Assert.Equal(0, segmentTimeline.Results.Length);
+            Assert.Empty(segmentTimeline.Results);
 
             var segmentRecent = await reader.GetRecentFunctionInstancesAsync(new RecentFunctionQuery
             {
@@ -133,7 +133,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
                 End = DateTime.MaxValue,
                 MaximumResults = 1000
             }, null);
-            Assert.Equal(0, segmentRecent.Results.Length);
+            Assert.Empty(segmentRecent.Results);
 
             var item = await reader.LookupFunctionInstanceAsync(Guid.NewGuid());
             Assert.Null(item);
@@ -334,14 +334,14 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
 
                 segment = await reader1.GetFunctionDefinitionsAsync(host1, null);
 
-                Assert.Equal(1, segment.Results.Length);
+                Assert.Single(segment.Results);
                 var host1Defs = segment.Results[0];
                 Assert.Equal(Func1, host1Defs.Name);
                 Assert.Equal(FunctionId.Build(host1, Func1), host1Defs.FunctionId);
 
                 segment = await reader1.GetFunctionDefinitionsAsync(host2, null);
 
-                Assert.Equal(1, segment.Results.Length);
+                Assert.Single(segment.Results);
                 var host2Defs = segment.Results[0];
                 Assert.Equal(Func1, host2Defs.Name);
                 Assert.Equal(FunctionId.Build(host2, Func1), host2Defs.FunctionId);
@@ -400,7 +400,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
             // Start event should exist. 
 
             var entries = await GetRecentAsync(reader, l1.FunctionId);
-            Assert.Equal(1, entries.Length);
+            Assert.Single(entries);
             Assert.Equal(entries[0].GetStatus(), FunctionInstanceStatus.Running);
             Assert.Equal(entries[0].EndTime, null);
 
@@ -412,7 +412,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
             // Should overwrite the previous row. 
 
             entries = await GetRecentAsync(reader, l1.FunctionId);
-            Assert.Equal(1, entries.Length);
+            Assert.Single(entries);
             Assert.Equal(entries[0].GetStatus(), FunctionInstanceStatus.CompletedSuccess);
             Assert.Equal(entries[0].EndTime.Value, l1.EndTime);
         }
@@ -446,14 +446,14 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
 
 
             var definitionSegment = await reader.GetFunctionDefinitionsAsync(null, null);
-            Assert.Equal(1, definitionSegment.Results.Length);
+            Assert.Single(definitionSegment.Results);
             Assert.Equal(FuncOriginal, definitionSegment.Results[0].Name);
 
             // Lookup various casings 
             foreach (var name in new string[] { FuncOriginal, Func2, Func3 })
             {
                 var entries = await GetRecentAsync(reader, l1.FunctionId);
-                Assert.Equal(1, entries.Length);
+                Assert.Single(entries);
                 Assert.Equal(entries[0].GetStatus(), FunctionInstanceStatus.Running);
                 Assert.Equal(entries[0].EndTime, null);
                 Assert.Equal(entries[0].FunctionName, FuncOriginal); // preserving. 
@@ -655,13 +655,13 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
             {
                 var segment2 = await reader.GetAggregateStatsAsync(l2.FunctionId, DateTime.MinValue, DateTime.MaxValue, null);
                 var stats2 = segment2.Results;
-                Assert.Equal(1, stats2.Length);
+                Assert.Single(stats2);
                 Assert.Equal(stats2[0].TotalPass, 1);
                 Assert.Equal(stats2[0].TotalRun, 1);
                 Assert.Equal(stats2[0].TotalFail, 0);
 
                 var recent2 = await GetRecentAsync(reader, l2.FunctionId);
-                Assert.Equal(1, recent2.Length);
+                Assert.Single(recent2);
                 Assert.Equal(recent2[0].FunctionInstanceId, l2.FunctionInstanceId);
             }
         }

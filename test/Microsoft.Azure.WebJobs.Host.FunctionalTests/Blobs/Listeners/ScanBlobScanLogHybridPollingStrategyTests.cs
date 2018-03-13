@@ -324,7 +324,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
                 int count = 0;
                 executor.ExecuteLambda = (b) =>
                 {
-                    Assert.True(blobNameMap.Keys.Any(blob => blob == b.Name));
+                    Assert.Contains(blobNameMap.Keys, blob => blob == b.Name);
                     blobNameMap[b.Name]++;
 
                     if (b.DownloadText() == "throw")

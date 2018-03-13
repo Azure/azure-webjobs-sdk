@@ -27,14 +27,14 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal.FunctionalTests
             l.Increment(g1); // ignored, already started g1.                         
             l.Decrement(g1); // count is back to 0 before poll happens. 
             
-            Assert.Equal(0, l._dict.Count); // Large poll, haven't written yet. 
+            Assert.Empty(l._dict); // Large poll, haven't written yet. 
 
             l._newTicks = 100;
             await l.StopAsync();
 
             // StopAsync will flush and cause a write. 
             // We still picked up g1
-            Assert.Equal(1, l._dict.Count);
+            Assert.Single(l._dict);
             Assert.Equal(1, l._dict[100]);
 
             Assert.Equal(1, l._totalActive); // duplicate g1 is only counted once
@@ -52,7 +52,7 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal.FunctionalTests
             l.Increment(g1); // will start the timer. 
             l.Decrement(g1); // ignored, already staretd g1.                         
             
-            Assert.Equal(0, l._dict.Count); // Large poll, haven't written yet. 
+            Assert.Empty(l._dict); // Large poll, haven't written yet. 
 
             l.Poll(100);
             l._newTicks = 200;
@@ -60,7 +60,7 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal.FunctionalTests
 
             // StopAsync will flush and cause a write. 
             // We still picked up g1
-            Assert.Equal(1, l._dict.Count);
+            Assert.Single(l._dict);
             Assert.Equal(1, l._dict[100]);
 
             Assert.Equal(1, l._totalActive);
@@ -73,7 +73,7 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal.FunctionalTests
             Guid g1 = Guid.NewGuid();
 
             await l.StopAsync();
-            Assert.Equal(0, l._dict.Count);
+            Assert.Empty(l._dict);
         }
 
         // It's ok to call Stop() many times. 
@@ -91,7 +91,7 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal.FunctionalTests
             await Task.WhenAll(tasks);
 
             Assert.Equal(1, l._totalActive);
-            Assert.Equal(1, l._dict.Count);
+            Assert.Single(l._dict);
             Assert.Equal(1, l._dict[101]);
         }
 

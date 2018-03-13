@@ -17,42 +17,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
 {
     public class EventHubAsyncCollectorTests
     {
-        public class TestEventHubAsyncCollector : EventHubAsyncCollector
-        {
-            // A fake connection string for event hubs. This just needs to parse. It won't actually get invoked.
-            const string FakeConnectionString = "Endpoint=sb://test89123-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey;EntityPath=path2";
-            public static EventHubClient _testClient = EventHubClient.CreateFromConnectionString(FakeConnectionString);
-
-            // EventData is disposed after sending. So track raw bytes; not the actual EventData.
-            public List<byte[]> _sentEvents = new List<byte[]>();
-
-            public TestEventHubAsyncCollector() : base(_testClient)
-            {
-            }
-
-            protected override Task SendBatchAsync(IEnumerable<EventData> batch)
-            {
-
-                // Assert they all have the same partition key (could be null)
-                var partitionKey = batch.First().SystemProperties?.PartitionKey;
-                foreach(var e in batch)
-                {
-                    Assert.Equal(partitionKey, e.SystemProperties?.PartitionKey);
-                }
-
-                lock(_sentEvents)
-                {
-                    foreach (var e in batch)
-                    {
-                        var payloadBytes = e.Body.Array;
-                        Assert.NotNull(payloadBytes);
-                        _sentEvents.Add(payloadBytes);
-                    }
-                }
-                return Task.FromResult(0);
-            }
-        }
-
         [Fact]
         public void NullArgumentCheck()
         {
@@ -73,17 +37,17 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         {
             var collector = new TestEventHubAsyncCollector();
 
-            await collector.AddAsync(CreateEvent(new byte[] { 1 }, "pk1"));
+            await collector.AddAsync(this.CreateEvent(new byte[] { 1 }, "pk1"));
             await collector.AddAsync(CreateEvent(new byte[] { 2 }, "pk2"));
 
             // Not physically sent yet since we haven't flushed
-            Assert.Equal(0, collector._sentEvents.Count);
+            Assert.Empty(collector.SentEvents);
 
             await collector.FlushAsync();
 
             // Partitions aren't flushed in a specific order.
-            Assert.Equal(2, collector._sentEvents.Count);
-            var items = collector._sentEvents.ToArray();
+            Assert.Equal(2, collector.SentEvents.Count);
+            var items = collector.SentEvents.ToArray();
 
             var item0 = items[0];
             var item1 = items[1];
@@ -102,11 +66,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             await collector.AddAsync(e1);
 
             // Not physically sent yet since we haven't flushed
-            Assert.Equal(0, collector._sentEvents.Count);
+            Assert.Empty(collector.SentEvents);
 
             await collector.FlushAsync();
-            Assert.Equal(1, collector._sentEvents.Count);
-            Assert.Equal(payload, collector._sentEvents[0]);
+            Assert.Single(collector.SentEvents);
+            Assert.Equal(payload, collector.SentEvents[0]);
         }
 
         // If we send enough events, that will eventually tip over and flush.
@@ -122,7 +86,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
                 await collector.AddAsync(e1);
             }
 
-            Assert.True(collector._sentEvents.Count > 0);
+            Assert.True(collector.SentEvents.Count > 0);
         }
 
         // If we send enough events, that will eventually tip over and flush.
@@ -139,7 +103,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             }
 
             // Not yet
-            Assert.Equal(0, collector._sentEvents.Count);
+            Assert.Empty(collector.SentEvents);
 
             // This will push it over the theshold
             for (int i = 0; i < 20; i++)
@@ -148,7 +112,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
                 await collector.AddAsync(e1);
             }
 
-            Assert.True(collector._sentEvents.Count > 0);
+            Assert.True(collector.SentEvents.Count > 0);
         }
 
         [Fact]
@@ -173,7 +137,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
 
             // Verify we didn't queue anything
             await collector.FlushAsync();
-            Assert.Equal(0, collector._sentEvents.Count);
+            Assert.Empty(collector.SentEvents);
         }
 
         [Fact]
@@ -182,8 +146,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             var collector = new TestEventHubAsyncCollector();
 
             await Assert.ThrowsAsync<ArgumentNullException>(
-                async () => await collector.AddAsync(null)
-            );
+                async () => await collector.AddAsync(null));
         }
 
         // Send lots of events from multiple threads and ensure that all events are precisely accounted for.
@@ -207,7 +170,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
                     {
                         for (int i = 0; i < numEvents; i++)
                         {
-                            var idx = x * numEvents + i;
+                            var idx = (x * numEvents) + i;
                             var payloadStr = idx.ToString();
                             var payload = Encoding.UTF8.GetBytes(payloadStr);
                             lock (expected)
@@ -239,7 +202,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
 
             // Verify that every event we sent is accounted for; and that there are no duplicates.
             int count = 0;
-            foreach (var payloadBytes in collector._sentEvents)
+            foreach (var payloadBytes in collector.SentEvents)
             {
                 count++;
                 var payloadStr = Encoding.UTF8.GetString(payloadBytes);
@@ -255,7 +218,51 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
                 }
             }
 
-            Assert.Equal(0, expected.Count); // Some events where missed.
+            Assert.Empty(expected); // Some events where missed.
+        }
+
+        public class TestEventHubAsyncCollector : EventHubAsyncCollector
+        {
+            private static EventHubClient testClient = EventHubClient.CreateFromConnectionString(FakeConnectionString1);
+
+            // EventData is disposed after sending. So track raw bytes; not the actual EventData.
+            private List<byte[]> sentEvents = new List<byte[]>();
+
+            // A fake connection string for event hubs. This just needs to parse. It won't actually get invoked.
+            private const string FakeConnectionString = "Endpoint=sb://test89123-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey;EntityPath=path2";
+
+            public static EventHubClient TestClient { get => testClient; set => testClient = value; }
+
+            public List<byte[]> SentEvents { get => sentEvents; set => sentEvents = value; }
+
+            public static string FakeConnectionString1 => FakeConnectionString;
+
+            public TestEventHubAsyncCollector()
+                : base(TestClient)
+            {
+            }
+
+            protected override Task SendBatchAsync(IEnumerable<EventData> batch)
+            {
+                // Assert they all have the same partition key (could be null)
+                var partitionKey = batch.First().SystemProperties?.PartitionKey;
+                foreach (var e in batch)
+                {
+                    Assert.Equal(partitionKey, e.SystemProperties?.PartitionKey);
+                }
+
+                lock (SentEvents)
+                {
+                    foreach (var e in batch)
+                    {
+                        var payloadBytes = e.Body.Array;
+                        Assert.NotNull(payloadBytes);
+                        SentEvents.Add(payloadBytes);
+                    }
+                }
+
+                return Task.FromResult(0);
+            }
         }
     } // end class
 }

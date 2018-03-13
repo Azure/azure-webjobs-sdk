@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the MIT License. See License.txt in the project root for license information.
+
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -50,7 +53,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 return _duplicate;
             }
-
         }
 
         public DispatchQueueEndToEndTests(ITestOutputHelper output)
@@ -76,7 +78,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 _stopwatch.Restart();
 
-                int twoFuncCount = DispatchQueueTestConfig.batchSize * 2;
+                int twoFuncCount = DispatchQueueTestConfig.BatchSize * 2;
                 await TestHelpers.Await(() => _funcInvokation.TotalAdd() >= twoFuncCount || _funcInvokation.HasDuplicate(),
                                         7000, 1000);
 
@@ -104,12 +106,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 // this test takes long since it does at least 5 dequeue on the poison message
                 // count retries caused by failures and poison queue function process
-                int funcWithExceptionCount = DispatchQueueTestConfig.batchSize + _hostConfiguration.Queues.MaxDequeueCount;
+                int funcWithExceptionCount = DispatchQueueTestConfig.BatchSize + _hostConfiguration.Queues.MaxDequeueCount;
                 await TestHelpers.Await(() => _funcInvokation.TotalAdd() >= funcWithExceptionCount, 10000, 1000);
 
                 Assert.Equal(funcWithExceptionCount, _funcInvokation.TotalAdd());
                 Assert.True(_funcInvokation.HasDuplicate());
-                Assert.True(SampleTriggerWithPoisonQueue.poisonQueueResult);
+                Assert.True(SampleTriggerWithPoisonQueue.PoisonQueueResult);
 
                 _stopwatch.Stop();
             }
@@ -129,7 +131,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         public class SampleTriggerWithPoisonQueue
         {
-            public static bool poisonQueueResult = false;
+            public static bool PoisonQueueResult = false;
             public void PoisonQueueTrigger([DispatchQueueTrigger]JObject json)
             {
                 int order = json["order"].Value<int>();
@@ -148,7 +150,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 int value = message["Data"]["order"].Value<int>();
                 if (functionId.Contains("PoisonQueueTrigger") && value == 0)
                 {
-                    poisonQueueResult = true;
+                    PoisonQueueResult = true;
                 }
                 _funcInvokation.Add("PosionQueueProcess");
                 _output.WriteLine("PoisonQueueProcess" + " elapsed time: " + _stopwatch.ElapsedMilliseconds + " ms");

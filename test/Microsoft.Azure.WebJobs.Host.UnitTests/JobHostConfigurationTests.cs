@@ -293,7 +293,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 Assert.True(config.UsingDevelopmentSettings);
                 Assert.Equal(TimeSpan.FromSeconds(2), config.Queues.MaxPollingInterval);
                 Assert.Equal(TimeSpan.FromSeconds(15), config.Singleton.ListenerLockPeriod);
-
             }
         }
 

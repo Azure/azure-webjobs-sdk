@@ -32,7 +32,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         private readonly Dictionary<string, EventProcessorHost> _explicitlyProvidedHosts = new Dictionary<string, EventProcessorHost>(StringComparer.OrdinalIgnoreCase);
 
         private readonly EventProcessorOptions _options;
-        private ILogger _logger;
 
         private string _defaultStorageString; // set to JobHostConfig.StorageConnectionString
         private int _batchCheckpointFrequency = 1;

@@ -242,7 +242,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 IEnumerable<LogMessage> consoleOutput = _loggerProvider.GetAllLogMessages();
 
-                Assert.False(consoleOutput.Any(p => p.Level == LogLevel.Error));
+                Assert.DoesNotContain(consoleOutput, p => p.Level == LogLevel.Error);
 
                 string[] consoleOutputLines = consoleOutput
                     .Where(p => p.FormattedMessage != null)

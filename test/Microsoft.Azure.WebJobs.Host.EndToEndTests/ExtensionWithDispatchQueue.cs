@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the MIT License. See License.txt in the project root for license information.
+
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
@@ -18,7 +21,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
     internal class DispatchQueueTestConfig : IExtensionConfigProvider
     {
-        public const int batchSize = 6;
+        public const int BatchSize = 6;
 
         public void Initialize(ExtensionConfigContext context)
         {
@@ -28,7 +31,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
 
             context.AddBindingRule<DispatchQueueTriggerAttribute>().BindToTrigger(new ExtensionTriggerAttributeBindingProvider());
-
         }
     }
 
@@ -190,7 +192,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 private Task DelayEnqueue()
                 {
                     List<Task> tasks = new List<Task>();
-                    for (int i = 0; i < DispatchQueueTestConfig.batchSize; i++)
+                    for (int i = 0; i < DispatchQueueTestConfig.BatchSize; i++)
                     {
                         JObject payload = JObject.Parse("{ order:" + i + "}");
                         tasks.Add(_dispatchQueue.EnqueueAsync(payload, CancellationToken.None));
