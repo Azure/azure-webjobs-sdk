@@ -264,7 +264,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await TestHelpers.Await(() => testResult != null);
 
             JArray results = (JArray)testResult;
-            Assert.Equal(1, results.Count);
+            Assert.Single(results);
 
             input = new Person { Age = 25, Location = "Tam O'Shanter" };
             json = JsonConvert.SerializeObject(input);
@@ -272,7 +272,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await host.CallAsync(methodInfo, arguments);
             await TestHelpers.Await(() => testResult != null);
             results = (JArray)testResult;
-            Assert.Equal(1, results.Count);
+            Assert.Single(results);
             Assert.Equal("Bill", (string)results[0]["Name"]);
         }
 

@@ -75,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal.FunctionalTests
             var rows = GetData();
 
             var f2 = Work(rows, t1, t3, 1); // single bucket , same
-            Assert.Equal(1, f2.Length);
+            Assert.Single(f2);
             Assert.Equal(StdArea, f2[0].Item2);
         }
 
@@ -86,7 +86,7 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal.FunctionalTests
             var rows = GetData();
 
             var f2b = Work(rows, t1, t5, 1); // long bucket , half
-            Assert.Equal(1, f2b.Length);
+            Assert.Single(f2b);
             Assert.Equal(StdArea / 2, f2b[0].Item2);
         }
 
@@ -111,7 +111,7 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal.FunctionalTests
             var rows = GetData();
 
             var f4 = Work(rows, t1, t2, 1); // subsection 
-            Assert.Equal(1, f4.Length);
+            Assert.Single(f4);
             Assert.Equal(t1, f4[0].Item1);
             Assert.Equal(StdArea, f4[0].Item2);
         }
@@ -123,7 +123,7 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal.FunctionalTests
             var rows = GetData();
 
             var f5 = Work(rows, t2, t3, 1); // subsection 
-            Assert.Equal(1, f5.Length);
+            Assert.Single(f5);
             Assert.Equal(t2, f5[0].Item1);
             Assert.Equal(StdArea, f5[0].Item2);
         }
@@ -165,7 +165,7 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal.FunctionalTests
 
             // Projection in single bucket            
             var f7 = Work(rows, t0, t5, 1); // larger bucket.  smaller. 
-            Assert.Equal(1, f7.Length);
+            Assert.Single(f7);
             Assert.Equal(48, f7[0].Item2);
         }
 

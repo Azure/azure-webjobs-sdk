@@ -110,16 +110,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
             public void AssertFromAlpha(string expected)
             {
-                Assert.Equal(1, _itemsFromAlpha.Count);
-                Assert.Equal(0, _itemsFromBeta.Count);
+                Assert.Single(_itemsFromAlpha);
+                Assert.Empty(_itemsFromBeta);
                 Assert.Equal(expected, _itemsFromAlpha[0]);
                 _itemsFromAlpha.Clear();
                 _itemsFromBeta.Clear();
             }
             public void AssertFromBeta(string expected)
             {
-                Assert.Equal(0, _itemsFromAlpha.Count);
-                Assert.Equal(1, _itemsFromBeta.Count);
+                Assert.Empty(_itemsFromAlpha);
+                Assert.Single(_itemsFromBeta);
                 Assert.Equal(expected, _itemsFromBeta[0]);
                 _itemsFromAlpha.Clear();
                 _itemsFromBeta.Clear();

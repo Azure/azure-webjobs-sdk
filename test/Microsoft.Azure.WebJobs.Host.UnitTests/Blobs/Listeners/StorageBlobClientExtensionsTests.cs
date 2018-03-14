@@ -66,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
                     {
                         // Previously this is where a bug existed - ListBlobsAsync wasn't handling
                         // continuation tokens properly and kept sending the same initial token
-                        Assert.False(seenTokens.Contains(currentToken));
+                        Assert.DoesNotContain(currentToken, seenTokens);
                         seenTokens.Add(currentToken);
 
                         if (currentToken == null)

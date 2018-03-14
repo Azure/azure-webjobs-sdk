@@ -1,13 +1,15 @@
-﻿using Microsoft.Azure.WebJobs.Host.Bindings;
+﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the MIT License. See License.txt in the project root for license information.
+
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Triggers;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
@@ -21,7 +23,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             {
                 return new MyTriggerBinding();
             }
-        
         }
         class MyTriggerBinding : ITriggerBinding
         {

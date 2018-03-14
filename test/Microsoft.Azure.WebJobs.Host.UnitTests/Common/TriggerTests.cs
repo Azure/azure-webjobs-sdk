@@ -173,7 +173,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             };
 
             var items = Run<FunctionsOutputUsesParams>(e0);
-            Assert.Equal(1, items.Length);
+            Assert.Single(items);
 
             // this trigger strongly binds to a poco and adds Payload.val1
             var d = (FakeQueueData) (items[0]);
@@ -192,7 +192,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             };
 
             var items = Run<FunctionsSinglePoco>(e0);
-            Assert.Equal(1, items.Length);
+            Assert.Single(items);
 
             // this trigger strongly binds to a poco and adds Payload.val1
             Assert.Equal(payload.val1, items[0]);
@@ -231,7 +231,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             };
 
             var items = Run<FunctionsSingleString>(e0);
-            Assert.Equal(1, items.Length);
+            Assert.Single(items);
 
             // this trigger strongly binds to a poco and adds Payload.val1
             Assert.Equal(e0.Message, items[0]);
@@ -260,7 +260,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             client.SetConverters = AddItem2ByteArrayConverter;
             
             var items = Run<FunctionsByteArray>(client, e0);
-            Assert.Equal(1, items.Length);
+            Assert.Single(items);
             
             // This uses the Item --> byte[] converter. Dispatch as a single item.
             // Received as 1 object, a byte[]. 
@@ -280,7 +280,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 new FakeQueueData { Message = "AB" },
                 new FakeQueueData { Message = "CD" }
                 );
-            Assert.Equal(1, items.Length);
+            Assert.Single(items);
 
             var arg = (byte[][])(items[0]);
 
@@ -301,7 +301,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 new FakeQueueData { Byte = 2 },
                 new FakeQueueData { Byte = 3 }
                 );
-            Assert.Equal(1, items.Length);
+            Assert.Single(items);
 
             // Received as 1 batch, with 3 entries. 
             var bytes = new byte[] { 1, 2, 3 };

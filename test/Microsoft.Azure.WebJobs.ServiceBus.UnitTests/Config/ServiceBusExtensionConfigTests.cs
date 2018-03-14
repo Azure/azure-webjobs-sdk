@@ -27,9 +27,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
 
             IExtensionRegistry extensions = config.GetService<IExtensionRegistry>();
             ITriggerBindingProvider[] triggerBindingProviders = extensions.GetExtensions<ITriggerBindingProvider>().ToArray();
-            Assert.Equal(0, triggerBindingProviders.Length);
+            Assert.Empty(triggerBindingProviders);
             IBindingProvider[] bindingProviders = extensions.GetExtensions<IBindingProvider>().ToArray();
-            Assert.Equal(0, bindingProviders.Length);
+            Assert.Empty(bindingProviders);
 
             ExtensionConfigContext context = new ExtensionConfigContext
             {
@@ -40,13 +40,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
 
             // ensure the ServiceBusTriggerAttributeBindingProvider was registered
             triggerBindingProviders = extensions.GetExtensions<ITriggerBindingProvider>().ToArray();
-            Assert.Equal(1, triggerBindingProviders.Length);
+            Assert.Single(triggerBindingProviders);
             ServiceBusTriggerAttributeBindingProvider triggerBindingProvider = (ServiceBusTriggerAttributeBindingProvider)triggerBindingProviders[0];
             Assert.NotNull(triggerBindingProvider);
 
             // ensure the ServiceBusAttributeBindingProvider was registered
             bindingProviders = extensions.GetExtensions<IBindingProvider>().ToArray();
-            Assert.Equal(1, bindingProviders.Length);
+            Assert.Single(bindingProviders);
             ServiceBusAttributeBindingProvider bindingProvider = (ServiceBusAttributeBindingProvider)bindingProviders[0];
             Assert.NotNull(bindingProvider);
         }

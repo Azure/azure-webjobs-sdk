@@ -17,7 +17,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         {
             public TestAttribute()
             {
-
             }
             public TestAttribute(string path)
             {

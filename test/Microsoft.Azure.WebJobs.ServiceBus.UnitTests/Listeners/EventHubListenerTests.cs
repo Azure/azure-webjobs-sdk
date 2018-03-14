@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         [InlineData(8, 12)]
         [InlineData(32, 3)]
         [InlineData(128, 0)]
-        async Task EventHubListener_CreatesCheckpointStrategy(int batchCheckpointFrequency, int expected)
+        private async Task EventHubListener_CreatesCheckpointStrategy(int batchCheckpointFrequency, int expected)
         {
             var iterations = 100;
             var strategy = EventHubListener.CreateCheckpointStrategy(batchCheckpointFrequency);
@@ -38,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         [Theory]
         [InlineData(0)]
         [InlineData(-2)]
-        void EventHubListener_Throws_IfInvalidCheckpointStrategy(int batchCheckpointFrequency)
+        private void EventHubListener_Throws_IfInvalidCheckpointStrategy(int batchCheckpointFrequency)
         {
             var exc = Assert.Throws<InvalidOperationException>(() => EventHubListener.CreateCheckpointStrategy(batchCheckpointFrequency));
             Assert.Equal("Batch checkpoint frequency must be larger than 0.", exc.Message);

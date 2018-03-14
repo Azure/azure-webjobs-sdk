@@ -180,37 +180,37 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var host = TestHelpers.NewJobHost<Functions>(client);
 
             var p7 = Invoke(host, client, "SendDirectClient");
-            Assert.Equal(1, p7.Length);
+            Assert.Single(p7);
             Assert.Equal("abc", p7[0].Message);
             Assert.Equal("def", p7[0].ExtraPropertery);
 
             var p8 = Invoke(host, client, "SendOneDerivedNative");
-            Assert.Equal(1, p8.Length);
+            Assert.Single(p8);
             DerivedFakeQueueData pd8 = (DerivedFakeQueueData)p8[0];
             Assert.Equal("Bonus!", pd8.Bonus); // verify derived prop that wouldn't serialize. 
 
             var p9 = Invoke(host, client, "SendOneOtherNative");
-            Assert.Equal(1, p9.Length);
+            Assert.Single(p9);
             Assert.Equal("direct", p9[0].ExtraPropertery); // Set by the  DirectFakeQueueData.ToEvent
 
             // Single items
             var p1 = InvokeJson<Payload>(host, client, "SendOnePoco");
-            Assert.Equal(1, p1.Length);
+            Assert.Single(p1);
             Assert.Equal(123, p1[0].val1);
 
             var p2 = Invoke(host, client, "SendOneNative");
-            Assert.Equal(1, p2.Length);
+            Assert.Single(p2);
             Assert.Equal("message", p2[0].Message);
             Assert.Equal("extra", p2[0].ExtraPropertery);
 
             var p3 = Invoke(host, client, "SendOneString");
-            Assert.Equal(1, p3.Length);
+            Assert.Single(p3);
             Assert.Equal("stringvalue", p3[0].Message);
 
             foreach (string methodName in new string[] { "SendDontQueue", "SendArrayNull", "SendArrayLen0" })
             {
                 var p6 = Invoke(host, client, methodName);
-                Assert.Equal(0, p6.Length);
+                Assert.Empty(p6);
             }
 
             // batching 

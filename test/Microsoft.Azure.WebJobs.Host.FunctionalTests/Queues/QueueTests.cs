@@ -45,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var queue = account.CreateQueueClient().GetQueueReference(QueueName);
             var msgs = queue.GetMessages(10).ToArray();
 
-            Assert.Equal(1, msgs.Length);
+            Assert.Single(msgs);
             Assert.Equal("123", msgs[0].AsString);
         }
 
@@ -172,7 +172,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var queue = account.CreateQueueClient().GetQueueReference("qname-abc");
             var msgs = queue.GetMessages(10).ToArray();
 
-            Assert.Equal(1, msgs.Length);
+            Assert.Single(msgs);
             Assert.Equal("123", msgs[0].AsString);
         }
 
@@ -235,7 +235,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var queue = account.CreateQueueClient().GetQueueReference("qname-abc");
             var msgs = queue.GetMessages(10).ToArray();
 
-            Assert.Equal(1, msgs.Length);
+            Assert.Single(msgs);
             Assert.Equal("123", msgs[0].AsString);
         }
 
@@ -387,7 +387,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             IStorageQueue queue = client.GetQueueReference(QueueName);
             IEnumerable<IStorageQueueMessage> messages = queue.GetMessages(messageCount: 10);
             Assert.NotNull(messages);
-            Assert.Equal(1, messages.Count());
+            Assert.Single(messages);
             IStorageQueueMessage message = messages.Single();
             Assert.Equal(expectedContent, message.AsString);
         }

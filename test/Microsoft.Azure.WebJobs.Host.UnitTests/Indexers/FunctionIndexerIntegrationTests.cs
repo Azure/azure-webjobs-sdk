@@ -58,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             FunctionDescriptor descriptor = entry.Item1;
             Assert.NotNull(descriptor);
             var parameters = descriptor.Parameters;
-            Assert.Equal(1, parameters.Count());
+            Assert.Single(parameters);
             Assert.IsType<BlobParameterDescriptor>(parameters.First());
         }
 
@@ -74,7 +74,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
             Assert.NotNull(func);
             var parameters = func.Parameters;
-            Assert.Equal(1, parameters.Count());
+            Assert.Single(parameters);
             ParameterDescriptor firstParameter = parameters.First();
             Assert.Equal("inputs", firstParameter.Name);
             Assert.IsType<BlobParameterDescriptor>(firstParameter);
@@ -92,7 +92,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
             Assert.NotNull(func);
             var parameters = func.Parameters;
-            Assert.Equal(1, parameters.Count());
+            Assert.Single(parameters);
             Assert.IsType<BlobTriggerParameterDescriptor>(parameters.First());
         }
 
@@ -139,7 +139,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
             Assert.NotNull(func);
             var parameters = func.Parameters;
-            Assert.Equal(1, parameters.Count());
+            Assert.Single(parameters);
 
             ParameterDescriptor firstParameter = parameters.First();
             Assert.NotNull(firstParameter);
@@ -158,7 +158,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
             Assert.NotNull(func);
             var parameters = func.Parameters;
-            Assert.Equal(1, parameters.Count());
+            Assert.Single(parameters);
 
             ParameterDescriptor firstParameter = parameters.First();
             Assert.IsType<QueueTriggerParameterDescriptor>(firstParameter);
@@ -180,7 +180,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
             Assert.NotNull(func);
             var parameters = func.Parameters;
-            Assert.Equal(1, parameters.Count());
+            Assert.Single(parameters);
 
             ParameterDescriptor firstParameter = parameters.First();
             QueueParameterDescriptor queueParameter = (QueueParameterDescriptor)firstParameter;

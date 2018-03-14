@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the MIT License. See License.txt in the project root for license information.
+
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
@@ -154,7 +157,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             Assert.Null(contract["partitioncontext"]); // case insensitive
         }
 
-        // Validate that if connection string has EntityPath, that takes precedence over the parameter. 
+        // Validate that if connection string has EntityPath, that takes precedence over the parameter.
         [Theory]
         [InlineData("k1", "Endpoint=sb://test89123-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey")]
         [InlineData("path2", "Endpoint=sb://test89123-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey;EntityPath=path2")]
@@ -162,20 +165,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         {
             EventHubConfiguration config = new EventHubConfiguration();
 
-            // Test sender 
+            // Test sender
             config.AddSender("k1", connectionString);
             var client = config.GetEventHubClient("k1", null);
             Assert.Equal(expectedPathName, client.EventHubName);
         }
 
-        private class TestNameResolver : INameResolver
-        {
-            public IDictionary<string, string> env = new Dictionary<string, string>();
-
-            public string Resolve(string name) => env[name];
-        }
-
-        // Validate that if connection string has EntityPath, that takes precedence over the parameter. 
+        // Validate that if connection string has EntityPath, that takes precedence over the parameter.
         [Theory]
         [InlineData("k1", "Endpoint=sb://test89123-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey")]
         [InlineData("path2", "Endpoint=sb://test89123-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey;EntityPath=path2")]
@@ -235,11 +231,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
                             {
                                 { "MaxBatchSize", 100 },
                                 { "PrefetchCount", 200 },
-                                { "BatchCheckpointFrequency", 5 }
+                                { "BatchCheckpointFrequency", 5 },
                             }
                         },
-                    } 
-                }
+                    },
+                },
             };
             context.Config.AddService<ILoggerFactory>(new LoggerFactory());
             (config as IExtensionConfigProvider).Initialize(context);

@@ -30,13 +30,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
 
             IExtensionRegistry extensions = config.GetService<IExtensionRegistry>();
             IExtensionConfigProvider[] configProviders = extensions.GetExtensions<IExtensionConfigProvider>().ToArray();
-            Assert.Equal(0, configProviders.Length);
+            Assert.Empty(configProviders);
 
             config.UseServiceBus();
 
             // verify that the service bus config provider was registered
             configProviders = extensions.GetExtensions<IExtensionConfigProvider>().ToArray();
-            Assert.Equal(1, configProviders.Length);
+            Assert.Single(configProviders);
 
             ServiceBusExtensionConfig serviceBusExtensionConfig = (ServiceBusExtensionConfig)configProviders.Single();
 
@@ -53,7 +53,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
 
             IExtensionRegistry extensions = config.GetService<IExtensionRegistry>();
             IExtensionConfigProvider[] configProviders = extensions.GetExtensions<IExtensionConfigProvider>().ToArray();
-            Assert.Equal(0, configProviders.Length);
+            Assert.Empty(configProviders);
 
             ServiceBusConfiguration serviceBusConfig = new ServiceBusConfiguration
             {
@@ -63,7 +63,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
 
             // verify that the service bus config provider was registered
             configProviders = extensions.GetExtensions<IExtensionConfigProvider>().ToArray();
-            Assert.Equal(1, configProviders.Length);
+            Assert.Single(configProviders);
 
             ServiceBusExtensionConfig serviceBusExtensionConfig = (ServiceBusExtensionConfig)configProviders.Single();
             Assert.Same(serviceBusConfig, serviceBusExtensionConfig.Config);

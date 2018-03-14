@@ -68,14 +68,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             object[] services = registry.GetExtensions(typeof(IMyService)).ToArray();
             Assert.Equal(3, services.Length);
-            Assert.True(services.Contains(serviceA));
-            Assert.True(services.Contains(serviceB));
-            Assert.True(services.Contains(serviceC));
+            Assert.Contains(serviceA, services);
+            Assert.Contains(serviceB, services);
+            Assert.Contains(serviceC, services);
 
             services = registry.GetExtensions(typeof(IMyOtherService)).ToArray();
             Assert.Equal(2, services.Length);
-            Assert.True(services.Contains(otherServiceA));
-            Assert.True(services.Contains(otherServiceB));
+            Assert.Contains(otherServiceA, services);
+            Assert.Contains(otherServiceB, services);
         }
 
         [Fact]
@@ -93,9 +93,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             IMyService[] services = registry.GetExtensions<IMyService>().ToArray();
             Assert.Equal(3, services.Length);
-            Assert.True(services.Contains(serviceA));
-            Assert.True(services.Contains(serviceB));
-            Assert.True(services.Contains(serviceC));
+            Assert.Contains(serviceA, services);
+            Assert.Contains(serviceB, services);
+            Assert.Contains(serviceC, services);
         }
 
         [Fact]
@@ -104,7 +104,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             DefaultExtensionRegistry registry = new DefaultExtensionRegistry();
 
             object[] services = registry.GetExtensions(typeof(IConvertible)).ToArray();
-            Assert.Equal(0, services.Length);
+            Assert.Empty(services);
         }
 
         public interface IMyService
