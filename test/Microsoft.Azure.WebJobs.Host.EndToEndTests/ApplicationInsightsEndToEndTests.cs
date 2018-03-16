@@ -49,15 +49,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 .AddApplicationInsights(
                     new TestTelemetryClientFactory(filter.Filter, _channel));
 
-            JobHostConfiguration config = new JobHostConfiguration
+            Assert.False(true, "fix");
+            JobHostOptions config = new JobHostOptions
             {
-                LoggerFactory = loggerFactory,
-                TypeLocator = new FakeTypeLocator(GetType()),
+                //LoggerFactory = loggerFactory,
+                //TypeLocator = new FakeTypeLocator(GetType()),
             };
-            config.Aggregator.IsEnabled = false;
+            //config.Aggregator.IsEnabled = false;
             config.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
 
-            using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(config), null))
             {
                 await host.StartAsync();
                 var methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
@@ -109,15 +110,17 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 .AddApplicationInsights(
                     new TestTelemetryClientFactory(filter.Filter, _channel));
 
-            JobHostConfiguration config = new JobHostConfiguration
+            Assert.False(true, "fix");
+
+            JobHostOptions config = new JobHostOptions
             {
-                LoggerFactory = loggerFactory,
-                TypeLocator = new FakeTypeLocator(GetType()),
+                //LoggerFactory = loggerFactory,
+                //TypeLocator = new FakeTypeLocator(GetType()),
             };
-            config.Aggregator.IsEnabled = false;
+            //config.Aggregator.IsEnabled = false;
             config.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
 
-            using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(config), null))
             {
                 await host.StartAsync();
                 var methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
@@ -175,13 +178,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var loggerFactory = new LoggerFactory()
                 .AddApplicationInsights(
                     new TestTelemetryClientFactory(filter.Filter, _channel));
+            Assert.False(true, "fix");
 
-            JobHostConfiguration config = new JobHostConfiguration
+            JobHostOptions config = new JobHostOptions
             {
-                LoggerFactory = loggerFactory,
-                TypeLocator = new FakeTypeLocator(GetType()),
+                //LoggerFactory = loggerFactory,
+                //TypeLocator = new FakeTypeLocator(GetType()),
             };
-            config.Aggregator.IsEnabled = false;
+            //config.Aggregator.IsEnabled = false;
 
             var listener = new ApplicationInsightsTestListener();
             int requests = 5;
@@ -190,7 +194,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 listener.StartListening();
 
-                using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+                JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(config), null);
                 {
                     await host.StartAsync();
 

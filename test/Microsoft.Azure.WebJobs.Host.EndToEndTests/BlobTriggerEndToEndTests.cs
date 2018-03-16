@@ -7,12 +7,14 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
+using Moq;
 using Newtonsoft.Json.Linq;
 using Xunit;
 
@@ -46,7 +48,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             _nameResolver = new RandomNameResolver();
 
-            var storageConnectionString = new JobHostConfiguration().StorageConnectionString;
+            string storageConnectionString = null; // new JobHostOptions().StorageConnectionString;
             _storageAccount = CloudStorageAccount.Parse(storageConnectionString);
             CloudBlobClient blobClient = _storageAccount.CreateCloudBlobClient();
             _testContainer = blobClient.GetContainerReference(_nameResolver.ResolveInString(SingleTriggerContainerName));
@@ -54,21 +56,24 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _testContainer.CreateAsync().Wait();
         }
 
-        public JobHostConfiguration NewConfig<TProgram>(TProgram program, params object[] services)
+        public JobHostOptions NewConfig<TProgram>(TProgram program, params object[] services)
         {
-            JobHostConfiguration config = new JobHostConfiguration();
+            JobHostOptions config = new JobHostOptions();
 
             var activator = new FakeActivator();
             activator.Add(program);
-            config.TypeLocator = new FakeTypeLocator(typeof(TProgram));
-            config.JobActivator = activator;
+            // TODO: DI: This needs to be updated to perform proper service registration
+            //config.TypeLocator = new FakeTypeLocator(typeof(TProgram));
+            //config.JobActivator = activator;
 
             ILoggerFactory loggerFactory = new LoggerFactory();
             loggerFactory.AddProvider(_loggerProvider);
-            config.LoggerFactory = loggerFactory;
+            // TODO: DI: This needs to be updated to perform proper service registration
+            //config.LoggerFactory = loggerFactory;
 
-            config.AddServices(services);
-            config.AddServices(_nameResolver);
+            // TODO: DI: This needs to be updated to perform proper service registration
+            //config.AddServices(services);
+            //config.AddServices(_nameResolver);
             config.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
             return config;
         }
@@ -179,7 +184,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var prog = new Poison_Program();
             var config = NewConfig(prog);
 
-            using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
             {
                 host.Start();
 
@@ -204,7 +209,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             // Process the blob first
             using (prog._completedEvent = new ManualResetEvent(initialState: false))
-            using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
             {
                 DateTime startTime = DateTime.Now;
 
@@ -229,7 +234,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // wait twice the amount of time required to process first before 
             // deciding that it doesn't get reprocessed
             using (prog._completedEvent = new ManualResetEvent(initialState: false))
-            using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
             {
                 host.Start();
 
@@ -255,7 +260,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var config = NewConfig(prog);
 
             using (prog._completedEvent = new ManualResetEvent(initialState: false))
-            using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
             {
                 host.Start();
                 Assert.True(prog._completedEvent.WaitOne(TimeSpan.FromSeconds(60)));
@@ -275,8 +280,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
 
             using (prog._completedEvent = new ManualResetEvent(initialState: false))
-            using (JobHost host1 = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
-            using (JobHost host2 = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host1 = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
+            using (JobHost host2 = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
             {
                 host1.Start();
                 host2.Start();

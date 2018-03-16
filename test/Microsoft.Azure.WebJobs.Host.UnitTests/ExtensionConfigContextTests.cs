@@ -15,8 +15,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void BasicRules()
         {
-            var config = new JobHostConfiguration();
-            var ctx = new ExtensionConfigContext
+            var config = new JobHostOptions();
+            var ctx = new ExtensionConfigContext(null, null, null)
             {
                 Config = config
             };
@@ -53,8 +53,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void Converters()
         {
-            var config = new JobHostConfiguration();
-            var ctx = new ExtensionConfigContext
+            var config = new JobHostOptions();
+            var ctx = new ExtensionConfigContext(null, null, null)
             {
                 Config = config
             };
@@ -67,7 +67,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
             ctx.ApplyRules();
 
-            var cm = config.ConverterManager;
+            IConverterManager cm = null; //config.ConverterManager;
 
             {
                 var generalConverter = cm.GetSyncConverter<int, string, Attribute>();
@@ -85,8 +85,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void Error_IfMissingBindingAttribute()
         {
-            var config = new JobHostConfiguration();
-            var ctx = new ExtensionConfigContext
+            var config = new JobHostOptions();
+            var ctx = new ExtensionConfigContext(null, null, null)
             {
                 Config = config
             };
@@ -98,8 +98,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void CallingAddBindingRule_Multiple_Times()
         {
-            var config = new JobHostConfiguration();
-            var ctx = new ExtensionConfigContext
+            var config = new JobHostOptions();
+            var ctx = new ExtensionConfigContext(null, null, null)
             {
                 Config = config
             };
@@ -116,8 +116,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void ErrorOnDanglingWhen()
         {
-            var config = new JobHostConfiguration();
-            var ctx = new ExtensionConfigContext
+            var config = new JobHostOptions();
+            var ctx = new ExtensionConfigContext(null, null, null)
             {
                 Config = config
             };

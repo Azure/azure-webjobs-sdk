@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
         [Fact]
         public void UseServiceBus_ThrowsArgumentNull_WhenServiceBusConfigIsNull()
         {
-            JobHostConfiguration config = new JobHostConfiguration();
+            JobHostOptions config = new JobHostOptions();
             ArgumentNullException exception = Assert.Throws<ArgumentNullException>(() =>
                 {
                     config.UseServiceBus(null);
@@ -26,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
         [Fact]
         public void UseServiceBus_NoServiceBusConfiguration_PerformsExpectedRegistration()
         {
-            JobHostConfiguration config = new JobHostConfiguration();
+            JobHostOptions config = new JobHostOptions();
 
             IExtensionRegistry extensions = config.GetService<IExtensionRegistry>();
             IExtensionConfigProvider[] configProviders = extensions.GetExtensions<IExtensionConfigProvider>().ToArray();
@@ -49,13 +49,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
         [Fact]
         public void UseServiceBus_ServiceBusConfigurationProvided_PerformsExpectedRegistration()
         {
-            JobHostConfiguration config = new JobHostConfiguration();
+            JobHostOptions config = new JobHostOptions();
 
             IExtensionRegistry extensions = config.GetService<IExtensionRegistry>();
             IExtensionConfigProvider[] configProviders = extensions.GetExtensions<IExtensionConfigProvider>().ToArray();
             Assert.Empty(configProviders);
 
-            ServiceBusConfiguration serviceBusConfig = new ServiceBusConfiguration
+            var serviceBusConfig = new ServiceBusOptions
             {
                 ConnectionString = "test service bus connection"
             };

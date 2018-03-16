@@ -18,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
         [Fact]
         public async Task CreateAsync__Success()
         {
-            var config = new ServiceBusConfiguration();
+            var config = new ServiceBusOptions();
             var account = new ServiceBusAccount(config);
             Mock<ITriggeredFunctionExecutor> mockExecutor = new Mock<ITriggeredFunctionExecutor>(MockBehavior.Strict);
             ServiceBusSubscriptionListenerFactory factory = new ServiceBusSubscriptionListenerFactory(account, "testtopic", "testsubscription", mockExecutor.Object, config);

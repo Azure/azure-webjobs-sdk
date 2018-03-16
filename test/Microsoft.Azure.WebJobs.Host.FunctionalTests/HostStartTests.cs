@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var serviceProvider = FunctionalTest.CreateConfigurationForCallFailure(account,
                 typeof(InvalidQueueNameProgram), backgroundTaskSource);
 
-            using (JobHost host = new JobHost(serviceProvider, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(serviceProvider), null))
             {
                 // Act & Assert
                 FunctionIndexingException exception = Assert.Throws<FunctionIndexingException>(() => host.Start());

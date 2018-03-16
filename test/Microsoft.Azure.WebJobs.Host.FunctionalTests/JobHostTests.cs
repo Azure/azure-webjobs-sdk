@@ -8,7 +8,9 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Moq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
@@ -35,13 +37,14 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             // Can now set type locator and types, do indexing, and run. 
             // Important that we're able to set this *after* we've queried the binding graph. 
-            config.TypeLocator = new FakeTypeLocator(typeof(ProgramSimple));
+            Assert.False(true, "Removed once DI fixes are in place");
+            //config.TypeLocator = new FakeTypeLocator(typeof(ProgramSimple));
 
             var expected = "123";
-            using (var jobHost = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(config), new Mock<IJobHostContextFactory>().Object);
             {
                 var method = typeof(ProgramSimple).GetMethod("Test");
-                jobHost.Call(method, new { value = expected });
+                //jobHost.Call(method, new { value = expected });
                 Assert.Equal(expected, ProgramSimple._value);
             }
         }

@@ -13,6 +13,8 @@ using Newtonsoft.Json.Linq;
 using Xunit;
 using Xunit.Abstractions;
 using Microsoft.Extensions.Options;
+using Moq;
+using Microsoft.Azure.WebJobs.Host.Executors;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
@@ -25,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private static ITestOutputHelper _output;
         private static Stopwatch _stopwatch = new Stopwatch();
 
-        private JobHostConfiguration _hostConfiguration;
+        private JobHostOptions _hostConfiguration;
         private CloudQueue _sharedQueue;
         private CloudQueue _poisonQueue;
 
@@ -59,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         public DispatchQueueEndToEndTests(ITestOutputHelper output)
         {
             _output = output;
-            _hostConfiguration = new JobHostConfiguration();
+            _hostConfiguration = new JobHostOptions();
             _hostConfiguration.AddExtension(new DispatchQueueTestConfig());
         }
 
@@ -67,11 +69,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         // same trigger type, multiple functions
         public async Task DispatchQueueBatchTriggerTest()
         {
-            _hostConfiguration.TypeLocator = new FakeTypeLocator(typeof(SampleTrigger));
+            // TODO: DI: This needs to be updated to perform proper service registration
+            //_hostConfiguration.TypeLocator = new FakeTypeLocator(typeof(SampleTrigger));
+
             // each test will have a unique hostId so that consecutive test run will not be affected by clean up code
             _hostConfiguration.HostId = "bttest";
 
-            using (var host = new JobHost(_hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_hostConfiguration), new Mock<IJobHostContextFactory>().Object))
             {
                 _funcInvokation = new ConcurrentStringSet();
 
@@ -94,10 +98,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async void PoisonQueueTest()
         {
-            _hostConfiguration.TypeLocator = new FakeTypeLocator(typeof(SampleTriggerWithPoisonQueue));
+            // TODO: DI: This needs to be updated to perform proper service registration
+            //_hostConfiguration.TypeLocator = new FakeTypeLocator(typeof(SampleTriggerWithPoisonQueue));
             _hostConfiguration.HostId = "pqtest";
 
-            using (var host = new JobHost(_hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_hostConfiguration), new Mock<IJobHostContextFactory>().Object))
             {
                 _funcInvokation = new ConcurrentStringSet();
 
@@ -107,7 +112,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 // this test takes long since it does at least 5 dequeue on the poison message
                 // count retries caused by failures and poison queue function process
-                int funcWithExceptionCount = DispatchQueueTestConfig.BatchSize + _hostConfiguration.Queues.MaxDequeueCount;
+                // TODO: DI: 
+                int funcWithExceptionCount = DispatchQueueTestConfig.BatchSize + 0;//_hostConfiguration.Queues.MaxDequeueCount;
                 await TestHelpers.Await(() => _funcInvokation.TotalAdd() >= funcWithExceptionCount, 10000, 1000);
 
                 Assert.Equal(funcWithExceptionCount, _funcInvokation.TotalAdd());
@@ -122,7 +128,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             // each test will have a different hostId
             // and therefore a different sharedQueue and poisonQueue
-            CloudStorageAccount sdkAccount = CloudStorageAccount.Parse(_hostConfiguration.StorageConnectionString);
+            // TODO: DI:
+            CloudStorageAccount sdkAccount = CloudStorageAccount.Parse(null);//_hostConfiguration.StorageConnectionString);
             CloudQueueClient client = sdkAccount.CreateCloudQueueClient();
             _sharedQueue = client.GetQueueReference("azure-webjobs-shared-" + _hostConfiguration.HostId);
             _poisonQueue = client.GetQueueReference("azure-webjobs-poison-" + _hostConfiguration.HostId);

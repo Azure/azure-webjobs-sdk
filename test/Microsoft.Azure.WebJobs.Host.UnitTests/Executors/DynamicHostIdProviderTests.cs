@@ -29,15 +29,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             IStorageAccountProvider storageAccountProvider = storageAccountProviderMock.Object;
             IFunctionIndexProvider functionIndexProvider = CreateDummyFunctionIndexProvider();
 
-            IHostIdProvider product = new DynamicHostIdProvider(storageAccountProvider, () => functionIndexProvider);
-            CancellationToken cancellationToken = CancellationToken.None;
+            Assert.False(true, "Remove once DI fixes are in place");
+            //IHostIdProvider product = new DynamicHostIdProvider(storageAccountProvider, () => functionIndexProvider);
+            //CancellationToken cancellationToken = CancellationToken.None;
 
-            // Act & Assert
-            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-                () => product.GetHostIdAsync(cancellationToken).GetAwaiter().GetResult());
-            Assert.Equal("A host ID is required. Either set JobHostConfiguration.HostId or provide a valid storage " +
-                "connection string.", exception.Message);
-            Assert.Same(innerException, exception.InnerException);
+            //// Act & Assert
+            //InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            //    () => product.GetHostIdAsync(cancellationToken).GetAwaiter().GetResult());
+            //Assert.Equal("A host ID is required. Either set JobHostConfiguration.HostId or provide a valid storage " +
+            //    "connection string.", exception.Message);
+            //Assert.Same(innerException, exception.InnerException);
         }
 
         private static IFunctionIndexProvider CreateDummyFunctionIndexProvider()

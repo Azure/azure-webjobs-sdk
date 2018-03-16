@@ -25,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public void ILogger_Succeeds()
         {
             string functionName = nameof(ILoggerFunctions.ILogger);
-            using (JobHost host = new JobHost(CreateConfig(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(CreateConfig()), new Mock<IJobHostContextFactory>().Object))
             {
                 var method = typeof(ILoggerFunctions).GetMethod(functionName);
                 host.Call(method);
@@ -55,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public void TraceWriter_ForwardsTo_ILogger()
         {
             string functionName = nameof(ILoggerFunctions.TraceWriterWithILoggerFactory);
-            using (JobHost host = new JobHost(CreateConfig(), new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(CreateConfig()), new Mock<IJobHostContextFactory>().Object))
             {
                 var method = typeof(ILoggerFunctions).GetMethod(functionName);
                 host.Call(method);
@@ -108,11 +108,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             config.AddService<IFunctionResultAggregatorFactory>(mockFactory.Object);
 
             const int N = 5;
-            config.Aggregator.IsEnabled = true;
-            config.Aggregator.BatchSize = N;
-            config.Aggregator.FlushTimeout = TimeSpan.FromSeconds(1);
+            // TODO: DI:
+            //config.Aggregator.IsEnabled = true;
+            //config.Aggregator.BatchSize = N;
+            //config.Aggregator.FlushTimeout = TimeSpan.FromSeconds(1);
 
-            using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(CreateConfig()), new Mock<IJobHostContextFactory>().Object))
             {
                 host.Start();
 
@@ -142,7 +143,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var mockFactory = new Mock<IFunctionResultAggregatorFactory>(MockBehavior.Strict);
             config.AddService<IFunctionResultAggregatorFactory>(mockFactory.Object);
 
-            using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(config), new Mock<IJobHostContextFactory>().Object))
             {
                 var method = typeof(ILoggerFunctions).GetMethod(nameof(ILoggerFunctions.TraceWriterWithILoggerFactory));
                 host.Call(method);
@@ -154,14 +155,15 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             // Add the loggerfactory but disable the aggregator
             var config = CreateConfig();
-            config.Aggregator.IsEnabled = false;
+            // TODO: DI:
+            //config.Aggregator.IsEnabled = false;
 
             // Ensure the aggregator is never configured by registering an
             // AggregatorFactory that with a strict, unconfigured mock.
             var mockFactory = new Mock<IFunctionResultAggregatorFactory>(MockBehavior.Strict);
             config.AddService<IFunctionResultAggregatorFactory>(mockFactory.Object);
 
-            using (JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(config), new Mock<IJobHostContextFactory>().Object))
             {
                 // also start and stop the host to ensure nothing throws due to the
                 // null aggregator
@@ -174,7 +176,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
         }
 
-        private JobHostConfiguration CreateConfig(bool addFactory = true)
+        private JobHostOptions CreateConfig(bool addFactory = true)
         {
             IStorageAccountProvider accountProvider = new FakeStorageAccountProvider()
             {
@@ -184,11 +186,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             ILoggerFactory factory = new LoggerFactory();
             factory.AddProvider(_loggerProvider);
 
-            var config = new JobHostConfiguration();
+            var config = new JobHostOptions();
             config.AddService(accountProvider);
-            config.TypeLocator = new FakeTypeLocator(new[] { typeof(ILoggerFunctions) });
+            // TODO: DI: 
+            //config.TypeLocator = new FakeTypeLocator(new[] { typeof(ILoggerFunctions) });
             config.AddService(factory);
-            config.Aggregator.IsEnabled = false; // disable aggregator
+            //config.Aggregator.IsEnabled = false; // disable aggregator
 
             return config;
         }

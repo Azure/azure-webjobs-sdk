@@ -99,11 +99,11 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
              )
         {
             var config = NewConfig(typeof(TProgram), services);
-            var host = new TestJobHost<TProgram>(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+            var host = new TestJobHost<TProgram>(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), null);
             return host;
         }
 
-        public static JobHostConfiguration NewConfig<TProgram>(params object[] services)
+        public static JobHostOptions NewConfig<TProgram>(params object[] services)
         {
             return NewConfig(typeof(TProgram), services);
         }
@@ -111,17 +111,18 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
         // Helper to create a JobHostConfiguraiton from a set of services. 
         // Default config, pure-in-memory
         // Default is pure-in-memory, good for unit testing. 
-        public static JobHostConfiguration NewConfig(Type functions, params object[] services)
+        public static JobHostOptions NewConfig(Type functions, params object[] services)
         {
             var config = NewConfig(services);
             if (!services.OfType<ITypeLocator>().Any())
             {
-                config.AddServices(new FakeTypeLocator(functions));
+                // TODO: DI: This needs to be updated to perform proper service registration
+                //config.AddServices(new FakeTypeLocator(functions));
             }
             return config;
         }
 
-        public static JobHostConfiguration NewConfig(
+        public static JobHostOptions NewConfig(
             params object[] services
             )
         {
@@ -129,122 +130,126 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             ILoggerProvider loggerProvider = services.OfType<ILoggerProvider>().SingleOrDefault() ?? new TestLoggerProvider();
             loggerFactory.AddProvider(loggerProvider);
 
-            var config = new JobHostConfiguration()
+            var config = new JobHostOptions()
             {
                 // Pure in-memory, no storage. 
-                HostId = Guid.NewGuid().ToString("n"),
-                DashboardConnectionString = null,
-                StorageConnectionString = null,
-                LoggerFactory = loggerFactory
+                HostId = Guid.NewGuid().ToString("n")
             };
-            config.AddServices(services);
+
+            // TODO: DI: This needs to be updated to perform proper service registration
+            //config.AddServices(services);
             return config;
         }
 
-        public static void AddServices(this JobHostConfiguration config, params object[] services)
-        {
-            // Set extensionRegistry first since other services may depend on it. 
-            foreach (var obj in services)
-            {
-                IExtensionRegistry extensionRegistry = obj as IExtensionRegistry;
-                if (extensionRegistry != null)
-                {
-                    config.AddService<IExtensionRegistry>(extensionRegistry);
-                    break;
-                }
-            }
+        // TODO: DI: This needs to be updated to perform proper service registration
+        //public static void AddServices(this JobHostConfiguration config, params object[] services)
+        //{
+        //    // Set extensionRegistry first since other services may depend on it. 
+        //    foreach (var obj in services)
+        //    {
+        //        IExtensionRegistry extensionRegistry = obj as IExtensionRegistry;
+        //        if (extensionRegistry != null)
+        //        {
+        //            config.AddService<IExtensionRegistry>(extensionRegistry);
+        //            break;
+        //        }
+        //    }
 
-            IExtensionRegistry extensions = config.GetService<IExtensionRegistry>();
+        //    IExtensionRegistry extensions = config.GetService<IExtensionRegistry>();
 
-            var types = new Type[] {
-                typeof(IAsyncCollector<FunctionInstanceLogEntry>),
-                typeof(IHostInstanceLoggerProvider),
-                typeof(IFunctionInstanceLoggerProvider),
-                typeof(IFunctionOutputLoggerProvider),
-                typeof(IConsoleProvider),
-                typeof(ITypeLocator),
-                typeof(IWebJobsExceptionHandler),
-                typeof(INameResolver),
-                typeof(IJobActivator),
-                typeof(IExtensionTypeLocator),
-                typeof(SingletonManager),
-                typeof(IHostIdProvider),
-                typeof(IQueueConfiguration),
-                typeof(IExtensionRegistry),
-                typeof(IDistributedLockManager),
-                typeof(ILoggerFactory),
-                typeof(IFunctionIndexProvider) // set to unit test indexing. 
-            };
+        //    var types = new Type[] {
+        //        typeof(IAsyncCollector<FunctionInstanceLogEntry>),
+        //        typeof(IHostInstanceLoggerProvider),
+        //        typeof(IFunctionInstanceLoggerProvider),
+        //        typeof(IFunctionOutputLoggerProvider),
+        //        typeof(IConsoleProvider),
+        //        typeof(ITypeLocator),
+        //        typeof(IWebJobsExceptionHandler),
+        //        typeof(INameResolver),
+        //        typeof(IJobActivator),
+        //        typeof(IExtensionTypeLocator),
+        //        typeof(SingletonManager),
+        //        typeof(IHostIdProvider),
+        //        typeof(IQueueConfiguration),
+        //        typeof(IExtensionRegistry),
+        //        typeof(IDistributedLockManager),
+        //        typeof(ILoggerFactory),
+        //        typeof(IFunctionIndexProvider) // set to unit test indexing. 
+        //    };
 
-            foreach (var obj in services)
-            {
-                if (obj == null ||
-                    obj is ILoggerProvider)
-                {
-                    continue;
-                }
+        //    foreach (var obj in services)
+        //    {
+        //        if (obj == null ||
+        //            obj is ILoggerProvider)
+        //        {
+        //            continue;
+        //        }
 
-                IStorageAccountProvider storageAccountProvider = obj as IStorageAccountProvider;
-                IStorageAccount account = obj as IStorageAccount;
-                if (account != null)
-                {
-                    storageAccountProvider = new FakeStorageAccountProvider
-                    {
-                        StorageAccount = account
-                    };
-                }
-                if (storageAccountProvider != null)
-                {
-                    config.AddService<IStorageAccountProvider>(storageAccountProvider);
-                    continue;
-                }
+        //        IStorageAccountProvider storageAccountProvider = obj as IStorageAccountProvider;
+        //        IStorageAccount account = obj as IStorageAccount;
+        //        if (account != null)
+        //        {
+        //            storageAccountProvider = new FakeStorageAccountProvider
+        //            {
+        //                StorageAccount = account
+        //            };
+        //        }
+        //        if (storageAccountProvider != null)
+        //        {
+        //            config.AddService<IStorageAccountProvider>(storageAccountProvider);
+        //            continue;
+        //        }
 
-                // A new extension 
-                IExtensionConfigProvider extension = obj as IExtensionConfigProvider;
-                if (extension != null)
-                {
-                    extensions.RegisterExtension<IExtensionConfigProvider>(extension);
-                    continue;
-                }
+        //        // A new extension 
+        //        IExtensionConfigProvider extension = obj as IExtensionConfigProvider;
+        //        if (extension != null)
+        //        {
+        //            extensions.RegisterExtension<IExtensionConfigProvider>(extension);
+        //            continue;
+        //        }
 
-                // A function filter
-                if (obj is IFunctionInvocationFilter)
-                {
-                    extensions.RegisterExtension<IFunctionInvocationFilter>((IFunctionInvocationFilter)obj);
-                    continue;
-                }
+        //        // A function filter
+        //        if (obj is IFunctionInvocationFilter)
+        //        {
+        //            extensions.RegisterExtension<IFunctionInvocationFilter>((IFunctionInvocationFilter)obj);
+        //            continue;
+        //        }
 
-                if (obj is IFunctionExceptionFilter)
-                {
-                    extensions.RegisterExtension<IFunctionExceptionFilter>((IFunctionExceptionFilter)obj);
-                    continue;
-                }
+        //        if (obj is IFunctionExceptionFilter)
+        //        {
+        //            extensions.RegisterExtension<IFunctionExceptionFilter>((IFunctionExceptionFilter)obj);
+        //            continue;
+        //        }
 
-                // basic pattern. 
-                bool ok = false;
-                foreach (var type in types)
-                {
-                    if (type.IsAssignableFrom(obj.GetType()))
-                    {
-                        config.AddService(type, obj);
-                        ok = true;
-                        break;
-                    }
-                }
-                if (ok)
-                {
-                    continue;
-                }
+        //        // basic pattern. 
+        //        bool ok = false;
+        //        foreach (var type in types)
+        //        {
+        //            if (type.IsAssignableFrom(obj.GetType()))
+        //            {
+        //                config.AddService(type, obj);
+        //                ok = true;
+        //                break;
+        //            }
+        //        }
+        //        if (ok)
+        //        {
+        //            continue;
+        //        }
 
-                throw new InvalidOperationException("Test bug: Unrecognized type: " + obj.GetType().FullName);
-            }
-        }
+        //        throw new InvalidOperationException("Test bug: Unrecognized type: " + obj.GetType().FullName);                
+        //    }
+        //}
 
         private class FakeStorageAccountProvider : IStorageAccountProvider
         {
             public IStorageAccount StorageAccount { get; set; }
 
             public IStorageAccount DashboardAccount { get; set; }
+
+            public string StorageConnectionString => throw new NotImplementedException();
+
+            public string DashboardConnectionString => throw new NotImplementedException();
 
             public Task<IStorageAccount> TryGetAccountAsync(string connectionStringName, CancellationToken cancellationToken)
             {

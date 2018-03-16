@@ -28,10 +28,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             JobHostOptions config = new JobHostOptions();
 
-            Assert.NotNull(config.Singleton);
-            Assert.NotNull(config.LoggerFactory);
-            Assert.False(config.Blobs.CentralizedPoisonQueue);
-            Assert.False(config.AllowPartialHostStartup);
+            // TODO: DI: Fix as required
+            //Assert.NotNull(config.Singleton);
+            //Assert.NotNull(config.LoggerFactory);
+            //Assert.False(config.Blobs.CentralizedPoisonQueue);
 
             StorageClientFactory clientFactory = config.GetService<StorageClientFactory>();
             Assert.NotNull(clientFactory);
@@ -148,7 +148,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             JobHostOptions configuration = new JobHostOptions();
 
-            ExceptionAssert.ThrowsArgumentNull(() => configuration.JobActivator = null, "value");
+            Assert.False(true, "Remove once DI fixes are in place");
+            //ExceptionAssert.ThrowsArgumentNull(() => configuration.JobActivator = null, "value");
         }
 
         [Fact]
@@ -257,47 +258,51 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             JobHostOptions configuration = new JobHostOptions();
 
-            StorageClientFactory clientFactory = configuration.StorageClientFactory;
+            StorageClientFactory clientFactory = null;// configuration.StorageClientFactory;
             Assert.NotNull(clientFactory);
             Assert.Same(clientFactory, configuration.GetService<StorageClientFactory>());
 
             CustomStorageClientFactory customFactory = new CustomStorageClientFactory();
-            configuration.StorageClientFactory = customFactory;
-            Assert.Same(customFactory, configuration.StorageClientFactory);
+
+            // TODO: DI:
+            //configuration.StorageClientFactory = customFactory;
+            Assert.Same(customFactory, null);  //configuration.StorageClientFactory);
             Assert.Same(customFactory, configuration.GetService<StorageClientFactory>());
         }
 
-        [Theory]
-        [InlineData(null, false)]
-        [InlineData("Blah", false)]
-        [InlineData("Development", true)]
-        [InlineData("development", true)]
-        public void IsDevelopment_ReturnsCorrectValue(string settingValue, bool expected)
-        {
-            using (EnvVarHolder.Set(Constants.EnvironmentSettingName, settingValue))
-            {
-                JobHostOptions config = new JobHostOptions();
-                Assert.Equal(config.IsDevelopment, expected);
-            }
-        }
 
-        public void UseDevelopmentSettings_ConfiguresCorrectValues()
-        {
-            using (EnvVarHolder.Set(Constants.EnvironmentSettingName, "Development"))
-            {
-                JobHostOptions config = new JobHostOptions();
-                Assert.False(config.UsingDevelopmentSettings);
+        // TODO: DI: Change to use IHostingEnvironment
+        //[Theory]
+        //[InlineData(null, false)]
+        //[InlineData("Blah", false)]
+        //[InlineData("Development", true)]
+        //[InlineData("development", true)]
+        //public void IsDevelopment_ReturnsCorrectValue(string settingValue, bool expected)
+        //{
+        //    using (EnvVarHolder.Set(Constants.EnvironmentSettingName, settingValue))
+        //    {
+        //        JobHostOptions config = new JobHostOptions();
+        //        Assert.Equal(config.IsDevelopment, expected);
+        //    }
+        //}
 
-                if (config.IsDevelopment)
-                {
-                    config.UseDevelopmentSettings();
-                }
+        //public void UseDevelopmentSettings_ConfiguresCorrectValues()
+        //{
+        //    using (EnvVarHolder.Set(Constants.EnvironmentSettingName, "Development"))
+        //    {
+        //        JobHostOptions config = new JobHostOptions();
+        //        Assert.False(config.UsingDevelopmentSettings);
 
-                Assert.True(config.UsingDevelopmentSettings);
-                Assert.Equal(TimeSpan.FromSeconds(2), config.Queues.MaxPollingInterval);
-                Assert.Equal(TimeSpan.FromSeconds(15), config.Singleton.ListenerLockPeriod);
-            }
-        }
+        //        if (config.IsDevelopment)
+        //        {
+        //            config.UseDevelopmentSettings();
+        //        }
+
+        //        Assert.True(config.UsingDevelopmentSettings);
+        //        Assert.Equal(TimeSpan.FromSeconds(2), config.Queues.MaxPollingInterval);
+        //        Assert.Equal(TimeSpan.FromSeconds(15), config.Singleton.ListenerLockPeriod);
+        //    }
+        //}
 
         private static void TestHostIdThrows(string hostId)
         {
@@ -347,12 +352,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
                 JobHostOptions config = new JobHostOptions();
 
-                Assert.NotNull(config.InternalStorageConfiguration); // Env var should cause this to get initialized 
+                //Assert.NotNull(config.InternalStorageConfiguration); // Env var should cause this to get initialized 
 
-                var container = config.InternalStorageConfiguration.InternalContainer;
-                Assert.NotNull(container);
+                // TODO: DI:
+                //var container = null;//config.InternalStorageConfiguration.InternalContainer;
+                //Assert.NotNull(container);
 
-                Assert.Equal(container.Name, "myContainer"); // specified in sas. 
+                Assert.False(true, "Remove once DI fixes are in place");
+                //Assert.Equal(container.Name, "myContainer"); // specified in sas. 
             }
         }
 
@@ -366,20 +373,27 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
                 JobHostOptions config = new JobHostOptions()
                 {
-                    TypeLocator = new FakeTypeLocator(typeof(BasicTest))
+                    // TODO: DI: This needs to be updated to perform proper service registration
+                    //TypeLocator = new FakeTypeLocator(typeof(BasicTest))
                 };
-                Assert.Null(config.InternalStorageConfiguration);
+
+                // TODO: DI:
+                Assert.False(true, "Remove this once fixed");
+                //Assert.Null(config.InternalStorageConfiguration);
 
                 // Explicitly disalbe storage.
                 config.HostId = Guid.NewGuid().ToString("n");
-                config.DashboardConnectionString = null;
-                config.StorageConnectionString = null;
+                // TODO: DI: Use storage account provider
+                //config.DashboardConnectionString = null;
+                //config.StorageConnectionString = null;
 
                 var randomValue = Guid.NewGuid().ToString();
 
                 StringBuilder sbLoggingCallbacks = new StringBuilder();
                 var fastLogger = new FastLogger();
-                config.AddService<IAsyncCollector<FunctionInstanceLogEntry>>(fastLogger);
+
+                // TODO: DI: This needs to be updated to perform proper service registration
+                // config.AddService<IAsyncCollector<FunctionInstanceLogEntry>>(fastLogger);
 
                 JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object);
 
@@ -428,17 +442,22 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             // - config is then initialized, including adding extensions 
             // - extensions may register their own services. 
             JobHostOptions config = new JobHostOptions();
-            var host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+            var host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object);
 
-            var lockManager = config.GetService<IDistributedLockManager>();
+            // TODO: DI: This needs to be updated to perform proper service registration
+            //var lockManager = config.GetService<IDistributedLockManager>();
+            IDistributedLockManager lockManager = null;
             Assert.Null(lockManager); // Not initialized yet. 
 
             var nameResolver = new FakeNameResolver();
-            config.AddExtension(new TestExtension()); // this extension will add services. 
-            config.AddService<INameResolver>(nameResolver);
+            // TODO: DI: This needs to be updated to perform proper service registration
+            //config.AddExtension(new TestExtension()); // this extension will add services. 
+            //config.AddService<INameResolver>(nameResolver);
 
             //  Now succeeds when called on JobHost instead of Config object. 
-            lockManager = host.Services.GetService<IDistributedLockManager>();
+            // TODO: DI: This needs to be updated to perform proper service registration
+            //lockManager = host.Services.GetService<IDistributedLockManager>();
+
             Assert.NotNull(lockManager);
             Assert.IsType<TestLockManager>(lockManager); // verify it's our custom type             
         }
@@ -448,7 +467,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             public void Initialize(ExtensionConfigContext context)
             {
-                context.Config.AddService<IDistributedLockManager>(new TestLockManager());
+                // TODO: DI: This needs to be updated to perform proper service registration
+                //context.Config.AddService<IDistributedLockManager>(new TestLockManager());
             }
         }
 

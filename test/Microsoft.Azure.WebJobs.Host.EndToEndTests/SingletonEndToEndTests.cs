@@ -38,8 +38,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         static SingletonEndToEndTests()
         {
-            JobHostConfiguration config = new JobHostConfiguration();
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(config.StorageConnectionString);
+            JobHostOptions config = new JobHostOptions();
+            // TODO: DI:
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(null);//config.StorageConnectionString);
             CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
             _lockDirectory = blobClient.GetContainerReference("azure-webjobs-hosts").GetDirectoryReference("locks");
 
@@ -604,23 +605,24 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             TestJobActivator activator = new TestJobActivator(hostId);
 
-            JobHostConfiguration config = new JobHostConfiguration
+            JobHostOptions config = new JobHostOptions
             {
                 HostId = TestHostId,
                 NameResolver = _resolver,
-                TypeLocator = new FakeTypeLocator(typeof(TestJobs)),
-                JobActivator = activator
+                // TODO: DI:
+                //TypeLocator = new FakeTypeLocator(typeof(TestJobs)),
+                //JobActivator = activator
             };
 
             config.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
-            config.Queues.MaxPollingInterval = TimeSpan.FromSeconds(2);
-            config.Singleton.LockAcquisitionTimeout = TimeSpan.FromSeconds(10);
-            config.Singleton.LockAcquisitionPollingInterval = TimeSpan.FromMilliseconds(500);
+            //config.Queues.MaxPollingInterval = TimeSpan.FromSeconds(2);
+            //config.Singleton.LockAcquisitionTimeout = TimeSpan.FromSeconds(10);
+            //config.Singleton.LockAcquisitionPollingInterval = TimeSpan.FromMilliseconds(500);
 
             IExtensionRegistry registry = config.GetService<IExtensionRegistry>();
             registry.RegisterExtension<ITriggerBindingProvider>(new TestTriggerAttributeBindingProvider());
 
-            JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(config), null);
 
             return host;
         }
@@ -769,8 +771,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             public TestFixture()
             {
-                JobHostConfiguration config = new JobHostConfiguration();
-                storageAccount = CloudStorageAccount.Parse(config.StorageConnectionString);
+                JobHostOptions config = new JobHostOptions();
+                storageAccount = CloudStorageAccount.Parse(null);//config.StorageConnectionString);
             }
 
             public void Dispose()

@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Options;
@@ -13,6 +14,7 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
+using Moq;
 using Newtonsoft.Json.Linq;
 using Xunit;
 
@@ -254,17 +256,19 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             private async Task Initialize()
             {
                 RandomNameResolver nameResolver = new TestNameResolver();
-                JobHostConfiguration hostConfiguration = new JobHostConfiguration()
+                var hostConfiguration = new JobHostOptions()
                 {
-                    NameResolver = nameResolver,
-                    TypeLocator = new FakeTypeLocator(typeof(MultipleStorageAccountsEndToEndTests)),
+                    NameResolver = nameResolver
+                    // TODO: DI: This needs to be updated to perform proper service registration
+                    //TypeLocator = new FakeTypeLocator(typeof(MultipleStorageAccountsEndToEndTests)),
                 };
 
                 hostConfiguration.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
 
                 Config = hostConfiguration;
 
-                Account1 = CloudStorageAccount.Parse(hostConfiguration.StorageConnectionString);
+                // TODO: DI:
+                Account1 = CloudStorageAccount.Parse(null);//hostConfiguration.StorageConnectionString);
                 string secondaryConnectionString = AmbientConnectionStringProvider.Instance.GetConnectionString(Secondary);
                 Account2 = CloudStorageAccount.Parse(secondaryConnectionString);
 
@@ -311,7 +315,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await inputQueue1.AddMessageAsync(new CloudQueueMessage(TestData));
                 await inputQueue2.AddMessageAsync(new CloudQueueMessage(TestData));
 
-                Host = new JobHost(hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+                Host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object);
                 Host.Start();
             }
 
@@ -321,7 +325,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 private set;
             }
 
-            public JobHostConfiguration Config
+            public JobHostOptions Config
             {
                 get;
                 private set;

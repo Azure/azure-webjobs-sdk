@@ -67,15 +67,18 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _numberOfQueueMessages = batchSize * 3;
 
             RandomNameResolver nameResolver = new RandomNameResolver();
-            JobHostConfiguration hostConfiguration = new JobHostConfiguration()
+            var hostConfiguration = new JobHostOptions()
             {
                 NameResolver = nameResolver,
-                TypeLocator = new FakeTypeLocator(typeof(ParallelExecutionTests)),
+                // TODO: DI:
+                //TypeLocator = new FakeTypeLocator(typeof(ParallelExecutionTests)),
             };
             hostConfiguration.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
-            hostConfiguration.Queues.BatchSize = batchSize;
 
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(hostConfiguration.StorageConnectionString);
+            // TODO: DI:
+            //hostConfiguration.Queues.BatchSize = batchSize;
+
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(null);//hostConfiguration.StorageConnectionString);
             _queueClient = storageAccount.CreateCloudQueueClient();
             CloudQueue queue = _queueClient.GetQueueReference(nameResolver.ResolveInString(TestQueueName));
 
@@ -88,7 +91,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
 
             using (_allMessagesProcessed = new ManualResetEvent(initialState: false))
-            using (JobHost host = new JobHost(hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(hostConfiguration), null))
             {
                 host.Start();
                 _allMessagesProcessed.WaitOne(TimeSpan.FromSeconds(90));

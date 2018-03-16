@@ -31,7 +31,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Queues
             CloudQueue queue = Fixture.CreateNewQueue();
             CloudQueue poisonQueue = Fixture.CreateNewQueue();
 
-            JobHostQueuesConfiguration queuesConfig = new JobHostQueuesConfiguration { MaxDequeueCount = 2 };
+            var queuesConfig = new JobHostQueuesOptions { MaxDequeueCount = 2 };
 
             StorageQueue storageQueue = new StorageQueue(new StorageQueueClient(Fixture.QueueClient), queue);
             StorageQueue storagePoisonQueue = new StorageQueue(new StorageQueueClient(Fixture.QueueClient), poisonQueue);
@@ -42,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Queues
             await queue.AddMessageAsync(message, null, null, null, null, CancellationToken.None);
             CloudQueueMessage messageFromCloud = await queue.GetMessageAsync();
 
-            QueueListener listener = new QueueListener(storageQueue, storagePoisonQueue, mockTriggerExecutor.Object, new WebJobsExceptionHandler(),
+            QueueListener listener = new QueueListener(storageQueue, storagePoisonQueue, mockTriggerExecutor.Object, new WebJobsExceptionHandler(null),
                 null, null, queuesConfig);
 
             mockTriggerExecutor
@@ -81,8 +81,8 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Queues
             await queue.AddMessageAsync(message, null, null, null, null, CancellationToken.None);
             CloudQueueMessage messageFromCloud = await queue.GetMessageAsync();
 
-            QueueListener listener = new QueueListener(storageQueue, null, mockTriggerExecutor.Object, new WebJobsExceptionHandler(),
-                null, null, new JobHostQueuesConfiguration());
+            QueueListener listener = new QueueListener(storageQueue, null, mockTriggerExecutor.Object, new WebJobsExceptionHandler(null),
+                null, null, new JobHostQueuesOptions());
             listener.MinimumVisibilityRenewalInterval = TimeSpan.FromSeconds(1);
 
             // Set up a function that sleeps to allow renewal

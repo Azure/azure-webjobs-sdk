@@ -12,7 +12,7 @@ using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.ServiceBus.Bindings;
 using Microsoft.Azure.WebJobs.ServiceBus.Config;
 using Microsoft.Azure.WebJobs.ServiceBus.Triggers;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
@@ -22,16 +22,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
         [Fact]
         public async Task Initialize_PerformsExpectedRegistrations()
         {
-            JobHostConfiguration config = new JobHostConfiguration();
+            JobHostOptions config = new JobHostOptions();
             config.AddService<INameResolver>(new RandomNameResolver());
 
-            TestLoggerProvider loggerProvider = new TestLoggerProvider();
-            ILoggerFactory loggerFactory = new LoggerFactory();
-            loggerFactory.AddProvider(loggerProvider);
-            config.LoggerFactory = loggerFactory;
-
-            ServiceBusConfiguration serviceBusConfig = new ServiceBusConfiguration();
-            ServiceBusExtensionConfig serviceBusExtensionConfig = new ServiceBusExtensionConfig(serviceBusConfig);
+            var serviceBusConfig = new ServiceBusOptions();
+            ServiceBusExtensionConfig serviceBusExtensionConfig = new ServiceBusExtensionConfig(new OptionsWrapper<ServiceBusOptions>(serviceBusConfig), null, null);
 
             IExtensionRegistry extensions = config.GetService<IExtensionRegistry>();
             ITriggerBindingProvider[] triggerBindingProviders = extensions.GetExtensions<ITriggerBindingProvider>().ToArray();
@@ -39,7 +34,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
             IBindingProvider[] bindingProviders = extensions.GetExtensions<IBindingProvider>().ToArray();
             Assert.Empty(bindingProviders);
 
-            ExtensionConfigContext context = new ExtensionConfigContext
+            ExtensionConfigContext context = new ExtensionConfigContext(null, null, null)
             {
                 Config = config,
             };

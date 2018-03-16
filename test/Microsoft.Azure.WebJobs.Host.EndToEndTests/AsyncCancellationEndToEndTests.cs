@@ -4,11 +4,13 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
+using Moq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
@@ -27,19 +29,23 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private readonly CloudStorageAccount _storageAccount;
         private readonly RandomNameResolver _resolver;
-        private readonly JobHostConfiguration _hostConfiguration;
+        private readonly JobHostOptions _hostConfiguration;
 
         public AsyncCancellationEndToEndTests()
         {
             _resolver = new RandomNameResolver();
 
-            _hostConfiguration = new JobHostConfiguration()
+            _hostConfiguration = new JobHostOptions()
             {
-                NameResolver = _resolver,
-                TypeLocator = new FakeTypeLocator(typeof(AsyncCancellationEndToEndTests))
+                NameResolver = _resolver
+                // TODO: DI: This needs to be updated to perform proper service registration
+                //TypeLocator = new FakeTypeLocator(typeof(AsyncCancellationEndToEndTests))
             };
-            _hostConfiguration.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
-            _storageAccount = CloudStorageAccount.Parse(_hostConfiguration.StorageConnectionString);
+            // TODO: DI: This needs to be updated to perform proper service registration
+            //_hostConfiguration.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
+
+            // TODO: DI: Use storage account provider:
+            // _storageAccount = CloudStorageAccount.Parse(_hostConfiguration.StorageConnectionString);
 
             _invokeInFunction = () => { };
             _tokenCancelled = false;
@@ -111,7 +117,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 SynchronizationContext.SetSynchronizationContext(null);
                 using (WebJobsShutdownContext shutdownContext = new WebJobsShutdownContext())
-                using (JobHost host = new JobHost(_hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+                using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
                 {
                     _invokeInFunction = () => { shutdownContext.NotifyShutdown(); };
 
@@ -130,7 +136,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         public void WebJobsShutdown_WhenUsingTriggeredFunction_TriggersCancellationToken()
         {
             using (WebJobsShutdownContext shutdownContext = new WebJobsShutdownContext())
-            using (JobHost host = new JobHost(_hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
             {
                 _invokeInFunction = () => { shutdownContext.NotifyShutdown(); };
 
@@ -148,7 +154,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             try
             {
                 SynchronizationContext.SetSynchronizationContext(null);
-                using (JobHost host = new JobHost(_hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+                using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
                 {
                     host.Start();
 
@@ -168,7 +174,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public void Stop_WhenUsingTriggeredFunction_TriggersCancellationToken()
         {
-            using (JobHost host = new JobHost(_hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
             {
                 PrepareHostForTrigger(host, startHost: true);
 
@@ -187,7 +193,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             try
             {
                 SynchronizationContext.SetSynchronizationContext(null);
-                using (JobHost host = new JobHost(_hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+                using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
                 {
                     callTask = InvokeNoAutomaticTriggerFunction(host);
                 }
@@ -203,7 +209,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public void Dispose_WhenUsingTriggeredFunction_TriggersCancellationToken()
         {
-            using (JobHost host = new JobHost(_hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
             {
                 PrepareHostForTrigger(host, startHost: true);
             }
@@ -220,7 +226,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 SynchronizationContext.SetSynchronizationContext(null);
                 using (CancellationTokenSource tokenSource = new CancellationTokenSource())
-                using (JobHost host = new JobHost(_hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+                using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
                 {
                     _invokeInFunction = () => { tokenSource.Cancel(); };
 
@@ -245,7 +251,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 SynchronizationContext.SetSynchronizationContext(null);
 
                 using (CancellationTokenSource tokenSource = new CancellationTokenSource())
-                using (JobHost host = new JobHost(_hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+                using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
                 {
                     _invokeInFunction = () => { tokenSource.Cancel(); };
 

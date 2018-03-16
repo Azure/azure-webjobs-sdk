@@ -33,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
             MessageReceiver messageReceiver = new MessageReceiver(_testConnection, _entityPath);
             _mockMessageProcessor = new Mock<MessageProcessor>(MockBehavior.Strict, messageReceiver, messageOptions);
 
-            ServiceBusConfiguration config = new ServiceBusConfiguration
+            ServiceBusOptions config = new ServiceBusOptions
             {
                 MessageOptions = messageOptions
             };

@@ -12,7 +12,7 @@ namespace Microsoft.Azure.WebJobs.Host
     /// <summary>
     /// Represents configuration for <see cref="QueueTriggerAttribute"/>.
     /// </summary>
-    public sealed class JobHostQueuesOptions
+    public class JobHostQueuesOptions
     {
         private const int DefaultMaxDequeueCount = 5;
         private const int DefaultBatchSize = 16;

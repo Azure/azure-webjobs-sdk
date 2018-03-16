@@ -204,12 +204,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // Reinitialize the name resolver to avoid conflicts
             _resolver = new RandomNameResolver();
 
-            JobHostConfiguration hostConfig = new JobHostConfiguration()
+            JobHostOptions hostConfig = new JobHostOptions()
             {
                 NameResolver = _resolver,
-                TypeLocator = new FakeTypeLocator(
-                    this.GetType(),
-                    typeof(BlobToCustomObjectBinder))
+
+                // TODO: DI:
+                //TypeLocator = new FakeTypeLocator(
+                //    this.GetType(),
+                //    typeof(BlobToCustomObjectBinder))
             };
 
             hostConfig.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
@@ -254,7 +256,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             });
             await table.ExecuteBatchAsync(operation);
 
-            JobHost host = new JobHost(hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(hostConfig), null);
             var methodInfo = this.GetType().GetMethod("TableWithFilter", BindingFlags.Public | BindingFlags.Static);
             var input = new Person { Age = 25, Location = "Seattle" };
             string json = JsonConvert.SerializeObject(input);
@@ -282,12 +284,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // Reinitialize the name resolver to avoid conflicts
             _resolver = new RandomNameResolver();
 
-            JobHostConfiguration hostConfig = new JobHostConfiguration()
+            JobHostOptions hostConfig = new JobHostOptions()
             {
                 NameResolver = _resolver,
-                TypeLocator = new FakeTypeLocator(
-                    this.GetType(),
-                    typeof(BlobToCustomObjectBinder))
+                // TODO: DI:
+                //TypeLocator = new FakeTypeLocator(
+                //    this.GetType(),
+                //    typeof(BlobToCustomObjectBinder))
             };
 
             hostConfig.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
@@ -299,7 +302,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
 
             // The jobs host is started
-            JobHost host = new JobHost(hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(hostConfig), null);
 
             _functionChainWaitHandle = new ManualResetEvent(initialState: false);
 
@@ -334,27 +337,27 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             // Reinitialize the name resolver to avoid conflicts
             _resolver = new RandomNameResolver();
-
-            JobHostConfiguration hostConfig = new JobHostConfiguration()
+            Assert.False(true, "Remove once DI fixes are in place");
+            JobHostOptions hostConfig = new JobHostOptions()
             {
                 NameResolver = _resolver,
-                TypeLocator = new FakeTypeLocator(
-                    this.GetType(),
-                    typeof(BlobToCustomObjectBinder))
+                //TypeLocator = new FakeTypeLocator(
+                //    this.GetType(),
+                //    typeof(BlobToCustomObjectBinder))
             };
 
             hostConfig.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
 
             // use a custom processor so we can grab the Id and PopReceipt
-            hostConfig.Queues.QueueProcessorFactory = new TestQueueProcessorFactory();
+            //hostConfig.Queues.QueueProcessorFactory = new TestQueueProcessorFactory();
 
             ILoggerFactory loggerFactory = new LoggerFactory();
             TestLoggerProvider loggerProvider = new TestLoggerProvider();
             loggerFactory.AddProvider(loggerProvider);
-            hostConfig.LoggerFactory = loggerFactory;
+            //hostConfig.LoggerFactory = loggerFactory;
 
             // The jobs host is started
-            JobHost host = new JobHost(hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(hostConfig), null);
             host.Start();
 
             // use reflection to construct a bad message:
@@ -530,8 +533,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             public TestFixture()
             {
-                JobHostConfiguration config = new JobHostConfiguration();
-                StorageAccount = CloudStorageAccount.Parse(config.StorageConnectionString);
+                JobHostOptions config = new JobHostOptions();
+                // TODO: DI:
+                StorageAccount = CloudStorageAccount.Parse(null);//config.StorageConnectionString);
             }
 
             public CloudStorageAccount StorageAccount

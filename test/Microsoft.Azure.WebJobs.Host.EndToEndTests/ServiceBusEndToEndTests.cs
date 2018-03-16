@@ -10,10 +10,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.ServiceBus.Core;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Moq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
@@ -38,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private static string _resultMessage1;
         private static string _resultMessage2;
 
-        private ServiceBusConfiguration _serviceBusConfig;
+        private ServiceBusOptions _serviceBusConfig;
         private RandomNameResolver _nameResolver;
         private string _secondaryConnectionString;
 
@@ -47,7 +49,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         public ServiceBusEndToEndTests()
         {
-            _serviceBusConfig = new ServiceBusConfiguration();
+            _serviceBusConfig = new ServiceBusOptions();
             _nameResolver = new RandomNameResolver();
             _secondaryConnectionString = AmbientConnectionStringProvider.Instance.GetConnectionString("ServiceBusSecondary");
 
@@ -102,18 +104,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 TestLoggerProvider loggerProvider = new TestLoggerProvider();
                 loggerFactory.AddProvider(loggerProvider);
 
-                _serviceBusConfig = new ServiceBusConfiguration();
+                _serviceBusConfig = new ServiceBusOptions();
                 _serviceBusConfig.MessagingProvider = new CustomMessagingProvider(_serviceBusConfig, loggerFactory);
 
-                JobHostConfiguration config = new JobHostConfiguration()
+                var config = new JobHostOptions()
                 {
-                    NameResolver = _nameResolver,
-                    TypeLocator = new FakeTypeLocator(typeof(ServiceBusTestJobs)),
-                    LoggerFactory = _loggerFactory
+                    NameResolver = _nameResolver
+                    // TODO: DI:
+                    //TypeLocator = new FakeTypeLocator(typeof(ServiceBusTestJobs)),
+                    //LoggerFactory = _loggerFactory
                 };
 
-                config.UseServiceBus(_serviceBusConfig);
-                JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+                // TODO: DI:
+                //config.UseServiceBus(_serviceBusConfig);
+                JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(config), new Mock<IJobHostContextFactory>().Object);
 
                 await ServiceBusEndToEndInternal(typeof(ServiceBusTestJobs), host: host);
 
@@ -134,16 +138,18 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             try
             {
-                _serviceBusConfig = new ServiceBusConfiguration();
+                _serviceBusConfig = new ServiceBusOptions();
                 _serviceBusConfig.MessagingProvider = new CustomMessagingProvider(_serviceBusConfig, null);
 
-                JobHostConfiguration config = new JobHostConfiguration()
+                var config = new JobHostOptions()
                 {
                     NameResolver = _nameResolver,
-                    TypeLocator = new FakeTypeLocator(typeof(ServiceBusTestJobs))
+                    // TODO: DI:
+                    //TypeLocator = new FakeTypeLocator(typeof(ServiceBusTestJobs))
                 };
-                config.UseServiceBus(_serviceBusConfig);
-                JobHost host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+                // TODO: DI:
+                //config.UseServiceBus(_serviceBusConfig);
+                JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(config), new Mock<IJobHostContextFactory>().Object);
 
                 await WriteQueueMessage(_secondaryConnectionString, FirstQueueName, "Test");
 
@@ -202,14 +208,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private JobHost CreateHost(Type jobContainerType)
         {
-            JobHostConfiguration config = new JobHostConfiguration()
+            var config = new JobHostOptions()
             {
                 NameResolver = _nameResolver,
-                TypeLocator = new FakeTypeLocator(jobContainerType),
-                LoggerFactory = _loggerFactory
+                // TODO: DI:
+                //TypeLocator = new FakeTypeLocator(jobContainerType),
+                //LoggerFactory = _loggerFactory
             };
-            config.UseServiceBus(_serviceBusConfig);
-            return new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+            //config.UseServiceBus(_serviceBusConfig);
+            return new JobHost(new OptionsWrapper<JobHostOptions>(config), new Mock<IJobHostContextFactory>().Object);
         }
 
         private async Task ServiceBusEndToEndInternal(Type jobContainerType, JobHost host = null, bool verifyLogs = true)
@@ -387,10 +394,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private class CustomMessagingProvider : MessagingProvider
         {
-            private readonly ServiceBusConfiguration _config;
+            private readonly ServiceBusOptions _config;
             private readonly ILogger _logger;
 
-            public CustomMessagingProvider(ServiceBusConfiguration config, ILoggerFactory loggerFactory)
+            public CustomMessagingProvider(ServiceBusOptions config, ILoggerFactory loggerFactory)
                 : base(config)
             {
                 _config = config;
