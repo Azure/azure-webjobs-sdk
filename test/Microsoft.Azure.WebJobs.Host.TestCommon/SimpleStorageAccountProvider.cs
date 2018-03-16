@@ -23,6 +23,10 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 
         public CloudStorageAccount DashboardAccount { get; set; }
 
+        public string StorageConnectionString => throw new NotImplementedException();
+
+        public string DashboardConnectionString => throw new NotImplementedException();
+
         Task<IStorageAccount> IStorageAccountProvider.TryGetAccountAsync(string connectionStringName, CancellationToken cancellationToken)
         {
             IStorageAccount account;

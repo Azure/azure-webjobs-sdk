@@ -55,21 +55,24 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 var prog = new BasicProg();
                 var activator = new FakeActivator(prog);
-                JobHostConfiguration config = new JobHostConfiguration()
+                JobHostOptions config = new JobHostOptions()
                 {
-                    TypeLocator = new FakeTypeLocator(typeof(BasicProg))                    
+                    // TODO: DI:
+                    //TypeLocator = new FakeTypeLocator(typeof(BasicProg))                    
                 };
 
-                Assert.NotNull(config.InternalStorageConfiguration);
-                Assert.Equal(container.Name, config.InternalStorageConfiguration.InternalContainer.Name);
+                Assert.False(true, "Fix");
 
-                config.JobActivator = activator;
-                config.HostId = Guid.NewGuid().ToString("n");
-                config.DashboardConnectionString = null;
-                config.StorageConnectionString = null;
+                //Assert.NotNull(config.InternalStorageConfiguration);
+                //Assert.Equal(container.Name, config.InternalStorageConfiguration.InternalContainer.Name);
+
+                //config.JobActivator = activator;
+                //config.HostId = Guid.NewGuid().ToString("n");
+                //config.DashboardConnectionString = null;
+                //config.StorageConnectionString = null;
 
 
-                var host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+                var host = new JobHost(new OptionsWrapper<JobHostOptions>(config), null);
                 await host.CallAsync("Foo");
 
                 Assert.Equal(1, prog._count); // Verify successfully called.

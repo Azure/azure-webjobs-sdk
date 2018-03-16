@@ -12,7 +12,7 @@ using Microsoft.WindowsAzure.Storage.Queue;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
 {
-    internal class FakeQueueConfiguration : IQueueConfiguration
+    internal class FakeQueueConfiguration : JobHostQueuesOptions
     {
         private readonly FakeQueueProcessorFactory _queueProcessorFactory;
 

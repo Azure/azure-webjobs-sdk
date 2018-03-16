@@ -10,6 +10,7 @@ using Microsoft.Azure.WebJobs.Host.Storage.Queue;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Moq;
 using Newtonsoft.Json;
@@ -29,9 +30,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             Mock<IStorageQueue> queueMock = new Mock<IStorageQueue>(MockBehavior.Strict);
             queueMock.Setup(q => q.Name).Returns("queueName");
             IStorageQueue queue = queueMock.Object;
-            IWebJobsExceptionHandler exceptionHandler = new WebJobsExceptionHandler();
+            IWebJobsExceptionHandler exceptionHandler = new WebJobsExceptionHandler(new Mock<IHost>().Object);
             _binding = new QueueTriggerBinding("parameterName", queue, argumentBinding,
-                new Mock<IQueueConfiguration>(MockBehavior.Strict).Object, exceptionHandler,
+                new JobHostQueuesOptions(), exceptionHandler,
                 new Mock<IContextSetter<IMessageEnqueuedWatcher>>(MockBehavior.Strict).Object,
                 new SharedContextProvider(), null);
         }

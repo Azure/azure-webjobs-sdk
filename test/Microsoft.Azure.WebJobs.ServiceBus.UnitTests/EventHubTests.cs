@@ -219,23 +219,24 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
         public void InitializeFromHostMetadata()
         {
             var config = new EventHubConfiguration();
-            var context = new ExtensionConfigContext()
+            var context = new ExtensionConfigContext(null, null, null)
             {
-                Config = new JobHostConfiguration()
+                Config = new JobHostOptions()
                 {
 #pragma warning disable CS0618 // Type or member is obsolete
-                    HostConfigMetadata = new JObject
+                    // TODO: DI: Just remove?
+                    //HostConfigMetadata = new JObject
 #pragma warning restore CS0618 // Type or member is obsolete
-                    {
-                        {
-                            "EventHub", new JObject
-                            {
-                                { "MaxBatchSize", 100 },
-                                { "PrefetchCount", 200 },
-                                { "BatchCheckpointFrequency", 5 },
-                            }
-                        },
-                    },
+                    // {
+                    //    {
+                    //        "EventHub", new JObject
+                    //        {
+                    //            { "MaxBatchSize", 100 },
+                    //            { "PrefetchCount", 200 },
+                    //            { "BatchCheckpointFrequency", 5 },
+                    //        }
+                    //    },
+                    // },
                 },
             };
             context.Config.AddService<ILoggerFactory>(new LoggerFactory());

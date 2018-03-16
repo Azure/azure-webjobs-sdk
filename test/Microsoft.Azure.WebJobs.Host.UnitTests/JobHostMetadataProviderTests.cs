@@ -223,7 +223,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var ext = new TestExtension3();
             var prog = new FakeTypeLocator();
             JobHostOptions config = TestHelpers.NewConfig();
-            var host2 = new JobHost(new OptionsWrapper<JobHostOptions>(config), new Mock<IJobHostContextFactory>().Object);
+            var host = new JobHost(new OptionsWrapper<JobHostOptions>(config), new Mock<IJobHostContextFactory>().Object);
             IJobHostMetadataProvider metadataProvider = host.CreateMetadataProvider();
 
             var attr = new Test9Attribute(null);

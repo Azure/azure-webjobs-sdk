@@ -19,7 +19,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
         [Fact]
         public async Task CreateAsync_Success()
         {
-            var config = new ServiceBusConfiguration();
+            var config = new ServiceBusOptions();
             var account = new ServiceBusAccount(config);
             Mock<ITriggeredFunctionExecutor> mockExecutor = new Mock<ITriggeredFunctionExecutor>(MockBehavior.Strict);
             ServiceBusQueueListenerFactory factory = new ServiceBusQueueListenerFactory(account, "testqueue", mockExecutor.Object, config);

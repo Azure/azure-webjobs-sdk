@@ -14,7 +14,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         public void GetConnectionString_ReturnsExpectedConnectionString()
         {
             string defaultConnection = "Endpoint=sb://default.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=abc123=";
-            var config = new ServiceBusConfiguration()
+            var config = new ServiceBusOptions()
             {
                 ConnectionString = defaultConnection
             };
@@ -27,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         [Fact]
         public void GetConnectionString_ThrowsIfConnectionStringNullOrEmpty()
         { 
-            var config = new ServiceBusConfiguration();
+            var config = new ServiceBusOptions();
             var attribute = new ServiceBusTriggerAttribute("testqueue");
             attribute.Connection = "MissingConnection";
 

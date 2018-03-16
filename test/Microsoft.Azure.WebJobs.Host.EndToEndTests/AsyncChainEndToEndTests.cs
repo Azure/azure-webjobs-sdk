@@ -22,6 +22,7 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
+using Moq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
@@ -43,7 +44,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private static CloudStorageAccount _storageAccount;
 
         private static RandomNameResolver _resolver;
-        private static JobHostConfiguration _hostConfig;
+        private static JobHostOptions _hostConfig;
         private readonly TestExceptionHandler _defaultExceptionHandler;
         private static EventWaitHandle _functionCompletedEvent;
 
@@ -59,23 +60,28 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             _fixture = fixture;
             _resolver = new RandomNameResolver();
-            _hostConfig = new JobHostConfiguration()
+            _hostConfig = new JobHostOptions()
             {
                 NameResolver = _resolver,
-                TypeLocator = new FakeTypeLocator(typeof(AsyncChainEndToEndTests))
+                // TODO: DI:
+                //TypeLocator = new FakeTypeLocator(typeof(AsyncChainEndToEndTests))
             };
 
             _defaultExceptionHandler = new TestExceptionHandler();
             _hostConfig.AddService<IWebJobsExceptionHandler>(_defaultExceptionHandler);
-            _hostConfig.Queues.MaxPollingInterval = TimeSpan.FromSeconds(2);
+            
+            // TODO: DI: 
+            //_hostConfig.Queues.MaxPollingInterval = TimeSpan.FromSeconds(2);
 
             _storageAccount = fixture.StorageAccount;
             _timeoutJobDelay = TimeSpan.FromMinutes(5);
 
             ILoggerFactory loggerFactory = new LoggerFactory();
             loggerFactory.AddProvider(_loggerProvider);
-            _hostConfig.LoggerFactory = loggerFactory;
-            _hostConfig.Aggregator.IsEnabled = false; // makes validation easier
+
+            // TODO: DI:
+            //_hostConfig.LoggerFactory = loggerFactory;
+            //_hostConfig.Aggregator.IsEnabled = false; // makes validation easier
 
             CloudQueueClient queueClient = _storageAccount.CreateCloudQueueClient();
             string queueName = _resolver.ResolveInString(TestQueueName);
@@ -152,10 +158,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             using (_functionCompletedEvent = new ManualResetEvent(initialState: false))
             {
                 CustomQueueProcessorFactory queueProcessorFactory = new CustomQueueProcessorFactory();
-                _hostConfig.Queues.QueueProcessorFactory = queueProcessorFactory;
+                // TODO: DI:
+                //_hostConfig.Queues.QueueProcessorFactory = queueProcessorFactory;
 
                 CustomStorageClientFactory storageClientFactory = new CustomStorageClientFactory();
-                _hostConfig.StorageClientFactory = storageClientFactory;
+                // TODO: DI
+                //_hostConfig.StorageClientFactory = storageClientFactory;
 
                 await AsyncChainEndToEndInternal();
 
@@ -194,14 +202,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             using (_functionCompletedEvent = new ManualResetEvent(initialState: false))
             {
                 // enable the aggregator
-                _hostConfig.Aggregator.IsEnabled = true;
-                _hostConfig.Aggregator.BatchSize = 1;
+                // TODO: DI:
+                //_hostConfig.Aggregator.IsEnabled = true;
+                //_hostConfig.Aggregator.BatchSize = 1;
 
                 // add a FunctionEventCollector
                 var eventCollector = new TestFunctionEventCollector();
                 _hostConfig.AddService<IAsyncCollector<FunctionInstanceLogEntry>>(eventCollector);
 
-                JobHost host = new JobHost(_hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+                JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_hostConfig), new Mock<IJobHostContextFactory>().Object);
 
                 await host.StartAsync();
                 await host.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod(nameof(WriteStartDataMessageToQueue)));
@@ -228,10 +237,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             using (_functionCompletedEvent = new ManualResetEvent(initialState: false))
             {
                 // enable the aggregator
-                _hostConfig.Aggregator.IsEnabled = true;
-                _hostConfig.Aggregator.BatchSize = 1;
+                // TODO: DI:
+                //_hostConfig.Aggregator.IsEnabled = true;
+                //_hostConfig.Aggregator.BatchSize = 1;
 
-                JobHost host = new JobHost(_hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+                JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_hostConfig), new Mock<IJobHostContextFactory>().Object);
 
                 await host.StartAsync();
                 await host.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod("WriteStartDataMessageToQueue"));
@@ -255,13 +265,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             using (_functionCompletedEvent = new ManualResetEvent(initialState: false))
             {
                 // disable the aggregator
-                _hostConfig.Aggregator.IsEnabled = false;
+                // TODO: DI:
+                //_hostConfig.Aggregator.IsEnabled = false;
 
                 // add a FunctionEventCollector
                 var eventCollector = new TestFunctionEventCollector();
                 _hostConfig.AddService<IAsyncCollector<FunctionInstanceLogEntry>>(eventCollector);
 
-                JobHost host = new JobHost(_hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+                JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_hostConfig), new Mock<IJobHostContextFactory>().Object);
 
                 await host.StartAsync();
                 await host.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod("WriteStartDataMessageToQueue"));
@@ -285,7 +296,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public void FunctionFailures_LogsExpectedMessage()
         {
-            JobHost host = new JobHost(_hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_hostConfig), new Mock<IJobHostContextFactory>().Object);
 
             MethodInfo methodInfo = GetType().GetMethod("AlwaysFailJob");
             try
@@ -308,7 +319,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task SystemParameterBindingOutput_GeneratesExpectedBlobs()
         {
-            JobHost host = new JobHost(_hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_hostConfig), new Mock<IJobHostContextFactory>().Object);
 
             var blobClient = _fixture.StorageAccount.CreateCloudBlobClient();
             var container = blobClient.GetContainerReference("test-output");
@@ -371,7 +382,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             try
             {
                 _hostConfig.AddService<IWebJobsExceptionHandler>(exceptionHandler);
-                JobHost host = new JobHost(_hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+                JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_hostConfig), new Mock<IJobHostContextFactory>().Object);
 
                 try
                 {
@@ -418,7 +429,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task Timeout_NoExpiry_CompletesSuccessfully()
         {
-            JobHost host = new JobHost(_hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_hostConfig), new Mock<IJobHostContextFactory>().Object);
 
             _timeoutJobDelay = TimeSpan.FromSeconds(0);
             MethodInfo methodInfo = GetType().GetMethod("TimeoutJob");
@@ -563,7 +574,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private async Task AsyncChainEndToEndInternal()
         {
-            JobHost host = new JobHost(_hostConfig, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_hostConfig), new Mock<IJobHostContextFactory>().Object);
 
             Assert.Null(_hostConfig.HostId);
 
@@ -704,8 +715,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             public TestFixture()
             {
-                JobHostConfiguration config = new JobHostConfiguration();
-                StorageAccount = CloudStorageAccount.Parse(config.StorageConnectionString);
+                var config = new JobHostOptions();
+                // TODO: DI:
+                StorageAccount = CloudStorageAccount.Parse(null);//config.StorageConnectionString);
             }
 
             public CloudStorageAccount StorageAccount

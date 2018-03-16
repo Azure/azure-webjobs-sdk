@@ -113,7 +113,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             var cm = (ConverterManager) config.GetService<IConverterManager>();
                               
-            var host = new TestJobHost<CustomTableBindingExtensionProgram>(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+            var host = new TestJobHost<CustomTableBindingExtensionProgram>(new OptionsWrapper<JobHostOptions>(config), null);
             host.Call("Run"); // Act
 
             // Assert
@@ -187,7 +187,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var config = TestHelpers.NewConfig(typeof(BindToICollectorJObjectProgramKeysInAttr), account);
 
             // Act
-            var host = new TestJobHost<BindToICollectorJObjectProgramKeysInAttr>(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+            var host = new TestJobHost<BindToICollectorJObjectProgramKeysInAttr>(new OptionsWrapper<JobHostOptions>(config), null);
             host.Call("Run");
 
             // Assert

@@ -751,7 +751,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Task callTask;
             bool completed;
 
-            using (JobHost host = new JobHost(serviceProvider, new OptionsWrapper<JobHostOptions>(new JobHostOptions())))
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(serviceProvider), null))
             {
                 try
                 {

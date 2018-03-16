@@ -16,6 +16,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
+using Microsoft.Azure.WebJobs.Host.Executors;
+using Moq;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
 {
@@ -112,7 +114,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         {
             var queueClient = new FakeQueueClient();
             var config = TestHelpers.NewConfig<ProgNoString>(new ExtNoStringConverter(), queueClient);
-            var host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+            var host = new JobHost(new OptionsWrapper<JobHostOptions>(config), new Mock<IJobHostContextFactory>().Object);
 
             var args = new Dictionary<string, object>();
             args["data"] = new FakeQueueData { Message = "15" };
@@ -126,7 +128,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         {
             var queueClient = new FakeQueueClient();
             var config = TestHelpers.NewConfig<Prog>(new Ext(), queueClient);
-            var host = new JobHost(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+            var host = new JobHost(new OptionsWrapper<JobHostOptions>(config), new Mock<IJobHostContextFactory>().Object);
 
             var args = new Dictionary<string, object>();
             args["data"] = new FakeQueueData { Message = "15" };

@@ -14,7 +14,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         public void CreateMessageProcessor_ReturnsExpectedReceiver()
         {
             string defaultConnection = "Endpoint=sb://default.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=abc123=";
-            var config = new ServiceBusConfiguration
+            var config = new ServiceBusOptions
             {
                 ConnectionString = defaultConnection
             };

@@ -11,6 +11,8 @@ using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Moq;
@@ -33,11 +35,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             extensionRegistry = services.GetService<IExtensionRegistry>();
 
             SingletonManager singletonManager = new SingletonManager();
-            IWebJobsExceptionHandler exceptionHandler = new WebJobsExceptionHandler();
+            IWebJobsExceptionHandler exceptionHandler = new WebJobsExceptionHandler(new Mock<IHost>().Object);
             IFunctionOutputLoggerProvider outputLoggerProvider = new NullFunctionOutputLoggerProvider();
-            IFunctionOutputLogger outputLogger = outputLoggerProvider.GetAsync(CancellationToken.None).Result;
 
-            IFunctionExecutor executor = new FunctionExecutor(new NullFunctionInstanceLogger(), outputLogger, exceptionHandler, loggerFactory: loggerFactory);
+            IFunctionExecutor executor = new FunctionExecutor(new NullFunctionInstanceLogger(), outputLoggerProvider, exceptionHandler, loggerFactory: loggerFactory);
 
             return new FunctionIndexer(triggerBindingProvider, bindingProvider, new DefaultJobActivator(), executor,
                 extensionRegistry, singletonManager, loggerFactory);

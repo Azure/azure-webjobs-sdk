@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 
@@ -27,16 +28,18 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
         public static TestJobHost<TProgram> Create<TProgram>(CloudStorageAccount storageAccount, int maxDequeueCount)
         {
             IHostIdProvider hostIdProvider = new FixedHostIdProvider("test");
-            JobHostConfiguration config = TestHelpers.NewConfig<TProgram>(hostIdProvider);
+            JobHostOptions config = TestHelpers.NewConfig<TProgram>(hostIdProvider);
 
-            IStorageAccountProvider storageAccountProvider = new SimpleStorageAccountProvider(config)
+            var s = new ServiceCollection().BuildServiceProvider();
+            IStorageAccountProvider storageAccountProvider = new SimpleStorageAccountProvider(s)
             {
                 StorageAccount = storageAccount,
                 // use null logging string since unit tests don't need logs.
                 DashboardAccount = null
             };
-            config.AddServices(storageAccountProvider);
-            return new TestJobHost<TProgram>(config, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+            // TODO: DI: This needs to be updated to perform proper service registration
+            // config.AddServices(storageAccountProvider);
+            return new TestJobHost<TProgram>(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), null);
         }
     }
 }

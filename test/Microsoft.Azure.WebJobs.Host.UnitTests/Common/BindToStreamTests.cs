@@ -492,7 +492,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         public void DefaultType()
         {
             var config = TestHelpers.NewConfig<ConfigNullOutParam>();
-            config.AddExtension(new ConfigNullOutParam()); // Registers a BindToInput rule
+            
+            // TODO: DI: This needs to be updated to perform proper extensions registration
+            //config.AddExtension(new ConfigNullOutParam()); // Registers a BindToInput rule
             var host = new JobHost(new OptionsWrapper<JobHostOptions>(config), new Mock<IJobHostContextFactory>().Object);
             IJobHostMetadataProvider metadataProvider = host.CreateMetadataProvider();
 

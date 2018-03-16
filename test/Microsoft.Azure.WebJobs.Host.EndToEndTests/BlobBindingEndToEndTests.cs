@@ -7,11 +7,13 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
+using Moq;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -693,17 +695,18 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             private async Task Initialize()
             {
                 RandomNameResolver nameResolver = new RandomNameResolver();
-                JobHostConfiguration hostConfiguration = new JobHostConfiguration()
+                var hostConfiguration = new JobHostOptions()
                 {
-                    NameResolver = nameResolver,
-                    TypeLocator = new FakeTypeLocator(typeof(BlobBindingEndToEndTests)),
+                    NameResolver = nameResolver
+                    // TODO: DI: This needs to be updated to perform proper service registration
+                    //TypeLocator = new FakeTypeLocator(typeof(BlobBindingEndToEndTests)),
                 };
 
                 hostConfiguration.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
 
                 Config = hostConfiguration;
 
-                StorageAccount = CloudStorageAccount.Parse(hostConfiguration.StorageConnectionString);
+                StorageAccount = CloudStorageAccount.Parse(null);
                 CloudBlobClient blobClient = StorageAccount.CreateCloudBlobClient();
 
                 BlobContainer = blobClient.GetContainerReference(nameResolver.ResolveInString(ContainerName));
@@ -724,7 +727,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.False(await appendBlobContainer.ExistsAsync());
                 await appendBlobContainer.CreateAsync();
 
-                Host = new JobHost(hostConfiguration, new OptionsWrapper<JobHostOptions>(new JobHostOptions()));
+                Host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object);
                 Host.Start();
 
                 // upload some test blobs
@@ -776,7 +779,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 private set;
             }
 
-            public JobHostConfiguration Config
+            public JobHostOptions Config
             {
                 get;
                 private set;

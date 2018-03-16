@@ -20,14 +20,14 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private CloudQueue _queue;
         private CloudQueue _poisonQueue;
         private QueueProcessor _processor;
-        private JobHostQueuesConfiguration _queuesConfig;
+        private JobHostQueuesOptions _queuesConfig;
 
         public QueueProcessorTests(TestFixture fixture)
         {
             _queue = fixture.Queue;
             _poisonQueue = fixture.PoisonQueue;
 
-            _queuesConfig = new JobHostQueuesConfiguration();
+            _queuesConfig = new JobHostQueuesOptions();
             QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, null, _queuesConfig);
             _processor = new QueueProcessor(context);
         }
@@ -35,7 +35,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         [Fact]
         public void Constructor_DefaultsValues()
         {
-            var config = new JobHostQueuesConfiguration
+            var config = new JobHostQueuesOptions
             {
                 BatchSize = 32,
                 MaxDequeueCount = 2,
@@ -126,7 +126,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         [Fact]
         public async Task CompleteProcessingMessageAsync_Failure_AppliesVisibilityTimeout()
         {
-            var queuesConfig = new JobHostQueuesConfiguration
+            var queuesConfig = new JobHostQueuesOptions
             {
                 // configure a non-zero visibility timeout
                 VisibilityTimeout = TimeSpan.FromMinutes(5)
