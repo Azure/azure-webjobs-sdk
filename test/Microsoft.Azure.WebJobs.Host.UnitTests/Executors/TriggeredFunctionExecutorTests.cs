@@ -14,13 +14,17 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 {
     public class TriggeredFunctionExecutorTests
     {
-        [Fact]
-        public async Task TryExecuteAsync_WithInvokeHandler_InvokesHandler()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task TryExecuteAsync_WithInvokeHandler_InvokesHandler(bool passesInvocationId)
         {
+            Guid? actualInvocationId = null;
             var mockExecutor = new Mock<IFunctionExecutor>();
             mockExecutor.Setup(m => m.TryExecuteAsync(It.IsAny<IFunctionInstance>(), It.IsAny<CancellationToken>())).
                 Returns<IFunctionInstance, CancellationToken>((x, y) =>
                 {
+                    actualInvocationId = x.Id;
                     x.Invoker.InvokeAsync(null, null).Wait();
                     return Task.FromResult<IDelayedException>(null);
                 });
@@ -53,11 +57,27 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                 InvokeHandler = invokeHandler
             };
 
+            Guid? expectedInvocationId = null;
+            if (passesInvocationId)
+            {
+                expectedInvocationId = Guid.NewGuid();
+                triggerData.Id = expectedInvocationId;
+            }
+
             var result = await triggerExecutor.TryExecuteAsync(triggerData, CancellationToken.None);
 
             Assert.True(result.Succeeded);
             Assert.True(customInvokerInvoked);
             Assert.True(innerInvokerInvoked);
+
+            if (passesInvocationId)
+            {
+                if (!actualInvocationId.HasValue)
+                {
+                    throw new NullReferenceException("Id was not set during ExecuteAsync");
+                }
+                Assert.Equal(expectedInvocationId.Value, actualInvocationId.Value);
+            }
         }
     }
 }
