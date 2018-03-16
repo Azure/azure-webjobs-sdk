@@ -176,7 +176,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                         TriggerValue = value
                     };
 
-                    FunctionResult result = await _parent._executor.TryExecuteAsync(input, CancellationToken.None);
+                    FunctionResult result = await _parent._executor.TryExecuteAsync(input, _cts.Token);
                 }
 
                 bool hasEvents = false;
