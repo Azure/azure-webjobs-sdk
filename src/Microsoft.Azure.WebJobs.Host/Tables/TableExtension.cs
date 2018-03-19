@@ -87,7 +87,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
 
         private ParameterDescriptor ToParameterDescriptorForCollector(TableAttribute attribute, ParameterInfo parameter, INameResolver nameResolver)
         {
-            // Note: Avoid using the sync over async pattern (Async().GetAwaiter().GetResult()) whenever possible
+            // Avoid using the sync over async pattern (Async().GetAwaiter().GetResult()) whenever possible
             IStorageAccount account = _accountProvider.GetStorageAccountAsync(attribute, CancellationToken.None, nameResolver).GetAwaiter().GetResult();
             string accountName = account.Credentials.AccountName;
 
