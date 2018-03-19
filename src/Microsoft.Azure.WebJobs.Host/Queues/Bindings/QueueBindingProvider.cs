@@ -108,7 +108,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
 
             private ParameterDescriptor ToParameterDescriptorForCollector(QueueAttribute attr, ParameterInfo parameter, INameResolver nameResolver, FileAccess access)
             {
-                // Note: Avoid using the sync over async pattern (Async().GetAwaiter().GetResult()) whenever possible
+                // Avoid using the sync over async pattern (Async().GetAwaiter().GetResult()) whenever possible
                 IStorageAccount account = _accountProvider.GetStorageAccountAsync(attr, CancellationToken.None, nameResolver).GetAwaiter().GetResult();
 
                 string accountName = account.Credentials.AccountName;
@@ -183,7 +183,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
 
             internal IStorageQueue GetQueue(QueueAttribute attrResolved)
             {
-                // Note: Avoid using the sync over async pattern (Async().GetAwaiter().GetResult()) whenever possible
+                // Avoid using the sync over async pattern (Async().GetAwaiter().GetResult()) whenever possible
                 var account = _accountProvider.GetStorageAccountAsync(attrResolved, CancellationToken.None).GetAwaiter().GetResult();
                 var client = account.CreateQueueClient();
 
