@@ -68,7 +68,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
         // Get the storage table from the attribute.
         private IStorageTable GetTable(TableAttribute attribute)
         {
-            // Note: Avoid using the sync over async pattern (Async().GetAwaiter().GetResult()) whenever possible
+            // Avoid using the sync over async pattern (Async().GetAwaiter().GetResult()) whenever possible
             var account = this._accountProvider.GetStorageAccountAsync(attribute, CancellationToken.None).GetAwaiter().GetResult();
             return GetTable(attribute, account);
         }
