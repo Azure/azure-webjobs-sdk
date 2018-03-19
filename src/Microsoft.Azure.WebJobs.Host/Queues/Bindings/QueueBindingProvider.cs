@@ -183,7 +183,11 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
 
             internal IStorageQueue GetQueue(QueueAttribute attrResolved)
             {
+<<<<<<< 7335b8b1998776a9f04d23c6858dfbda7cce8be6
                 // Avoid using the sync over async pattern (Async().GetAwaiter().GetResult()) whenever possible
+=======
+                // Note: Avoid using the sync over async pattern (Async().GetAwaiter().GetResult()) whenever possible
+>>>>>>> updated to take cached task
                 var account = _accountProvider.GetStorageAccountAsync(attrResolved, CancellationToken.None).GetAwaiter().GetResult();
                 var client = account.CreateQueueClient();
 
