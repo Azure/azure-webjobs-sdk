@@ -22,6 +22,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private static EventWaitHandle _functionStarted;
         private static EventWaitHandle _functionCompleted;
         private static bool _tokenCancelled;
+        private static SynchronizationContext _oldContext;
 
         private readonly CloudStorageAccount _storageAccount;
         private readonly RandomNameResolver _resolver;
@@ -29,6 +30,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         public AsyncCancellationEndToEndTests()
         {
+            // Run tests in multithreaded environment
+            _oldContext = SynchronizationContext.Current;
+            SynchronizationContext.SetSynchronizationContext(null);
             _resolver = new RandomNameResolver();
 
             _hostConfiguration = new JobHostConfiguration()
@@ -58,6 +62,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     testQueue.Delete();
                 }
             }
+            SynchronizationContext.SetSynchronizationContext(_oldContext);
         }
 
 
