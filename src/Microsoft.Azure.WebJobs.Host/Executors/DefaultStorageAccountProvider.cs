@@ -188,10 +188,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             return account;
         }
 
-        public Task<IStorageAccount> TryGetAccountAsync(string connectionStringName, CancellationToken cancellationToken)
-        {
-            return _accounts.GetOrAdd(connectionStringName, s => CreateAndValidateAccountAsync(s, cancellationToken));
-        }
+        public Task<IStorageAccount> TryGetAccountAsync(string connectionStringName, CancellationToken cancellationToken) =>
+            _accounts.GetOrAdd(connectionStringName, s => CreateAndValidateAccountAsync(s, cancellationToken));
 
         private IStorageAccount ParseAccount(string connectionStringName)
         {
