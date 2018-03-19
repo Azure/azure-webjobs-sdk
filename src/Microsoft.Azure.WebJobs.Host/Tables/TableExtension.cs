@@ -68,16 +68,16 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
         // Get the storage table from the attribute.
         private IStorageTable GetTable(TableAttribute attribute)
         {
-            var account = Task.Run(() => this._accountProvider.GetStorageAccountAsync(attribute, CancellationToken.None)).GetAwaiter().GetResult();
+            // Note: Avoid using the sync over async pattern (Async().GetAwaiter().GetResult()) whenever possible
+            var account = this._accountProvider.GetStorageAccountAsync(attribute, CancellationToken.None).GetAwaiter().GetResult();
             var tableClient = account.CreateTableClient();
             return tableClient.GetTableReference(attribute.TableName);
         }
 
         private ParameterDescriptor ToParameterDescriptorForCollector(TableAttribute attribute, ParameterInfo parameter, INameResolver nameResolver)
         {
-            Task<IStorageAccount> t = Task.Run(() =>
-                _accountProvider.GetStorageAccountAsync(attribute, CancellationToken.None, nameResolver));
-            IStorageAccount account = t.GetAwaiter().GetResult();
+            // Note: Avoid using the sync over async pattern (Async().GetAwaiter().GetResult()) whenever possible
+            IStorageAccount account = _accountProvider.GetStorageAccountAsync(attribute, CancellationToken.None, nameResolver).GetAwaiter().GetResult();
             string accountName = account.Credentials.AccountName;
 
             return new TableParameterDescriptor
