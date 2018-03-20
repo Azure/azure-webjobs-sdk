@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -27,12 +28,29 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
           IConverterManager converterManager
           )
         {
-            this._nameResolver = nameResolver;
-            this._converterManager = converterManager;
+            _nameResolver = nameResolver;
+            _converterManager = converterManager;
         }
+
+        // Listed in precedence for providing via DefaultType.
+        // Precedence is more important than how we produce the default type (a direct conversion vs. a converter)
+        private static readonly Type[] _defaultTypes = new Type[] {
+            typeof(byte[]),
+            typeof(JObject),
+            typeof(JArray),
+            typeof(string)
+        };
 
         public Type GetDefaultType(Attribute attribute, FileAccess access, Type requestedType)
         {
+            foreach (var target in _defaultTypes)
+            {
+                if (_converterManager.HasConverter<TAttribute>(typeof(TTriggerValue), target))
+                {
+                    return target;
+                }
+            }
+
             return typeof(object);
         }
 
@@ -105,13 +123,13 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 var converter = cm.GetConverter<TTriggerValue, TUserType, TAttribute>();
 
                 if (converter == null)
-                { 
+                {
                     return null;
                 }
 
                 var parameter = context.Parameter;
                 var attributeSource = TypeUtility.GetResolvedAttribute<TAttribute>(parameter);
-                
+
                 return new ExactBinding<TUserType>
                 {
                     _converter = converter,
@@ -124,11 +142,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             private static FuncAsyncConverter<TTriggerValue, DirectInvokeString> GetDirectInvokeString(IConverterManager cm)
             {
                 var converter = cm.GetConverter<TTriggerValue, DirectInvokeString, TAttribute>();
-                if (converter!= null)
+                if (converter != null)
                 {
                     return converter;
                 }
-                
+
                 var strConverter = cm.GetConverter<TTriggerValue, string, TAttribute>();
                 if (strConverter != null)
                 {
@@ -143,7 +161,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return (input, attr, ctx) => Task.FromResult(DirectInvokeString.None);
             }
 
-                private static FuncAsyncConverter<DirectInvokeString, TTriggerValue> GetDirectInvoker(IConverterManager cm)
+            private static FuncAsyncConverter<DirectInvokeString, TTriggerValue> GetDirectInvoker(IConverterManager cm)
             {
                 var direct = cm.GetConverter<DirectInvokeString, TTriggerValue, TAttribute>();
                 if (direct != null)
@@ -160,7 +178,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
 
             public async Task<IValueProvider> BindAsync(object value, ValueBindingContext context)
-            {                
+            {
                 TTriggerValue val = value as TTriggerValue;
                 if (val == null)
                 {
