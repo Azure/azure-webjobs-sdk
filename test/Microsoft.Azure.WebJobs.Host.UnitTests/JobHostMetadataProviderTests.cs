@@ -66,7 +66,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var defaultType = metadataProvider.GetDefaultType(attr, FileAccess.Read, null);
             Assert.Equal(typeof(JObject), defaultType);
 
-            Assert.Throws<InvalidOperationException>(() => metadataProvider.GetDefaultType(attr, FileAccess.Write, typeof(object)));
+            // If we have no match for output, we'll try IAsyncCollector<string>
+            Assert.Equal(typeof(IAsyncCollector<string>), metadataProvider.GetDefaultType(attr, FileAccess.Write, typeof(object)));
         }
 
         static T GetAttr<T>(IJobHostMetadataProvider metadataProvider, object obj) where T : Attribute
