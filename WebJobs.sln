@@ -37,8 +37,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{3B089351
 		build\PublicKey.snk = build\PublicKey.snk
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.EventHubs", "src\Microsoft.Azure.WebJobs.ServiceBus\EventHubs\WebJobs.EventHubs.csproj", "{F78F19F3-0023-4A5C-823B-DA054BC51D07}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.EventHubs.UnitTests", "test\Microsoft.Azure.WebJobs.EventHubs.UnitTests\WebJobs.EventHubs.UnitTests.csproj", "{27F0E6AC-505E-4BEC-81CA-8DF777DEA9C7}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.ServiceBus", "src\Microsoft.Azure.WebJobs.ServiceBus\WebJobs.ServiceBus.csproj", "{A2B3C676-3DF0-43B4-92A2-7E7DAA7BF439}"
@@ -46,6 +44,8 @@ EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "WebJobs.Shared", "src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.shproj", "{ADD036F5-2170-4B05-9E0A-C2ED0A08A929}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.ServiceBus.UnitTests", "test\Microsoft.Azure.WebJobs.ServiceBus.UnitTests\WebJobs.ServiceBus.UnitTests.csproj", "{D37637D5-7EF9-43CB-86BE-537473CD613B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.EventHubs", "src\Microsoft.Azure.WebJobs.Extensions.EventHubs\WebJobs.EventHubs.csproj", "{8498FA6B-3843-44A4-A351-E35711B7FFDF}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
@@ -104,10 +104,6 @@ Global
 		{340AB554-5482-4B3D-B65F-46DFF5AF1684}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{340AB554-5482-4B3D-B65F-46DFF5AF1684}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{340AB554-5482-4B3D-B65F-46DFF5AF1684}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F78F19F3-0023-4A5C-823B-DA054BC51D07}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F78F19F3-0023-4A5C-823B-DA054BC51D07}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F78F19F3-0023-4A5C-823B-DA054BC51D07}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F78F19F3-0023-4A5C-823B-DA054BC51D07}.Release|Any CPU.Build.0 = Release|Any CPU
 		{27F0E6AC-505E-4BEC-81CA-8DF777DEA9C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{27F0E6AC-505E-4BEC-81CA-8DF777DEA9C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{27F0E6AC-505E-4BEC-81CA-8DF777DEA9C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -120,6 +116,10 @@ Global
 		{D37637D5-7EF9-43CB-86BE-537473CD613B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D37637D5-7EF9-43CB-86BE-537473CD613B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D37637D5-7EF9-43CB-86BE-537473CD613B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8498FA6B-3843-44A4-A351-E35711B7FFDF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8498FA6B-3843-44A4-A351-E35711B7FFDF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8498FA6B-3843-44A4-A351-E35711B7FFDF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8498FA6B-3843-44A4-A351-E35711B7FFDF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

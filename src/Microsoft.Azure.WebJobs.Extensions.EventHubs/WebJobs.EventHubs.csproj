@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\..\build\common.props" />
+  <Import Project="..\..\build\common.props" />
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj" />
-    <ProjectReference Include="..\..\Microsoft.Azure.WebJobs\WebJobs.csproj" />
+    <ProjectReference Include="..\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj" />
+    <ProjectReference Include="..\Microsoft.Azure.WebJobs\WebJobs.csproj" />
   </ItemGroup>
 </Project>

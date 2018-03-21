@@ -1,4 +1,10 @@
 version: 3.0.{build}
+init:
+- ps: | 
+    if ($env:FUNCTIONS_NIGHTLY -eq "1") {
+      $version = Get-Date -Format "yyyyMMdd-HHmm"
+      Update-AppveyorBuild -Version $version -Message "Functions Scheduled Build"
+    }
 pull_requests:
   do_not_increment_build_number: true
 branches:
@@ -12,8 +18,9 @@ install:
     $env:CommitHash = "$env:APPVEYOR_REPO_COMMIT"
 cache: '%USERPROFILE%\.nuget\packages'
 build_script:
+- cmd: IF "%APPVEYOR_REPO_TAG_NAME%"=="" SET BuildNumber=%APPVEYOR_BUILD_NUMBER%
 - ps: >
-    .\build.ps1 -buildNumber "$env:APPVEYOR_BUILD_NUMBER"
+    .\build.ps1 -buildNumber "$env:BuildNumber"
 test_script:
 - ps: >-
     $success = $true
