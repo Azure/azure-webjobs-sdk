@@ -1,5 +1,5 @@
 ﻿param (
-  [string]$buildNumber = "0"
+  [string]$packageSuffix = "0"
 )
 
 dotnet --version
@@ -20,9 +20,9 @@ foreach ($project in $projects)
 {
   $cmd = "pack", "$project", "-o", "..\..\buildoutput", "--no-build"
   
-  if ($buildNumber -ne "0")
+  if ($packageSuffix -ne "0")
   {
-    $cmd += "--version-suffix", "-$buildNumber"
+    $cmd += "--version-suffix", "-$packageSuffix"
   }
   
   & dotnet $cmd  

@@ -18,9 +18,14 @@ install:
     $env:CommitHash = "$env:APPVEYOR_REPO_COMMIT"
 cache: '%USERPROFILE%\.nuget\packages'
 build_script:
-- cmd: IF "%APPVEYOR_REPO_TAG_NAME%"=="" SET BuildNumber=%APPVEYOR_BUILD_NUMBER%
-- ps: >
-    .\build.ps1 -buildNumber "$env:BuildNumber"
+- ps: |
+    $buildNumber = 0
+    $hasTag = Test-Path env:APPVEYOR_REPO_TAG_NAME
+    if (-not $hasTag) {
+      $buildNumber = $env:APPVEYOR_BUILD_NUMBER
+      Write-Host “No git tag found. Setting package suffix to '$buildNumber'"
+    }    
+    .\build.ps1 -packageSuffix "$buildNumber"
 test_script:
 - ps: >-
     $success = $true
