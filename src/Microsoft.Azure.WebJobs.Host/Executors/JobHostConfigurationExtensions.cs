@@ -277,14 +277,15 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         trace,
                         loggerFactory,
                         hostSharedQueue,
-                        defaultTimeout);
+                        defaultTimeout,
+                        config.AllowPartialHostStartup);
 
                     // Important to set this so that the func we passed to DynamicHostIdProvider can pick it up. 
                     services.AddService<IFunctionIndexProvider>(functionIndexProvider);
                 }
 
                 IFunctionIndex functions = await functionIndexProvider.GetAsync(combinedCancellationToken);
-                IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), singletonManager, activator, nameResolver, trace, loggerFactory);
+                IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), singletonManager, activator, nameResolver, trace, loggerFactory, config.AllowPartialHostStartup);
 
                 IFunctionExecutor hostCallExecutor;
                 IListener listener;

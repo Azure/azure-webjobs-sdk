@@ -33,6 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.Equal(TraceLevel.Info, config.Tracing.ConsoleLevel);
             Assert.Equal(0, config.Tracing.Tracers.Count);
             Assert.False(config.Blobs.CentralizedPoisonQueue);
+            Assert.False(config.AllowPartialHostStartup);
 
             StorageClientFactory clientFactory = config.GetService<StorageClientFactory>();
             Assert.NotNull(clientFactory);

@@ -4,8 +4,8 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
 
@@ -13,11 +13,15 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 {
     internal class FunctionListener : IListener
     {
+        private readonly TimeSpan _minRetryInterval;
+        private readonly TimeSpan _maxRetryInterval;
         private readonly IListener _listener;
         private readonly FunctionDescriptor _descriptor;
         private readonly TraceWriter _trace;
         private readonly ILogger _logger;
         private bool _started = false;
+        private bool _allowPartialHostStartup;
+        private CancellationTokenSource _retryCancellationTokenSource;
 
         /// <summary>
         /// Wraps a listener. If the listener throws an exception OnStart,
@@ -27,25 +31,38 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         /// <param name="descriptor"></param>
         /// <param name="trace"></param>
         /// <param name="loggerFactory"></param>
-        public FunctionListener(IListener listener, FunctionDescriptor descriptor, TraceWriter trace, ILoggerFactory loggerFactory)
+        /// <param name="allowPartialHostStartup"></param>
+        /// <param name="maxRetryInterval"></param>
+        /// <param name="minRetryInterval"></param>
+        public FunctionListener(IListener listener, FunctionDescriptor descriptor, TraceWriter trace, ILoggerFactory loggerFactory, bool allowPartialHostStartup = false, TimeSpan? minRetryInterval = null, TimeSpan? maxRetryInterval = null)
         {
             _listener = listener;
             _descriptor = descriptor;
             _trace = trace;
             _logger = loggerFactory?.CreateLogger(LogCategories.Startup);
+            _allowPartialHostStartup = allowPartialHostStartup;
+            _minRetryInterval = minRetryInterval ?? TimeSpan.FromSeconds(2);
+            _maxRetryInterval = maxRetryInterval ?? TimeSpan.FromMinutes(2);
         }
 
         public void Cancel()
         {
             _listener.Cancel();
+            _retryCancellationTokenSource?.Cancel();
         }
 
         public void Dispose()
         {
             _listener.Dispose();
+            _retryCancellationTokenSource?.Cancel();
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
+        {
+            await StartAsync(cancellationToken, allowRetry: true);   
+        }
+
+        private async Task StartAsync(CancellationToken cancellationToken, bool allowRetry = false)
         {
             try
             {
@@ -54,7 +71,51 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             }
             catch (Exception e)
             {
-                new FunctionListenerException(_descriptor.ShortName, e).TryRecover(_trace, _logger);
+                var flx = new FunctionListenerException(_descriptor.ShortName, e);
+                if (_allowPartialHostStartup)
+                {
+                    flx.Handled = true;
+                }
+
+                flx.TryRecover(_trace, _logger);
+
+                if (allowRetry && _allowPartialHostStartup)
+                {
+                    // if to here, the listener exception was handled and
+                    // we're in partial startup mode.
+                    // we spin up a background task retrying to start the listener
+                    _retryCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    cancellationToken = _retryCancellationTokenSource.Token;
+                    Task taskIgnore = Task.Run(() => RetryStartWithBackoffAsync(cancellationToken), cancellationToken);
+                }
+            }
+        }
+
+        public async Task RetryStartWithBackoffAsync(CancellationToken cancellationToken)
+        {
+            var backoffStrategy = new RandomizedExponentialBackoffStrategy(_minRetryInterval, _maxRetryInterval);
+            int attempt = 0;
+            string message;
+            while (!_started && !cancellationToken.IsCancellationRequested)
+            {
+                var delay = backoffStrategy.GetNextDelay(false);
+                await Task.Delay(delay, cancellationToken);
+
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    message = $"Retrying to start listener for function '{_descriptor.ShortName}' (Attempt {++attempt})";
+                    _trace.Info(message);
+                    _logger?.LogInformation(message);
+
+                    await StartAsync(cancellationToken, allowRetry: false);
+
+                    if (_started)
+                    {
+                        message = $"Listener successfully started for function '{_descriptor.ShortName}' after {attempt} retries.";
+                        _trace.Info(message);
+                        _logger?.LogInformation(message);
+                    }
+                }
             }
         }
 
@@ -65,6 +126,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                 await _listener.StopAsync(cancellationToken);
                 _started = false;
             }
+            _retryCancellationTokenSource?.Cancel();
         }
     }
 }

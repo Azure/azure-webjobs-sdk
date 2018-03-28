@@ -26,6 +26,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly ILoggerFactory _loggerFactory;
         private readonly SharedQueueHandler _sharedQueue;
         private readonly TimeoutAttribute _defaultTimeout;
+        private readonly bool _allowPartialHostStartup;
 
         private IFunctionIndex _index;
 
@@ -39,7 +40,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             TraceWriter trace,
             ILoggerFactory loggerFactory,
             SharedQueueHandler sharedQueue,
-            TimeoutAttribute defaultTimeout)
+            TimeoutAttribute defaultTimeout,
+            bool allowPartialHostStartup = false)
         {
             if (typeLocator == null)
             {
@@ -97,6 +99,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _loggerFactory = loggerFactory;
             _sharedQueue = sharedQueue;
             _defaultTimeout = defaultTimeout;
+            _allowPartialHostStartup = allowPartialHostStartup;
         }
 
         public async Task<IFunctionIndex> GetAsync(CancellationToken cancellationToken)
@@ -112,7 +115,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private async Task<IFunctionIndex> CreateAsync(CancellationToken cancellationToken)
         {
             FunctionIndex index = new FunctionIndex();
-            FunctionIndexer indexer = new FunctionIndexer(_triggerBindingProvider, _bindingProvider, _activator, _executor, _extensions, _singletonManager, _trace, _loggerFactory, null, _sharedQueue, _defaultTimeout);
+            FunctionIndexer indexer = new FunctionIndexer(_triggerBindingProvider, _bindingProvider, _activator, _executor, _extensions, _singletonManager, _trace, _loggerFactory, null, _sharedQueue, _defaultTimeout, _allowPartialHostStartup);
             IReadOnlyList<Type> types = _typeLocator.GetTypes();
 
             foreach (Type type in types)
