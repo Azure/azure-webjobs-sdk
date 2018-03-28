@@ -36,6 +36,121 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
         }
 
         [Fact]
+        public async Task FunctionListener_RetriesOnListenerFailure_WhenPartialHostStartupEnabled()
+        {
+            var trace = new TestTraceWriter(TraceLevel.Error);
+            Mock<IListener> badListener = new Mock<IListener>(MockBehavior.Strict);
+            int failureCount = 0;
+            badListener.Setup(bl => bl.StartAsync(It.IsAny<CancellationToken>()))
+                .Callback<CancellationToken>((ct) =>
+                {
+                    if (failureCount++ < 3)
+                    {
+                        throw new Exception("Listener Exploded!");
+                    }
+                })
+                .Returns(Task.CompletedTask);
+            badListener.Setup(bl => bl.StopAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+            var listener = new FunctionListener(badListener.Object, fd, trace, _loggerFactory, allowPartialHostStartup: true, minRetryInterval: TimeSpan.FromMilliseconds(10), maxRetryInterval: TimeSpan.FromMilliseconds(100));
+
+            // we should return right away with the listener
+            // attempting to restart in the background
+            await listener.StartAsync(ct);
+
+            await TestHelpers.Await(() =>
+            {
+                var lastTrace = trace.Traces.Last();
+                return lastTrace.Message == "Listener successfully started for function 'testfunc' after 3 retries.";
+            });
+
+            badListener.Verify(p => p.StartAsync(It.IsAny<CancellationToken>()), Times.Exactly(4));
+            
+            var validators = new Action<string>[]
+            {
+                p => Assert.Equal("The listener for function 'testfunc' was unable to start.", p),
+                p => Assert.Equal("Retrying to start listener for function 'testfunc' (Attempt 1)", p),
+                p => Assert.Equal("The listener for function 'testfunc' was unable to start.", p),
+                p => Assert.Equal("Retrying to start listener for function 'testfunc' (Attempt 2)", p),
+                p => Assert.Equal("The listener for function 'testfunc' was unable to start.", p),
+                p => Assert.Equal("Retrying to start listener for function 'testfunc' (Attempt 3)", p),
+                p => Assert.Equal("Listener successfully started for function 'testfunc' after 3 retries.", p)
+            };
+            Assert.Collection(trace.Traces.Select(p => p.Message), validators);
+
+            // Validate Logger
+            var logs = _loggerProvider.CreatedLoggers.Single().LogMessages.Select(p => p.FormattedMessage);
+            Assert.Collection(logs, validators);
+
+            await listener.StopAsync(ct);
+            badListener.Verify(p => p.StopAsync(It.IsAny<CancellationToken>()), Times.Once());
+        }
+
+        [Fact]
+        public async Task FunctionListener_BackgroundRetriesStopped_WhenListenerStopped()
+        {
+            await RetryStopTestHelper(
+                (listener) => listener.StopAsync(CancellationToken.None)
+            );
+        }
+
+        [Fact]
+        public async Task FunctionListener_BackgroundRetriesStopped_WhenListenerCancelled()
+        {
+            await RetryStopTestHelper(
+                (listener) => {
+                    listener.Cancel();
+                    return Task.CompletedTask;
+                });
+        }
+
+        [Fact]
+        public async Task FunctionListener_BackgroundRetriesStopped_WhenListenerDisposed()
+        {
+            await RetryStopTestHelper(
+                (listener) => {
+                    listener.Dispose();
+                    return Task.CompletedTask;
+                });
+        }
+
+        private async Task RetryStopTestHelper(Func<FunctionListener, Task> action)
+        {
+            var trace = new TestTraceWriter(TraceLevel.Error);
+            Mock<IListener> badListener = new Mock<IListener>(MockBehavior.Strict);
+            badListener.Setup(bl => bl.StartAsync(It.IsAny<CancellationToken>()))
+                .Callback<CancellationToken>((ct) =>
+                {
+                    throw new Exception("Listener Exploded!");
+                })
+                .Returns(Task.CompletedTask);
+            badListener.Setup(bl => bl.Dispose());
+            badListener.Setup(bl => bl.Cancel());
+            badListener.Setup(bl => bl.StopAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+            var listener = new FunctionListener(badListener.Object, fd, trace, _loggerFactory, allowPartialHostStartup: true, minRetryInterval: TimeSpan.FromMilliseconds(10), maxRetryInterval: TimeSpan.FromMilliseconds(100));
+
+            await listener.StartAsync(ct);
+
+            // wait until we're sure the retry task is running
+            await TestHelpers.Await(() =>
+            {
+                var lastTrace = trace.Traces.Last();
+                return trace.Traces.Any(p => p.Message.Contains("Retrying to start listener"));
+            });
+
+            // initiate the action which should stop the retry task
+            await action(listener);
+
+            // take a count before and after a delay to make sure the
+            // task is no longer running
+            int prevRetryCount = trace.Traces.Count(p => p.Message.Contains("Retrying to start listener"));
+            await Task.Delay(1000);
+            int retryCount = trace.Traces.Count(p => p.Message.Contains("Retrying to start listener"));
+
+            Assert.Equal(prevRetryCount, retryCount);
+        }
+
+        [Fact]
         public async Task FunctionListener_Throws_IfUnhandledListenerExceptionOnStartAsync()
         {
             var trace = new TestTraceWriter(TraceLevel.Error);

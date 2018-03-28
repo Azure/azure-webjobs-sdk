@@ -26,9 +26,10 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         private readonly TraceWriter _trace;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger _logger;
+        private readonly bool _allowPartialHostStartup;
 
         public HostListenerFactory(IEnumerable<IFunctionDefinition> functionDefinitions, SingletonManager singletonManager, IJobActivator activator, INameResolver nameResolver,
-            TraceWriter trace, ILoggerFactory loggerFactory)
+            TraceWriter trace, ILoggerFactory loggerFactory, bool allowPartialHostStartup = false)
         {
             _functionDefinitions = functionDefinitions;
             _singletonManager = singletonManager;
@@ -37,6 +38,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             _trace = trace;
             _loggerFactory = loggerFactory;
             _logger = _loggerFactory?.CreateLogger(LogCategories.Startup);
+            _allowPartialHostStartup = allowPartialHostStartup;
         }
 
         public async Task<IListener> CreateAsync(CancellationToken cancellationToken)
@@ -70,7 +72,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                 }
 
                 // wrap the listener with a function listener to handle exceptions
-                listener = new FunctionListener(listener, functionDefinition.Descriptor, _trace, _loggerFactory);
+                listener = new FunctionListener(listener, functionDefinition.Descriptor, _trace, _loggerFactory, _allowPartialHostStartup);
                 listeners.Add(listener);
             }
 
