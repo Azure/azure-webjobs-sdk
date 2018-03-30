@@ -21,6 +21,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         private MessagingFactory _messagingFactory;
         private MessageReceiver _receiver;
         private bool _disposed;
+        private bool _started;
 
         public ServiceBusListener(MessagingFactory messagingFactory, string entityPath, ServiceBusTriggerExecutor triggerExecutor, ServiceBusConfiguration config)
         {
@@ -36,13 +37,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         {
             ThrowIfDisposed();
 
-            if (_receiver != null)
+            if (_started)
             {
                 throw new InvalidOperationException("The listener has already been started.");
             }
 
             _receiver = _messagingProvider.CreateMessageReceiver(_messagingFactory, _entityPath);
             _receiver.OnMessageAsync(ProcessMessageAsync, _messageProcessor.MessageOptions);
+            _started = true;
 
             return Task.CompletedTask;
         }
@@ -51,7 +53,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         {
             ThrowIfDisposed();
 
-            if (_receiver == null)
+            if (!_started)
             {
                 throw new InvalidOperationException("The listener has not yet been started or has already been stopped.");
             }
@@ -63,6 +65,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             // abort the message factory which will stop all receivers
             // created by it so no new work is started
             _messagingFactory.Abort();
+
+            _started = false;
 
             return Task.CompletedTask;
         }

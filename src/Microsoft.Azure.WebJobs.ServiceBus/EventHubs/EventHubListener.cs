@@ -20,6 +20,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         private readonly bool _singleDispatch;
         private readonly EventProcessorOptions _options;
         private readonly EventHubConfiguration _config;
+        private bool _started;
 
         public EventHubListener(ITriggeredFunctionExecutor executor, EventProcessorHost eventListener, bool single, EventHubConfiguration config)
         {
@@ -41,14 +42,19 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         }
 
         // This will get called once when starting the JobHost. 
-        public Task StartAsync(CancellationToken cancellationToken)
+        public async Task StartAsync(CancellationToken cancellationToken)
         {
-            return _eventListener.RegisterEventProcessorFactoryAsync(this, _options);
+            await _eventListener.RegisterEventProcessorFactoryAsync(this, _options);
+            _started = true;
         }
 
-        public Task StopAsync(CancellationToken cancellationToken)
+        public async Task StopAsync(CancellationToken cancellationToken)
         {
-            return _eventListener.UnregisterEventProcessorAsync();
+            if (_started)
+            {
+                await _eventListener.UnregisterEventProcessorAsync();
+            }
+            _started = false;
         }
         
         // This will get called per-partition. 
