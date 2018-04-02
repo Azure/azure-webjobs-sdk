@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
     {
         private const string TestArtifactPrefix = "asynccancele2e";
         private const string QueueName = TestArtifactPrefix + "%rnd%";
-        private const int DefaultTimeout = 5 * 1000;
+        private const int DefaultTimeout = 10000;
 
         private static Action _invokeInFunction;
         private static bool _invokeInFunctionInvoked;
@@ -204,7 +204,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 _invokeInFunction = () => { tokenSource.Cancel(); };
 
                 PrepareHostForTrigger(host, startHost: false);
-                Assert.True(host.StartAsync(tokenSource.Token).WaitUntilCompleted(DefaultTimeout));
+                Assert.True(host.StartAsync(tokenSource.Token).WaitUntilCompleted(2 * DefaultTimeout));
 
                 EvaluateTriggeredCancellation(expectedCancellation: false);
             }
@@ -239,7 +239,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private void EvaluateTriggeredCancellation(bool expectedCancellation)
         {
             // Wait for the function to complete
-            Assert.True(_functionCompleted.WaitOne(2 * DefaultTimeout));
+            Assert.True(_functionCompleted.WaitOne(DefaultTimeout));
             Assert.Equal(expectedCancellation, _tokenCancelled);
             Assert.True(_invokeInFunctionInvoked);
         }
