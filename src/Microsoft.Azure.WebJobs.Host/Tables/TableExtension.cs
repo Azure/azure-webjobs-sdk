@@ -85,6 +85,13 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
             return tableClient.GetTableReference(attribute.TableName);
         }
 
+        private async Task<IStorageTable> GetTableAsync(TableAttribute attribute)
+        {
+            var account = await this._accountProvider.GetStorageAccountAsync(attribute, CancellationToken.None);
+            var tableClient = account.CreateTableClient();
+            return tableClient.GetTableReference(attribute.TableName);
+        }
+
         private ParameterDescriptor ToParameterDescriptorForCollector(TableAttribute attribute, ParameterInfo parameter, INameResolver nameResolver)
         {
             // Avoid using the sync over async pattern (Async().GetAwaiter().GetResult()) whenever possible
