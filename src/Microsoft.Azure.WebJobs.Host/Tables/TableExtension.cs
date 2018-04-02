@@ -74,6 +74,13 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
             return tableClient.GetTableReference(attribute.TableName);
         }
 
+        private async Task<IStorageTable> GetTableAsync(TableAttribute attribute)
+        {
+            var account = await this._accountProvider.GetStorageAccountAsync(attribute, CancellationToken.None);
+            var tableClient = account.CreateTableClient();
+            return tableClient.GetTableReference(attribute.TableName);
+        }
+
         private ParameterDescriptor ToParameterDescriptorForCollector(TableAttribute attribute, ParameterInfo parameter, INameResolver nameResolver)
         {
             // Note: Avoid using the sync over async pattern (Async().GetAwaiter().GetResult()) whenever possible
@@ -224,7 +231,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
 
             async Task<CloudTable> IAsyncConverter<TableAttribute, CloudTable>.ConvertAsync(TableAttribute attribute, CancellationToken cancellation)
             {
-                var table = _bindingProvider.GetTable(attribute);
+                var table = await _bindingProvider.GetTableAsync(attribute);
                 await table.CreateIfNotExistsAsync(CancellationToken.None);
 
                 return table.SdkObject;
@@ -232,7 +239,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
 
             async Task<JObject> IAsyncConverter<TableAttribute, JObject>.ConvertAsync(TableAttribute attribute, CancellationToken cancellation)
             {
-                var table = _bindingProvider.GetTable(attribute);
+                var table = await _bindingProvider.GetTableAsync(attribute);
 
                 IStorageTableOperation retrieve = table.CreateRetrieveOperation<DynamicTableEntity>(
                   attribute.PartitionKey, attribute.RowKey);
@@ -252,7 +259,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
             // Used as an alternative to binding to IQueryable.
             async Task<JArray> IAsyncConverter<TableAttribute, JArray>.ConvertAsync(TableAttribute attribute, CancellationToken cancellation)
             {
-                var table = _bindingProvider.GetTable(attribute).SdkObject;
+                var table = (await _bindingProvider.GetTableAsync(attribute)).SdkObject;
 
                 string finalQuery = attribute.Filter;
                 if (!string.IsNullOrEmpty(attribute.PartitionKey))

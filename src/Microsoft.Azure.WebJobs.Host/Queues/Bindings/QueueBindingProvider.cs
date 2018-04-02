@@ -192,6 +192,17 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
 
                 return client.GetQueueReference(queueName);
             }
+
+            internal async Task<IStorageQueue> GetQueueAsync(QueueAttribute attrResolved)
+            {
+                var account = await _accountProvider.GetStorageAccountAsync(attrResolved, CancellationToken.None);
+                var client = account.CreateQueueClient();
+
+                string queueName = attrResolved.QueueName.ToLowerInvariant();
+                QueueClient.ValidateQueueName(queueName);
+
+                return client.GetQueueReference(queueName);
+            }
         }
 
         private class QueueBuilder : 
@@ -209,7 +220,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
                 QueueAttribute attrResolved,
                 CancellationToken cancellation)
             {
-                IStorageQueue queue = _bindingProvider.GetQueue(attrResolved);
+                IStorageQueue queue = await _bindingProvider.GetQueueAsync(attrResolved);
                 await queue.CreateIfNotExistsAsync(CancellationToken.None);
                 return queue;
             }
