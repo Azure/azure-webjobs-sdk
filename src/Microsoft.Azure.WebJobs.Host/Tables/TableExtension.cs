@@ -88,6 +88,11 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
         private async Task<IStorageTable> GetTableAsync(TableAttribute attribute)
         {
             var account = await this._accountProvider.GetStorageAccountAsync(attribute, CancellationToken.None);
+            return GetTable(attribute, account);
+        }
+
+        private IStorageTable GetTable(TableAttribute attribute, IStorageAccount account)
+        {
             var tableClient = account.CreateTableClient();
             return tableClient.GetTableReference(attribute.TableName);
         }
