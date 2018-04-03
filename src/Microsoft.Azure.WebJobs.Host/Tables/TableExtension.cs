@@ -91,7 +91,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
             return GetTable(attribute, account);
         }
 
-        private IStorageTable GetTable(TableAttribute attribute, IStorageAccount account)
+        private static IStorageTable GetTable(TableAttribute attribute, IStorageAccount account)
         {
             var tableClient = account.CreateTableClient();
             return tableClient.GetTableReference(attribute.TableName);
