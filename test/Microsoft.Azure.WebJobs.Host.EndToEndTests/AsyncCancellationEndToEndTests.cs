@@ -204,7 +204,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 _invokeInFunction = () => { tokenSource.Cancel(); };
 
                 PrepareHostForTrigger(host, startHost: false);
-                Assert.True(host.StartAsync(tokenSource.Token).WaitUntilCompleted(DefaultTimeout));
+                Assert.True(host.StartAsync(tokenSource.Token).WaitUntilCompleted(2 * DefaultTimeout));
 
                 EvaluateTriggeredCancellation(expectedCancellation: false);
             }
