@@ -121,9 +121,19 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
             catch (ReflectionTypeLoadException ex)
             {
+				
                 _log.WriteLine("Warning: Only got partial types from assembly: {0}", assembly.FullName);
-                _log.WriteLine("Exception message: {0}", ex.ToString());
+				if(ex?.LoaderExceptions != null)
+				{
+					foreach(var loaderException in ex.LoaderExceptions)
+					{
+						_log.WriteLine("Exception message: Loader Exception: {0}", loaderException);
+					}
+					
+				}
 
+				_log.WriteLine("Exception message: {0}", ex.ToString());
+				
                 // In case of a type load exception, at least get the types that did succeed in loading
                 types = ex.Types;
             }
