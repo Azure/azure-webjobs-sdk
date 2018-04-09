@@ -67,7 +67,18 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
         // Get the storage table from the attribute.
         private IStorageTable GetTable(TableAttribute attribute)
         {
-            var account = Task.Run(() => this._accountProvider.GetStorageAccountAsync(attribute, CancellationToken.None)).GetAwaiter().GetResult();
+            var account = this._accountProvider.GetStorageAccountAsync(attribute, CancellationToken.None).GetAwaiter().GetResult();
+            return GetTable(attribute, account);
+        }
+
+        private async Task<IStorageTable> GetTableAsync(TableAttribute attribute)
+        {
+            var account = await this._accountProvider.GetStorageAccountAsync(attribute, CancellationToken.None);
+            return GetTable(attribute, account);
+        }
+
+        private IStorageTable GetTable(TableAttribute attribute, IStorageAccount account)
+        {
             var tableClient = account.CreateTableClient();
             return tableClient.GetTableReference(attribute.TableName);
         }
@@ -223,7 +234,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
 
             async Task<CloudTable> IAsyncConverter<TableAttribute, CloudTable>.ConvertAsync(TableAttribute attribute, CancellationToken cancellation)
             {
-                var table = _bindingProvider.GetTable(attribute);
+                var table = await _bindingProvider.GetTableAsync(attribute);
                 await table.CreateIfNotExistsAsync(CancellationToken.None);
 
                 return table.SdkObject;
@@ -231,7 +242,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
 
             async Task<JObject> IAsyncConverter<TableAttribute, JObject>.ConvertAsync(TableAttribute attribute, CancellationToken cancellation)
             {
-                var table = _bindingProvider.GetTable(attribute);
+                var table = await _bindingProvider.GetTableAsync(attribute);
 
                 IStorageTableOperation retrieve = table.CreateRetrieveOperation<DynamicTableEntity>(
                   attribute.PartitionKey, attribute.RowKey);
@@ -251,7 +262,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
             // Used as an alternative to binding to IQueryable.
             async Task<JArray> IAsyncConverter<TableAttribute, JArray>.ConvertAsync(TableAttribute attribute, CancellationToken cancellation)
             {
-                var table = _bindingProvider.GetTable(attribute).SdkObject;
+                var table = (await _bindingProvider.GetTableAsync(attribute)).SdkObject;
 
                 string finalQuery = attribute.Filter;
                 if (!string.IsNullOrEmpty(attribute.PartitionKey))

@@ -16,7 +16,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IStorageCredentialsValidator _storageCredentialsValidator;
         private readonly IStorageAccountParser _storageAccountParser;
         private readonly IServiceProvider _services;
-        private readonly ConcurrentDictionary<string, IStorageAccount> _accounts = new ConcurrentDictionary<string, IStorageAccount>();
+        private readonly ConcurrentDictionary<string, Task<IStorageAccount>> _accounts = new ConcurrentDictionary<string, Task<IStorageAccount>>();
 
         private IStorageAccount _dashboardAccount;
         private bool _dashboardAccountSet;
@@ -199,17 +199,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             return account;
         }
 
-        public async Task<IStorageAccount> TryGetAccountAsync(string connectionStringName, CancellationToken cancellationToken)
-        {
-            IStorageAccount account;
-            if (!_accounts.TryGetValue(connectionStringName, out account))
-            {
-                // in rare cases createAndValidateAccountAsync could be called multiple times for the same account
-                account = await CreateAndValidateAccountAsync(connectionStringName, cancellationToken);
-                _accounts.AddOrUpdate(connectionStringName, (cs) => account, (cs, a) => account);
-            }
-            return account;
-        }
+        public Task<IStorageAccount> TryGetAccountAsync(string connectionStringName, CancellationToken cancellationToken) =>
+            _accounts.GetOrAdd(connectionStringName, s => CreateAndValidateAccountAsync(s, cancellationToken));
 
         private IStorageAccount ParseAccount(string connectionStringName)
         {
