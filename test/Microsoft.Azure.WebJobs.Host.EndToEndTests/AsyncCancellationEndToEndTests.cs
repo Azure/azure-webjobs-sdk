@@ -23,7 +23,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private static EventWaitHandle _functionStarted;
         private static EventWaitHandle _functionCompleted;
         private static bool _tokenCancelled;
-        private static SynchronizationContext _oldContext;
 
         private readonly CloudStorageAccount _storageAccount;
         private readonly RandomNameResolver _resolver;
@@ -31,10 +30,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         public AsyncCancellationEndToEndTests()
         {
-            // Run tests in multithreaded environment
             _resolver = new RandomNameResolver();
-            _oldContext = SynchronizationContext.Current;
-            SynchronizationContext.SetSynchronizationContext(null);
+
             _hostConfiguration = new JobHostConfiguration()
             {
                 NameResolver = _resolver,
@@ -62,7 +59,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     testQueue.DeleteAsync().Wait();
                 }
             }
-            SynchronizationContext.SetSynchronizationContext(_oldContext);
         }
 
         [NoAutomaticTrigger]
@@ -108,6 +104,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public void WebJobsShutdown_WhenUsingHostCall_TriggersCancellationToken()
         {
+            // Run test in multithreaded environment
             var oldContext = SynchronizationContext.Current;
             try
             {
@@ -145,6 +142,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public void Stop_WhenUsingHostCall_DoesNotTriggerCancellationToken()
         {
+            // Run test in multithreaded environment
             var oldContext = SynchronizationContext.Current;
             try
             {
@@ -183,6 +181,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         public void Dispose_WhenUsingHostCall_TriggersCancellationToken()
         {
             Task callTask;
+            // Run test in multithreaded environment
             var oldContext = SynchronizationContext.Current;
             try
             {
@@ -214,6 +213,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public void CallCancellationToken_WhenUsingHostCall_TriggersCancellationToken()
         {
+            // Run test in multithreaded environment
             var oldContext = SynchronizationContext.Current;
             try
             {
@@ -237,6 +237,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public void CallCancellationToken_WhenUsingTriggeredFunction_DoesNotTriggerCancellationToken()
         {
+            // Run test in multithreaded environment
             var oldContext = SynchronizationContext.Current;
             try
             {
