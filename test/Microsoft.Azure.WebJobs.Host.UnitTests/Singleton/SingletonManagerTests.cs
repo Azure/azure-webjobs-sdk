@@ -377,7 +377,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         {
             Mock<IHostIdProvider> mockHostIdProvider = new Mock<IHostIdProvider>(MockBehavior.Strict);
             mockHostIdProvider.Setup(p => p.GetHostIdAsync(CancellationToken.None)).ReturnsAsync(TestHostId);
-            SingletonManager singletonManager = new SingletonManager(null, null, null, null, mockHostIdProvider.Object);
+            SingletonManager singletonManager = new SingletonManager(null, new OptionsWrapper<SingletonOptions>(null), null, null, mockHostIdProvider.Object);
 
             Assert.Equal(TestHostId, singletonManager.HostId);
             Assert.Equal(TestHostId, singletonManager.HostId);

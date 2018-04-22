@@ -15,7 +15,7 @@ using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
@@ -26,6 +26,7 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
+    // TODO: Are these meant to be tests?
     public class JobHostTests
     {
         // Checks that we write the marker file when we call the host
@@ -38,8 +39,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var path = Path.Combine(tempDir, filename);
 
             File.Delete(path);
-
-            var configuration = CreateConfiguration();
 
             using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
             {
@@ -100,8 +99,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             // Arrange
             TaskCompletionSource<IStorageAccount> getAccountTaskSource = new TaskCompletionSource<IStorageAccount>();
-            JobHostOptions configuration = CreateConfiguration(new LambdaStorageAccountProvider(
-                    (i1, i2) => getAccountTaskSource.Task));
+            //JobHostOptions configuration = CreateConfiguration(new LambdaStorageAccountProvider(
+            //        (i1, i2) => getAccountTaskSource.Task));
 
             using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
             {
@@ -184,8 +183,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             // Arrange
             TaskCompletionSource<IStorageAccount> getAccountTaskSource = new TaskCompletionSource<IStorageAccount>();
-            JobHostOptions configuration = CreateConfiguration(new LambdaStorageAccountProvider(
-                    (i1, i2) => getAccountTaskSource.Task));
+            JobHostOptions configuration = null; // CreateConfiguration(new LambdaStorageAccountProvider(
+            //        (i1, i2) => getAccountTaskSource.Task));
 
             using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(configuration), new Mock<IJobHostContextFactory>().Object))
             {
@@ -233,7 +232,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void StopAsync_WhenAlreadyStopping_ReturnsSameTask()
         {
             // Arrange
-            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(CreateConfiguration()), new Mock<IJobHostContextFactory>().Object))
+            JobHostOptions configuration = null;
+            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(configuration), new Mock<IJobHostContextFactory>().Object))
             {
                 host.Start();
 
@@ -452,33 +452,31 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
         [Fact]
         [Trait("Category", "secretsrequired")]
-        public void IndexingExceptions_CanBeHandledByLogger()
+        public async Task IndexingExceptions_CanBeHandledByLogger()
         {
-            var config = new JobHostOptions();
-
-            // TODO: DI WORK
-            // Fix this
-            // config.TypeLocator = new FakeTypeLocator(typeof(BindingErrorsProgram));
             FunctionErrorLogger errorLogger = new FunctionErrorLogger("TestCategory");
-
-            // TODO: DI WORK - Make sure services are available
-            //config.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
 
             Mock<ILoggerProvider> mockProvider = new Mock<ILoggerProvider>(MockBehavior.Strict);
             mockProvider
                 .Setup(m => m.CreateLogger(It.IsAny<string>()))
                 .Returns(errorLogger);
 
-            ILoggerFactory factory = new LoggerFactory();
-            factory.AddProvider(mockProvider.Object);
+            var builder = new HostBuilder()
+                .ConfigureDefaultTestHost<BindingErrorsProgram>()
+                .ConfigureLogging(logging =>
+                {
+                    logging.AddProvider(mockProvider.Object);
+                });
 
-            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object);
-            host.Start();
+            var host = builder.Build();
+            using (host)
+            {
+                await host.StartAsync();
 
-            // verify the handled binding error
-            FunctionIndexingException fex = errorLogger.Errors.SingleOrDefault() as FunctionIndexingException;
-            Assert.True(fex.Handled);
-            Assert.Equal("BindingErrorsProgram.Invalid", fex.MethodName);
+                // verify the handled binding error
+                FunctionIndexingException fex = errorLogger.Errors.SingleOrDefault() as FunctionIndexingException;
+                Assert.True(fex.Handled);
+                Assert.Equal("BindingErrorsProgram.Invalid", fex.MethodName);
 
             // verify that the binding error was logged
             var messages = errorLogger.GetLogMessages();
@@ -500,36 +498,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             logMessage = messages.ElementAt(4);
             Assert.Equal("Job host started", logMessage.FormattedMessage);
 
-            host.Stop();
-            host.Dispose();
-        }
-
-        private static JobHostOptions CreateConfiguration()
-        {
-            Mock<IServiceProvider> services = new Mock<IServiceProvider>(MockBehavior.Strict);
-            StorageClientFactory clientFactory = new StorageClientFactory();
-            services.Setup(p => p.GetService(typeof(StorageClientFactory))).Returns(clientFactory);
-
-            IStorageAccountProvider storageAccountProvider = new SimpleStorageAccountProvider(services.Object)
-            {
-                // Use null connection strings since unit tests shouldn't make wire requests.
-                StorageAccount = null,
-                DashboardAccount = null
-            };
-            return CreateConfiguration(storageAccountProvider);
-        }
-
-        private static JobHostOptions CreateConfiguration(IStorageAccountProvider storageAccountProvider)
-        {
-            var singletonManager = new SingletonManager();
-
-            return TestHelpers.NewConfig(
-                storageAccountProvider,
-                singletonManager,
-                new NullConsoleProvider(),
-                new FixedHostIdProvider(Guid.NewGuid().ToString("N")),
-                new EmptyFunctionIndexProvider()
-                );
+                await host.StopAsync();
+            }
         }
 
         private static ExceptionDispatchInfo CreateExceptionInfo(Exception exception)
@@ -567,6 +537,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             public string StorageConnectionString => throw new NotImplementedException();
 
             public string DashboardConnectionString => throw new NotImplementedException();
+
+            public string InternalSasStorage => throw new NotImplementedException();
 
             public Task<IStorageAccount> TryGetAccountAsync(string connectionStringName,
                 CancellationToken cancellationToken)

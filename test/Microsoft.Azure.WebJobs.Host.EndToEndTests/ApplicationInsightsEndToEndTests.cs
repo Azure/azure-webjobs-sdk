@@ -18,9 +18,10 @@ using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.Implementation;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -28,7 +29,7 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
-    public class ApplicationInsightsEndToEndTests
+    public class ApplicationInsightsEndToEndTests : IDisposable
     {
         private const string _mockApplicationInsightsUrl = "http://localhost:4005/v2/track/";
         private const string _mockQuickPulseUrl = "http://localhost:4005/QuickPulseService.svc/";
@@ -38,35 +39,43 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private const string _customScopeKey = "MyCustomScopeKey";
         private const string _customScopeValue = "MyCustomScopeValue";
 
+        private readonly IHost _host;
+        private readonly JobHost _jobHost;
+
+        public ApplicationInsightsEndToEndTests()
+        {
+            LogCategoryFilter filter = new LogCategoryFilter();
+            filter.DefaultLevel = LogLevel.Information;
+
+            _host = new HostBuilder()
+                .ConfigureDefaultTestHost<ApplicationInsightsEndToEndTests>()
+                .ConfigureServices(services =>
+                {
+                    services.Configure<FunctionResultAggregatorOptions>(o =>
+                    {
+                        o.IsEnabled = false;
+                    });
+                })
+                .ConfigureLogging(logging =>
+                {
+                    logging.AddApplicationInsights(new TestTelemetryClientFactory(filter.Filter, _channel));
+                })
+                .Build();
+
+            _jobHost = _host.GetJobHost();
+        }
+
         [Fact]
         public async Task ApplicationInsights_SuccessfulFunction()
         {
             string testName = nameof(TestApplicationInsightsInformation);
-            LogCategoryFilter filter = new LogCategoryFilter();
-            filter.DefaultLevel = LogLevel.Information;
 
-            var loggerFactory = new LoggerFactory()
-                .AddApplicationInsights(
-                    new TestTelemetryClientFactory(filter.Filter, _channel));
+            await _host.StartAsync();
+            var methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+            await _jobHost.CallAsync(methodInfo, new { input = "function input" });
+            await _host.StopAsync();
 
-            Assert.False(true, "fix");
-            JobHostOptions config = new JobHostOptions
-            {
-                //LoggerFactory = loggerFactory,
-                //TypeLocator = new FakeTypeLocator(GetType()),
-            };
-            //config.Aggregator.IsEnabled = false;
-            config.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
-
-            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(config), null))
-            {
-                await host.StartAsync();
-                var methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
-                await host.CallAsync(methodInfo, new { input = "function input" });
-                await host.StopAsync();
-            }
-
-            Assert.Equal(9, _channel.Telemetries.Count);
+            Assert.Equal(11, _channel.Telemetries.Count);
 
             // Validate the traces. Order by message string as the requests may come in
             // slightly out-of-order or on different threads
@@ -84,7 +93,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             ValidateTrace(telemetries[3], "Job host started", LogCategories.Startup);
             ValidateTrace(telemetries[4], "Job host stopped", LogCategories.Startup);
             ValidateTrace(telemetries[5], "Logger", expectedFunctionUserCategory, testName, hasCustomScope: true);
-            ValidateTrace(telemetries[6], "Trace", expectedFunctionUserCategory, testName);
+            ValidateTrace(telemetries[6], "Starting JobHost", "Microsoft.Azure.WebJobs.Hosting.JobHostService");
+            ValidateTrace(telemetries[7], "Stopping JobHost", "Microsoft.Azure.WebJobs.Hosting.JobHostService");
+            ValidateTrace(telemetries[8], "Trace", expectedFunctionUserCategory, testName);
 
             // We should have 1 custom metric.
             MetricTelemetry metric = _channel.Telemetries
@@ -103,32 +114,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         public async Task ApplicationInsights_FailedFunction()
         {
             string testName = nameof(TestApplicationInsightsFailure);
-            LogCategoryFilter filter = new LogCategoryFilter();
-            filter.DefaultLevel = LogLevel.Information;
 
-            var loggerFactory = new LoggerFactory()
-                .AddApplicationInsights(
-                    new TestTelemetryClientFactory(filter.Filter, _channel));
+            await _host.StartAsync();
+            var methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+            await Assert.ThrowsAsync<FunctionInvocationException>(() => _jobHost.CallAsync(methodInfo, new { input = "function input" }));
+            await _host.StopAsync();
 
-            Assert.False(true, "fix");
-
-            JobHostOptions config = new JobHostOptions
-            {
-                //LoggerFactory = loggerFactory,
-                //TypeLocator = new FakeTypeLocator(GetType()),
-            };
-            //config.Aggregator.IsEnabled = false;
-            config.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
-
-            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(config), null))
-            {
-                await host.StartAsync();
-                var methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
-                await Assert.ThrowsAsync<FunctionInvocationException>(() => host.CallAsync(methodInfo, new { input = "function input" }));
-                await host.StopAsync();
-            }
-
-            Assert.Equal(12, _channel.Telemetries.Count);
+            Assert.Equal(14, _channel.Telemetries.Count);
 
             // Validate the traces. Order by message string as the requests may come in
             // slightly out-of-order or on different threads
@@ -147,7 +139,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             ValidateTrace(telemetries[4], "Job host started", LogCategories.Startup);
             ValidateTrace(telemetries[5], "Job host stopped", LogCategories.Startup);
             ValidateTrace(telemetries[6], "Logger", expectedFunctionUserCategory, testName, hasCustomScope: true);
-            ValidateTrace(telemetries[7], "Trace", expectedFunctionUserCategory, testName);
+            ValidateTrace(telemetries[7], "Starting JobHost", "Microsoft.Azure.WebJobs.Hosting.JobHostService");
+            ValidateTrace(telemetries[8], "Stopping JobHost", "Microsoft.Azure.WebJobs.Hosting.JobHostService");
+            ValidateTrace(telemetries[9], "Trace", expectedFunctionUserCategory, testName);
 
             // Validate the exception
             ExceptionTelemetry[] exceptions = _channel.Telemetries
@@ -527,6 +521,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private static void ValidateSdkVersion(ITelemetry telemetry)
         {
             Assert.StartsWith("webjobs: ", telemetry.Context.GetInternalContext().SdkVersion);
+        }
+
+        public void Dispose()
+        {
+            _host.Dispose();
         }
 
         private class QuickPulsePayload

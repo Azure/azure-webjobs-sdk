@@ -54,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             _exceptionMock = new Mock<IWebJobsExceptionHandler>();
 
-            _queueConfiguration = new FakeQueueConfiguration(accountProvider);
+            _queueConfiguration = new FakeQueuesOptionsFactory(accountProvider).Create(string.Empty);
 
             _sharedContextProvider = new SharedContextProvider();
 

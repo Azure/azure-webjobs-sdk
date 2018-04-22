@@ -14,9 +14,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
 
         public IStorageAccount DashboardAccount { get; set; }
 
-        public string StorageConnectionString => throw new System.NotImplementedException();
+        public string StorageConnectionString => null;
 
-        public string DashboardConnectionString => throw new System.NotImplementedException();
+        public string DashboardConnectionString => null;
+
+        public string InternalSasStorage => null;
 
         public Task<IStorageAccount> TryGetAccountAsync(string connectionStringName, CancellationToken cancellationToken)
         {

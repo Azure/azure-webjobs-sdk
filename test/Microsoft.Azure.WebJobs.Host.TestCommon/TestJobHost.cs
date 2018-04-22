@@ -10,9 +10,9 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.TestCommon
 {
-    public class TestJobHost<TProgram> : JobHost
+    public class JobHost<TProgram> : JobHost
     {
-        public TestJobHost(IOptions<JobHostOptions> options, IJobHostContextFactory contextFactory)
+        public JobHost(IOptions<JobHostOptions> options, IJobHostContextFactory contextFactory)
             : base(options, contextFactory)
         {
         }

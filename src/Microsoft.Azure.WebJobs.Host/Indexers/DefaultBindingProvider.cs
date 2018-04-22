@@ -24,7 +24,6 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             INameResolver nameResolver,
             ILoggerFactory loggerFactory,
             IStorageAccountProvider storageAccountProvider,
-            IExtensionTypeLocator extensionTypeLocator,
             IExtensionRegistry extensions)
         {
             _nameResolver = nameResolver;

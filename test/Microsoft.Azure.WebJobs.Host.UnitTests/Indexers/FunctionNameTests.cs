@@ -1,13 +1,15 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Xunit;
-using System;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 {
@@ -20,29 +22,40 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             var activator = new FakeActivator();
             activator.Add(prog);
             var logger = new MyLogger();
-            var host = TestHelpers.NewJobHost<MyProg>(activator, logger);
+
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<MyProg>(activator: activator)
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<IAsyncCollector<FunctionInstanceLogEntry>>(logger);
+                })
+                .Build();
+
+            var jobHost = host.GetJobHost<MyProg>();
 
             // Invoke with method Info
             var method = prog.GetType().GetMethod("Test");
-            host.Call(method);
+            jobHost.Call(method);
             prog.AssertValid();
             logger.AssertValid();
 
             // Invoke with new name. 
-            await host.CallAsync(MyProg.NewName);
+            await jobHost.CallAsync(MyProg.NewName);
             prog.AssertValid();
             logger.AssertValid();
 
             // Invoke with original name fails 
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await host.CallAsync("Test"));
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await host.CallAsync("MyProg.Test"));
-        }    
+            await Assert.ThrowsAsync<InvalidOperationException>(async () => await jobHost.CallAsync("Test"));
+            await Assert.ThrowsAsync<InvalidOperationException>(async () => await jobHost.CallAsync("MyProg.Test"));
+        }
 
         [Fact]
         public void TestInvalidName()
         {
-            var host = TestHelpers.NewJobHost<ProgInvalidName>();
-            TestHelpers.AssertIndexingError(() => host.Call("Test"), "ProgInvalidName.Test", "'x y' is not a valid function name.");
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<ProgInvalidName>()
+                .Build();
+            TestHelpers.AssertIndexingError(() => host.GetJobHost<ProgInvalidName>().Call("Test"), "ProgInvalidName.Test", "'x y' is not a valid function name.");
         }
 
         public class ProgInvalidName

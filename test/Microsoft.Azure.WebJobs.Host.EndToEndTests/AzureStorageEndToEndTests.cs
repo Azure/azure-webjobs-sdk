@@ -7,11 +7,11 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.Host.Timers;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -204,17 +204,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // Reinitialize the name resolver to avoid conflicts
             _resolver = new RandomNameResolver();
 
-            JobHostOptions hostConfig = new JobHostOptions()
-            {
-                NameResolver = _resolver,
-
-                // TODO: DI:
-                //TypeLocator = new FakeTypeLocator(
-                //    this.GetType(),
-                //    typeof(BlobToCustomObjectBinder))
-            };
-
-            hostConfig.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost(GetType(), typeof(BlobToCustomObjectBinder))
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<INameResolver>(_resolver);
+                })
+                .Build();
 
             // write test entities
             string testTableName = _resolver.ResolveInString(TableName);
@@ -254,14 +250,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Age = 28,
                 Location = "Tam O'Shanter"
             });
+
             await table.ExecuteBatchAsync(operation);
 
-            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(hostConfig), null);
-            var methodInfo = this.GetType().GetMethod("TableWithFilter", BindingFlags.Public | BindingFlags.Static);
+            JobHost jobHost = host.GetJobHost();
+            var methodInfo = GetType().GetMethod(nameof(TableWithFilter));
             var input = new Person { Age = 25, Location = "Seattle" };
             string json = JsonConvert.SerializeObject(input);
             var arguments = new { person = json };
-            await host.CallAsync(methodInfo, arguments);
+            await jobHost.CallAsync(methodInfo, arguments);
 
             // wait for test results to appear
             await TestHelpers.Await(() => testResult != null);
@@ -272,7 +269,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             input = new Person { Age = 25, Location = "Tam O'Shanter" };
             json = JsonConvert.SerializeObject(input);
             arguments = new { person = json };
-            await host.CallAsync(methodInfo, arguments);
+            await jobHost.CallAsync(methodInfo, arguments);
             await TestHelpers.Await(() => testResult != null);
             results = (JArray)testResult;
             Assert.Single(results);
@@ -284,16 +281,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // Reinitialize the name resolver to avoid conflicts
             _resolver = new RandomNameResolver();
 
-            JobHostOptions hostConfig = new JobHostOptions()
-            {
-                NameResolver = _resolver,
-                // TODO: DI:
-                //TypeLocator = new FakeTypeLocator(
-                //    this.GetType(),
-                //    typeof(BlobToCustomObjectBinder))
-            };
-
-            hostConfig.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost(GetType(), typeof(BlobToCustomObjectBinder))
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<INameResolver>(_resolver);
+                })
+                .Build();
 
             if (uploadBlobBeforeHostStart)
             {
@@ -302,11 +296,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
 
             // The jobs host is started
-            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(hostConfig), null);
+            JobHost jobHost = host.GetJobHost();
 
             _functionChainWaitHandle = new ManualResetEvent(initialState: false);
 
-            host.Start();
+            await host.StartAsync();
 
             if (!uploadBlobBeforeHostStart)
             {
@@ -317,7 +311,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             bool signaled = _functionChainWaitHandle.WaitOne(15 * 1000);
 
             // Stop the host and wait for it to finish
-            host.Stop();
+            await host.StopAsync();
 
             Assert.True(signaled);
 
@@ -337,27 +331,22 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             // Reinitialize the name resolver to avoid conflicts
             _resolver = new RandomNameResolver();
-            Assert.False(true, "Remove once DI fixes are in place");
-            JobHostOptions hostConfig = new JobHostOptions()
-            {
-                NameResolver = _resolver,
-                //TypeLocator = new FakeTypeLocator(
-                //    this.GetType(),
-                //    typeof(BlobToCustomObjectBinder))
-            };
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost(GetType(), typeof(BlobToCustomObjectBinder))
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<INameResolver>(_resolver);
+                    services.Configure<JobHostQueuesOptions>(o =>
+                    {
+                        // use a custom processor so we can grab the Id and PopReceipt
+                        o.QueueProcessorFactory = new TestQueueProcessorFactory();
+                    });
+                })
+                .Build();
 
-            hostConfig.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
-
-            // use a custom processor so we can grab the Id and PopReceipt
-            //hostConfig.Queues.QueueProcessorFactory = new TestQueueProcessorFactory();
-
-            ILoggerFactory loggerFactory = new LoggerFactory();
-            TestLoggerProvider loggerProvider = new TestLoggerProvider();
-            loggerFactory.AddProvider(loggerProvider);
-            //hostConfig.LoggerFactory = loggerFactory;
+            TestLoggerProvider loggerProvider = host.GetTestLoggerProvider();
 
             // The jobs host is started
-            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(hostConfig), null);
             host.Start();
 
             // use reflection to construct a bad message:
@@ -405,7 +394,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 return done;
             });
 
-            host.Stop();
+            await host.StopAsync();
 
             // find the raw string to compare it to the original
             Assert.NotNull(poisonMessage);
@@ -533,9 +522,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             public TestFixture()
             {
-                JobHostOptions config = new JobHostOptions();
-                // TODO: DI:
-                StorageAccount = CloudStorageAccount.Parse(null);//config.StorageConnectionString);
+                IHost host = new HostBuilder()
+                    .ConfigureDefaultTestHost<TestFixture>()
+                    .Build();
+
+                var provider = host.Services.GetService<IStorageAccountProvider>();
+                StorageAccount = provider.TryGetAccountAsync(ConnectionStringNames.Storage, CancellationToken.None).Result.SdkObject;
             }
 
             public CloudStorageAccount StorageAccount

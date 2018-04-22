@@ -10,12 +10,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.ServiceBus.Core;
-using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.ServiceBus;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Moq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
@@ -40,20 +41,23 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private static string _resultMessage1;
         private static string _resultMessage2;
 
-        private ServiceBusOptions _serviceBusConfig;
         private RandomNameResolver _nameResolver;
+        private string _primaryConnectionString;
         private string _secondaryConnectionString;
-
-        TestLoggerProvider _loggerProvider = new TestLoggerProvider();
-        LoggerFactory _loggerFactory = new LoggerFactory();
 
         public ServiceBusEndToEndTests()
         {
-            _serviceBusConfig = new ServiceBusOptions();
-            _nameResolver = new RandomNameResolver();
-            _secondaryConnectionString = AmbientConnectionStringProvider.Instance.GetConnectionString("ServiceBusSecondary");
+            var config = new ConfigurationBuilder()
+                .AddEnvironmentVariables()
+                .Build();
 
-            _loggerFactory.AddProvider(_loggerProvider);
+            var connStrProvider = new AmbientConnectionStringProvider(config);
+            _primaryConnectionString = connStrProvider.GetConnectionString(ConnectionStringNames.ServiceBus);
+            _secondaryConnectionString = connStrProvider.GetConnectionString("ServiceBusSecondary");
+
+            _nameResolver = new RandomNameResolver();
+
+            Cleanup().GetAwaiter().GetResult();
         }
 
         [Fact]
@@ -61,7 +65,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             try
             {
-                await ServiceBusEndToEndInternal(typeof(ServiceBusTestJobs));
+                await ServiceBusEndToEndInternal();
             }
             finally
             {
@@ -75,14 +79,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             try
             {
                 var hostType = typeof(ServiceBusTestJobs);
-                var host = CreateHost(hostType);
+                var host = CreateHost();
                 var method = typeof(ServiceBusTestJobs).GetMethod("ServiceBusBinderTest");
 
                 int numMessages = 10;
                 var args = new { message = "Test Message", numMessages = numMessages };
-                await host.CallAsync(method, args);
-                await host.CallAsync(method, args);
-                await host.CallAsync(method, args);
+                var jobHost = host.GetJobHost<ServiceBusTestJobs>();
+                await jobHost.CallAsync(method, args);
+                await jobHost.CallAsync(method, args);
+                await jobHost.CallAsync(method, args);
 
                 var count = await CleanUpEntity(BinderQueueName);
 
@@ -104,22 +109,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 TestLoggerProvider loggerProvider = new TestLoggerProvider();
                 loggerFactory.AddProvider(loggerProvider);
 
-                _serviceBusConfig = new ServiceBusOptions();
-                _serviceBusConfig.MessagingProvider = new CustomMessagingProvider(_serviceBusConfig, loggerFactory);
+                IHost host = new HostBuilder()
+                    .ConfigureDefaultTestHost<ServiceBusTestJobs>()
+                    .AddServiceBus()
+                    .ConfigureServices(services =>
+                    {
+                        services.AddSingleton<IMessagingProvider>(p => new CustomMessagingProvider(p.GetRequiredService<IOptions<ServiceBusOptions>>(), loggerFactory));
+                    })
+                    .Build();
 
-                var config = new JobHostOptions()
-                {
-                    NameResolver = _nameResolver
-                    // TODO: DI:
-                    //TypeLocator = new FakeTypeLocator(typeof(ServiceBusTestJobs)),
-                    //LoggerFactory = _loggerFactory
-                };
-
-                // TODO: DI:
-                //config.UseServiceBus(_serviceBusConfig);
-                JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(config), new Mock<IJobHostContextFactory>().Object);
-
-                await ServiceBusEndToEndInternal(typeof(ServiceBusTestJobs), host: host);
+                await ServiceBusEndToEndInternal(host: host);
 
                 // in addition to verifying that our custom processor was called, we're also
                 // verifying here that extensions can log
@@ -138,18 +137,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             try
             {
-                _serviceBusConfig = new ServiceBusOptions();
-                _serviceBusConfig.MessagingProvider = new CustomMessagingProvider(_serviceBusConfig, null);
-
-                var config = new JobHostOptions()
-                {
-                    NameResolver = _nameResolver,
-                    // TODO: DI:
-                    //TypeLocator = new FakeTypeLocator(typeof(ServiceBusTestJobs))
-                };
-                // TODO: DI:
-                //config.UseServiceBus(_serviceBusConfig);
-                JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(config), new Mock<IJobHostContextFactory>().Object);
+                IHost host = new HostBuilder()
+                   .ConfigureDefaultTestHost<ServiceBusTestJobs>(nameResolver: _nameResolver)
+                   .AddServiceBus()
+                   .ConfigureServices(services =>
+                   {
+                       services.AddSingleton<IMessagingProvider>(p => new CustomMessagingProvider(p.GetRequiredService<IOptions<ServiceBusOptions>>(), null));
+                   })
+                   .Build();
 
                 await WriteQueueMessage(_secondaryConnectionString, FirstQueueName, "Test");
 
@@ -176,7 +171,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private async Task<int> CleanUpEntity(string queueName, string connectionString = null)
         {
-            var messageReceiver = new MessageReceiver(!string.IsNullOrEmpty(connectionString) ? connectionString : _serviceBusConfig.ConnectionString, queueName, ReceiveMode.ReceiveAndDelete);
+            var messageReceiver = new MessageReceiver(!string.IsNullOrEmpty(connectionString) ? connectionString : _primaryConnectionString, queueName, ReceiveMode.ReceiveAndDelete);
             Message message;
             int count = 0;
             do
@@ -206,27 +201,28 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await CleanUpEntity(EntityNameHelper.FormatSubscriptionPath(TopicName, TopicSubscriptionName2));
         }
 
-        private JobHost CreateHost(Type jobContainerType)
+        private IHost CreateHost()
         {
-            var config = new JobHostOptions()
-            {
-                NameResolver = _nameResolver,
-                // TODO: DI:
-                //TypeLocator = new FakeTypeLocator(jobContainerType),
-                //LoggerFactory = _loggerFactory
-            };
-            //config.UseServiceBus(_serviceBusConfig);
-            return new JobHost(new OptionsWrapper<JobHostOptions>(config), new Mock<IJobHostContextFactory>().Object);
+            return new HostBuilder()
+                .ConfigureDefaultTestHost<ServiceBusTestJobs>()
+                .AddServiceBus()
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<INameResolver>(_nameResolver);
+                })
+                .Build();
         }
 
-        private async Task ServiceBusEndToEndInternal(Type jobContainerType, JobHost host = null, bool verifyLogs = true)
+        private async Task ServiceBusEndToEndInternal(IHost host = null, bool verifyLogs = true)
         {
             if (host == null)
             {
-                host = CreateHost(jobContainerType);
+                host = CreateHost();
             }
 
-            await WriteQueueMessage(_serviceBusConfig.ConnectionString, FirstQueueName, "E2E");
+            var jobContainerType = typeof(ServiceBusTestJobs);
+
+            await WriteQueueMessage(_primaryConnectionString, FirstQueueName, "E2E");
 
             _topicSubscriptionCalled1 = new ManualResetEvent(initialState: false);
             _topicSubscriptionCalled2 = new ManualResetEvent(initialState: false);
@@ -248,7 +244,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             if (verifyLogs)
             {
-                IEnumerable<LogMessage> consoleOutput = _loggerProvider.GetAllLogMessages();
+                IEnumerable<LogMessage> consoleOutput = host.GetTestLoggerProvider().GetAllLogMessages();
 
                 Assert.DoesNotContain(consoleOutput, p => p.Level == LogLevel.Error);
 
@@ -260,7 +256,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 string[] expectedOutputLines = new string[]
                 {
-                    "Found the following functions:",
+                   "Found the following functions:",
                     $"{jobContainerType.FullName}.SBQueue2SBQueue",
                     $"{jobContainerType.FullName}.MultipleAccounts",
                     $"{jobContainerType.FullName}.SBQueue2SBTopic",
@@ -276,7 +272,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     $"Executed '{jobContainerType.Name}.SBTopicListener1' (Succeeded, Id=",
                     $"Executing '{jobContainerType.Name}.SBTopicListener2' (Reason='New ServiceBus message detected on '{EntityNameHelper.FormatSubscriptionPath(TopicName, TopicSubscriptionName2)}'.', Id=",
                     $"Executed '{jobContainerType.Name}.SBTopicListener2' (Succeeded, Id=",
-                    "Job host stopped"
+                    "Job host stopped",
+                    "Starting JobHost",
+                    "Stopping JobHost"
                 }.OrderBy(p => p).ToArray();
 
                 Action<string>[] inspectors = expectedOutputLines.Select<string, Action<string>>(p => (string m) => m.StartsWith(p)).ToArray();
@@ -394,13 +392,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private class CustomMessagingProvider : MessagingProvider
         {
-            private readonly ServiceBusOptions _config;
             private readonly ILogger _logger;
+            private readonly ServiceBusOptions _options;
 
-            public CustomMessagingProvider(ServiceBusOptions config, ILoggerFactory loggerFactory)
-                : base(config)
+            public CustomMessagingProvider(IOptions<ServiceBusOptions> serviceBusOptions, ILoggerFactory loggerFactory)
+                : base(serviceBusOptions)
             {
-                _config = config;
+                _options = serviceBusOptions.Value;
                 _logger = loggerFactory?.CreateLogger("CusomMessagingProvider");
             }
 
@@ -412,7 +410,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     MaxAutoRenewDuration = TimeSpan.FromMinutes(1)
                 };
 
-                var messageReceiver = new MessageReceiver(_config.ConnectionString, entityPath);
+                var messageReceiver = new MessageReceiver(_options.ConnectionString, entityPath);
 
                 return new CustomMessageProcessor(messageReceiver, options, _logger);
             }

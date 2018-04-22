@@ -14,5 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         string StorageConnectionString { get; }
 
         string DashboardConnectionString { get; }
+
+        string InternalSasStorage { get; }
     }
 }

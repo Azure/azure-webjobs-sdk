@@ -9,7 +9,6 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
@@ -46,16 +45,11 @@ namespace Microsoft.Azure.WebJobs
         // Points to a completed task after initialization. 
         private Task _initializationRunning = null;
 
-        // These are services that are accessible without starting the execution container. 
-        // They include the initial set of JobHostConfiguration services as well as 
-        // additional services created. 
-        private ServiceProviderWrapper _services;
-
         private int _state;
         private Task _stopTask;
         private bool _disposed;
 
-        // Common lock to protect fields. 
+        // Common lock to protect fields.
         private object _lock = new object();
 
         private ILogger _logger;
@@ -168,11 +162,7 @@ namespace Microsoft.Azure.WebJobs
             await _listener.StopAsync(cancellationToken);
 
             // Flush remaining logs
-            var functionEventCollector = _context.FunctionEventCollector;
-            if (functionEventCollector != null)
-            {
-                await functionEventCollector.FlushAsync(cancellationToken);
-            }
+            await _context.EventCollector.FlushAsync(cancellationToken);
 
             string msg = "Job host stopped";
             _logger?.LogInformation(msg);

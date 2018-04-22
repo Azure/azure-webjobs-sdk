@@ -5,8 +5,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.Host.Timers;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Xunit;
@@ -67,18 +67,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _numberOfQueueMessages = batchSize * 3;
 
             RandomNameResolver nameResolver = new RandomNameResolver();
-            var hostConfiguration = new JobHostOptions()
-            {
-                NameResolver = nameResolver,
-                // TODO: DI:
-                //TypeLocator = new FakeTypeLocator(typeof(ParallelExecutionTests)),
-            };
-            hostConfiguration.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<ParallelExecutionTests>()
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<INameResolver>(nameResolver);
+                    services.Configure<JobHostQueuesOptions>(o => o.BatchSize = batchSize);
+                })
+                .Build();
 
-            // TODO: DI:
-            //hostConfiguration.Queues.BatchSize = batchSize;
-
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(null);//hostConfiguration.StorageConnectionString);
+            CloudStorageAccount storageAccount = host.GetStorageAccount();
             _queueClient = storageAccount.CreateCloudQueueClient();
             CloudQueue queue = _queueClient.GetQueueReference(nameResolver.ResolveInString(TestQueueName));
 
@@ -91,11 +89,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
 
             using (_allMessagesProcessed = new ManualResetEvent(initialState: false))
-            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(hostConfiguration), null))
+            using (host)
             {
-                host.Start();
+                await host.StartAsync();
                 _allMessagesProcessed.WaitOne(TimeSpan.FromSeconds(90));
-                host.Stop();
+                await host.StopAsync();
             }
 
             Assert.Equal(_numberOfQueueMessages, _receivedMessages);

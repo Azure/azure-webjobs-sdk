@@ -2,18 +2,17 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Linq;
-using System.Reflection;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Configuration;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Auth;
 using Moq;
 using Xunit;
-using Xunit.Extensions;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 {
@@ -22,32 +21,26 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         [Fact]
         public void ConnectionStringProvider_NoDashboardConnectionString_Throws()
         {
-            const string DashboardConnectionEnvironmentVariable = "AzureWebJobsDashboard";
-            string previousConnectionString = Environment.GetEnvironmentVariable(DashboardConnectionEnvironmentVariable);
-
-            try
-            {
-                Environment.SetEnvironmentVariable(DashboardConnectionEnvironmentVariable, null);
-
-                Mock<IServiceProvider> mockServices = new Mock<IServiceProvider>(MockBehavior.Strict);
-                IStorageAccountProvider product = new DefaultStorageAccountProvider(mockServices.Object)
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string>
                 {
-                    StorageConnectionString = new CloudStorageAccount(new StorageCredentials("Test", string.Empty, "key"), true).ToString(exportSecrets: true)
-                };
+                        { "Dashboard", null }
+                })
+                .Build();
 
-                // Act & Assert
-                ExceptionAssert.ThrowsInvalidOperation(() =>
-                    product.GetDashboardAccountAsync(CancellationToken.None).GetAwaiter().GetResult(),
-                    "Microsoft Azure WebJobs SDK 'Dashboard' connection string is missing or empty. The Microsoft Azure Storage account connection string can be set in the following ways:" + Environment.NewLine +
-                    "1. Set the connection string named 'AzureWebJobsDashboard' in the connectionStrings section of the .config file in the following format " +
-                    "<add name=\"AzureWebJobsDashboard\" connectionString=\"DefaultEndpointsProtocol=http|https;AccountName=NAME;AccountKey=KEY\" />, or" + Environment.NewLine +
-                    "2. Set the environment variable named 'AzureWebJobsDashboard', or" + Environment.NewLine +
-                    "3. Set corresponding property of JobHostConfiguration.");
-            }
-            finally
+            IStorageAccountProvider product = new DefaultStorageAccountProvider(new AmbientConnectionStringProvider(configuration), new StorageAccountParser(new StorageClientFactory()), new DefaultStorageCredentialsValidator())
             {
-                Environment.SetEnvironmentVariable(DashboardConnectionEnvironmentVariable, previousConnectionString);
-            }
+                StorageConnectionString = new CloudStorageAccount(new StorageCredentials("Test", string.Empty, "key"), true).ToString(exportSecrets: true)
+            };
+
+            // Act & Assert
+            ExceptionAssert.ThrowsInvalidOperation(() =>
+                product.GetDashboardAccountAsync(CancellationToken.None).GetAwaiter().GetResult(),
+                "Microsoft Azure WebJobs SDK 'Dashboard' connection string is missing or empty. The Microsoft Azure Storage account connection string can be set in the following ways:" + Environment.NewLine +
+                "1. Set the connection string named 'AzureWebJobsDashboard' in the connectionStrings section of the .config file in the following format " +
+                "<add name=\"AzureWebJobsDashboard\" connectionString=\"DefaultEndpointsProtocol=http|https;AccountName=NAME;AccountKey=KEY\" />, or" + Environment.NewLine +
+                "2. Set the environment variable named 'AzureWebJobsDashboard', or" + Environment.NewLine +
+                "3. Set corresponding property of JobHostConfiguration.");
         }
 
         [Theory]
@@ -57,7 +50,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         {
             string connectionString = "valid-ignore";
             IStorageAccount parsedAccount = Mock.Of<IStorageAccount>();
-            
+
             Mock<IConnectionStringProvider> connectionStringProviderMock = new Mock<IConnectionStringProvider>(MockBehavior.Strict);
             connectionStringProviderMock.Setup(p => p.GetConnectionString(connectionStringName))
                                         .Returns(connectionString)
@@ -66,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             Mock<IStorageAccountParser> parserMock = new Mock<IStorageAccountParser>(MockBehavior.Strict);
             IServiceProvider services = CreateServices();
-            parserMock.Setup(p => p.ParseAccount(connectionString, connectionStringName, services))
+            parserMock.Setup(p => p.ParseAccount(connectionString, connectionStringName))
                       .Returns(parsedAccount)
                       .Verifiable();
             IStorageAccountParser parser = parserMock.Object;
@@ -100,10 +93,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                 connectionString);
             Mock<IStorageAccountParser> parserMock = new Mock<IStorageAccountParser>(MockBehavior.Strict);
             IServiceProvider services = CreateServices();
-            parserMock.Setup(p => p.ParseAccount(connectionString, connectionStringName, services))
+            parserMock.Setup(p => p.ParseAccount(connectionString, connectionStringName))
                 .Throws(expectedException);
             IStorageAccountParser parser = parserMock.Object;
-            
+
             IStorageAccountProvider provider = CreateProductUnderTest(services, connectionStringProvider, parser);
 
             Exception actualException = Assert.Throws<InvalidOperationException>(
@@ -250,7 +243,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         [Fact]
         public async Task GetStorageAccountAsyncTest()
         {
-            string cxEmpty= "";
+            string cxEmpty = "";
             var accountDefault = new Mock<IStorageAccount>().Object;
 
             string cxReal = "MyAccount";
@@ -283,7 +276,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                 .Returns(Task.CompletedTask);
             validatorMock.Setup(v => v.ValidateCredentialsAsync(storageMock.Object, It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
-            
+
             DefaultStorageAccountProvider provider = CreateProductUnderTest(services, csProvider, parser, validatorMock.Object);
             var account = await provider.TryGetAccountAsync("account", CancellationToken.None);
             var account2 = await provider.TryGetAccountAsync("account", CancellationToken.None);
@@ -328,7 +321,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         private static IStorageAccountParser CreateParser(IServiceProvider services, string connectionStringName, string connectionString, IStorageAccount parsedAccount)
         {
             Mock<IStorageAccountParser> mock = new Mock<IStorageAccountParser>(MockBehavior.Strict);
-            mock.Setup(p => p.ParseAccount(connectionString, connectionStringName, services)).Returns(parsedAccount);
+            mock.Setup(p => p.ParseAccount(connectionString, connectionStringName)).Returns(parsedAccount);
             return mock.Object;
         }
 
@@ -347,7 +340,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             IConnectionStringProvider ambientConnectionStringProvider, IStorageAccountParser storageAccountParser,
             IStorageCredentialsValidator storageCredentialsValidator)
         {
-            return new DefaultStorageAccountProvider(services, ambientConnectionStringProvider, storageAccountParser, storageCredentialsValidator);
+            return new DefaultStorageAccountProvider(ambientConnectionStringProvider, storageAccountParser, storageCredentialsValidator);
         }
 
         private static IStorageCredentialsValidator CreateValidator(IStorageAccount account)

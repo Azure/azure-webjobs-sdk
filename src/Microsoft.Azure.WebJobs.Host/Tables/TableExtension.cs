@@ -40,7 +40,6 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
             {
                 throw new ArgumentNullException(nameof(context));
             }
-            var config = context.Config;
 
             // rules for single entity. 
             var original = new TableAttributeBindingProvider(_nameResolver, _accountProvider);

@@ -1,17 +1,16 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System.Diagnostics;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Azure.WebJobs.Host.Executors;
-using Microsoft.Azure.WebJobs.ServiceBus.Listeners;
 using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.ServiceBus.Core;
+using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Azure.WebJobs.ServiceBus.Listeners;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
-using System;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
 {
@@ -37,8 +36,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
             {
                 MessageOptions = messageOptions
             };
-            _mockMessagingProvider = new Mock<MessagingProvider>(MockBehavior.Strict, config);
-            config.MessagingProvider = _mockMessagingProvider.Object;
+            _mockMessagingProvider = new Mock<MessagingProvider>(MockBehavior.Strict, new OptionsWrapper<ServiceBusOptions>(config));
 
             _mockMessagingProvider.Setup(p => p.CreateMessageProcessor(_entityPath, _testConnection))
                 .Returns(_mockMessageProcessor.Object);
@@ -47,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
             var mockServiceBusAccount = new Mock<ServiceBusAccount>(MockBehavior.Strict);
             mockServiceBusAccount.Setup(a => a.ConnectionString).Returns(_testConnection);
 
-            _listener = new ServiceBusListener(_entityPath, triggerExecutor, config, mockServiceBusAccount.Object);
+            _listener = new ServiceBusListener(_entityPath, triggerExecutor, config, mockServiceBusAccount.Object, _mockMessagingProvider.Object);
         }
 
         [Fact]

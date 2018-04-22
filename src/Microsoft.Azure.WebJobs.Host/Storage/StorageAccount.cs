@@ -16,26 +16,17 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
     internal class StorageAccount : IStorageAccount
     {
         private readonly CloudStorageAccount _sdkAccount;
-        private readonly IServiceProvider _services;
+        private readonly StorageClientFactory _storageClientFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="StorageAccount"/> class.
         /// </summary>
         /// <param name="sdkAccount">The underlying SDK cloud storage account.</param>
         /// <param name="services">The <see cref="IServiceProvider"/> to use.</param>
-        public StorageAccount(CloudStorageAccount sdkAccount, IServiceProvider services)
+        public StorageAccount(CloudStorageAccount sdkAccount, StorageClientFactory storageClientFactory)
         {
-            if (sdkAccount == null)
-            {
-                throw new ArgumentNullException("sdkAccount");
-            }
-            if (services == null)
-            {
-                throw new ArgumentNullException("services");
-            }
-
-            _sdkAccount = sdkAccount;
-            _services = services;
+            _sdkAccount = sdkAccount ?? throw new ArgumentNullException(nameof(sdkAccount));
+            _storageClientFactory = storageClientFactory ?? throw new ArgumentNullException(nameof(storageClientFactory));
             Type = StorageAccountType.GeneralPurpose;
         }
 
@@ -60,13 +51,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
         /// <inheritdoc />
         public StorageAccountType Type { get; set; }
 
-        private StorageClientFactory ClientFactory
-        {
-            get
-            {
-                return (StorageClientFactory)_services.GetService(typeof(StorageClientFactory));
-            }
-        }
+        private StorageClientFactory ClientFactory => _storageClientFactory;
 
         /// <inheritdoc />
         public IStorageBlobClient CreateBlobClient(StorageClientFactoryContext context = null)
