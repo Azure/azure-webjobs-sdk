@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -11,10 +12,13 @@ using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Storage.Queue;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage.Queue;
+using Moq;
 using Newtonsoft.Json;
 using Xunit;
-using System.Globalization;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
@@ -37,9 +41,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public void TestGenericSucceeds()
         {
             IStorageAccount account = CreateFakeStorageAccount();
-            var host = TestHelpers.NewJobHost<GenericProgram<ICollector<string>>>(account);
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<GenericProgram<ICollector<string>>>()
+                .ConfigureServices(s => s.AddFakeStorageAccountProvider(account))
+                .Build();
 
-            host.Call("Func");
+            host.GetJobHost().Call<GenericProgram<ICollector<string>>>("Func");
 
             // Now peek at messages. 
             var queue = account.CreateQueueClient().GetQueueReference(QueueName);
@@ -64,12 +71,13 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         [Fact]
         public void Catch_Bad_Name_At_IndexTime()
         {
-            IStorageAccount account = CreateFakeStorageAccount();
-            var host = TestHelpers.NewJobHost<ProgramWithStaticBadName>();
+            IHost host = new HostBuilder()
+               .ConfigureDefaultTestHost<ProgramWithStaticBadName>()
+               .Build();
 
             string errorMessage = GetErrorMessageForBadQueueName(ProgramWithStaticBadName.BadQueueName, "name");
 
-            TestHelpers.AssertIndexingError(() => host.Call("Func"), "ProgramWithStaticBadName.Func", errorMessage);
+            TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<ProgramWithStaticBadName>("Func"), "ProgramWithStaticBadName.Func", errorMessage);
         }
 
         private static string GetErrorMessageForBadQueueName(string value, string parameterName)
@@ -94,14 +102,20 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public void Catch_Bad_Name_At_Runtime()
         {
             var nameResolver = new FakeNameResolver().Add("key", "1");
-            IStorageAccount account = CreateFakeStorageAccount();
-            var host = TestHelpers.NewJobHost<ProgramWithVariableQueueName>(account, nameResolver);
+            IHost host = new HostBuilder()
+               .ConfigureDefaultTestHost<ProgramWithVariableQueueName>()
+               .ConfigureFakeStorageAccount()
+               .ConfigureServices(services =>
+               {
+                   services.AddSingleton<INameResolver>(nameResolver);
+               })
+               .Build();
 
-            host.Call("Func", new { x = "1" }); // succeeds with valid char
+            host.GetJobHost().Call<ProgramWithVariableQueueName>("Func", new { x = "1" }); // succeeds with valid char
 
             try
             {
-                host.Call("Func", new { x = "*" }); // produces an error pattern. 
+                host.GetJobHost().Call<ProgramWithVariableQueueName>("Func", new { x = "*" }); // produces an error pattern. 
                 Assert.False(true, "should have failed");
             }
             catch (FunctionInvocationException e)
@@ -118,12 +132,18 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public void Catch_Bad_Name_At_Runtime_With_Illegal_Static_Chars()
         {
             var nameResolver = new FakeNameResolver().Add("key", "$"); // Illegal
-            IStorageAccount account = CreateFakeStorageAccount();
-            var host = TestHelpers.NewJobHost<ProgramWithVariableQueueName>(account, nameResolver);
 
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<ProgramWithVariableQueueName>()
+                .ConfigureServices(services =>
+                {
+                    services.AddFakeStorageAccountProvider();
+                    services.AddSingleton<INameResolver>(nameResolver);
+                })
+                .Build();
             try
             {
-                host.Call("Func", new { x = "1" }); // produces an error pattern. 
+                host.GetJobHost().Call<ProgramWithVariableQueueName>("Func", new { x = "1" }); // produces an error pattern. 
                 Assert.False(true, "should have failed");
             }
             catch (FunctionInvocationException e) // Not an index exception!
@@ -159,10 +179,16 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Assert.NotEqual(ProgramWithTriggerAndBindingData.QueueOutName, ProgramWithTriggerAndBindingData.QueueOutName.ToLower());
 
             IStorageAccount account = CreateFakeStorageAccount();
-            var host = TestHelpers.NewJobHost<ProgramWithTriggerAndBindingData>(account);
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<ProgramWithTriggerAndBindingData>()
+                .ConfigureServices(services =>
+                {
+                    services.AddFakeStorageAccountProvider(account);
+                })
+                .Build();
 
             var trigger = new ProgramWithTriggerAndBindingData.Poco { xyz = "abc" };
-            host.Call("Func", new
+            host.GetJobHost().Call<ProgramWithTriggerAndBindingData>("Func", new
             {
                 triggers = new CloudQueueMessage(JsonConvert.SerializeObject(trigger))
             });
@@ -215,7 +241,13 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Assert.NotEqual(ProgramWithTriggerAndBindingData.QueueOutName, ProgramWithTriggerAndBindingData.QueueOutName.ToLower());
 
             IStorageAccount account = CreateFakeStorageAccount();
-            var host = TestHelpers.NewJobHost<ProgramWithTriggerAndCompoundBindingData>(account);
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<ProgramWithTriggerAndCompoundBindingData>()
+                .ConfigureServices(services =>
+                {
+                    services.AddFakeStorageAccountProvider(account);
+                })
+                .Build();
 
             var trigger = new ProgramWithTriggerAndCompoundBindingData.Poco
             {
@@ -225,7 +257,8 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                     xyz = "abc"
                 }
             };
-            host.Call("Func", new
+
+            host.GetJobHost().Call<ProgramWithTriggerAndCompoundBindingData>("Func", new
             {
                 triggers = new CloudQueueMessage(JsonConvert.SerializeObject(trigger))
             });
@@ -262,20 +295,45 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         [Fact]
         public void Fails_When_No_Storage_is_set()
         {
-            var host = TestHelpers.NewJobHost<ProgramSimple>();  // no storage account!
+            // TODO: We shouldn't have to do this, but our default parser
+            //       does not allow for null Storage/Dashboard.
+            var mockParser = new Mock<IStorageAccountParser>();
+            mockParser
+                .Setup(p => p.ParseAccount(null, It.IsAny<string>()))
+                .Returns<string>(null);
+
+            // no storage account!
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<ProgramSimple>()
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<IStorageAccountParser>(mockParser.Object);
+                })
+                .ConfigureAppConfiguration(config =>
+                {
+                    config.AddInMemoryCollection(new Dictionary<string, string>
+                    {
+                        { "AzureWebJobsStorge", null },
+                        { "AzureWebJobsDashboard", null }
+                    });
+                })
+                .Build();
+
             string message = StorageAccountParser.FormatParseAccountErrorMessage(StorageAccountParseResult.MissingOrEmptyConnectionStringError, "Storage");
-            TestHelpers.AssertIndexingError(() => host.Call("Func"),
-                "ProgramSimple.Func", message);
+            TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<ProgramSimple>("Func"), "ProgramSimple.Func", message);
         }
 
         [Fact]
         public void Sanitizes_Exception_If_Connection_String()
         {
             // people accidentally use their connection string; we want to make sure we sanitize it
-            var host = TestHelpers.NewJobHost<ProgramSimple2>();
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<ProgramSimple2>()
+                .Build();
+
             string message = StorageAccountParser.FormatParseAccountErrorMessage(StorageAccountParseResult.MissingOrEmptyConnectionStringError, ProgramSimple2.ConnectionString);
 
-            TestHelpers.AssertIndexingError(() => host.Call(nameof(ProgramSimple2.Func2)),
+            TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<ProgramSimple2>(nameof(ProgramSimple2.Func2)),
                 "ProgramSimple2.Func2", message);
 
             Assert.DoesNotContain(ProgramSimple2.ConnectionString, message);
@@ -295,9 +353,15 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             // Verify that indexing fails if the [Queue] trigger needs binding data that's not present. 
             IStorageAccount account = CreateFakeStorageAccount();
-            var host = TestHelpers.NewJobHost<ProgramBadContract>(account);
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<ProgramBadContract>()
+                .ConfigureServices(services =>
+                {
+                    services.AddFakeStorageAccountProvider(account);
+                })
+                .Build();
 
-            TestHelpers.AssertIndexingError(() => host.Call("Func"),
+            TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<ProgramBadContract>("Func"),
                 "ProgramBadContract.Func",
                 string.Format(CultureInfo.CurrentCulture, Constants.UnableToResolveBindingParameterFormat, "xyz"));
         }
@@ -314,9 +378,15 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public void Fails_Cant_Bind_To_Object()
         {
             IStorageAccount account = CreateFakeStorageAccount();
-            var host = TestHelpers.NewJobHost<ProgramCantBindToObject>(account);
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<ProgramCantBindToObject>()
+                .ConfigureServices(services =>
+                {
+                    services.AddFakeStorageAccountProvider(account);
+                })
+                .Build();
 
-            TestHelpers.AssertIndexingError(() => host.Call("Func"),
+            TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<ProgramCantBindToObject>("Func"),
                 "ProgramCantBindToObject.Func",
                 "Object element types are not supported.");
         }
@@ -342,9 +412,15 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private void Fails_Cant_Bind_To_Types_Worker<T>(string typeName)
         {
             IStorageAccount account = CreateFakeStorageAccount();
-            var host = TestHelpers.NewJobHost<GenericProgram<T>>(account);
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<GenericProgram<T>>()
+                .ConfigureServices(services =>
+                {
+                    services.AddFakeStorageAccountProvider(account);
+                })
+                .Build();
 
-            TestHelpers.AssertIndexingError(() => host.Call("Func"),
+            TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<GenericProgram<T>>("Func"),
                 "GenericProgram`1.Func",
                 "Can't bind Queue to type '" + typeName + "'.");
         }

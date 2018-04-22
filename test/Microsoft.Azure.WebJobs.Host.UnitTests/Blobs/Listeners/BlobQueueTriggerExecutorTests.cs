@@ -16,7 +16,6 @@ using Microsoft.WindowsAzure.Storage.Blob;
 using Moq;
 using Newtonsoft.Json;
 using Xunit;
-using Xunit.Extensions;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
 {
@@ -293,11 +292,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
 
         private static IStorageBlobClient CreateClient()
         {
-            Mock<IServiceProvider> services = new Mock<IServiceProvider>(MockBehavior.Strict);
             StorageClientFactory clientFactory = new StorageClientFactory();
-            services.Setup(p => p.GetService(typeof(StorageClientFactory))).Returns(clientFactory);
 
-            IStorageAccount account = new StorageAccount(CloudStorageAccount.DevelopmentStorageAccount, services.Object);
+            IStorageAccount account = new StorageAccount(CloudStorageAccount.DevelopmentStorageAccount, clientFactory);
             return account.CreateBlobClient();
         }
 

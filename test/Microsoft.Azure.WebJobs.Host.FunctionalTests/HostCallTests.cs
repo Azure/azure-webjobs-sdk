@@ -10,21 +10,23 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Blobs;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Storage.Blob;
 using Microsoft.Azure.WebJobs.Host.Storage.Queue;
 using Microsoft.Azure.WebJobs.Host.Storage.Table;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
 using Newtonsoft.Json;
-using Xunit;
 using Newtonsoft.Json.Linq;
-using Moq;
-using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
@@ -1006,14 +1008,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         private static StorageAccount GetRealStorage()
         {
-            // Arrange
-            Mock<IServiceProvider> servicesMock = new Mock<IServiceProvider>(MockBehavior.Strict);
+            // Arrange            
             StorageClientFactory clientFactory = new StorageClientFactory();
-            servicesMock.Setup(p => p.GetService(typeof(StorageClientFactory))).Returns(clientFactory);
 
             var acs = Environment.GetEnvironmentVariable("AzureWebJobsDashboard");
             var realAccount = CloudStorageAccount.Parse(acs);
-            var account = new StorageAccount(realAccount, servicesMock.Object);
+            var account = new StorageAccount(realAccount, clientFactory);
             return account;
         }
 
@@ -1022,7 +1022,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public void TableEntity_IfBoundToJArray_CanCall()
         {
             IStorageAccount account = GetRealStorage(); // Fake storage doesn't implement table filters
-                        
+
             IStorageTableClient client = account.CreateTableClient();
             IStorageTable table = client.GetTableReference(TableName);
             table.CreateIfNotExists();
@@ -1035,19 +1035,27 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var jobActivator = new FakeActivator();
             jobActivator.Add(instance);
 
-            var prog = TestHelpers.NewJobHost<BindTableEntityToJArrayProgram>(account, jobActivator);
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<BindTableEntityToJArrayProgram>()
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<IJobActivator>(jobActivator);
+                    services.AddSingleton<IStorageAccountProvider>(new FakeStorageAccountProvider { StorageAccount = account });
+                })
+                .Build();
 
             // Act
-            prog.Call("CallTakeFilter");
+            Type type = typeof(BindTableEntityToJArrayProgram);
+            host.GetJobHost().Call(type.GetMethod(nameof(BindTableEntityToJArrayProgram.CallTakeFilter)));
             Assert.Equal("x1;x3;", instance._result);
 
-            prog.Call("CallFilter");
+            host.GetJobHost().Call(type.GetMethod(nameof(BindTableEntityToJArrayProgram.CallFilter)));
             Assert.Equal("x1;x3;x4;", instance._result);
 
-            prog.Call("CallTake");
+            host.GetJobHost().Call(type.GetMethod(nameof(BindTableEntityToJArrayProgram.CallTake)));
             Assert.Equal("x1;x2;x3;", instance._result);
 
-            prog.Call("Call");
+            host.GetJobHost().Call(type.GetMethod(nameof(BindTableEntityToJArrayProgram.Call)));
             Assert.Equal("x1;x2;x3;x4;", instance._result);
         }
 
@@ -1100,9 +1108,18 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             table.Insert(CreateTableEntity(PartitionKey, RowKey, "Value", "Foo"));
 
             // Act
-            var prog = TestHelpers.NewJobHost<BindTableEntityToJObjectProgram>(account);
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<BindTableEntityToJObjectProgram>()
+                .ConfigureServices(services =>
+                {
+                    services.AddFakeStorageAccountProvider(account);
+                })
+                .Build();
 
-            prog.Call("Call", new {
+            var prog = host.GetJobHost<BindTableEntityToJObjectProgram>();
+
+            prog.Call("Call", new
+            {
                 table = TableName, // Test resolution 
                 pk1 = PartitionKey,
                 rk1 = RowKey
@@ -1378,7 +1395,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             {
                 // Read() shouldn't be called if the stream is missing. 
                 Assert.False(true, "If stream is missing, should never call Read() converter");
-                                
+
                 return Task.FromResult<CustomDataObject>(null);
             }
 
@@ -1727,7 +1744,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private class SdkTableEntity : TableEntity
         {
             public string Value { get; set; }
-        }     
+        }
 
         private class PocoTableEntity
         {

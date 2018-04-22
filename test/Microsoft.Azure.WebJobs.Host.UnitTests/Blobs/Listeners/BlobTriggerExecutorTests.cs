@@ -12,7 +12,6 @@ using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Storage.Blob;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
 using Moq;
 using Xunit;
 
@@ -372,11 +371,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
 
         private static IStorageAccount CreateAccount()
         {
-            Mock<IServiceProvider> services = new Mock<IServiceProvider>(MockBehavior.Strict);
             StorageClientFactory clientFactory = new StorageClientFactory();
-            services.Setup(p => p.GetService(typeof(StorageClientFactory))).Returns(clientFactory);
 
-            return new StorageAccount(CloudStorageAccount.DevelopmentStorageAccount, services.Object);
+            return new StorageAccount(CloudStorageAccount.DevelopmentStorageAccount, clientFactory);
         }
 
         private static IStorageBlob CreateBlobReference()

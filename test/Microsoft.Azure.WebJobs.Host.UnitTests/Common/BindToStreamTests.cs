@@ -1,19 +1,18 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Description;
-using Microsoft.Azure.WebJobs.Host.Config;
-using Microsoft.Azure.WebJobs.Host.Executors;
-using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Extensions.Options;
-using Moq;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Description;
+using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
@@ -27,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         // Each of the TestConfigs below implement this. 
         interface ITest<TConfig>
         {
-            void Test(TestJobHost<TConfig> host);
+            void Test(JobHost<TConfig> host);
         }
 
         [Binding]
@@ -73,7 +72,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                     BindToStream(this, FileAccess.ReadWrite);
             }
 
-            public void Test(TestJobHost<ConfigNullOutParam> host)
+            public void Test(JobHost<ConfigNullOutParam> host)
             {
                 host.Call("WriteString");
                 // Convert was never called 
@@ -111,7 +110,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                     BindToStream(this, FileAccess.ReadWrite);
             }
 
-            public void Test(TestJobHost<ConfigAutoResolve> host)
+            public void Test(JobHost<ConfigAutoResolve> host)
             {
                 host.Call("Read", new { x = 456 });
                 // Convert was never called 
@@ -132,7 +131,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             }
 
             public void Read(
-                [TestStream(Path="{x}-%y%")] string value
+                [TestStream(Path = "{x}-%y%")] string value
                 )
             {
                 _log = value;
@@ -160,7 +159,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                     BindToStream(this, FileAccess.ReadWrite);
 
                 // Override the Stream --> String converter
-                context.AddConverter<Stream, string>(stream => ReadTag); 
+                context.AddConverter<Stream, string>(stream => ReadTag);
 
                 context.AddConverter<ApplyConversion<string, Stream>, object>((pair) =>
                  {
@@ -175,7 +174,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                  });
             }
 
-            public void Test(TestJobHost<ConfigCustom> host)
+            public void Test(JobHost<ConfigCustom> host)
             {
                 host.Call("Read");
                 Assert.Equal(_log, ReadTag);
@@ -235,7 +234,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                     BindToStream(this, FileAccess.ReadWrite);
             }
 
-            public void Test(TestJobHost<ConfigNotExist> host)
+            public void Test(JobHost<ConfigNotExist> host)
             {
                 host.Call("Read1");
                 Assert.Null(_log);
@@ -301,7 +300,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                     BindToStream(this, FileAccess.ReadWrite);
             }
 
-            public void Test(TestJobHost<ConfigStream> host)
+            public void Test(JobHost<ConfigStream> host)
             {
                 foreach (var funcName in new string[]
                 {
@@ -397,7 +396,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             {
                 var bytes = Encoding.UTF8.GetBytes(_writeMessage);
                 stream.Write(bytes, 0, bytes.Length);
-                
+
                 stream.Close();  // Ok if user code explicitly closes. 
             }
 
@@ -443,21 +442,27 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
 
             #endregion // #region Write overloads 
 
-            public async Task<Stream> ConvertAsync(TestStreamAttribute input, CancellationToken cancellationToken)
+            public Task<Stream> ConvertAsync(TestStreamAttribute input, CancellationToken cancellationToken)
             {
+                MemoryStream stream = null;
                 if (input.Access == FileAccess.Read)
                 {
-                    var stream = new MemoryStream(Encoding.UTF8.GetBytes("Hello"));
-                    stream.Position = 0;
-                    return stream;
+                    stream = new MemoryStream(Encoding.UTF8.GetBytes("Hello"))
+                    {
+                        Position = 0
+                    };
                 }
-                if (input.Access == FileAccess.Write)
+                else if (input.Access == FileAccess.Write)
                 {
-                    var stream = new MemoryStream();
+                    stream = new MemoryStream();
                     _writeStream = stream;
-                    return stream;
                 }
-                throw new NotImplementedException();
+                else
+                {
+                    throw new NotImplementedException();
+                }
+
+                return Task.FromResult<Stream>(stream);
             }
         }
 
@@ -465,9 +470,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         [Fact]
         public void TestMetadata()
         {
-            JobHostOptions config = TestHelpers.NewConfig();
-            var host2 = new JobHost(new OptionsWrapper<JobHostOptions>(config), new Mock<IJobHostContextFactory>().Object);
-            var metadataProvider = host2.CreateMetadataProvider();
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost()
+                .Build();
+
+            JobHost jobHost = host.GetJobHost();
+            var metadataProvider = host.Services.GetService<IJobHostMetadataProvider>();
 
             // Blob 
             var blobAttr = GetAttr<TestStreamAttribute>(metadataProvider, new { path = "x" });
@@ -491,15 +499,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         [Fact]
         public void DefaultType()
         {
-            var config = TestHelpers.NewConfig<ConfigNullOutParam>();
-            
-            // TODO: DI: This needs to be updated to perform proper extensions registration
-            //config.AddExtension(new ConfigNullOutParam()); // Registers a BindToInput rule
-            var host = new JobHost(new OptionsWrapper<JobHostOptions>(config), new Mock<IJobHostContextFactory>().Object);
+            var host = new HostBuilder()
+                .ConfigureDefaultTestHost<ConfigNullOutParam>()
+                .AddExtension<ConfigNullOutParam>()
+                .Build();
+
             IJobHostMetadataProvider metadataProvider = host.CreateMetadataProvider();
 
             // Getting default type. 
             var attr = new TestStreamAttribute("x", FileAccess.Read);
+
             {
                 var defaultType = metadataProvider.GetDefaultType(attr, FileAccess.Read, null);
                 Assert.Equal(typeof(Stream), defaultType);
@@ -530,10 +539,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             appSettings.Add("y", "123");
 
             IExtensionConfigProvider ext = prog;
-            var host = TestHelpers.NewJobHost<TConfig>(jobActivator, ext, appSettings);
+
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<TConfig>(appSettings, jobActivator)
+                .AddExtension(ext)
+                .Build();
 
             ITest<TConfig> test = prog;
-            test.Test(host);
+            test.Test(host.GetJobHost<TConfig>());
         }
     }
 }

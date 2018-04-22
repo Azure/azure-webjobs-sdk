@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.TestCommon
@@ -11,10 +12,9 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
     {
         private readonly Func<string, LogLevel, bool> _filter;
         private Action<LogMessage> _logAction;
+        private IList<LogMessage> _logMessages = new List<LogMessage>();
 
         public string Category { get; private set; }
-
-        public IList<LogMessage> LogMessages = new List<LogMessage>();
 
         public TestLogger(string category, Func<string, LogLevel, bool> filter = null, Action<LogMessage> logAction = null)
         {
@@ -33,6 +33,10 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             return _filter?.Invoke(Category, logLevel) ?? true;
         }
 
+        public IList<LogMessage> GetLogMessages() => _logMessages.ToList();
+
+        public void ClearLogMessages() => _logMessages.Clear();
+
         public virtual void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
             if (!IsEnabled(logLevel))
@@ -50,8 +54,13 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                 Category = Category
             };
 
-            LogMessages.Add(logMessage);
+            _logMessages.Add(logMessage);
             _logAction?.Invoke(logMessage);
+        }
+
+        public override string ToString()
+        {
+            return Category;
         }
     }
 }

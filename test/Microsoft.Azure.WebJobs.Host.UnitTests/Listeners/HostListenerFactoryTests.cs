@@ -63,7 +63,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             string expectedMessage = $"Function '{descriptor.ShortName}' is disabled";
 
             // Validate Logger
-            var logMessage = loggerProvider.CreatedLoggers.Single().LogMessages.Single();
+            var logMessage = loggerProvider.CreatedLoggers.Single().GetLogMessages().Single();
             Assert.Equal(LogLevel.Information, logMessage.Level);
             Assert.Equal(Logging.LogCategories.Startup, logMessage.Category);
             Assert.Equal(expectedMessage, logMessage.FormattedMessage);

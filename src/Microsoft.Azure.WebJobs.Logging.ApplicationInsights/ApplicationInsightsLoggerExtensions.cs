@@ -52,5 +52,10 @@ namespace Microsoft.Extensions.Logging
 
             return loggerFactory;
         }
+
+        public static ILoggingBuilder AddApplicationInsights(this ILoggingBuilder builder, ITelemetryClientFactory telemetryClientFactory)
+        {
+            return builder.AddProvider(new ApplicationInsightsLoggerProvider(telemetryClientFactory));
+        }
     }
 }

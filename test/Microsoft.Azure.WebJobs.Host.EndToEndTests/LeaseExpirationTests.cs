@@ -34,7 +34,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             RandomNameResolver nameResolver = new RandomNameResolver();
             _config = new JobHostOptions()
             {
-                NameResolver = nameResolver,
+                // NameResolver = nameResolver,
                 // TODO: DI:
                 //TypeLocator = new FakeTypeLocator(typeof(LeaseExpirationTests))
             };

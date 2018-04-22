@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Configuration;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host;
@@ -10,7 +9,6 @@ using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Storage.Queue;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
-using Moq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Storage.IntegrationTests
@@ -89,11 +87,8 @@ namespace Microsoft.Azure.WebJobs.Storage.IntegrationTests
 
         private static IStorageAccount CreateProductUnderTest(CloudStorageAccount account)
         {
-            Mock<IServiceProvider> servicesMock = new Mock<IServiceProvider>(MockBehavior.Strict);
             StorageClientFactory clientFactory = new StorageClientFactory();
-            servicesMock.Setup(p => p.GetService(typeof(StorageClientFactory))).Returns(clientFactory);
-
-            return new StorageAccount(account, servicesMock.Object);
+            return new StorageAccount(account, clientFactory);
         }
 
         private static CloudStorageAccount CreateSdkAccount()

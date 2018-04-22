@@ -40,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
         {
             ServiceBusOptions config = new ServiceBusOptions();
 
-            string defaultConnection = AmbientConnectionStringProvider.Instance.GetConnectionString(ConnectionStringNames.ServiceBus);
+            string defaultConnection = null; // AmbientConnectionStringProvider.Instance.GetConnectionString(ConnectionStringNames.ServiceBus);
             Assert.Equal(defaultConnection, config.ConnectionString);
 
             string testConnection = "testconnection";

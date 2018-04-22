@@ -11,7 +11,6 @@ using Microsoft.Azure.WebJobs.Host.Storage.Table;
 using Microsoft.Azure.WebJobs.Host.Tables;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
-using Moq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Tables
@@ -199,10 +198,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Tables
 
         private IStorageTableClient CreateTableClient()
         {
-            Mock<IServiceProvider> services = new Mock<IServiceProvider>(MockBehavior.Strict);
             StorageClientFactory clientFactory = new StorageClientFactory();
-            services.Setup(p => p.GetService(typeof(StorageClientFactory))).Returns(clientFactory);
-            IStorageTableClient client = new StorageAccount(CloudStorageAccount.DevelopmentStorageAccount, services.Object).CreateTableClient();
+
+            IStorageTableClient client = new StorageAccount(CloudStorageAccount.DevelopmentStorageAccount, clientFactory).CreateTableClient();
             return client;
         }
     }

@@ -2,9 +2,13 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Threading;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Blobs;
+using Microsoft.Azure.WebJobs.Host.Blobs.Bindings;
+using Microsoft.Azure.WebJobs.Host.Blobs.Triggers;
+using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Configuration;
 using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Executors;
@@ -12,6 +16,8 @@ using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Queues;
+using Microsoft.Azure.WebJobs.Host.Queues.Bindings;
+using Microsoft.Azure.WebJobs.Host.Tables;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.Logging;
@@ -46,20 +52,21 @@ namespace Microsoft.Azure.WebJobs
             // A LOT of the service registrations below need to be cleaned up
             // maintaining some of the existing dependencies and model we previously had, 
             // but this should be reviewed as it can be improved.
-            services.TryAddSingleton<IExtensionRegistry, DefaultExtensionRegistry>();
-            
-            // Type conversion
-            services.TryAddSingleton<IExtensionTypeLocator, ExtensionTypeLocator>();
-            services.TryAddSingleton<ITypeLocator>(p => new DefaultTypeLocator(p.GetRequiredService<IConsoleProvider>().Out, p.GetRequiredService<IExtensionRegistry>()));
-            services.TryAddSingleton<IConverterManager, ConverterManager>();
+            services.TryAddSingleton<IExtensionRegistryFactory, DefaultExtensionRegistryFactory>();
+            services.TryAddSingleton<IExtensionRegistry>(p => p.GetRequiredService<IExtensionRegistryFactory>().Create());
 
+            // Type conversion
+            services.TryAddSingleton<ITypeLocator, DefaultTypeLocator>();
+            services.TryAddSingleton<IConverterManager, ConverterManager>();
+            services.TryAddSingleton<IFunctionIndexProvider, FunctionIndexProvider>();
             services.TryAddSingleton<SingletonManager>();
             services.TryAddSingleton<SharedQueueHandler>();
             services.TryAddSingleton<IFunctionExecutor, FunctionExecutor>();
             services.TryAddSingleton<IJobHostContextFactory, JobHostContextFactory>();
-            services.TryAddSingleton<IFunctionInstanceLogger, FunctionInstanceLogger>();
-            services.TryAddSingleton<IFunctionIndexProvider, FunctionIndexProvider>();
+
             services.TryAddSingleton<IBindingProviderFactory, DefaultBindingProvider>();
+            services.TryAddSingleton<IBindingProvider>(p => p.GetRequiredService<IBindingProviderFactory>().Create());
+
             services.TryAddSingleton<ISharedContextProvider, SharedContextProvider>();
             services.TryAddSingleton<IContextSetter<IMessageEnqueuedWatcher>>((p) => new ContextAccessor<IMessageEnqueuedWatcher>());
             services.TryAddSingleton<IContextSetter<IBlobWrittenWatcher>>((p) => new ContextAccessor<IBlobWrittenWatcher>());
@@ -68,8 +75,12 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IDistributedLockManagerFactory, DefaultDistributedLockManagerFactory>();
             services.TryAddSingleton<IDistributedLockManager>(p => p.GetRequiredService<IDistributedLockManagerFactory>().Create());
 
+            services.TryAddSingleton<IJobHostMetadataProviderFactory, JobHostMetadataProviderFactory>();
+            services.TryAddSingleton<IJobHostMetadataProvider>(p => p.GetService<IJobHostMetadataProviderFactory>().Create());
+            services.TryAddSingleton<IExtensionTypeLocator, ExtensionTypeLocator>();
+
             services.AddWebJobsLogging();
-            
+
             // TODO: FACAVAL FIX THIS - Right now, We're only registering the FixedIdProvider
             // need to register the dynamic ID provider and verify if the logic in it can be improved (and have the storage dependency removed)
             services.TryAddSingleton<IHostIdProvider, FixedHostIdProvider>();
@@ -81,15 +92,21 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IWebJobsExceptionHandlerFactory, DefaultWebJobsExceptionHandlerFactory>();
             services.TryAddSingleton<IWebJobsExceptionHandler>(p => p.GetRequiredService<IWebJobsExceptionHandlerFactory>().Create(p.GetRequiredService<IHost>()));
 
-            // TODO: Remove passing the service provider here.
-            services.TryAddSingleton<IStorageAccountProvider>(p => new DefaultStorageAccountProvider(p));
+            services.TryAddSingleton<IStorageAccountProvider, DefaultStorageAccountProvider>();
+            services.TryAddSingleton<IConnectionStringProvider, AmbientConnectionStringProvider>();
+            services.TryAddSingleton<IStorageAccountParser, StorageAccountParser>();
+            services.TryAddSingleton<IStorageCredentialsValidator, DefaultStorageCredentialsValidator>();
             services.TryAddSingleton<StorageClientFactory>();
             services.TryAddSingleton<INameResolver, DefaultNameResolver>();
             services.TryAddSingleton<IJobActivator, DefaultJobActivator>();
-            services.TryAddSingleton<IFunctionResultAggregatorFactory, FunctionResultAggregatorFactory>();
+
+            // Event collector
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IEventCollectorProvider, FunctionResultAggregatorProvider>());
+            services.TryAddSingleton<IEventCollectorFactory, EventCollectorFactory>();
+            services.TryAddSingleton<IAsyncCollector<FunctionInstanceLogEntry>>(p => p.GetRequiredService<IEventCollectorFactory>().Create());
 
             // Options setup
-            services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostOptions>, JobHostOptionsSetup>());
+            services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, JobHostInternalStorageOptionsSetup>());
 
             services.RegisterBuiltInBindings();
 
@@ -103,10 +120,15 @@ namespace Microsoft.Azure.WebJobs
         {
             // Logging related services (lots of them...)
             services.TryAddSingleton<LoggerProviderFactory>();
+
             services.TryAddSingleton<IFunctionOutputLoggerProvider>(p => p.GetRequiredService<LoggerProviderFactory>().GetLoggerProvider<IFunctionOutputLoggerProvider>());
+            services.TryAddSingleton<IFunctionOutputLogger>(p => p.GetRequiredService<IFunctionOutputLoggerProvider>().GetAsync(CancellationToken.None).GetAwaiter().GetResult());
+
             services.TryAddSingleton<IFunctionInstanceLoggerProvider>(p => p.GetRequiredService<LoggerProviderFactory>().GetLoggerProvider<IFunctionInstanceLoggerProvider>());
+            services.TryAddSingleton<IFunctionInstanceLogger>(p => p.GetRequiredService<IFunctionInstanceLoggerProvider>().GetAsync(CancellationToken.None).GetAwaiter().GetResult());
+
             services.TryAddSingleton<IHostInstanceLoggerProvider>(p => p.GetRequiredService<LoggerProviderFactory>().GetLoggerProvider<IHostInstanceLoggerProvider>());
-            services.TryAddSingleton<IConsoleProvider, DefaultConsoleProvider>();
+            services.TryAddSingleton<IHostInstanceLogger>(p => p.GetRequiredService<IHostInstanceLoggerProvider>().GetAsync(CancellationToken.None).GetAwaiter().GetResult());
 
             return services;
         }
@@ -124,10 +146,10 @@ namespace Microsoft.Azure.WebJobs
                 throw new ArgumentNullException(nameof(services));
             }
 
-            services.TryAddSingleton<Host.Tables.TableExtension>();
-            services.TryAddSingleton<Host.Queues.Bindings.QueueExtension>();
-            services.TryAddSingleton<Host.Blobs.Bindings.BlobExtensionConfig>();
-            services.TryAddSingleton<Host.Blobs.Triggers.BlobTriggerExtensionConfig>();
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IExtensionConfigProvider, TableExtension>());
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IExtensionConfigProvider, QueueExtension>());
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IExtensionConfigProvider, BlobExtensionConfig>());
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IExtensionConfigProvider, BlobTriggerExtensionConfig>());
 
             return services;
         }

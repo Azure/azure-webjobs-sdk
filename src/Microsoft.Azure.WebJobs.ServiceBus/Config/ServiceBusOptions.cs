@@ -2,9 +2,8 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Azure.ServiceBus;
 using System.Threading.Tasks;
+using Microsoft.Azure.ServiceBus;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -13,8 +12,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     /// </summary>
     public class ServiceBusOptions
     {
-        private bool _connectionStringSet;
-        private string _connectionString;
         private MessagingProvider _messagingProvider;
 
         /// <summary>
@@ -34,24 +31,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// <summary>
         /// Gets or sets the Azure ServiceBus connection string.
         /// </summary>
-        public string ConnectionString
-        {
-            get
-            {
-                if (!_connectionStringSet)
-                {
-                    _connectionString = AmbientConnectionStringProvider.Instance.GetConnectionString(ConnectionStringNames.ServiceBus);
-                    _connectionStringSet = true;
-                }
-
-                return _connectionString;
-            }
-            set
-            {
-                _connectionString = value;
-                _connectionStringSet = true;
-            }
-        }
+        public string ConnectionString { get; set; }
 
         /// <summary>
         /// Gets or sets the default <see cref="MessageHandlerOptions"/> that will be used by

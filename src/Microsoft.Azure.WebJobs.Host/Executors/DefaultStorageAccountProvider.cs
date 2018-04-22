@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Storage;
@@ -15,65 +14,19 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IConnectionStringProvider _ambientConnectionStringProvider;
         private readonly IStorageCredentialsValidator _storageCredentialsValidator;
         private readonly IStorageAccountParser _storageAccountParser;
-        private readonly IServiceProvider _services;
-        private readonly ConcurrentDictionary<string, Task<IStorageAccount>> _accounts = new ConcurrentDictionary<string, Task<IStorageAccount>>();
+        private readonly ConcurrentDictionary<string, IStorageAccount> _accounts = new ConcurrentDictionary<string, IStorageAccount>();
 
         private IStorageAccount _dashboardAccount;
         private bool _dashboardAccountSet;
         private IStorageAccount _storageAccount;
         private bool _storageAccountSet;
 
-        /// <summary>
-        /// Constructs a new instance.
-        /// </summary>
-        /// <param name="services">The <see cref="IServiceProvider"/> to use.</param>
-        public DefaultStorageAccountProvider(IServiceProvider services)
-            : this(services, AmbientConnectionStringProvider.Instance, new StorageAccountParser(), new DefaultStorageCredentialsValidator())
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the class, using a single Microsoft Azure
-        /// Storage connection string for both reading and writing data as well as logging.
-        /// </summary>
-        /// <param name="services">The <see cref="IServiceProvider"/> to use.</param>
-        /// <param name="dashboardAndStorageConnectionString">
-        /// The Azure Storage connection string for accessing data and logging.
-        /// </param>
-        public DefaultStorageAccountProvider(IServiceProvider services, string dashboardAndStorageConnectionString)
-            : this(services)
-        {
-            StorageConnectionString = dashboardAndStorageConnectionString;
-            DashboardAccount = StorageAccount;
-        }
-
-        internal DefaultStorageAccountProvider(IServiceProvider services, IConnectionStringProvider ambientConnectionStringProvider, 
+        public DefaultStorageAccountProvider(IConnectionStringProvider ambientConnectionStringProvider,
             IStorageAccountParser storageAccountParser, IStorageCredentialsValidator storageCredentialsValidator)
         {
-            if (services == null)
-            {
-                throw new ArgumentNullException("services");
-            }
-
-            if (ambientConnectionStringProvider == null)
-            {
-                throw new ArgumentNullException("ambientConnectionStringProvider");
-            }
-
-            if (storageAccountParser == null)
-            {
-                throw new ArgumentNullException("storageAccountParser");
-            }
-
-            if (storageCredentialsValidator == null)
-            {
-                throw new ArgumentNullException("storageCredentialsValidator");
-            }
-
-            _services = services;
-            _ambientConnectionStringProvider = ambientConnectionStringProvider;
-            _storageCredentialsValidator = storageCredentialsValidator;
-            _storageAccountParser = storageAccountParser;
+            _ambientConnectionStringProvider = ambientConnectionStringProvider ?? throw new ArgumentNullException(nameof(ambientConnectionStringProvider));
+            _storageCredentialsValidator = storageCredentialsValidator ?? throw new ArgumentNullException(nameof(storageCredentialsValidator));
+            _storageAccountParser = storageAccountParser ?? throw new ArgumentNullException(nameof(storageAccountParser));
         }
 
         /// <summary>Gets or sets the Azure Storage connection string used for logging and diagnostics.</summary>
@@ -199,8 +152,17 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             return account;
         }
 
-        public Task<IStorageAccount> TryGetAccountAsync(string connectionStringName, CancellationToken cancellationToken) =>
-            _accounts.GetOrAdd(connectionStringName, s => CreateAndValidateAccountAsync(s, cancellationToken));
+        public async Task<IStorageAccount> TryGetAccountAsync(string connectionStringName, CancellationToken cancellationToken)
+        {
+            IStorageAccount account;
+            if (!_accounts.TryGetValue(connectionStringName, out account))
+            {
+                // in rare cases createAndValidateAccountAsync could be called multiple times for the same account
+                account = await CreateAndValidateAccountAsync(connectionStringName, cancellationToken);
+                _accounts.AddOrUpdate(connectionStringName, (cs) => account, (cs, a) => account);
+            }
+            return account;
+        }
 
         private IStorageAccount ParseAccount(string connectionStringName)
         {
@@ -210,7 +172,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         private IStorageAccount ParseAccount(string connectionStringName, string connectionString)
         {
-            return _storageAccountParser.ParseAccount(connectionString, connectionStringName, _services);
+            return _storageAccountParser.ParseAccount(connectionString, connectionStringName);
         }
     }
 }

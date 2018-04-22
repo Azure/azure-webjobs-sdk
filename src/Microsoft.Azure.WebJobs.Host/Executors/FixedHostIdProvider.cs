@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             if (_hostId == null)
             {
-                _hostId = Guid.NewGuid().ToString();
+                _hostId = Guid.NewGuid().ToString("N");
             }
         }
 

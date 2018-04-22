@@ -66,7 +66,5 @@ namespace Microsoft.Azure.WebJobs
                 _hostId = value;
             }
         }
-
-        public INameResolver NameResolver { get; set; }
     }
 }

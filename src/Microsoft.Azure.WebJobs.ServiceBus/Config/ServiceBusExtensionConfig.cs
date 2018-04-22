@@ -4,7 +4,6 @@
 using System;
 using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.Logging;
@@ -20,26 +19,20 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
     public class ServiceBusExtensionConfig : IExtensionConfigProvider
     {
         private readonly INameResolver _nameResolver;
-        private readonly IExtensionRegistry _extensions;
-        private ServiceBusOptions _serviceBusConfig;
-
-        /// <summary>
-        /// default constructor. Callers can reference this without having any assembly references to service bus assemblies. 
-        /// </summary>
-        public ServiceBusExtensionConfig()
-            : this(null, new DefaultNameResolver(), null)
-        {
-        }
+        private readonly IConnectionStringProvider _connectionStringProvider;
+        private readonly ServiceBusOptions _serviceBusConfig;
+        private readonly IMessagingProvider _messagingProvider;
 
         /// <summary>
         /// Creates a new <see cref="ServiceBusExtensionConfig"/> instance.
         /// </summary>
         /// <param name="serviceBusConfig">The <see cref="ServiceBusOptions"></see> to use./></param>
-        public ServiceBusExtensionConfig(IOptions<ServiceBusOptions> serviceBusConfig, INameResolver nameResolver, IExtensionRegistry extensions)
+        public ServiceBusExtensionConfig(IOptions<ServiceBusOptions> serviceBusConfig, IMessagingProvider messagingProvider, INameResolver nameResolver, IConnectionStringProvider connectionStringProvider)
         {
-            _serviceBusConfig = serviceBusConfig != null ? serviceBusConfig.Value : new ServiceBusOptions();
+            _serviceBusConfig = serviceBusConfig.Value;
+            _messagingProvider = messagingProvider;
             _nameResolver = nameResolver;
-            _extensions = extensions;
+            _connectionStringProvider = connectionStringProvider;
         }
 
         /// <summary>
@@ -69,12 +62,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
             };
 
             // register our trigger binding provider
-            ServiceBusTriggerAttributeBindingProvider triggerBindingProvider = new ServiceBusTriggerAttributeBindingProvider(_nameResolver, _serviceBusConfig);
-            _extensions.RegisterExtension<ITriggerBindingProvider>(triggerBindingProvider);
+            ServiceBusTriggerAttributeBindingProvider triggerBindingProvider = new ServiceBusTriggerAttributeBindingProvider(_nameResolver, _serviceBusConfig, _messagingProvider, _connectionStringProvider);
+            context.AddBindingRule<ServiceBusTriggerAttribute>().BindToTrigger(triggerBindingProvider);
 
             // register our binding provider
-            ServiceBusAttributeBindingProvider bindingProvider = new ServiceBusAttributeBindingProvider(_nameResolver, _serviceBusConfig);
-            _extensions.RegisterExtension<IBindingProvider>(bindingProvider);
+            ServiceBusAttributeBindingProvider bindingProvider = new ServiceBusAttributeBindingProvider(_nameResolver, _serviceBusConfig, _connectionStringProvider);
+            context.AddBindingRule<ServiceBusAttribute>().Bind(bindingProvider);
         }
 
         internal static void LogExceptionReceivedEvent(ExceptionReceivedEventArgs e, ILoggerFactory loggerFactory)

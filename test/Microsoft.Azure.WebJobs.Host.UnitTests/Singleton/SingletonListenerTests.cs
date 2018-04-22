@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 using SingletonLockHandle = Microsoft.Azure.WebJobs.Host.BlobLeaseDistributedLockManager.SingletonLockHandle;
@@ -33,7 +34,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             {
                 LockPeriod = TimeSpan.FromSeconds(20)
             };
-            _mockSingletonManager = new Mock<SingletonManager>(MockBehavior.Strict, null, null, null, null, new FixedHostIdProvider(testHostId), null);
+            _mockSingletonManager = new Mock<SingletonManager>(MockBehavior.Strict, null, new OptionsWrapper<SingletonOptions>(null), null, null, new FixedHostIdProvider(testHostId), null);
             _mockSingletonManager.SetupGet(p => p.Config).Returns(_config);
             _mockInnerListener = new Mock<IListener>(MockBehavior.Strict);
 

@@ -10,28 +10,21 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Bindings;
-using Microsoft.Azure.WebJobs.Host.Blobs.Bindings;
-using Microsoft.Azure.WebJobs.Host.Blobs.Triggers;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.Azure.WebJobs.Host.Queues;
-using Microsoft.Azure.WebJobs.Host.Queues.Bindings;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Storage.Blob;
 using Microsoft.Azure.WebJobs.Host.Storage.Queue;
-using Microsoft.Azure.WebJobs.Host.Tables;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.DependencyInjection;
 
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
@@ -46,16 +39,19 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IHostIdProvider _hostIdProvider;
         private readonly INameResolver _nameResolver;
         private readonly IExtensionRegistry _extensions;
+        private readonly IExtensionTypeLocator _extensionTypeLocator;
         private readonly IStorageAccountProvider _storageAccountProvider;
         private readonly ILoggerFactory _loggerFactory;
-        private readonly IFunctionResultAggregatorFactory _aggregatorFactory;
         private readonly IOptions<JobHostQueuesOptions> _queueConfiguration;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly SharedQueueHandler _sharedQueueHandler;
         private readonly IOptions<JobHostOptions> _jobHostOptions;
-        private readonly IOptions<FunctionResultAggregatorOptions> _aggregatorOptions;
         private readonly IOptions<JobHostBlobsOptions> _blobsConfiguration;
-        private readonly IServiceProvider _serviceProvider;
+        private readonly IHostInstanceLogger _hostInstanceLogger;
+        private readonly IFunctionInstanceLogger _functionInstanceLogger;
+        private readonly IFunctionOutputLogger _functionOutputLogger;
+        private readonly IConverterManager _converterManager;
+        private readonly IAsyncCollector<FunctionInstanceLogEntry> _eventCollector;
 
         public JobHostContextFactory(IFunctionExecutor functionExecutor,
             IFunctionIndexProvider functionIndexProvider,
@@ -65,16 +61,19 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             IHostIdProvider hostIdProvider,
             INameResolver nameResolver,
             IExtensionRegistry extensions,
+            IExtensionTypeLocator extensionTypeLocator,
             IStorageAccountProvider storageAccountProvider,
             ILoggerFactory loggerFactory,
-            IFunctionResultAggregatorFactory aggregatorFactory,
             IWebJobsExceptionHandler exceptionHandler,
             SharedQueueHandler sharedQueueHandler,
             IOptions<JobHostOptions> jobHostOptions,
-            IOptions<FunctionResultAggregatorOptions> aggregatorOptions,
             IOptions<JobHostQueuesOptions> queueOptions,
             IOptions<JobHostBlobsOptions> blobsConfiguration,
-            IServiceProvider serviceProvider)
+            IHostInstanceLogger hostInstanceLogger,
+            IFunctionInstanceLogger functionInstanceLogger,
+            IFunctionOutputLogger functionOutputLogger,
+            IConverterManager converterManager,
+            IAsyncCollector<FunctionInstanceLogEntry> eventCollector)
         {
             _functionExecutor = functionExecutor;
             _functionIndexProvider = functionIndexProvider;
@@ -84,65 +83,32 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _hostIdProvider = hostIdProvider;
             _nameResolver = nameResolver;
             _extensions = extensions;
+            _extensionTypeLocator = extensionTypeLocator;
             _storageAccountProvider = storageAccountProvider;
             _loggerFactory = loggerFactory;
-            _aggregatorFactory = aggregatorFactory;
             _queueConfiguration = queueOptions;
             _exceptionHandler = exceptionHandler;
             _sharedQueueHandler = sharedQueueHandler;
             _jobHostOptions = jobHostOptions;
-            _aggregatorOptions = aggregatorOptions;
             _blobsConfiguration = blobsConfiguration;
-            _serviceProvider = serviceProvider;
+            _hostInstanceLogger = hostInstanceLogger;
+            _functionInstanceLogger = functionInstanceLogger;
+            _functionOutputLogger = functionOutputLogger;
+            _converterManager = converterManager;
+            _eventCollector = eventCollector;
         }
 
         public async Task<JobHostContext> Create(CancellationToken shutdownToken, CancellationToken cancellationToken)
         {
-            RegisterBuiltInExtensions();
-
-            // Create the aggregator if all the pieces are configured
-            IAsyncCollector<FunctionInstanceLogEntry> aggregator = null;
-            FunctionResultAggregatorOptions aggregatorOptions = _aggregatorOptions.Value;
-            if (_loggerFactory != null && _aggregatorFactory != null && aggregatorOptions.IsEnabled)
-            {
-                aggregator = _aggregatorFactory.Create(aggregatorOptions.BatchSize, aggregatorOptions.FlushTimeout, _loggerFactory);
-            }
-
-            var blobsConfiguration = _blobsConfiguration.Value;
-
-            IAsyncCollector<FunctionInstanceLogEntry> registeredFunctionEventCollector = _serviceProvider.GetService<IAsyncCollector<FunctionInstanceLogEntry>>();
-
-            IAsyncCollector<FunctionInstanceLogEntry> functionEventCollector;
-            if (registeredFunctionEventCollector != null && aggregator != null)
-            {
-                // If there are both an aggregator and a registered FunctionEventCollector, wrap them in a composite
-                functionEventCollector = new CompositeFunctionEventCollector(new[] { registeredFunctionEventCollector, aggregator });
-            }
-            else
-            {
-                // Otherwise, take whichever one is null (or use null if both are)
-                functionEventCollector = aggregator ?? registeredFunctionEventCollector;
-            }
-
-            bool hasFastTableHook = registeredFunctionEventCollector != null;
-            bool noDashboardStorage = _storageAccountProvider.DashboardConnectionString == null;
-
-            // Only testing will override these interfaces. 
-            IHostInstanceLoggerProvider hostInstanceLoggerProvider = _serviceProvider.GetService<IHostInstanceLoggerProvider>();
-            IFunctionInstanceLoggerProvider functionInstanceLoggerProvider = _serviceProvider.GetService<IFunctionInstanceLoggerProvider>();
-            IFunctionOutputLoggerProvider functionOutputLoggerProvider = _serviceProvider.GetService<IFunctionOutputLoggerProvider>();
-
             using (CancellationTokenSource combinedCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, shutdownToken))
             {
                 CancellationToken combinedCancellationToken = combinedCancellationSource.Token;
 
+                AddStreamConverters(_extensionTypeLocator, _converterManager);
+
                 await WriteSiteExtensionManifestAsync(combinedCancellationToken);
 
                 IStorageAccount dashboardAccount = await _storageAccountProvider.GetDashboardAccountAsync(combinedCancellationToken);
-
-                IHostInstanceLogger hostInstanceLogger = await hostInstanceLoggerProvider.GetAsync(combinedCancellationToken);
-                IFunctionInstanceLogger functionInstanceLogger = await functionInstanceLoggerProvider.GetAsync(combinedCancellationToken);
-                IFunctionOutputLogger functionOutputLogger = await functionOutputLoggerProvider.GetAsync(combinedCancellationToken);
 
                 // TODO: FACAVAL: Chat with Brettsam, this should probably be moved out of here.
                 _loggerFactory.AddProvider(new FunctionOutputLoggerProvider());
@@ -179,14 +145,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     IStorageQueue sharedQueue = dashboardQueueClient.GetQueueReference(sharedQueueName);
                     IListenerFactory sharedQueueListenerFactory = new HostMessageListenerFactory(sharedQueue,
                         _queueConfiguration.Value, _exceptionHandler, _loggerFactory, functions,
-                        functionInstanceLogger, _functionExecutor);
+                        _functionInstanceLogger, _functionExecutor);
 
                     Guid hostInstanceId = Guid.NewGuid();
                     string instanceQueueName = HostQueueNames.GetHostQueueName(hostInstanceId.ToString("N"));
                     IStorageQueue instanceQueue = dashboardQueueClient.GetQueueReference(instanceQueueName);
                     IListenerFactory instanceQueueListenerFactory = new HostMessageListenerFactory(instanceQueue,
                         _queueConfiguration.Value, _exceptionHandler, _loggerFactory, functions,
-                        functionInstanceLogger, _functionExecutor);
+                        _functionInstanceLogger, _functionExecutor);
 
                     HeartbeatDescriptor heartbeatDescriptor = new HeartbeatDescriptor
                     {
@@ -222,7 +188,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     listener = CreateHostListener(hostListenerFactory, _sharedQueueHandler, heartbeatCommand, _exceptionHandler, shutdownToken);
 
                     // Publish this to Azure logging account so that a web dashboard can see it. 
-                    await LogHostStartedAsync(functions, hostOutputMessage, hostInstanceLogger, combinedCancellationToken);
+                    await LogHostStartedAsync(functions, hostOutputMessage, _hostInstanceLogger, combinedCancellationToken);
                 }
 
                 if (_functionExecutor is FunctionExecutor executor)
@@ -265,41 +231,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     functions,
                     hostCallExecutor,
                     listener,
-                    functionEventCollector,
+                    _eventCollector,
                     _loggerFactory);
             }
-        }
-
-        private void RegisterBuiltInExtensions()
-        {
-            bool builtinsAdded = _extensions.GetExtensions<IExtensionConfigProvider>().OfType<TableExtension>().Any();
-
-            if (!builtinsAdded)
-            {
-                _extensions.RegisterExtension<IExtensionConfigProvider>(_serviceProvider.GetService<TableExtension>());
-                _extensions.RegisterExtension<IExtensionConfigProvider>(_serviceProvider.GetService<QueueExtension>());
-                _extensions.RegisterExtension<IExtensionConfigProvider>(_serviceProvider.GetService<BlobExtensionConfig>());
-                _extensions.RegisterExtension<IExtensionConfigProvider>(_serviceProvider.GetService<BlobTriggerExtensionConfig>());
-            }
-
-            IConverterManager converterManager = _serviceProvider.GetService<IConverterManager>();
-            IWebHookProvider webHookProvider = _serviceProvider.GetService<IWebHookProvider>();
-            ExtensionConfigContext context = new ExtensionConfigContext(converterManager, webHookProvider, _extensions)
-            {
-                Config = _jobHostOptions.Value
-            };
-            InvokeExtensionConfigProviders(context);
-        }
-
-        private void InvokeExtensionConfigProviders(ExtensionConfigContext context)
-        {
-            IEnumerable<IExtensionConfigProvider> configProviders = _extensions.GetExtensions(typeof(IExtensionConfigProvider)).Cast<IExtensionConfigProvider>();
-            foreach (IExtensionConfigProvider configProvider in configProviders)
-            {
-                context.Current = configProvider;
-                configProvider.Initialize(context);
-            }
-            context.ApplyRules();
         }
 
         [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
@@ -401,6 +335,42 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             IFunctionExecutor shutdownFunctionExecutor = new ShutdownFunctionExecutor(shutdownToken, abortListenerExecutor);
             return shutdownFunctionExecutor;
         }
+
+        #region Backwards compat shim for ExtensionLocator
+        // We can remove this when we fix https://github.com/Azure/azure-webjobs-sdk/issues/995
+
+        // create IConverterManager adapters to any legacy ICloudBlobStreamBinder<T>. 
+        private static void AddStreamConverters(IExtensionTypeLocator extensionTypeLocator, IConverterManager cm)
+        {
+            if (extensionTypeLocator == null)
+            {
+                return;
+            }
+
+            foreach (var type in extensionTypeLocator.GetCloudBlobStreamBinderTypes())
+            {
+                var instance = Activator.CreateInstance(type);
+
+                var bindingType = Blobs.CloudBlobStreamObjectBinder.GetBindingValueType(type);
+                var method = typeof(JobHostContextFactory).GetMethod("AddAdapter", BindingFlags.Static | BindingFlags.NonPublic);
+                method = method.MakeGenericMethod(bindingType);
+                method.Invoke(null, new object[] { cm, instance });
+            }
+        }
+
+        private static void AddAdapter<T>(ConverterManager cm, ICloudBlobStreamBinder<T> x)
+        {
+            cm.AddExactConverter<Stream, T>(stream => x.ReadFromStreamAsync(stream, CancellationToken.None).Result);
+
+            cm.AddExactConverter<ApplyConversion<T, Stream>, object>(pair =>
+            {
+                T value = pair.Value;
+                Stream stream = pair.Existing;
+                x.WriteToStreamAsync(value, stream, CancellationToken.None).Wait();
+                return null;
+            });
+        }
+        #endregion
 
         private class DataOnlyHostOutputMessage : HostOutputMessage
         {

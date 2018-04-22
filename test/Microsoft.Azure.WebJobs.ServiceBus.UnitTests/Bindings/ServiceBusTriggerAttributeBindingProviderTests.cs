@@ -4,9 +4,11 @@
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.ServiceBus;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.ServiceBus.Triggers;
-using Microsoft.Azure.ServiceBus;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -22,10 +24,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
             Mock<INameResolver> mockResolver = new Mock<INameResolver>(MockBehavior.Strict);
 
             ServiceBusOptions config = new ServiceBusOptions();
-            _mockMessagingProvider = new Mock<MessagingProvider>(MockBehavior.Strict, config);
+            _mockMessagingProvider = new Mock<MessagingProvider>(MockBehavior.Strict, new OptionsWrapper<ServiceBusOptions>(config));
 
-            config.MessagingProvider = _mockMessagingProvider.Object;
-            _provider = new ServiceBusTriggerAttributeBindingProvider(mockResolver.Object, config);
+            _provider = new ServiceBusTriggerAttributeBindingProvider(mockResolver.Object, config, _mockMessagingProvider.Object, TestHelpers.GetConnectionStringProvider());
         }
 
         [Fact]

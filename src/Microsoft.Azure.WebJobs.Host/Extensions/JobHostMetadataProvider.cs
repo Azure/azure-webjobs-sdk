@@ -26,34 +26,35 @@ namespace Microsoft.Azure.WebJobs.Host
 
         private IBindingProvider _root;
 
-        private readonly Func<IFunctionIndexProvider> _getFunctionIndexProvider;
+        private readonly IFunctionIndexProvider _functionIndexProvider;
+        private readonly IExtensionRegistry _extensionRegistry;
+        private readonly IBindingProvider _bindingProvider;
+        private readonly IConverterManager _converter;
 
-        public JobHostMetadataProvider(Func<IFunctionIndexProvider> getFunctionIndexProvider)
+        public JobHostMetadataProvider(IFunctionIndexProvider functionIndexProvider, IExtensionRegistry extensionRegistry, IBindingProvider bindingProvider, IConverterManager converter)
         {
-            if (getFunctionIndexProvider == null)
-            {
-                throw new ArgumentNullException("getFunctionIndexProvider");
-            }
-
-            _getFunctionIndexProvider = getFunctionIndexProvider;
+            _functionIndexProvider = functionIndexProvider;
+            _extensionRegistry = extensionRegistry;
+            _bindingProvider = bindingProvider;
+            _converter = converter;
         }
 
-        internal void Initialize(IBindingProvider bindingProvider, ConverterManager converter, IExtensionRegistry extensionRegistry)
+        internal void Initialize()
         {
-            foreach (var extension in extensionRegistry.GetExtensions<IExtensionConfigProvider>())
+            foreach (var extension in _extensionRegistry.GetExtensions<IExtensionConfigProvider>())
             {
                 this.AddExtension(extension);
             }
 
-            this._root = bindingProvider;
+            this._root = _bindingProvider;
 
             // Populate assembly resolution from converters.            
-            if (converter != null)
+            if (_converter != null)
             {
-                converter.AddAssemblies((type) => this.AddAssembly(type));
+               // _converter.AddAssemblies((type) => AddAssembly(type));
             }
 
-            AddTypesFromGraph(bindingProvider as IBindingRuleProvider);
+            AddTypesFromGraph(_bindingProvider as IBindingRuleProvider);
         }
 
         // Resolve an assembly from the given name. 
@@ -328,19 +329,17 @@ namespace Microsoft.Azure.WebJobs.Host
         public FunctionMetadata GetFunctionMetadata(string functionName)
         {
             FunctionMetadata result = null;
-            var provider = _getFunctionIndexProvider.Invoke();
-            if (provider != null)
+
+            var index = _functionIndexProvider.GetAsync(CancellationToken.None).GetAwaiter().GetResult();
+            var functionDefinition = index.LookupByName(functionName);
+            if (functionDefinition != null)
             {
-                var index = provider.GetAsync(CancellationToken.None).GetAwaiter().GetResult();
-                var functionDefinition = index.LookupByName(functionName);
-                if (functionDefinition != null)
+                result = new FunctionMetadata()
                 {
-                    result = new FunctionMetadata()
-                    {
-                        IsDisabled = functionDefinition.Descriptor.IsDisabled
-                    };
-                }
+                    IsDisabled = functionDefinition.Descriptor.IsDisabled
+                };
             }
+
             return result;
         }
     }

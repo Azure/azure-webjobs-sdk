@@ -41,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
                 return null;
             }
             return (SingletonLockHandle)handle.InnerLock;
-    }
+        }
     }
 
     public class SingletonManagerTests
@@ -205,9 +205,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             // verify the logger
             TestLogger logger = _loggerProvider.CreatedLoggers.Single() as TestLogger;
             Assert.Equal(LogCategories.Singleton, logger.Category);
-            Assert.Equal(2, logger.LogMessages.Count);
-            Assert.NotNull(logger.LogMessages.Single(m => m.Level == Extensions.Logging.LogLevel.Debug && m.FormattedMessage == "Singleton lock acquired (testid)"));
-            Assert.NotNull(logger.LogMessages.Single(m => m.Level == Extensions.Logging.LogLevel.Debug && m.FormattedMessage == "Singleton lock released (testid)"));
+            Assert.Equal(2, logger.GetLogMessages().Count);
+            Assert.NotNull(logger.GetLogMessages().Single(m => m.Level == Extensions.Logging.LogLevel.Debug && m.FormattedMessage == "Singleton lock acquired (testid)"));
+            Assert.NotNull(logger.GetLogMessages().Single(m => m.Level == Extensions.Logging.LogLevel.Debug && m.FormattedMessage == "Singleton lock released (testid)"));
 
             renewCount = 0;
             await Task.Delay(1000);
@@ -376,7 +376,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         {
             Mock<IHostIdProvider> mockHostIdProvider = new Mock<IHostIdProvider>(MockBehavior.Strict);
             mockHostIdProvider.Setup(p => p.GetHostIdAsync(CancellationToken.None)).ReturnsAsync(TestHostId);
-            SingletonManager singletonManager = new SingletonManager(null, null, null, null, mockHostIdProvider.Object);
+            SingletonManager singletonManager = new SingletonManager(null, new OptionsWrapper<SingletonOptions>(null), null, null, mockHostIdProvider.Object);
 
             Assert.Equal(TestHostId, singletonManager.HostId);
             Assert.Equal(TestHostId, singletonManager.HostId);

@@ -16,13 +16,14 @@ using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
-using Moq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
@@ -44,8 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private static CloudStorageAccount _storageAccount;
 
         private static RandomNameResolver _resolver;
-        private static JobHostOptions _hostConfig;
-        private readonly TestExceptionHandler _defaultExceptionHandler;
+        private readonly IHostBuilder _hostBuilder;
         private static EventWaitHandle _functionCompletedEvent;
 
         private static string _finalBlobContent;
@@ -54,34 +54,28 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private readonly CloudQueue _testQueue;
         private readonly TestFixture _fixture;
 
-        private readonly TestLoggerProvider _loggerProvider = new TestLoggerProvider();
-
         public AsyncChainEndToEndTests(TestFixture fixture)
         {
             _fixture = fixture;
             _resolver = new RandomNameResolver();
-            _hostConfig = new JobHostOptions()
-            {
-                NameResolver = _resolver,
-                // TODO: DI:
-                //TypeLocator = new FakeTypeLocator(typeof(AsyncChainEndToEndTests))
-            };
 
-            _defaultExceptionHandler = new TestExceptionHandler();
-            _hostConfig.AddService<IWebJobsExceptionHandler>(_defaultExceptionHandler);
-            
-            // TODO: DI: 
-            //_hostConfig.Queues.MaxPollingInterval = TimeSpan.FromSeconds(2);
+            _hostBuilder = new HostBuilder()
+                .ConfigureDefaultTestHost<AsyncChainEndToEndTests>()
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<INameResolver>(_resolver);
+                    services.Configure<JobHostQueuesOptions>(o =>
+                    {
+                        o.MaxPollingInterval = TimeSpan.FromSeconds(2);
+                    });
+                    services.Configure<FunctionResultAggregatorOptions>(o =>
+                    {
+                        o.IsEnabled = false;
+                    });
+                });
 
             _storageAccount = fixture.StorageAccount;
             _timeoutJobDelay = TimeSpan.FromMinutes(5);
-
-            ILoggerFactory loggerFactory = new LoggerFactory();
-            loggerFactory.AddProvider(_loggerProvider);
-
-            // TODO: DI:
-            //_hostConfig.LoggerFactory = loggerFactory;
-            //_hostConfig.Aggregator.IsEnabled = false; // makes validation easier
 
             CloudQueueClient queueClient = _storageAccount.CreateCloudQueueClient();
             string queueName = _resolver.ResolveInString(TestQueueName);
@@ -97,13 +91,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             using (_functionCompletedEvent = new ManualResetEvent(initialState: false))
             {
-                await AsyncChainEndToEndInternal();
+                TestLoggerProvider loggerProvider = await AsyncChainEndToEndInternal(_hostBuilder);
 
                 string firstQueueName = _resolver.ResolveInString(Queue1Name);
                 string secondQueueName = _resolver.ResolveInString(Queue2Name);
                 string blobContainerName = _resolver.ResolveInString(ContainerName);
 
-                string[] loggerOutputLines = _loggerProvider.GetAllLogMessages()
+                string[] loggerOutputLines = loggerProvider.GetAllLogMessages()
                     .Where(p => p.FormattedMessage != null)
                     .SelectMany(p => p.FormattedMessage.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries))
                     .OrderBy(p => p)
@@ -138,7 +132,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "Executed 'AsyncChainEndToEndTests.ReadResultBlob' (Succeeded, Id=",
                     "User ILogger log",
                     "User TraceWriter log 1",
-                    "User TraceWriter log 2"
+                    "User TraceWriter log 2",
+                    "Starting JobHost",
+                    "Stopping JobHost"
                 }.OrderBy(p => p).ToArray();
 
                 bool hasError = loggerOutputLines.Any(p => p.Contains("Function had errors"));
@@ -158,14 +154,19 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             using (_functionCompletedEvent = new ManualResetEvent(initialState: false))
             {
                 CustomQueueProcessorFactory queueProcessorFactory = new CustomQueueProcessorFactory();
-                // TODO: DI:
-                //_hostConfig.Queues.QueueProcessorFactory = queueProcessorFactory;
-
                 CustomStorageClientFactory storageClientFactory = new CustomStorageClientFactory();
-                // TODO: DI
-                //_hostConfig.StorageClientFactory = storageClientFactory;
 
-                await AsyncChainEndToEndInternal();
+                _hostBuilder.ConfigureServices(services =>
+                {
+                    services.Configure<JobHostQueuesOptions>(o =>
+                    {
+                        o.QueueProcessorFactory = queueProcessorFactory;
+                    });
+
+                    services.AddSingleton<StorageClientFactory>(storageClientFactory);
+                });
+
+                await AsyncChainEndToEndInternal(_hostBuilder);
 
                 Assert.Equal(2, queueProcessorFactory.CustomQueueProcessors.Count);
                 Assert.True(queueProcessorFactory.CustomQueueProcessors.All(p => p.Context.Queue.Name.StartsWith("asynce2eq")));
@@ -179,13 +180,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             using (_functionCompletedEvent = new ManualResetEvent(initialState: false))
             {
-                await AsyncChainEndToEndInternal();
+                TestLoggerProvider loggerProvider = await AsyncChainEndToEndInternal(_hostBuilder);
 
-                // Validate Logger
-                bool hasError = _loggerProvider.GetAllLogMessages().Where(p => p.FormattedMessage != null && p.FormattedMessage.Contains("Error")).Any();
+                // Validate Logger                
+                bool hasError = loggerProvider.GetAllLogMessages().Where(p => p.FormattedMessage != null && p.FormattedMessage.Contains("Error")).Any();
                 Assert.False(hasError);
 
-                IEnumerable<string> userLogMessages = _loggerProvider.GetAllLogMessages()
+                IEnumerable<string> userLogMessages = loggerProvider.GetAllLogMessages()
                     .Where(p => p.Category.StartsWith("Function.") && p.Category.EndsWith(".User"))
                     .Select(p => p.FormattedMessage);
 
@@ -201,19 +202,27 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             using (_functionCompletedEvent = new ManualResetEvent(initialState: false))
             {
+                // add a FunctionEventCollectorFactory
+                var eventCollectorFactory = new TestEventCollectorProvider();
+
                 // enable the aggregator
-                // TODO: DI:
-                //_hostConfig.Aggregator.IsEnabled = true;
-                //_hostConfig.Aggregator.BatchSize = 1;
+                _hostBuilder.ConfigureServices(services =>
+                {
+                    services.Configure((FunctionResultAggregatorOptions o) =>
+                    {
+                        o.IsEnabled = true;
+                        o.BatchSize = 1;
+                    });
 
-                // add a FunctionEventCollector
-                var eventCollector = new TestFunctionEventCollector();
-                _hostConfig.AddService<IAsyncCollector<FunctionInstanceLogEntry>>(eventCollector);
+                    services.AddSingleton<IEventCollectorProvider>(eventCollectorFactory);
+                });
 
-                JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_hostConfig), new Mock<IJobHostContextFactory>().Object);
+                IHost host = _hostBuilder.Build();
 
-                await host.StartAsync();
-                await host.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod(nameof(WriteStartDataMessageToQueue)));
+                JobHost jobHost = host.GetJobHost();
+
+                await jobHost.StartAsync();
+                await jobHost.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod(nameof(WriteStartDataMessageToQueue)));
 
                 await TestHelpers.Await(() => _functionCompletedEvent.WaitOne(200), 30000);
 
@@ -221,13 +230,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await Task.Delay(3000);
 
                 await host.StopAsync();
+                host.Dispose();
 
                 // Make sure the aggregator was logged to
-                var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Aggregator).Single();
-                Assert.Equal(4, logger.LogMessages.Count);
+                var logger = host.GetTestLoggerProvider().CreatedLoggers.Where(l => l.Category == LogCategories.Aggregator).Single();
+                Assert.Equal(4, logger.GetLogMessages().Count);
 
                 // Make sure the eventCollector was logged 
-                eventCollector.AssertFunctionCount(4);
+                eventCollectorFactory.EventCollector.AssertFunctionCount(4);
             }
         }
 
@@ -237,14 +247,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             using (_functionCompletedEvent = new ManualResetEvent(initialState: false))
             {
                 // enable the aggregator
-                // TODO: DI:
-                //_hostConfig.Aggregator.IsEnabled = true;
-                //_hostConfig.Aggregator.BatchSize = 1;
+                _hostBuilder.ConfigureServices(services =>
+                {
+                    services.Configure<FunctionResultAggregatorOptions>(o =>
+                    {
+                        o.IsEnabled = true;
+                        o.BatchSize = 1;
+                    });
+                });
 
-                JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_hostConfig), new Mock<IJobHostContextFactory>().Object);
+                IHost host = _hostBuilder.Build();
+                var jobHost = host.GetJobHost<AsyncChainEndToEndTests>();
 
                 await host.StartAsync();
-                await host.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod("WriteStartDataMessageToQueue"));
+                await jobHost.CallAsync(nameof(WriteStartDataMessageToQueue));
 
                 await TestHelpers.Await(() => _functionCompletedEvent.WaitOne(200), 30000);
 
@@ -252,10 +268,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await Task.Delay(3000);
 
                 await host.StopAsync();
+                host.Dispose();
 
                 // Make sure the aggregator was logged to
-                var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Aggregator).Single();
-                Assert.Equal(4, logger.LogMessages.Count);
+
+                var logger = host.GetTestLoggerProvider().CreatedLoggers.Where(l => l.Category == LogCategories.Aggregator).Single();
+                Assert.True(logger.GetLogMessages().Count == 4, string.Join(Environment.NewLine, logger.GetLogMessages()));
             }
         }
 
@@ -264,28 +282,31 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             using (_functionCompletedEvent = new ManualResetEvent(initialState: false))
             {
-                // disable the aggregator
-                // TODO: DI:
-                //_hostConfig.Aggregator.IsEnabled = false;
+                // aggregator is disabled by default in these tests
 
                 // add a FunctionEventCollector
                 var eventCollector = new TestFunctionEventCollector();
-                _hostConfig.AddService<IAsyncCollector<FunctionInstanceLogEntry>>(eventCollector);
 
-                JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_hostConfig), new Mock<IJobHostContextFactory>().Object);
+                _hostBuilder.ConfigureServices(services =>
+                {
+                    services.AddSingleton<IAsyncCollector<FunctionInstanceLogEntry>>(eventCollector);
+                });
 
-                await host.StartAsync();
-                await host.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod("WriteStartDataMessageToQueue"));
+                IHost host = _hostBuilder.Build();
+                JobHost jobHost = host.GetJobHost();
+
+                await jobHost.StartAsync();
+                await jobHost.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod("WriteStartDataMessageToQueue"));
 
                 await TestHelpers.Await(() => _functionCompletedEvent.WaitOne(200), 30000);
 
                 // ensure all logs have had a chance to flush
                 await Task.Delay(3000);
 
-                await host.StopAsync();
+                await jobHost.StopAsync();
 
                 // Make sure the aggregator was logged to
-                var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Aggregator).SingleOrDefault();
+                var logger = host.GetTestLoggerProvider().CreatedLoggers.Where(l => l.Category == LogCategories.Aggregator).SingleOrDefault();
                 Assert.Null(logger);
 
                 // Make sure the eventCollector was logged
@@ -296,12 +317,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public void FunctionFailures_LogsExpectedMessage()
         {
-            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_hostConfig), new Mock<IJobHostContextFactory>().Object);
+            IHost host = _hostBuilder.Build();
+            JobHost jobHost = host.GetJobHost();
 
-            MethodInfo methodInfo = GetType().GetMethod("AlwaysFailJob");
+            MethodInfo methodInfo = GetType().GetMethod(nameof(AlwaysFailJob));
             try
             {
-                host.Call(methodInfo);
+                jobHost.Call(methodInfo);
             }
             catch { }
 
@@ -309,8 +331,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             // Validate Logger
             // Logger only writes out a single log message (which includes the Exception).        
-            var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Results).Single();
-            var logMessage = logger.LogMessages.Single();
+            var logger = host.GetTestLoggerProvider().CreatedLoggers.Where(l => l.Category == LogCategories.Results).Single();
+            var logMessage = logger.GetLogMessages().Single();
             var loggerException = logMessage.Exception as FunctionException;
             Assert.NotNull(loggerException);
             Assert.Equal(expectedName, loggerException.MethodName);
@@ -319,7 +341,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task SystemParameterBindingOutput_GeneratesExpectedBlobs()
         {
-            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_hostConfig), new Mock<IJobHostContextFactory>().Object);
+            IHost host = _hostBuilder.Build();
+            JobHost jobHost = host.GetJobHost();
 
             var blobClient = _fixture.StorageAccount.CreateCloudBlobClient();
             var container = blobClient.GetContainerReference("test-output");
@@ -336,7 +359,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 { "input", "Test Value" }
             };
-            host.Call(methodInfo, arguments);
+            jobHost.Call(methodInfo, arguments);
 
             // We expect 3 separate blobs to have been written
             var blobs = (await container.ListBlobsSegmentedAsync(null)).Results.Cast<CloudBlockBlob>().ToArray();
@@ -351,8 +374,17 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task Timeout_TimeoutExpires_Cancels()
         {
-            var exceptionHandler = new TestExceptionHandler();
-            await RunTimeoutTest(exceptionHandler, typeof(TaskCanceledException), "TimeoutJob");
+            var exceptionHandlerFactory = new CapturingExceptionHandlerFactory();
+            var exceptionHandler = (CapturingExceptionHandler)exceptionHandlerFactory.Create(null);
+
+            _hostBuilder.ConfigureServices(services =>
+            {
+                services.AddSingleton<IWebJobsExceptionHandlerFactory>(exceptionHandlerFactory);
+            });
+
+            IHost host = _hostBuilder.Build();
+
+            await RunTimeoutTest(host, typeof(TaskCanceledException), "TimeoutJob");
             Assert.Empty(exceptionHandler.UnhandledExceptionInfos);
             Assert.Empty(exceptionHandler.TimeoutExceptionInfos);
         }
@@ -360,8 +392,17 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task TimeoutWithThrow_TimeoutExpires_CancelsAndThrows()
         {
-            var exceptionHandler = new TestExceptionHandler();
-            await RunTimeoutTest(exceptionHandler, typeof(FunctionTimeoutException), "TimeoutJob_Throw");
+            var exceptionHandlerFactory = new CapturingExceptionHandlerFactory();
+            var exceptionHandler = (CapturingExceptionHandler)exceptionHandlerFactory.Create(null);
+
+            _hostBuilder.ConfigureServices(services =>
+            {
+                services.AddSingleton<IWebJobsExceptionHandlerFactory>(exceptionHandlerFactory);
+            });
+
+            IHost host = _hostBuilder.Build();
+            await RunTimeoutTest(host, typeof(FunctionTimeoutException), "TimeoutJob_Throw");
+
             var exception = exceptionHandler.TimeoutExceptionInfos.Single().SourceException;
             Assert.IsType<FunctionTimeoutException>(exception);
             Assert.Empty(exceptionHandler.UnhandledExceptionInfos);
@@ -370,73 +411,82 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task TimeoutWithThrow_NoCancellationToken_CancelsAndThrows()
         {
-            var exceptionHandler = new TestExceptionHandler();
-            await RunTimeoutTest(exceptionHandler, typeof(FunctionTimeoutException), "TimeoutJob_Throw_NoToken");
+            var exceptionHandlerFactory = new CapturingExceptionHandlerFactory();
+            var exceptionHandler = (CapturingExceptionHandler)exceptionHandlerFactory.Create(null);
+
+            _hostBuilder.ConfigureServices(services =>
+            {
+                services.AddSingleton<IWebJobsExceptionHandlerFactory>(exceptionHandlerFactory);
+            });
+            IHost host = _hostBuilder.Build();
+            await RunTimeoutTest(host, typeof(FunctionTimeoutException), "TimeoutJob_Throw_NoToken");
+
             var exception = exceptionHandler.TimeoutExceptionInfos.Single().SourceException;
             Assert.IsType<FunctionTimeoutException>(exception);
             Assert.Empty(exceptionHandler.UnhandledExceptionInfos);
         }
 
-        private async Task RunTimeoutTest(IWebJobsExceptionHandler exceptionHandler, Type expectedExceptionType, string functionName)
+        private async Task RunTimeoutTest(IHost host, Type expectedExceptionType, string functionName)
         {
             try
             {
-                _hostConfig.AddService<IWebJobsExceptionHandler>(exceptionHandler);
-                JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_hostConfig), new Mock<IJobHostContextFactory>().Object);
+                JobHost jobHost = host.GetJobHost();
 
                 try
                 {
-                    await host.StartAsync();
+                    await jobHost.StartAsync();
 
                     MethodInfo methodInfo = GetType().GetMethod(functionName);
 
                     Exception ex = await Assert.ThrowsAnyAsync<Exception>(async () =>
                     {
-                        await host.CallAsync(methodInfo);
+                        await jobHost.CallAsync(methodInfo);
                     });
 
                     Assert.IsType(expectedExceptionType, ex);
                 }
                 finally
                 {
-                    host.Stop();
+                    jobHost.Stop();
                 }
 
                 string expectedExceptionMessage = $"Timeout value of 00:00:01 exceeded by function 'AsyncChainEndToEndTests.{functionName}'";
                 string expectedResultMessage = $"Executed 'AsyncChainEndToEndTests.{functionName}' (Failed, Id=";
 
                 // Validate Logger
-                var resultLogger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Results).Single();
-                var executorLogger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.CreateFunctionCategory(functionName)).Single();
+                var loggerProvider = host.GetTestLoggerProvider();
+                var resultLogger = loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Results).Single();
+                var executorLogger = loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.CreateFunctionCategory(functionName)).Single();
 
                 // Results logs the exception with no message
-                Assert.NotNull(resultLogger.LogMessages.Single().Exception);
-                Assert.Null(resultLogger.LogMessages.Single().FormattedMessage);
+                Assert.NotNull(resultLogger.GetLogMessages().Single().Exception);
+                Assert.Null(resultLogger.GetLogMessages().Single().FormattedMessage);
 
                 // It logs Executed/Executing messages and the timeout message.
-                Assert.Equal(3, executorLogger.LogMessages.Count());
+                Assert.Equal(3, executorLogger.GetLogMessages().Count());
 
-                executorLogger.LogMessages.Single(p => p.FormattedMessage != null && p.FormattedMessage.StartsWith(expectedExceptionMessage));
-                LogMessage resultMessage = executorLogger.LogMessages.Single(p => p.FormattedMessage != null && p.FormattedMessage.StartsWith(expectedResultMessage));
+                executorLogger.GetLogMessages().Single(p => p.FormattedMessage != null && p.FormattedMessage.StartsWith(expectedExceptionMessage));
+                LogMessage resultMessage = executorLogger.GetLogMessages().Single(p => p.FormattedMessage != null && p.FormattedMessage.StartsWith(expectedResultMessage));
                 Assert.NotNull(resultMessage.Exception);
             }
             finally
             {
-                _hostConfig.AddService<IWebJobsExceptionHandler>(_defaultExceptionHandler);
+                //_hostConfig.AddService<IWebJobsExceptionHandler>(_defaultExceptionHandler);
             }
         }
 
         [Fact]
         public async Task Timeout_NoExpiry_CompletesSuccessfully()
         {
-            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_hostConfig), new Mock<IJobHostContextFactory>().Object);
+            IHost host = _hostBuilder.Build();
+            JobHost jobHost = host.GetJobHost();
 
             _timeoutJobDelay = TimeSpan.FromSeconds(0);
-            MethodInfo methodInfo = GetType().GetMethod("TimeoutJob");
-            await host.CallAsync(methodInfo);
+            MethodInfo methodInfo = GetType().GetMethod(nameof(TimeoutJob));
+            await jobHost.CallAsync(methodInfo);
 
             // Validate Logger
-            LogMessage[] logErrors = _loggerProvider.GetAllLogMessages().Where(l => l.Level == Microsoft.Extensions.Logging.LogLevel.Error).ToArray();
+            LogMessage[] logErrors = host.GetTestLoggerProvider().GetAllLogMessages().Where(l => l.Level == Extensions.Logging.LogLevel.Error).ToArray();
             Assert.Empty(logErrors);
         }
 
@@ -572,28 +622,29 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _finalBlobContent = blob;
         }
 
-        private async Task AsyncChainEndToEndInternal()
+        private async Task<TestLoggerProvider> AsyncChainEndToEndInternal(IHostBuilder hostBuilder)
         {
-            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_hostConfig), new Mock<IJobHostContextFactory>().Object);
+            using (IHost host = hostBuilder.Build())
+            {
+                JobHost jobHost = host.GetJobHost();
 
-            Assert.Null(_hostConfig.HostId);
+                Assert.Null(host.Services.GetService<IOptions<JobHostOptions>>().Value.HostId);
 
-            await host.StartAsync();
+                await host.StartAsync();
 
-            Assert.NotEmpty(_hostConfig.HostId);
+                Assert.NotEmpty(host.Services.GetService<IOptions<JobHostOptions>>().Value.HostId);
 
-            await host.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod("WriteStartDataMessageToQueue"));
+                await jobHost.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod(nameof(WriteStartDataMessageToQueue)));
 
-            await TestHelpers.Await(() => _functionCompletedEvent.WaitOne(200), 30000);
+                await TestHelpers.Await(() => _functionCompletedEvent.WaitOne(200), 30000);
 
-            // ensure all logs have had a chance to flush
-            await Task.Delay(3000);
+                await jobHost.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod(nameof(ReadResultBlob)));
+                Assert.Equal("async works", _finalBlobContent);
 
-            // Stop async waits for the function to complete
-            await host.StopAsync();
+                await host.StopAsync();
 
-            await host.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod("ReadResultBlob"));
-            Assert.Equal("async works", _finalBlobContent);
+                return host.GetTestLoggerProvider();
+            }
         }
 
         private class CustomQueueProcessorFactory : IQueueProcessorFactory
@@ -715,9 +766,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             public TestFixture()
             {
-                var config = new JobHostOptions();
-                // TODO: DI:
-                StorageAccount = CloudStorageAccount.Parse(null);//config.StorageConnectionString);
+                // We know the tests are using the default storage provider, so pull that out
+                // of a default host.
+                IHost host = new HostBuilder()
+                    .ConfigureDefaultTestHost<TestFixture>()
+                    .Build();
+
+                var provider = host.Services.GetService<IStorageAccountProvider>();
+                StorageAccount = provider.TryGetAccountAsync(ConnectionStringNames.Storage, CancellationToken.None).GetAwaiter().GetResult().SdkObject;
             }
 
             public CloudStorageAccount StorageAccount
@@ -742,16 +798,17 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
-        private class TestExceptionHandler : IWebJobsExceptionHandler
+        private class CapturingExceptionHandlerFactory : IWebJobsExceptionHandlerFactory
         {
-            public ICollection<ExceptionDispatchInfo> UnhandledExceptionInfos { get; private set; }
-            public ICollection<ExceptionDispatchInfo> TimeoutExceptionInfos { get; private set; }
+            CapturingExceptionHandler _handler = new CapturingExceptionHandler();
 
-            public void Initialize(JobHost host)
-            {
-                UnhandledExceptionInfos = new List<ExceptionDispatchInfo>();
-                TimeoutExceptionInfos = new List<ExceptionDispatchInfo>();
-            }
+            public IWebJobsExceptionHandler Create(IHost host) => _handler;
+        }
+
+        private class CapturingExceptionHandler : IWebJobsExceptionHandler
+        {
+            public ICollection<ExceptionDispatchInfo> UnhandledExceptionInfos { get; } = new List<ExceptionDispatchInfo>();
+            public ICollection<ExceptionDispatchInfo> TimeoutExceptionInfos { get; } = new List<ExceptionDispatchInfo>();
 
             public Task OnTimeoutExceptionAsync(ExceptionDispatchInfo exceptionInfo, TimeSpan timeoutGracePeriod)
             {
@@ -769,6 +826,17 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 }
                 return Task.FromResult(0);
             }
+        }
+
+        private class TestEventCollectorProvider : IEventCollectorProvider
+        {
+            public TestFunctionEventCollector EventCollector = new TestFunctionEventCollector();
+
+            public IAsyncCollector<FunctionInstanceLogEntry> Create()
+            {
+                return EventCollector;
+            }
+
         }
 
         private class TestFunctionEventCollector : IAsyncCollector<FunctionInstanceLogEntry>
@@ -821,7 +889,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 }
 
                 var actual = this._state.Count;
-                Assert.True(actual == expected, "Actual function invocations:" + Environment.NewLine + string.Join(Environment.NewLine, this.LogEntries.Select(l => l.FunctionName)));
+                Assert.True(actual == expected, $"Expected {expected}. Actual {actual}. {Environment.NewLine} Actual function invocations:" + Environment.NewLine + string.Join(Environment.NewLine, this.LogEntries.Select(l => l.FunctionName)));
             }
         }
     }
