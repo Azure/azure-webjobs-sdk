@@ -93,7 +93,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var ex = await Assert.ThrowsAsync<FunctionInvocationException>(() =>
            _fixture.Host.CallAsync(typeof(BlobBindingEndToEndTests).GetMethod("CloudBlockBlobBinding_WithUrlBinding"), arguments));
             // CloudBlockBlobBinding_WithUrlBinding is suppose to bind to a blob
-            Assert.Equal($"Blob identifiers must be in the format 'container/blob'.", ex.InnerException.InnerException.Message);
+            Assert.Equal($"Invalid blob path specified : '{poco.A}'. Blob identifiers must be in the format 'container/blob'.", ex.InnerException.InnerException.Message);
         }
 
         [Fact]
