@@ -30,6 +30,17 @@ namespace Microsoft.Azure.WebJobs
         }
 
         /// <summary>
+        /// Constructs a new instance.
+        /// </summary>
+        /// <param name="timeout">The timeout limit as a <see cref="TimeSpan"/> string (e.g. "00:30:00").</param>
+        /// <param name="gracePeriod">The gracePeriod as a <see cref="TimeSpan"/> string (e.g. "00:30:00").</param>
+        public TimeoutAttribute(string timeout, string gracePeriod)
+        {
+            Timeout = TimeSpan.Parse(timeout, CultureInfo.InvariantCulture);
+            GracePeriod = TimeSpan.Parse(gracePeriod, CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
         /// Gets the timeout value.
         /// </summary>
         public TimeSpan Timeout { get; private set; }
