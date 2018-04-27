@@ -36,6 +36,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly ILogger _logger;
         private readonly SharedQueueHandler _sharedQueue;
         private readonly TimeoutAttribute _defaultTimeout;
+        private readonly bool _allowPartialHostStartup;
 
         public FunctionIndexer(
             ITriggerBindingProvider triggerBindingProvider,
@@ -47,7 +48,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             ILoggerFactory loggerFactory,
             INameResolver nameResolver = null,
             SharedQueueHandler sharedQueue = null,
-            TimeoutAttribute defaultTimeout = null)
+            TimeoutAttribute defaultTimeout = null,
+            bool allowPartialHostStartup = false)
         {
             if (triggerBindingProvider == null)
             {
@@ -89,6 +91,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _logger = loggerFactory?.CreateLogger(LogCategories.Startup);
             _sharedQueue = sharedQueue;
             _defaultTimeout = defaultTimeout;
+            _allowPartialHostStartup = allowPartialHostStartup;
         }
 
         public async Task IndexTypeAsync(Type type, IFunctionIndexCollector index, CancellationToken cancellationToken)
@@ -101,9 +104,17 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 }
                 catch (FunctionIndexingException fex)
                 {
+                    if (_allowPartialHostStartup)
+                    {
+                        fex.Handled = true;
+                    }
+
                     fex.TryRecover(_logger);
+
                     // If recoverable, continue to the rest of the methods.
                     // The method in error simply won't be running in the JobHost.
+                    string msg = $"Function '{method.GetShortName()}' failed indexing and will be disabled.";
+                    _logger?.LogWarning(msg);
                     continue;
                 }
             }

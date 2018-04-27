@@ -124,6 +124,21 @@ namespace Microsoft.Azure.WebJobs
         }
 
         /// <summary>
+        /// Gets or sets a value indicating whether the host should be able to start partially
+        /// when some functions are in error. The default is false.
+        /// </summary>
+        /// <remarks>
+        /// Normally when a function encounters an indexing error or its listener fails to start
+        /// the error will propagate and the host will not start. However, with this option set,
+        /// the host will be allowed to start in "partial" mode:
+        ///   - Functions without errors will run normally
+        ///   - Functions with indexing errors will not be running
+        ///   - Functions listener startup failures will be retried in the background
+        ///     until they start.
+        /// </remarks>
+        public bool AllowPartialHostStartup { get; set; }
+
+        /// <summary>
         /// Gets a value indicating whether the <see cref="JobHost"/> is running in a Development environment.
         /// You can use this property in conjunction with <see cref="UseDevelopmentSettings"/> to default
         /// configuration settings to values optimized for local development.

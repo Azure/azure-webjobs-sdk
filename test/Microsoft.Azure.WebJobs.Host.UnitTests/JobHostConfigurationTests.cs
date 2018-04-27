@@ -29,6 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.NotNull(config.Singleton);
             Assert.NotNull(config.LoggerFactory);
             Assert.False(config.Blobs.CentralizedPoisonQueue);
+            Assert.False(config.AllowPartialHostStartup);
 
             StorageClientFactory clientFactory = config.GetService<StorageClientFactory>();
             Assert.NotNull(clientFactory);
