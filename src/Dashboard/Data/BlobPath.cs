@@ -47,7 +47,7 @@ namespace Dashboard.Data
 
             if (!TryParse(value, out path))
             {
-                throw new FormatException($"Blob identifiers must be in the format 'container/blob', but given '{value}'.");
+                throw new FormatException($"Invalid blob path specified: '{value}'. Blob identifiers must be in the format 'container/blob'.");
             }
 
             return path;
