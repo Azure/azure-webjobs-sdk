@@ -13,7 +13,24 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     public static class EventHubJobHostConfigurationExtensions
     {
         /// <summary>
-        /// Enable connecting to event hubs for sending and receiving events. This call is required to the <see cref="EventHubAttribute"/> and <see cref="EventHubTriggerAttribute"/> attributes on parameter bindings.
+        /// Enable connecting to event hubs for sending and receiving events. This call is required to the <see cref="EventHubAttribute"/> 
+        /// and <see cref="EventHubTriggerAttribute"/> attributes on parameter bindings.
+        /// </summary>
+        /// <param name="config">job host configuration</param>
+        public static void UseEventHub(this JobHostConfiguration config)
+        {
+            if (config == null)
+            {
+                throw new ArgumentNullException("config");
+            }
+
+            var eventHubConfig = new EventHubConfiguration();
+            config.UseEventHub(eventHubConfig);
+        }
+
+        /// <summary>
+        /// Enable connecting to event hubs for sending and receiving events. This call is required to the <see cref="EventHubAttribute"/> 
+        /// and <see cref="EventHubTriggerAttribute"/> attributes on parameter bindings.
         /// </summary>
         /// <param name="config">job host configuration</param>
         /// <param name="eventHubConfig">event hub configuration containing connection strings to the event hubs.</param>
