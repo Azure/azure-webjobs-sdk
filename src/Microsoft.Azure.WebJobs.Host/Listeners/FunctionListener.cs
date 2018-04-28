@@ -116,12 +116,15 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
+            // ensure we stop any background retry loop before
+            // we issue the Stop
+            _retryCancellationTokenSource?.Cancel();
+
             if (_started)
             {
                 await _listener.StopAsync(cancellationToken);
                 _started = false;
             }
-            _retryCancellationTokenSource?.Cancel();
         }
     }
 }

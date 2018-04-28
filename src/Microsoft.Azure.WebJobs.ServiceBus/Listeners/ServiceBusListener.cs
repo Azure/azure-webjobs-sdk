@@ -23,6 +23,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
 
         private MessageReceiver _receiver;
         private bool _disposed;
+        private bool _started;
 
         public ServiceBusListener(string entityPath, ServiceBusTriggerExecutor triggerExecutor, ServiceBusConfiguration config, ServiceBusAccount serviceBusAccount)
         {
@@ -38,13 +39,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         {
             ThrowIfDisposed();
 
-            if (_receiver != null)
+            if (_started)
             {
                 throw new InvalidOperationException("The listener has already been started.");
             }
 
             _receiver = _messagingProvider.CreateMessageReceiver(_entityPath, _serviceBusAccount.ConnectionString);
             _receiver.RegisterMessageHandler(ProcessMessageAsync, _messageProcessor.MessageOptions);
+            _started = true;
 
             return Task.CompletedTask;
         }
@@ -53,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         {
             ThrowIfDisposed();
 
-            if (_receiver == null)
+            if (!_started)
             {
                 throw new InvalidOperationException("The listener has not yet been started or has already been stopped.");
             }
@@ -64,6 +66,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
 
             await _receiver.CloseAsync();
             _receiver = null;
+            _started = false;
         }
 
         public void Cancel()
