@@ -19,10 +19,18 @@ using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
+
+    // $$$
+    // Wraps SingletonManager and  exposes to extensions 
+    public interface IHostSingletonManager
+    {
+        IListener CreateHostSingletonListener(IListener innerListener, string scopeId);
+    }
+
     /// <summary>
     /// Encapsulates and manages blob leases for Singleton locks.
     /// </summary>
-    internal class SingletonManager
+    internal class SingletonManager : IHostSingletonManager
     {
         private readonly INameResolver _nameResolver;
         private readonly SingletonOptions _config;
@@ -242,7 +250,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="innerListener">The inner listener to wrap.</param>
         /// <param name="scopeId">The scope ID to use.</param>
         /// <returns>The singleton listener.</returns>
-        public SingletonListener CreateHostSingletonListener(IListener innerListener, string scopeId)
+        public IListener CreateHostSingletonListener(IListener innerListener, string scopeId)
         {
             SingletonAttribute singletonAttribute = new SingletonAttribute(scopeId, SingletonScope.Host)
             {

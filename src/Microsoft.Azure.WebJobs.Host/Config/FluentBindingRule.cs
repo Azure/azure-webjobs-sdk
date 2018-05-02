@@ -112,7 +112,8 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             return this;
         }
 
-        internal FluentBindingRule<TAttribute> SetPostResolveHook(Func<TAttribute, ParameterInfo, INameResolver, ParameterDescriptor> hook)
+        // $$$ Needed for storage ext
+        public FluentBindingRule<TAttribute> SetPostResolveHook(Func<TAttribute, ParameterInfo, INameResolver, ParameterDescriptor> hook)
         {
             _hook = hook;
             return this;

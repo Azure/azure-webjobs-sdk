@@ -25,7 +25,6 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.1.0" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
     <PackageReference Include="System.Threading.Tasks.Dataflow" Version="4.8.0" />
-    <PackageReference Include="WindowsAzure.Storage" Version="8.6.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -52,8 +51,7 @@
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\FunctionStartedMessage.cs" Link="Protocols\FunctionStartedMessage.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\FunctionStartedMessageExtensions.cs" Link="Protocols\FunctionStartedMessageExtensions.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\FunctionStatusMessage.cs" Link="Protocols\FunctionStatusMessage.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\HeartbeatCommand.cs" Link="Protocols\HeartbeatCommand.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\HeartbeatDescriptor.cs" Link="Protocols\HeartbeatDescriptor.cs" />
+    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\HeartbeatDescriptor.cs" Link="Loggers\HeartbeatDescriptor.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\HostMessage.cs" Link="Protocols\HostMessage.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\HostOutputMessage.cs" Link="Protocols\HostOutputMessage.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\HostStartedMessage.cs" Link="Protocols\HostStartedMessage.cs" />
@@ -68,9 +66,7 @@
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\ParameterDescriptor.cs" Link="Protocols\ParameterDescriptor.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\ParameterDisplayHints.cs" Link="Protocols\ParameterDisplayHints.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\ParameterLog.cs" Link="Protocols\ParameterLog.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\PersistentQueueMessage.cs" Link="Protocols\PersistentQueueMessage.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\PersistentQueueReader.cs" Link="Protocols\PersistentQueueReader.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\PersistentQueueWriter.cs" Link="Protocols\PersistentQueueWriter.cs" />
+    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\PersistentQueueMessage.cs" Link="Loggers\PersistentQueueMessage.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\PolymorphicJsonConverter.cs" Link="Protocols\PolymorphicJsonConverter.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\QueueParameterDescriptor.cs" Link="Protocols\QueueParameterDescriptor.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\QueueTriggerParameterDescriptor.cs" Link="Protocols\QueueTriggerParameterDescriptor.cs" />
@@ -87,42 +83,6 @@
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\WebJobTypes.cs" Link="Protocols\WebJobTypes.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\WebSitesKnownKeyNames.cs" Link="Protocols\WebSitesKnownKeyNames.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\WriteBlobParameterLog.cs" Link="Protocols\WriteBlobParameterLog.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Blob\IStorageAppendBlob.cs" Link="Storage\Blob\IStorageAppendBlob.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Blob\IStorageBlob.cs" Link="Storage\Blob\IStorageBlob.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Blob\IStorageBlobClient.cs" Link="Storage\Blob\IStorageBlobClient.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Blob\IStorageBlobContainer.cs" Link="Storage\Blob\IStorageBlobContainer.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Blob\IStorageBlobDirectory.cs" Link="Storage\Blob\IStorageBlobDirectory.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Blob\IStorageBlobProperties.cs" Link="Storage\Blob\IStorageBlobProperties.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Blob\IStorageBlobResultSegment.cs" Link="Storage\Blob\IStorageBlobResultSegment.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Blob\IStorageBlockBlob.cs" Link="Storage\Blob\IStorageBlockBlob.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Blob\IStorageListBlobItem.cs" Link="Storage\Blob\IStorageListBlobItem.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Blob\IStoragePageBlob.cs" Link="Storage\Blob\IStoragePageBlob.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Blob\StorageAppendBlob.cs" Link="Storage\Blob\StorageAppendBlob.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Blob\StorageBlobClient.cs" Link="Storage\Blob\StorageBlobClient.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Blob\StorageBlobContainer.cs" Link="Storage\Blob\StorageBlobContainer.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Blob\StorageBlobDirectory.cs" Link="Storage\Blob\StorageBlobDirectory.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Blob\StorageBlobProperties.cs" Link="Storage\Blob\StorageBlobProperties.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Blob\StorageBlobResultSegment.cs" Link="Storage\Blob\StorageBlobResultSegment.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Blob\StorageBlobType.cs" Link="Storage\Blob\StorageBlobType.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Blob\StorageBlockBlob.cs" Link="Storage\Blob\StorageBlockBlob.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Blob\StoragePageBlob.cs" Link="Storage\Blob\StoragePageBlob.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Queue\IStorageQueue.cs" Link="Storage\Queue\IStorageQueue.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Queue\IStorageQueueClient.cs" Link="Storage\Queue\IStorageQueueClient.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Queue\IStorageQueueMessage.cs" Link="Storage\Queue\IStorageQueueMessage.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Queue\StorageQueue.cs" Link="Storage\Queue\StorageQueue.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Queue\StorageQueueClient.cs" Link="Storage\Queue\StorageQueueClient.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Queue\StorageQueueMessage.cs" Link="Storage\Queue\StorageQueueMessage.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\StorageExceptionExtensions.cs" Link="Storage\StorageExceptionExtensions.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Table\IEntityResolver.cs" Link="Storage\Table\IEntityResolver.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Table\IStorageTable.cs" Link="Storage\Table\IStorageTable.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Table\IStorageTableBatchOperation.cs" Link="Storage\Table\IStorageTableBatchOperation.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Table\IStorageTableClient.cs" Link="Storage\Table\IStorageTableClient.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Table\IStorageTableOperation.cs" Link="Storage\Table\IStorageTableOperation.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Table\StorageTable.cs" Link="Storage\Table\StorageTable.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Table\StorageTableBatchOperation.cs" Link="Storage\Table\StorageTableBatchOperation.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Table\StorageTableClient.cs" Link="Storage\Table\StorageTableClient.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Table\StorageTableOperation.cs" Link="Storage\Table\StorageTableOperation.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Storage\Table\TypeEntityResolver.cs" Link="Storage\Table\TypeEntityResolver.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -11,7 +11,6 @@ using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
-using Microsoft.Azure.WebJobs.Host.Storage.Queue;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
@@ -25,36 +24,32 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
     {
         internal const string InitErrorMessage = "Shared queue initialization error, fallback to in memory implementation";
 
-        private readonly IStorageAccountProvider _accountProvider;
         private readonly IHostIdProvider _hostIdProvider;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly ILoggerFactory _loggerFactory;
-        private readonly IOptions<JobHostQueuesOptions> _queueOptions;
         private readonly ISharedContextProvider _sharedContextProvider;
-        private readonly IContextSetter<IMessageEnqueuedWatcher> _messageEnqueuedWatcherSetter;
+        private readonly ISuperhack _storageServices;
 
         private Exception _initializationEx; // delay initialization error until consumer showed up
         private SharedQueueExecutor _triggerExecutor;
         private State _state;
-        private QueueListener _sharedQueuelistener;
-        private SharedQueueWriter _sharedQueueWriter;
+        private IListener _sharedQueuelistener; // QueueListener
+        private IAsyncCollector<QueueMessage> _sharedQueueWriter;
 
-        public SharedQueueHandler(IStorageAccountProvider accountProvider,
+        public SharedQueueHandler(
                            IHostIdProvider hostIdProvider,
                            IWebJobsExceptionHandler exceptionHandler,
                            ILoggerFactory loggerFactory,
-                           IOptions<JobHostQueuesOptions> queueOptions,
                            ISharedContextProvider sharedContextProvider,
-                           IContextSetter<IMessageEnqueuedWatcher> messageEnqueuedWatcherSetter)
-        {
-            _accountProvider = accountProvider;
+                           ISuperhack storageServices
+                )
+        {            
             _hostIdProvider = hostIdProvider;
             _exceptionHandler = exceptionHandler;
             _loggerFactory = loggerFactory;
-            _queueOptions = queueOptions;
             _sharedContextProvider = sharedContextProvider;
-            _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter;
             _state = State.Created;
+            _storageServices = storageServices;
         }
 
         // this is used to prevent illegal call sequence
@@ -103,23 +98,18 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
 
             try
             {
-                IStorageQueueClient primaryQueueClient = (await _accountProvider.GetStorageAccountAsync(cancellationToken)).CreateQueueClient();
                 string hostId = await _hostIdProvider.GetHostIdAsync(cancellationToken);
 
                 // one host level shared queue
                 // queue is not created here, only after 1st message added
-                IStorageQueue sharedQueue = primaryQueueClient.GetQueueReference(HostQueueNames.GetHostSharedQueueName(hostId));
+                var sharedQueue = _storageServices.GetQueueReference(HostQueueNames.GetHostSharedQueueName(hostId));
                 // default host level poison queue
-                IStorageQueue sharedPoisonQueue = primaryQueueClient.GetQueueReference(HostQueueNames.GetHostSharedPoisonQueueName(hostId));
+                var sharedPoisonQueue = _storageServices.GetQueueReference(HostQueueNames.GetHostSharedPoisonQueueName(hostId));
 
                 // queueWatcher will update queueListener's polling interval when queueWriter performes an enqueue operation
-                SharedQueueWatcher sharedQueueWatcher = _sharedContextProvider.GetOrCreateInstance<SharedQueueWatcher>(
-                                                            new SharedQueueWatcherFactory(_messageEnqueuedWatcherSetter));
-                _sharedQueueWriter = new SharedQueueWriter(sharedQueue, sharedQueueWatcher);
-
-                // use default poisonQueue setup
-                _sharedQueuelistener = new QueueListener(sharedQueue, sharedPoisonQueue, _triggerExecutor,
-                    _exceptionHandler, _loggerFactory, sharedQueueWatcher, _queueOptions.Value);
+                _sharedQueueWriter = _storageServices.GetQueueWriter<QueueMessage>(sharedQueue);
+                                
+                _sharedQueuelistener = _storageServices.CreateQueueListenr(sharedQueue, sharedPoisonQueue, _triggerExecutor.ExecuteAsync);
             }
             catch (Exception ex)
             {
@@ -177,11 +167,12 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
             {
                 throw new InvalidOperationException("Cannot enqueue messages, shared queue is either uninitialized or has already stopped listening");
             }
-            return _sharedQueueWriter.EnqueueAsync(message, functionId, cancellationToken);
+            var msg = new QueueMessage(message, functionId);
+            return _sharedQueueWriter.AddAsync(msg, cancellationToken);
         }
 
         // IStorageQueueMessage is used in QueueTriggerBindingData
-        private class SharedQueueExecutor : ITriggerExecutor<IStorageQueueMessage>
+        private class SharedQueueExecutor 
         {
             // concurrent dictionary, since CompositeListener start all Listeners in parallele
             // if we can assume all users of sharedQueue register their handler before calling listener.startAsync
@@ -192,9 +183,9 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
                 _messageHandlers = new ConcurrentDictionary<string, IMessageHandler>();
             }
             // handle dequeued message, execute the function
-            public async Task<FunctionResult> ExecuteAsync(IStorageQueueMessage value, CancellationToken cancellationToken)
+            public async Task<FunctionResult> ExecuteAsync(string value, CancellationToken cancellationToken)
             {
-                QueueMessage message = JsonConvert.DeserializeObject<QueueMessage>(value.AsString, JsonSerialization.Settings);
+                QueueMessage message = JsonConvert.DeserializeObject<QueueMessage>(value, JsonSerialization.Settings);
                 if (message == null)
                 {
                     throw new InvalidOperationException("Invalid shared queue message.");
@@ -231,26 +222,7 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
             }
         }
 
-        private class SharedQueueWriter
-        {
-            private readonly IStorageQueue _queue;
-            private readonly IMessageEnqueuedWatcher _watcher;
-
-            internal SharedQueueWriter(IStorageQueue queue, IMessageEnqueuedWatcher watcher)
-            {
-                _queue = queue;
-                Debug.Assert(watcher != null);
-                _watcher = watcher;
-            }
-
-            internal async Task EnqueueAsync(JObject data, String functionId, CancellationToken cancellationToken)
-            {
-                string contents = JsonConvert.SerializeObject(new QueueMessage(data, functionId), JsonSerialization.Settings);
-                await _queue.AddMessageAndCreateIfNotExistsAsync(_queue.CreateMessage(contents), cancellationToken);
-                _watcher.Notify(_queue.Name);
-            }
-        }
-
+        // Internal message format used for function queuing
         private class QueueMessage
         {
             // public so that we can deserialize it

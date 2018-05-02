@@ -33,12 +33,13 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<IHostIdProvider>(new FixedHostIdProvider("test"));
+                    /*
                     services.AddSingleton<IStorageAccountProvider>(p => new SimpleStorageAccountProvider(p.GetRequiredService<StorageClientFactory>())
                     {
                         StorageAccount = storageAccount,
                         // use null logging string since unit tests don't need logs.
                         DashboardAccount = null
-                    });
+                    });*/ // $$$
                 })
                 .Build();
 

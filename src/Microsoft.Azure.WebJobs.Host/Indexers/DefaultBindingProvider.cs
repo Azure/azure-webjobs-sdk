@@ -6,8 +6,6 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Bindings.Cancellation;
 using Microsoft.Azure.WebJobs.Host.Bindings.Data;
 using Microsoft.Azure.WebJobs.Host.Bindings.Runtime;
-using Microsoft.Azure.WebJobs.Host.Bindings.StorageAccount;
-using Microsoft.Azure.WebJobs.Host.Blobs;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Extensions.Logging;
 
@@ -17,18 +15,15 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
     {
         private readonly INameResolver _nameResolver;
         private readonly ILoggerFactory _loggerFactory;
-        private readonly IStorageAccountProvider _storageAccountProvider;
         private readonly IExtensionRegistry _extensions;
 
         public DefaultBindingProvider(
             INameResolver nameResolver,
             ILoggerFactory loggerFactory,
-            IStorageAccountProvider storageAccountProvider,
             IExtensionRegistry extensions)
         {
             _nameResolver = nameResolver;
             _loggerFactory = loggerFactory;
-            _storageAccountProvider = storageAccountProvider;
             _extensions = extensions;
         }
 
@@ -42,8 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             {
                 innerProviders.Add(provider);
             }
-
-            innerProviders.Add(new CloudStorageAccountBindingProvider(_storageAccountProvider));
+                        
             innerProviders.Add(new CancellationTokenBindingProvider());
 
             // The TraceWriter binder handles all remaining TraceWriter/TextWriter parameters. It must come after the

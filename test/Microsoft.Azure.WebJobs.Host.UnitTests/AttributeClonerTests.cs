@@ -107,7 +107,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             [AutoResolve]
             public string PropWithoutPolicy { get; set; }
 
-            [AutoResolve(ResolutionPolicyType = typeof(WebJobs.ODataFilterResolutionPolicy))]
+            [AutoResolve(ResolutionPolicyType = typeof(ODataFilterResolutionPolicy))]
             public string PropWithMarkerPolicy { get; set; }
 
             [AutoResolve(ResolutionPolicyType = typeof(AutoResolveAttribute))]

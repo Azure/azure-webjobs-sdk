@@ -42,8 +42,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 })
                 .Build();
 
-            var accountProvider = _host.Services.GetService<IStorageAccountProvider>();
-            _storageAccount = accountProvider.TryGetAccountAsync(ConnectionStringNames.Storage, CancellationToken.None).GetAwaiter().GetResult().SdkObject;
+            var accountProvider = _host.Services.GetService<XStorageAccountProvider>();
+            _storageAccount = accountProvider.GetHost().SdkObject;
 
             _invokeInFunction = () => { };
             _tokenCancelled = false;

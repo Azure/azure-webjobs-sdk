@@ -9,10 +9,9 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Storage;
 using Microsoft.Azure.WebJobs.Storage.Blob;
 #else
-using Microsoft.Azure.WebJobs.Host.Storage;
-using Microsoft.Azure.WebJobs.Host.Storage.Blob;
 #endif
 using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 #if PUBLICPROTOCOL
 namespace Microsoft.Azure.WebJobs.Protocols
@@ -28,13 +27,13 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
     internal class HeartbeatCommand : IHeartbeatCommand
 #endif
     {
-        private readonly IStorageBlockBlob _blob;
+        private readonly CloudBlockBlob _blob;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="HeartbeatCommand"/> class.
         /// </summary>
         /// <param name="blob">The heartbeat blob.</param>
-        public HeartbeatCommand(IStorageBlockBlob blob)
+        public HeartbeatCommand(CloudBlockBlob blob)
         {
             if (blob == null)
             {
