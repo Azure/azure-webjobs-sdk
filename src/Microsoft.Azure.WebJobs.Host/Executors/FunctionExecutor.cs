@@ -24,7 +24,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     internal class FunctionExecutor : IFunctionExecutor
     {
         private readonly IFunctionInstanceLogger _functionInstanceLogger;
-        private readonly IFunctionOutputLoggerProvider _functionOutputLoggerProvider;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IAsyncCollector<FunctionInstanceLogEntry> _functionEventCollector;
         private readonly ILoggerFactory _loggerFactory;
@@ -34,29 +33,21 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private IFunctionOutputLogger _functionOutputLogger;
         private HostOutputMessage _hostOutputMessage;
 
-        public FunctionExecutor(IFunctionInstanceLogger functionInstanceLogger, IFunctionOutputLoggerProvider functionOutputLoggerProvider,
+        public FunctionExecutor(
+                IFunctionInstanceLogger functionInstanceLogger,
+                IFunctionOutputLogger functionOutputLogger,
                 IWebJobsExceptionHandler exceptionHandler,
                 IAsyncCollector<FunctionInstanceLogEntry> functionEventCollector,
                 ILoggerFactory loggerFactory = null,
                 IEnumerable<IFunctionFilter> globalFunctionFilters = null)
         {
             _functionInstanceLogger = functionInstanceLogger ?? throw new ArgumentNullException(nameof(functionInstanceLogger));
-            _functionOutputLoggerProvider = functionOutputLoggerProvider;
+            _functionOutputLogger = functionOutputLogger;
             _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
             _functionEventCollector = functionEventCollector ?? throw new ArgumentNullException(nameof(functionEventCollector));
             _loggerFactory = loggerFactory;
             _resultsLogger = _loggerFactory?.CreateLogger(LogCategories.Results);
             _globalFunctionFilters = globalFunctionFilters ?? Enumerable.Empty<IFunctionFilter>();
-        }
-
-        private async Task<IFunctionOutputLogger> GetFunctionOutputLogger(CancellationToken cancellationToken)
-        {
-            if (_functionOutputLogger == null)
-            {
-                _functionOutputLogger = await _functionOutputLoggerProvider.GetAsync(cancellationToken);
-            }
-
-            return _functionOutputLogger;
         }
 
         public HostOutputMessage HostOutputMessage
@@ -199,7 +190,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             ITaskSeriesTimer updateOutputLogTimer = null;
             TextWriter functionOutputTextWriter = null;
 
-            IFunctionOutputLogger outputLogger = await GetFunctionOutputLogger(cancellationToken);
+            IFunctionOutputLogger outputLogger = _functionOutputLogger;
             outputDefinition = await outputLogger.CreateAsync(instance, cancellationToken);
             outputLog = outputDefinition.CreateOutput();
             functionOutputTextWriter = outputLog.Output;

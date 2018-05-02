@@ -65,12 +65,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                     // TODO: We shouldn't have to do this, but our default parser
                     //       does not allow for null Storage/Dashboard.
-                    var mockParser = new Mock<IStorageAccountParser>();
-                    mockParser
-                        .Setup(p => p.ParseAccount(null, It.IsAny<string>()))
-                        .Returns<string>(null);
+                    //var mockParser = new Mock<IStorageAccountParser>(); $$$ 
+                    //mockParser
+                    //    .Setup(p => p.ParseAccount(null, It.IsAny<string>()))
+                    //    .Returns<string>(null);
 
-                    services.AddSingleton<IStorageAccountParser>(mockParser.Object);
+                    //services.AddSingleton<IStorageAccountParser>(mockParser.Object);
                 })
                 .Build();
 

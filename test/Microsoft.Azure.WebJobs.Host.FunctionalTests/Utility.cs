@@ -4,10 +4,10 @@
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
 using Microsoft.Azure.WebJobs.Host.Loggers;
-using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
@@ -17,17 +17,17 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public static void AssertIndexingError<TProgram>(string methodName, string expectedErrorMessage)
         {
             // Need to pass an account to get passed initial validation checks. 
-            IStorageAccount account = new FakeStorageAccount();
 
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost<TProgram>()
                 .ConfigureServices(services => services.AddFakeStorageAccountProvider())
+                .AddStorageBindings()
                 .Build();
 
             host.GetJobHost<TProgram>().AssertIndexingError(methodName, expectedErrorMessage);
         }
 
-        public static IHostBuilder ConfigureDefaultTestHost<TProgram>(this IHostBuilder builder, IStorageAccount account)
+        public static IHostBuilder ConfigureDefaultTestHost<TProgram>(this IHostBuilder builder, XStorageAccount account)
         {
             return builder.ConfigureDefaultTestHost<TProgram>()
                 .ConfigureServices(services => services.AddFakeStorageAccountProvider(account));
@@ -43,7 +43,8 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         public static IServiceCollection AddFakeStorageAccountProvider(this IServiceCollection services)
         {
-            return services.AddFakeStorageAccountProvider(new FakeStorageAccount());
+            // return services.AddFakeStorageAccountProvider(new XFakeStorageAccount()); $$$
+            throw new NotImplementedException();
         }
 
         public static IServiceCollection AddNullLoggerProviders(this IServiceCollection services)
@@ -53,18 +54,17 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 .AddSingleton<IFunctionInstanceLoggerProvider, NullFunctionInstanceLoggerProvider>();
         }
 
-        public static IServiceCollection AddFakeStorageAccountProvider(this IServiceCollection services, IStorageAccount account)
+        public static IServiceCollection AddFakeStorageAccountProvider(this IServiceCollection services, XStorageAccount account)
         {
-            if (account is FakeStorageAccount)
+            throw new NotImplementedException();
+            /*
+            if (account is XFakeStorageAccount)
             {
                 services.AddNullLoggerProviders();
             }
 
-            return services.AddSingleton<IStorageAccountProvider>(new FakeStorageAccountProvider
-            {
-                StorageAccount = account,
-                DashboardAccount = account
-            });
+            return services.AddSingleton<XStorageAccountProvider>(new FakeStorageAccountProvider(account));
+            */
         }
     }
 }

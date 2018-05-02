@@ -2,21 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.Reflection;
-using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Azure.WebJobs.Host.Bindings;
-using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Executors;
-using Microsoft.Azure.WebJobs.Host.Indexers;
-using Microsoft.Azure.WebJobs.Host.Loggers;
-using Microsoft.Azure.WebJobs.Host.Queues;
-using Microsoft.Azure.WebJobs.Host.Timers;
-using Microsoft.Azure.WebJobs.Logging;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
-using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Azure.WebJobs
 {

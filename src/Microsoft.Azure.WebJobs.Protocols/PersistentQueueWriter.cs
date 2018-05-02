@@ -9,10 +9,10 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Storage;
 using Microsoft.Azure.WebJobs.Storage.Blob;
 #else
-using Microsoft.Azure.WebJobs.Host.Storage;
-using Microsoft.Azure.WebJobs.Host.Storage.Blob;
+
 #endif
 using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json;
 
 #if PUBLICPROTOCOL
@@ -30,20 +30,20 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
     internal class PersistentQueueWriter<T> : IPersistentQueueWriter<T> where T : PersistentQueueMessage
 #endif
     {
-        private readonly IStorageBlobContainer _blobContainer;
+        private readonly CloudBlobContainer _blobContainer;
 
         /// <summary>Initializes a new instance of the <see cref="PersistentQueueWriter{T}"/> class.</summary>
         /// <param name="client">
         /// A blob client for the storage account into which host output messages are written.
         /// </param>
-        public PersistentQueueWriter(IStorageBlobClient client)
+        public PersistentQueueWriter(CloudBlobClient client)
             : this(client.GetContainerReference(ContainerNames.HostOutput))
         {
         }
 
         /// <summary>Initializes a new instance of the <see cref="PersistentQueueWriter{T}"/> class.</summary>
         /// <param name="container">The container into which host output messages are written.</param>
-        public PersistentQueueWriter(IStorageBlobContainer container)
+        public PersistentQueueWriter(CloudBlobContainer container)
         {
             _blobContainer = container;
         }
@@ -54,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
             await _blobContainer.CreateIfNotExistsAsync(cancellationToken);
 
             string blobName = BlobNames.GetConflictFreeDateTimeBasedBlobName();
-            IStorageBlockBlob blob = _blobContainer.GetBlockBlobReference(blobName);
+            var blob = _blobContainer.GetBlockBlobReference(blobName);
             message.AddMetadata(blob.Metadata);
             string messageBody = JsonConvert.SerializeObject(message, JsonSerialization.Settings);
             await blob.UploadTextAsync(messageBody, cancellationToken: cancellationToken);
@@ -72,7 +72,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
                     throw new ArgumentNullException("messageId");
                 }
 
-                IStorageBlockBlob blob = _blobContainer.GetBlockBlobReference(messageId);
+                var blob = _blobContainer.GetBlockBlobReference(messageId);
                 await blob.DeleteAsync(cancellationToken);
             }
             catch (StorageException exception)

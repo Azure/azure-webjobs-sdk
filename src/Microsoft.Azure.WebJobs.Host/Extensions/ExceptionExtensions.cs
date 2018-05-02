@@ -8,7 +8,6 @@ using System.Text;
 using System.Threading;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Diagnostics;
-using Microsoft.WindowsAzure.Storage;
 
 namespace System
 {
@@ -47,6 +46,7 @@ namespace System
 
         private static IDictionary<string, string> GetAdditionalDetails(Exception exception)
         {
+#if false // $$$  get this dynamically? 
             StorageException storageException = exception as StorageException;
 
             if (storageException == null)
@@ -69,6 +69,9 @@ namespace System
             }
 
             return extendedErrorInformation.AdditionalDetails;
+#else
+            return null;
+#endif 
         }
 
         public static bool IsTimeout(this Exception exception)

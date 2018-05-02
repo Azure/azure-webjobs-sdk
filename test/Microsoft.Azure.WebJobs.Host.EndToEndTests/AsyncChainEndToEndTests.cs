@@ -148,6 +148,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
+        /* $$$ 
         [Fact]
         public async Task AsyncChainEndToEnd_CustomFactories()
         {
@@ -174,6 +175,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.True(queueProcessorFactory.CustomQueueProcessors.Sum(p => p.CompleteProcessingCount) >= 2);
             }
         }
+        */
 
         [Fact]
         public async Task LoggerLogging()
@@ -713,63 +715,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
-        /// <summary>
-        /// This custom <see cref="StorageClientFactory"/> demonstrates how clients can be customized.
-        /// For example, users can configure global retry policies, DefaultRequestOptions, etc.
-        /// </summary>
-        public class CustomStorageClientFactory : StorageClientFactory
-        {
-            public int TotalBlobClientCount;
-            public int TotalQueueClientCount;
-            public int TotalTableClientCount;
-
-            public int ParameterBlobClientCount;
-            public int ParameterQueueClientCount;
-            public int ParameterTableClientCount;
-
-            public override CloudBlobClient CreateCloudBlobClient(StorageClientFactoryContext context)
-            {
-                TotalBlobClientCount++;
-
-                if (context.Parameter != null)
-                {
-                    ParameterBlobClientCount++;
-                }
-
-                return base.CreateCloudBlobClient(context);
-            }
-
-            public override CloudQueueClient CreateCloudQueueClient(StorageClientFactoryContext context)
-            {
-                TotalQueueClientCount++;
-
-                if (context.Parameter != null)
-                {
-                    ParameterQueueClientCount++;
-
-                    if (context.Parameter.Member.Name == "QueueToQueueAsync")
-                    {
-                        // demonstrates how context can be used to create a custom client
-                        // for a particular method or parameter binding
-                    }
-                }
-
-                return base.CreateCloudQueueClient(context);
-            }
-
-            public override CloudTableClient CreateCloudTableClient(StorageClientFactoryContext context)
-            {
-                TotalTableClientCount++;
-
-                if (context.Parameter != null)
-                {
-                    ParameterTableClientCount++;
-                }
-
-                return base.CreateCloudTableClient(context);
-            }
-        }
-
         public class TestFixture : IDisposable
         {
             public TestFixture()
@@ -780,8 +725,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     .ConfigureDefaultTestHost<TestFixture>()
                     .Build();
 
-                var provider = host.Services.GetService<IStorageAccountProvider>();
-                StorageAccount = provider.TryGetAccountAsync(ConnectionStringNames.Storage, CancellationToken.None).GetAwaiter().GetResult().SdkObject;
+                var provider = host.Services.GetService<XStorageAccountProvider>();
+                StorageAccount = provider.GetHost().SdkObject;
             }
 
             public CloudStorageAccount StorageAccount

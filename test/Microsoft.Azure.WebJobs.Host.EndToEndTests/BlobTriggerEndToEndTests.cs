@@ -49,8 +49,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var host = new HostBuilder()
                 .ConfigureDefaultTestHost()
                 .Build();
-            var provider = host.Services.GetService<IStorageAccountProvider>();
-            _storageAccount = provider.TryGetAccountAsync(ConnectionStringNames.Storage, CancellationToken.None).Result.SdkObject;
+            var provider = host.Services.GetService<XStorageAccountProvider>();
+            _storageAccount = provider.GetHost().SdkObject;
             CloudBlobClient blobClient = _storageAccount.CreateCloudBlobClient();
             _testContainer = blobClient.GetContainerReference(_nameResolver.ResolveInString(SingleTriggerContainerName));
             Assert.False(_testContainer.ExistsAsync().Result);

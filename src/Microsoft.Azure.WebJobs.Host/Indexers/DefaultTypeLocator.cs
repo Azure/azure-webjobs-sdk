@@ -14,14 +14,12 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
     // Default policy for locating types. 
     internal class DefaultTypeLocator : ITypeLocator
     {
-        private static readonly string WebJobsAssemblyName = AssemblyNameCache.GetName(typeof(TableAttribute).Assembly).Name;
+        private static readonly string WebJobsAssemblyName = AssemblyNameCache.GetName(typeof(FunctionNameAttribute).Assembly).Name;
 
         private readonly ILogger _logger;
-        private readonly IExtensionRegistry _extensions;
 
-        public DefaultTypeLocator(TextWriter log, IExtensionRegistry extensions, ILoggerFactory loggerFactory)
-        {
-            _extensions = extensions ?? throw new ArgumentNullException(nameof(extensions));
+        public DefaultTypeLocator(ILoggerFactory loggerFactory)
+        {            
             _logger = loggerFactory.CreateLogger(LogCategories.Startup);
         }
 
@@ -61,7 +59,10 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             List<Type> allTypes = new List<Type>();
 
             var assemblies = GetUserAssemblies();
-            IEnumerable<Assembly> extensionAssemblies = _extensions.GetExtensionAssemblies();
+
+            // $$$ Previously - this would include all extension assemblies (any assembly that referenced an extension)
+            // but it's hard to determine that; and an extension assembly would also reference webjobs; so can we just include that? 
+            IEnumerable<Assembly> extensionAssemblies = new Assembly[] { this.GetType().Assembly } ; // $$$ breaking change 
             foreach (var assembly in assemblies)
             {
                 var assemblyTypes = FindTypes(assembly, extensionAssemblies);

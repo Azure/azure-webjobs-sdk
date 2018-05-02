@@ -16,6 +16,7 @@ namespace SampleHost
     [ErrorHandler]
     public static class Functions
     {
+        [Singleton]
         public static void BlobTrigger(
             [BlobTrigger("test")] string blob, ILogger logger)
         {

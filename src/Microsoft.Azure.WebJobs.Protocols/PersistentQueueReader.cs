@@ -11,7 +11,6 @@ using System.Threading;
 #if PUBLICPROTOCOL
 using Microsoft.Azure.WebJobs.Storage;
 #else
-using Microsoft.Azure.WebJobs.Host.Storage;
 #endif
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
@@ -102,7 +101,12 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
         /// <inheritdoc />
         public async Task TryMakeItemVisible(T message)
         {
-            await TryMakeItemVisible(message.Blob);
+            await TryMakeItemVisible(GetBlob(message));
+        }
+
+        private static ICloudBlob GetBlob(T message)
+        {
+            return (ICloudBlob)message.Blob;
         }
 
         /// <summary>
@@ -360,7 +364,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
         /// <inheritdoc />
         public async Task DeleteAsync(T message)
         {
-            ICloudBlob outputBlob = message.Blob;
+            ICloudBlob outputBlob = GetBlob(message);
 
             // Do a client-side blob copy. Note that StartCopyFromBlob is another option, but that would require polling
             // to wait for completion.

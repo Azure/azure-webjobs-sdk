@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.projitems" Label="Shared" />
+
+  <Import Project="..\Microsoft.Azure.WebJobs.Shared.Storage\Microsoft.Azure.WebJobs.Shared.Storage.projitems" Label="Shared" />
+  <Import Project="..\..\build\common.props" />  
+  
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>Microsoft.Azure.WebJobs.Host.Storage</AssemblyName>
+  </PropertyGroup>  
+  
+  <ItemGroup>
+    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\HeartbeatCommand.cs" Link="OldLogger\HeartbeatCommand.cs" />
+    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\PersistentQueueReader.cs" Link="OldLogger\PersistentQueueReader.cs" />
+    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\PersistentQueueWriter.cs" Link="OldLogger\PersistentQueueWriter.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WindowsAzure.Storage" Version="8.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj" />
+  </ItemGroup>
+
+</Project>

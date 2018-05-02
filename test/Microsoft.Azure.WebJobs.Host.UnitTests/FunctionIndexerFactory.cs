@@ -40,6 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                         services.AddSingleton<IExtensionRegistry>(extensionRegistry);
                     }
                 })
+                .AddStorageBindings()
                 .Build();
 
             ITriggerBindingProvider triggerBindingProvider = host.Services.GetService<ITriggerBindingProvider>();

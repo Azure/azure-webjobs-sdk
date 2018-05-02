@@ -163,8 +163,8 @@ namespace Microsoft.Azure.WebJobs.Host
             metadata = (JObject)metadata.DeepClone(); // avoid mutating the inpout 
 
             JToken token;
-            if (attributeType == typeof(BlobAttribute) ||
-                attributeType == typeof(BlobTriggerAttribute))
+            if (attributeType.Name == "BlobAttribute" ||
+                attributeType.Name == "BlobTriggerAttribute")
             {
                 // Path --> BlobPath
                 if (metadata.TryGetValue("path", StringComparison.OrdinalIgnoreCase, out token))
