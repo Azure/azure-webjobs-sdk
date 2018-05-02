@@ -40,7 +40,8 @@ namespace Microsoft.Azure.WebJobs.Host
             return connectionString;
         }
 
-        internal static string GetPrefixedConnectionStringName(string connectionStringName)
+        // $$$ Was internal? 
+        public static string GetPrefixedConnectionStringName(string connectionStringName)
         {
             return Prefix + connectionStringName;
         }

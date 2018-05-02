@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
-using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,7 +22,14 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 {
     public static class TestHelpers
     {
-        public static async Task Await(Func<Task<bool>> condition, int timeout = 60 * 1000, int pollingInterval = 2 * 1000, bool throwWhenDebugging = false, Func<string> userMessageCallback = null)
+        // Test error if not reached within a timeout 
+        public static Task<TResult> AwaitWithTimeout<TResult>(TaskCompletionSource<TResult> taskSource)
+        {
+            // $$$ use a timeout here. 
+            return taskSource.Task;
+        }
+
+        public static Task Await(Func<bool> condition, int timeout = 60 * 1000, int pollingInterval = 2 * 1000, bool throwWhenDebugging = false, Func<string> userMessageCallback = null)
         {
             return Await(() => Task.FromResult(condition()), timeout, pollingInterval, throwWhenDebugging, userMessageCallback);
         }
@@ -111,7 +117,19 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                .ConfigureLogging(logging =>
                {
                    logging.AddProvider(new TestLoggerProvider());
-               });
+               }).AddStorageBindings();
+        }
+
+        public static IHostBuilder ConfigureDefaultTestHost<TProgram>(this IHostBuilder builder,
+            TProgram instance)
+        {
+            return builder.ConfigureDefaultTestHost(typeof(TProgram))
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<IJobHost, JobHost<TProgram>>();
+
+                    services.AddSingleton<IJobActivator>(new FakeActivator(instance));
+                }).AddStorageBindings();
         }
 
         public static IHostBuilder ConfigureDefaultTestHost<TProgram>(this IHostBuilder builder,
@@ -131,7 +149,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                     {
                         services.AddSingleton<IJobActivator>(activator);
                     }
-                });
+                }).AddStorageBindings();
         }
 
         public static TestLoggerProvider GetTestLoggerProvider(this IHost host)
@@ -166,8 +184,8 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 
         public static CloudStorageAccount GetStorageAccount(this IHost host)
         {
-            var provider = host.Services.GetRequiredService<IStorageAccountProvider>();
-            return provider.GetStorageAccountAsync(CancellationToken.None).Result.SdkObject;
+            var provider = host.Services.GetRequiredService<XStorageAccountProvider>(); // $$$ ok?
+            return provider.GetHost().SdkObject;            
         }
 
         public static TOptions GetOptions<TOptions>(this IHost host) where TOptions : class, new()
@@ -183,39 +201,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 
             return new AmbientConnectionStringProvider(config);
         }
-
-        private class FakeStorageAccountProvider : IStorageAccountProvider
-        {
-            public IStorageAccount StorageAccount { get; set; }
-
-            public IStorageAccount DashboardAccount { get; set; }
-
-            public string StorageConnectionString => throw new NotImplementedException();
-
-            public string DashboardConnectionString => throw new NotImplementedException();
-
-            public string InternalSasStorage => throw new NotImplementedException();
-
-            public Task<IStorageAccount> TryGetAccountAsync(string connectionStringName, CancellationToken cancellationToken)
-            {
-                IStorageAccount account;
-
-                if (connectionStringName == ConnectionStringNames.Storage)
-                {
-                    account = StorageAccount;
-                }
-                else if (connectionStringName == ConnectionStringNames.Dashboard)
-                {
-                    account = DashboardAccount;
-                }
-                else
-                {
-                    account = null;
-                }
-
-                return Task.FromResult(account);
-            }
-        }
+        
 
         public static IJobHostMetadataProvider CreateMetadataProvider(this IHost host)
         {

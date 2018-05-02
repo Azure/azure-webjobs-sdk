@@ -24,10 +24,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.Azure.WebJobs.Storage\WebJobs.Storage.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Folder Include="Properties\" />
   </ItemGroup>
 

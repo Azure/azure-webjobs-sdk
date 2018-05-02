@@ -6,7 +6,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
     // A short string serialization used to rehydrate the trigger. Sometimes this is the contents, and sometimes it's a moniker.  For example:
     // For Blob, the DirectInvokeString is the blob path; whereas the String is the blob contents. (because blobs can be MB large) 
     // For queue, both the DirectInvokeString and String are the queue contents. (because queue messages are generally small)
-    internal class DirectInvokeString
+    public class DirectInvokeString
     {
         public string Value { get; set; }
 

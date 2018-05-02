@@ -16,7 +16,6 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.WindowsAzure.Storage;
 
 namespace Microsoft.Azure.WebJobs
 {
@@ -53,17 +52,6 @@ namespace Microsoft.Azure.WebJobs
         private object _lock = new object();
 
         private ILogger _logger;
-
-        static JobHost()
-        {
-            // add webjobs to user agent for all storage calls
-            OperationContext.GlobalSendingRequest += (sender, e) =>
-            {
-                // TODO: FACAVAL - This is not supported on by the latest version of the
-                // storage SDK. Need to re-add this when the capability is reintroduced.
-                // e.UserAgent += " AzureWebJobs";
-            };
-        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JobHost"/> class using the configuration provided.

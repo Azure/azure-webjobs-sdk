@@ -23,6 +23,7 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
+#if false // $$$ enable this 
     public class DispatchQueueTests
     {
         private const string HostId = "functionalTestHost";
@@ -250,4 +251,5 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             return Task.WhenAll(enqueues);
         }
     }
+#endif
 }
