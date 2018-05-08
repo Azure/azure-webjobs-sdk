@@ -20,6 +20,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             {
                 throw new ArgumentNullException("input");
             }
+            if (input.Body == null)
+            {
+                return null;
+            }
             Stream stream = new MemoryStream(input.Body);
 
             TextReader reader = new StreamReader(stream, StrictEncodings.Utf8);
