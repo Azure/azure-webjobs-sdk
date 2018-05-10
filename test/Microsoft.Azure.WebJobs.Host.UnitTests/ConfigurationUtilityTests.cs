@@ -11,8 +11,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void GetSettingFromConfigOrEnvironment_NotFound_ReturnsEmpty()
         {
-            ConfigurationUtility.Reset();
-
             string value = ConfigurationUtility.GetSetting("DNE");
             Assert.Equal(null, value);
         }
@@ -20,8 +18,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void GetSettingFromConfigOrEnvironment_NameNull_ReturnsEmpty()
         {
-            ConfigurationUtility.Reset();
-
             string value = ConfigurationUtility.GetSetting(null);
             Assert.Equal(null, value);
         }
@@ -29,8 +25,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void GetSettingFromConfigOrEnvironment_ConfigSetting_NoEnvironmentSetting()
         {
-            ConfigurationUtility.Reset();
-
             string value = ConfigurationUtility.GetSetting("DisableSetting0");
             Assert.Equal("0", value);
         }
@@ -38,8 +32,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void GetSettingFromConfigOrEnvironment_EnvironmentSetting_NoConfigSetting()
         {
-            ConfigurationUtility.Reset();
-
             Environment.SetEnvironmentVariable("EnvironmentSetting", "1");
 
             string value = ConfigurationUtility.GetSetting("EnvironmentSetting");
@@ -51,14 +43,39 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void GetSettingFromConfigOrEnvironment_ConfigAndEnvironment_EnvironmentWins()
         {
-            ConfigurationUtility.Reset();
-
             Environment.SetEnvironmentVariable("DisableSetting0", "1");
 
             string value = ConfigurationUtility.GetSetting("DisableSetting0");
             Assert.Equal("1", value);
 
             Environment.SetEnvironmentVariable("DisableSetting0", null);
+        }
+
+        [Theory]
+        [InlineData("Foo__Bar__Baz", "Foo__Bar__Baz")]
+        [InlineData("Foo__Bar__Baz", "foo__bar__baz")]
+        [InlineData("Foo__Bar__Baz", "Foo:Bar:Baz")]
+        [InlineData("Foo__Bar__Baz", "foo:bar:baz")]
+        [InlineData("Foo:Bar:Baz", "Foo:Bar:Baz")]
+        [InlineData("Foo:Bar:Baz", "foo:bar:baz")]
+        [InlineData("Foo_Bar_Baz", "Foo_Bar_Baz")]
+        [InlineData("Foo_Bar_Baz", "foo_bar_baz")]
+        [InlineData("FooBarBaz", "FooBarBaz")]
+        [InlineData("FooBarBaz", "foobarbaz")]
+        public void GetSetting_NormalizesKeys(string key, string lookup)
+        {
+            try
+            {
+                string value = Guid.NewGuid().ToString();
+                Environment.SetEnvironmentVariable(key, value);
+
+                string result = ConfigurationUtility.GetSetting(lookup);
+                Assert.Equal(value, result);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(key, null);
+            }
         }
 
         [Theory]
@@ -72,7 +89,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void IsSettingEnabled_ReturnsExpected(string settingValue, bool expectedResult)
         {
             // Arrange
-            ConfigurationUtility.Reset();
             string settingName = "SettingEnabledTest";
             Environment.SetEnvironmentVariable(settingName, settingValue);            
 

@@ -11,8 +11,6 @@ namespace Microsoft.Azure.WebJobs
     {
         public static IDisposable Set(string name, string value)
         {
-            ConfigurationUtility.Reset();
-
             string prevStorage = Environment.GetEnvironmentVariable(name);
 
             Environment.SetEnvironmentVariable(name, value);
@@ -32,7 +30,6 @@ namespace Microsoft.Azure.WebJobs
             public void Dispose()
             {
                 Environment.SetEnvironmentVariable(_name, _value);
-                ConfigurationUtility.Reset();
             }
         }
     }

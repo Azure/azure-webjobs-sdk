@@ -22,8 +22,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         [Fact]
         public void ConnectionStringProvider_NoDashboardConnectionString_Throws()
         {
-            ConfigurationUtility.Reset();
-
             const string DashboardConnectionEnvironmentVariable = "AzureWebJobsDashboard";
             string previousConnectionString = Environment.GetEnvironmentVariable(DashboardConnectionEnvironmentVariable);
 

@@ -2,8 +2,9 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Globalization;
+using System.Linq;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.EnvironmentVariables;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
@@ -32,7 +33,6 @@ namespace Microsoft.Azure.WebJobs.Host
         public static void SetConfigurationFactory(Func<IConfiguration> configurationRootFactory)
         {
             _configurationFactory = configurationRootFactory;
-            Reset();
         }
 
         public static bool IsSettingEnabled(string settingName)
@@ -53,15 +53,10 @@ namespace Microsoft.Azure.WebJobs.Host
         private static IConfigurationRoot BuildConfiguration()
         {
             var configurationBuilder = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json", optional: true)
-                .AddEnvironmentVariables();
+                .AddJsonFile("appsettings.json", optional: true);
+            configurationBuilder.Sources.Add(new WebJobsEnvironmentVariablesConfigurationSource());
 
             return configurationBuilder.Build();
-        }
-
-        internal static void Reset()
-        {
-            _configuration = new Lazy<IConfiguration>(_configurationFactory);
         }
     }
 }
