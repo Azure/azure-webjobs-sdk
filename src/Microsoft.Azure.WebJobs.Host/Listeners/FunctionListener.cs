@@ -18,6 +18,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         private readonly IListener _listener;
         private readonly FunctionDescriptor _descriptor;
         private readonly ILogger _logger;
+        private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
         private bool _started = false;
         private bool _allowPartialHostStartup;
         private CancellationTokenSource _retryCancellationTokenSource;
@@ -52,6 +53,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         {
             _listener.Dispose();
             _retryCancellationTokenSource?.Cancel();
+            _semaphoreSlim.Dispose();
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -109,6 +111,16 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                     {
                         message = $"Listener successfully started for function '{_descriptor.ShortName}' after {attempt} retries.";
                         _logger?.LogInformation(message);
+
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            // stop has been called while we were in the process of starting
+                            // so we need to stop this listener
+                            await StopAsync(cancellationToken);
+
+                            message = $"Listener for function '{_descriptor.ShortName}' stopped. A stop was initiated while starting.";
+                            _logger?.LogInformation(message);
+                        }
                     }
                 }
             }
@@ -120,10 +132,20 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             // we issue the Stop
             _retryCancellationTokenSource?.Cancel();
 
-            if (_started)
+            await _semaphoreSlim.WaitAsync();
             {
-                await _listener.StopAsync(cancellationToken);
-                _started = false;
+                try
+                {
+                    if (_started)
+                    {
+                        await _listener.StopAsync(cancellationToken);
+                        _started = false;
+                    }
+                }
+                finally
+                {
+                    _semaphoreSlim.Release();
+                }
             }
         }
     }

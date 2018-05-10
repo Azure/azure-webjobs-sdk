@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -142,6 +143,83 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             int retryCount = _loggerProvider.GetAllLogMessages().Count(p => p.FormattedMessage.Contains("Retrying to start listener"));
 
             Assert.Equal(prevRetryCount, retryCount);
+        }
+
+        [Fact]
+        public async Task FunctionListener_ConcurrentStartStop_ListenerIsStopped()
+        {
+            Mock<IListener> badListener = new Mock<IListener>(MockBehavior.Strict);
+            var listener = new FunctionListener(badListener.Object, fd, _loggerFactory, allowPartialHostStartup: true, minRetryInterval: TimeSpan.FromMilliseconds(10), maxRetryInterval: TimeSpan.FromMilliseconds(100));
+
+            int count = 0;
+            badListener.Setup(bl => bl.StartAsync(It.IsAny<CancellationToken>()))
+                .Returns(async () =>
+                {
+                    count++;
+
+                    if (count == 1)
+                    {
+                        // initiate the restart loop by falling on the first attemt
+                        throw new Exception("Listener Exploded!");
+                    }
+                    else if (count == 2)
+                    {
+                        // while we're in the retry loop simulate a concurrent stop by
+                        // invoking stop ourselves
+                        await listener.StopAsync(ct);
+                    }
+                    else
+                    {
+                        // shouldn't get to here
+                    }
+                });
+
+            bool stopCalled = false;
+            badListener.Setup(bl => bl.StopAsync(It.IsAny<CancellationToken>()))
+                .Callback(() => stopCalled = true)
+                .Returns(Task.CompletedTask);
+
+            await listener.StartAsync(ct);
+
+            await TestHelpers.Await(() =>
+            {
+                return Task.FromResult(stopCalled);
+            }, timeout: 4000, userMessage: "Listener not stopped.");
+
+            badListener.Verify(p => p.StartAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+            badListener.Verify(p => p.StopAsync(It.IsAny<CancellationToken>()), Times.Exactly(1));
+
+            Assert.Collection(_loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage),
+                p => Assert.Equal("The listener for function 'testfunc' was unable to start.", p),
+                p => Assert.Equal("Retrying to start listener for function 'testfunc' (Attempt 1)", p),
+                p => Assert.Equal("Listener successfully started for function 'testfunc' after 1 retries.", p),
+                p => Assert.Equal("Listener for function 'testfunc' stopped. A stop was initiated while starting.", p));
+
+            // make sure the retry loop is not running
+            await Task.Delay(1000);
+            Assert.Equal(2, count);
+        }
+
+        [Fact]
+        public async Task StopAsync_MultipleConcurrentRequests_InnerListenerStoppedOnce()
+        {
+            Mock<IListener> innerListener = new Mock<IListener>(MockBehavior.Strict);
+            var functionListener = new FunctionListener(innerListener.Object, fd, _loggerFactory);
+
+            innerListener.Setup(bl => bl.StartAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+            innerListener.Setup(bl => bl.StopAsync(It.IsAny<CancellationToken>())).Returns(async () => await Task.Delay(100));
+
+            await functionListener.StartAsync(CancellationToken.None);
+
+            List<Task> tasks = new List<Task>();
+            for (int i = 0; i < 10; i++)
+            {
+                tasks.Add(functionListener.StopAsync(CancellationToken.None));
+            }
+
+            await Task.WhenAll(tasks);
+
+            innerListener.Verify(p => p.StopAsync(It.IsAny<CancellationToken>()), Times.Exactly(1));
         }
 
         [Fact]
