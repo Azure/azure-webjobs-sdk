@@ -35,14 +35,14 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 Environment.SetEnvironmentVariable(key, value);
             }
-        }
 
-        private static string NormalizeKey(string key)
-        {
-            // For hierarchical config values specified in environment variables, 
-            // a colon(:) may not work on all platforms. Double underscore(__) is
-            // supported by all platforms.
-            return key.Replace(ConfigurationPath.KeyDelimiter, "__");
+            private static string NormalizeKey(string key)
+            {
+                // For hierarchical config values specified in environment variables, 
+                // a colon(:) may not work on all platforms. Double underscore(__) is
+                // supported by all platforms.
+                return key.Replace(ConfigurationPath.KeyDelimiter, "__");
+            }
         }
     }
 }
