@@ -39,8 +39,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             telemetry.Context.Operation.Name = scopeProps.GetValueOrDefault<string>(ScopeKeys.FunctionName);
 
             // Apply Category and LogLevel to all telemetry
-            ISupportProperties telemetryProps = telemetry as ISupportProperties;
-            if (telemetryProps != null)
+            if (telemetry is ISupportProperties telemetryProps)
             {
                 string category = scopeProps.GetValueOrDefault<string>(LogConstants.CategoryNameKey);
                 if (category != null)
@@ -52,6 +51,12 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 if (logLevel != null)
                 {
                     telemetryProps.Properties[LogConstants.LogLevelKey] = logLevel.Value.ToString();
+                }
+
+                int? eventId = scopeProps.GetValueOrDefault<int?>(LogConstants.EventIdKey);
+                if (eventId != null && eventId.HasValue && eventId.Value != 0)
+                {
+                    telemetryProps.Properties[LogConstants.EventIdKey] = eventId.Value.ToString();
                 }
             }
         }

@@ -1,7 +1,6 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Logging
 {
@@ -126,9 +125,14 @@ namespace Microsoft.Azure.WebJobs.Logging
         public const string LogLevelKey = "LogLevel";
 
         /// <summary>
+        /// Gets the name of the key used to store the EventId of the log message.
+        /// </summary>
+        public const string EventIdKey = "EventId";
+
+        /// <summary>
         /// Gets the function start event name.
         /// </summary>
-        public const string FunctionStartEvent = "FunctionStart";        
+        public const string FunctionStartEvent = "FunctionStart";
 
         /// <summary>
         /// Gets the event id for a metric event.

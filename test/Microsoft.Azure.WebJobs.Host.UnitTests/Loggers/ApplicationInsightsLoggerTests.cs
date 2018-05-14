@@ -284,9 +284,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             var telemetry = _channel.Telemetries.Single() as MetricTelemetry;
 
-            Assert.Equal(2, telemetry.Properties.Count);
+            Assert.Equal(3, telemetry.Properties.Count);
             Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
+
+            // metrics are logged with EventId=1
+            Assert.Equal("1", telemetry.Properties[LogConstants.EventIdKey]);
 
             Assert.Equal("CustomMetric", telemetry.Name);
             Assert.Equal(44.9, telemetry.Sum);
@@ -297,6 +300,33 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Null(telemetry.Max);
             Assert.Equal(1, telemetry.Count);
             Assert.Null(telemetry.StandardDeviation);
+        }
+
+        [Fact]
+        public void Log_IncludesEventId()
+        {
+            ILogger logger = CreateLogger(_functionCategoryName);
+            logger.Log(LogLevel.Information, 100, "Test", null, (s, e) => s);
+
+            var telemetry = _channel.Telemetries.Single() as ISupportProperties;
+
+            Assert.Equal(3, telemetry.Properties.Count);
+            Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
+            Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
+            Assert.Equal("100", telemetry.Properties[LogConstants.EventIdKey]);
+        }
+
+        [Fact]
+        public void Log_IgnoresEventIdZero()
+        {
+            ILogger logger = CreateLogger(_functionCategoryName);
+            logger.Log(LogLevel.Information, 0, "Test", null, (s, e) => s);
+
+            var telemetry = _channel.Telemetries.Single() as ISupportProperties;
+
+            Assert.Equal(2, telemetry.Properties.Count);
+            Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
+            Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
         }
 
         [Fact]
@@ -321,11 +351,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             var telemetry = _channel.Telemetries.Single() as MetricTelemetry;
 
-            Assert.Equal(4, telemetry.Properties.Count);
+            Assert.Equal(5, telemetry.Properties.Count);
             Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
             Assert.Equal("abc", telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}MyCustomProp1"]);
             Assert.Equal("def", telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}MyCustomProp2"]);
+
+            // metrics are logged with EventId=1
+            Assert.Equal("1", telemetry.Properties[LogConstants.EventIdKey]);
 
             Assert.Equal(scopeGuid.ToString(), telemetry.Context.Operation.Id);
             Assert.Equal(_functionShortName, telemetry.Context.Operation.Name);
@@ -360,11 +393,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             var telemetry = _channel.Telemetries.Single() as MetricTelemetry;
 
-            Assert.Equal(4, telemetry.Properties.Count);
+            Assert.Equal(5, telemetry.Properties.Count);
             Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
             Assert.Equal("abc", telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}MyCustomProp1"]);
             Assert.Equal("def", telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}MyCustomProp2"]);
+
+            // metrics are logged with EventId=1
+            Assert.Equal("1", telemetry.Properties[LogConstants.EventIdKey]);
 
             Assert.Equal(scopeGuid.ToString(), telemetry.Context.Operation.Id);
             Assert.Equal(_functionShortName, telemetry.Context.Operation.Name);
