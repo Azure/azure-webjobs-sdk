@@ -19,6 +19,7 @@
       <dependency id="Newtonsoft.Json" version="9.0.1"/>
       <dependency id="WindowsAzure.ServiceBus" version="3.4.5"/>
       <dependency id="Microsoft.Azure.ServiceBus.EventProcessorHost" version="2.2.10" />
+      <dependency id="Microsoft.Extensions.Logging.Abstractions" version="1.1.1" />
     </dependencies>
   </metadata>
 </package>

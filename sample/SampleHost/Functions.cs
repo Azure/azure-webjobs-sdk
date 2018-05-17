@@ -2,7 +2,10 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Extensions.Logging;
+using Microsoft.ServiceBus.Messaging;
 using Newtonsoft.Json.Linq;
 using SampleHost.Filters;
 using SampleHost.Models;
@@ -32,6 +35,19 @@ namespace SampleHost
             [QueueTrigger("test")] WorkItem workItem)
         {
             Console.WriteLine($"Processed work item {workItem.ID}");
+        }
+
+        public static async Task ProcessWorkItem_ServiceBus(
+            [ServiceBusTrigger("test-items", AccessRights.Listen)] WorkItem item,
+            string messageId,
+            int deliveryCount,
+            ILogger log)
+        {
+            log.LogInformation($"Processing ServiceBus message (Id={messageId}, DeliveryCount={deliveryCount})");
+
+            await Task.Delay(1000);
+
+            log.LogInformation($"Message complete (Id={messageId})");
         }
     }
 }

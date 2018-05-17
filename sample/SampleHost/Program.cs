@@ -17,6 +17,8 @@ namespace SampleHost
             config.Queues.MaxDequeueCount = 3;
             config.LoggerFactory = new LoggerFactory().AddConsole();
 
+            config.UseServiceBus();
+
             if (config.IsDevelopment)
             {
                 config.UseDevelopmentSettings();

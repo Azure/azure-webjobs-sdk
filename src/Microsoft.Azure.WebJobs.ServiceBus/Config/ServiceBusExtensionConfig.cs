@@ -6,8 +6,11 @@ using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.ServiceBus.Bindings;
 using Microsoft.Azure.WebJobs.ServiceBus.Triggers;
+using Microsoft.Extensions.Logging;
+using Microsoft.ServiceBus.Messaging;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Config
 {
@@ -50,6 +53,24 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
             {
                 throw new ArgumentNullException("context");
             }
+
+            // Register an exception handler for background exceptions
+            // coming from MessageReceivers.
+            //
+            // The message options is a host level instance that is shared
+            // across all bindings, so we have to subscribe to it at the
+            // host level.
+            Config.MessageOptions.ExceptionReceived += (s, e) =>
+            {
+                if (!e.Exception.IsWrappedExceptionTransient())
+                {
+                    string message = $"MessageReceiver error (Action={e.Action})";
+                    var logger = context.Config.LoggerFactory?.CreateLogger(LogCategories.Executor);
+                    logger?.LogError(0, e.Exception, message);
+
+                    context.Trace.Error(message, e.Exception);
+                }
+            };
 
             // get the services we need to construct our binding providers
             INameResolver nameResolver = context.Config.GetService<INameResolver>();
