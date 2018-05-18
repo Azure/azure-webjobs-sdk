@@ -22,10 +22,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// </summary>
         public ServiceBusConfiguration()
         {
-            // We do not want to log MessageReceiverPump exceptions so just complete task in the git exception handler
-            Func<ExceptionReceivedEventArgs, Task> exceptionReceivedHandler = (args) => { return Task.CompletedTask; };
-
-            MessageOptions = new MessageHandlerOptions(exceptionReceivedHandler)
+            // Our default options will delegate to our own exception
+            // logger. Customers can override this completely.
+            MessageOptions = new MessageHandlerOptions(ExceptionReceivedHandler)
             {
                 MaxConcurrentCalls = 16
             };
@@ -86,6 +85,15 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 }
                 _messagingProvider = value;
             }
+        }
+
+        internal Action<ExceptionReceivedEventArgs> ExceptionHandler { get; set; }
+
+        private Task ExceptionReceivedHandler(ExceptionReceivedEventArgs args)
+        {
+            ExceptionHandler?.Invoke(args);
+
+            return Task.CompletedTask;
         }
     }
 }

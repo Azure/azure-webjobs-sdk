@@ -22,6 +22,8 @@ namespace SampleHost
                 config.UseDevelopmentSettings();
             }
 
+            config.UseServiceBus();
+
             CheckAndEnableAppInsights(config);
 
             var host = new JobHost(config);

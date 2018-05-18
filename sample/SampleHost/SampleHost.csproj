@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj" />
     <ProjectReference Include="..\..\src\Microsoft.Azure.WebJobs.Logging.ApplicationInsights\WebJobs.Logging.ApplicationInsights.csproj" />
+    <ProjectReference Include="..\..\src\Microsoft.Azure.WebJobs.ServiceBus\WebJobs.ServiceBus.csproj" />
   </ItemGroup>
   
 

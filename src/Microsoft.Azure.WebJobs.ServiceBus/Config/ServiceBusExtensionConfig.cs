@@ -2,12 +2,15 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.ServiceBus.Bindings;
 using Microsoft.Azure.WebJobs.ServiceBus.Triggers;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Config
 {
@@ -53,6 +56,20 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
             {
                 throw new ArgumentNullException("context");
             }
+
+            // Register an exception handler for background exceptions
+            // coming from MessageReceivers.
+            Config.ExceptionHandler = (e) =>
+            {
+                var sbex = e.Exception as ServiceBusException;
+                if (sbex != null && !sbex.IsTransient)
+                {
+                    var ctxt = e.ExceptionReceivedContext;
+                    string message = $"MessageReceiver error (Action={ctxt.Action}, ClientId={ctxt.ClientId}, EntityPath={ctxt.EntityPath}, Endpoint={ctxt.Endpoint})";
+                    var logger = context.Config.LoggerFactory?.CreateLogger(LogCategories.Executor);
+                    logger?.LogError(0, e.Exception, message);
+                }
+            };
 
             // get the services we need to construct our binding providers
             INameResolver nameResolver = context.Config.GetService<INameResolver>();
