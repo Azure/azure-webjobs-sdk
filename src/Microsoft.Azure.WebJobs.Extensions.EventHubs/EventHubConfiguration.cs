@@ -2,18 +2,16 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.EventHubs.Processor;
-using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Bindings;
-using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Config;
 using Newtonsoft.Json;
-using Microsoft.Extensions.Logging;
-using Microsoft.Azure.WebJobs.Logging;
-using Microsoft.Azure.WebJobs.Host;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -26,8 +24,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         // Event Hub Names are case-insensitive.
         // The same path can have multiple connection strings with different permissions (sending and receiving), 
         // so we track senders and receivers separately and infer which one to use based on the EventHub (sender) vs. EventHubTrigger (receiver) attribute. 
-        // Connection strings may also encapsulate different endpoints. 
-        private readonly Dictionary<string, EventHubClient> _senders = new Dictionary<string, EventHubClient>(StringComparer.OrdinalIgnoreCase);
+        // Connection strings may also encapsulate different endpoints.
+        //
+        // The client cache must be thread safe because clients are accessed/added on the function
+        // invocation path (BuildFromAttribute)
+        private readonly ConcurrentDictionary<string, EventHubClient> _clients = new ConcurrentDictionary<string, EventHubClient>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, ReceiverCreds> _receiverCreds = new Dictionary<string, ReceiverCreds>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, EventProcessorHost> _explicitlyProvidedHosts = new Dictionary<string, EventProcessorHost>(StringComparer.OrdinalIgnoreCase);
 
@@ -115,7 +116,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 throw new ArgumentNullException("client");
             }
            
-            _senders[eventHubName] = client;
+            _clients[eventHubName] = client;
         }
 
         /// <summary>
@@ -221,14 +222,17 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         internal EventHubClient GetEventHubClient(string eventHubName, string connection)
         {
             EventHubClient client;
-            if (_senders.TryGetValue(eventHubName, out client))             
+            if (_clients.TryGetValue(eventHubName, out client))             
             {
                 return client;
             }
             else if (!string.IsNullOrWhiteSpace(connection))
             {
-                AddSender(eventHubName, connection);
-                return _senders[eventHubName];
+                return _clients.GetOrAdd(eventHubName, k =>
+                {
+                    AddSender(k, connection);
+                    return _clients[k];
+                });
             }
             throw new InvalidOperationException("No event hub sender named " + eventHubName);
         }
