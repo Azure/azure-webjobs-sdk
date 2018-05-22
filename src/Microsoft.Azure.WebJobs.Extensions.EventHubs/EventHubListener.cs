@@ -30,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             _executor = executor;
             _eventListener = eventListener;
             _singleDispatch = single;
-            _options = config.GetOptions();
+            _options = config.EventProcessorOptions;
             _config = config;
             _logger = logger;
         }

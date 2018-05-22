@@ -23,7 +23,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         public ServiceBusConfiguration()
         {
             // Our default options will delegate to our own exception
-            // logger. Customers can override this completely.
+            // logger. Customers can override this completely by setting their
+            // own MessageHandlerOptions instance.
             MessageOptions = new MessageHandlerOptions(ExceptionReceivedHandler)
             {
                 MaxConcurrentCalls = 16

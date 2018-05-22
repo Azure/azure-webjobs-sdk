@@ -9,12 +9,13 @@ using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.EventHubs.Processor;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Xunit;
 using static Microsoft.Azure.EventHubs.EventData;
 
-namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
+namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
 {
     public class EventHubTests
     {
@@ -240,7 +241,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             context.Config.AddService<ILoggerFactory>(new LoggerFactory());
             (config as IExtensionConfigProvider).Initialize(context);
 
-            var options = config.GetOptions();
+            var options = config.EventProcessorOptions;
             Assert.Equal(100, options.MaxBatchSize);
             Assert.Equal(200, options.PrefetchCount);
             Assert.Equal(5, config.BatchCheckpointFrequency);
