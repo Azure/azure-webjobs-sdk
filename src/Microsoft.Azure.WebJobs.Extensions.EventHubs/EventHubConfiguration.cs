@@ -11,7 +11,9 @@ using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.EventHubs.Processor;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Logging;
 using Newtonsoft.Json;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -32,9 +34,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         private readonly Dictionary<string, ReceiverCreds> _receiverCreds = new Dictionary<string, ReceiverCreds>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, EventProcessorHost> _explicitlyProvidedHosts = new Dictionary<string, EventProcessorHost>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly EventProcessorOptions _options;
-
-        private string _defaultStorageString; // set to JobHostConfig.StorageConnectionString
+        private string _defaultStorageString;
         private int _batchCheckpointFrequency = 1;
 
         /// <summary>
@@ -44,26 +44,17 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         public const string LeaseContainerName = "azure-webjobs-eventhub";
 
         /// <summary>
-        /// default constructor. Callers can reference this without having any assembly references to service bus assemblies. 
-        /// </summary>
-        public EventHubConfiguration()
-            : this(null)
-        {
-        }
-
-        /// <summary>
         /// Constructs a new instance.
         /// </summary>
-        /// <param name="options">The optional <see cref="EventProcessorOptions"/> to use when receiving events.</param>
-        public EventHubConfiguration(EventProcessorOptions options)
+        public EventHubConfiguration()
         {
-            if (options == null)
-            {
-                options = EventProcessorOptions.DefaultOptions;
-                options.MaxBatchSize = 64;
-                options.PrefetchCount = options.MaxBatchSize * 4;
-            }
-            _options = options;
+            // Our default options will delegate to our own exception
+            // logger. Customers can override this completely by setting their
+            // own EventProcessorOptions instance.
+            EventProcessorOptions = EventProcessorOptions.DefaultOptions;
+            EventProcessorOptions.MaxBatchSize = 64;
+            EventProcessorOptions.PrefetchCount = EventProcessorOptions.MaxBatchSize * 4;
+            EventProcessorOptions.SetExceptionHandler(ExceptionReceivedHandler);
         }
 
         /// <summary>
@@ -376,9 +367,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             string key = EscapeBlobPath(serviceBusNamespace) + "/" + EscapeBlobPath(eventHubName) + "/";
             return key;
         }
-
-        // Get the eventhub options, used by the EventHub SDK for listening on event. 
-        internal EventProcessorOptions GetOptions() => _options;
+        public EventProcessorOptions EventProcessorOptions { get; set; }
 
         void IExtensionConfigProvider.Initialize(ExtensionConfigContext context)
         {
@@ -388,7 +377,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             }
 
             // apply at eventProcessorOptions level (maxBatchSize, prefetchCount)
-            context.ApplyConfig(_options, "eventHub");
+            context.ApplyConfig(EventProcessorOptions, "eventHub");
 
             // apply at config level (batchCheckpointFrequency)
             context.ApplyConfig(this, "eventHub");
@@ -411,7 +400,20 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
             // register our binding provider
             context.AddBindingRule<EventHubAttribute>()
-                .BindToCollector(BuildFromAttribute);           
+                .BindToCollector(BuildFromAttribute);
+
+            // Set the default exception handler for background exceptions
+            // coming from the EventProcessorHost.
+            ExceptionHandler = (e =>
+            {
+                var ehex = e.Exception as EventHubsException;
+                if (ehex != null && !ehex.IsTransient)
+                {
+                    string message = $"EventProcessorHost error (Action={e.Action})";
+                    var logger = context.Config.LoggerFactory?.CreateLogger(LogCategories.Executor);
+                    logger?.LogError(0, e.Exception, message);
+                }
+            });
         }
 
         private IAsyncCollector<EventData> BuildFromAttribute(EventHubAttribute attribute)
@@ -435,6 +437,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         private static Task<object> ConvertPocoToEventData(object arg, Attribute attrResolved, ValueBindingContext context)
         {
             return Task.FromResult<object>(ConvertString2EventData(JsonConvert.SerializeObject(arg)));
+        }
+
+        internal Action<ExceptionReceivedEventArgs> ExceptionHandler { get; set; }
+
+        private void ExceptionReceivedHandler(ExceptionReceivedEventArgs args)
+        {
+            ExceptionHandler?.Invoke(args);
         }
 
         // Hold credentials for a given eventHub name. 

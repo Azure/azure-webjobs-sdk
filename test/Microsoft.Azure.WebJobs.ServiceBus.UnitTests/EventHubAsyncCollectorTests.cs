@@ -9,11 +9,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.ServiceBus;
 using Xunit;
 
 using static Microsoft.Azure.EventHubs.EventData;
 
-namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
+namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
 {
     public class EventHubAsyncCollectorTests
     {

@@ -57,7 +57,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
                 throw new ArgumentNullException("context");
             }
 
-            // Register an exception handler for background exceptions
+            // Set the default exception handler for background exceptions
             // coming from MessageReceivers.
             Config.ExceptionHandler = (e) =>
             {

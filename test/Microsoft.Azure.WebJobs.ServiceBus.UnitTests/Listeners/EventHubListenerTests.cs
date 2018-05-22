@@ -3,9 +3,10 @@
 
 using System;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.ServiceBus;
 using Xunit;
 
-namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
+namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
 {
     public class EventHubListenerTests
     {

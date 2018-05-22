@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.0</TargetFramework>
-    <RootNamespace>Microsoft.Azure.WebJobs.ServiceBus.UnitTests</RootNamespace>
+    <RootNamespace>Microsoft.Azure.WebJobs.EventHubs.UnitTests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
