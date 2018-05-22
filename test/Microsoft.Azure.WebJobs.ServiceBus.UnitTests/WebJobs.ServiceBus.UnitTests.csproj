@@ -201,6 +201,7 @@
     <Compile Include="Bindings\ServiceBusTriggerBindingTests.cs" />
     <Compile Include="BrokeredMessageToByteArrayConverterTests.cs" />
     <Compile Include="BrokeredMessageToStringConverterTests.cs" />
+    <Compile Include="Config\EventHubConfigurationTests.cs" />
     <Compile Include="Config\ServiceBusConfigurationTests.cs" />
     <Compile Include="Config\ServiceBusJobHostConfigurationExtensionsTests.cs" />
     <Compile Include="Config\ServiceBusExtensionConfigTests.cs" />

@@ -9,6 +9,8 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.Logging;
 using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
 
@@ -453,7 +455,25 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
             // register our binding provider
             context.AddBindingRule<EventHubAttribute>()
-                .BindToCollector(BuildFromAttribute);           
+                .BindToCollector(BuildFromAttribute);
+
+            // Register an exception handler for background exceptions
+            // coming from the EventProcessorHost.
+            //
+            // EventProcessorOptions is a host level instance that is shared
+            // across all bindings, so we have to subscribe to it at the
+            // host level.
+            _options.ExceptionReceived += (s, e) =>
+            {
+                if (!e.Exception.IsWrappedExceptionTransient())
+                {
+                    string message = $"EventProcessorHost error (Action={e.Action})";
+                    var logger = context.Config.LoggerFactory?.CreateLogger(LogCategories.Executor);
+                    logger?.LogError(0, e.Exception, message);
+
+                    context.Trace.Error(message, e.Exception);
+                }
+            };
         }
 
         private IAsyncCollector<EventData> BuildFromAttribute(EventHubAttribute attribute)
