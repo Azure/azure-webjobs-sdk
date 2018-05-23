@@ -19,7 +19,7 @@ if (-not $isPr -and $env:SkipAssemblySigning -ne "true") {
   }
 
   if ($polling) {
-    "No jenkins artifacts found, investigate job at https://zenkins.redmond.corp.microsoft.com/view/Functions/job/Functions_signing/"
+    "No jenkins artifacts found, investigate job at https://funkins-master.redmond.corp.microsoft.com/job/Build_signing/"
     exit(1);
   }
   Remove-Item "$PSScriptRoot/../bin/sign" -Recurse -Force
