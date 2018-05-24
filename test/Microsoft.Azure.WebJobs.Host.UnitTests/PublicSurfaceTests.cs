@@ -111,6 +111,23 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
+        public void EventHubsPublicSurface_LimitedToSpecificTypes()
+        {
+            var assembly = typeof(EventHubAttribute).Assembly;
+
+            var expected = new[]
+            {
+                "EventHubAttribute",
+                "EventHubTriggerAttribute",
+                "EventHubConfiguration",
+                "EventHubExtensionConfigProvider",
+                "EventHubHostBuilderExtensions"
+            };
+
+            AssertPublicTypes(expected, assembly);
+        }
+
+        [Fact]
         public void WebJobsPublicSurface_LimitedToSpecificTypes()
         {
             var assembly = typeof(QueueTriggerAttribute).Assembly;

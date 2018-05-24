@@ -9,7 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.ServiceBus;
 using Xunit;
 
 using static Microsoft.Azure.EventHubs.EventData;
@@ -222,7 +221,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             Assert.Empty(expected); // Some events where missed.
         }
 
-        public class TestEventHubAsyncCollector : EventHubAsyncCollector
+        internal class TestEventHubAsyncCollector : EventHubAsyncCollector
         {
             private static EventHubClient testClient = EventHubClient.CreateFromConnectionString(FakeConnectionString1);
 

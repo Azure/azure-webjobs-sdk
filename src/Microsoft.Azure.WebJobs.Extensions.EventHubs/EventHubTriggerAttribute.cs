@@ -4,7 +4,7 @@
 using System;
 using Microsoft.Azure.WebJobs.Description;
 
-namespace Microsoft.Azure.WebJobs.ServiceBus
+namespace Microsoft.Azure.WebJobs
 {
     /// <summary>
     /// Setup an 'trigger' on a parameter to listen on events from an event hub. 

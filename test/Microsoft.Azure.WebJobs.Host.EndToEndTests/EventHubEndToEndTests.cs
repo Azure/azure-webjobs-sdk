@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
-using Microsoft.Azure.WebJobs.ServiceBus;
+using Microsoft.Azure.WebJobs.EventHubs;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Xunit;
 using Microsoft.Extensions.Hosting;

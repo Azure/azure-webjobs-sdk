@@ -10,7 +10,7 @@ using Microsoft.Azure.EventHubs.Processor;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Executors;
 
-namespace Microsoft.Azure.WebJobs.ServiceBus
+namespace Microsoft.Azure.WebJobs.EventHubs
 {
     /// <summary>
     /// Provide configuration for event hubs. 

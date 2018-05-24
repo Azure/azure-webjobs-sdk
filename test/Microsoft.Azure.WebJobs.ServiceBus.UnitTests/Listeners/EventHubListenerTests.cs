@@ -3,7 +3,6 @@
 
 using System;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.ServiceBus;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests

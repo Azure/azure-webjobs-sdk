@@ -4,7 +4,7 @@
 using System;
 using Microsoft.Azure.WebJobs.Description;
 
-namespace Microsoft.Azure.WebJobs.ServiceBus
+namespace Microsoft.Azure.WebJobs
 {
     /// <summary>
     /// Setup an 'output' binding to an EventHub. This can be any output type compatible with an IAsyncCollector.
