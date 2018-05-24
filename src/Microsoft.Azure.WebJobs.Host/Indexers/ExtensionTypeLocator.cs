@@ -10,6 +10,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
     {
         private readonly ITypeLocator _typeLocator;
         private IReadOnlyList<Type> _cloudBlobStreamBinderTypes;
+        private readonly static IReadOnlyList<Type> _emptyList = new List<Type>().AsReadOnly();
 
         public ExtensionTypeLocator(ITypeLocator typeLocator)
         {
@@ -22,43 +23,10 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         }
 
         public IReadOnlyList<Type> GetCloudBlobStreamBinderTypes()
-        {
-            if (_cloudBlobStreamBinderTypes == null)
-            {
-                _cloudBlobStreamBinderTypes = GetCloudBlobStreamBinderTypes(_typeLocator.GetTypes());
-            }
-
-            return _cloudBlobStreamBinderTypes;
-        }
+            => _emptyList;
 
         // Search for any types that implement ICloudBlobStreamBinder<T>
         internal static IReadOnlyList<Type> GetCloudBlobStreamBinderTypes(IEnumerable<Type> types)
-        {
-            List<Type> cloudBlobStreamBinderTypes = new List<Type>();
-
-            foreach (Type type in types)
-            {
-                try
-                {
-                    foreach (Type interfaceType in type.GetInterfaces())
-                    {
-                        if (interfaceType.IsGenericType)
-                        {
-                            Type interfaceGenericDefinition = interfaceType.GetGenericTypeDefinition();
-
-                            if (interfaceGenericDefinition == typeof(ICloudBlobStreamBinder<>))
-                            {
-                                cloudBlobStreamBinderTypes.Add(type);
-                            }
-                        }
-                    }
-                }
-                catch
-                {
-                }
-            }
-
-            return cloudBlobStreamBinderTypes;
-        }
+            => _emptyList;
     }
 }

@@ -191,13 +191,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await EndToEndTest(uploadBlobBeforeHostStart: false);
         }
 
-        [Fact]
+        [Fact(Skip = "This test relies on ICloudBlobStreamBinder<T> support, which has been removed. See https://github.com/Azure/azure-webjobs-sdk/issues/995")]
         public async Task AzureStorageEndToEndFast()
         {
             await EndToEndTest(uploadBlobBeforeHostStart: true);
         }
 
-        [Fact]
+        [Fact(Skip = "This test relies on ICloudBlobStreamBinder<T> support, which has been removed. See https://github.com/Azure/azure-webjobs-sdk/issues/995")]
         public async Task TableFilterTest()
         {
             // Reinitialize the name resolver to avoid conflicts
@@ -321,7 +321,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await VerifyTableResultsAsync();
         }
 
-        [Fact]
+        [Fact(Skip = "This test relies on ICloudBlobStreamBinder<T> support, which has been removed. See https://github.com/Azure/azure-webjobs-sdk/issues/995")]
         public async Task BadQueueMessageE2ETests()
         {
             // This test ensures that the host does not crash on a bad message (it previously did)
