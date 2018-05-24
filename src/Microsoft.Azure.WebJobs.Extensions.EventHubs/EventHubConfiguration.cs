@@ -406,14 +406,28 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             // coming from the EventProcessorHost.
             ExceptionHandler = (e =>
             {
-                var ehex = e.Exception as EventHubsException;
-                if (ehex != null && !ehex.IsTransient)
-                {
-                    string message = $"EventProcessorHost error (Action={e.Action})";
-                    var logger = context.Config.LoggerFactory?.CreateLogger(LogCategories.Executor);
-                    logger?.LogError(0, e.Exception, message);
-                }
+                LogExceptionReceivedEvent(e, context.Config.LoggerFactory);
             });
+        }
+
+        internal static void LogExceptionReceivedEvent(ExceptionReceivedEventArgs e, ILoggerFactory loggerFactory)
+        {
+            var logger = loggerFactory?.CreateLogger(LogCategories.Executor);
+            string message = $"EventProcessorHost error (Action={e.Action}, HostName={e.Hostname}, PartitionId={e.PartitionId})";
+
+            var ehex = e.Exception as EventHubsException;
+            if (ehex == null || !ehex.IsTransient)
+            {
+                // any non-transient exceptions or unknown exception types
+                // we want to log as errors
+                logger?.LogError(0, e.Exception, message);
+            }
+            else
+            {
+                // transient errors we log as verbose so we have a record
+                // of them, but we don't treat them as actual errors
+                logger?.LogDebug(0, e.Exception, message);
+            }
         }
 
         private IAsyncCollector<EventData> BuildFromAttribute(EventHubAttribute attribute)

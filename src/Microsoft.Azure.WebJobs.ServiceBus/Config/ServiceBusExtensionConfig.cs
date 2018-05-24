@@ -61,14 +61,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
             // coming from MessageReceivers.
             Config.ExceptionHandler = (e) =>
             {
-                var sbex = e.Exception as ServiceBusException;
-                if (sbex != null && !sbex.IsTransient)
-                {
-                    var ctxt = e.ExceptionReceivedContext;
-                    string message = $"MessageReceiver error (Action={ctxt.Action}, ClientId={ctxt.ClientId}, EntityPath={ctxt.EntityPath}, Endpoint={ctxt.Endpoint})";
-                    var logger = context.Config.LoggerFactory?.CreateLogger(LogCategories.Executor);
-                    logger?.LogError(0, e.Exception, message);
-                }
+                LogExceptionReceivedEvent(e, context.Config.LoggerFactory);
             };
 
             // get the services we need to construct our binding providers
@@ -82,6 +75,27 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
             // register our binding provider
             ServiceBusAttributeBindingProvider bindingProvider = new ServiceBusAttributeBindingProvider(nameResolver, _serviceBusConfig);
             extensions.RegisterExtension<IBindingProvider>(bindingProvider);
+        }
+
+        internal static void LogExceptionReceivedEvent(ExceptionReceivedEventArgs e, ILoggerFactory loggerFactory)
+        {
+            var ctxt = e.ExceptionReceivedContext;
+            var logger = loggerFactory?.CreateLogger(LogCategories.Executor);
+            string message = $"MessageReceiver error (Action={ctxt.Action}, ClientId={ctxt.ClientId}, EntityPath={ctxt.EntityPath}, Endpoint={ctxt.Endpoint})";
+
+            var sbex = e.Exception as ServiceBusException;
+            if (sbex == null || !sbex.IsTransient)
+            {
+                // any non-transient exceptions or unknown exception types
+                // we want to log as errors
+                logger?.LogError(0, e.Exception, message);
+            }
+            else
+            {
+                // transient errors we log as verbose so we have a record
+                // of them, but we don't treat them as actual errors
+                logger?.LogDebug(0, e.Exception, message);
+            }
         }
     }
 }
