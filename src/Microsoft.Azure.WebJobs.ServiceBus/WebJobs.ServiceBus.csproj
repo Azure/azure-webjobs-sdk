@@ -278,6 +278,7 @@
     <Compile Include="Listeners\ServiceBusCausalityHelper.cs" />
     <Compile Include="Triggers\ServiceBusTriggerAttributeBindingProvider.cs" />
     <Compile Include="Triggers\ServiceBusTriggerBinding.cs" />
+    <Compile Include="Utility.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj">

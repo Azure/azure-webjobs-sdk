@@ -62,14 +62,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
             // host level.
             Config.MessageOptions.ExceptionReceived += (s, e) =>
             {
-                if (!e.Exception.IsWrappedExceptionTransient())
-                {
-                    string message = $"MessageReceiver error (Action={e.Action})";
-                    var logger = context.Config.LoggerFactory?.CreateLogger(LogCategories.Executor);
-                    logger?.LogError(0, e.Exception, message);
-
-                    context.Trace.Error(message, e.Exception);
-                }
+                Utility.LogExceptionReceivedEvent(e, "MessageReceiver", context.Trace, context.Config.LoggerFactory);
             };
 
             // get the services we need to construct our binding providers

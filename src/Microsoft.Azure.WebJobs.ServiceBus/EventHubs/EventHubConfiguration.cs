@@ -465,14 +465,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             // host level.
             _options.ExceptionReceived += (s, e) =>
             {
-                if (!e.Exception.IsWrappedExceptionTransient())
-                {
-                    string message = $"EventProcessorHost error (Action={e.Action})";
-                    var logger = context.Config.LoggerFactory?.CreateLogger(LogCategories.Executor);
-                    logger?.LogError(0, e.Exception, message);
-
-                    context.Trace.Error(message, e.Exception);
-                }
+                Utility.LogExceptionReceivedEvent(e, "EventProcessorHost", context.Trace, context.Config.LoggerFactory);
             };
         }
 
