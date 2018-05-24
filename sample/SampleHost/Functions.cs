@@ -4,6 +4,7 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceBus.Messaging;
 using Newtonsoft.Json.Linq;
@@ -48,6 +49,15 @@ namespace SampleHost
             await Task.Delay(1000);
 
             log.LogInformation($"Message complete (Id={messageId})");
+        }
+
+        public static void ProcessEvents([EventHubTrigger("testhub2", Connection = "TestEventHubConnection")] EventData[] events,
+            ILogger log)
+        {
+            foreach (var evt in events)
+            {
+                log.LogInformation($"Event processed (Offset={evt.Offset}, SequenceNumber={evt.SequenceNumber})");
+            }
         }
     }
 }

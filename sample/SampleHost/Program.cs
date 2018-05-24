@@ -4,6 +4,7 @@
 using System;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.Extensions.Logging;
 
 namespace SampleHost
@@ -18,6 +19,8 @@ namespace SampleHost
             config.LoggerFactory = new LoggerFactory().AddConsole();
 
             config.UseServiceBus();
+            var eventHubConfig = new EventHubConfiguration();
+            config.UseEventHub(eventHubConfig);
 
             if (config.IsDevelopment)
             {
