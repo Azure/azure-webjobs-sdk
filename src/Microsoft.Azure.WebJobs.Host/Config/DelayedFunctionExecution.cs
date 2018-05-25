@@ -18,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             _data = data;
         }
 
-        public async Task<FunctionResult> Execute(CancellationToken token)
+        public async Task<FunctionResult> ExecuteAsync(CancellationToken token)
         {
             return await _executor.TryExecuteAsync(_data, token);
         }
