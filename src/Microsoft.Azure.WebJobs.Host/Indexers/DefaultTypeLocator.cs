@@ -122,11 +122,15 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             catch (ReflectionTypeLoadException ex)
             {
                 _log.WriteLine("Warning: Only got partial types from assembly: {0}", assembly.FullName);
-                _log.WriteLine($"The following loader failures occured when trying to load the assembly:");
-                string loaderFailuresMessage = string.Join(Environment.NewLine, ex.LoaderExceptions.Select(e => $"   - {e.Message}"));
-                _log.WriteLine(loaderFailuresMessage);
 
-                _log.WriteLine("This can occur if the assemblies listed above are missing, outdated or mismatched.");
+                if (ex.LoaderExceptions != null)
+                {
+                    _log.WriteLine($"The following loader failures occured when trying to load the assembly:");
+                    string loaderFailuresMessage = string.Join(Environment.NewLine, ex.LoaderExceptions.Select(e => $"   - {e.Message}"));
+                    _log.WriteLine(loaderFailuresMessage);
+
+                    _log.WriteLine("This can occur if the assemblies listed above are missing, outdated or mismatched.");
+                }
 
                 _log.WriteLine("Exception message: {0}", ex.ToString());
 
