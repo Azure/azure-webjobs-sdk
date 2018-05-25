@@ -9,8 +9,6 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using Microsoft.Azure.WebJobs.Host.Config;
-using Microsoft.Azure.WebJobs.Logging;
-using Microsoft.Extensions.Logging;
 using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
 

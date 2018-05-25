@@ -6,11 +6,8 @@ using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Triggers;
-using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.ServiceBus.Bindings;
 using Microsoft.Azure.WebJobs.ServiceBus.Triggers;
-using Microsoft.Extensions.Logging;
-using Microsoft.ServiceBus.Messaging;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Config
 {
