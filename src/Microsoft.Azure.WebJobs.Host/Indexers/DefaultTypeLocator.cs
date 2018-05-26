@@ -123,11 +123,11 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             {
 				
                 _log.WriteLine("Warning: Only got partial types from assembly: {0}", assembly.FullName);
-				if(ex?.LoaderExceptions != null)
+				if(ex.LoaderExceptions != null)
 				{
 					foreach(var loaderException in ex.LoaderExceptions)
 					{
-						_log.WriteLine("Exception message: Loader Exception: {0}", loaderException);
+						_log.WriteLine("Loader Exception: {0}", loaderException);
 					}
 					
 				}
