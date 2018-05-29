@@ -42,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 return false;
             }
 
-            AssemblyName[] referencedAssemblyNames = assembly.GetReferencedAssemblies();  
+            AssemblyName[] referencedAssemblyNames = assembly.GetReferencedAssemblies();
             foreach (var referencedAssemblyName in referencedAssemblyNames)
             {
                 if (String.Equals(referencedAssemblyName.Name, WebJobsAssemblyName, StringComparison.OrdinalIgnoreCase))
@@ -121,19 +121,17 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
             catch (ReflectionTypeLoadException ex)
             {
-				
                 _log.WriteLine("Warning: Only got partial types from assembly: {0}", assembly.FullName);
-				if(ex.LoaderExceptions != null)
-				{
-					foreach(var loaderException in ex.LoaderExceptions)
-					{
-						_log.WriteLine("Loader Exception: {0}", loaderException);
-					}
-					
-				}
+                if (ex.LoaderExceptions != null)
+                {
+                    foreach (var loaderException in ex.LoaderExceptions)
+                    {
+                        _log.WriteLine("Loader Exception: {0}", loaderException);
+                    }
+                }
 
-				_log.WriteLine("Exception message: {0}", ex.ToString());
-				
+                _log.WriteLine("Exception message: {0}", ex.ToString());
+
                 // In case of a type load exception, at least get the types that did succeed in loading
                 types = ex.Types;
             }
