@@ -2,8 +2,10 @@
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
+using Microsoft.Azure.EventHubs.Processor;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -28,6 +30,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             _configuration = configuration;
         }
 
+        internal Action<ExceptionReceivedEventArgs> ExceptionHandler { get; set; }
+
+        private void ExceptionReceivedHandler(ExceptionReceivedEventArgs args)
+        {
+            ExceptionHandler?.Invoke(args);
+        }
+
         public void Initialize(ExtensionConfigContext context)
         {
             if (context == null)
@@ -37,7 +46,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
             // TODO: Can we bind these during service setup?
             // apply at eventProcessorOptions level (maxBatchSize, prefetchCount)
-            _configuration.Bind("eventHub", _config.GetOptions());
+
+            EventProcessorOptions options = _config.GetOptions();
+            options.SetExceptionHandler(ExceptionReceivedHandler);
+            _configuration.Bind("eventHub", options);
 
             // apply at config level (batchCheckpointFrequency)
             _configuration.Bind("eventHub", _config);
@@ -57,6 +69,31 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             // register our binding provider
             context.AddBindingRule<EventHubAttribute>()
                 .BindToCollector(BuildFromAttribute);
+
+            ExceptionHandler = (e =>
+            {
+                LogExceptionReceivedEvent(e, _loggerFactory);
+            });
+        }
+
+        internal static void LogExceptionReceivedEvent(ExceptionReceivedEventArgs e, ILoggerFactory loggerFactory)
+        {
+            var logger = loggerFactory?.CreateLogger(LogCategories.Executor);
+            string message = $"EventProcessorHost error (Action={e.Action}, HostName={e.Hostname}, PartitionId={e.PartitionId})";
+
+            var ehex = e.Exception as EventHubsException;
+            if (ehex == null || !ehex.IsTransient)
+            {
+                // any non-transient exceptions or unknown exception types
+                // we want to log as errors
+                logger?.LogError(0, e.Exception, message);
+            }
+            else
+            {
+                // transient errors we log as verbose so we have a record
+                // of them, but we don't treat them as actual errors
+                logger?.LogDebug(0, e.Exception, message);
+            }
         }
 
         private IAsyncCollector<EventData> BuildFromAttribute(EventHubAttribute attribute)

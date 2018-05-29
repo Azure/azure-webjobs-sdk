@@ -213,7 +213,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
 
             async Task<CloudTable> IAsyncConverter<TableAttribute, CloudTable>.ConvertAsync(TableAttribute attribute, CancellationToken cancellation)
             {
-                var table = await _bindingProvider.GetTableAsync(attribute);
+                var table = _bindingProvider.GetTable(attribute);
                 await table.CreateIfNotExistsAsync(CancellationToken.None);
 
                 return table;
@@ -221,10 +221,9 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
 
             async Task<JObject> IAsyncConverter<TableAttribute, JObject>.ConvertAsync(TableAttribute attribute, CancellationToken cancellation)
             {
-                var table = await _bindingProvider.GetTableAsync(attribute);
+                var table = _bindingProvider.GetTable(attribute);
 
-                var retrieve = table.CreateRetrieveOperation<DynamicTableEntity>(
-                  attribute.PartitionKey, attribute.RowKey);
+                var retrieve = table.CreateRetrieveOperation<DynamicTableEntity>(attribute.PartitionKey, attribute.RowKey);
                 TableResult result = await table.ExecuteAsync(retrieve, CancellationToken.None);
                 DynamicTableEntity entity = (DynamicTableEntity)result.Result;
                 if (entity == null)

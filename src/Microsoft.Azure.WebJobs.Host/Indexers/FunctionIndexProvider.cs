@@ -39,8 +39,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             SingletonManager singletonManager,
             ILoggerFactory loggerFactory,
             SharedQueueHandler sharedQueue,
-            bool allowPartialHostStartup = false,
-            IOptions<JobHostFunctionTimeoutOptions> timeoutOptions)
+            IOptions<JobHostFunctionTimeoutOptions> timeoutOptions,
+            bool allowPartialHostStartup = false)
         {
 
             _typeLocator = typeLocator ?? throw new ArgumentNullException(nameof(typeLocator));

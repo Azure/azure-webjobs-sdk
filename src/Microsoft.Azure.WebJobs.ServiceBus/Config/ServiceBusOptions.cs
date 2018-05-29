@@ -4,6 +4,7 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.Azure.ServiceBus;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -54,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             {
                 if (_messagingProvider == null)
                 {
-                    _messagingProvider = new MessagingProvider(this);
+                    _messagingProvider = new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(this));
                 }
                 return _messagingProvider;
             }
