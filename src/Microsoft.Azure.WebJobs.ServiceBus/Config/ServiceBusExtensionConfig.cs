@@ -9,6 +9,8 @@ using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.ServiceBus.Bindings;
 using Microsoft.Azure.WebJobs.ServiceBus.Triggers;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Config
@@ -20,6 +22,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
     {
         private readonly INameResolver _nameResolver;
         private readonly IConnectionStringProvider _connectionStringProvider;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly ServiceBusOptions _serviceBusConfig;
         private readonly IMessagingProvider _messagingProvider;
 
@@ -27,12 +30,17 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
         /// Creates a new <see cref="ServiceBusExtensionConfig"/> instance.
         /// </summary>
         /// <param name="serviceBusConfig">The <see cref="ServiceBusOptions"></see> to use./></param>
-        public ServiceBusExtensionConfig(IOptions<ServiceBusOptions> serviceBusConfig, IMessagingProvider messagingProvider, INameResolver nameResolver, IConnectionStringProvider connectionStringProvider)
+        public ServiceBusExtensionConfig(IOptions<ServiceBusOptions> serviceBusConfig,
+            IMessagingProvider messagingProvider,
+            INameResolver nameResolver,
+            IConnectionStringProvider connectionStringProvider,
+            ILoggerFactory loggerFactory)
         {
             _serviceBusConfig = serviceBusConfig.Value;
             _messagingProvider = messagingProvider;
             _nameResolver = nameResolver;
             _connectionStringProvider = connectionStringProvider;
+            _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         }
 
         /// <summary>
@@ -58,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
             // coming from MessageReceivers.
             Config.ExceptionHandler = (e) =>
             {
-                LogExceptionReceivedEvent(e, context.Config.LoggerFactory);
+                LogExceptionReceivedEvent(e, _loggerFactory);
             };
 
             // register our trigger binding provider
