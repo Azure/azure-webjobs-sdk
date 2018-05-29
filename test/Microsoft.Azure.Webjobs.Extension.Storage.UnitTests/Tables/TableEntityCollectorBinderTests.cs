@@ -6,8 +6,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.Azure.WebJobs.Host.Storage;
-using Microsoft.Azure.WebJobs.Host.Storage.Table;
 using Microsoft.Azure.WebJobs.Host.Tables;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
@@ -24,7 +22,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Tables
             public int TimesFlushed { get; set; }
 
             public StubTableEntityWriter()
-                : base(new StorageTable(new CloudTable(new Uri("http://localhost:10000/account/table"))))
+                : base(new CloudTable(new Uri("http://localhost:10000/account/table")))
             {
                 TimesFlushed = 0;
                 TimesPartitionFlushed = 0;
@@ -37,7 +35,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Tables
             }
 
             internal override Task ExecuteBatchAndCreateTableIfNotExistsAsync(
-                Dictionary<string, IStorageTableOperation> batch, CancellationToken cancellationToken)
+                Dictionary<string, TableOperation> batch, CancellationToken cancellationToken)
             {
                 // Do nothing
                 TimesPartitionFlushed++;
@@ -50,8 +48,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Tables
         public void ValueHasNotChanged()
         {
             // Arrange
-            IStorageTableClient client = CreateTableClient();
-            IStorageTable table = client.GetTableReference("table");
+            var client = CreateTableClient();
+            var table = client.GetTableReference("table");
             StubTableEntityWriter<DynamicTableEntity> writer = new StubTableEntityWriter<DynamicTableEntity>();
             Type valueType = typeof(TableEntityWriter<DynamicTableEntity>);
             TableEntityCollectorBinder<DynamicTableEntity> product = new TableEntityCollectorBinder<DynamicTableEntity>(table, writer, valueType);
@@ -67,8 +65,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Tables
         public void PropertyHasBeenAdded()
         {
             // Arrange
-            IStorageTableClient client = CreateTableClient();
-            IStorageTable table = client.GetTableReference("table");
+            var client = CreateTableClient();
+            CloudTable table = client.GetTableReference("table");
             StubTableEntityWriter<DynamicTableEntity> writer = new StubTableEntityWriter<DynamicTableEntity>();
             Type valueType = typeof(TableEntityWriter<DynamicTableEntity>);
             TableEntityCollectorBinder<DynamicTableEntity> product = new TableEntityCollectorBinder<DynamicTableEntity>(table, writer, valueType);
@@ -94,8 +92,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Tables
         public void MaximumBatchSizeFlushes()
         {
             // Arrange
-            IStorageTableClient client = CreateTableClient();
-            IStorageTable table = client.GetTableReference("table");
+            var client = CreateTableClient();
+            CloudTable table = client.GetTableReference("table");
             StubTableEntityWriter<DynamicTableEntity> writer = new StubTableEntityWriter<DynamicTableEntity>();
             Type valueType = typeof(TableEntityWriter<DynamicTableEntity>);
             TableEntityCollectorBinder<DynamicTableEntity> product = new TableEntityCollectorBinder<DynamicTableEntity>(table, writer, valueType);
@@ -125,8 +123,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Tables
         public void MaximumPartitionWidthFlushes()
         {
             // Arrange
-            IStorageTableClient client = CreateTableClient();
-            IStorageTable table = client.GetTableReference("table");
+            var client = CreateTableClient();
+            CloudTable table = client.GetTableReference("table");
             StubTableEntityWriter<DynamicTableEntity> writer = new StubTableEntityWriter<DynamicTableEntity>();
             Type valueType = typeof(TableEntityWriter<DynamicTableEntity>);
             TableEntityCollectorBinder<DynamicTableEntity> product = new TableEntityCollectorBinder<DynamicTableEntity>(table, writer, valueType);
@@ -157,8 +155,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Tables
         public void PropertyHasBeenReplaced()
         {
             // Arrange
-            IStorageTableClient client = CreateTableClient();
-            IStorageTable table = client.GetTableReference("table");
+            var client = CreateTableClient();
+            CloudTable table = client.GetTableReference("table");
             StubTableEntityWriter<DynamicTableEntity> writer = new StubTableEntityWriter<DynamicTableEntity>();
             Type valueType = typeof(TableEntityWriter<DynamicTableEntity>);
             TableEntityCollectorBinder<DynamicTableEntity> product = new TableEntityCollectorBinder<DynamicTableEntity>(table, writer, valueType);
@@ -196,11 +194,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Tables
             Assert.Equal(1, writer.TimesPartitionFlushed);
         }
 
-        private IStorageTableClient CreateTableClient()
+        private CloudTableClient CreateTableClient()
         {
-            StorageClientFactory clientFactory = new StorageClientFactory();
-
-            IStorageTableClient client = new StorageAccount(CloudStorageAccount.DevelopmentStorageAccount, clientFactory).CreateTableClient();
+            // StorageClientFactory clientFactory = new StorageClientFactory();
+            // IStorageTableClient client = new StorageAccount(CloudStorageAccount.DevelopmentStorageAccount, clientFactory).CreateTableClient();
+            var account = XStorageAccount.New(CloudStorageAccount.DevelopmentStorageAccount);
+            var client = account.CreateCloudTableClient();
             return client;
         }
     }

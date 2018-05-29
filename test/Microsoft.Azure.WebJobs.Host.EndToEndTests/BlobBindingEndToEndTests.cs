@@ -6,9 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -699,6 +697,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 Host = new HostBuilder()
                     .ConfigureDefaultTestHost<BlobBindingEndToEndTests>()
+                    .AddStorageForRuntimeInternals()
                     .ConfigureServices(services =>
                     {
                         services.AddSingleton<INameResolver>(nameResolver);

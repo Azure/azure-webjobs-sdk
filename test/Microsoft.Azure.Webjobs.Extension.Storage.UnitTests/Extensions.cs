@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.WindowsAzure.Storage.Queue;
 using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Azure.WebJobs
 {
@@ -91,7 +92,7 @@ namespace Microsoft.Azure.WebJobs
         {
             builder.ConfigureServices(services =>
            {
-               services.TryAddSingleton<XStorageAccountProvider>(new FakeStorageAccountProvider(account));
+               services.Add(ServiceDescriptor.Singleton<XStorageAccountProvider>(new FakeStorageAccountProvider(account)));
            });
 
             return builder;

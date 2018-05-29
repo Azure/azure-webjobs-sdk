@@ -35,8 +35,6 @@
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\BindingDataParameterDescriptor.cs" Link="Protocols\BindingDataParameterDescriptor.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\BlobMetadataKeys.cs" Link="Protocols\BlobMetadataKeys.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\BlobNames.cs" Link="Protocols\BlobNames.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\BlobParameterDescriptor.cs" Link="Protocols\BlobParameterDescriptor.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\BlobTriggerParameterDescriptor.cs" Link="Protocols\BlobTriggerParameterDescriptor.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\CallAndOverrideMessage.cs" Link="Protocols\CallAndOverrideMessage.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\CallerSuppliedParameterDescriptor.cs" Link="Protocols\CallerSuppliedParameterDescriptor.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\CancellationTokenParameterDescriptor.cs" Link="Protocols\CancellationTokenParameterDescriptor.cs" />
@@ -68,14 +66,10 @@
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\ParameterLog.cs" Link="Protocols\ParameterLog.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\PersistentQueueMessage.cs" Link="Loggers\PersistentQueueMessage.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\PolymorphicJsonConverter.cs" Link="Protocols\PolymorphicJsonConverter.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\QueueParameterDescriptor.cs" Link="Protocols\QueueParameterDescriptor.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\QueueTriggerParameterDescriptor.cs" Link="Protocols\QueueTriggerParameterDescriptor.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\ReadBlobParameterLog.cs" Link="Protocols\ReadBlobParameterLog.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\ServiceBusParameterDescriptor.cs" Link="Protocols\ServiceBusParameterDescriptor.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\ServiceBusTriggerParameterDescriptor.cs" Link="Protocols\ServiceBusTriggerParameterDescriptor.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\SingletonParameterLog.cs" Link="Protocols\SingletonParameterLog.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\TableEntityParameterDescriptor.cs" Link="Protocols\TableEntityParameterDescriptor.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\TableParameterDescriptor.cs" Link="Protocols\TableParameterDescriptor.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\TableParameterLog.cs" Link="Protocols\TableParameterLog.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\TextParameterLog.cs" Link="Protocols\TextParameterLog.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\TriggerParameterDescriptor.cs" Link="Protocols\TriggerParameterDescriptor.cs" />

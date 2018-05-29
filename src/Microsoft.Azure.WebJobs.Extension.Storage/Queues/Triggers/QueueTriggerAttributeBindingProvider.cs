@@ -4,8 +4,6 @@
 using System;
 using System.Reflection;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Executors;
-using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
@@ -19,6 +17,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
     {
         private static readonly IQueueTriggerArgumentBindingProvider InnerProvider =
             new CompositeArgumentBindingProvider(
+                new ConverterArgumentBindingProvider<CloudQueueMessage>(new CloudQueueMessageDirectConverter()), // $$$: Is this the best way to handle a direct CloudQueueMessage?
                 new ConverterArgumentBindingProvider<string>(new StorageQueueMessageToStringConverter()),
                 new ConverterArgumentBindingProvider<byte[]>(new StorageQueueMessageToByteArrayConverter()),
                 new UserTypeArgumentBindingProvider()); // Must come last, because it will attempt to bind all types.
@@ -70,7 +69,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             var account = _accountProvider.Get(queueTrigger.Connection, _nameResolver);
             // requires storage account with queue support
             //account.AssertTypeOneOf(StorageAccountType.GeneralPurpose); $$$
-                        
+
             CloudQueueClient client = account.CreateCloudQueueClient();
             var queue = client.GetQueueReference(queueName);
 

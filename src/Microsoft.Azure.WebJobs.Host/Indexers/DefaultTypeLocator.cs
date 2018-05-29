@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
 
@@ -115,19 +116,22 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
             catch (ReflectionTypeLoadException ex)
             {
-                _log.WriteLine("Warning: Only got partial types from assembly: {0}", assembly.FullName);
+                var builder = new StringBuilder();
+
+                builder.AppendLine($"Warning: Only got partial types from assembly: {assembly.FullName}");
 
                 if (ex.LoaderExceptions != null)
                 {
-                    _log.WriteLine($"The following loader failures occured when trying to load the assembly:");
+                    builder.AppendLine($"The following loader failures occured when trying to load the assembly:");
                     string loaderFailuresMessage = string.Join(Environment.NewLine, ex.LoaderExceptions.Select(e => $"   - {e.Message}"));
-                    _log.WriteLine(loaderFailuresMessage);
+                    builder.AppendLine(loaderFailuresMessage);
 
-                    _log.WriteLine("This can occur if the assemblies listed above are missing, outdated or mismatched.");
+                    builder.AppendLine("This can occur if the assemblies listed above are missing, outdated or mismatched.");
                 }
 
-                _log.WriteLine("Exception message: {0}", ex.ToString());
+                builder.AppendLine($"Exception message: {ex.ToString()}");
 
+                _logger.LogWarning(builder.ToString());
                 // In case of a type load exception, at least get the types that did succeed in loading
                 types = ex.Types.Where(t => t != null).ToArray();
             }

@@ -6,7 +6,6 @@ using System.Reflection;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.Queues.Triggers;
-using Microsoft.Azure.WebJobs.Host.Storage.Queue;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
@@ -27,14 +26,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             IQueueTriggerArgumentBindingProvider provider = new UserTypeArgumentBindingProvider();
             ParameterInfo pi = new StubParameterInfo("parameterName", typeof(UserDataType));
             var argumentBinding = provider.TryCreate(pi);
-            Mock<IStorageQueue> queueMock = new Mock<IStorageQueue>(MockBehavior.Strict);
+            Mock<CloudQueue> queueMock = new Mock<CloudQueue>(MockBehavior.Strict);
             queueMock.Setup(q => q.Name).Returns("queueName");
-            IStorageQueue queue = queueMock.Object;
+            CloudQueue queue = queueMock.Object;
             IWebJobsExceptionHandler exceptionHandler = new WebJobsExceptionHandler(new Mock<IHost>().Object);
+            var enqueueWatcher = new Host.Queues.Listeners.SharedQueueWatcher();
             _binding = new QueueTriggerBinding("parameterName", queue, argumentBinding,
                 new JobHostQueuesOptions(), exceptionHandler,
-                new Mock<IContextSetter<IMessageEnqueuedWatcher>>(MockBehavior.Strict).Object,
-                new SharedContextProvider(), null);
+                enqueueWatcher,
+                null);
         }
 
         [Theory]

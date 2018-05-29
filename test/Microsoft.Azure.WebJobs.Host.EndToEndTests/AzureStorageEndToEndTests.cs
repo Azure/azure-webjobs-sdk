@@ -7,7 +7,6 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.DependencyInjection;
@@ -75,14 +74,17 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         /// - blob name pattern binding
         /// </summary>
         public static void BlobToQueue(
-            [BlobTrigger(ContainerName + @"/{name}")] CustomObject input,
+            [BlobTrigger(ContainerName + @"/{name}")] string input,
             string name,
             [Queue(TestQueueNameEtag)] out CustomObject output)
         {
+            // TODO: Use CustomObject as param when POCO blob supported
+            var inputObject = JsonConvert.DeserializeObject<CustomObject>(input);
+
             CustomObject result = new CustomObject()
             {
-                Text = input.Text + " " + name,
-                Number = input.Number + 1
+                Text = inputObject.Text + " " + name,
+                Number = inputObject.Number + 1
             };
 
             output = result;
@@ -192,20 +194,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await EndToEndTest(uploadBlobBeforeHostStart: false);
         }
 
-        [Fact(Skip = "This test relies on ICloudBlobStreamBinder<T> support, which has been removed. See https://github.com/Azure/azure-webjobs-sdk/issues/995")]
+        [Fact]
         public async Task AzureStorageEndToEndFast()
         {
             await EndToEndTest(uploadBlobBeforeHostStart: true);
         }
 
-        [Fact(Skip = "This test relies on ICloudBlobStreamBinder<T> support, which has been removed. See https://github.com/Azure/azure-webjobs-sdk/issues/995")]
+        [Fact]
         public async Task TableFilterTest()
         {
             // Reinitialize the name resolver to avoid conflicts
             _resolver = new RandomNameResolver();
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost(GetType(), typeof(BlobToCustomObjectBinder))
+                .ConfigureDefaultTestHost<AzureStorageEndToEndTests>()
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<INameResolver>(_resolver);
@@ -283,7 +285,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _resolver = new RandomNameResolver();
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost(GetType(), typeof(BlobToCustomObjectBinder))
+                .ConfigureDefaultTestHost<AzureStorageEndToEndTests>()
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<INameResolver>(_resolver);
@@ -321,7 +323,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await VerifyTableResultsAsync();
         }
 
-        [Fact(Skip = "This test relies on ICloudBlobStreamBinder<T> support, which has been removed. See https://github.com/Azure/azure-webjobs-sdk/issues/995")]
+        [Fact]
         public async Task BadQueueMessageE2ETests()
         {
             // This test ensures that the host does not crash on a bad message (it previously did)
@@ -334,7 +336,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // Reinitialize the name resolver to avoid conflicts
             _resolver = new RandomNameResolver();
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost(GetType(), typeof(BlobToCustomObjectBinder))
+                .ConfigureDefaultTestHost<AzureStorageEndToEndTests>()
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<INameResolver>(_resolver);
@@ -394,6 +396,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         Assert.Equal("MessageNotFound", ex.RequestInformation.ExtendedErrorInformation.ErrorCode);
                     }
                 }
+                var logs = loggerProvider.GetAllLogMessages();
                 return done;
             });
 

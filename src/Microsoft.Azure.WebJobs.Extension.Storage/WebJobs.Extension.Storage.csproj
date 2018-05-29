@@ -14,7 +14,6 @@
     <Compile Include="..\Microsoft.Azure.WebJobs.Host.Storage\DefaultStorageAccountProvider.cs" Link="Shared\DefaultStorageAccountProvider.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host.Storage\DefaultStorageCredentialsValidator.cs" Link="Shared\DefaultStorageCredentialsValidator.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Bindings\BindingDataPathHelper.cs" Link="Shared\BindingDataPathHelper.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Host\Bindings\BindingTemplateExtensions.cs" Link="Shared\BindingTemplateExtensions.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Bindings\IBindablePath.cs" Link="Shared\IBindablePath.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Bindings\Path\BindingParameterResolver.cs" Link="Shared\BindingParameterResolver.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Bindings\SystemBindingData.cs" Link="Shared\SystemBindingData.cs" />
@@ -82,6 +81,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Logging\" />
   </ItemGroup>
 
 </Project>

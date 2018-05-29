@@ -29,12 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             return taskSource.Task;
         }
 
-        public static Task Await(Func<bool> condition, int timeout = 60 * 1000, int pollingInterval = 2 * 1000, bool throwWhenDebugging = false, Func<string> userMessageCallback = null)
-        {
-            return Await(() => Task.FromResult(condition()), timeout, pollingInterval, throwWhenDebugging, userMessageCallback);
-        }
-
-        public static async Task Await(Func<Task<bool>> condition, int timeout = 60 * 1000, int pollingInterval = 2 * 1000, bool throwWhenDebugging = false, Func<string> userMessageCallback = null)
+        public static async Task Await(Func<Task<bool>> condition, int timeout = 60 * 1000, int pollingInterval = 2 * 1000, bool throwWhenDebugging = false, string userMessage = null)
         {
             DateTime start = DateTime.Now;
             while (!await condition())
@@ -150,6 +145,14 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                         services.AddSingleton<IJobActivator>(activator);
                     }
                 }).AddStorageBindings();
+        }
+
+        public static IHostBuilder ConfigureTypeLocator(this IHostBuilder builder, params Type[] types)
+        {
+            return builder.ConfigureServices(services =>
+            {
+                services.AddSingleton<ITypeLocator>(new FakeTypeLocator(types));
+            });
         }
 
         public static TestLoggerProvider GetTestLoggerProvider(this IHost host)
