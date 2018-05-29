@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 string message = $"{source} error (Action={e.Action})";
 
                 var mex = e.Exception as MessagingException;
-                if (mex == null || !mex.IsTransient)
+                if (!(e.Exception is OperationCanceledException) && (mex == null || !mex.IsTransient))
                 {
                     // any non-transient exceptions or unknown exception types
                     // we want to log as errors
