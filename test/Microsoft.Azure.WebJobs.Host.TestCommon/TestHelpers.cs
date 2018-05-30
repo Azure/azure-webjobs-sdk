@@ -154,6 +154,14 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                 }).AddStorageBindings();
         }
 
+        public static IHostBuilder ConfigureTypeLocator(this IHostBuilder builder, params Type[] types)
+        {
+            return builder.ConfigureServices(services =>
+            {
+                services.AddSingleton<ITypeLocator>(new FakeTypeLocator(types));
+            });
+        }
+
         public static TestLoggerProvider GetTestLoggerProvider(this IHost host)
         {
             return host.Services.GetServices<ILoggerProvider>().OfType<TestLoggerProvider>().Single();

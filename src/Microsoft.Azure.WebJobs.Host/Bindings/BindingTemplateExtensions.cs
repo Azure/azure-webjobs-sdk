@@ -14,16 +14,6 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     /// </summary>
     public static class BindingTemplateExtensions
     {
-        internal static void ValidateContractCompatibility<TPath>(this IBindablePath<TPath> path, IReadOnlyDictionary<string, Type> bindingDataContract)
-        {
-            if (path == null)
-            {
-                throw new ArgumentNullException("path");
-            }
-
-            ValidateContractCompatibility(path.ParameterNames, bindingDataContract);
-        }
-
         /// <summary>
         /// Verifies that the specified binding contract contains contract members for each of the
         /// parameters in the specified <see cref="BindingTemplate"/>.
@@ -57,7 +47,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return bindingTemplate.Bind(bindingData);
         }
 
-        private static void ValidateContractCompatibility(IEnumerable<string> parameterNames, IReadOnlyDictionary<string, Type> bindingDataContract)
+        // $$$ expose 
+        public static void ValidateContractCompatibility(IEnumerable<string> parameterNames, IReadOnlyDictionary<string, Type> bindingDataContract)
         {
             if (parameterNames != null && bindingDataContract != null)
             {

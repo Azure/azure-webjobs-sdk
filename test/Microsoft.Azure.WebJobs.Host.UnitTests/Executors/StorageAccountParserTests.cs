@@ -7,6 +7,7 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 {
+#if false // $$$ Storage account parser tests? 
     public class StorageAccountParserTests
     {
         [Fact]
@@ -42,4 +43,5 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             Assert.Equal(StorageAccountParseResult.MalformedConnectionStringError, result);
         }
     }
+#endif
 }

@@ -63,8 +63,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         {            
             try
             {
-                // $$$ fix
-                // template.ValidateContractCompatibility(SystemBindingData.DefaultSystemContract);
+                template.ValidateContractCompatibility(SystemBindingData.DefaultSystemContract);
             }
             catch (InvalidOperationException e)
             {

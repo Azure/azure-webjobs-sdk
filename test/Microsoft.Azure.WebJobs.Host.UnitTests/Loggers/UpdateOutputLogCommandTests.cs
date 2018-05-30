@@ -5,7 +5,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Loggers;
-using Microsoft.Azure.WebJobs.Host.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.Blob;
 using Moq;
 using Xunit;
 
@@ -23,7 +23,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 return Task.FromResult(0);
             };
 
-            UpdateOutputLogCommand writer = UpdateOutputLogCommand.Create(new Mock<IStorageBlockBlob>().Object, fp);
+            // $$$ Need a fake blob that we can read from, see UpdateOutputLogCommand.ReadBlobAsync
+            UpdateOutputLogCommand writer = UpdateOutputLogCommand.Create(
+                new Mock<CloudBlockBlob>().Object, fp);
 
             var tw = writer.Output;
             tw.Write("1");
@@ -53,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             string content = null;
             Func<string, CancellationToken, Task> fp = (x, _) => { content = x; return Task.FromResult(0); };
-            UpdateOutputLogCommand writer = UpdateOutputLogCommand.Create(new Mock<IStorageBlockBlob>().Object, fp);
+            UpdateOutputLogCommand writer = UpdateOutputLogCommand.Create(new Mock<CloudBlockBlob>().Object, fp);
 
             var tw = writer.Output;
             bool writeDone = false;

@@ -1,4 +1,5 @@
-﻿using Microsoft.Azure.WebJobs.Host.Blobs;
+﻿using Microsoft.Azure.WebJobs.Host.Bindings;
+using Microsoft.Azure.WebJobs.Host.Blobs;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -15,6 +16,18 @@ namespace Microsoft.Azure.WebJobs
 {
     internal static class StorageExtensions2
     {
+        // $$$ Move to better place. From 
+        internal static void ValidateContractCompatibility<TPath>(this IBindablePath<TPath> path, IReadOnlyDictionary<string, Type> bindingDataContract)
+        {
+            if (path == null)
+            {
+                throw new ArgumentNullException("path");
+            }
+
+            BindingTemplateExtensions.ValidateContractCompatibility(path.ParameterNames, bindingDataContract);
+        }
+
+
         public static string GetBlobPath(this ICloudBlob blob)
         {
             return ToBlobPath(blob).ToString();

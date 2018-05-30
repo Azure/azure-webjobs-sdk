@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
-using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -95,10 +94,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
+        
         public void StartAsync_WhenStarting_Throws()
         {
             // Arrange
-            TaskCompletionSource<IStorageAccount> getAccountTaskSource = new TaskCompletionSource<IStorageAccount>();
+            // TaskCompletionSource<IStorageAccount> getAccountTaskSource = new TaskCompletionSource<IStorageAccount>();
             //JobHostOptions configuration = CreateConfiguration(new LambdaStorageAccountProvider(
             //        (i1, i2) => getAccountTaskSource.Task));
 
@@ -111,10 +111,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 ExceptionAssert.ThrowsInvalidOperation(() => host.StartAsync(), "Start has already been called.");
 
                 // Cleanup
-                getAccountTaskSource.SetResult(null);
+                // getAccountTaskSource.SetResult(null);
                 starting.GetAwaiter().GetResult();
             }
         }
+        
 
         public void StartAsync_WhenStopping_Throws()
         {
@@ -182,7 +183,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void StopAsync_WhenStarting_Throws()
         {
             // Arrange
-            TaskCompletionSource<IStorageAccount> getAccountTaskSource = new TaskCompletionSource<IStorageAccount>();
+            // TaskCompletionSource<IStorageAccount> getAccountTaskSource = new TaskCompletionSource<IStorageAccount>();
             JobHostOptions configuration = null; // CreateConfiguration(new LambdaStorageAccountProvider(
             //        (i1, i2) => getAccountTaskSource.Task));
 
@@ -195,7 +196,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 ExceptionAssert.ThrowsInvalidOperation(() => host.StopAsync(), "The host has not yet started.");
 
                 // Cleanup
-                getAccountTaskSource.SetResult(null);
+                // getAccountTaskSource.SetResult(null);
                 starting.GetAwaiter().GetResult();
             }
         }
@@ -521,6 +522,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
+        /* $$$
         private class LambdaStorageAccountProvider : IStorageAccountProvider
         {
             private readonly Func<string, CancellationToken, Task<IStorageAccount>> _getAccountAsync;
@@ -541,7 +543,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
                 return _getAccountAsync.Invoke(connectionStringName, cancellationToken);
             }
-        }
+        }*/ 
 
         private class ProgramWithCancellationToken
         {

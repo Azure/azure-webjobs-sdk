@@ -21,6 +21,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 
         public string FunctionId { get; set; }
 
+        // $$$ Ignored this?
         [JsonConverter(typeof(StringEnumConverter))]
         public BlobType BlobType { get; set; }
 

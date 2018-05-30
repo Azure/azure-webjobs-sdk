@@ -2,13 +2,13 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using Microsoft.Azure.WebJobs.Host.Storage;
 using Moq;
 using Xunit;
 using Microsoft.WindowsAzure.Storage.Auth;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Storage
 {
+#if false // $$$ still meaningful? 
     public class StorageAccountExtensionsTests
     {
         private IStorageAccount account;
@@ -43,4 +43,5 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Storage
             Assert.Equal("Storage account 'name' is of unsupported type 'General Purpose'. Supported types are 'Blob-Only/ZRS', 'Premium'", exception.Message);
         }
     }
+#endif
 }
