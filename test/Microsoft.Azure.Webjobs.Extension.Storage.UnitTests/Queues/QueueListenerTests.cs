@@ -8,7 +8,6 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
-using Microsoft.Azure.WebJobs.Host.Storage.Queue;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
@@ -21,26 +20,27 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
 {
     public class QueueListenerTests
     {
-        private Mock<IStorageQueue> _mockQueue;
+        private Mock<CloudQueue> _mockQueue;
         private QueueListener _listener;
         private Mock<QueueProcessor> _mockQueueProcessor;
-        private Mock<ITriggerExecutor<IStorageQueueMessage>> _mockTriggerExecutor;
-        private StorageQueueMessage _storageMessage;
+        private Mock<ITriggerExecutor<CloudQueueMessage>> _mockTriggerExecutor;
+        private CloudQueueMessage _storageMessage;
         private ILoggerFactory _loggerFactory;
 
         public QueueListenerTests()
         {
-            CloudQueue queue = new CloudQueue(new Uri("https://test.queue.core.windows.net/testqueue"));
-            _mockQueue = new Mock<IStorageQueue>(MockBehavior.Strict);
-            _mockQueue.Setup(p => p.SdkObject).Returns(queue);
+            // CloudQueue queue = new CloudQueue(new Uri("https://test.queue.core.windows.net/testqueue"));
+            //_mockQueue = new Mock<CloudQueue>(MockBehavior.Strict);
+            _mockQueue = new Mock<CloudQueue>(new Uri("https://test.queue.core.windows.net/testqueue"));
+            // _mockQueue.Setup(p => p.SdkObject).Returns(queue);
 
-            _mockTriggerExecutor = new Mock<ITriggerExecutor<IStorageQueueMessage>>(MockBehavior.Strict);
+            _mockTriggerExecutor = new Mock<ITriggerExecutor<CloudQueueMessage>>(MockBehavior.Strict);
             Mock<IWebJobsExceptionHandler> mockExceptionDispatcher = new Mock<IWebJobsExceptionHandler>(MockBehavior.Strict);
             _loggerFactory = new LoggerFactory();
             _loggerFactory.AddProvider(new TestLoggerProvider());
             Mock<IQueueProcessorFactory> mockQueueProcessorFactory = new Mock<IQueueProcessorFactory>(MockBehavior.Strict);
             JobHostQueuesOptions queuesConfig = new JobHostQueuesOptions();
-            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(queue, _loggerFactory, queuesConfig);
+            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_mockQueue.Object, _loggerFactory, queuesConfig);
 
             _mockQueueProcessor = new Mock<QueueProcessor>(MockBehavior.Strict, context);
             JobHostQueuesOptions queueConfig = new JobHostQueuesOptions
@@ -54,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             _listener = new QueueListener(_mockQueue.Object, null, _mockTriggerExecutor.Object, mockExceptionDispatcher.Object, _loggerFactory, null, queueConfig);
 
             CloudQueueMessage cloudMessage = new CloudQueueMessage("TestMessage");
-            _storageMessage = new StorageQueueMessage(cloudMessage);
+            _storageMessage = cloudMessage;
         }
 
         [Fact]
@@ -132,9 +132,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
         {
             CancellationToken cancellationToken = new CancellationToken();
             FunctionResult result = new FunctionResult(true);
-            _mockQueueProcessor.Setup(p => p.BeginProcessingMessageAsync(_storageMessage.SdkObject, cancellationToken)).ReturnsAsync(true);
+            _mockQueueProcessor.Setup(p => p.BeginProcessingMessageAsync(_storageMessage, cancellationToken)).ReturnsAsync(true);
             _mockTriggerExecutor.Setup(p => p.ExecuteAsync(_storageMessage, cancellationToken)).ReturnsAsync(result);
-            _mockQueueProcessor.Setup(p => p.CompleteProcessingMessageAsync(_storageMessage.SdkObject, result, cancellationToken)).Returns(Task.FromResult(true));
+            _mockQueueProcessor.Setup(p => p.CompleteProcessingMessageAsync(_storageMessage, result, cancellationToken)).Returns(Task.FromResult(true));
 
             await _listener.ProcessMessageAsync(_storageMessage, TimeSpan.FromMinutes(10), cancellationToken);
         }
@@ -162,7 +162,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
         public async Task ProcessMessageAsync_QueueBeginProcessingMessageReturnsFalse_MessageNotProcessed()
         {
             CancellationToken cancellationToken = new CancellationToken();
-            _mockQueueProcessor.Setup(p => p.BeginProcessingMessageAsync(_storageMessage.SdkObject, cancellationToken)).ReturnsAsync(false);
+            _mockQueueProcessor.Setup(p => p.BeginProcessingMessageAsync(_storageMessage, cancellationToken)).ReturnsAsync(false);
 
             await _listener.ProcessMessageAsync(_storageMessage, TimeSpan.FromMinutes(10), cancellationToken);
         }
@@ -172,9 +172,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
         {
             CancellationToken cancellationToken = new CancellationToken();
             FunctionResult result = new FunctionResult(false);
-            _mockQueueProcessor.Setup(p => p.BeginProcessingMessageAsync(_storageMessage.SdkObject, cancellationToken)).ReturnsAsync(true);
+            _mockQueueProcessor.Setup(p => p.BeginProcessingMessageAsync(_storageMessage, cancellationToken)).ReturnsAsync(true);
             _mockTriggerExecutor.Setup(p => p.ExecuteAsync(_storageMessage, cancellationToken)).ReturnsAsync(result);
-            _mockQueueProcessor.Setup(p => p.CompleteProcessingMessageAsync(_storageMessage.SdkObject, result, cancellationToken)).Returns(Task.FromResult(true));
+            _mockQueueProcessor.Setup(p => p.CompleteProcessingMessageAsync(_storageMessage, result, cancellationToken)).Returns(Task.FromResult(true));
 
             await _listener.ProcessMessageAsync(_storageMessage, TimeSpan.FromMinutes(10), cancellationToken);
         }

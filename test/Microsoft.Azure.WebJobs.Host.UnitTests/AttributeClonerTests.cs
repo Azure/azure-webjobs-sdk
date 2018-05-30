@@ -107,9 +107,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             [AutoResolve]
             public string PropWithoutPolicy { get; set; }
 
-            [AutoResolve(ResolutionPolicyType = typeof(ODataFilterResolutionPolicy))]
-            public string PropWithMarkerPolicy { get; set; }
-
             [AutoResolve(ResolutionPolicyType = typeof(AutoResolveAttribute))]
             public string PropWithInvalidPolicy { get; set; }
 
@@ -607,19 +604,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             IResolutionPolicy policy = AttributeCloner<AttributeWithResolutionPolicy>.GetPolicy(attr.ResolutionPolicyType, propInfo);
 
             Assert.IsType<TestResolutionPolicy>(policy);
-        }
-
-        [Fact]
-        public void GetPolicy_ReturnsODataFilterPolicy_ForMarkerType()
-        {
-            // This is a special-case marker type to handle TableAttribute.Filter. We cannot directly list ODataFilterResolutionPolicy
-            // because BindingTemplate doesn't exist in the core assembly.
-            PropertyInfo propInfo = typeof(AttributeWithResolutionPolicy).GetProperty(nameof(AttributeWithResolutionPolicy.PropWithMarkerPolicy));
-
-            AutoResolveAttribute attr = propInfo.GetCustomAttribute<AutoResolveAttribute>();
-            IResolutionPolicy policy = AttributeCloner<AttributeWithResolutionPolicy>.GetPolicy(attr.ResolutionPolicyType, propInfo);
-
-            Assert.IsType<Host.Bindings.ODataFilterResolutionPolicy>(policy);
         }
 
         [Fact]

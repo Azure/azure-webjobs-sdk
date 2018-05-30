@@ -4,7 +4,6 @@
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
-using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,19 +15,34 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
     internal static class FunctionIndexerFactory
     {
+        public class FakeStorageAccountProvider : XStorageAccountProvider
+        {
+            private readonly XStorageAccount _account;
+
+            public FakeStorageAccountProvider()
+                : base(null)
+            {
+
+            }
+            public override XStorageAccount Get(string name)
+            {
+                return XStorageAccount.New(CloudStorageAccount.DevelopmentStorageAccount);
+            }
+        }
+
         public static FunctionIndexer Create(CloudStorageAccount account = null, INameResolver nameResolver = null,
             IExtensionRegistry extensionRegistry = null, ILoggerFactory loggerFactory = null)
         {
-            IStorageAccountProvider storageAccountProvider = GetStorageAccountProvider(account);
-
+#if false
+            throw new System.NotImplementedException();
+#else
+            // IStorageAccountProvider storageAccountProvider = GetStorageAccountProvider(account);
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost()
                 .ConfigureServices(services =>
                 {
-                    if (storageAccountProvider != null)
-                    {
-                        services.AddSingleton<IStorageAccountProvider>(storageAccountProvider);
-                    }
+                    services.AddSingleton<XStorageAccountProvider>(new FakeStorageAccountProvider());
+                    
 
                     if (nameResolver != null)
                     {
@@ -54,8 +68,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             // TODO: This should be using DI internally and not be so complicated to construct
             return new FunctionIndexer(triggerBindingProvider, bindingProvider, new DefaultJobActivator(), executor,
                 extensionRegistry, singletonManager, loggerFactory);
+#endif
         }
 
+        /*
         private static IStorageAccountProvider GetStorageAccountProvider(CloudStorageAccount account)
         {
             StorageClientFactory clientFactory = new StorageClientFactory();
@@ -66,6 +82,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 StorageAccount = account
             };
             return storageAccountProvider;
-        }
+        }*/
     }
 }

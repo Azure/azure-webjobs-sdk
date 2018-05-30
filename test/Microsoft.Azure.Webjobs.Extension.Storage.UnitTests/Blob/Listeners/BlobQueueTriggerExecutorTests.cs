@@ -7,12 +7,10 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Blobs;
 using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
 using Microsoft.Azure.WebJobs.Host.Executors;
-using Microsoft.Azure.WebJobs.Host.Storage;
-using Microsoft.Azure.WebJobs.Host.Storage.Blob;
-using Microsoft.Azure.WebJobs.Host.Storage.Queue;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.Queue;
 using Moq;
 using Newtonsoft.Json;
 using Xunit;
@@ -28,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
         {
             // Arrange
             BlobQueueTriggerExecutor product = CreateProductUnderTest();
-            IStorageQueueMessage message = CreateMessage("ThisIsNotValidJson");
+            var message = CreateMessage("ThisIsNotValidJson");
 
             // Act
             Task task = product.ExecuteAsync(message, CancellationToken.None);
@@ -42,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
         {
             // Arrange
             BlobQueueTriggerExecutor product = CreateProductUnderTest();
-            IStorageQueueMessage message = CreateMessage("null");
+            var message = CreateMessage("null");
 
             // Act
             Task task = product.ExecuteAsync(message, CancellationToken.None);
@@ -57,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
         {
             // Arrange
             BlobQueueTriggerExecutor product = CreateProductUnderTest();
-            IStorageQueueMessage message = CreateMessage("{}");
+            var message = CreateMessage("{}");
 
             // Act
             Task task = product.ExecuteAsync(message, CancellationToken.None);
@@ -71,7 +69,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
         {
             // Arrange
             BlobQueueTriggerExecutor product = CreateProductUnderTest();
-            IStorageQueueMessage message = CreateMessage(new BlobTriggerMessage { FunctionId = "Missing" });
+            var message = CreateMessage(new BlobTriggerMessage { FunctionId = "Missing" });
 
             // Act
             Task<FunctionResult> task = product.ExecuteAsync(message, CancellationToken.None);
@@ -90,7 +88,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             string expectedBlobName = TestBlobName;
             string functionId = "FunctionId";
             Mock<IBlobETagReader> mock = new Mock<IBlobETagReader>(MockBehavior.Strict);
-            mock.Setup(r => r.GetETagAsync(It.Is<IStorageBlob>(b => b.BlobType == (StorageBlobType)expectedBlobType &&
+            mock.Setup(r => r.GetETagAsync(It.Is<ICloudBlob>(b => /*b.BlobType == (StorageBlobType)expectedBlobType && $$$*/
                     b.Name == expectedBlobName && b.Container.Name == expectedContainerName),
                     It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult("ETag"))
@@ -108,12 +106,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             BlobTriggerMessage triggerMessage = new BlobTriggerMessage
             {
                 FunctionId = functionId,
-                BlobType = (StorageBlobType)expectedBlobType,
+                // BlobType = (StorageBlobType)expectedBlobType, $$$
                 ContainerName = expectedContainerName,
                 BlobName = expectedBlobName,
                 ETag = "OriginalETag"
             };
-            IStorageQueueMessage message = CreateMessage(triggerMessage);
+            var message = CreateMessage(triggerMessage);
 
             // Act
             Task task = product.ExecuteAsync(message, CancellationToken.None);
@@ -138,7 +136,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             };
             product.Register(functionId, registration);
 
-            IStorageQueueMessage message = CreateMessage(functionId, "OriginalETag");
+            var message = CreateMessage(functionId, "OriginalETag");
 
             // Act
             Task<FunctionResult> task = product.ExecuteAsync(message, CancellationToken.None);
@@ -154,7 +152,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             string functionId = "FunctionId";
             IBlobETagReader eTagReader = CreateStubETagReader("NewETag");
             Mock<IBlobWrittenWatcher> mock = new Mock<IBlobWrittenWatcher>(MockBehavior.Strict);
-            mock.Setup(w => w.Notify(It.IsAny<IStorageBlob>()))
+            mock.Setup(w => w.Notify(It.IsAny<ICloudBlob>()))
                 .Verifiable();
             IBlobWrittenWatcher blobWrittenWatcher = mock.Object;
             BlobQueueTriggerExecutor product = CreateProductUnderTest(eTagReader, blobWrittenWatcher);
@@ -166,7 +164,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             };
             product.Register(functionId, registration);
 
-            IStorageQueueMessage message = CreateMessage(functionId, "OriginalETag");
+            var message = CreateMessage(functionId, "OriginalETag");
 
             // Act
             Task<FunctionResult> task = product.ExecuteAsync(message, CancellationToken.None);
@@ -184,7 +182,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             string functionId = "FunctionId";
             string matchingETag = "ETag";
             Guid expectedParentId = Guid.NewGuid();
-            IStorageQueueMessage message = CreateMessage(functionId, matchingETag);
+            var message = CreateMessage(functionId, matchingETag);
             IBlobETagReader eTagReader = CreateStubETagReader(matchingETag);
             IBlobCausalityReader causalityReader = CreateStubCausalityReader(expectedParentId);
 
@@ -196,7 +194,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
                 {
                     Assert.Equal(expectedParentId, mockInput.ParentId);
 
-                    StorageBlockBlob resultBlob = (StorageBlockBlob)mockInput.TriggerValue;
+                    var resultBlob = (CloudBlockBlob)mockInput.TriggerValue;
                     Assert.Equal(TestBlobName, resultBlob.Name);
                 })
                 .ReturnsAsync(expectedResult)
@@ -246,7 +244,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             };
             product.Register(functionId, registration);
 
-            IStorageQueueMessage message = CreateMessage(functionId, matchingETag);
+            var message = CreateMessage(functionId, matchingETag);
 
             // Act
             Task<FunctionResult> task = product.ExecuteAsync(message, CancellationToken.None);
@@ -281,7 +279,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             };
             product.Register(functionId, registration);
 
-            IStorageQueueMessage message = CreateMessage(functionId, matchingETag);
+            var message = CreateMessage(functionId, matchingETag);
 
             // Act
             Task<FunctionResult> task = product.ExecuteAsync(message, CancellationToken.None);
@@ -290,12 +288,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             Assert.False(task.Result.Succeeded);
         }
 
-        private static IStorageBlobClient CreateClient()
+        private static CloudBlobClient CreateClient()
         {
-            StorageClientFactory clientFactory = new StorageClientFactory();
+            var account = new XFakeStorageAccount();
 
-            IStorageAccount account = new StorageAccount(CloudStorageAccount.DevelopmentStorageAccount, clientFactory);
-            return account.CreateBlobClient();
+            //StorageClientFactory clientFactory = new StorageClientFactory();
+            //IStorageAccount account = new StorageAccount(CloudStorageAccount.DevelopmentStorageAccount, clientFactory);
+            return account.CreateCloudBlobClient();
         }
 
         private static IBlobWrittenWatcher CreateDummyBlobWrittenWatcher()
@@ -323,12 +322,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             return new Mock<ITriggeredFunctionExecutor>(MockBehavior.Strict).Object;
         }
 
-        private static IStorageQueueMessage CreateMessage(string functionId, string eTag)
+        private static CloudQueueMessage CreateMessage(string functionId, string eTag)
         {
             BlobTriggerMessage triggerMessage = new BlobTriggerMessage
             {
                 FunctionId = functionId,
-                BlobType = StorageBlobType.BlockBlob,
+                // BlobType = StorageBlobType.BlockBlob, $$$
                 ContainerName = "container",
                 BlobName = TestBlobName,
                 ETag = eTag
@@ -336,16 +335,17 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             return CreateMessage(triggerMessage);
         }
 
-        private static IStorageQueueMessage CreateMessage(BlobTriggerMessage triggerMessage)
+        private static CloudQueueMessage CreateMessage(BlobTriggerMessage triggerMessage)
         {
             return CreateMessage(JsonConvert.SerializeObject(triggerMessage));
         }
 
-        private static IStorageQueueMessage CreateMessage(string content)
+        private static CloudQueueMessage CreateMessage(string content)
         {
-            Mock<IStorageQueueMessage> mock = new Mock<IStorageQueueMessage>(MockBehavior.Strict);
-            mock.Setup(m => m.AsString).Returns(content);
-            return mock.Object;
+            return new CloudQueueMessage(content);
+            //Mock<CloudQueueMessage> mock = new Mock<CloudQueueMessage>(MockBehavior.Strict);
+            //mock.Setup(m => m.AsString).Returns(content);
+            //return mock.Object;
         }
 
         private static BlobQueueTriggerExecutor CreateProductUnderTest()
@@ -385,7 +385,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
         private static IBlobCausalityReader CreateStubCausalityReader(Guid? parentId)
         {
             Mock<IBlobCausalityReader> mock = new Mock<IBlobCausalityReader>(MockBehavior.Strict);
-            mock.Setup(r => r.GetWriterAsync(It.IsAny<IStorageBlob>(), It.IsAny<CancellationToken>()))
+            mock.Setup(r => r.GetWriterAsync(It.IsAny<ICloudBlob>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(parentId));
             return mock.Object;
         }
@@ -393,7 +393,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
         private static IBlobETagReader CreateStubETagReader(string eTag)
         {
             Mock<IBlobETagReader> mock = new Mock<IBlobETagReader>(MockBehavior.Strict);
-            mock.Setup(r => r.GetETagAsync(It.IsAny<IStorageBlob>(), It.IsAny<CancellationToken>()))
+            mock.Setup(r => r.GetETagAsync(It.IsAny<ICloudBlob>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult<string>(eTag));
             return mock.Object;
         }

@@ -8,5 +8,5 @@ using System.Runtime.CompilerServices;
 //[assembly: InternalsVisibleTo("Microsoft.Azure.WebJobs.Host.TestCommon")]
 //[assembly: InternalsVisibleTo("Microsoft.Azure.WebJobs.Host.FunctionalTests")]
 [assembly: InternalsVisibleTo("Microsoft.Azure.WebJobs.Extension.Storage.UnitTests")]
-[assembly: InternalsVisibleTo("Microsoft.Azure.WebJobs.Host.UnitTests")]
+// [assembly: InternalsVisibleTo("Microsoft.Azure.WebJobs.Host.UnitTests")]
 [assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]

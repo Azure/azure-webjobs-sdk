@@ -180,10 +180,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "dashes, not start or end with a dash, and not contain consecutive dashes.");
         }
 
-        private class CustomStorageClientFactory : StorageClientFactory
-        {
-        }
-
         private class FastLogger : IAsyncCollector<FunctionInstanceLogEntry>
         {
             public List<FunctionInstanceLogEntry> List = new List<FunctionInstanceLogEntry>();
@@ -244,13 +240,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                     services.AddSingleton<IAsyncCollector<FunctionInstanceLogEntry>>(fastLogger);
 
                     // TODO: We shouldn't have to do this, but our default parser
-                    //       does not allow for null Storage/Dashboard.
-                    var mockParser = new Mock<IStorageAccountParser>();
-                    mockParser
-                        .Setup(p => p.ParseAccount(null, It.IsAny<string>()))
-                        .Returns<string>(null);
+                    //       does not allow for null Storage/Dashboard. $$$
+                    //var mockParser = new Mock<IStorageAccountParser>();
+                    //mockParser
+                    //    .Setup(p => p.ParseAccount(null, It.IsAny<string>()))
+                    //    .Returns<string>(null);
 
-                    services.AddSingleton<IStorageAccountParser>(mockParser.Object);
+                    //services.AddSingleton<IStorageAccountParser>(mockParser.Object);
                 })
                 .ConfigureAppConfiguration(config =>
                 {
@@ -277,6 +273,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             Assert.Equal(2, fastLogger.List.Count); // We should be batching, so flush not called yet.
 
+            // $$$ AddStraoge sets SuperHack, which requires Dashboard connection 
             host.Start(); // required to call stop()
             await host.StopAsync(); // will ensure flush is called.
 
