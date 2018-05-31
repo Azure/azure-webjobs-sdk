@@ -466,7 +466,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Converters
             // Assert
             Assert.NotNull(converter);
             ExceptionAssert.ThrowsFormat(() => converter.Convert(" 0001-01-01T00:00:00.0000000 "),
-                "String was not recognized as a valid DateTime.");
+                "String ' 0001-01-01T00:00:00.0000000 ' was not recognized as a valid DateTime.");
         }
 
         [Fact]
@@ -507,7 +507,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Converters
             // Assert
             Assert.NotNull(converter);
             ExceptionAssert.ThrowsFormat(() => converter.Convert(" 0001-01-01T00:00:00.0000000-10:00 "),
-                "String was not recognized as a valid DateTime.");
+                "String ' 0001-01-01T00:00:00.0000000-10:00 ' was not recognized as a valid DateTime.");
         }
 
         [Fact]
