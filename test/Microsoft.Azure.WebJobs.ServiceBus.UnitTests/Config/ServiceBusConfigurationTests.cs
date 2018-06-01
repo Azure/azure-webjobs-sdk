@@ -88,20 +88,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
         }
 
         [Fact]
-        public void LogExceptionReceivedEvent_OperationCanceledException_LoggedAsVerbose()
-        {
-            var ex = new OperationCanceledException("Testing");
-            ExceptionReceivedEventArgs e = new ExceptionReceivedEventArgs(ex, "TestAction", "TestEndpoint", "TestEntity", "TestClient");
-            ServiceBusExtensionConfig.LogExceptionReceivedEvent(e, _loggerFactory);
-
-            var expectedMessage = $"MessageReceiver error (Action=TestAction, ClientId=TestClient, EntityPath=TestEntity, Endpoint=TestEndpoint)";
-            var logMessage = _loggerProvider.GetAllLogMessages().Single();
-            Assert.Equal(LogLevel.Debug, logMessage.Level);
-            Assert.Same(ex, logMessage.Exception);
-            Assert.Equal(expectedMessage, logMessage.FormattedMessage);
-        }
-
-        [Fact]
         public void LogExceptionReceivedEvent_NonMessagingException_LoggedAsError()
         {
             var ex = new MissingMethodException("What method??");

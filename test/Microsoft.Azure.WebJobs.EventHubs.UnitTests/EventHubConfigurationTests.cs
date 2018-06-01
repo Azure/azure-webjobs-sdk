@@ -110,21 +110,6 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
         }
 
         [Fact]
-        public void LogExceptionReceivedEvent_OperationCanceledException_LoggedAsVerbose()
-        {
-            var ex = new OperationCanceledException("Testing");
-            var ctor = typeof(ExceptionReceivedEventArgs).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance).Single();
-            var e = (ExceptionReceivedEventArgs)ctor.Invoke(new object[] { "TestHostName", "TestPartitionId", ex, "TestAction" });
-            EventHubConfiguration.LogExceptionReceivedEvent(e, _loggerFactory);
-
-            string expectedMessage = "EventProcessorHost error (Action=TestAction, HostName=TestHostName, PartitionId=TestPartitionId)";
-            var logMessage = _loggerProvider.GetAllLogMessages().Single();
-            Assert.Equal(LogLevel.Debug, logMessage.Level);
-            Assert.Same(ex, logMessage.Exception);
-            Assert.Equal(expectedMessage, logMessage.FormattedMessage);
-        }
-
-        [Fact]
         public void LogExceptionReceivedEvent_NonMessagingException_LoggedAsError()
         {
             var ex = new MissingMethodException("What method??");
