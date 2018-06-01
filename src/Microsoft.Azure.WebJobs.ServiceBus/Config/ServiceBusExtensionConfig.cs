@@ -79,22 +79,29 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
 
         internal static void LogExceptionReceivedEvent(ExceptionReceivedEventArgs e, ILoggerFactory loggerFactory)
         {
-            var ctxt = e.ExceptionReceivedContext;
-            var logger = loggerFactory?.CreateLogger(LogCategories.Executor);
-            string message = $"MessageReceiver error (Action={ctxt.Action}, ClientId={ctxt.ClientId}, EntityPath={ctxt.EntityPath}, Endpoint={ctxt.Endpoint})";
+            try
+            {
+                var ctxt = e.ExceptionReceivedContext;
+                var logger = loggerFactory?.CreateLogger(LogCategories.Executor);
+                string message = $"MessageReceiver error (Action={ctxt.Action}, ClientId={ctxt.ClientId}, EntityPath={ctxt.EntityPath}, Endpoint={ctxt.Endpoint})";
 
-            var sbex = e.Exception as ServiceBusException;
-            if (sbex == null || !sbex.IsTransient)
-            {
-                // any non-transient exceptions or unknown exception types
-                // we want to log as errors
-                logger?.LogError(0, e.Exception, message);
+                var sbex = e.Exception as ServiceBusException;
+                if (!(e.Exception is OperationCanceledException) && (sbex == null || !sbex.IsTransient))
+                {
+                    // any non-transient exceptions or unknown exception types
+                    // we want to log as errors
+                    logger?.LogError(0, e.Exception, message);
+                }
+                else
+                {
+                    // transient errors we log as verbose so we have a record
+                    // of them, but we don't treat them as actual errors
+                    logger?.LogDebug(0, e.Exception, message);
+                }
             }
-            else
+            catch
             {
-                // transient errors we log as verbose so we have a record
-                // of them, but we don't treat them as actual errors
-                logger?.LogDebug(0, e.Exception, message);
+                // best effort logging
             }
         }
     }
