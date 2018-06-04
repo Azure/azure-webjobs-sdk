@@ -45,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host
         public async virtual Task<string> GetLockOwnerAsync(string account, string lockId, CancellationToken cancellationToken)
         {
             var lockDirectory = GetLockDirectory(account);
-            var lockBlob = lockDirectory.GetBlockBlobReference(lockId);
+            var lockBlob = lockDirectory.SafeGetBlockBlobReference(lockId);
 
             await ReadLeaseBlobMetadata(lockBlob, cancellationToken);
 
@@ -72,7 +72,7 @@ namespace Microsoft.Azure.WebJobs.Host
             CancellationToken cancellationToken)
         {
             var lockDirectory = GetLockDirectory(account);
-            var lockBlob = lockDirectory.GetBlockBlobReference(lockId);
+            var lockBlob = lockDirectory.SafeGetBlockBlobReference(lockId);
             string leaseId = await TryAcquireLeaseAsync(lockBlob, lockPeriod, proposedLeaseId, cancellationToken);
 
             if (string.IsNullOrEmpty(leaseId))
@@ -446,6 +446,8 @@ namespace Microsoft.Azure.WebJobs.Host
     internal class BlobManagerXStorageAccountProvider
     {
         private readonly LegacyConfig _config;
+
+        public BlobManagerXStorageAccountProvider() { }
 
         // public CloudStorageAccount GetAccount(string accountName);
         public BlobManagerXStorageAccountProvider(IOptions<LegacyConfig> config)

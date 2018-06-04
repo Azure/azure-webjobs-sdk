@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.WindowsAzure.Storage.Table;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs
@@ -16,7 +17,7 @@ namespace Microsoft.Azure.WebJobs
         public FakeStorageAccountProvider(XStorageAccount account)
             : base(null)
         {
-
+            this._account = account;
         }
         public override XStorageAccount Get(string name)
         {
@@ -26,6 +27,7 @@ namespace Microsoft.Azure.WebJobs
 
     public class XFakeStorageAccount : XStorageAccount
     {
+#if false
         public XFakeStorageAccount()
         {
             // $$$ Mock this out? 
@@ -40,6 +42,23 @@ namespace Microsoft.Azure.WebJobs
         {
             return base.CreateCloudBlobClient();
         }
+#else
+        private FakeStorage.FakeAccount _account2 = new FakeStorage.FakeAccount();
+
+        public override CloudBlobClient CreateCloudBlobClient()
+        {
+            return _account2.CreateCloudBlobClient();
+        }
+
+        public override CloudTableClient CreateCloudTableClient()
+        {
+            return _account2.CreateCloudTableClient();
+        }
+
+        public override string Name => "FakeAccount";
+        public override bool IsDevelopmentStorageAccount() { return true; }        
+
+#endif
     }
 
     // Helpeful test extensions 

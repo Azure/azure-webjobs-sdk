@@ -76,7 +76,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             Debug.Assert(directory != null);
 
-            var blob = directory.GetBlockBlobReference(sharedHostName);
+            var blob = directory.SafeGetBlockBlobReference(sharedHostName);
             Guid? possibleHostId = await TryGetExistingIdAsync(blob, cancellationToken);
 
             if (possibleHostId.HasValue)
