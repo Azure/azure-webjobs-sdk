@@ -30,6 +30,7 @@
     <ProjectReference Include="..\..\src\Microsoft.Azure.WebJobs.Extension.Storage\WebJobs.Extension.Storage.csproj" />
     <ProjectReference Include="..\..\src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj" />
     <ProjectReference Include="..\..\src\Microsoft.Azure.WebJobs.Logging\WebJobs.Logging.csproj" />
+    <ProjectReference Include="..\FakeStorage\FakeAzureStorage.csproj" />
     <ProjectReference Include="..\Microsoft.Azure.WebJobs.Host.TestCommon\WebJobs.Host.TestCommon.csproj" />
   </ItemGroup>
 

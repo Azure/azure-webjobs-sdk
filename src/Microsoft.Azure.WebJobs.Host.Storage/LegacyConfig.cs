@@ -29,7 +29,7 @@ namespace Microsoft.Azure.WebJobs
             }
             if (options.Storage == null)
             {
-                options.Dashboard = _provider.GetConnectionString("Dashboard");
+                options.Storage = _provider.GetConnectionString("Storage");
             }
         }
     }

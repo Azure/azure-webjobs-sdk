@@ -90,21 +90,30 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private static void FunctionBody(CancellationToken token)
         {
-            // If the token is cancelled here, something is not right
-            if (!token.IsCancellationRequested)
+            try
             {
-                _functionStarted.Set();
-
-                _invokeInFunction();
-                _invokeInFunctionInvoked = true;
-
-                if (token.WaitHandle.WaitOne(DefaultTimeout))
+                // If the token is cancelled here, something is not right
+                if (!token.IsCancellationRequested)
                 {
-                    _tokenCancelled = token.IsCancellationRequested;
+                    _functionStarted.Set();
+
+                    _invokeInFunction();
+                    _invokeInFunctionInvoked = true;
+
+                    if (token.WaitHandle.WaitOne(DefaultTimeout))
+                    {
+                        _tokenCancelled = token.IsCancellationRequested;
+
+                        // The function must throw in order for the calling 
+                        // Task to be canceled, which the tests expect.
+                        token.ThrowIfCancellationRequested();
+                    }
                 }
             }
-
-            _functionCompleted.Set();
+            finally
+            {
+                _functionCompleted.Set();
+            }
         }
 
         [Fact]

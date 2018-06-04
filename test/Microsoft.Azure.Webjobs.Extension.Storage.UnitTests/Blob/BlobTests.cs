@@ -71,8 +71,8 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         private static XStorageAccount CreateFakeStorageAccount()
         {
-            return new XFakeStorageAccount();
-        }
+            return new XFakeStorageAccount();         
+        }        
 
         private static CloudQueue CreateQueue(XStorageAccount account, string queueName)
         {

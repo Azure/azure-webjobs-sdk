@@ -148,7 +148,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await container.CreateIfNotExistsAsync();
             await inputBlob.UploadTextAsync("0,1,2");
 
-            // Act
             Call(account, typeof(BlobProgram), "BindToString");
         }
 

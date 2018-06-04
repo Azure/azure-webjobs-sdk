@@ -215,7 +215,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             };
 
             Exception exception = null;
-            MethodInfo method = typeof(TestJobs).GetMethod("SingletonJob");
+            MethodInfo method = typeof(TestJobs).GetMethod(nameof(TestJobs.SingletonJob));
             try
             {
                 await host.GetJobHost().CallAsync(method, new { workItem = workItem });
@@ -238,7 +238,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             IHost host = CreateTestJobHost(1);
             await host.StartAsync();
 
-            MethodInfo method = typeof(TestJobs).GetMethod("QueueFunction_SingletonListener");
+            MethodInfo method = typeof(TestJobs).GetMethod(nameof(TestJobs.QueueFunction_SingletonListener));
             await VerifyLeaseState(method, SingletonScope.Function, "Listener", LeaseState.Leased, LeaseStatus.Locked);
 
             await host.GetJobHost().CallAsync(method, new { message = "{}" });
@@ -536,7 +536,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             public async Task QueueFunction_SingletonListener([QueueTrigger("xyz123")] string message)
             {
                 await VerifyLeaseState(
-                    GetType().GetMethod("QueueFunction_SingletonListener"),
+                    GetType().GetMethod(nameof(QueueFunction_SingletonListener)),
                     SingletonScope.Function,
                     "Listener",
                     LeaseState.Leased, LeaseStatus.Locked);
@@ -613,6 +613,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     });
                 })
                 .AddExtension<TestTriggerAttributeBindingProvider>()
+                .AddStorageForRuntimeInternals()
                 .Build();
 
             return host;
