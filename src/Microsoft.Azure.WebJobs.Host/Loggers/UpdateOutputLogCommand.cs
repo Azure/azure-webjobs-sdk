@@ -23,6 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
         private readonly StringWriter _innerWriter;
         private readonly IStorageBlockBlob _outputBlob;
         private readonly Func<string, CancellationToken, Task> _uploadCommand;
+        private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
 
         // Thread-safe access to _innerWriter so that user threads can write to it. 
         private readonly TextWriter _synchronizedWriter;
@@ -158,7 +159,16 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             sb.Append(snapshot);
             snapshot = sb.ToString();
 
-            await _uploadCommand.Invoke(snapshot, cancellationToken);
+            // Make sure we can only do one of these at a time to prevent Md5Mismatch errors
+            await _semaphoreSlim.WaitAsync();
+            try
+            {
+                await _uploadCommand.Invoke(snapshot, cancellationToken);
+            }
+            finally
+            {
+                _semaphoreSlim.Release();
+            }
         }
 
         private void ThrowIfDisposed()
