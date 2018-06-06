@@ -31,7 +31,7 @@ namespace SampleHost
                 .AddWebJobsLogging()    // Enables WebJobs v1 classic logging 
                 .AddStorageForRuntimeInternals() // enables WebJobs to run distributed, via a storage account to coordinate
                 .AddStorageBindings()   // adds [Blob], etc bindings for Azure Storage. 
-
+                .AddApplicationInsights()
                 .ConfigureAppConfiguration(config =>
                 {
                     // Adding command line as a configuration source
@@ -46,7 +46,6 @@ namespace SampleHost
                 {
                     b.SetMinimumLevel(LogLevel.Debug);
                     b.AddConsole();
-                    b.AddApplicationInsights();
                 })
                 .UseConsoleLifetime();
 

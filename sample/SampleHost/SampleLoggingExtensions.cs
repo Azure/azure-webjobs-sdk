@@ -4,14 +4,13 @@
 using System;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
-using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.Implementation;
-using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
+using Microsoft.Extensions.Hosting;
 
 namespace SampleHost
 {
     public static class SampleLoggingExtensions
     {
-        public static void AddApplicationInsights(this ILoggingBuilder builder)
+        public static IHostBuilder AddApplicationInsights(this IHostBuilder builder)
         {
             // If AppInsights is enabled, build up a LoggerFactory
             string instrumentationKey = Environment.GetEnvironmentVariable("APPINSIGHTS_INSTRUMENTATIONKEY");
@@ -25,9 +24,10 @@ namespace SampleHost
                 filter.CategoryLevels[LogCategories.Results] = LogLevel.Debug;
                 filter.CategoryLevels[LogCategories.Aggregator] = LogLevel.Debug;
 
-                ITelemetryClientFactory defaultFactory = new DefaultTelemetryClientFactory(instrumentationKey, new SamplingPercentageEstimatorSettings(), filter.Filter);
-                builder.AddProvider(new ApplicationInsightsLoggerProvider(defaultFactory));
+                builder.AddApplicationInsights(instrumentationKey, filter.Filter, null);
             }
+
+            return builder;
         }
     }
 }
