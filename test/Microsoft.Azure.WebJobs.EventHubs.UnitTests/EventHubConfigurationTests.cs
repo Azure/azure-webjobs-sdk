@@ -119,7 +119,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             var ex = new OperationCanceledException("Testing");
             var ctor = typeof(ExceptionReceivedEventArgs).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance).Single();
             var e = (ExceptionReceivedEventArgs)ctor.Invoke(new object[] { "TestHostName", "TestPartitionId", ex, "TestAction" });
-            EventHubConfiguration.LogExceptionReceivedEvent(e, _loggerFactory);
+            EventHubExtensionConfigProvider.LogExceptionReceivedEvent(e, _loggerFactory);
 
             string expectedMessage = "EventProcessorHost error (Action=TestAction, HostName=TestHostName, PartitionId=TestPartitionId)";
             var logMessage = _loggerProvider.GetAllLogMessages().Single();
