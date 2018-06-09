@@ -157,7 +157,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task CloudStorageAccount_PrimaryAndSecondary_Succeeds()
         {
-            await _fixture.JobHost.CallAsync(typeof(MultipleStorageAccountsEndToEndTests).GetMethod("BindToCloudStorageAccount"));
+            await _fixture.JobHost.CallAsync(typeof(MultipleStorageAccountsEndToEndTests).GetMethod(nameof(MultipleStorageAccountsEndToEndTests.BindToCloudStorageAccount)));
 
             Assert.Equal(_fixture.Account1.Credentials.AccountName, primaryAccountResult.Credentials.AccountName);
             Assert.Equal(_fixture.Account2.Credentials.AccountName, secondaryAccountResult.Credentials.AccountName);

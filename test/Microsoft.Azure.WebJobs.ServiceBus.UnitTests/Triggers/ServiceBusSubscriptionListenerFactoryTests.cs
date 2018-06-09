@@ -9,7 +9,6 @@ using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.ServiceBus.Listeners;
 using Microsoft.Extensions.Options;
 using Moq;
-using WebJobs.ServiceBus.Config;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
@@ -20,8 +19,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
         public async Task CreateAsync_Success()
         {
             var connectionStringProvider = TestHelpers.GetConnectionStringProvider();
-            var config = new ServiceBusOptions();
-            new ServiceBusOptionsFactory(connectionStringProvider).Configure(config);
+            var config = new ServiceBusOptions
+            {
+                ConnectionString = connectionStringProvider.GetConnectionString(ConnectionStringNames.ServiceBus)
+            };
 
             var messagingProvider = new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(config));
 

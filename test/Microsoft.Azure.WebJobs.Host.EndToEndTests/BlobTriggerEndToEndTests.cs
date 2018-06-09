@@ -226,23 +226,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 var executions = loggerOutputLines.Where(p => p.Contains("Executing"));
                 Assert.Single(executions);
                 Assert.StartsWith(string.Format("Executing 'BlobGetsProcessedOnlyOnce_SingleHost_Program.SingleBlobTrigger' (Reason='New blob detected: {0}/{1}', Id=", blob.Container.Name, blob.Name), executions.Single());
-            }
 
-            // Then start again and make sure the blob doesn't get reprocessed
-            // wait twice the amount of time required to process first before 
-            // deciding that it doesn't get reprocessed
-            using (prog._completedEvent = new ManualResetEvent(initialState: false))
-            using (host)
-            {
-                host.Start();
+                await host.StopAsync();
 
-                bool blobReprocessed = prog._completedEvent.WaitOne(2 * timeToProcess);
 
-                Assert.False(blobReprocessed);
+                // Can't restart 
+                Assert.Throws<InvalidOperationException>(() => host.Start());
             }
 
             Assert.Equal(1, prog._timesProcessed);
-        }
+        } // host 
 
         [Fact]
         public async Task BlobChainTest()

@@ -12,9 +12,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     /// This class provides factory methods for the creation of instances
     /// used for ServiceBus message processing.
     /// </summary>
-    public class MessagingProvider : IMessagingProvider
+    public class MessagingProvider
     {
-        private readonly ServiceBusOptions _config;
+        private readonly ServiceBusOptions _options;
         private readonly ConcurrentDictionary<string, MessageReceiver> _messageReceiverCache = new ConcurrentDictionary<string, MessageReceiver>();
         private readonly ConcurrentDictionary<string, MessageSender> _messageSenderCache = new ConcurrentDictionary<string, MessageSender>();
 
@@ -24,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// <param name="serviceBusOptions">The <see cref="ServiceBusOptions"/>.</param>
         public MessagingProvider(IOptions<ServiceBusOptions> serviceBusOptions)
         {
-            _config = serviceBusOptions?.Value ?? throw new ArgumentNullException(nameof(serviceBusOptions));
+            _options = serviceBusOptions?.Value ?? throw new ArgumentNullException(nameof(serviceBusOptions));
         }
 
         /// <summary>
@@ -44,7 +44,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 throw new ArgumentNullException("connectionString");
             }
 
-            return new MessageProcessor(GetOrAddMessageReceiver(entityPath, connectionString), _config.MessageOptions);
+            return new MessageProcessor(GetOrAddMessageReceiver(entityPath, connectionString), _options.MessageOptions);
         }
 
         /// <summary>
@@ -99,7 +99,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             return _messageReceiverCache.GetOrAdd(cacheKey,
                 new MessageReceiver(connectionString, entityPath)
                 {
-                    PrefetchCount = _config.PrefetchCount
+                    PrefetchCount = _options.PrefetchCount
                 });
         }
 

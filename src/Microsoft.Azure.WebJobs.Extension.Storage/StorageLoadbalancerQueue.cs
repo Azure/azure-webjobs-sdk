@@ -20,7 +20,7 @@ using Newtonsoft.Json;
 namespace WebJobs.Extension.Storage
 {
     // $$$ This exposes Azure Storage implementations for runtime state objects. 
-    class Class1 : ISuperhack
+    class StorageLoadbalancerQueue : ILoadbalancerQueue
     {
         private readonly JobHostQueuesOptions _queueOptions;
         private readonly ILoggerFactory _loggerFactory;
@@ -28,7 +28,7 @@ namespace WebJobs.Extension.Storage
         private readonly SharedQueueWatcher _sharedWatcher;
         private readonly XStorageAccountProvider _storageAccountProvider;
 
-        public Class1(
+        public StorageLoadbalancerQueue(
             XStorageAccountProvider storageAccountProvider,
                IOptions<JobHostQueuesOptions> queueOptions,
                IWebJobsExceptionHandler exceptionHandler,
@@ -41,27 +41,18 @@ namespace WebJobs.Extension.Storage
             _sharedWatcher = sharedWatcher;
             _loggerFactory = loggerFactory;
             }
-
-        public QueueMoniker GetQueueReference(string queueName) // Storage accounts?
-        {
-            return new QueueMoniker
-            {
-                 // ConnectionString = _storageAccountProvider.DashboardConnectionString, $$$
-                  QueueName = queueName
-            };
-        }
-
-        public IAsyncCollector<T> GetQueueWriter<T>(QueueMoniker queue)
+        
+        public IAsyncCollector<T> GetQueueWriter<T>(string queue)
         {
             return new QueueWriter<T>(this, Convert(queue));
         }
 
         class QueueWriter<T> : IAsyncCollector<T>
         {
-            Class1 _parent;
+            StorageLoadbalancerQueue _parent;
             CloudQueue _queue;
 
-            public QueueWriter(Class1 parent, CloudQueue queue)
+            public QueueWriter(StorageLoadbalancerQueue parent, CloudQueue queue)
             {
                 this._parent = parent;
                 this._queue = queue;
@@ -87,17 +78,17 @@ namespace WebJobs.Extension.Storage
             }
         }
 
-        CloudQueue Convert(QueueMoniker queueMoniker)
+        CloudQueue Convert(string queueMoniker)
         {
             // var account = Task.Run(() => _storageAccountProvider.GetDashboardAccountAsync(CancellationToken.None)).GetAwaiter().GetResult();
             var account = _storageAccountProvider.Get("Dashboard"); // $$$
-            var queue = account.CreateCloudQueueClient().GetQueueReference(queueMoniker.QueueName);
+            var queue = account.CreateCloudQueueClient().GetQueueReference(queueMoniker);
             return queue;
         }
 
         public IListener CreateQueueListenr(
-            QueueMoniker queue,
-            QueueMoniker poisonQueue,
+            string queue,
+            string poisonQueue,
             Func<string, CancellationToken,  Task<FunctionResult>> callback
             )
         {

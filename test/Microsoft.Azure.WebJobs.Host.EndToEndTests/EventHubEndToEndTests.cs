@@ -10,6 +10,8 @@ using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Xunit;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
@@ -64,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.True(eventsProcessed.Length >= 1);
         }
 
-        public static class EventHubTestJobs
+        public class EventHubTestJobs
         {
             public static string EventId;
             public static object Result { get; set; }
@@ -133,23 +135,25 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             public TestFixture()
             {
-                var config = new JobHostConfiguration()
-                {
-                    TypeLocator = new FakeTypeLocator(typeof(EventHubTestJobs))
-                };
-                var eventHubConfig = new EventHubConfiguration();
-
                 string connection = Environment.GetEnvironmentVariable("AzureWebJobsTestHubConnection");
                 Assert.True(!string.IsNullOrEmpty(connection), "Required test connection string is missing.");
-                eventHubConfig.AddSender(TestHubName, connection);
-                eventHubConfig.AddReceiver(TestHubName, connection);
 
-                connection = Environment.GetEnvironmentVariable(TestHub2Connection);
-                Assert.True(!string.IsNullOrEmpty(connection), "Required test connection string is missing.");
+                var host = new HostBuilder()
+                    .ConfigureDefaultTestHost<EventHubTestJobs>()
+                    .AddEventHubs()
+                    .ConfigureServices(services =>
+                    {
+                        services.AddSingleton<EventHubConfiguration>(serviceProvider =>
+                        {
+                            var eventHubConfig = new EventHubConfiguration(serviceProvider.GetRequiredService<IConnectionStringProvider>());
+                            eventHubConfig.AddSender(TestHubName, connection);
+                            eventHubConfig.AddReceiver(TestHubName, connection);
+                            return eventHubConfig;
+                        });
+                    })
+                    .Build();
 
-                config.UseEventHub(eventHubConfig);
-                Host = new JobHost(config);
-
+                Host = host.GetJobHost();
                 Host.StartAsync().GetAwaiter().GetResult();
             }
 

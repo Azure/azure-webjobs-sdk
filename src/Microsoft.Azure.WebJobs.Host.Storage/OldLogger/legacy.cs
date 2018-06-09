@@ -27,7 +27,7 @@ namespace WebJobs.Host.Storage.OldLogger
         private readonly IFunctionInstanceLogger _functionInstanceLogger;
         private readonly IFunctionExecutor _functionExecutor;
         private readonly SharedQueueHandler _sharedQueueHandler;
-        private readonly ISuperhack _storageServices;
+        private readonly ILoadbalancerQueue _storageServices;
         private readonly LegacyConfig _storageAccountProvider;
 
         public Legacy(
@@ -37,7 +37,7 @@ namespace WebJobs.Host.Storage.OldLogger
                 IFunctionInstanceLogger functionInstanceLogger,
                 IFunctionExecutor functionExecutor,
                 SharedQueueHandler sharedQueueHandler,
-                ISuperhack storageServices
+                ILoadbalancerQueue storageServices
             )
         {
             _storageAccountProvider = storageAccountProvider;
@@ -59,7 +59,7 @@ namespace WebJobs.Host.Storage.OldLogger
             CancellationToken shutdownToken)
         {
             string sharedQueueName = HostQueueNames.GetHostQueueName(hostId);
-            var sharedQueue = _storageServices.GetQueueReference(sharedQueueName);
+            var sharedQueue = sharedQueueName;
 
             IListenerFactory sharedQueueListenerFactory = new HostMessageListenerFactory(_storageServices, sharedQueue,
                  _exceptionHandler, _loggerFactory, functions,
@@ -68,7 +68,7 @@ namespace WebJobs.Host.Storage.OldLogger
 
             Guid hostInstanceId = Guid.NewGuid();
             string instanceQueueName = HostQueueNames.GetHostQueueName(hostInstanceId.ToString("N"));
-            var instanceQueue = _storageServices.GetQueueReference(instanceQueueName);
+            var instanceQueue = instanceQueueName;
             IListenerFactory instanceQueueListenerFactory = new HostMessageListenerFactory(_storageServices, instanceQueue,
                 _exceptionHandler, _loggerFactory, functions,
                 _functionInstanceLogger, _functionExecutor);

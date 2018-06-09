@@ -3,6 +3,7 @@
 
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Bindings.StorageAccount;
 using Microsoft.Azure.WebJobs.Host.Blobs;
 using Microsoft.Azure.WebJobs.Host.Blobs.Bindings;
@@ -38,7 +39,7 @@ namespace Microsoft.Extensions.Hosting
                 .ConfigureServices((context, services) =>
                 {
                     // $$$ Move to Host.Storage? 
-                    services.TryAddSingleton<ISuperhack, Class1>();
+                    services.TryAddSingleton<ILoadbalancerQueue, StorageLoadbalancerQueue>();
 
                     services.TryAddSingleton<SharedQueueWatcher>();
 
@@ -57,7 +58,7 @@ namespace Microsoft.Extensions.Hosting
 
                     services.TryAddSingleton<QueueTriggerAttributeBindingProvider>();
 
-                    services.TryAddSingleton<CloudStorageAccountBindingProvider>();
+                    services.TryAddEnumerable(ServiceDescriptor.Singleton<IBindingProvider, CloudStorageAccountBindingProvider>());
                 })
 
                 .AddExtension<TableExtension>()

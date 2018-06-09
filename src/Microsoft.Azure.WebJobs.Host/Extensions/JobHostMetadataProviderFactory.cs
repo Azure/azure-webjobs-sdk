@@ -13,7 +13,7 @@ namespace Microsoft.Azure.WebJobs.Host
         private readonly IBindingProvider _bindingProvider;
         private readonly IConverterManager _converterManager;
 
-        public JobHostMetadataProviderFactory(IFunctionIndexProvider functionIndexProvider, IExtensionRegistry extensionRegistry, IBindingProvider bindingProvider, IConverterManager converterManager)
+        public JobHostMetadataProviderFactory(IFunctionIndexProvider functionIndexProvider, IExtensionRegistry extensionRegistry, CompositeBindingProvider bindingProvider, IConverterManager converterManager)
         {
             _functionIndexProvider = functionIndexProvider;
             _extensionRegistry = extensionRegistry;

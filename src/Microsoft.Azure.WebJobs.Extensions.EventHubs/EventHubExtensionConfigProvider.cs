@@ -78,21 +78,28 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
         internal static void LogExceptionReceivedEvent(ExceptionReceivedEventArgs e, ILoggerFactory loggerFactory)
         {
-            var logger = loggerFactory?.CreateLogger(LogCategories.Executor);
-            string message = $"EventProcessorHost error (Action={e.Action}, HostName={e.Hostname}, PartitionId={e.PartitionId})";
+            try
+            {
+                var logger = loggerFactory?.CreateLogger(LogCategories.Executor);
+                string message = $"EventProcessorHost error (Action={e.Action}, HostName={e.Hostname}, PartitionId={e.PartitionId})";
 
-            var ehex = e.Exception as EventHubsException;
-            if (ehex == null || !ehex.IsTransient)
-            {
-                // any non-transient exceptions or unknown exception types
-                // we want to log as errors
-                logger?.LogError(0, e.Exception, message);
+                var ehex = e.Exception as EventHubsException;
+                if (!(e.Exception is OperationCanceledException) && (ehex == null || !ehex.IsTransient))
+                {
+                    // any non-transient exceptions or unknown exception types
+                    // we want to log as errors
+                    logger?.LogError(0, e.Exception, message);
+                }
+                else
+                {
+                    // transient errors we log as verbose so we have a record
+                    // of them, but we don't treat them as actual errors
+                    logger?.LogDebug(0, e.Exception, message);
+                }
             }
-            else
+            catch
             {
-                // transient errors we log as verbose so we have a record
-                // of them, but we don't treat them as actual errors
-                logger?.LogDebug(0, e.Exception, message);
+                // best effort logging
             }
         }
 

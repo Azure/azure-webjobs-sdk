@@ -28,7 +28,7 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ISharedContextProvider _sharedContextProvider;
-        private readonly ISuperhack _storageServices;
+        private readonly ILoadbalancerQueue _storageServices;
 
         private Exception _initializationEx; // delay initialization error until consumer showed up
         private SharedQueueExecutor _triggerExecutor;
@@ -41,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
                            IWebJobsExceptionHandler exceptionHandler,
                            ILoggerFactory loggerFactory,
                            ISharedContextProvider sharedContextProvider,
-                           ISuperhack storageServices
+                           ILoadbalancerQueue storageServices
                 )
         {            
             _hostIdProvider = hostIdProvider;
@@ -102,9 +102,9 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
 
                 // one host level shared queue
                 // queue is not created here, only after 1st message added
-                var sharedQueue = _storageServices.GetQueueReference(HostQueueNames.GetHostSharedQueueName(hostId));
+                var sharedQueue = HostQueueNames.GetHostSharedQueueName(hostId);
                 // default host level poison queue
-                var sharedPoisonQueue = _storageServices.GetQueueReference(HostQueueNames.GetHostSharedPoisonQueueName(hostId));
+                var sharedPoisonQueue = HostQueueNames.GetHostSharedPoisonQueueName(hostId);
 
                 // queueWatcher will update queueListener's polling interval when queueWriter performes an enqueue operation
                 _sharedQueueWriter = _storageServices.GetQueueWriter<QueueMessage>(sharedQueue);

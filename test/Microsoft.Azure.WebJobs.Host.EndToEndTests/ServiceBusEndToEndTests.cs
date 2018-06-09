@@ -104,25 +104,22 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             try
             {
-                // Pass in a separate LoggerFactory to the CusomtMessagingProvider to make validation easier.
-                LoggerFactory loggerFactory = new LoggerFactory();
-                TestLoggerProvider loggerProvider = new TestLoggerProvider();
-                loggerFactory.AddProvider(loggerProvider);
-
                 IHost host = new HostBuilder()
                     .ConfigureDefaultTestHost<ServiceBusTestJobs>()
                     .AddServiceBus()
                     .ConfigureServices(services =>
                     {
-                        services.AddSingleton<IMessagingProvider>(p => new CustomMessagingProvider(p.GetRequiredService<IOptions<ServiceBusOptions>>(), loggerFactory));
+                        services.AddSingleton<MessagingProvider, CustomMessagingProvider>();
                     })
                     .Build();
+
+                var loggerProvider = host.GetTestLoggerProvider();
 
                 await ServiceBusEndToEndInternal(host: host);
 
                 // in addition to verifying that our custom processor was called, we're also
                 // verifying here that extensions can log
-                IEnumerable<LogMessage> messages = loggerProvider.GetAllLogMessages();
+                IEnumerable<LogMessage> messages = loggerProvider.GetAllLogMessages().Where(m => m.Category == CustomMessagingProvider.CustomMessagingCategory);
                 Assert.Equal(4, messages.Count(p => p.FormattedMessage.Contains("Custom processor Begin called!")));
                 Assert.Equal(4, messages.Count(p => p.FormattedMessage.Contains("Custom processor End called!")));
             }
@@ -142,7 +139,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                    .AddServiceBus()
                    .ConfigureServices(services =>
                    {
-                       services.AddSingleton<IMessagingProvider>(p => new CustomMessagingProvider(p.GetRequiredService<IOptions<ServiceBusOptions>>(), null));
+                       services.AddSingleton<MessagingProvider, CustomMessagingProvider>();
                    })
                    .Build();
 
@@ -213,7 +210,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 .Build();
         }
 
-        private async Task ServiceBusEndToEndInternal(IHost host = null, bool verifyLogs = true)
+        private async Task ServiceBusEndToEndInternal(IHost host = null)
         {
             if (host == null)
             {
@@ -227,24 +224,26 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _topicSubscriptionCalled1 = new ManualResetEvent(initialState: false);
             _topicSubscriptionCalled2 = new ManualResetEvent(initialState: false);
 
-            await host.StartAsync();
-
-            _topicSubscriptionCalled1.WaitOne(SBTimeout);
-            _topicSubscriptionCalled2.WaitOne(SBTimeout);
-
-            // ensure all logs have had a chance to flush
-            await Task.Delay(3000);
-
-            // Wait for the host to terminate
-            await host.StopAsync();
-            host.Dispose();
-
-            Assert.Equal("E2E-SBQueue2SBQueue-SBQueue2SBTopic-topic-1", _resultMessage1);
-            Assert.Equal("E2E-SBQueue2SBQueue-SBQueue2SBTopic-topic-2", _resultMessage2);
-
-            if (verifyLogs)
+            using (host)
             {
-                IEnumerable<LogMessage> consoleOutput = host.GetTestLoggerProvider().GetAllLogMessages();
+                await host.StartAsync();
+
+                _topicSubscriptionCalled1.WaitOne(SBTimeout);
+                _topicSubscriptionCalled2.WaitOne(SBTimeout);
+
+                // ensure all logs have had a chance to flush
+                await Task.Delay(3000);
+
+                // Wait for the host to terminate
+                await host.StopAsync();
+
+                Assert.Equal("E2E-SBQueue2SBQueue-SBQueue2SBTopic-topic-1", _resultMessage1);
+                Assert.Equal("E2E-SBQueue2SBQueue-SBQueue2SBTopic-topic-2", _resultMessage2);
+
+                // filter out anything from the custom processor for easier validation.
+                IEnumerable<LogMessage> consoleOutput = host.GetTestLoggerProvider()
+                    .GetAllLogMessages()
+                    .Where(m => m.Category != CustomMessagingProvider.CustomMessagingCategory);
 
                 Assert.DoesNotContain(consoleOutput, p => p.Level == LogLevel.Error);
 
@@ -407,6 +406,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private class CustomMessagingProvider : MessagingProvider
         {
+            public const string CustomMessagingCategory = "CustomMessagingProvider";
             private readonly ILogger _logger;
             private readonly ServiceBusOptions _options;
 
@@ -414,7 +414,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 : base(serviceBusOptions)
             {
                 _options = serviceBusOptions.Value;
-                _logger = loggerFactory?.CreateLogger("CusomMessagingProvider");
+                _logger = loggerFactory?.CreateLogger(CustomMessagingCategory);
             }
 
             public override MessageProcessor CreateMessageProcessor(string entityPath, string connectionName = null)

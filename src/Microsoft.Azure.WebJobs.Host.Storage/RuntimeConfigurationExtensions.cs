@@ -62,7 +62,6 @@ namespace Microsoft.Extensions.Hosting
                .ConfigureServices((context, services) =>
                {
                    // Add runtime services that depend on storage.
-                   services.TryAddSingleton<BlobManagerXStorageAccountProvider>(); 
                    services.AddSingleton<IDistributedLockManager>(provider => Create(provider));
                                       
                    services.TryAddSingleton<IHostIdProvider, DynamicHostIdProvider>();
@@ -74,27 +73,31 @@ namespace Microsoft.Extensions.Hosting
                });
         }
 
+        // This is only called if the host didn't already provide an implementation 
         private static IDistributedLockManager Create(IServiceProvider provider)
         {
             var opts = provider.GetRequiredService<IOptions<LegacyConfig>>();
 
-            // $$$ This is what DefaultDistributedLockManagerFactory used to do. 
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
-            ILogger logger = loggerFactory.CreateLogger<IDistributedLockManager>();
-
+            
             var sas = provider.GetService<JobHostInternalStorageOptions>(); // may be null 
-                        
-            IDistributedLockManager lockManager;
-            if (sas != null && sas.InternalContainer != null)            
+
+            CloudBlobContainer container;
+
+            if (sas != null && sas.InternalContainer != null)
             {
-                lockManager = new BlobLeaseDistributedLockManager.SasContainer(sas.InternalContainer, logger);
+                container = sas.InternalContainer;
             }
             else
             {
-                var storageAccountProvider = provider.GetRequiredService<BlobManagerXStorageAccountProvider>();
-                lockManager = new BlobLeaseDistributedLockManager.DedicatedStorage(storageAccountProvider, logger);
+                var config = opts.Value;
+                CloudStorageAccount account = config.GetStorageAccount();
+
+                var blobClient = account.CreateCloudBlobClient();
+                container = blobClient.GetContainerReference(HostContainerNames.Hosts);
             }
 
+            var lockManager = new CloudBlobContainerDistributedLockManager(container, loggerFactory);            
             return lockManager;
         }
     }

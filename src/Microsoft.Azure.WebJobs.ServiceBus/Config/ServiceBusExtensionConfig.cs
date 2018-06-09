@@ -24,14 +24,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
         private readonly IConnectionStringProvider _connectionStringProvider;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ServiceBusOptions _serviceBusConfig;
-        private readonly IMessagingProvider _messagingProvider;
+        private readonly MessagingProvider _messagingProvider;
 
         /// <summary>
         /// Creates a new <see cref="ServiceBusExtensionConfig"/> instance.
         /// </summary>
         /// <param name="serviceBusConfig">The <see cref="ServiceBusOptions"></see> to use./></param>
         public ServiceBusExtensionConfig(IOptions<ServiceBusOptions> serviceBusConfig,
-            IMessagingProvider messagingProvider,
+            MessagingProvider messagingProvider,
             INameResolver nameResolver,
             IConnectionStringProvider connectionStringProvider,
             ILoggerFactory loggerFactory)

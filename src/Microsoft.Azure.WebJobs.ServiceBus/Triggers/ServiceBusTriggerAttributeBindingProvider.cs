@@ -24,10 +24,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
 
         private readonly INameResolver _nameResolver;
         private readonly ServiceBusOptions _config;
-        private readonly IMessagingProvider _messagingProvider;
+        private readonly MessagingProvider _messagingProvider;
         private readonly IConnectionStringProvider _connectionStringProvider;
 
-        public ServiceBusTriggerAttributeBindingProvider(INameResolver nameResolver, ServiceBusOptions config, IMessagingProvider messagingProvider, IConnectionStringProvider connectionStringProvider)
+        public ServiceBusTriggerAttributeBindingProvider(INameResolver nameResolver, ServiceBusOptions config, MessagingProvider messagingProvider, IConnectionStringProvider connectionStringProvider)
         {
             _nameResolver = nameResolver ?? throw new ArgumentNullException(nameof(nameResolver));
             _config = config ?? throw new ArgumentNullException(nameof(config));
