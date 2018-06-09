@@ -28,7 +28,8 @@ namespace Microsoft.Extensions.Hosting
 
             builder.ConfigureServices((context, services) =>
             {
-                services.Configure<JobHostOptions>(context.Configuration);
+                // TODO: FACAVAL
+                // services.Configure<JobHostOptions>(context.Configuration);
 
                 services.AddWebJobs(configure);
 

@@ -18,8 +18,6 @@ namespace SampleHost
     {
         public static async Task Main(string[] args)
         {
-            var x = new ServiceCollection(); 
-
             var builder = new HostBuilder()
                 .UseEnvironment("Development")
                 .ConfigureWebJobsHost(o =>
@@ -28,9 +26,9 @@ namespace SampleHost
                     // o.HostId = "testhostid";
                 })
                 // These can be toggled independently!
-                .AddWebJobsLogging()    // Enables WebJobs v1 classic logging 
+                .AddWebJobsLogging() // Enables WebJobs v1 classic logging 
                 .AddStorageForRuntimeInternals() // enables WebJobs to run distributed, via a storage account to coordinate
-                .AddStorageBindings()   // adds [Blob], etc bindings for Azure Storage. 
+                .AddStorageBindings() // adds [Blob], etc bindings for Azure Storage. 
                 .AddApplicationInsights()
                 .ConfigureAppConfiguration(config =>
                 {
@@ -50,8 +48,6 @@ namespace SampleHost
                 .UseConsoleLifetime();
 
             var jobHost = builder.Build();
-
-            var opts = jobHost.Services.GetRequiredService<IOptions<LegacyConfig>>();
 
             using (jobHost)
             {
