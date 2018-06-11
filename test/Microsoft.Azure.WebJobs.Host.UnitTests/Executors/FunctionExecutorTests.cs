@@ -342,7 +342,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             Assert.Equal(message, trace.Message);
 
             // verify ILogger
-            LogMessage log = logger.LogMessages.Single();
+            LogMessage log = logger.GetLogMessages().Single();
             Assert.Equal(LogLevel.Error, log.Level);
             Assert.Equal(message, log.FormattedMessage);
         }

@@ -70,7 +70,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             Assert.Equal(expectedMessage, traceWriter.Traces[0].Message);
 
             // Validate Logger
-            var logMessage = loggerProvider.CreatedLoggers.Single().LogMessages.Single();
+            var logMessage = loggerProvider.CreatedLoggers.Single().GetLogMessages().Single();
             Assert.Equal(LogLevel.Information, logMessage.Level);
             Assert.Equal(Logging.LogCategories.Startup, logMessage.Category);
             Assert.Equal(expectedMessage, logMessage.FormattedMessage);

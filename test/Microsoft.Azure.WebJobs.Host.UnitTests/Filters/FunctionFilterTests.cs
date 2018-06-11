@@ -125,7 +125,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             Assert.Equal(expected, TestLog.ToString());
 
             var logger = loggerProvider.CreatedLoggers.Single(p => p.Category == "Host.Executor");
-            string logResult = string.Join("|", logger.LogMessages.Select(p => p.FormattedMessage));
+            string logResult = string.Join("|", logger.GetLogMessages().Select(p => p.FormattedMessage));
             Assert.Equal(
                 "Pre_global|Pre_class|Pre_m1|Pre_m2|" +
                 "Post_m2|Post_m1|Post_class|Post_global|" +

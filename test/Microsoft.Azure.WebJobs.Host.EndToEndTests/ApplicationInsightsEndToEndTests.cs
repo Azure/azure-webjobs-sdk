@@ -188,19 +188,21 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     // If we stop the host too early, the QuickPulse items may not all be flushed. So wait until 
                     // we see them before continuing. 
                     double min = requests - 2;
+                    double? sum = null;
+
                     await TestHelpers.Await(() =>
                     {
                         // Sum up all req/sec calls that we've received.
                         var reqPerSec = listener.GetQuickPulseItems()
-                            .Select(p => p.Metrics.Where(q => q.Name == @"\ApplicationInsights\Requests/Sec").Single());
-                        double sum = reqPerSec.Sum(p => p.Value);
+                           .Select(p => p.Metrics.Where(q => q.Name == @"\ApplicationInsights\Requests/Sec").Single());
+                        sum = reqPerSec.Sum(p => p.Value);
 
                         // All requests will go to QuickPulse.
                         // The calculated RPS may off, so give some wiggle room. The important thing is that it's generating 
                         // RequestTelemetry and not being filtered.
                         return sum >= min;
                     }, timeout: 3000, pollingInterval: 100,
-                    userMessage: $"Expected sum to be greater than {min}. DefaultLevel: {defaultLevel}.");
+                    userMessageCallback: () => $"Expected sum to be greater than '{min}'. Actual: '{sum}'. DefaultLevel: '{defaultLevel}'.");
 
                     await host.StopAsync();
                 }

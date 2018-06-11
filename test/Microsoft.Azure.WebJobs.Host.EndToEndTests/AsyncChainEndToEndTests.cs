@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Text;
@@ -118,7 +119,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "Microsoft.Azure.WebJobs.Host.EndToEndTests.AsyncChainEndToEndTests.ReadResultBlob",
                     "Microsoft.Azure.WebJobs.Host.EndToEndTests.AsyncChainEndToEndTests.SystemParameterBindingOutput",
                     "Function 'AsyncChainEndToEndTests.DisabledJob' is disabled",
-                    "ServicePointManager.DefaultConnectionLimit is set to the default value of 2.",
                     "Job host started",
                     "Executing 'AsyncChainEndToEndTests.WriteStartDataMessageToQueue' (Reason='This function was programmatically called via the host APIs.', Id=",
                     "Executed 'AsyncChainEndToEndTests.WriteStartDataMessageToQueue' (Succeeded, Id=",
@@ -146,7 +146,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 }
 
                 // Validate Logger output
-                var allLogs = _loggerProvider.CreatedLoggers.SelectMany(l => l.LogMessages.SelectMany(m => m.FormattedMessage.Trim().Split(new string[] { Environment.NewLine }, StringSplitOptions.None))).OrderBy(p => p).ToArray();
+                var allLogs = _loggerProvider.CreatedLoggers.SelectMany(l => l.GetLogMessages().SelectMany(m => m.FormattedMessage.Trim().Split(new string[] { Environment.NewLine }, StringSplitOptions.None))).OrderBy(p => p).ToArray();
                 // Logger doesn't log the 'Executing' messages
                 var loggerExpected = expectedOutputLines.Where(l => !l.StartsWith("Executing '")).ToArray();
 
@@ -203,7 +203,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await host.StartAsync();
                 await host.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod("WriteStartDataMessageToQueue"));
 
-                _functionCompletedEvent.WaitOne();
+                await WaitForFunctionCompleteAsync();
 
                 // ensure all logs have had a chance to flush
                 await Task.Delay(3000);
@@ -225,10 +225,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 // Validate Logger
                 var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Function).Single();
-                Assert.Equal(3, logger.LogMessages.Count);
-                Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("User TraceWriter log")));
-                Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("User TextWriter log (TestParam)")));
-                Assert.NotNull(logger.LogMessages.SingleOrDefault(p => p.FormattedMessage.Contains("Another User TextWriter log")));
+                var messages = logger.GetLogMessages();
+                Assert.Equal(3, messages.Count);
+                Assert.NotNull(messages.SingleOrDefault(p => p.FormattedMessage.Contains("User TraceWriter log")));
+                Assert.NotNull(messages.SingleOrDefault(p => p.FormattedMessage.Contains("User TextWriter log (TestParam)")));
+                Assert.NotNull(messages.SingleOrDefault(p => p.FormattedMessage.Contains("Another User TextWriter log")));
             }
 
             Console.SetOut(hold);
@@ -254,7 +255,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await host.StartAsync();
                 await host.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod("WriteStartDataMessageToQueue"));
 
-                _functionCompletedEvent.WaitOne();
+                await WaitForFunctionCompleteAsync();
 
                 // ensure all logs have had a chance to flush
                 await Task.Delay(3000);
@@ -263,10 +264,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 // Make sure the aggregator was logged to
                 var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Aggregator).Single();
-                Assert.Equal(4, logger.LogMessages.Count);
+                var count = logger.GetLogMessages().Count;
+                Assert.True(count == 4, $"Expected 4. Actual {count}.{Environment.NewLine}{_loggerProvider.GetLogString()}");
 
                 // Make sure the eventCollector was logged 
-                eventCollector.AssertFunctionCount(4);
+                eventCollector.AssertFunctionCount(4, _loggerProvider.GetLogString());
             }
         }
 
@@ -286,7 +288,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await host.StartAsync();
                 await host.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod(nameof(WriteStartDataMessageToQueue)));
 
-                _functionCompletedEvent.WaitOne();
+                await WaitForFunctionCompleteAsync();
 
                 // ensure all logs have had a chance to flush
                 await Task.Delay(3000);
@@ -295,13 +297,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 // Make sure the aggregator was logged to
                 var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Aggregator).Single();
-                var count = logger.LogMessages.Count;
+                var count = logger.GetLogMessages().Count;
 
-                // Pull the name of the function out for a more descriptive failure message.
-                var names = logger.LogMessages.Select(p => p.State.Single(s => s.Key == "Name").Value.ToString());
-                var failureMessage = string.Join(Environment.NewLine, names);
-
-                Assert.True(count == 4, $"Expected 4. Actual {count}. {failureMessage}");
+                Assert.True(count == 4, $"Expected 4. Actual {count}.{Environment.NewLine}{_loggerProvider.GetLogString()}");
             }
         }
 
@@ -324,19 +322,19 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await host.StartAsync();
                 await host.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod("WriteStartDataMessageToQueue"));
 
-                _functionCompletedEvent.WaitOne();
+                await WaitForFunctionCompleteAsync();
 
                 // ensure all logs have had a chance to flush
                 await Task.Delay(3000);
 
                 await host.StopAsync();
 
-                // Make sure the aggregator was logged to
+                // Make sure the aggregator was not logged to
                 var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Aggregator).SingleOrDefault();
                 Assert.Null(logger);
 
-                // Make sure the eventCollector was logged
-                eventCollector.AssertFunctionCount(4);
+                // Make sure the eventCollector was logged                
+                eventCollector.AssertFunctionCount(4, _loggerProvider.GetLogString());
             }
         }
 
@@ -411,7 +409,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // Validate Logger
             // Logger only writes out a single log message (which includes the Exception).        
             var logger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Results).Single();
-            var logMessage = logger.LogMessages.Single();
+            var logMessage = logger.GetLogMessages().Single();
             var loggerException = logMessage.Exception as FunctionException;
             Assert.NotNull(loggerException);
             Assert.Equal(expectedName, loggerException.MethodName);
@@ -517,9 +515,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // One error is logged by the Executor and one as a Result.
             var resultLogger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Results).Single();
             var executorLogger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Executor).Single();
-            Assert.NotNull(resultLogger.LogMessages.Single().Exception);
-            Assert.StartsWith(expectedResultMessage, resultLogger.LogMessages.Single().FormattedMessage);
-            Assert.StartsWith(expectedExceptionMessage, executorLogger.LogMessages.Single().FormattedMessage);
+            Assert.NotNull(resultLogger.GetLogMessages().Single().Exception);
+            Assert.StartsWith(expectedResultMessage, resultLogger.GetLogMessages().Single().FormattedMessage);
+            Assert.StartsWith(expectedExceptionMessage, executorLogger.GetLogMessages().Single().FormattedMessage);
         }
 
         [Fact]
@@ -558,15 +556,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     CloudQueueMessage message = new CloudQueueMessage("test message");
                     _testQueue.AddMessage(message);
 
-                    _functionCompletedEvent.WaitOne();
+                    await WaitForFunctionCompleteAsync();
 
                     // wait for logs to flush
                     await Task.Delay(3000);
 
                     // expect no function output
                     TraceEvent[] traces = trace.Traces.ToArray();
-                    Assert.Equal(5, traces.Length);
-                    Assert.False(traces.Any(p => p.Message.Contains("test message")));
+                    string failureMessage = $"{Environment.NewLine}{string.Join(Environment.NewLine, trace.Traces)}";
+                    Assert.True(traces.Length == 4, $"Expected 4 traces. Actual {traces.Length}.{failureMessage}");
+                    Assert.False(traces.Any(p => p.Message.Contains("test message")), $"Did not expect to see 'test message' in a trace.{failureMessage}");
                 }
             }
             finally
@@ -592,14 +591,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     CloudQueueMessage message = new CloudQueueMessage("throw_message");
                     _testQueue.AddMessage(message);
 
-                    _functionCompletedEvent.WaitOne();
+                    await WaitForFunctionCompleteAsync();
 
                     // wait for logs to flush
                     await Task.Delay(3000);
 
                     // expect normal logs to be written (TraceLevel override is ignored)
                     TraceEvent[] traces = trace.Traces.ToArray();
-                    Assert.Equal(10, traces.Length);
+                    Assert.Equal(9, traces.Length);
 
                     string output = string.Join("\r\n", traces.Select(p => p.Message));
                     Assert.Contains("Executing 'AsyncChainEndToEndTests.QueueTrigger_TraceLevelOverride' (Reason='New queue message detected", output);
@@ -771,7 +770,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             await host.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod("WriteStartDataMessageToQueue"));
 
-            _functionCompletedEvent.WaitOne();
+            await WaitForFunctionCompleteAsync();
 
             // ensure all logs have had a chance to flush
             await Task.Delay(3000);
@@ -781,6 +780,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             await host.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod("ReadResultBlob"));
             Assert.Equal("async works", _finalBlobContent);
+        }
+
+        private async Task WaitForFunctionCompleteAsync(int waitTimeout = 30000)
+        {
+            await TestHelpers.Await(() => _functionCompletedEvent.WaitOne(200), timeout: waitTimeout, pollingInterval: 500,
+                userMessageCallback: () => $"Function did not complete in {waitTimeout} ms. Current time: {DateTime.UtcNow.ToString("HH:mm:ss.fff")}{Environment.NewLine}{_loggerProvider.GetLogString()}");
         }
 
         private class CustomQueueProcessorFactory : IQueueProcessorFactory
@@ -902,6 +907,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             public TestFixture()
             {
+                ServicePointManager.DefaultConnectionLimit = Int32.MaxValue;
                 JobHostConfiguration config = new JobHostConfiguration();
                 StorageAccount = CloudStorageAccount.Parse(config.StorageConnectionString);
             }
@@ -993,7 +999,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 get { return _state.Count; }
             }
 
-            public void AssertFunctionCount(int expected)
+            public void AssertFunctionCount(int expected, string failureMessage = null)
             {
                 // Verify the event ordering and that we got all notifications. 
                 foreach (var kv in _state)
@@ -1002,7 +1008,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 }
 
                 var actual = this._state.Count;
-                Assert.True(actual == expected, "Actual function invocations:" + Environment.NewLine + string.Join(Environment.NewLine, this.LogEntries.Select(l => l.FunctionName)));
+
+                string msg = failureMessage ?? "Actual function invocations:" + Environment.NewLine + string.Join(Environment.NewLine, this.LogEntries.Select(l => l.FunctionName));
+                Assert.True(actual == expected, $"Expected '{expected}'. Actual '{actual}'.{Environment.NewLine}{msg}");
             }
         }
     }
