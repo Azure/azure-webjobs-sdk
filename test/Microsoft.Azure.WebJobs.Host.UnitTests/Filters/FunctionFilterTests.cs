@@ -128,7 +128,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             var logger = loggerProvider.CreatedLoggers.Single(p => p.Category == LogCategories.CreateFunctionCategory(nameof(MyProg3.Method2)));
 
             // strip out the 4 messages written by the executor ("Executing", FunctionStartedEvent, "Executed", FunctionCompletedEvent)
-            string logResult = string.Join("|", logger.LogMessages
+            string logResult = string.Join("|", logger.GetLogMessages()
                 .Where(p => p.EventId.Id == 0 && !p.FormattedMessage.StartsWith("Execut"))
                 .Select(p => p.FormattedMessage));
 

@@ -92,7 +92,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
         public async Task FunctionListener_BackgroundRetriesStopped_WhenListenerCancelled()
         {
             await RetryStopTestHelper(
-                (listener) => {
+                (listener) =>
+                {
                     listener.Cancel();
                     return Task.CompletedTask;
                 });
@@ -102,7 +103,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
         public async Task FunctionListener_BackgroundRetriesStopped_WhenListenerDisposed()
         {
             await RetryStopTestHelper(
-                (listener) => {
+                (listener) =>
+                {
                     listener.Dispose();
                     return Task.CompletedTask;
                 });
@@ -184,7 +186,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             await TestHelpers.Await(() =>
             {
                 return Task.FromResult(stopCalled);
-            }, timeout: 4000, userMessage: "Listener not stopped.");
+            }, timeout: 4000, userMessageCallback: () => "Listener not stopped.");
 
             badListener.Verify(p => p.StartAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
             badListener.Verify(p => p.StopAsync(It.IsAny<CancellationToken>()), Times.Exactly(1));
@@ -233,7 +235,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             var e = await Assert.ThrowsAsync<FunctionListenerException>(async () => await listener.StartAsync(ct));
 
             // Validate Logger
-            var loggerEx = _loggerProvider.CreatedLoggers.Single().LogMessages.Single().Exception as FunctionException;
+            var loggerEx = _loggerProvider.CreatedLoggers.Single().GetLogMessages().Single().Exception as FunctionException;
             Assert.Equal("testfunc", loggerEx.MethodName);
             Assert.False(loggerEx.Handled);
 
@@ -257,7 +259,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             string expectedMessage = "The listener for function 'testfunc' was unable to start.";
 
             // Validate Logger
-            var logMessage = handlingLoggerProvider.CreatedLoggers.Single().LogMessages.Single();
+            var logMessage = handlingLoggerProvider.CreatedLoggers.Single().GetLogMessages().Single();
             Assert.Equal(expectedMessage, logMessage.FormattedMessage);
             var loggerEx = logMessage.Exception as FunctionException;
             Assert.Equal("testfunc", loggerEx.MethodName);
@@ -301,7 +303,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             await listener.StartAsync(ct);
             await listener.StopAsync(ct);
 
-            Assert.Empty(_loggerProvider.CreatedLoggers.Single().LogMessages);
+            Assert.Empty(_loggerProvider.CreatedLoggers.Single().GetLogMessages());
 
             goodListener.VerifyAll();
         }

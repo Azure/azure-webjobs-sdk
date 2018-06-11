@@ -31,20 +31,21 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
 
             // Six loggers are the startup, singleton, results, function and function.user
-            Assert.Equal(5, _loggerProvider.CreatedLoggers.Count);
+            Assert.Equal(5, _loggerProvider.CreatedLoggers.Count());
 
             var functionLogger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.CreateFunctionUserCategory(functionName)).Single();
             var resultsLogger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Results).Single();
 
-            Assert.Equal(2, functionLogger.LogMessages.Count);
-            var infoMessage = functionLogger.LogMessages[0];
-            var errorMessage = functionLogger.LogMessages[1];
+            var messages = functionLogger.GetLogMessages();
+            Assert.Equal(2, messages.Count);
+            var infoMessage = messages[0];
+            var errorMessage = messages[1];
 
             // These get the {OriginalFormat} property as well as the 2 from structured log properties
             Assert.Equal(3, infoMessage.State.Count());
             Assert.Equal(3, errorMessage.State.Count());
 
-            Assert.Equal(1, resultsLogger.LogMessages.Count);
+            Assert.Equal(1, resultsLogger.GetLogMessages().Count);
 
             // TODO: beef these verifications up
         }
@@ -60,11 +61,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
 
             // Five loggers are the startup, singleton, results, function and function.user
-            Assert.Equal(5, _loggerProvider.CreatedLoggers.Count);
+            Assert.Equal(5, _loggerProvider.CreatedLoggers.Count());
             var functionLogger = _loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.CreateFunctionUserCategory(functionName)).Single();
-            Assert.Equal(2, functionLogger.LogMessages.Count);
-            var infoMessage = functionLogger.LogMessages[0];
-            var errorMessage = functionLogger.LogMessages[1];
+            var messages = functionLogger.GetLogMessages();
+            Assert.Equal(2, messages.Count);
+            var infoMessage = messages[0];
+            var errorMessage = messages[1];
 
             // These get the {OriginalFormat} only
             Assert.Single(infoMessage.State);

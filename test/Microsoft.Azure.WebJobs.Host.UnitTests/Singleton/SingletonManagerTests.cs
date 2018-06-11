@@ -40,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
                 return null;
             }
             return (SingletonLockHandle)handle.InnerLock;
-    }
+        }
     }
 
     public class SingletonManagerTests
@@ -204,9 +204,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             // verify the logger
             TestLogger logger = _loggerProvider.CreatedLoggers.Single() as TestLogger;
             Assert.Equal(LogCategories.Singleton, logger.Category);
-            Assert.Equal(2, logger.LogMessages.Count);
-            Assert.NotNull(logger.LogMessages.Single(m => m.Level == Extensions.Logging.LogLevel.Debug && m.FormattedMessage == "Singleton lock acquired (testid)"));
-            Assert.NotNull(logger.LogMessages.Single(m => m.Level == Extensions.Logging.LogLevel.Debug && m.FormattedMessage == "Singleton lock released (testid)"));
+            var messages = logger.GetLogMessages();
+            Assert.Equal(2, messages.Count);
+            Assert.NotNull(messages.Single(m => m.Level == Extensions.Logging.LogLevel.Debug && m.FormattedMessage == "Singleton lock acquired (testid)"));
+            Assert.NotNull(messages.Single(m => m.Level == Extensions.Logging.LogLevel.Debug && m.FormattedMessage == "Singleton lock released (testid)"));
 
             renewCount = 0;
             await Task.Delay(1000);

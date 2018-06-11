@@ -1,6 +1,12 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
+using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
@@ -9,19 +15,13 @@ using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.TestCommon
 {
     public static class TestHelpers
     {
-        public static async Task Await(Func<Task<bool>> condition, int timeout = 60 * 1000, int pollingInterval = 2 * 1000, bool throwWhenDebugging = false, string userMessage = null)
+        public static async Task Await(Func<Task<bool>> condition, int timeout = 60 * 1000, int pollingInterval = 2 * 1000, bool throwWhenDebugging = false, Func<string> userMessageCallback = null)
         {
             DateTime start = DateTime.Now;
             while (!await condition())
@@ -32,18 +32,18 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                 if (shouldThrow && (DateTime.Now - start).TotalMilliseconds > timeout)
                 {
                     string error = "Condition not reached within timeout.";
-                    if (userMessage != null)
+                    if (userMessageCallback != null)
                     {
-                        error += " " + userMessage;
+                        error += " " + userMessageCallback();
                     }
                     throw new ApplicationException(error);
                 }
             }
         }
 
-        public static async Task Await(Func<bool> condition, int timeout = 60 * 1000, int pollingInterval = 2 * 1000)
+        public static async Task Await(Func<bool> condition, int timeout = 60 * 1000, int pollingInterval = 2 * 1000, bool throwWhenDebugging = false, Func<string> userMessageCallback = null)
         {
-            await Await(() => Task.FromResult(condition()), timeout, pollingInterval);
+            await Await(() => Task.FromResult(condition()), timeout, pollingInterval, throwWhenDebugging, userMessageCallback);
         }
 
         public static void WaitOne(WaitHandle handle, int timeout = 60 * 1000)
@@ -53,7 +53,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             {
                 // timeout. Event not signaled in time. 
                 throw new ApplicationException("Condition not reached within timeout.");
-            }         
+            }
         }
 
         public static void SetField(object target, string fieldName, object value)
@@ -235,10 +235,10 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                     continue;
                 }
 
-                throw new InvalidOperationException("Test bug: Unrecognized type: " + obj.GetType().FullName);                
+                throw new InvalidOperationException("Test bug: Unrecognized type: " + obj.GetType().FullName);
             }
         }
-        
+
         private class FakeStorageAccountProvider : IStorageAccountProvider
         {
             public IStorageAccount StorageAccount { get; set; }
