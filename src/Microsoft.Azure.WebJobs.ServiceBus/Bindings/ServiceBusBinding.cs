@@ -19,16 +19,17 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
         private readonly IBindableServiceBusPath _path;
         private readonly IAsyncObjectToTypeConverter<ServiceBusEntity> _converter;
         private readonly EntityType _entityType;
+        private readonly MessagingProvider _messagingProvider;
 
-        public ServiceBusBinding(string parameterName, IArgumentBinding<ServiceBusEntity> argumentBinding, ServiceBusAccount account, IBindableServiceBusPath path, ServiceBusAttribute attr)
+        public ServiceBusBinding(string parameterName, IArgumentBinding<ServiceBusEntity> argumentBinding, ServiceBusAccount account, ServiceBusConfiguration config, IBindableServiceBusPath path, ServiceBusAttribute attr)
         {
             _parameterName = parameterName;
             _argumentBinding = argumentBinding;
             _account = account;
             _path = path;
             _entityType = attr.EntityType;
-            _converter = new OutputConverter<string>(
-                new StringToServiceBusEntityConverter(account, _path, _entityType));
+            _messagingProvider = config.MessagingProvider;
+            _converter = new OutputConverter<string>(new StringToServiceBusEntityConverter(account, _path, _entityType, _messagingProvider));
         }
 
         public bool FromAttribute
@@ -41,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
             context.CancellationToken.ThrowIfCancellationRequested();
 
             string boundQueueName = _path.Bind(context.BindingData);
-            var messageSender = new MessageSender(_account.ConnectionString, boundQueueName);
+            var messageSender = _messagingProvider.CreateMessageSender(boundQueueName, _account.ConnectionString);
 
             var entity = new ServiceBusEntity
             {

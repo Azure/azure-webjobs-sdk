@@ -15,6 +15,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     {
         private readonly ServiceBusConfiguration _config;
         private readonly ConcurrentDictionary<string, MessageReceiver> _messageReceiverCache = new ConcurrentDictionary<string, MessageReceiver>();
+        private readonly ConcurrentDictionary<string, MessageSender> _messageSenderCache = new ConcurrentDictionary<string, MessageSender>();
 
         /// <summary>
         /// Constructs a new instance.
@@ -33,12 +34,17 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// Creates a <see cref="MessageProcessor"/> for the specified ServiceBus entity.
         /// </summary>
         /// <param name="entityPath">The ServiceBus entity to create a <see cref="MessageProcessor"/> for.</param>
+        /// <param name="connectionString">The ServiceBus connection string.</param>
         /// <returns>The <see cref="MessageProcessor"/>.</returns>
         public virtual MessageProcessor CreateMessageProcessor(string entityPath, string connectionString)
         {
             if (string.IsNullOrEmpty(entityPath))
             {
                 throw new ArgumentNullException("entityPath");
+            }
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                throw new ArgumentNullException("connectionString");
             }
 
             return new MessageProcessor(GetOrAddMessageReceiver(entityPath, connectionString), _config.MessageOptions);
@@ -50,8 +56,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// <remarks>
         /// You can override this method to customize the <see cref="MessageReceiver"/>.
         /// </remarks>
-        /// <param name="factory">The <see cref="MessagingFactory"/> to use.</param>
         /// <param name="entityPath">The ServiceBus entity to create a <see cref="MessageReceiver"/> for.</param>
+        /// <param name="connectionString">The ServiceBus connection string.</param>
         /// <returns></returns>
         public virtual MessageReceiver CreateMessageReceiver(string entityPath, string connectionString)
         {
@@ -59,8 +65,35 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             {
                 throw new ArgumentNullException("entityPath");
             }
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                throw new ArgumentNullException("connectionString");
+            }
 
             return GetOrAddMessageReceiver(entityPath, connectionString);
+        }
+
+        /// <summary>
+        /// Creates a <see cref="MessageSender"/> for the specified ServiceBus entity.
+        /// </summary>
+        /// <remarks>
+        /// You can override this method to customize the <see cref="MessageSender"/>.
+        /// </remarks>
+        /// <param name="entityPath">The ServiceBus entity to create a <see cref="MessageSender"/> for.</param>
+        /// <param name="connectionString">The ServiceBus connection string.</param>
+        /// <returns></returns>
+        public virtual MessageSender CreateMessageSender(string entityPath, string connectionString)
+        {
+            if (string.IsNullOrEmpty(entityPath))
+            {
+                throw new ArgumentNullException("entityPath");
+            }
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                throw new ArgumentNullException("connectionString");
+            }
+
+            return GetOrAddMessageSender(entityPath, connectionString);
         }
 
         private MessageReceiver GetOrAddMessageReceiver(string entityPath, string connectionString)
@@ -71,6 +104,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 {
                     PrefetchCount = _config.PrefetchCount
                 });
+        }
+
+        private MessageSender GetOrAddMessageSender(string entityPath, string connectionString)
+        {
+            string cacheKey = $"{entityPath}-{connectionString}";
+            return _messageSenderCache.GetOrAdd(cacheKey, new MessageSender(connectionString, entityPath));
         }
     }
 }

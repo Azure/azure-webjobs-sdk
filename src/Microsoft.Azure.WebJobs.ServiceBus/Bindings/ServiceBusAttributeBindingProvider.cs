@@ -15,6 +15,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
     {
         private static readonly IQueueArgumentBindingProvider InnerProvider =
             new CompositeArgumentBindingProvider(
+                new MessageSenderArgumentBindingProvider(),
                 new MessageArgumentBindingProvider(),
                 new StringArgumentBindingProvider(),
                 new ByteArrayArgumentBindingProvider(),
@@ -67,7 +68,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 
             ServiceBusAccount account = new ServiceBusAccount(_config, attribute);
 
-            IBinding binding = new ServiceBusBinding(parameter.Name, argumentBinding, account, path, attribute);
+            IBinding binding = new ServiceBusBinding(parameter.Name, argumentBinding, account, _config, path, attribute);
             return Task.FromResult<IBinding>(binding);
         }
 

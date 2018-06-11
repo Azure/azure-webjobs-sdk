@@ -35,6 +35,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             _messageProcessor = config.MessagingProvider.CreateMessageProcessor(entityPath, _serviceBusAccount.ConnectionString);
         }
 
+        internal MessageReceiver Receiver => _receiver;
+
         public Task StartAsync(CancellationToken cancellationToken)
         {
             ThrowIfDisposed();

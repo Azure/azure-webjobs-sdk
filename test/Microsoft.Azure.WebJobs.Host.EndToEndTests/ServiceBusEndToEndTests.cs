@@ -285,19 +285,24 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         public abstract class ServiceBusTestJobsBase
         {
-            protected static string SBQueue2SBQueue_GetOutputMessage(string input)
+            protected static Message SBQueue2SBQueue_GetOutputMessage(string input)
             {
-                return input + "-SBQueue2SBQueue";
+                input = input + "-SBQueue2SBQueue";
+                return new Message
+                {
+                    ContentType = "text/plain",
+                    Body = Encoding.UTF8.GetBytes(input)
+                };
             }
 
             protected static Message SBQueue2SBTopic_GetOutputMessage(string input)
             {
                 input = input + "-SBQueue2SBTopic";
 
-                var output = new Message(Encoding.UTF8.GetBytes(input));
-                output.ContentType = "text/plain";
-
-                return output;
+                return new Message(Encoding.UTF8.GetBytes(input))
+                {
+                    ContentType = "text/plain"
+                };
             }
 
             protected static void SBTopicListener1Impl(string input)
@@ -321,12 +326,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         public class ServiceBusTestJobs : ServiceBusTestJobsBase
         {
             // Passes service bus message from a queue to another queue
-            public static void SBQueue2SBQueue(
+            public static async Task SBQueue2SBQueue(
                 [ServiceBusTrigger(FirstQueueName)] string start, int deliveryCount,
-                [ServiceBus(SecondQueueName)] out string message)
+                MessageReceiver messageReceiver,
+                string lockToken,
+                [ServiceBus(SecondQueueName)] MessageSender messageSender)
             {
+                Assert.Equal(FirstQueueName, messageReceiver.Path);
                 Assert.Equal(1, deliveryCount);
-                message = SBQueue2SBQueue_GetOutputMessage(start);
+
+                // verify the message receiver and token are valid
+                await messageReceiver.RenewLockAsync(lockToken);
+
+                var message = SBQueue2SBQueue_GetOutputMessage(start);
+                await messageSender.SendAsync(message);
             }
 
             // Passes a service bus message from a queue to topic using a brokered message
@@ -339,7 +352,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             // First listener for the topic
             public static void SBTopicListener1(
-                [ServiceBusTrigger(TopicName, TopicSubscriptionName1)] string message)
+                [ServiceBusTrigger(TopicName, TopicSubscriptionName1)] string message,
+                MessageReceiver messageReceiver,
+                string lockToken)
             {
                 SBTopicListener1Impl(message);
             }
