@@ -8,6 +8,7 @@ using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
+using Microsoft.ApplicationInsights.SnapshotCollector;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.Implementation;
 using Microsoft.Extensions.Logging;
@@ -21,6 +22,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
     {
         private readonly string _instrumentationKey;
         private readonly SamplingPercentageEstimatorSettings _samplingSettings;
+        private readonly SnapshotCollectorConfiguration _snapshotCollectorConfiguration;
 
         private QuickPulseTelemetryModule _quickPulseModule;
         private TelemetryConfiguration _config;
@@ -33,10 +35,16 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// <param name="instrumentationKey">The Application Insights instrumentation key.</param>
         /// <param name="samplingSettings">The <see cref="SamplingPercentageEstimatorSettings"/> to use for configuring adaptive sampling. If null, sampling is disabled.</param>
         /// <param name="filter"></param>
-        public DefaultTelemetryClientFactory(string instrumentationKey, SamplingPercentageEstimatorSettings samplingSettings, Func<string, LogLevel, bool> filter)
+        public DefaultTelemetryClientFactory(string instrumentationKey, SamplingPercentageEstimatorSettings samplingSettings, Func<string, LogLevel, bool> filter) :
+            this(instrumentationKey, samplingSettings, null, filter)
+        {
+        }
+
+        public DefaultTelemetryClientFactory(string instrumentationKey, SamplingPercentageEstimatorSettings samplingSettings, SnapshotCollectorConfiguration snapshotCollectorConfiguration, Func<string, LogLevel, bool> filter)
         {
             _instrumentationKey = instrumentationKey;
             _samplingSettings = samplingSettings;
+            _snapshotCollectorConfiguration = snapshotCollectorConfiguration;
             _filter = filter;
         }
 
@@ -90,6 +98,11 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 {
                     return new AdaptiveSamplingTelemetryProcessor(_samplingSettings, null, next);
                 });
+            }
+
+            if (_snapshotCollectorConfiguration != null)
+            {
+                builder.UseSnapshotCollector(_snapshotCollectorConfiguration);
             }
 
             builder.Build();
