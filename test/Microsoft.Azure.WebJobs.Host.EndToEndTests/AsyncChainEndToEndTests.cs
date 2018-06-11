@@ -614,15 +614,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [NoAutomaticTrigger]
-        public static async Task WriteStartDataMessageToQueue(
-            [Queue(Queue1Name)] ICollector<string> queueMessages,
-            [Blob(ContainerName + "/" + NonWebJobsBlobName, FileAccess.Write)] Stream nonSdkBlob,
-            CancellationToken token)
+        public static void WriteStartDataMessageToQueue(
+            [Queue(Queue1Name)] out string queueMessage,
+            [Blob(ContainerName + "/" + NonWebJobsBlobName, FileAccess.Write)] Stream nonSdkBlob)
         {
-            queueMessages.Add(" works");
+            queueMessage = " works";
 
             byte[] messageBytes = Encoding.UTF8.GetBytes("async");
-            await nonSdkBlob.WriteAsync(messageBytes, 0, messageBytes.Length);
+            nonSdkBlob.Write(messageBytes, 0, messageBytes.Length);
         }
 
         [NoAutomaticTrigger]
@@ -696,6 +695,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             CloudBlobClient blobClient = _storageAccount.CreateCloudBlobClient();
             CloudBlobContainer container = blobClient.GetContainerReference(_resolver.ResolveInString(ContainerName));
             CloudBlockBlob blob = container.GetBlockBlobReference(NonWebJobsBlobName);
+
             string blobContent = await blob.DownloadTextAsync();
 
             trace.Info("User TraceWriter log");
