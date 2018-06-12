@@ -27,6 +27,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _extensions = extensions;
         }
 
+        // $$$ This should all be DI. 
+        // How do 3rd-parties add IBindingProvider directly? (ie bindings that don't use attributes, like for CloudStorageAccount)
         public IBindingProvider Create()
         {
             List<IBindingProvider> innerProviders = new List<IBindingProvider>();
@@ -38,17 +40,17 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 innerProviders.Add(provider);
             }
                         
-            innerProviders.Add(new CancellationTokenBindingProvider());
+            innerProviders.Add(new CancellationTokenBindingProvider()); // for typeof(CancellationToken)
 
             // The TraceWriter binder handles all remaining TraceWriter/TextWriter parameters. It must come after the
             // Blob binding provider; otherwise bindings like Do([Blob("a/b")] TextWriter blob) wouldn't work.
-            innerProviders.Add(new TraceWriterBindingProvider(_loggerFactory));
+            innerProviders.Add(new TraceWriterBindingProvider(_loggerFactory)); // for typeof(TraceWriter), typeof(TextWriter)
 
-            innerProviders.Add(new ILoggerBindingProvider(_loggerFactory));
+            innerProviders.Add(new ILoggerBindingProvider(_loggerFactory)); // for typeof(ILogger)
 
             ContextAccessor<IBindingProvider> bindingProviderAccessor = new ContextAccessor<IBindingProvider>();
-            innerProviders.Add(new RuntimeBindingProvider(bindingProviderAccessor));
-            innerProviders.Add(new DataBindingProvider());
+            innerProviders.Add(new RuntimeBindingProvider(bindingProviderAccessor)); // for IBinder, Binder
+            innerProviders.Add(new DataBindingProvider()); // arbitrary 
 
             IBindingProvider bindingProvider = new CompositeBindingProvider(innerProviders);
             bindingProviderAccessor.SetValue(bindingProvider);

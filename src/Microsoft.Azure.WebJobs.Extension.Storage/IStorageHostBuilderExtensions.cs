@@ -3,6 +3,7 @@
 
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Bindings.StorageAccount;
 using Microsoft.Azure.WebJobs.Host.Blobs;
 using Microsoft.Azure.WebJobs.Host.Blobs.Bindings;
@@ -57,7 +58,7 @@ namespace Microsoft.Extensions.Hosting
 
                     services.TryAddSingleton<QueueTriggerAttributeBindingProvider>();
 
-                    services.TryAddSingleton<CloudStorageAccountBindingProvider>();
+                    services.TryAddSingleton<IBindingProvider, CloudStorageAccountBindingProvider>();
                 })
 
                 .AddExtension<TableExtension>()
