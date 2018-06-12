@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -303,14 +304,15 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         {
             IDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionary() ?? new Dictionary<string, object>();
 
-            RequestTelemetry requestTelemetry = scopeProps.GetValueOrDefault<RequestTelemetry>(OperationContext);
+            IOperationHolder<RequestTelemetry> requestOperation = scopeProps.GetValueOrDefault<IOperationHolder<RequestTelemetry>>(OperationContext);
 
             // We somehow never started the operation, so there's no way to complete it.
-            if (requestTelemetry == null)
+            if (requestOperation == null)
             {
                 throw new InvalidOperationException("No started telemetry was found.");
             }
 
+            RequestTelemetry requestTelemetry = requestOperation.Telemetry;
             requestTelemetry.Success = exception == null;
             requestTelemetry.ResponseCode = "0";
 
@@ -326,8 +328,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             }
 
             // Note: we do not have to set Duration, StartTime, etc. These are handled by the call to Stop()
-            requestTelemetry.Stop();
-            _telemetryClient.TrackRequest(requestTelemetry);
+            _telemetryClient.StopOperation(requestOperation);
         }
 
         private static void ApplyFunctionResultProperties(RequestTelemetry requestTelemetry, IEnumerable<KeyValuePair<string, object>> stateValues)
@@ -373,7 +374,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             return DictionaryLoggerScope.Push(state);
         }
 
-        private static void StartTelemetryIfFunctionInvocation(IDictionary<string, object> stateValues)
+        private void StartTelemetryIfFunctionInvocation(IDictionary<string, object> stateValues)
         {
             if (stateValues == null)
             {
@@ -397,8 +398,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 };
 
                 // We'll need to store this operation context so we can stop it when the function completes
-                request.Start();
-                stateValues[OperationContext] = request;
+                IOperationHolder<RequestTelemetry> operation = _telemetryClient.StartOperation(request);
+                stateValues[OperationContext] = operation;
             }
         }
 

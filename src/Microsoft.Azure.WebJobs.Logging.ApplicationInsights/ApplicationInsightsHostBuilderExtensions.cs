@@ -5,6 +5,7 @@ using System;
 using System.Reflection;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
+using Microsoft.ApplicationInsights.DependencyCollector;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
@@ -58,6 +59,8 @@ namespace Microsoft.Extensions.Logging
 
             builder.ConfigureServices((context, services) =>
             {
+                services.AddSingleton<ITelemetryInitializer, OperationCorrelationTelemetryInitializer>();
+                services.AddSingleton<ITelemetryInitializer, HttpDependenciesParsingTelemetryInitializer>();
                 services.AddSingleton<ITelemetryInitializer, WebJobsRoleEnvironmentTelemetryInitializer>();
                 services.AddSingleton<ITelemetryInitializer, WebJobsTelemetryInitializer>();
                 services.AddSingleton<ITelemetryInitializer, WebJobsSanitizingInitializer>();
@@ -65,6 +68,23 @@ namespace Microsoft.Extensions.Logging
 
                 ServerTelemetryChannel serverChannel = new ServerTelemetryChannel();
                 services.AddSingleton<ITelemetryModule>(serverChannel);
+                services.AddSingleton<ITelemetryModule, DependencyTrackingTelemetryModule>(provider =>
+                {
+                    var dependencyCollector = new DependencyTrackingTelemetryModule();
+                    var excludedDomains = dependencyCollector.ExcludeComponentCorrelationHttpHeadersOnDomains;
+                    excludedDomains.Add("core.windows.net");
+                    excludedDomains.Add("core.chinacloudapi.cn");
+                    excludedDomains.Add("core.cloudapi.de");
+                    excludedDomains.Add("core.usgovcloudapi.net");
+                    excludedDomains.Add("localhost");
+                    excludedDomains.Add("127.0.0.1");
+
+                    var includedActivities = dependencyCollector.IncludeDiagnosticSourceActivities;
+                    includedActivities.Add("Microsoft.Azure.EventHubs");
+                    includedActivities.Add("Microsoft.Azure.ServiceBus");
+
+                    return dependencyCollector;
+                });
                 services.AddSingleton<ITelemetryChannel>(serverChannel);
                 services.AddSingleton<TelemetryConfiguration>(provider =>
                 {

@@ -2,10 +2,8 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -19,15 +17,11 @@ using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
-using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.Implementation;
-using Microsoft.Azure.WebJobs.Host.Bindings.Cancellation;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging;
-using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -570,28 +564,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             public double Value { get; set; }
 
             public int Weight { get; set; }
-        }
-
-        private class TestTelemetryChannel : ITelemetryChannel
-        {
-            public ConcurrentBag<ITelemetry> Telemetries = new ConcurrentBag<ITelemetry>();
-
-            public bool? DeveloperMode { get; set; }
-
-            public string EndpointAddress { get; set; }
-
-            public void Dispose()
-            {
-            }
-
-            public void Flush()
-            {
-            }
-
-            public void Send(ITelemetry item)
-            {
-                Telemetries.Add(item);
-            }
         }
     }
 }

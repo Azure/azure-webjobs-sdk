@@ -30,6 +30,18 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly ILogger _resultsLogger;
         private readonly IEnumerable<IFunctionFilter> _globalFunctionFilters;
 
+        private readonly Dictionary<string, object> _inputBindingScope = new Dictionary<string, object>
+        {
+            [LogConstants.CategoryNameKey] = "Host.Bindings.Input",
+            [LogConstants.LogLevelKey] = LogLevel.Information
+        };
+
+        private readonly Dictionary<string, object> _outputBindingScope = new Dictionary<string, object>
+        {
+            [LogConstants.CategoryNameKey] = "Host.Bindings.Output",
+            [LogConstants.LogLevelKey] = LogLevel.Information
+        };
+
         private IFunctionOutputLogger _functionOutputLogger;
         private HostOutputMessage _hostOutputMessage;
 
@@ -214,7 +226,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         functionCancellationTokenSource.Token,
                         instance.FunctionDescriptor);
                     var valueBindingContext = new ValueBindingContext(functionContext, cancellationToken);
-                    await parameterHelper.BindAsync(instance.BindingSource, valueBindingContext);
+
+                    using (logger.BeginScope(_inputBindingScope))
+                    {
+                        await parameterHelper.BindAsync(instance.BindingSource, valueBindingContext);
+                    }
 
                     Exception invocationException = null;
                     ExceptionDispatchInfo exceptionInfo = null;
@@ -480,8 +496,16 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                     invoker = FunctionInvocationFilterInvoker.Create(invoker, filters, instance, parameterHelper, logger);
 
-                    await InvokeAsync(invoker, parameterHelper, timeoutTokenSource, functionCancellationTokenSource,
-                        throwOnTimeout, timerInterval, instance);
+
+                    using (logger.BeginScope(new Dictionary<string, object>
+                    {
+                        [LogConstants.CategoryNameKey] = LogCategories.CreateFunctionCategory(instance.FunctionDescriptor.LogName),
+                        [LogConstants.LogLevelKey] = LogLevel.Information
+                    }))
+                    {
+                        await InvokeAsync(invoker, parameterHelper, timeoutTokenSource, functionCancellationTokenSource,
+                            throwOnTimeout, timerInterval, instance);
+                    }
                 }
                 finally
                 {
@@ -493,7 +517,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
             }
 
-            await parameterHelper.ProcessOutputParameters(functionCancellationTokenSource.Token);
+            using (logger.BeginScope(_outputBindingScope))
+            {
+                await parameterHelper.ProcessOutputParameters(functionCancellationTokenSource.Token);
+            }
 
             if (singleton != null)
             {

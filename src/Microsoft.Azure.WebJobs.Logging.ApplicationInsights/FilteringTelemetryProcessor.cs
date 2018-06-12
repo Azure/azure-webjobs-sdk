@@ -5,6 +5,7 @@ using System;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
@@ -41,6 +42,11 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 {
                     // If no category is specified, it will be filtered by the default filter
                     categoryName = string.Empty;
+
+                    if (telemetry is OperationTelemetry)
+                    {
+                        enabled = false;
+                    }
                 }
 
                 // Extract the log level and apply the filter
