@@ -39,8 +39,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             await _logger.LogFunctionStartedAsync(message, CancellationToken.None);
 
-            Assert.Equal(1, _traceWriter.Traces.Count);
-            TraceEvent traceEvent = _traceWriter.Traces[0];
+            Assert.Equal(1, _traceWriter.GetTraces().Count);
+            TraceEvent traceEvent = _traceWriter.GetTraces()[0];
             Assert.Equal(TraceLevel.Info, traceEvent.Level);
             Assert.Equal(Host.TraceSource.Execution, traceEvent.Source);
             Assert.Equal(string.Format("Executing 'TestJob' (Reason='TestReason', Id={0})", message.FunctionInstanceId), traceEvent.Message);
@@ -78,9 +78,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             await _logger.LogFunctionCompletedAsync(successMessage, CancellationToken.None);
             await _logger.LogFunctionCompletedAsync(failureMessage, CancellationToken.None);
 
-            Assert.Equal(3, _traceWriter.Traces.Count);
+            Assert.Equal(3, _traceWriter.GetTraces().Count);
 
-            TraceEvent traceEvent = _traceWriter.Traces[0];
+            TraceEvent traceEvent = _traceWriter.GetTraces()[0];
             Assert.Equal(TraceLevel.Info, traceEvent.Level);
             Assert.Equal(Host.TraceSource.Execution, traceEvent.Source);
             Assert.Equal(string.Format("Executed 'TestJob' (Succeeded, Id={0})", successMessage.FunctionInstanceId), traceEvent.Message);
@@ -88,7 +88,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(successMessage.FunctionInstanceId, traceEvent.Properties["MS_FunctionInvocationId"]);
             Assert.Same(successMessage.Function, traceEvent.Properties["MS_FunctionDescriptor"]);
 
-            traceEvent = _traceWriter.Traces[1];
+            traceEvent = _traceWriter.GetTraces()[1];
             Assert.Equal(TraceLevel.Error, traceEvent.Level);
             Assert.Equal(Host.TraceSource.Execution, traceEvent.Source);
             Assert.Equal(string.Format("Executed 'TestJob' (Failed, Id={0})", failureMessage.FunctionInstanceId), traceEvent.Message);
@@ -97,7 +97,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(failureMessage.FunctionInstanceId, traceEvent.Properties["MS_FunctionInvocationId"]);
             Assert.Same(failureMessage.Function, traceEvent.Properties["MS_FunctionDescriptor"]);
 
-            traceEvent = _traceWriter.Traces[2];
+            traceEvent = _traceWriter.GetTraces()[2];
             Assert.Equal(TraceLevel.Error, traceEvent.Level);
             Assert.Equal(Host.TraceSource.Host, traceEvent.Source);
             Assert.Equal("  Function had errors. See Azure WebJobs SDK dashboard for details. Instance ID is '8d71c9e3-e809-4cfb-bb78-48ae25c7d26d'", traceEvent.Message);

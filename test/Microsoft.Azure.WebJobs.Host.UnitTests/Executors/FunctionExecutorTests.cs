@@ -336,7 +336,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             string message = string.Format("Timeout value of 00:01:00 exceeded by function 'Functions.MethodLevel' (Id: 'b2d1dd72-80e2-412b-a22e-3b4558f378b4'). {0}", expectedMessage);
 
             // verify TraceWriter
-            TraceEvent trace = _traceWriter.Traces[0];
+            TraceEvent trace = _traceWriter.GetTraces()[0];
             Assert.Equal(TraceLevel.Error, trace.Level);
             Assert.Equal(TraceSource.Execution, trace.Source);
             Assert.Equal(message, trace.Message);

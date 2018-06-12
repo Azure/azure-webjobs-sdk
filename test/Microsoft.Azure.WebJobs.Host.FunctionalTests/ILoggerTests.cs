@@ -55,10 +55,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 host.Call(method);
             }
 
-            Assert.Equal(6, _trace.Traces.Count);
+            Assert.Equal(6, _trace.GetTraces().Count);
             // The fourth and fifth traces are from our function
-            var infoLog = _trace.Traces[3];
-            var errorLog = _trace.Traces[4];
+            var infoLog = _trace.GetTraces()[3];
+            var errorLog = _trace.GetTraces()[4];
 
             Assert.Equal("This should go to the ILogger", infoLog.Message);
             Assert.Null(infoLog.Exception);

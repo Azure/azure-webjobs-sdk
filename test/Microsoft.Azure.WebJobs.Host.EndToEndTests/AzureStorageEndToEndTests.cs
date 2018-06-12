@@ -412,7 +412,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.Equal(0, _badMessage2Calls);
 
             // make sure the exception is being properly logged
-            var errors = tracer.Traces.Where(t => t.Level == TraceLevel.Error);
+            var errors = tracer.GetTraces().Where(t => t.Level == TraceLevel.Error);
             Assert.True(errors.All(t => t.Exception.InnerException.InnerException is FormatException));
 
             // Validate Logger

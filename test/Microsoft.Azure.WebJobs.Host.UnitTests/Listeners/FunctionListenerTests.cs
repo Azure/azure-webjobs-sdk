@@ -60,7 +60,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
 
             await TestHelpers.Await(() =>
             {
-                var lastTrace = trace.Traces.Last();
+                var lastTrace = trace.GetTraces().Last();
                 return lastTrace.Message == "Listener successfully started for function 'testfunc' after 3 retries.";
             });
 
@@ -76,7 +76,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
                 p => Assert.Equal("Retrying to start listener for function 'testfunc' (Attempt 3)", p),
                 p => Assert.Equal("Listener successfully started for function 'testfunc' after 3 retries.", p)
             };
-            Assert.Collection(trace.Traces.Select(p => p.Message), validators);
+            Assert.Collection(trace.GetTraces().Select(p => p.Message), validators);
 
             // Validate Logger
             var logs = _loggerProvider.CreatedLoggers.Single().GetLogMessages().Select(p => p.FormattedMessage);
@@ -137,8 +137,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             // wait until we're sure the retry task is running
             await TestHelpers.Await(() =>
             {
-                var lastTrace = trace.Traces.Last();
-                return trace.Traces.Any(p => p.Message.Contains("Retrying to start listener"));
+                var lastTrace = trace.GetTraces().Last();
+                return trace.GetTraces().Any(p => p.Message.Contains("Retrying to start listener"));
             });
 
             // initiate the action which should stop the retry task
@@ -146,9 +146,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
 
             // take a count before and after a delay to make sure the
             // task is no longer running
-            int prevRetryCount = trace.Traces.Count(p => p.Message.Contains("Retrying to start listener"));
+            int prevRetryCount = trace.GetTraces().Count(p => p.Message.Contains("Retrying to start listener"));
             await Task.Delay(1000);
-            int retryCount = trace.Traces.Count(p => p.Message.Contains("Retrying to start listener"));
+            int retryCount = trace.GetTraces().Count(p => p.Message.Contains("Retrying to start listener"));
 
             Assert.Equal(prevRetryCount, retryCount);
         }
@@ -198,7 +198,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             badListener.Verify(p => p.StartAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
             badListener.Verify(p => p.StopAsync(It.IsAny<CancellationToken>()), Times.Exactly(1));
 
-            Assert.Collection(trace.Traces.Select(p => p.Message),
+            Assert.Collection(trace.GetTraces().Select(p => p.Message),
                 p => Assert.Equal("The listener for function 'testfunc' was unable to start.", p),
                 p => Assert.Equal("Retrying to start listener for function 'testfunc' (Attempt 1)", p),
                 p => Assert.Equal("Listener successfully started for function 'testfunc' after 1 retries.", p),
@@ -244,7 +244,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             var e = await Assert.ThrowsAsync<FunctionListenerException>(async () => await listener.StartAsync(ct));
 
             // Validate TraceWriter
-            var traceEx = trace.Traces[0].Exception as FunctionException;
+            var traceEx = trace.GetTraces()[0].Exception as FunctionException;
             Assert.Equal("testfunc", traceEx.MethodName);
             Assert.False(traceEx.Handled);
 

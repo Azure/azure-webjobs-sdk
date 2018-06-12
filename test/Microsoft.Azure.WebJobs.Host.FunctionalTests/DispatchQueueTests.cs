@@ -75,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 ThrowsAsync(new Exception(error));
 
             await _sharedQueue.InitializeAsync(CancellationToken.None);
-            Assert.Empty(_trace.Traces);
+            Assert.Empty(_trace.GetTraces());
 
 
             // listenercontext should return inMemoryDispatchQueueHandler when there's no storage account
@@ -99,8 +99,8 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             var dispatchQueue = context.GetDispatchQueue(messageHandlerMock.Object);
             // make sure initialization error is traced
-            Assert.Equal(error, _trace.Traces[0].Exception.Message);
-            Assert.Equal(SharedQueueHandler.InitErrorMessage, _trace.Traces[0].Message);
+            Assert.Equal(error, _trace.GetTraces()[0].Exception.Message);
+            Assert.Equal(SharedQueueHandler.InitErrorMessage, _trace.GetTraces()[0].Message);
             Assert.IsType<InMemoryDispatchQueueHandler>(dispatchQueue);
 
             await dispatchQueue.EnqueueAsync(JObject.Parse("{}"), CancellationToken.None);

@@ -61,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
             handler.Method.Invoke(handler.Target, new object[] { null, args });
 
             string expectedMessage = "EventProcessorHost error (Action=Testing)";
-            var trace = traceWriter.Traces.Last();
+            var trace = traceWriter.GetTraces().Last();
             Assert.Equal(expectedMessage, trace.Message);
             Assert.Same(ex, trace.Exception);
 

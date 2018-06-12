@@ -106,7 +106,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
 
             await Task.WhenAll(tasks);
 
-            Assert.Equal(1000, trace.Traces.Count);
+            Assert.Equal(1000, trace.GetTraces().Count);
         }
     }
 }

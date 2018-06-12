@@ -210,12 +210,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 await host.StopAsync();
 
-                bool hasError = string.Join(Environment.NewLine, trace.Traces.Where(p => p.Message.Contains("Error"))).Any();
+                bool hasError = string.Join(Environment.NewLine, trace.GetTraces().Where(p => p.Message.Contains("Error"))).Any();
                 Assert.False(hasError);
 
-                Assert.NotNull(trace.Traces.SingleOrDefault(p => p.Message.Contains("User TraceWriter log")));
-                Assert.NotNull(trace.Traces.SingleOrDefault(p => p.Message.Contains("User TextWriter log (TestParam)")));
-                Assert.NotNull(trace.Traces.SingleOrDefault(p => p.Message.Contains("Another User TextWriter log")));
+                Assert.NotNull(trace.GetTraces().SingleOrDefault(p => p.Message.Contains("User TraceWriter log")));
+                Assert.NotNull(trace.GetTraces().SingleOrDefault(p => p.Message.Contains("User TextWriter log (TestParam)")));
+                Assert.NotNull(trace.GetTraces().SingleOrDefault(p => p.Message.Contains("Another User TextWriter log")));
                 ValidateTraceProperties(trace);
 
                 string[] consoleOutputLines = consoleOutput.ToString().Trim().Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
@@ -340,7 +340,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private void ValidateTraceProperties(TestTraceWriter trace)
         {
-            foreach (var traceEvent in trace.Traces)
+            foreach (var traceEvent in trace.GetTraces())
             {
                 var message = traceEvent.Message;
                 var startedOrEndedMessage = message.StartsWith("Executing ") || message.StartsWith("Executed ");
@@ -395,7 +395,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             // Validate TraceWriter
             // We expect 3 error messages total
-            TraceEvent[] traceErrors = trace.Traces.Where(p => p.Level == TraceLevel.Error).ToArray();
+            TraceEvent[] traceErrors = trace.GetTraces().Where(p => p.Level == TraceLevel.Error).ToArray();
             Assert.Equal(3, traceErrors.Length);
 
             // Ensure that all errors include the same exception, with function
@@ -505,7 +505,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             // Validate TraceWriter
             // We expect 3 error messages total
-            TraceEvent[] traceErrors = trace.Traces.Where(p => p.Level == TraceLevel.Error).ToArray();
+            TraceEvent[] traceErrors = trace.GetTraces().Where(p => p.Level == TraceLevel.Error).ToArray();
             Assert.Equal(3, traceErrors.Length);
             Assert.StartsWith(expectedExceptionMessage, traceErrors[0].Message);
             Assert.StartsWith(expectedResultMessage, traceErrors[1].Message);
@@ -532,7 +532,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await host.CallAsync(methodInfo);
 
             // Validate TraceWriter
-            TraceEvent[] traceErrors = trace.Traces.Where(p => p.Level == TraceLevel.Error).ToArray();
+            TraceEvent[] traceErrors = trace.GetTraces().Where(p => p.Level == TraceLevel.Error).ToArray();
             Assert.Equal(0, traceErrors.Length);
 
             // Validate Logger
@@ -562,9 +562,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     await Task.Delay(3000);
 
                     // expect no function output
-                    TraceEvent[] traces = trace.Traces.ToArray();
-                    string failureMessage = $"{Environment.NewLine}{string.Join(Environment.NewLine, trace.Traces)}";
-                    Assert.True(traces.Length == 4, $"Expected 4 traces. Actual {traces.Length}.{failureMessage}");
+                    var traces = trace.GetTraces();
+                    string failureMessage = $"{Environment.NewLine}{string.Join(Environment.NewLine, traces)}";
+                    Assert.True(traces.Count == 4, $"Expected 4 traces. Actual {traces.Count}.{failureMessage}");
                     Assert.False(traces.Any(p => p.Message.Contains("test message")), $"Did not expect to see 'test message' in a trace.{failureMessage}");
                 }
             }
@@ -597,8 +597,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     await Task.Delay(3000);
 
                     // expect normal logs to be written (TraceLevel override is ignored)
-                    TraceEvent[] traces = trace.Traces.ToArray();
-                    Assert.Equal(9, traces.Length);
+                    var traces = trace.GetTraces();
+                    Assert.Equal(9, traces.Count);
 
                     string output = string.Join("\r\n", traces.Select(p => p.Message));
                     Assert.Contains("Executing 'AsyncChainEndToEndTests.QueueTrigger_TraceLevelOverride' (Reason='New queue message detected", output);

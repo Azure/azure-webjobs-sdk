@@ -205,8 +205,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             await _singletonManager.ReleaseLockAsync(lockHandle, cancellationToken);
 
             // verify the traces
-            Assert.Equal(1, _trace.Traces.Count(p => p.ToString().Contains("Verbose Singleton lock acquired (testid)")));
-            Assert.Equal(1, _trace.Traces.Count(p => p.ToString().Contains("Verbose Singleton lock released (testid)")));
+            Assert.Equal(1, _trace.GetTraces().Count(p => p.ToString().Contains("Verbose Singleton lock acquired (testid)")));
+            Assert.Equal(1, _trace.GetTraces().Count(p => p.ToString().Contains("Verbose Singleton lock released (testid)")));
 
             // verify the logger
             TestLogger logger = _loggerProvider.CreatedLoggers.Single() as TestLogger;

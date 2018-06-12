@@ -107,18 +107,18 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var traceWriter = new CompositeTraceWriter(traceWriters, textWriter);
 
             traceWriter.Info("Test");
-            Assert.Equal(1, t1.Traces.Count);
-            Assert.Equal(1, t2.Traces.Count);
+            Assert.Equal(1, t1.GetTraces().Count);
+            Assert.Equal(1, t2.GetTraces().Count);
             Assert.Equal(1, textWriter.ToString().Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries).Length);
 
             var t3 = new TestTraceWriter(TraceLevel.Verbose);
             traceWriters.Add(t3);
 
             traceWriter.Info("Test");
-            Assert.Equal(2, t1.Traces.Count);
-            Assert.Equal(2, t2.Traces.Count);
+            Assert.Equal(2, t1.GetTraces().Count);
+            Assert.Equal(2, t2.GetTraces().Count);
             Assert.Equal(2, textWriter.ToString().Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries).Length);
-            Assert.Equal(0, t3.Traces.Count);
+            Assert.Equal(0, t3.GetTraces().Count);
         }
     }
 }

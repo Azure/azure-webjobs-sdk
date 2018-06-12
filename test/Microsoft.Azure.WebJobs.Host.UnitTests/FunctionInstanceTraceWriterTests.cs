@@ -24,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             var instanceWriter = new FunctionInstanceTraceWriter(instance, hostInstanceId, writer, functionTraceLevel);
             instanceWriter.Info("Test Info");
-            var traceEvent = writer.Traces.Single();
+            var traceEvent = writer.GetTraces().Single();
 
             Assert.Equal(4, traceEvent.Properties.Count);
             Assert.Equal(instance.Id, traceEvent.Properties["MS_FunctionInvocationId"]);

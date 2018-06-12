@@ -491,23 +491,23 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.Equal("BindingErrorsProgram.Invalid", fex.MethodName);
 
             // verify that the binding error was logged
-            Assert.Equal(6, traceWriter.Traces.Count);
-            TraceEvent traceEvent = traceWriter.Traces[0];
+            Assert.Equal(6, traceWriter.GetTraces().Count);
+            TraceEvent traceEvent = traceWriter.GetTraces()[0];
             Assert.Equal("Error indexing method 'BindingErrorsProgram.Invalid'", traceEvent.Message);
             Assert.Equal(TraceLevel.Error, traceEvent.Level);
             Assert.Same(fex, traceEvent.Exception);
             Assert.Equal("Invalid container name: invalid$=+1", traceEvent.Exception.InnerException.Message);
-            traceEvent = traceWriter.Traces[1];
+            traceEvent = traceWriter.GetTraces()[1];
             Assert.Equal("Function 'BindingErrorsProgram.Invalid' failed indexing and will be disabled.", traceEvent.Message);
             Assert.Equal(TraceLevel.Warning, traceEvent.Level);
 
             // verify that the valid function was still indexed
-            traceEvent = traceWriter.Traces[2];
+            traceEvent = traceWriter.GetTraces()[2];
             Assert.True(traceEvent.Message.Contains("Found the following functions"));
             Assert.True(traceEvent.Message.Contains("BindingErrorsProgram.Valid"));
 
             // verify that the job host was started successfully
-            traceEvent = traceWriter.Traces[5];
+            traceEvent = traceWriter.GetTraces()[5];
             Assert.Equal("Job host started", traceEvent.Message);
 
             host.Stop();

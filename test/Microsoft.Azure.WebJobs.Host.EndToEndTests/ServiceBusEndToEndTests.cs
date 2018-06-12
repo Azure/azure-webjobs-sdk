@@ -180,8 +180,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 // in addition to verifying that our custom processor was called, we're also
                 // verifying here that extensions can log to the TraceWriter
-                Assert.Equal(4, trace.Traces.Count(p => p.Message.Contains("Custom processor Begin called!")));
-                Assert.Equal(4, trace.Traces.Count(p => p.Message.Contains("Custom processor End called!")));
+                Assert.Equal(4, trace.GetTraces().Count(p => p.Message.Contains("Custom processor Begin called!")));
+                Assert.Equal(4, trace.GetTraces().Count(p => p.Message.Contains("Custom processor End called!")));
             }
             finally
             {

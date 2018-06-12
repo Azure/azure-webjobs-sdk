@@ -38,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             Utility.LogExceptionReceivedEvent(e, "Test", _traceWriter, _loggerFactory);
 
             var expectedMessage = $"Test error (Action=Complete)";
-            var traceEvent = _traceWriter.Traces.Single();
+            var traceEvent = _traceWriter.GetTraces().Single();
             Assert.Equal(TraceLevel.Error, traceEvent.Level);
             Assert.Same(ex, traceEvent.Exception);
             Assert.Equal(expectedMessage, traceEvent.Message);
@@ -58,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             Utility.LogExceptionReceivedEvent(e, "Test", _traceWriter, _loggerFactory);
 
             var expectedMessage = $"Test error (Action=Connect)";
-            var traceEvent = _traceWriter.Traces.Single();
+            var traceEvent = _traceWriter.GetTraces().Single();
             Assert.Equal(TraceLevel.Verbose, traceEvent.Level);
             Assert.Equal($"{expectedMessage} : {ex.ToString()}", traceEvent.Message);
             Assert.Same(ex, traceEvent.Exception);
@@ -77,7 +77,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             Utility.LogExceptionReceivedEvent(e, "Test", _traceWriter, _loggerFactory);
 
             var expectedMessage = $"Test error (Action=Receive)";
-            var traceEvent = _traceWriter.Traces.Single();
+            var traceEvent = _traceWriter.GetTraces().Single();
             Assert.Equal(TraceLevel.Verbose, traceEvent.Level);
             Assert.Equal($"{expectedMessage} : {ex.ToString()}", traceEvent.Message);
             Assert.Same(ex, traceEvent.Exception);
@@ -96,7 +96,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             Utility.LogExceptionReceivedEvent(e, "Test", _traceWriter, _loggerFactory);
 
             var expectedMessage = $"Test error (Action=Unknown)";
-            var traceEvent = _traceWriter.Traces.Single();
+            var traceEvent = _traceWriter.GetTraces().Single();
             Assert.Equal(TraceLevel.Error, traceEvent.Level);
             Assert.Same(ex, traceEvent.Exception);
             Assert.Equal(expectedMessage, traceEvent.Message);

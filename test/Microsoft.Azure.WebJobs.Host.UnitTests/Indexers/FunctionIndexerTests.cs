@@ -134,7 +134,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             string expectedMessage = "Function 'ReturnAsyncVoid' is async but does not return a Task. Your function may not run correctly.";
 
             // Validate TraceWriter
-            var traceWarning = traceWriter.Traces.First(p => p.Level == TraceLevel.Warning);
+            var traceWarning = traceWriter.GetTraces().First(p => p.Level == TraceLevel.Warning);
             Assert.Equal(expectedMessage, traceWarning.Message);
 
             // Validate Logger
