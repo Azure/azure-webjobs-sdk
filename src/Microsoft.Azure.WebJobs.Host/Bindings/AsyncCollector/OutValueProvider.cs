@@ -14,8 +14,6 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         private readonly string _invokeString;
 
         // raw is the underlying object (exposes a Flush method).
-        // obj is athe front-end veneer to pass to the user function. 
-        // calls to obj will trickle through adapters to be calls on raw. 
         public OutValueProvider(IAsyncCollector<TMessage> raw, string invokeString)
         {
             _raw = raw;
