@@ -58,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 .Build();
 
             ITriggerBindingProvider triggerBindingProvider = host.Services.GetService<ITriggerBindingProvider>();
-            IBindingProvider bindingProvider = host.Services.GetService<IBindingProviderFactory>().Create();
+            IBindingProvider bindingProvider = host.Services.GetService<CompositeBindingProvider>();
             IJobActivator activator = host.Services.GetService<IJobActivator>();
             extensionRegistry = host.Services.GetService<IExtensionRegistry>();
             SingletonManager singletonManager = host.Services.GetService<SingletonManager>();

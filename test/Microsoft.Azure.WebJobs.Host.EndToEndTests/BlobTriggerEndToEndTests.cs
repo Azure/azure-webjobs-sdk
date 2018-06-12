@@ -230,23 +230,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await host.StopAsync();
 
 
-#if false
-                // Then start again and make sure the blob doesn't get reprocessed
-                // wait twice the amount of time required to process first before 
-                // deciding that it doesn't get reprocessed
-                using (prog._completedEvent = new ManualResetEvent(initialState: false))
-                {
-
-                    host.Start();
-
-                    bool blobReprocessed = prog._completedEvent.WaitOne(2 * timeToProcess);
-
-                    Assert.False(blobReprocessed);
-                } // _completedEvent
-#else
                 // Can't restart 
                 Assert.Throws<InvalidOperationException>(() => host.Start());
-#endif
             }
 
             Assert.Equal(1, prog._timesProcessed);
