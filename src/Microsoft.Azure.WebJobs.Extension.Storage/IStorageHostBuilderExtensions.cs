@@ -58,7 +58,7 @@ namespace Microsoft.Extensions.Hosting
 
                     services.TryAddSingleton<QueueTriggerAttributeBindingProvider>();
 
-                    services.TryAddSingleton<IBindingProvider, CloudStorageAccountBindingProvider>();
+                    services.TryAddEnumerable(ServiceDescriptor.Singleton<IBindingProvider, CloudStorageAccountBindingProvider>());
                 })
 
                 .AddExtension<TableExtension>()

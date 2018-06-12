@@ -5,6 +5,8 @@ using System;
 using System.Threading;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
+using Microsoft.Azure.WebJobs.Host.Bindings.Cancellation;
+using Microsoft.Azure.WebJobs.Host.Bindings.Data;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Executors;
@@ -58,14 +60,17 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IFunctionExecutor, FunctionExecutor>();
             services.TryAddSingleton<IJobHostContextFactory, JobHostContextFactory>();
 
-            services.TryAddSingleton<IBindingProviderFactory, DefaultBindingProvider>();
-            services.TryAddSingleton<IBindingProvider>(p => p.GetRequiredService<IBindingProviderFactory>().Create());
+            // Anybody can add IBindingProvider via DI. 
+            // Consume the whole list via a CompositeBindingProvider
+            services.TryAddSingleton<CompositeBindingProviderFactory>();
+            services.TryAddSingleton<CompositeBindingProvider>(
+                p => p.GetRequiredService<CompositeBindingProviderFactory>().Create());
 
             services.TryAddSingleton<ISharedContextProvider, SharedContextProvider>();
 
             services.TryAddSingleton<IJobHostMetadataProviderFactory, JobHostMetadataProviderFactory>();
             services.TryAddSingleton<IJobHostMetadataProvider>(p => p.GetService<IJobHostMetadataProviderFactory>().Create());
-            services.TryAddSingleton<IExtensionTypeLocator, ExtensionTypeLocator>();
+            services.TryAddSingleton<IExtensionTypeLocator, ExtensionTypeLocator>(); // $$$ remove
 
             // Empty logging. V1 Logging can replace this.              
             services.TryAddSingleton<ILegacyLogger, DisableLegacyLogger>(); // Gets replaced 
@@ -110,10 +115,12 @@ namespace Microsoft.Azure.WebJobs
             return services;
         }
 
-        // $$$ Remove this 
+        
+
+
+                
         /// <summary>
-        /// Adds the following bindings: <see cref="Tables.TableExtension"/>, <see cref="Queues.Bindings.QueueExtension"/>, 
-        /// <see cref="Blobs.Bindings.BlobExtensionConfig"/> and <see cref="Blobs.Triggers.BlobTriggerExtensionConfig"/>.
+        /// Adds builtin bindings 
         /// </summary>
         /// <param name="services"></param>
         /// <returns></returns>
@@ -124,7 +131,21 @@ namespace Microsoft.Azure.WebJobs
                 throw new ArgumentNullException(nameof(services));
             }
 
-            
+            // for typeof(CancellationToken)
+            services.AddSingleton<IBindingProvider, CancellationTokenBindingProvider>();
+
+            // The TraceWriter binder handles all remaining TraceWriter/TextWriter parameters. It must come after the
+            // Blob binding provider; otherwise bindings like Do([Blob("a/b")] TextWriter blob) wouldn't work.
+            // for typeof(TraceWriter), typeof(TextWriter)
+            services.AddSingleton<IBindingProvider, TraceWriterBindingProvider>();
+
+            // for typeof(ILogger)
+            services.AddSingleton<IBindingProvider, ILoggerBindingProvider>();
+
+            // arbitrary binding to binding data 
+            services.AddSingleton<IBindingProvider, DataBindingProvider>();
+
+
 
             return services;
         }
