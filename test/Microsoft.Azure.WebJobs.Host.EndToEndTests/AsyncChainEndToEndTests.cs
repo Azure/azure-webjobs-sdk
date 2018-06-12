@@ -75,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 });
 
             _storageAccount = fixture.StorageAccount;
-            _timeoutJobDelay = TimeSpan.FromMinutes(5);
+            _timeoutJobDelay = TimeSpan.FromMinutes(5); // $$$ !!! 5 minutes in a test!!! 
 
             CloudQueueClient queueClient = _storageAccount.CreateCloudQueueClient();
             string queueName = _resolver.ResolveInString(TestQueueName);
@@ -231,7 +231,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await Task.Delay(3000);
 
                 await host.StopAsync();
-                host.Dispose();
 
                 // Make sure the aggregator was logged to
                 var loggerProvider = host.GetTestLoggerProvider();
@@ -240,6 +239,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.True(count == 4, $"Expected 4. Actual {count}.{Environment.NewLine}{loggerProvider.GetLogString()}");
                 // Make sure the eventCollector was logged 
                 eventCollector.AssertFunctionCount(4, loggerProvider.GetLogString());
+
+                host.Dispose();
             }
         }
 
@@ -270,14 +271,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await Task.Delay(3000);
 
                 await host.StopAsync();
-                host.Dispose();
-
+                
                 // Make sure the aggregator was logged to
                 var loggerProvider = host.GetTestLoggerProvider();
                 var logger = loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Aggregator).Single();
                 var count = logger.GetLogMessages().Count;
-
                 Assert.True(count == 4, $"Expected 4. Actual {count}.{Environment.NewLine}{loggerProvider.GetLogString()}");
+                host.Dispose();               
             }
         }
 

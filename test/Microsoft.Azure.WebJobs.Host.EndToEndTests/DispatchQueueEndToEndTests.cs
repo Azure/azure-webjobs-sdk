@@ -78,8 +78,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     services.Configure<JobHostOptions>(o => o.HostId = "bttest");
                 })
                 .Build();
-
-            using (_host)
+                        
             {
                 _funcInvocation = new ConcurrentStringSet();
 
@@ -111,8 +110,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     services.Configure<JobHostOptions>(o => o.HostId = "pqtest");
                 })
                 .Build();
-
-            using (_host)
+                        
             {
                 _funcInvocation = new ConcurrentStringSet();
 
@@ -142,6 +140,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _poisonQueue = client.GetQueueReference("azure-webjobs-poison-" + _host.GetOptions<JobHostOptions>().HostId);
             _sharedQueue.DeleteIfExistsAsync().Wait();
             _poisonQueue.DeleteIfExistsAsync().Wait();
+
+            _host.Dispose();
         }
 
         public class SampleTriggerWithPoisonQueue

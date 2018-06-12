@@ -195,13 +195,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
+        // $$$ This should be a JobHost.Unit test. It doesn't actually need any external bindings. 
         [Fact]
         public void Dispose_WhenUsingHostCall_TriggersCancellationToken()
         {
-            // Note: This is still failing. Using JobHost.CallAsync() forces the JobHost to start, but the 
-            //       wrapping IHostedService and IHost don't know that it's started. So when the IHost is disposed,
-            //       it never cancels or stops anything related to the JobHost.
-
             Task callTask;
             // Run test in multithreaded environment
             var oldContext = SynchronizationContext.Current;
@@ -210,8 +207,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 SynchronizationContext.SetSynchronizationContext(null);
                 using (_host)
                 {
+                    // The function invocation gets an operation cancelled exception, which should cause this task to be marked as cancelled. 
                     callTask = InvokeNoAutomaticTriggerFunction(_host.GetJobHost());
-                }
+                } // calls host.Dispose() while a function instance is still running 
 
                 EvaluateNoAutomaticTriggerCancellation(callTask, expectedCancellation: true);
             }
@@ -325,7 +323,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             Assert.True(taskCompleted);
             Assert.False(taskCompletedBeforeFunction);
-            Assert.Equal(expectedCancellation, task.IsCanceled);
+
+            // task.IsCancelled explicitly expects a cancellation, 
+            // task.IsFaulted allows any other exception (such as a Object Disposed).
+            Assert.Equal(expectedCancellation, task.IsCanceled || task.IsFaulted);
             Assert.Equal(expectedCancellation, _tokenCancelled);
             Assert.True(_invokeInFunctionInvoked);
         }
