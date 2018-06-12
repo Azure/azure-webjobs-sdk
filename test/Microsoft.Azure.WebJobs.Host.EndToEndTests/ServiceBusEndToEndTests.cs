@@ -227,35 +227,36 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _topicSubscriptionCalled1 = new ManualResetEvent(initialState: false);
             _topicSubscriptionCalled2 = new ManualResetEvent(initialState: false);
 
-            await host.StartAsync();
-
-            _topicSubscriptionCalled1.WaitOne(SBTimeout);
-            _topicSubscriptionCalled2.WaitOne(SBTimeout);
-
-            // ensure all logs have had a chance to flush
-            await Task.Delay(3000);
-
-            // Wait for the host to terminate
-            await host.StopAsync();
-            host.Dispose();
-
-            Assert.Equal("E2E-SBQueue2SBQueue-SBQueue2SBTopic-topic-1", _resultMessage1);
-            Assert.Equal("E2E-SBQueue2SBQueue-SBQueue2SBTopic-topic-2", _resultMessage2);
-
-            if (verifyLogs)
+            using (host)
             {
-                IEnumerable<LogMessage> consoleOutput = host.GetTestLoggerProvider().GetAllLogMessages();
+                await host.StartAsync();
 
-                Assert.DoesNotContain(consoleOutput, p => p.Level == LogLevel.Error);
+                _topicSubscriptionCalled1.WaitOne(SBTimeout);
+                _topicSubscriptionCalled2.WaitOne(SBTimeout);
 
-                string[] consoleOutputLines = consoleOutput
-                    .Where(p => p.FormattedMessage != null)
-                    .SelectMany(p => p.FormattedMessage.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries))
-                    .OrderBy(p => p)
-                    .ToArray();
+                // ensure all logs have had a chance to flush
+                await Task.Delay(3000);
 
-                string[] expectedOutputLines = new string[]
+                // Wait for the host to terminate
+                await host.StopAsync();
+
+                Assert.Equal("E2E-SBQueue2SBQueue-SBQueue2SBTopic-topic-1", _resultMessage1);
+                Assert.Equal("E2E-SBQueue2SBQueue-SBQueue2SBTopic-topic-2", _resultMessage2);
+
+                if (verifyLogs)
                 {
+                    IEnumerable<LogMessage> consoleOutput = host.GetTestLoggerProvider().GetAllLogMessages();
+
+                    Assert.DoesNotContain(consoleOutput, p => p.Level == LogLevel.Error);
+
+                    string[] consoleOutputLines = consoleOutput
+                        .Where(p => p.FormattedMessage != null)
+                        .SelectMany(p => p.FormattedMessage.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries))
+                        .OrderBy(p => p)
+                        .ToArray();
+
+                    string[] expectedOutputLines = new string[]
+                    {
                    "Found the following functions:",
                     $"{jobContainerType.FullName}.SBQueue2SBQueue",
                     $"{jobContainerType.FullName}.MultipleAccounts",
@@ -275,10 +276,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "Job host stopped",
                     "Starting JobHost",
                     "Stopping JobHost"
-                }.OrderBy(p => p).ToArray();
+                    }.OrderBy(p => p).ToArray();
 
-                Action<string>[] inspectors = expectedOutputLines.Select<string, Action<string>>(p => (string m) => m.StartsWith(p)).ToArray();
-                Assert.Collection(consoleOutputLines, inspectors);
+                    Action<string>[] inspectors = expectedOutputLines.Select<string, Action<string>>(p => (string m) => m.StartsWith(p)).ToArray();
+                    Assert.Collection(consoleOutputLines, inspectors);
+                }
             }
         }
 
