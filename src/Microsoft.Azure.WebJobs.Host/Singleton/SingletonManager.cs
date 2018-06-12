@@ -15,16 +15,25 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
+
+    // $$$
+    // Wraps SingletonManager and  exposes to extensions 
+    public interface IHostSingletonManager
+    {
+        IListener CreateHostSingletonListener(IListener innerListener, string scopeId);
+    }
+
     /// <summary>
     /// Encapsulates and manages blob leases for Singleton locks.
     /// </summary>
-    internal class SingletonManager
+    internal class SingletonManager : IHostSingletonManager
     {
         private readonly INameResolver _nameResolver;
-        private readonly SingletonConfiguration _config;
+        private readonly SingletonOptions _config;
         private readonly ILogger _logger;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IDistributedLockManager _lockManager;
@@ -40,12 +49,12 @@ namespace Microsoft.Azure.WebJobs.Host
         {
         }
 
-        public SingletonManager(IDistributedLockManager lockManager, SingletonConfiguration config, IWebJobsExceptionHandler exceptionHandler,
+        public SingletonManager(IDistributedLockManager lockManager, IOptions<SingletonOptions> config, IWebJobsExceptionHandler exceptionHandler,
             ILoggerFactory loggerFactory, IHostIdProvider hostIdProvider, INameResolver nameResolver = null)
         {
             _lockManager = lockManager;
             _nameResolver = nameResolver;
-            _config = config;
+            _config = config.Value;
             _loggerFactory = loggerFactory;
             _exceptionHandler = exceptionHandler;
             _logger = _loggerFactory?.CreateLogger(LogCategories.Singleton);
@@ -65,7 +74,7 @@ namespace Microsoft.Azure.WebJobs.Host
             }
         }
 
-        internal virtual SingletonConfiguration Config
+        internal virtual SingletonOptions Config
         {
             get
             {
@@ -144,7 +153,7 @@ namespace Microsoft.Azure.WebJobs.Host
             return new TaskSeriesTimer(command, this._exceptionHandler, Task.Delay(normalUpdateInterval));
         }
 
-        internal static TimeSpan GetLockPeriod(SingletonAttribute attribute, SingletonConfiguration config)
+        internal static TimeSpan GetLockPeriod(SingletonAttribute attribute, SingletonOptions config)
         {
             return attribute.Mode == SingletonMode.Listener ?
                     config.ListenerLockPeriod : config.LockPeriod;
@@ -241,7 +250,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="innerListener">The inner listener to wrap.</param>
         /// <param name="scopeId">The scope ID to use.</param>
         /// <returns>The singleton listener.</returns>
-        public SingletonListener CreateHostSingletonListener(IListener innerListener, string scopeId)
+        public IListener CreateHostSingletonListener(IListener innerListener, string scopeId)
         {
             SingletonAttribute singletonAttribute = new SingletonAttribute(scopeId, SingletonScope.Host)
             {
@@ -277,7 +286,7 @@ namespace Microsoft.Azure.WebJobs.Host
             return singletonAttribute;
         }
 
-        internal static TimeSpan GetLockAcquisitionTimeout(SingletonAttribute attribute, SingletonConfiguration config)
+        internal static TimeSpan GetLockAcquisitionTimeout(SingletonAttribute attribute, SingletonOptions config)
         {
             TimeSpan acquisitionTimeout = attribute.LockAcquisitionTimeout != -1
                     ? TimeSpan.FromSeconds(attribute.LockAcquisitionTimeout)

@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json;
 
 #if PUBLICPROTOCOL
@@ -25,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
 
         /// <summary>Gets or sets the blob object.</summary>
         [JsonIgnore]
-        internal ICloudBlob Blob { get; set; }
+        internal object Blob { get; set; } // It's a ICloudBlob, but use System.Object to break coupling. 
 
         /// <summary>Gets or sets the blob text.</summary>
         [JsonIgnore]

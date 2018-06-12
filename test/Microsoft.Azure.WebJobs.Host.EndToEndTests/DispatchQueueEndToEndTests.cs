@@ -4,10 +4,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.WindowsAzure.Storage;
+using Microsoft.Azure.WebJobs.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Newtonsoft.Json.Linq;
 using Xunit;
@@ -18,15 +20,18 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
     public class DispatchQueueEndToEndTests : IDisposable
     {
         // tells you how many function with different arguments have been ran
-        private static ConcurrentStringSet _funcInvokation;
+        private static ConcurrentStringSet _funcInvocation;
+
         // shows the concurrent execution when using sharedQueue
         // also make it easy to debug
         private static ITestOutputHelper _output;
         private static Stopwatch _stopwatch = new Stopwatch();
 
-        private JobHostConfiguration _hostConfiguration;
         private CloudQueue _sharedQueue;
         private CloudQueue _poisonQueue;
+
+        // Each test should set this up; it will be used during cleanup.
+        private IHost _host;
 
         // thin wrapper around concurrentDictionary
         private class ConcurrentStringSet
@@ -58,33 +63,37 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         public DispatchQueueEndToEndTests(ITestOutputHelper output)
         {
             _output = output;
-            _hostConfiguration = new JobHostConfiguration();
-            _hostConfiguration.AddExtension(new DispatchQueueTestConfig());
         }
 
         [Fact]
         // same trigger type, multiple functions
         public async Task DispatchQueueBatchTriggerTest()
         {
-            _hostConfiguration.TypeLocator = new FakeTypeLocator(typeof(SampleTrigger));
-            // each test will have a unique hostId so that consecutive test run will not be affected by clean up code
-            _hostConfiguration.HostId = "bttest";
+            _host = new HostBuilder()
+                .ConfigureDefaultTestHost<SampleTrigger>()
+                .AddExtension<DispatchQueueTestConfig>()
+                .ConfigureServices(services =>
+                {
+                    // each test will have a unique hostId so that consecutive test run will not be affected by clean up code
+                    services.Configure<JobHostOptions>(o => o.HostId = "bttest");
+                })
+                .Build();
 
-            using (var host = new JobHost(_hostConfiguration))
+            using (_host)
             {
-                _funcInvokation = new ConcurrentStringSet();
+                _funcInvocation = new ConcurrentStringSet();
 
-                host.Start();
+                _host.Start();
 
                 _stopwatch.Restart();
 
                 int twoFuncCount = DispatchQueueTestConfig.BatchSize * 2;
-                await TestHelpers.Await(() => _funcInvokation.TotalAdd() >= twoFuncCount || _funcInvokation.HasDuplicate(),
+                await TestHelpers.Await(() => _funcInvocation.TotalAdd() >= twoFuncCount || _funcInvocation.HasDuplicate(),
                                         7000, 1000);
 
                 // make sure each function is triggered once and only once
-                Assert.Equal(twoFuncCount, _funcInvokation.TotalAdd());
-                Assert.False(_funcInvokation.HasDuplicate());
+                Assert.Equal(twoFuncCount, _funcInvocation.TotalAdd());
+                Assert.False(_funcInvocation.HasDuplicate());
 
                 _stopwatch.Stop();
             }
@@ -93,24 +102,31 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async void PoisonQueueTest()
         {
-            _hostConfiguration.TypeLocator = new FakeTypeLocator(typeof(SampleTriggerWithPoisonQueue));
-            _hostConfiguration.HostId = "pqtest";
+            _host = new HostBuilder()
+                .ConfigureDefaultTestHost<SampleTriggerWithPoisonQueue>()
+                .AddExtension<DispatchQueueTestConfig>()
+                .ConfigureServices(services =>
+                {
+                    // each test will have a unique hostId so that consecutive test run will not be affected by clean up code
+                    services.Configure<JobHostOptions>(o => o.HostId = "pqtest");
+                })
+                .Build();
 
-            using (var host = new JobHost(_hostConfiguration))
+            using (_host)
             {
-                _funcInvokation = new ConcurrentStringSet();
+                _funcInvocation = new ConcurrentStringSet();
 
-                host.Start();
+                _host.Start();
 
                 _stopwatch.Restart();
 
                 // this test takes long since it does at least 5 dequeue on the poison message
                 // count retries caused by failures and poison queue function process
-                int funcWithExceptionCount = DispatchQueueTestConfig.BatchSize + _hostConfiguration.Queues.MaxDequeueCount;
-                await TestHelpers.Await(() => _funcInvokation.TotalAdd() >= funcWithExceptionCount, 10000, 1000);
+                int funcWithExceptionCount = DispatchQueueTestConfig.BatchSize + _host.GetOptions<JobHostQueuesOptions>().MaxDequeueCount;
+                await TestHelpers.Await(() => _funcInvocation.TotalAdd() >= funcWithExceptionCount, 10000, 1000);
 
-                Assert.Equal(funcWithExceptionCount, _funcInvokation.TotalAdd());
-                Assert.True(_funcInvokation.HasDuplicate());
+                Assert.Equal(funcWithExceptionCount, _funcInvocation.TotalAdd());
+                Assert.True(_funcInvocation.HasDuplicate());
                 Assert.True(SampleTriggerWithPoisonQueue.PoisonQueueResult);
 
                 _stopwatch.Stop();
@@ -121,10 +137,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             // each test will have a different hostId
             // and therefore a different sharedQueue and poisonQueue
-            CloudStorageAccount sdkAccount = CloudStorageAccount.Parse(_hostConfiguration.StorageConnectionString);
-            CloudQueueClient client = sdkAccount.CreateCloudQueueClient();
-            _sharedQueue = client.GetQueueReference("azure-webjobs-shared-" + _hostConfiguration.HostId);
-            _poisonQueue = client.GetQueueReference("azure-webjobs-poison-" + _hostConfiguration.HostId);
+            CloudQueueClient client = _host.GetStorageAccount().CreateCloudQueueClient();
+            _sharedQueue = client.GetQueueReference("azure-webjobs-shared-" + _host.GetOptions<JobHostOptions>().HostId);
+            _poisonQueue = client.GetQueueReference("azure-webjobs-poison-" + _host.GetOptions<JobHostOptions>().HostId);
             _sharedQueue.DeleteIfExistsAsync().Wait();
             _poisonQueue.DeleteIfExistsAsync().Wait();
         }
@@ -136,7 +151,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 int order = json["order"].Value<int>();
                 string funcSignature = "PoisonQueueTrigger arg: " + order;
-                _funcInvokation.Add(funcSignature);
+                _funcInvocation.Add(funcSignature);
                 _output.WriteLine(funcSignature + " elapsed time: " + _stopwatch.ElapsedMilliseconds + " ms");
                 if (order == 0)
                 {
@@ -152,7 +167,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 {
                     PoisonQueueResult = true;
                 }
-                _funcInvokation.Add("PosionQueueProcess");
+                _funcInvocation.Add("PosionQueueProcess");
                 _output.WriteLine("PoisonQueueProcess" + " elapsed time: " + _stopwatch.ElapsedMilliseconds + " ms");
             }
         }
@@ -162,14 +177,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             public void DispatchQueueTrigger([DispatchQueueTrigger]JObject json)
             {
                 string funcSignature = "DispatchQueueTrigger arg: " + json["order"].Value<int>();
-                _funcInvokation.Add(funcSignature);
+                _funcInvocation.Add(funcSignature);
                 _output.WriteLine(funcSignature + " elapsed time: " + _stopwatch.ElapsedMilliseconds + " ms");
             }
 
             public void DispatchQueueTrigger2([DispatchQueueTrigger]JObject json)
             {
                 string funcSignature = "DispatchQueueTrigger2 arg: " + json["order"].Value<int>();
-                _funcInvokation.Add(funcSignature);
+                _funcInvocation.Add(funcSignature);
                 _output.WriteLine(funcSignature + " elapsed time: " + _stopwatch.ElapsedMilliseconds + " ms");
             }
         }

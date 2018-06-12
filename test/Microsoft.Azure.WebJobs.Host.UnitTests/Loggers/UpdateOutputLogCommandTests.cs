@@ -5,7 +5,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Loggers;
-using Microsoft.Azure.WebJobs.Host.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.Blob;
 using Moq;
 using Xunit;
 
@@ -13,6 +13,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 {
     public class UpdateOutputLogCommandTests
     {
+        private CloudBlockBlob GetTestBlob()
+        {
+            // Need a fake blob that we can read from, see UpdateOutputLogCommand.ReadBlobAsync
+            var account = new FakeStorage.FakeAccount();
+            var blobClient = account.CreateCloudBlobClient();
+            var blob = blobClient.GetContainerReference("container").GetBlockBlobReference("blob");
+            return blob;
+        }
+
         [Fact]
         public void TestIncrementalWriter()
         {
@@ -23,7 +32,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 return Task.FromResult(0);
             };
 
-            UpdateOutputLogCommand writer = UpdateOutputLogCommand.Create(new Mock<IStorageBlockBlob>().Object, fp);
+
+            var blob = GetTestBlob();
+            
+            UpdateOutputLogCommand writer = UpdateOutputLogCommand.Create(
+                blob, fp);
 
             var tw = writer.Output;
             tw.Write("1");
@@ -51,9 +64,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             // This validates a bug where flushing from one thread while writing from another
             // would cause an exception. 
 
+            var blob = GetTestBlob();
+
             string content = null;
             Func<string, CancellationToken, Task> fp = (x, _) => { content = x; return Task.FromResult(0); };
-            UpdateOutputLogCommand writer = UpdateOutputLogCommand.Create(new Mock<IStorageBlockBlob>().Object, fp);
+            UpdateOutputLogCommand writer = UpdateOutputLogCommand.Create(blob, fp);
 
             var tw = writer.Output;
             bool writeDone = false;

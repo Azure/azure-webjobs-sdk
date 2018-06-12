@@ -116,7 +116,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
             // Validate Logger
             var logger = loggerProvider.CreatedLoggers.Single(l => l.Category == Logging.LogCategories.Startup);
-            var loggerWarning = logger.LogMessages.Single();
+            var loggerWarning = logger.GetLogMessages().Single();
             Assert.Equal(LogLevel.Warning, loggerWarning.Level);
             Assert.Equal(expectedMessage, loggerWarning.FormattedMessage);
         }

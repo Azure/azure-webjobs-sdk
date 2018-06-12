@@ -25,6 +25,11 @@ namespace Microsoft.Azure.WebJobs.Logging
         public const string Singleton = "Host.Singleton";
 
         /// <summary>
+        /// The category for all logs written by the function executor.
+        /// </summary>
+        public const string Executor = "Host.Executor";
+
+        /// <summary>
         /// The category for logs written by the function aggregator.
         /// </summary>
         public const string Aggregator = "Host.Aggregator";

@@ -1,15 +1,11 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Config;
-using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
@@ -58,12 +54,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         {
             public void Bad([Test(Bad = true, Path = "%k1%-{k2}")] Widget x)
             {
-            }        
+            }
         }
 
         public class GoodFunction : FunctionBase
         {
-            public void Good([Test(Bad= false, Path = "%k1%-{k2}")] Widget x)
+            public void Good([Test(Bad = false, Path = "%k1%-{k2}")] Widget x)
             {
             }
         }
@@ -93,10 +89,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         public void TestValidatorFails()
         {
             var nr = new FakeNameResolver().Add("k1", "v1");
-            var host = TestHelpers.NewJobHost<BadFunction>(new FakeExtClient(), nr);
+
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<BadFunction>(nr)
+                .AddExtension<FakeExtClient>()
+                .Build();
 
             TestHelpers.AssertIndexingError(
-                () => host.Call("Valid"),
+                () => host.GetJobHost<BadFunction>().Call("Valid"),
                 "BadFunction.Bad", TestAttribute.ErrorMessage);
         }
 
@@ -104,8 +104,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         public void TestValidatorSucceeds()
         {
             var nr = new FakeNameResolver().Add("k1", "v1");
-            var host = TestHelpers.NewJobHost<GoodFunction>(new FakeExtClient(), nr);
-            host.Call("Good", new { k2 = "xxxx" } ); 
+
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<GoodFunction>(nr)
+                .AddExtension<FakeExtClient>()
+                .Build();
+
+            host.GetJobHost<GoodFunction>().Call("Good", new { k2 = "xxxx" });
         }
 
         // Register [Test]  with 2 rules and a local validator. 
@@ -159,9 +164,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         {
             // Local validator only run if we use the given rule. 
             var nr = new FakeNameResolver().Add("k1", "v1");
-            var host = TestHelpers.NewJobHost<LocalFunction1>(new FakeExtClient2(), nr);
 
-            host.Call("NoValidation", new { k2 = "xxxx" }); // Succeeds since validate doesn't run on this rule             
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<LocalFunction1>(nr)
+                .AddExtension<FakeExtClient2>()
+                .Build();
+
+            host.GetJobHost<LocalFunction1>().Call("NoValidation", new { k2 = "xxxx" }); // Succeeds since validate doesn't run on this rule             
         }
 
         [Fact]
@@ -169,10 +178,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         {
             // Local validator only run if we use the given rule. 
             var nr = new FakeNameResolver().Add("k1", "v1");
-            var host = TestHelpers.NewJobHost<LocalFunction2>(new FakeExtClient2(), nr);
+
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<LocalFunction2>(nr)
+                .AddExtension<FakeExtClient2>()
+                .Build();
 
             TestHelpers.AssertIndexingError(
-                () => host.Call("WithValidation"),
+                () => host.GetJobHost<LocalFunction2>().Call("WithValidation"),
                 "LocalFunction2.WithValidation", TestAttribute.ErrorMessage);
         }
     }

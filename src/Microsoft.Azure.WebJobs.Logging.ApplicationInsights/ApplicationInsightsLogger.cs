@@ -32,6 +32,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             {
                 LogConstants.CategoryNameKey,
                 LogConstants.LogLevelKey,
+                LogConstants.EventIdKey,
                 LogConstants.OriginalFormatKey,
                 ScopeKeys.Event,
                 ScopeKeys.FunctionInvocationId,
@@ -67,7 +68,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             using (BeginScope(new Dictionary<string, object>
             {
                 [LogConstants.CategoryNameKey] = _categoryName,
-                [LogConstants.LogLevelKey] = (LogLevel?)logLevel
+                [LogConstants.LogLevelKey] = (LogLevel?)logLevel,
+                [LogConstants.EventIdKey] = eventId.Id
             }))
             {
                 // Log a metric from user logs only

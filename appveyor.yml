@@ -1,4 +1,10 @@
 version: 3.0.{build}
+init:
+- ps: | 
+    if ($env:FUNCTIONS_NIGHTLY -eq "1") {
+      $version = Get-Date -Format "yyyyMMdd-HHmm"
+      Update-AppveyorBuild -Version $version -Message "Functions Scheduled Build"
+    }
 pull_requests:
   do_not_increment_build_number: true
 branches:
@@ -6,14 +12,22 @@ branches:
   - dev
   - master
   - next
-image: Visual Studio 2017
+image: Visual Studio 2017 Preview
 install:
-- ps: >-
+- ps: |
     $env:CommitHash = "$env:APPVEYOR_REPO_COMMIT"
+
+    .\dotnet-install.ps1 -Version 2.1.300 -Architecture x86
 cache: '%USERPROFILE%\.nuget\packages'
 build_script:
-- ps: >
-    .\build.ps1 -buildNumber "$env:APPVEYOR_BUILD_NUMBER"
+- ps: |
+    $buildNumber = 0
+    $hasTag = Test-Path env:APPVEYOR_REPO_TAG_NAME
+    if (-not $hasTag) {
+      $buildNumber = $env:APPVEYOR_BUILD_NUMBER
+      Write-Host "No git tag found. Setting packages suffix to '$buildNumber'"
+    }    
+    .\build.ps1 -packageSuffix "$buildNumber"
 test_script:
 - ps: >-
     $success = $true

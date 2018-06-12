@@ -5,10 +5,10 @@ using System;
 using System.Globalization;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Converters;
 using Microsoft.Azure.WebJobs.Host.Triggers;
-using Microsoft.Azure.ServiceBus;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
 {
@@ -23,21 +23,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
                 new UserTypeArgumentBindingProvider()); // Must come last, because it will attempt to bind all types.
 
         private readonly INameResolver _nameResolver;
-        private readonly ServiceBusConfiguration _config;
+        private readonly ServiceBusOptions _config;
+        private readonly IMessagingProvider _messagingProvider;
+        private readonly IConnectionStringProvider _connectionStringProvider;
 
-        public ServiceBusTriggerAttributeBindingProvider(INameResolver nameResolver, ServiceBusConfiguration config)
+        public ServiceBusTriggerAttributeBindingProvider(INameResolver nameResolver, ServiceBusOptions config, IMessagingProvider messagingProvider, IConnectionStringProvider connectionStringProvider)
         {
-            if (nameResolver == null)
-            {
-                throw new ArgumentNullException("nameResolver");
-            }
-            if (config == null)
-            {
-                throw new ArgumentNullException("config");
-            }
-
-            _nameResolver = nameResolver;
-            _config = config;
+            _nameResolver = nameResolver ?? throw new ArgumentNullException(nameof(nameResolver));
+            _config = config ?? throw new ArgumentNullException(nameof(config));
+            _messagingProvider = messagingProvider ?? throw new ArgumentNullException(nameof(messagingProvider));
+            _connectionStringProvider = connectionStringProvider;
         }
 
         public Task<ITriggerBinding> TryCreateAsync(TriggerBindingProviderContext context)
@@ -78,16 +73,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
                 throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Can't bind ServiceBusTrigger to type '{0}'.", parameter.ParameterType));
             }
 
-            ServiceBusAccount account = new ServiceBusAccount(_config, attribute);
+            ServiceBusAccount account = new ServiceBusAccount(_config, _connectionStringProvider, attribute);
 
             ITriggerBinding binding;
             if (queueName != null)
             {
-                binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, _config, queueName);
+                binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, _config, _messagingProvider, queueName);
             }
             else
             {
-                binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, _config, topicName, subscriptionName);
+                binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, _config, _messagingProvider, topicName, subscriptionName);
             }
 
             return Task.FromResult<ITriggerBinding>(binding);

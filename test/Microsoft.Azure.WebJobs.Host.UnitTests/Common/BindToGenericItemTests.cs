@@ -5,12 +5,13 @@ using System;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using Xunit;
-using Microsoft.Azure.WebJobs.Description;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
 {
@@ -23,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         // Each of the TestConfigs below implement this. 
         interface ITest<TConfig>
         {
-            void Test(TestJobHost<TConfig> host);
+            void Test(JobHost<TConfig> host);
         }
 
         // Simple case. 
@@ -34,7 +35,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         {
             TestWorker<ConfigConcreteTypeNoConverter>();
         }
-        
+
         public class ConfigConcreteTypeNoConverter : IExtensionConfigProvider, ITest<ConfigConcreteTypeNoConverter>
         {
             public void Initialize(ExtensionConfigContext context)
@@ -43,7 +44,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 rule.BindToInput<AlphaType>(typeof(AlphaBuilder));
             }
 
-            public void Test(TestJobHost<ConfigConcreteTypeNoConverter> host)
+            public void Test(JobHost<ConfigConcreteTypeNoConverter> host)
             {
                 host.Call("Func", new { k = 1 });
                 Assert.Equal("AlphaBuilder(1)", _log);
@@ -55,7 +56,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             public void Func([Test6("{k}")] AlphaType w)
             {
                 _log = w._value;
-            }         
+            }
         }
 
         // Simple end-2-end case with attribute that default binds to metho dname 
@@ -69,7 +70,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
 
         public class ConfigTestDefaultToMethodName : BindingPathAttribute.Extension, ITest<ConfigTestDefaultToMethodName>
         {
-            public void Test(TestJobHost<ConfigTestDefaultToMethodName> host)
+            public void Test(JobHost<ConfigTestDefaultToMethodName> host)
             {
                 host.Call("Func", new { k = 1 });
                 Assert.NotNull(_log);
@@ -92,7 +93,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 string guidstr1 = parts[1];
                 var guid1 = Guid.Parse(guidstr1);
                 string guidstr2 = parts[2];
-                var guid2 = Guid.Parse(guidstr2);                
+                var guid2 = Guid.Parse(guidstr2);
 
                 Assert.Equal(guid1.ToString("N"), guidstr1);
                 Assert.Equal(guid2.ToString("B"), guidstr2);
@@ -124,7 +125,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         {
             TestWorker<ConfigOpenTypeNoConverters>();
         }
-   
+
         public class ConfigOpenTypeNoConverters : IExtensionConfigProvider, ITest<ConfigOpenTypeNoConverters>
         {
             public void Initialize(ExtensionConfigContext context)
@@ -132,11 +133,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 var rule = context.AddBindingRule<Test6Attribute>();
                 rule.BindToInput<OpenType>(typeof(GeneralBuilder<>));
             }
-            
-            public void Test(TestJobHost<ConfigOpenTypeNoConverters> host)
+
+            public void Test(JobHost<ConfigOpenTypeNoConverters> host)
             {
                 host.Call("Func1", new { k = 1 });
-                Assert.Equal("GeneralBuilder_AlphaType(1)", _log); 
+                Assert.Equal("GeneralBuilder_AlphaType(1)", _log);
 
                 host.Call("Func2", new { k = 2 });
                 Assert.Equal("GeneralBuilder_BetaType(2)", _log);
@@ -168,19 +169,19 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             public void Initialize(ExtensionConfigContext context)
             {
                 context.AddConverter<AlphaType, BetaType>(ConvertAlpha2Beta);
-                
+
                 // The AlphaType restriction here means that although we have a GeneralBuilder<> that *could*
                 // directly build a BetaType, we can only use it to build AlphaTypes, and so we must invoke the converter.
                 context.AddBindingRule<Test6Attribute>().BindToInput<AlphaType>(typeof(GeneralBuilder<>));
             }
 
-            public void Test(TestJobHost<ConfigWithConverters> host)
+            public void Test(JobHost<ConfigWithConverters> host)
             {
                 host.Call("Func1", new { k = 1 });
                 Assert.Equal("GeneralBuilder_AlphaType(1)", _log);
 
                 host.Call("Func2", new { k = 2 });
-                Assert.Equal("A2B(GeneralBuilder_AlphaType(2))", _log);                
+                Assert.Equal("A2B(GeneralBuilder_AlphaType(2))", _log);
             }
 
             string _log;
@@ -215,7 +216,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 rule.BindToInput<BetaType>(typeof(BetaBuilder));
             }
 
-            public void Test(TestJobHost<ConfigMultipleRules> host)
+            public void Test(JobHost<ConfigMultipleRules> host)
             {
                 host.Call("Func", new { k = 1 });
                 Assert.Equal("AlphaBuilder(1)", _log);
@@ -225,7 +226,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             }
 
             string _log;
-                        
+
             public void Func([Test6("{k}")] AlphaType w)
             {
                 _log = w._value;
@@ -245,7 +246,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             TestWorker<ConfigExplicitObjectConverter>();
         }
 
-        public class ConfigExplicitObjectConverter : IExtensionConfigProvider, ITest<ConfigExplicitObjectConverter>, 
+        public class ConfigExplicitObjectConverter : IExtensionConfigProvider, ITest<ConfigExplicitObjectConverter>,
             IConverter<AlphaType, object>
         {
             public void Initialize(ExtensionConfigContext context)
@@ -256,7 +257,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 rule.BindToInput<AlphaType>(typeof(GeneralBuilder<>));
             }
 
-            public void Test(TestJobHost<ConfigExplicitObjectConverter> host)
+            public void Test(JobHost<ConfigExplicitObjectConverter> host)
             {
                 // normal case
                 host.Call("Func", new { k = 1 });
@@ -277,13 +278,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
 
             // Invokes a converter 
             public void FuncObject([Test6("{k}")] object w)
-            {                
+            {
                 _log = w.ToString();
             }
 
             object IConverter<AlphaType, object>.Convert(AlphaType input)
             {
-                return $"Alpha2Obj({input._value})"; 
+                return $"Alpha2Obj({input._value})";
             }
         }
 
@@ -304,7 +305,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 rule.BindToInput<object>(this); // 2nd rule
             }
 
-            public void Test(TestJobHost<ConfigObjectInheritence> host)
+            public void Test(JobHost<ConfigObjectInheritence> host)
             {
                 // 1st rule
                 host.Call("FuncDerived", new { k = 1 });
@@ -322,7 +323,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             string _log;
 
             public void FuncDerived([Test6("{k}")] AlphaDerivedType w)
-            {                
+            {
                 _log = w._value;
             }
 
@@ -340,7 +341,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             {
                 var beta = Assert.IsType<BetaType>(w);
                 _log = beta._value;
-            }         
+            }
 
             public object Convert(Test6Attribute input)
             {
@@ -364,18 +365,18 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             TestWorker<ConfigCollector<OpenType>>();
         }
 
-        public class ConfigCollector<TParam> : 
-            IExtensionConfigProvider, 
+        public class ConfigCollector<TParam> :
+            IExtensionConfigProvider,
             ITest<ConfigCollector<TParam>>,
             IConverter<Test6Attribute, IAsyncCollector<AlphaType>>
-        {        
+        {
             public string _log;
 
             public IAsyncCollector<AlphaType> Convert(Test6Attribute arg)
             {
                 return new AlphaTypeCollector { _parent = this };
             }
-            
+
             public class Object2AlphaConverter : IConverter<object, AlphaType>
             {
                 public AlphaType Convert(object obj)
@@ -400,7 +401,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                     return Task.FromResult(0);
                 }
             }
-      
+
             public void Initialize(ExtensionConfigContext context)
             {
                 // The converter rule is the key switch.
@@ -414,7 +415,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 rule.BindToCollector<AlphaType>(this);
             }
 
-            public void Test(TestJobHost<ConfigCollector<TParam>> host)
+            public void Test(JobHost<ConfigCollector<TParam>> host)
             {
                 // tells you we made 2 AddAysnc calls, and invoked the converter on each item. 
                 _log = "";
@@ -428,21 +429,21 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 else
                 {
                     // the object[] gets converters to a single element to a single object
-                    Assert.Equal("Collector(Json([123,\"xyz\"]));", _log);                    
+                    Assert.Equal("Collector(Json([123,\"xyz\"]));", _log);
                 }
 
                 // 2 calls, but no converters
                 _log = "";
                 host.Call("Func", new { k = 1 });
-                Assert.Equal("Collector(v1);Collector(v2);", _log); 
+                Assert.Equal("Collector(v1);Collector(v2);", _log);
             }
-                        
+
             public async Task Func([Test6("{k}")] IAsyncCollector<AlphaType> collector)
             {
                 await collector.AddAsync(AlphaType.New("v1"));
                 await collector.AddAsync(AlphaType.New("v2"));
             }
-                        
+
             public void Func2([Test6("{k}")] out object[] foo)
             {
                 foo = new object[] {
@@ -479,11 +480,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 rule.BindToInput<OpenType>(typeof(AlphaBuilder));
             }
 
-            public void Test(TestJobHost<ConfigError1> host)
+            public void Test(JobHost<ConfigError1> host)
             {
                 host.AssertIndexingError("Func", $"No Convert method on type {nameof(AlphaBuilder)} to convert from {nameof(Test6Attribute)} to {nameof(BetaType)}");
             }
-      
+
             // Fail to bind because: 
             // We only have an AlphaBuilder, and no registered converters from Alpha-->Beta
             public void Func([Test6("{k}")] BetaType w)
@@ -502,14 +503,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         public class ConfigErrorSearch : IExtensionConfigProvider, ITest<ConfigErrorSearch>
         {
             public void Initialize(ExtensionConfigContext context)
-            {                
+            {
                 context.AddConverter<AlphaType, BetaType>(ConvertAlpha2Beta);
-                context.AddConverter<BetaType, string>((beta) => $"Str({beta._value})" );
+                context.AddConverter<BetaType, string>((beta) => $"Str({beta._value})");
                 var rule = context.AddBindingRule<Test6Attribute>();
                 rule.BindToInput<AlphaType>(typeof(AlphaBuilder));
             }
 
-            public void Test(TestJobHost<ConfigErrorSearch> host)
+            public void Test(JobHost<ConfigErrorSearch> host)
             {
                 host.AssertIndexingError("Func", $"Can't bind Test6 to type 'System.String'.");
             }
@@ -528,22 +529,26 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         {
             return $"Can't bind Test to type '{parameterType.FullName}'.";
         }
-     
+
         // Glue to initialize a JobHost with the correct config and invoke the Test method. 
         // Config also has the program on it.         
-        private void TestWorker<TConfig>() where TConfig : IExtensionConfigProvider, ITest<TConfig>, new() 
+        private void TestWorker<TConfig>() where TConfig : IExtensionConfigProvider, ITest<TConfig>, new()
         {
             var prog = new TConfig();
             var jobActivator = new FakeActivator();
             jobActivator.Add(prog);
 
             IExtensionConfigProvider ext = prog;
-            var host = TestHelpers.NewJobHost<TConfig>(jobActivator, ext);
+
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<TConfig>(activator: jobActivator)
+                .AddExtension(ext)
+                .Build();
 
             ITest<TConfig> test = prog;
-            test.Test(host);
+            test.Test(host.GetJobHost<TConfig>());
         }
-                
+
         // Some custom type to bind to. 
         public class AlphaType
         {
@@ -561,7 +566,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             public static new AlphaDerivedType New(string value)
             {
                 return new AlphaDerivedType { _value = value };
-            }            
+            }
         }
 
 
@@ -631,7 +636,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             public T Convert(Test6Attribute attr)
             {
                 var value = $"GeneralBuilder_{typeof(T).Name}({attr.Path})";
-                return (T)_builder.Invoke(null, new object[] { value});
+                return (T)_builder.Invoke(null, new object[] { value });
             }
         }
     }

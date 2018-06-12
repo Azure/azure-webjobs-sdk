@@ -5,6 +5,7 @@ using System;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -21,11 +22,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var mockExecutor = new Mock<IFunctionExecutor>(MockBehavior.Strict);
             var mockListener = new Mock<IListener>(MockBehavior.Strict);
             var mockLoggerFactory = new Mock<ILoggerFactory>(MockBehavior.Strict);
+            var mockEventCollector = new Mock<IAsyncCollector<FunctionInstanceLogEntry>>(MockBehavior.Strict);
 
             mockListener.Setup(p => p.Dispose());
             mockLoggerFactory.Setup(p => p.Dispose());
 
-            var context = new JobHostContext(mockLookup.Object, mockExecutor.Object, mockListener.Object, null, loggerFactory: mockLoggerFactory.Object);
+            var context = new JobHostContext(mockLookup.Object, mockExecutor.Object, mockListener.Object, eventCollector: mockEventCollector.Object, loggerFactory: mockLoggerFactory.Object);
 
             context.Dispose();
 

@@ -37,8 +37,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
         [InlineData(typeof(Functions2), "DisabledAtClassLevel")]
         public async Task CreateAsync_SkipsDisabledFunctions(Type jobType, string methodName)
         {
-            ConfigurationUtility.Reset();
-
             Environment.SetEnvironmentVariable("EnvironmentSettingTrue", "True");
 
             Mock<IFunctionDefinition> mockFunctionDefinition = new Mock<IFunctionDefinition>();
@@ -53,19 +51,19 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             // create a bunch of function definitions that are disabled
             List<FunctionDefinition> functions = new List<FunctionDefinition>();
             var method = jobType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Static);
-            FunctionDescriptor descriptor = FunctionIndexer.FromMethod(method, DefaultJobActivator.Instance);
+            FunctionDescriptor descriptor = FunctionIndexer.FromMethod(method, new DefaultJobActivator());
             FunctionDefinition definition = new FunctionDefinition(descriptor, mockInstanceFactory.Object, mockListenerFactory.Object);
             functions.Add(definition);
 
             // Create the composite listener - this will fail if any of the
             // function definitions indicate that they are not disabled
-            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, DefaultJobActivator.Instance, null, loggerFactory);
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, new DefaultJobActivator(), null, loggerFactory);
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 
             string expectedMessage = $"Function '{descriptor.ShortName}' is disabled";
 
             // Validate Logger
-            var logMessage = loggerProvider.CreatedLoggers.Single().LogMessages.Single();
+            var logMessage = loggerProvider.CreatedLoggers.Single().GetLogMessages().Single();
             Assert.Equal(LogLevel.Information, logMessage.Level);
             Assert.Equal(Logging.LogCategories.Startup, logMessage.Category);
             Assert.Equal(expectedMessage, logMessage.FormattedMessage);
@@ -78,12 +76,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
         {
             Assert.Null(DisableProvider_Static.Method);
             MethodInfo method = typeof(Functions1).GetMethod("DisabledAtMethodLevel_CustomType_Static", BindingFlags.Public | BindingFlags.Static);
-            HostListenerFactory.IsDisabledByProvider(typeof(DisableProvider_Static), method, DefaultJobActivator.Instance);
+            HostListenerFactory.IsDisabledByProvider(typeof(DisableProvider_Static), method, new DefaultJobActivator());
             Assert.Same(method, DisableProvider_Static.Method);
 
             Assert.Null(DisableProvider_Instance.Method);
             method = typeof(Functions1).GetMethod("DisabledAtMethodLevel_CustomType_Static", BindingFlags.Public | BindingFlags.Static);
-            HostListenerFactory.IsDisabledByProvider(typeof(DisableProvider_Instance), method, DefaultJobActivator.Instance);
+            HostListenerFactory.IsDisabledByProvider(typeof(DisableProvider_Instance), method, new DefaultJobActivator());
             Assert.Same(method, DisableProvider_Static.Method);
         }
 
@@ -95,7 +93,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             MethodInfo method = typeof(Functions1).GetMethod("DisabledAtMethodLevel_CustomType_Static", BindingFlags.Public | BindingFlags.Static);
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
             {
-                HostListenerFactory.IsDisabledByProvider(providerType, method, DefaultJobActivator.Instance);
+                HostListenerFactory.IsDisabledByProvider(providerType, method, new DefaultJobActivator());
             });
             Assert.Equal(string.Format("Type '{0}' must declare a method 'IsDisabled' returning bool and taking a single parameter of Type MethodInfo.", providerType.Name), ex.Message);
         }
@@ -107,7 +105,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
         [InlineData("Disable_TestJob_Blah", false)]
         public void IsDisabledBySetting_BindsSettingName(string settingName, bool disabled)
         {
-            ConfigurationUtility.Reset();
             Environment.SetEnvironmentVariable("Disable_Functions1.TestJob_TestValue", "1");
             Environment.SetEnvironmentVariable("Disable_TestJob_TestValue", "1");
             Environment.SetEnvironmentVariable("Disable_TestJob", "False");

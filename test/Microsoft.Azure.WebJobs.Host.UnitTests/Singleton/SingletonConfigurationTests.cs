@@ -12,7 +12,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         [Fact]
         public void ConstructorDefaults()
         {
-            SingletonConfiguration config = new SingletonConfiguration();
+            var config = new SingletonOptions();
 
             Assert.Equal(TimeSpan.FromSeconds(15), config.LockPeriod);
             Assert.Equal(TimeSpan.FromSeconds(60), config.ListenerLockPeriod);
@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         [Fact]
         public void LockPeriod_RangeValidation()
         {
-            SingletonConfiguration config = new SingletonConfiguration();
+            var config = new SingletonOptions();
 
             TimeSpan[] invalidValues = new TimeSpan[]
             {
@@ -54,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         [Fact]
         public void ListenerLockPeriod_RangeValidation()
         {
-            SingletonConfiguration config = new SingletonConfiguration();
+            var config = new SingletonOptions();
 
             TimeSpan[] invalidValues = new TimeSpan[]
             {
@@ -85,7 +85,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         [Fact]
         public void LockAcquisitionPollingInterval_RangeValidation()
         {
-            SingletonConfiguration config = new SingletonConfiguration();
+            var config = new SingletonOptions();
 
             Assert.Throws<ArgumentOutOfRangeException>(() =>
             {
@@ -107,7 +107,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         [Fact]
         public void LockAcquisitionTimeout_RangeValidation()
         {
-            SingletonConfiguration config = new SingletonConfiguration();
+            var config = new SingletonOptions();
 
             Assert.Throws<ArgumentOutOfRangeException>(() =>
             {
@@ -129,7 +129,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         [Fact]
         public void ListenerLockRecoveryPollingInterval_RangeValidation()
         {
-            SingletonConfiguration config = new SingletonConfiguration();
+            var config = new SingletonOptions();
 
             Assert.Throws<ArgumentOutOfRangeException>(() =>
             {

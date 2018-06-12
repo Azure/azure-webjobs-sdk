@@ -11,12 +11,11 @@ using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.Azure.WebJobs.Host.Storage.Queue;
 using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal class HostMessageExecutor : ITriggerExecutor<IStorageQueueMessage>
+    internal class HostMessageExecutor
     {
         private readonly IFunctionExecutor _innerExecutor;
         private readonly IFunctionIndexLookup _functionLookup;
@@ -29,9 +28,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _functionInstanceLogger = functionInstanceLogger;
         }
 
-        public async Task<FunctionResult> ExecuteAsync(IStorageQueueMessage value, CancellationToken cancellationToken)
+        public async Task<FunctionResult> ExecuteAsync(string value, CancellationToken cancellationToken)
         {
-            HostMessage model = JsonConvert.DeserializeObject<HostMessage>(value.AsString, JsonSerialization.Settings);
+            HostMessage model = JsonConvert.DeserializeObject<HostMessage>(value, JsonSerialization.Settings);
 
             if (model == null)
             {

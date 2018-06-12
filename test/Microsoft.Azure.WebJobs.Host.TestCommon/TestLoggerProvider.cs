@@ -13,8 +13,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
     {
         private readonly Func<string, LogLevel, bool> _filter;
         private readonly Action<LogMessage> _logAction;
-
-        public IList<TestLogger> CreatedLoggers = new List<TestLogger>();
+        private Dictionary<string, TestLogger> _loggerCache { get; } = new Dictionary<string, TestLogger>();
 
         public TestLoggerProvider(Func<string, LogLevel, bool> filter = null, Action<LogMessage> logAction = null)
         {
@@ -22,16 +21,27 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             _logAction = logAction;
         }
 
+        public IList<TestLogger> CreatedLoggers => _loggerCache.Values.ToList();
+
         public ILogger CreateLogger(string categoryName)
         {
-            var logger = new TestLogger(categoryName, _filter, _logAction);
-            CreatedLoggers.Add(logger);
+            if (!_loggerCache.TryGetValue(categoryName, out TestLogger logger))
+            {
+                logger = new TestLogger(categoryName, _filter, _logAction);
+                _loggerCache.Add(categoryName, logger);
+            }
+
             return logger;
         }
 
-        public IEnumerable<LogMessage> GetAllLogMessages()
+        public IEnumerable<LogMessage> GetAllLogMessages() => CreatedLoggers.SelectMany(l => l.GetLogMessages()).OrderBy(p => p.Timestamp);
+
+        public void ClearAllLogMessages()
         {
-            return CreatedLoggers.SelectMany(l => l.LogMessages);
+            foreach (TestLogger logger in CreatedLoggers)
+            {
+                logger.ClearLogMessages();
+            }
         }
 
         public void Dispose()

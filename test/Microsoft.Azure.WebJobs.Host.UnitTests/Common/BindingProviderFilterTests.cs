@@ -2,10 +2,11 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Hosting;
 using Xunit;
-using Microsoft.Azure.WebJobs.Description;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
 {
@@ -24,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             }
 
             [AutoResolve]
-            public string Path {get;set;}
+            public string Path { get; set; }
         }
 
         class Program
@@ -46,11 +47,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         public void TestValidationError()
         {
             var nr = new FakeNameResolver().Add("x", "error");
-            var host = TestHelpers.NewJobHost<Program>(nr, new FakeExtClient());
 
-            TestHelpers.AssertIndexingError(() => host.Call("Func"), "Program.Func", FakeExtClient.IndexErrorMsg);
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<Program>(nr)
+                .AddExtension<FakeExtClient>()
+                .Build();
+
+            TestHelpers.AssertIndexingError(() => host.GetJobHost<Program>().Call("Func"), "Program.Func", FakeExtClient.IndexErrorMsg);
         }
-              
+
         // Filter takes the not-null branch
         [Fact]
         public void TestSuccessNotNull()
@@ -59,9 +64,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             var jobActivator = new FakeActivator();
             jobActivator.Add(prog);
 
-            var nr = new FakeNameResolver().Add("x", "something"); 
-            var host = TestHelpers.NewJobHost<Program>(nr, jobActivator, new FakeExtClient());
-            host.Call(nameof(Program.Func));
+            var nr = new FakeNameResolver().Add("x", "something");
+
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<Program>(nr, jobActivator)
+                .AddExtension<FakeExtClient>()
+                .Build();
+
+            host.GetJobHost<Program>().Call(nameof(Program.Func));
 
             // Skipped first rule, applied second 
             Assert.Equal(prog._value, "something");
@@ -76,8 +86,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             jobActivator.Add(prog);
 
             var nr = new FakeNameResolver().Add("x", "something");
-            var host = TestHelpers.NewJobHost<Program>(nr, jobActivator, new FakeExtClient());
-            host.Call(nameof(Program.FuncNull));
+
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<Program>(nr, jobActivator)
+                .AddExtension<FakeExtClient>()
+                .Build();
+
+            host.GetJobHost<Program>().Call(nameof(Program.FuncNull));
 
             // Skipped first rule, applied second 
             Assert.Equal(prog._value, "xxx");
@@ -85,6 +100,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
 
         public class FakeExtClient : IExtensionConfigProvider
         {
+            public FakeExtClient()
+            {
+            }
+
             public void Initialize(ExtensionConfigContext context)
             {
                 // Add [Test] support
