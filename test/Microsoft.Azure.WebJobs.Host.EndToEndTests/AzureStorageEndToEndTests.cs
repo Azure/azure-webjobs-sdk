@@ -78,7 +78,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             string name,
             [Queue(TestQueueNameEtag)] out CustomObject output)
         {
-            // TODO: Use CustomObject as param when POCO blob supported
+            // TODO: Use CustomObject as param when POCO blob supported:
+            //       https://github.com/Azure/azure-webjobs-sdk/issues/995
             var inputObject = JsonConvert.DeserializeObject<CustomObject>(input);
 
             CustomObject result = new CustomObject()

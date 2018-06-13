@@ -13,22 +13,22 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         private readonly ServiceBusAccount _account;
         private readonly string _queueName;
         private readonly ITriggeredFunctionExecutor _executor;
-        private readonly ServiceBusOptions _config;
-        private readonly IMessagingProvider _messagingProvider;
+        private readonly ServiceBusOptions _options;
+        private readonly MessagingProvider _messagingProvider;
 
-        public ServiceBusQueueListenerFactory(ServiceBusAccount account, string queueName, ITriggeredFunctionExecutor executor, ServiceBusOptions config, IMessagingProvider messagingProvider)
+        public ServiceBusQueueListenerFactory(ServiceBusAccount account, string queueName, ITriggeredFunctionExecutor executor, ServiceBusOptions options, MessagingProvider messagingProvider)
         {
             _account = account;
             _queueName = queueName;
             _executor = executor;
-            _config = config;
+            _options = options;
             _messagingProvider = messagingProvider;
         }
 
         public Task<IListener> CreateAsync(CancellationToken cancellationToken)
         {
             var triggerExecutor = new ServiceBusTriggerExecutor(_executor);
-            var listener = new ServiceBusListener(_queueName, triggerExecutor, _config, _account, _messagingProvider);
+            var listener = new ServiceBusListener(_queueName, triggerExecutor, _options, _account, _messagingProvider);
 
             return Task.FromResult<IListener>(listener);
         }

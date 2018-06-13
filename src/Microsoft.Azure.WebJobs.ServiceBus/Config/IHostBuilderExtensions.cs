@@ -1,8 +1,9 @@
-﻿using Microsoft.Azure.WebJobs.ServiceBus;
+﻿using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.Azure.WebJobs.ServiceBus.Config;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
-using WebJobs.ServiceBus.Config;
 
 namespace Microsoft.Extensions.Hosting
 {
@@ -13,8 +14,13 @@ namespace Microsoft.Extensions.Hosting
             return builder.AddExtension<ServiceBusExtensionConfig>()
                 .ConfigureServices(services =>
                 {
-                    services.TryAddSingleton<IConfigureOptions<ServiceBusOptions>, ServiceBusOptionsFactory>();
-                    services.TryAddSingleton<IMessagingProvider, MessagingProvider>();
+                    services.AddOptions<ServiceBusOptions>()
+                            .Configure<IConnectionStringProvider>((o, p) =>
+                            {
+                                o.ConnectionString = p.GetConnectionString(ConnectionStringNames.ServiceBus);
+                            });
+
+                    services.TryAddSingleton<MessagingProvider>();
                 });
         }
     }

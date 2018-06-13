@@ -14,7 +14,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
 {
     internal sealed class ServiceBusListener : IListener
     {
-        private readonly IMessagingProvider _messagingProvider;
+        private readonly MessagingProvider _messagingProvider;
         private readonly string _entityPath;
         private readonly ServiceBusTriggerExecutor _triggerExecutor;
         private readonly CancellationTokenSource _cancellationTokenSource;
@@ -25,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         private bool _disposed;
         private bool _started;
 
-        public ServiceBusListener(string entityPath, ServiceBusTriggerExecutor triggerExecutor, ServiceBusOptions config, ServiceBusAccount serviceBusAccount, IMessagingProvider messagingProvider)
+        public ServiceBusListener(string entityPath, ServiceBusTriggerExecutor triggerExecutor, ServiceBusOptions config, ServiceBusAccount serviceBusAccount, MessagingProvider messagingProvider)
         {
             _entityPath = entityPath;
             _triggerExecutor = triggerExecutor;

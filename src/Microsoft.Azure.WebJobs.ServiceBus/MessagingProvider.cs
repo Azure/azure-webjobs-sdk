@@ -12,7 +12,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     /// This class provides factory methods for the creation of instances
     /// used for ServiceBus message processing.
     /// </summary>
-    public class MessagingProvider : IMessagingProvider
+    public class MessagingProvider
     {
         private readonly ServiceBusOptions _config;
         private readonly ConcurrentDictionary<string, MessageReceiver> _messageReceiverCache = new ConcurrentDictionary<string, MessageReceiver>();
