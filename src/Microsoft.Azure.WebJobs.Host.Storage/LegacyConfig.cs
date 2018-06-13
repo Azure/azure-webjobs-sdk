@@ -41,7 +41,6 @@ namespace Microsoft.Azure.WebJobs
         // Property names here must match existing names. 
         public string Dashboard { get; set; }
         public string Storage { get; set; }
-        public string InternalSasBlobContainer { get; set; }
 
         public CloudStorageAccount GetDashboardStorageAccount()
         {

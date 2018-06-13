@@ -32,11 +32,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         public void CreateMessageSender_ReturnsExpectedSender()
         {
             string defaultConnection = "Endpoint=sb://default.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=abc123=";
-            var config = new ServiceBusConfiguration
+            var config = new ServiceBusOptions
             {
                 ConnectionString = defaultConnection
             };
-            var provider = new MessagingProvider(config);
+            var provider = new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(config));
             var sender = provider.CreateMessageSender("entityPath", defaultConnection);
             Assert.Equal("entityPath", sender.Path);
 

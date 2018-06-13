@@ -14,16 +14,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 {
     public class EventHubExtensionConfigProvider : IExtensionConfigProvider
     {
-        private readonly EventHubConfiguration _config;
+        private readonly EventHubConfiguration _options;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IConverterManager _converterManager;
         private readonly INameResolver _nameResolver;
         private readonly IConfiguration _configuration;
 
-        public EventHubExtensionConfigProvider(EventHubConfiguration config, ILoggerFactory loggerFactory,
+        public EventHubExtensionConfigProvider(EventHubConfiguration options, ILoggerFactory loggerFactory,
             IConverterManager converterManager, INameResolver nameResolver, IConfiguration configuration)
         {
-            _config = config;
+            _options = options;
             _loggerFactory = loggerFactory;
             _converterManager = converterManager;
             _nameResolver = nameResolver;
@@ -47,12 +47,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             // TODO: Can we bind these during service setup?
             // apply at eventProcessorOptions level (maxBatchSize, prefetchCount)
 
-            EventProcessorOptions options = _config.GetOptions();
+            EventProcessorOptions options = _options.GetOptions();
             options.SetExceptionHandler(ExceptionReceivedHandler);
             _configuration.Bind("eventHub", options);
 
             // apply at config level (batchCheckpointFrequency)
-            _configuration.Bind("eventHub", _config);
+            _configuration.Bind("eventHub", _options);
 
             context
                 .AddConverter<string, EventData>(ConvertString2EventData)
@@ -62,7 +62,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 .AddOpenConverter<OpenType.Poco, EventData>(ConvertPocoToEventData);
 
             // register our trigger binding provider
-            var triggerBindingProvider = new EventHubTriggerAttributeBindingProvider(_nameResolver, _converterManager, _config, _loggerFactory);
+            var triggerBindingProvider = new EventHubTriggerAttributeBindingProvider(_nameResolver, _converterManager, _options, _loggerFactory);
             context.AddBindingRule<EventHubTriggerAttribute>()
                 .BindToTrigger(triggerBindingProvider);
 
@@ -105,7 +105,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
         private IAsyncCollector<EventData> BuildFromAttribute(EventHubAttribute attribute)
         {
-            EventHubClient client = _config.GetEventHubClient(attribute.EventHubName, attribute.Connection);
+            EventHubClient client = _options.GetEventHubClient(attribute.EventHubName, attribute.Connection);
             return new EventHubAsyncCollector(client);
         }
 

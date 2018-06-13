@@ -34,7 +34,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             // Put the ETag before the blob name to prevent ambiguity since the blob name can contain embedded slashes.
             string receiptName = String.Format(CultureInfo.InvariantCulture, "{0}/{1}/{2}/{3}/{4}", hostId, functionId,
                 eTag, containerName, blobName);
-            return _directory.GetBlockBlobReference(receiptName);
+            return _directory.SafeGetBlockBlobReference(receiptName);
         }
 
         public async Task<BlobReceipt> TryReadAsync(CloudBlockBlob blob, CancellationToken cancellationToken)

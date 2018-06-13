@@ -46,11 +46,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IFunctionOutputLogger _functionOutputLogger;
         private readonly IConverterManager _converterManager;
         private readonly IAsyncCollector<FunctionInstanceLogEntry> _eventCollector;
-        private readonly ILoadbalancerQueue _storageServices;
         private readonly ILegacyLogger _legacyLogger;
 
         public JobHostContextFactory(
-            ILoadbalancerQueue storageServices,
             ILegacyLogger legacyLogger,
             IFunctionExecutor functionExecutor,
             IFunctionIndexProvider functionIndexProvider,
@@ -71,7 +69,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             IConverterManager converterManager,
             IAsyncCollector<FunctionInstanceLogEntry> eventCollector)
         {
-            _storageServices = storageServices;
             _legacyLogger = legacyLogger;
             _functionExecutor = functionExecutor;
             _functionIndexProvider = functionIndexProvider;

@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
@@ -16,7 +15,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Xunit;
 
-#if false // $$$
+
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
     public class TableTests
@@ -30,16 +29,27 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         [Fact]
         public void Table_IndexingFails()
         {
-            // Verify we catch various indexing failures. 
-            Utility.AssertIndexingError<BadProgramTableName>("Run", "Validation failed for property 'TableName', value '$$'");
+            void AssertIndexingError<TProgram>(string methodName, string expectedErrorMessage)
+            {
+
+                IHost host = new HostBuilder()
+                    .ConfigureDefaultTestHost<TProgram>()
+                    .UseFakeStorage()
+                    .Build();
+
+                host.GetJobHost<TProgram>().AssertIndexingError(methodName, expectedErrorMessage);
+            }
+
+            // Verify we catch various indexing failures.             
+            AssertIndexingError<BadProgramTableName>(nameof(BadProgramTableName.Run), "Validation failed for property 'TableName', value '$$'");
 
             // Pocos must have a default ctor. 
-            Utility.AssertIndexingError<BadProgram4>("Run", "Table entity types must provide a default constructor.");
+            AssertIndexingError<BadProgram4>(nameof(BadProgram4.Run), "Table entity types must provide a default constructor.");
 
             // When binding to Pocos, they must be structurally compatible with ITableEntity.
-            Utility.AssertIndexingError<BadProgram1>("Run", "Table entity types must implement the property RowKey.");
-            Utility.AssertIndexingError<BadProgram2>("Run", "Table entity types must implement the property RowKey.");
-            Utility.AssertIndexingError<BadProgram3>("Run", "Table entity types must implement the property PartitionKey.");
+            AssertIndexingError<BadProgram1>(nameof(BadProgram1.Run), "Table entity types must implement the property RowKey.");
+            AssertIndexingError<BadProgram2>(nameof(BadProgram2.Run), "Table entity types must implement the property RowKey.");
+            AssertIndexingError<BadProgram3>(nameof(BadProgram3.Run), "Table entity types must implement the property PartitionKey.");
         }
 
         class BindToSingleOutProgram
@@ -51,23 +61,18 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void Table_SingleOut_Supported()
+        public async Task Table_SingleOut_Supported()
         {
-            IStorageAccount account = new FakeStorageAccount();
-
             IHost host = new HostBuilder()
-             .ConfigureDefaultTestHost<BindToSingleOutProgram>(account)
-             .ConfigureServices(services =>
-             {
-                 services.AddSingleton<IFunctionOutputLoggerProvider, NullFunctionOutputLoggerProvider>();
-                 services.AddSingleton<IFunctionInstanceLoggerProvider, NullFunctionInstanceLoggerProvider>();
-             })
-             .AddStorageBindings()
+             .ConfigureDefaultTestHost<BindToSingleOutProgram>()
+             .AddAzureStorage()
+             .UseFakeStorage()
              .Build();
 
-            host.GetJobHost<BindToSingleOutProgram>().Call("Run");
+            host.GetJobHost<BindToSingleOutProgram>().Call(nameof(BindToSingleOutProgram.Run));
 
-            AssertStringProperty(account, "Property", "1234");
+            var account = host.GetStorageAccount();
+            await AssertStringPropertyAsync(account, "Property", "1234");
         }
 
         // Helper to demonstrate that TableName property can include { } pairs. 
@@ -84,23 +89,19 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         // TableName can have {  } pairs.
         [Fact]
-        public void Table_ResolvedName()
+        public async Task Table_ResolvedName()
         {
-            IStorageAccount account = new FakeStorageAccount();
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<BindToICollectorITableEntityResolvedTableProgram>(account)
-                .ConfigureServices(services =>
-                {
-                    services.AddSingleton<IFunctionOutputLoggerProvider, NullFunctionOutputLoggerProvider>();
-                    services.AddSingleton<IFunctionInstanceLoggerProvider, NullFunctionInstanceLoggerProvider>();
-                })
-                .AddStorageBindings()
+                .ConfigureDefaultTestHost<BindToICollectorITableEntityResolvedTableProgram>()
+                .AddAzureStorage()
+                .UseFakeStorage()
                 .Build();
 
             host.GetJobHost<BindToICollectorITableEntityResolvedTableProgram>().Call("Run", new { t1 = "ZZ" });
 
-            AssertStringProperty(account, "Property", "123", "TaZZ");
-            AssertStringProperty(account, "Property", "456", "ZZxZZ");
+            var account = host.GetStorageAccount();
+            await AssertStringPropertyAsync(account, "Property", "123", "TaZZ");
+            await AssertStringPropertyAsync(account, "Property", "456", "ZZxZZ");
         }
 
         private class CustomTableBindingConverter<T>
@@ -116,19 +117,13 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public void Table_IfBoundToCustomTableBindingExtension_BindsCorrectly()
         {
             // Arrange
-            IStorageAccount account = CreateFakeStorageAccount();
-
             var ext = new TableConverter();
 
             var host = new HostBuilder()
-                .ConfigureDefaultTestHost<CustomTableBindingExtensionProgram>(account)
-                .ConfigureServices(services =>
-                {
-                    services.AddSingleton<IFunctionOutputLoggerProvider, NullFunctionOutputLoggerProvider>();
-                    services.AddSingleton<IFunctionInstanceLoggerProvider, NullFunctionInstanceLoggerProvider>();
-                })
+                .ConfigureDefaultTestHost<CustomTableBindingExtensionProgram>()
                 .AddExtension(ext)
-                .AddStorageBindings()
+                .AddAzureStorage()
+                .UseFakeStorage()
                 .Build();
 
             host.GetJobHost<CustomTableBindingExtensionProgram>().Call("Run"); // Act
@@ -151,12 +146,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void Table_IfBoundToCloudTable_BindsAndCreatesTable()
+        public async Task Table_IfBoundToCloudTable_BindsAndCreatesTable()
         {
             // Arrange
-            IStorageAccount account = CreateFakeStorageAccount();
-            IStorageQueue triggerQueue = CreateQueue(account, TriggerQueueName);
-            triggerQueue.AddMessage(triggerQueue.CreateMessage("ignore"));
+            XStorageAccount account = CreateFakeStorageAccount();
+            CloudQueue triggerQueue = await TestHelpers.CreateQueueAsync(account, TriggerQueueName);
+            await triggerQueue.AddMessageAsync(new CloudQueueMessage("ignore"));
 
             // Act
             CloudTable result = RunTrigger<CloudTable>(account, typeof(BindToCloudTableProgram),
@@ -165,27 +160,27 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // Assert
             Assert.NotNull(result);
             Assert.Equal(TableName, result.Name);
-            IStorageTableClient client = account.CreateTableClient();
-            IStorageTable table = client.GetTableReference(TableName);
-            Assert.True(table.Exists());
+            CloudTableClient client = account.CreateCloudTableClient();
+            CloudTable table = client.GetTableReference(TableName);
+            Assert.True(await table.ExistsAsync());
         }
 
         [Fact]
-        public void Table_IfBoundToICollectorJObject_AddInsertsEntity()
+        public async Task Table_IfBoundToICollectorJObject_AddInsertsEntity()
         {
             // Arrange
             const string expectedValue = "abc";
-            IStorageAccount account = CreateFakeStorageAccount();
-            IStorageQueue triggerQueue = CreateQueue(account, TriggerQueueName);
-            triggerQueue.AddMessage(triggerQueue.CreateMessage(expectedValue));
+            XStorageAccount account = CreateFakeStorageAccount();
+            CloudQueue triggerQueue = await TestHelpers.CreateQueueAsync(account, TriggerQueueName);
+            await triggerQueue.AddMessageAsync(new CloudQueueMessage(expectedValue));
 
             // Act
             RunTrigger(account, typeof(BindToICollectorJObjectProgram));
 
             // Assert
-            IStorageTableClient client = account.CreateTableClient();
-            IStorageTable table = client.GetTableReference(TableName);
-            Assert.True(table.Exists());
+            CloudTableClient client = account.CreateCloudTableClient();
+            CloudTable table = client.GetTableReference(TableName);
+            Assert.True(await table.ExistsAsync());
             DynamicTableEntity entity = table.Retrieve<DynamicTableEntity>(PartitionKey, RowKey);
             Assert.NotNull(entity);
             Assert.NotNull(entity.Properties);
@@ -196,63 +191,58 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         // Partition and RowKey values are in the attribute
         [Fact]
-        public void Table_IfBoundToICollectorJObject__WithAttrKeys_AddInsertsEntity()
+        public async Task Table_IfBoundToICollectorJObject__WithAttrKeys_AddInsertsEntity()
         {
             // Arrange
             const string expectedValue = "abcdef";
-            IStorageAccount account = CreateFakeStorageAccount();            
 
             // Act
             var host = new HostBuilder()
-                .ConfigureDefaultTestHost<BindToICollectorJObjectProgramKeysInAttr>(account)
-                .ConfigureServices(services =>
-                {
-                    services.AddSingleton<IFunctionOutputLoggerProvider, NullFunctionOutputLoggerProvider>();
-                    services.AddSingleton<IFunctionInstanceLoggerProvider, NullFunctionInstanceLoggerProvider>();
-                })
-                .AddStorageBindings()
+                .ConfigureDefaultTestHost<BindToICollectorJObjectProgramKeysInAttr>()
+                .UseFakeStorage()
                 .Build();
-                
+
             host.GetJobHost<BindToICollectorJObjectProgramKeysInAttr>().Call("Run");
 
             // Assert
-            AssertStringProperty(account, "ValueStr", expectedValue);
+            var account = host.GetStorageAccount();
+            await AssertStringPropertyAsync(account, "ValueStr", expectedValue);
         }
 
         [Fact]
-        public void Table_IfBoundToICollectorITableEntity_AddInsertsEntity()
+        public async Task Table_IfBoundToICollectorITableEntity_AddInsertsEntity()
         {
             // Arrange
             const string expectedValue = "abc";
-            IStorageAccount account = CreateFakeStorageAccount();
-            IStorageQueue triggerQueue = CreateQueue(account, TriggerQueueName);
-            triggerQueue.AddMessage(triggerQueue.CreateMessage(expectedValue));
+            XStorageAccount account = CreateFakeStorageAccount();
+            CloudQueue triggerQueue = await TestHelpers.CreateQueueAsync(account, TriggerQueueName);
+            await triggerQueue.AddMessageAsync(new CloudQueueMessage(expectedValue));
 
             // Act
             RunTrigger(account, typeof(BindToICollectorITableEntityProgram));
 
             // Assert
-            AssertStringProperty(account, PropertyName, expectedValue);
+            await AssertStringPropertyAsync(account, PropertyName, expectedValue);
         }
 
         [Fact]
-        public void Table_IfBoundToICollectorPoco_AddInsertsEntity()
+        public async Task Table_IfBoundToICollectorPoco_AddInsertsEntity()
         {
             // Arrange
             const string expectedValue = "abc";
-            IStorageAccount account = CreateFakeStorageAccount();
-            IStorageQueue triggerQueue = CreateQueue(account, TriggerQueueName);
-            triggerQueue.AddMessage(triggerQueue.CreateMessage(expectedValue));
+            XStorageAccount account = CreateFakeStorageAccount();
+            CloudQueue triggerQueue = await TestHelpers.CreateQueueAsync(account, TriggerQueueName);
+            await triggerQueue.AddMessageAsync(new CloudQueueMessage(expectedValue));
 
             // Act
             RunTrigger(account, typeof(BindToICollectorPocoProgram));
 
             // Assert
-            AssertStringProperty(account, PropertyName, expectedValue);
+            await AssertStringPropertyAsync(account, PropertyName, expectedValue);
         }
 
         [Fact]
-        public void Table_IfBoundToICollectorPoco_AddInsertsUsingNativeTableTypes()
+        public async Task Table_IfBoundToICollectorPoco_AddInsertsUsingNativeTableTypes()
         {
             // Arrange
             PocoWithAllTypes expected = new PocoWithAllTypes
@@ -282,17 +272,17 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                     Property = "jkl"
                 }
             };
-            IStorageAccount account = CreateFakeStorageAccount();
-            IStorageQueue triggerQueue = CreateQueue(account, TriggerQueueName);
-            triggerQueue.AddMessage(triggerQueue.CreateMessage(JsonConvert.SerializeObject(expected)));
+            XStorageAccount account = CreateFakeStorageAccount();
+            CloudQueue triggerQueue = await TestHelpers.CreateQueueAsync(account, TriggerQueueName);
+            await triggerQueue.AddMessageAsync(new CloudQueueMessage(JsonConvert.SerializeObject(expected)));
 
             // Act
             RunTrigger(account, typeof(BindToICollectorPocoWithAllTypesProgram));
 
             // Assert
-            IStorageTableClient client = account.CreateTableClient();
-            IStorageTable table = client.GetTableReference(TableName);
-            Assert.True(table.Exists());
+            CloudTableClient client = account.CreateCloudTableClient();
+            CloudTable table = client.GetTableReference(TableName);
+            Assert.True(await table.ExistsAsync());
             DynamicTableEntity entity = table.Retrieve<DynamicTableEntity>(PartitionKey, RowKey);
             Assert.Equal(expected.PartitionKey, entity.PartitionKey);
             Assert.Equal(expected.RowKey, entity.RowKey);
@@ -395,8 +385,8 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         // Assert the given table has the given entity with PropertyName=ExpectedValue
-        void AssertStringProperty(
-            IStorageAccount account,
+        private async Task AssertStringPropertyAsync(
+            XStorageAccount account,
             string propertyName,
             string expectedValue,
             string tableName = TableName,
@@ -404,9 +394,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             string rowKey = RowKey)
         {
             // Assert
-            IStorageTableClient client = account.CreateTableClient();
-            IStorageTable table = client.GetTableReference(tableName);
-            Assert.True(table.Exists());
+            CloudTableClient client = account.CreateCloudTableClient();
+            CloudTable table = client.GetTableReference(tableName);
+            Assert.True(await table.ExistsAsync());
             DynamicTableEntity entity = table.Retrieve<DynamicTableEntity>(partitionKey, rowKey);
             Assert.NotNull(entity);
             Assert.NotNull(entity.Properties);
@@ -417,25 +407,17 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Assert.Equal(expectedValue, property.StringValue);
         }
 
-        private static IStorageAccount CreateFakeStorageAccount()
+        private static XStorageAccount CreateFakeStorageAccount()
         {
-            return new FakeStorageAccount();
+            return new XFakeStorageAccount();
         }
 
-        private static IStorageQueue CreateQueue(IStorageAccount account, string queueName)
+        private static void RunTrigger(XStorageAccount account, Type programType)
         {
-            IStorageQueueClient client = account.CreateQueueClient();
-            IStorageQueue queue = client.GetQueueReference(queueName);
-            queue.CreateIfNotExists();
-            return queue;
+            FunctionalTest.RunTrigger(account, programType);
         }
 
-        private static void RunTrigger(IStorageAccount account, Type programType, IExtensionRegistry extensions = null)
-        {
-            FunctionalTest.RunTrigger(account, programType, extensions);
-        }
-
-        private static TResult RunTrigger<TResult>(IStorageAccount account, Type programType,
+        private static TResult RunTrigger<TResult>(XStorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
             return FunctionalTest.RunTrigger<TResult>(account, programType, setTaskSource);
@@ -701,4 +683,3 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
     }
 }
-#endif

@@ -191,7 +191,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
 
             return CreateConfiguration<TResult>(storageAccount, programType, extensionTypeLocator, activator, taskSource,
-                new ExpectManualCompletionFunctionInstanceLogger<TResult>(taskSource, ignoreFailureFunctions), extensions);
+                new ExpectManualCompletionFunctionInstanceLogger<TResult>(taskSource, false, ignoreFailureFunctions), extensions);
         }
 
         private static IHost CreateConfiguration<TResult>(XStorageAccount storageAccount, Type programType,
@@ -228,7 +228,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                     services.AddSingleton<IFunctionOutputLoggerProvider>(new NullFunctionOutputLoggerProvider());
                     services.AddSingleton<IHostIdProvider>(hostIdProvider);
                 })
-                .AddStorageBindings()
+                .AddAzureStorage()
                 .Build();
         }
 

@@ -12,7 +12,7 @@ namespace FakeStorage
     internal class FakeStorageBlobContainer : CloudBlobContainer
     {
         internal readonly MemoryBlobStore _store;
-        private readonly FakeStorageBlobClient _parent;
+        internal readonly FakeStorageBlobClient _client;
 
         public FakeStorageBlobContainer(FakeStorageBlobClient client, string containerName)
              : base(client.GetContainerUri(containerName))
@@ -22,8 +22,9 @@ namespace FakeStorage
                 throw new ArgumentException(nameof(containerName));
             }
             _store = client._store;
-            _parent = client;
-            
+            _client = client;
+
+            this.SetInternalField(nameof(ServiceClient), client);
         }
 
         public override bool Equals(object obj)
@@ -194,14 +195,18 @@ namespace FakeStorage
 
         public override Task<ICloudBlob> GetBlobReferenceFromServerAsync(string blobName)
         {
-            throw new NotImplementedException();
-            return base.GetBlobReferenceFromServerAsync(blobName);
+            // throw new NotImplementedException();
+            // return base.GetBlobReferenceFromServerAsync(blobName);
+            var blob = _store.GetBlobReferenceFromServer(this, this.Name, blobName);
+            return Task.FromResult<ICloudBlob>(blob);
         }
 
         public override Task<ICloudBlob> GetBlobReferenceFromServerAsync(string blobName, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
-            throw new NotImplementedException();
-            return base.GetBlobReferenceFromServerAsync(blobName, accessCondition, options, operationContext);
+            //throw new NotImplementedException();
+            // return base.GetBlobReferenceFromServerAsync(blobName, accessCondition, options, operationContext);
+            var blob = _store.GetBlobReferenceFromServer(this, this.Name, blobName);
+            return Task.FromResult<ICloudBlob>(blob);
         }
 
         public override Task<ICloudBlob> GetBlobReferenceFromServerAsync(string blobName, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
@@ -211,27 +216,62 @@ namespace FakeStorage
         }
 
         public override Task<BlobResultSegment> ListBlobsSegmentedAsync(BlobContinuationToken currentToken)
-        {
-            throw new NotImplementedException();
+        {            
             return base.ListBlobsSegmentedAsync(currentToken);
         }
 
         public override Task<BlobResultSegment> ListBlobsSegmentedAsync(string prefix, BlobContinuationToken currentToken)
         {
-            throw new NotImplementedException();
             return base.ListBlobsSegmentedAsync(prefix, currentToken);
         }
 
         public override Task<BlobResultSegment> ListBlobsSegmentedAsync(string prefix, bool useFlatBlobListing, BlobListingDetails blobListingDetails, int? maxResults, BlobContinuationToken currentToken, BlobRequestOptions options, OperationContext operationContext)
         {
-            throw new NotImplementedException();
-            return base.ListBlobsSegmentedAsync(prefix, useFlatBlobListing, blobListingDetails, maxResults, currentToken, options, operationContext);
+            return ListBlobsSegmentedCoreAsync(prefix, useFlatBlobListing, blobListingDetails, maxResults, currentToken, options, operationContext, CancellationToken.None);
         }
 
         public override Task<BlobResultSegment> ListBlobsSegmentedAsync(string prefix, bool useFlatBlobListing, BlobListingDetails blobListingDetails, int? maxResults, BlobContinuationToken currentToken, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
-            return base.ListBlobsSegmentedAsync(prefix, useFlatBlobListing, blobListingDetails, maxResults, currentToken, options, operationContext, cancellationToken);
+            return ListBlobsSegmentedCoreAsync(prefix, useFlatBlobListing, blobListingDetails, maxResults, currentToken, options, operationContext, cancellationToken);
+        }
+
+        private Task<BlobResultSegment> ListBlobsSegmentedCoreAsync(string prefix, bool useFlatBlobListing,
+         BlobListingDetails blobListingDetails, int? maxResults, BlobContinuationToken currentToken,
+         BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
+        {
+            if (options != null)
+            {
+                throw new NotImplementedException();
+            }
+
+            if (operationContext != null)
+            {
+                throw new NotImplementedException();
+            }
+
+            string fullPrefix;
+
+            if (!String.IsNullOrEmpty(prefix))
+            {
+                fullPrefix = this.Name + "/" + prefix;
+            }
+            else
+            {
+                fullPrefix = this.Name;
+            }
+
+            Func<string, FakeStorageBlobContainer> containerFactory = (name) =>
+            {
+                if (name != this.Name)
+                {
+                    throw new InvalidOperationException();
+                }
+
+                return this;
+            };
+            var segment = _store.ListBlobsSegmented(containerFactory, fullPrefix,
+                useFlatBlobListing, blobListingDetails, maxResults, currentToken);
+            return Task.FromResult(segment);
         }
 
         public override Task SetPermissionsAsync(BlobContainerPermissions permissions)
@@ -272,12 +312,12 @@ namespace FakeStorage
 
         public override Task<bool> ExistsAsync()
         {
-            return base.ExistsAsync();
+            return Task.FromResult(_store.Exists(this.Name));
         }
 
         public override Task<bool> ExistsAsync(BlobRequestOptions options, OperationContext operationContext)
         {
-            return base.ExistsAsync(options, operationContext);
+            return Task.FromResult(_store.Exists(this.Name));
         }
 
         public override Task<bool> ExistsAsync(BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)

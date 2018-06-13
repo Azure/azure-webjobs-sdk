@@ -6,10 +6,10 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Newtonsoft.Json;
 using Xunit;
+using FakeStorage;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
@@ -24,16 +24,18 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             if (contents is string str)
             {
                 message = new CloudQueueMessage(str);
-            } else if (contents is byte[] bytearray)
+            }
+            else if (contents is byte[] bytearray)
             {
                 message = CloudQueueMessage.CreateCloudQueueMessageFromByteArray(bytearray);
-            } else
+            }
+            else
             {
                 throw new InvalidOperationException("bad test");
             }
-                        
+
             var queue = await CreateQueue(account, QueueName);
-            
+
             // message.InsertionTime is provided by FakeStorageAccount when the message is inserted.
             await queue.AddMessageAsync(message);
         }
@@ -44,7 +46,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // Arrange
             string expectedGuid = Guid.NewGuid().ToString();
             CloudQueueMessage expectedMessage = new CloudQueueMessage(expectedGuid);
-            var  account = CreateFakeStorageAccount();
+            var account = CreateFakeStorageAccount();
             var queue = await CreateQueue(account, QueueName);
             await queue.AddMessageAsync(expectedMessage);
 
@@ -429,11 +431,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             // Arrange
             const int expectedInt32Value = 123;
-            var account = CreateFakeStorageAccount();            
-                        
+            var account = CreateFakeStorageAccount();
+
             Poco value = new Poco { Int32Value = expectedInt32Value };
             string content = JsonConvert.SerializeObject(value, typeof(Poco), settings: null);
-            
+
             await SetupAsync(account, content);
 
             // Act
@@ -454,10 +456,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 Int32Value = 123
             };
             var account = CreateFakeStorageAccount();
-            
+
             Poco value = new Poco { Child = expectedChild };
             string content = JsonConvert.SerializeObject(value, typeof(Poco), settings: null);
-            
+
             await SetupAsync(account, content);
 
             // Act
@@ -549,7 +551,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             // Arrange
             CloudQueueMessage expectedMessage = new CloudQueueMessage("ignore");
-            
+
             // Act
             CloudQueueMessage result = CallQueueTrigger<CloudQueueMessage>(expectedMessage,
                 typeof(BindToCloudQueueMessageProgram), (s) => BindToCloudQueueMessageProgram.TaskSource = s);
@@ -563,7 +565,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             // Arrange
             const int expectedDequeueCount = 123;
-            var message = new CloudQueueMessage("ignore").SetDequeueCount(expectedDequeueCount);            
+            var message = new CloudQueueMessage("ignore").SetDequeueCount(expectedDequeueCount);
 
             // Act
             int result = CallQueueTrigger<int>(message, typeof(BindToDequeueCountBindingDataProgram),
@@ -721,46 +723,16 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private static TResult CallQueueTrigger<TResult>(object message, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
-            throw new NotImplementedException();
-#if false
-            // Arrange
-            TaskCompletionSource<TResult> functionTaskSource = new TaskCompletionSource<TResult>();
-            var serviceProvider = FunctionalTest.CreateConfigurationForManualCompletion<TResult>(
-                CreateFakeStorageAccount(), programType, functionTaskSource);
-            Task<TResult> functionTask = functionTaskSource.Task;
-            setTaskSource.Invoke(functionTaskSource);
-            Task callTask;
-            bool completed;
+            var account = new XFakeStorageAccount();
+            var method = programType.GetMethod("Run");
+            Assert.NotNull(method);
 
-            using (serviceProvider)
+            var result = FunctionalTest.Call<TResult>(account, programType, method, new Dictionary<string, object>
             {
-                var host = serviceProvider.GetJobHost();
-                try
-                {
-                    callTask = host.CallAsync(programType.GetMethod("Run"), new { message = message });
+                { "message", message }
+            }, setTaskSource);
 
-                    // Act
-                    completed = Task.WhenAll(callTask, functionTask).WaitUntilCompleted(3 * 1000);
-                }
-                finally
-                {
-                    setTaskSource.Invoke(null);
-                }
-            }
-
-            // Assert
-            Assert.True(completed);
-
-            // Give a nicer test failure message for faulted tasks.
-            if (functionTask.Status == TaskStatus.Faulted)
-            {
-                functionTask.GetAwaiter().GetResult();
-            }
-
-            Assert.Equal(TaskStatus.RanToCompletion, functionTask.Status);
-            Assert.Equal(TaskStatus.RanToCompletion, callTask.Status);
-            return functionTask.Result;
-#endif
+            return result;
         }
 
         private static XStorageAccount CreateFakeStorageAccount()

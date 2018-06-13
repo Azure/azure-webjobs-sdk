@@ -205,8 +205,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             using (_functionCompletedEvent = new ManualResetEvent(initialState: false))
             {
-                // add a FunctionEventCollectorFactory
-                var eventCollectorFactory = new TestEventCollectorProvider();
+                var eventCollectorProvider = new TestEventCollectorProvider();                
 
                 // enable the aggregator
                 _hostBuilder.ConfigureServices(services =>
@@ -217,7 +216,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         o.BatchSize = 1;
                     });
 
-                    services.AddSingleton<IEventCollectorProvider>(eventCollectorFactory);
+                    services.AddSingleton<IEventCollectorProvider>(eventCollectorProvider);
                 });
 
                 IHost host = _hostBuilder.Build();
@@ -226,7 +225,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 await jobHost.StartAsync();
                 await jobHost.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod(nameof(WriteStartDataMessageToQueue)));
-                await WaitForFunctionCompleteAsync();
+
+                var loggerProvider = host.GetTestLoggerProvider();
+                await WaitForFunctionCompleteAsync(loggerProvider);
 
                 // ensure all logs have had a chance to flush
                 await Task.Delay(3000);
@@ -234,12 +235,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await host.StopAsync();
 
                 // Make sure the aggregator was logged to
-                var loggerProvider = host.GetTestLoggerProvider();
                 var logger = loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Aggregator).Single();
                 var count = logger.GetLogMessages().Count;
                 Assert.True(count == 4, $"Expected 4. Actual {count}.{Environment.NewLine}{loggerProvider.GetLogString()}");
+
                 // Make sure the eventCollector was logged 
-                eventCollector.AssertFunctionCount(4, loggerProvider.GetLogString());
+                eventCollectorProvider.EventCollector.AssertFunctionCount(4, loggerProvider.GetLogString());
 
                 host.Dispose();
             }
@@ -266,7 +267,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await host.StartAsync();
                 await jobHost.CallAsync(nameof(WriteStartDataMessageToQueue));
 
-                await WaitForFunctionCompleteAsync();
+                var loggerProvider = host.GetTestLoggerProvider();
+                await WaitForFunctionCompleteAsync(loggerProvider);
 
                 // ensure all logs have had a chance to flush
                 await Task.Delay(3000);
@@ -274,11 +276,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await host.StopAsync();
 
                 // Make sure the aggregator was logged to
-                var loggerProvider = host.GetTestLoggerProvider();
+
                 var logger = loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Aggregator).Single();
                 var count = logger.GetLogMessages().Count;
                 Assert.True(count == 4, $"Expected 4. Actual {count}.{Environment.NewLine}{loggerProvider.GetLogString()}");
-                host.Dispose();               
+                host.Dispose();
             }
         }
 
@@ -303,7 +305,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await jobHost.StartAsync();
                 await jobHost.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod("WriteStartDataMessageToQueue"));
 
-                await WaitForFunctionCompleteAsync();
+                var loggerProvider = host.GetTestLoggerProvider();
+                await WaitForFunctionCompleteAsync(loggerProvider);
 
                 // ensure all logs have had a chance to flush
                 await Task.Delay(3000);
@@ -315,7 +318,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.Null(logger);
 
                 // Make sure the eventCollector was logged
-                eventCollector.AssertFunctionCount(4, _loggerProvider.GetLogString());
+                eventCollector.AssertFunctionCount(4, loggerProvider.GetLogString());
             }
         }
 
@@ -586,8 +589,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             Assert.True(uri.ToString().EndsWith(blobTrigger));
             string parentId = metadata["AzureWebJobsParentId"];
-            Guid g;
-            Assert.True(Guid.TryParse(parentId, out g));
+            Assert.True(Guid.TryParse(parentId, out Guid g));
             Assert.Equal("application/octet-stream", properties.ContentType);
 
             // Should not be signaled
@@ -630,21 +632,22 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 await jobHost.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod(nameof(WriteStartDataMessageToQueue)));
 
-            await WaitForFunctionCompleteAsync();
+                var loggerProvider = host.GetTestLoggerProvider();
+                await WaitForFunctionCompleteAsync(loggerProvider);
 
                 await jobHost.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod(nameof(ReadResultBlob)));
                 Assert.Equal("async works", _finalBlobContent);
 
                 await host.StopAsync();
 
-                return host.GetTestLoggerProvider();
+                return loggerProvider;
             }
         }
 
-        private async Task WaitForFunctionCompleteAsync(int waitTimeout = 30000)
+        private async Task WaitForFunctionCompleteAsync(TestLoggerProvider loggerProvider, int waitTimeout = 30000)
         {
             await TestHelpers.Await(() => _functionCompletedEvent.WaitOne(200), timeout: waitTimeout, pollingInterval: 500,
-                userMessageCallback: () => $"Function did not complete in {waitTimeout} ms. Current time: {DateTime.UtcNow.ToString("HH:mm:ss.fff")}{Environment.NewLine}{_loggerProvider.GetLogString()}");
+                userMessageCallback: () => $"Function did not complete in {waitTimeout} ms. Current time: {DateTime.UtcNow.ToString("HH:mm:ss.fff")}{Environment.NewLine}{loggerProvider.GetLogString()}");
         }
 
         private class CustomQueueProcessorFactory : IQueueProcessorFactory
@@ -743,7 +746,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private class CapturingExceptionHandlerFactory : IWebJobsExceptionHandlerFactory
         {
-            CapturingExceptionHandler _handler = new CapturingExceptionHandler();
+            private readonly CapturingExceptionHandler _handler = new CapturingExceptionHandler();
 
             public IWebJobsExceptionHandler Create(IHost host) => _handler;
         }
@@ -779,7 +782,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 return EventCollector;
             }
-
         }
 
         private class TestFunctionEventCollector : IAsyncCollector<FunctionInstanceLogEntry>
@@ -790,8 +792,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             public Task AddAsync(FunctionInstanceLogEntry item, CancellationToken cancellationToken = default(CancellationToken))
             {
-                StringBuilder prevState;
-                if (!_state.TryGetValue(item.FunctionInstanceId, out prevState))
+                if (!_state.TryGetValue(item.FunctionInstanceId, out StringBuilder prevState))
                 {
                     prevState = new StringBuilder();
                     _state[item.FunctionInstanceId] = prevState;

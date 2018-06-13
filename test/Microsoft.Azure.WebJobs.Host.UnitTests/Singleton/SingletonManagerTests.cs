@@ -19,10 +19,7 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Moq;
 using Xunit;
-using FakeStorage;
-
 using SingletonLockHandle = Microsoft.Azure.WebJobs.Host.StorageBaseDistributedLockManager.SingletonLockHandle;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 {
@@ -85,12 +82,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             protected override CloudBlobContainer GetContainer(string accountName)
             {
                 FakeStorage.FakeAccount account;
-                if (string.IsNullOrEmpty(accountName) || accountName == ConnectionStringNames.Storage) {
+                if (string.IsNullOrEmpty(accountName) || accountName == ConnectionStringNames.Storage)
+                {
                     account = _account1;
-                } else if (accountName == Secondary)
+                }
+                else if (accountName == Secondary)
                 {
                     account = _account2;
-                } else
+                }
+                else
                 {
                     throw new InvalidOperationException("Unknown account: " + accountName);
                 }
@@ -111,7 +111,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
 
             var leaseProvider = new FakeLeaseProvidder(loggerFactory);
-            _mockBlobDirectory = leaseProvider._account1.CreateCloudBlobClient().GetContainerReference(HostContainerNames.Hosts).GetDirectoryReference(HostDirectoryNames.SingletonLocks); 
+            _mockBlobDirectory = leaseProvider._account1.CreateCloudBlobClient().GetContainerReference(HostContainerNames.Hosts).GetDirectoryReference(HostDirectoryNames.SingletonLocks);
             _mockSecondaryBlobDirectory = leaseProvider._account2.CreateCloudBlobClient().GetContainerReference(HostContainerNames.Hosts).GetDirectoryReference(HostDirectoryNames.SingletonLocks);
 
             _mockExceptionDispatcher = new Mock<IWebJobsExceptionHandler>(MockBehavior.Strict);
@@ -121,7 +121,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             _mockBlobMetadata = new Dictionary<string, string>();
             leaseProvider._account1.SetBlob(HostContainerNames.Hosts, HostDirectoryNames.SingletonLocks + "/" + TestLockId, _mockStorageBlob.Object);
-            
+
 
             _singletonConfig = new SingletonOptions();
 
@@ -276,7 +276,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             CancellationToken cancellationToken = new CancellationToken();
 
             int count = 0;
-  
+
             MockAcquireLeaseAsync(null, () =>
             {
                 count++;
@@ -311,17 +311,17 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
         void MockFetchAttributesAsync(Action fpAction)
         {
-        _mockStorageBlob.Setup(
-                p => p.FetchAttributesAsync(It.IsAny<AccessCondition>(), It.IsAny<BlobRequestOptions>(), It.IsAny<OperationContext>(), It.IsAny<CancellationToken>())
-                )
-            .Callback<AccessCondition, BlobRequestOptions, OperationContext, CancellationToken>(
-                (accessCondition, blobRequest, opCtx, cancelToken) =>
-                {
-                    fpAction?.Invoke();
-                }).Returns(() =>
-                {
-                    return Task.CompletedTask;
-                });
+            _mockStorageBlob.Setup(
+                    p => p.FetchAttributesAsync(It.IsAny<AccessCondition>(), It.IsAny<BlobRequestOptions>(), It.IsAny<OperationContext>(), It.IsAny<CancellationToken>())
+                    )
+                .Callback<AccessCondition, BlobRequestOptions, OperationContext, CancellationToken>(
+                    (accessCondition, blobRequest, opCtx, cancelToken) =>
+                    {
+                        fpAction?.Invoke();
+                    }).Returns(() =>
+                    {
+                        return Task.CompletedTask;
+                    });
         }
 
         [Fact]
@@ -678,8 +678,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             public string Resolve(string name)
             {
-                string value = null;
-                if (Names.TryGetValue(name, out value))
+                if (Names.TryGetValue(name, out string value))
                 {
                     return value;
                 }

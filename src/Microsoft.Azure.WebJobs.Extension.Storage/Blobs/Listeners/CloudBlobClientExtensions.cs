@@ -9,7 +9,7 @@ using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {
-    internal static class StorageBlobClientExtensions
+    internal static class CloudBlobClientExtensions
     {
         public static async Task<IEnumerable<IListBlobItem>> ListBlobsAsync(this CloudBlobClient client,
             string prefix, bool useFlatBlobListing, BlobListingDetails blobListingDetails,

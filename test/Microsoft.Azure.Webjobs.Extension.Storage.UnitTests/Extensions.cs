@@ -1,85 +1,18 @@
-﻿using Microsoft.Extensions.Hosting;
-using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage.Table;
+﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the MIT License. See License.txt in the project root for license information.
+
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.WindowsAzure.Storage.Queue;
-using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.Table;
 
 namespace Microsoft.Azure.WebJobs
 {
-    // $$$ Helpers for dealing with unit-testable Cloud sdk. 
-    static class Mock
-    {        
-        public static BlobResultSegment NewBlobResultSegment(
-            BlobContinuationToken continuationToken,
-            IEnumerable<ICloudBlob> results
-            )
-        {
-            throw new NotImplementedException();
-        }
-
-        public static CloudQueueMessage SetDequeueCount(this CloudQueueMessage msg, int value)
-        {
-            var prop = msg.GetType().GetProperty(nameof(CloudQueueMessage.DequeueCount),
-                BindingFlags.Instance | BindingFlags.NonPublic);
-
-            prop.SetValue(msg, value);
-            return msg;
-        }
-
-        public static CloudQueueMessage SetExpirationTime(this CloudQueueMessage msg, DateTimeOffset? value)
-        {
-            var prop = msg.GetType().GetProperty(nameof(CloudQueueMessage.ExpirationTime),
-                BindingFlags.Instance | BindingFlags.NonPublic);
-
-            prop.SetValue(msg, value);
-            return msg;
-        }
-
-        public static CloudQueueMessage SetId(this CloudQueueMessage msg, string value)
-        {
-            var prop = msg.GetType().GetProperty(nameof(CloudQueueMessage.Id),
-                BindingFlags.Instance | BindingFlags.NonPublic);
-
-            prop.SetValue(msg, value);
-            return msg;
-        }
-
-        public static CloudQueueMessage SetInsertionTime(this CloudQueueMessage msg, DateTimeOffset? value)
-        {
-            var prop = msg.GetType().GetProperty(nameof(CloudQueueMessage.InsertionTime),
-                BindingFlags.Instance | BindingFlags.NonPublic);
-
-            prop.SetValue(msg, value);
-            return msg;
-        }
-
-        public static CloudQueueMessage SetNextVisibleTime(this CloudQueueMessage msg, DateTimeOffset? value)
-        {
-            var prop = msg.GetType().GetProperty(nameof(CloudQueueMessage.NextVisibleTime),
-                BindingFlags.Instance | BindingFlags.NonPublic);
-
-            prop.SetValue(msg, value);
-            return msg;
-        }
-
-        public static CloudQueueMessage SetPopReceipt(this CloudQueueMessage msg, string value)
-        {
-            var prop = msg.GetType().GetProperty(nameof(CloudQueueMessage.PopReceipt),
-                BindingFlags.Instance | BindingFlags.NonPublic);
-
-            prop.SetValue(msg, value);
-            return msg;
-        }
-    }
-
     static class MoreStorageExtensions
     {
         // $$$ Rationalize with AddFakeStorageAccountProvider in FunctionTests.
@@ -98,7 +31,7 @@ namespace Microsoft.Azure.WebJobs
             return builder;
         }
 
-           
+
         public static string DownloadText(this ICloudBlob blob)
         {
             if (blob == null)
@@ -160,7 +93,7 @@ namespace Microsoft.Azure.WebJobs
         }
 
         public static TElement Retrieve<TElement>(this CloudTable table, string partitionKey, string rowKey)
-    where TElement : ITableEntity, new()
+            where TElement : ITableEntity, new()
         {
             if (table == null)
             {

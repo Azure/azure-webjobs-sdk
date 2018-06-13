@@ -46,39 +46,27 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             var fakeSasUri = container.Uri + sig;
             var prog = new BasicProg();
-            var activator = new FakeActivator(prog);
+
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<BasicProg>()
+                .ConfigureDefaultTestHost<BasicProg>(prog)
                 .ConfigureAppConfiguration(config =>
                 {
                     // Set env to the SAS container and clear out all other storage. 
                     config.AddInMemoryCollection(new Dictionary<string, string>()
                     {
-                            { "AzureWebJobsInternalSasBlobContainer", fakeSasUri },
+                            { "AzureWebJobs:InternalSasBlobContainer", fakeSasUri },
                             { "AzureWebJobsStorage", null },
                             { "AzureWebJobsDashboard", null }
                     });
                 })
-                .ConfigureServices(services =>
-                {
-                    services.AddSingleton<IJobActivator>(activator);
-
-                    // TODO: We shouldn't have to do this, but our default parser
-                    //       does not allow for null Storage/Dashboard.
-                    //var mockParser = new Mock<IStorageAccountParser>(); $$$ 
-                    //mockParser
-                    //    .Setup(p => p.ParseAccount(null, It.IsAny<string>()))
-                    //    .Returns<string>(null);
-
-                    //services.AddSingleton<IStorageAccountParser>(mockParser.Object);
-                })
+                .AddStorageForRuntimeInternals()
                 .Build();
 
-            var internalOptions = host.GetOptions<JobHostInternalStorageOptions>();
+            var internalOptions = host.Services.GetService<DistributedLockManagerContainerProvider>();
             Assert.NotNull(internalOptions);
             Assert.Equal(container.Name, internalOptions.InternalContainer.Name);
 
-            await host.GetJobHost().CallAsync("Foo");
+            await host.GetJobHost().CallAsync(nameof(BasicProg.Foo));
 
             Assert.Equal(1, prog._count); // Verify successfully called.
         }

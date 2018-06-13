@@ -3,31 +3,24 @@
 
 using System;
 using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.Host.Configuration
 {
-    /* $$$ Remove this  / what's the right way to do this
+    // Need a setup class to help with binding because internal class name != Section Name. 
     internal class JobHostInternalStorageOptionsSetup : IConfigureOptions<JobHostInternalStorageOptions>
     {
-        private IStorageAccountProvider _storageAccountProvider;
-
-        public JobHostInternalStorageOptionsSetup(IStorageAccountProvider storageAccountProvider)
+        private readonly IConfiguration _config;
+        public JobHostInternalStorageOptionsSetup(IConfiguration config)
         {
-            _storageAccountProvider = storageAccountProvider;
+            _config = config;
         }
 
         public void Configure(JobHostInternalStorageOptions options)
         {
-            var sasBlobContainer = _storageAccountProvider.InternalSasStorage;
-            if (sasBlobContainer != null)
-            {
-                var uri = new Uri(sasBlobContainer);
-                var sdkContainer = new CloudBlobContainer(uri);
-
-                options.InternalContainer = sdkContainer;
-            }
+            _config.Bind("AzureWebJobs", options);
         }
-    }*/
+    }
 }

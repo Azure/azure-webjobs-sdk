@@ -61,26 +61,32 @@ namespace Microsoft.Extensions.Hosting
             return builder
                .ConfigureServices((context, services) =>
                {
+                   // Replace existing runtime services with storage-backed implementations.
                    // Add runtime services that depend on storage.
                    services.AddSingleton<IDistributedLockManager>(provider => Create(provider));
                                       
                    services.TryAddSingleton<IHostIdProvider, DynamicHostIdProvider>();
 
-                   services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<LegacyConfig>, LegacyConfigSetup>());
 
-                   // $$$
-                   //services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, JobHostInternalStorageOptionsSetup>());
+                   // Used specifically for the CloudBlobContainerDistributedLockManager implementaiton 
+                   services.TryAddSingleton<DistributedLockManagerContainerProvider>();
+
+                   services.TryAddEnumerable(
+                       ServiceDescriptor.Transient<IConfigureOptions<LegacyConfig>, LegacyConfigSetup>());
+
+                   services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, JobHostInternalStorageOptionsSetup>());
                });
         }
 
         // This is only called if the host didn't already provide an implementation 
         private static IDistributedLockManager Create(IServiceProvider provider)
         {
+            // $$$ get rid of LegacyConfig
             var opts = provider.GetRequiredService<IOptions<LegacyConfig>>();
 
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
             
-            var sas = provider.GetService<JobHostInternalStorageOptions>(); // may be null 
+            var sas = provider.GetService<DistributedLockManagerContainerProvider>();
 
             CloudBlobContainer container;
 
@@ -92,6 +98,10 @@ namespace Microsoft.Extensions.Hosting
             {
                 var config = opts.Value;
                 CloudStorageAccount account = config.GetStorageAccount();
+                if (account == null)
+                {
+                    return new InMemorySingletonManager();
+                }
 
                 var blobClient = account.CreateCloudBlobClient();
                 container = blobClient.GetContainerReference(HostContainerNames.Hosts);

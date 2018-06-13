@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
@@ -59,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         {
             if (!_committed)
             {
-                CommitAsync().GetAwaiter().GetResult();
+                Task.Run(async () => await CommitAsync()).GetAwaiter().GetResult();
             }
 
             base.Close();

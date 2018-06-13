@@ -3,6 +3,7 @@
 
 namespace Microsoft.Azure.WebJobs.Host.Loggers
 {
+    // $$$ Also Need to register FastTableLoggerProvider so that the log messages get properly created. 
     public interface IEventCollectorFactory
     {
         IAsyncCollector<FunctionInstanceLogEntry> Create();

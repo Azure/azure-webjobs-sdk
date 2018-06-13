@@ -36,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
 
         private static LocalBlobDescriptor CreateDescriptor(CloudBlobDirectory directory, string name)
         {
-            var blob = directory.GetBlockBlobReference(name);
+            var blob = directory.SafeGetBlockBlobReference(name);
 
             return new LocalBlobDescriptor
             {

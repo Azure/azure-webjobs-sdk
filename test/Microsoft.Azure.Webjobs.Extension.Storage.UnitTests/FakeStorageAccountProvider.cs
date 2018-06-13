@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the MIT License. See License.txt in the project root for license information.
+
 using System.Threading.Tasks;
-using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
-using Xunit;
 
 namespace Microsoft.Azure.WebJobs
 {
@@ -45,6 +43,10 @@ namespace Microsoft.Azure.WebJobs
 #else
         private FakeStorage.FakeAccount _account2 = new FakeStorage.FakeAccount();
 
+        public override CloudQueueClient CreateCloudQueueClient()
+        {
+            return _account2.CreateCloudQueueClient();
+        }
         public override CloudBlobClient CreateCloudBlobClient()
         {
             return _account2.CreateCloudBlobClient();
@@ -55,8 +57,8 @@ namespace Microsoft.Azure.WebJobs
             return _account2.CreateCloudTableClient();
         }
 
-        public override string Name => "FakeAccount";
-        public override bool IsDevelopmentStorageAccount() { return true; }        
+        public override string Name => _account2.Name;
+        public override bool IsDevelopmentStorageAccount() { return true; }
 
 #endif
     }
@@ -70,8 +72,7 @@ namespace Microsoft.Azure.WebJobs
             var queue = client.GetQueueReference(queueName);
             await queue.CreateIfNotExistsAsync();
             await queue.ClearAsync();
-            await queue.AddMessageAsync(message);            
+            await queue.AddMessageAsync(message);
         }
     }
-
 }

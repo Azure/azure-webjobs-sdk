@@ -180,7 +180,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "dashes, not start or end with a dash, and not contain consecutive dashes.");
         }
 
-        private class FastLogger : IAsyncCollector<FunctionInstanceLogEntry>
+        private class FastLogger : IAsyncCollector<FunctionInstanceLogEntry>, IEventCollectorFactory
         {
             public List<FunctionInstanceLogEntry> List = new List<FunctionInstanceLogEntry>();
 
@@ -202,29 +202,94 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 List.Add(FlushEntry);
                 return Task.CompletedTask;
             }
+
+            public IAsyncCollector<FunctionInstanceLogEntry> Create()
+            {
+                return this;
+            }
+        }
+
+        // Verify that JobHostConfig pulls a Sas container from appsettings. 
+        // Tests reading from an environment variable.
+        [Fact]
+        public void JobHost_UsesSas_FromEnvVar()
+        {
+            var fakeSasUri = "https://contoso.blob.core.windows.net/myContainer?signature=foo";
+
+            using (EnvVarHolder.Set("AzureWebJobs:InternalSasBlobContainer", fakeSasUri))
+            {
+                var hostBuilder = new HostBuilder()
+                 .ConfigureDefaultTestHost()
+                 .ConfigureAppConfiguration(c =>
+                 {
+                     c.AddEnvironmentVariables();
+                 })
+                 .AddStorageForRuntimeInternals();
+
+                IHost host = hostBuilder.Build();
+
+                var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
+
+                var container = config.InternalContainer;
+                Assert.NotNull(container);
+                Assert.Equal(container.Name, "myContainer"); // specified in sas. 
+            }
+        }
+
+        // Verify that JobHostConfig pulls a Sas container from appsettings. 
+        [Fact]
+        public void JobHost_UsesSas_SetService()
+        {            
+            var hostBuilder = new HostBuilder()
+             .ConfigureDefaultTestHost()
+             .ConfigureAppConfiguration(c =>
+             {
+             })
+             .AddStorageForRuntimeInternals();
+
+            // Explicitly set the service
+            hostBuilder.ConfigureServices((ctx, services) =>
+            {
+                var uri2 = new Uri("https://contoso.blob.core.windows.net/myContainer2?signature=foo");
+                services.AddSingleton<DistributedLockManagerContainerProvider>(new DistributedLockManagerContainerProvider()
+                {
+                    InternalContainer = new WindowsAzure.Storage.Blob.CloudBlobContainer(uri2)
+                });
+            });
+
+            IHost host = hostBuilder.Build();
+
+            var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
+
+            var container = config.InternalContainer;
+            Assert.NotNull(container);
+            Assert.Equal(container.Name, "myContainer2"); // specified in sas. 
         }
 
         // Verify that JobHostConfig pulls a Sas container from appsettings. 
         [Fact]
         public void JobHost_UsesSas()
         {
-            var fakeSasUri = "https://contoso.blob.core.windows.net/myContainer?signature=foo";
+            var fakeSasUri = "https://contoso.blob.core.windows.net/myContainer3?signature=foo";
 
-            IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost()
-                .ConfigureAppConfiguration(c =>
-                {
-                    c.AddInMemoryCollection(new Dictionary<string, string>
-                    {
-                        { "AzureWebJobsInternalSasBlobContainer", fakeSasUri }
-                    });
-                })
-                .Build();
+            var hostBuilder = new HostBuilder()
+             .ConfigureDefaultTestHost()
+             .ConfigureAppConfiguration(c =>
+             {
+                 c.AddInMemoryCollection(new Dictionary<string, string>
+                 {
+                        { "AzureWebJobs:InternalSasBlobContainer", fakeSasUri }
+                 });
+             })
+             .AddStorageForRuntimeInternals();
 
-            var config = host.GetOptions<JobHostInternalStorageOptions>();
+            IHost host = hostBuilder.Build();
+
+            var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
+
             var container = config.InternalContainer;
             Assert.NotNull(container);
-            Assert.Equal(container.Name, "myContainer"); // specified in sas. 
+            Assert.Equal(container.Name, "myContainer3"); // specified in sas.             
         }
 
         // Test that we can explicitly disable storage and call through a function
@@ -233,73 +298,60 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public async Task JobHost_NoStorage_Succeeds()
         {
             var fastLogger = new FastLogger();
-            IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<BasicTest>()
-                .ConfigureServices(services =>
-                {
-                    services.AddSingleton<IAsyncCollector<FunctionInstanceLogEntry>>(fastLogger);
 
-                    // TODO: We shouldn't have to do this, but our default parser
-                    //       does not allow for null Storage/Dashboard. $$$
-                    //var mockParser = new Mock<IStorageAccountParser>();
-                    //mockParser
-                    //    .Setup(p => p.ParseAccount(null, It.IsAny<string>()))
-                    //    .Returns<string>(null);
+            using (EnvVarHolder.Set("AzureWebJobsStorage", null))
+            using (EnvVarHolder.Set("AzureWebJobsDashboard", null))
+            {
 
-                    //services.AddSingleton<IStorageAccountParser>(mockParser.Object);
-                })
-                .ConfigureAppConfiguration(config =>
-                {
-                    config.AddInMemoryCollection(new Dictionary<string, string>()
-                    {
-                        { "AzureWebJobsStorage", null },
-                        { "AzureWebJobsDashboard", null }
-                    });
-                })
-                .AddStorageBindings()
+                IHost host = new HostBuilder()
+                .ConfigureWebJobsHost()
+                .ConfigureTypeLocator(typeof(BasicTest))
+                .ConfigureWebJobsFastLogging(fastLogger)
                 .Build();
+                
+                var randomValue = Guid.NewGuid().ToString();
 
-            Assert.Null(host.GetOptions<JobHostInternalStorageOptions>().InternalContainer);
+                StringBuilder sbLoggingCallbacks = new StringBuilder();
 
-            var randomValue = Guid.NewGuid().ToString();
+                // Manually invoked.
+                var method = typeof(BasicTest).GetMethod("Method", BindingFlags.Public | BindingFlags.Static);
 
-            StringBuilder sbLoggingCallbacks = new StringBuilder();
+                var lockManager = host.Services.GetRequiredService<IDistributedLockManager>();
+                Assert.IsType<InMemorySingletonManager>(lockManager);
 
-            // Manually invoked.
-            var method = typeof(BasicTest).GetMethod("Method", BindingFlags.Public | BindingFlags.Static);
+                host.GetJobHost().Call(method, new { value = randomValue });
+                Assert.True(BasicTest.Called);
 
-            host.GetJobHost().Call(method, new { value = randomValue });
-            Assert.True(BasicTest.Called);
+                Assert.Equal(2, fastLogger.List.Count); // We should be batching, so flush not called yet.
 
-            Assert.Equal(2, fastLogger.List.Count); // We should be batching, so flush not called yet.
+                host.Start(); // required to call stop()
+                await host.StopAsync(); // will ensure flush is called.
 
-            // $$$ AddStraoge sets SuperHack, which requires Dashboard connection 
-            host.Start(); // required to call stop()
-            await host.StopAsync(); // will ensure flush is called.
+                // Verify fast logs
+                Assert.Equal(3, fastLogger.List.Count);
 
-            // Verify fast logs
-            Assert.Equal(3, fastLogger.List.Count);
+                var startMsg = fastLogger.List[0];
+                Assert.Equal("BasicTest.Method", startMsg.FunctionName);
+                Assert.Equal(null, startMsg.EndTime);
+                Assert.NotNull(startMsg.StartTime);
 
-            var startMsg = fastLogger.List[0];
-            Assert.Equal("BasicTest.Method", startMsg.FunctionName);
-            Assert.Equal(null, startMsg.EndTime);
-            Assert.NotNull(startMsg.StartTime);
+                var endMsg = fastLogger.List[1];
+                Assert.Equal(startMsg.FunctionName, endMsg.FunctionName);
+                Assert.Equal(startMsg.StartTime, endMsg.StartTime);
+                Assert.Equal(startMsg.FunctionInstanceId, endMsg.FunctionInstanceId);
+                Assert.NotNull(endMsg.EndTime); // signal completed
+                Assert.True(endMsg.StartTime <= endMsg.EndTime);
+                Assert.Null(endMsg.ErrorDetails);
+                Assert.Null(endMsg.ParentId);
 
-            var endMsg = fastLogger.List[1];
-            Assert.Equal(startMsg.FunctionName, endMsg.FunctionName);
-            Assert.Equal(startMsg.StartTime, endMsg.StartTime);
-            Assert.Equal(startMsg.FunctionInstanceId, endMsg.FunctionInstanceId);
-            Assert.NotNull(endMsg.EndTime); // signal completed
-            Assert.True(endMsg.StartTime <= endMsg.EndTime);
-            Assert.Null(endMsg.ErrorDetails);
-            Assert.Null(endMsg.ParentId);
+                Assert.Equal(2, endMsg.Arguments.Count);
+                Assert.True(endMsg.Arguments.ContainsKey("log"));
+                Assert.Equal(randomValue, endMsg.Arguments["value"]);
+                                
+                Assert.Equal("val=" + randomValue, endMsg.LogOutput.Trim());
 
-            Assert.Equal(2, endMsg.Arguments.Count);
-            Assert.True(endMsg.Arguments.ContainsKey("log"));
-            Assert.Equal(randomValue, endMsg.Arguments["value"]);
-            Assert.Equal("val=" + randomValue, endMsg.LogOutput.Trim());
-
-            Assert.Same(FastLogger.FlushEntry, fastLogger.List[2]);
+                Assert.Same(FastLogger.FlushEntry, fastLogger.List[2]);
+            } // EnvVarHolder
         }
 
         public class BasicTest

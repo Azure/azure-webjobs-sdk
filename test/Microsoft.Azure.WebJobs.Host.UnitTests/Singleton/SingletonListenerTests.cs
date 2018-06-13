@@ -18,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
     public class SingletonListenerTests
     {
         private readonly string testHostId = "testhostid";
-        private readonly SingletonOptions _config;
+        private readonly SingletonOptions _options;
         private readonly Mock<SingletonManager> _mockSingletonManager;
         private readonly Mock<IListener> _mockInnerListener;
         private readonly SingletonListener _listener;
@@ -30,12 +30,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             MethodInfo methodInfo = this.GetType().GetMethod("TestJob", BindingFlags.Static | BindingFlags.NonPublic);
             var descriptor = FunctionIndexer.FromMethod(methodInfo);
             _attribute = new SingletonAttribute();
-            _config = new SingletonOptions
+            _options = new SingletonOptions
             {
                 LockPeriod = TimeSpan.FromSeconds(20)
             };
             _mockSingletonManager = new Mock<SingletonManager>(MockBehavior.Strict, null, new OptionsWrapper<SingletonOptions>(null), null, null, new FixedHostIdProvider(testHostId), null);
-            _mockSingletonManager.SetupGet(p => p.Config).Returns(_config);
+            _mockSingletonManager.SetupGet(p => p.Options).Returns(_options);
             _mockInnerListener = new Mock<IListener>(MockBehavior.Strict);
 
             _listener = new SingletonListener(descriptor, _attribute, _mockSingletonManager.Object, _mockInnerListener.Object, null);
@@ -72,7 +72,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             Assert.NotNull(_listener.LockTimer);
             Assert.True(_listener.LockTimer.AutoReset);
             Assert.True(_listener.LockTimer.Enabled);
-            Assert.Equal(_config.ListenerLockRecoveryPollingInterval.TotalMilliseconds, _listener.LockTimer.Interval);
+            Assert.Equal(_options.ListenerLockRecoveryPollingInterval.TotalMilliseconds, _listener.LockTimer.Interval);
 
             _mockSingletonManager.VerifyAll();
         }
@@ -82,7 +82,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         {
             // we expect the "retry" parameter passed to TryLockAync to be "true"
             // when recovery polling is turned off
-            _config.ListenerLockRecoveryPollingInterval = TimeSpan.MaxValue;
+            _options.ListenerLockRecoveryPollingInterval = TimeSpan.MaxValue;
 
             CancellationToken cancellationToken = new CancellationToken();
             _mockSingletonManager.Setup(p => p.TryLockAsync(_lockId, null, _attribute, cancellationToken, true))

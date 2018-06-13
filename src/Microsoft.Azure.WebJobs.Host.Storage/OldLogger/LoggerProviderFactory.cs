@@ -29,7 +29,8 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
 
         private object CreateLoggerProvider()
         {
-            bool noDashboardStorage = _storageAccountProvider.Dashboard == null; // $$$ if this is null, we should have registered different DI components
+            // $$$ if this is null, we should have registered different DI components
+            bool noDashboardStorage = _storageAccountProvider.Dashboard == null; 
             
             if (_hasFastTableHook && noDashboardStorage)
             {

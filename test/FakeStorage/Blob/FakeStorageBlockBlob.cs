@@ -33,13 +33,28 @@ namespace FakeStorage
             if (properties != null)
             {
                 _properties = properties;
+                ApplyProperties();                
             }
             else
             {
                 _properties = new FakeStorageBlobProperties();
             }
+
+            this.SetInternalField(nameof(ServiceClient), parent._client);
         }
-        
+
+        private void ApplyProperties()
+        {
+            if (_properties != null)
+            {
+                var realProps = _properties.GetRealProperties();
+                realProps.SetInternalField(nameof(BlobType), BlobType.BlockBlob);
+
+                // { return this.attributes.Properties; }
+                new Wrapper(this).GetField("attributes").SetInternalField("Properties", realProps);
+            }
+        }
+ 
         public override Task AbortCopyAsync(string copyId)
         {
             throw new NotImplementedException();
@@ -61,32 +76,33 @@ namespace FakeStorage
         public Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId,
             CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return AcquireLeaseCore(leaseTime, proposedLeaseId);
+        }
+
+        public override Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId = null)
+        {
+            return AcquireLeaseCore(leaseTime, proposedLeaseId);
+        }
+
+        public override Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
+        {
+            return AcquireLeaseCore(leaseTime, proposedLeaseId);
+        }
+
+        public override Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
+        {
+            return AcquireLeaseCore(leaseTime, proposedLeaseId);
+        }
+
+        private Task<String> AcquireLeaseCore(TimeSpan? leaseTime, string proposedLeaseId)
+        {
             if (proposedLeaseId != null)
             {
                 throw new NotImplementedException();
             }
 
-            string leaseId = _store.AcquireLease(_containerName, _blobName, leaseTime);
+            string leaseId = _store.AcquireLease(this._containerName, _blobName, leaseTime);
             return Task.FromResult(leaseId);
-        }
-
-        public override Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId = null)
-        {
-            //throw new NotImplementedException();
-            return base.AcquireLeaseAsync(leaseTime, proposedLeaseId);
-        }
-
-        public override Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
-        {
-            //throw new NotImplementedException();
-            return base.AcquireLeaseAsync(leaseTime, proposedLeaseId, accessCondition, options, operationContext);
-        }
-
-        public override Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
-        {
-            //throw new NotImplementedException();
-            return base.AcquireLeaseAsync(leaseTime, proposedLeaseId, accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task<TimeSpan> BreakLeaseAsync(TimeSpan? breakPeriod)
@@ -239,33 +255,36 @@ namespace FakeStorage
             return base.DownloadRangeToStreamAsync(target, offset, length, accessCondition, options, operationContext, cancellationToken);
         }
 
-        public override async Task<string> DownloadTextAsync()
+        private async Task<string> DownloadTextCoreAsync(Encoding encoding)
         {
+            encoding = encoding ?? Encoding.UTF8;
             using (Stream stream = await OpenReadAsync(CancellationToken.None))
             {
-                using (TextReader reader = new StreamReader(stream, Encoding.UTF8))
+                using (TextReader reader = new StreamReader(stream, encoding))
                 {
                     return reader.ReadToEnd();
                 }
             }
         }
 
+        public override Task<string> DownloadTextAsync()
+        {
+            return DownloadTextCoreAsync(Encoding.UTF8);
+        }
+
         public override Task<string> DownloadTextAsync(AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
-            throw new NotImplementedException();
-            return base.DownloadTextAsync(accessCondition, options, operationContext);
+            return DownloadTextCoreAsync(Encoding.UTF8);
         }
 
         public override Task<string> DownloadTextAsync(Encoding encoding, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
-            throw new NotImplementedException();
-            return base.DownloadTextAsync(encoding, accessCondition, options, operationContext);
+            return DownloadTextCoreAsync(encoding);
         }
 
         public override Task<string> DownloadTextAsync(Encoding encoding, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
-            return base.DownloadTextAsync(encoding, accessCondition, options, operationContext, cancellationToken);
+            return DownloadTextCoreAsync(encoding);
         }
 
         public override Task<int> DownloadToByteArrayAsync(byte[] target, int index)
@@ -371,6 +390,8 @@ namespace FakeStorage
             {
                 _metadata.Add(item);
             }
+
+            ApplyProperties();
 
             return Task.FromResult(0);
         }

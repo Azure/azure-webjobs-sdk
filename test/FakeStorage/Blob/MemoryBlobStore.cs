@@ -17,7 +17,7 @@ namespace FakeStorage
         private readonly ConcurrentDictionary<string, Container> _items = new ConcurrentDictionary<string, Container>();
         private ServiceProperties _properties = new ServiceProperties(new LoggingProperties(), new MetricsProperties(), new MetricsProperties(), new CorsProperties());
 
-        public void SetBlob(string containerName, string blobName, CloudBlockBlob blob)
+        public void SetBlob(string containerName, string blobName, ICloudBlob blob)
         {
             CreateIfNotExists(containerName);
             _items[containerName].SetBlob(blobName, blob);
@@ -306,14 +306,20 @@ namespace FakeStorage
                     return blob._hook;
                 }
 
+                FakeStorageBlobProperties properties = new FakeStorageBlobProperties()
+                {
+                    ETag = blob.ETag,
+                    LastModified = blob.LastModified,
+                };
+
                 switch (blob.BlobType)
                 {
                     case BlobType.BlockBlob:
-                        return new FakeStorageBlockBlob(blobName, parent);
+                        return new FakeStorageBlockBlob(blobName, parent, properties);
                     case BlobType.PageBlob:
-                        return new FakeStoragePageBlob(blobName, parent);                        
+                        return new FakeStoragePageBlob(blobName, parent, properties);                        
                     case BlobType.AppendBlob:
-                        return new FakeStorageAppendBlob(blobName, parent);
+                        return new FakeStorageAppendBlob(blobName, parent, properties);
                     default:
                         throw new InvalidOperationException(string.Format("Type '{0}' is not supported.", blob.BlobType));
                 }

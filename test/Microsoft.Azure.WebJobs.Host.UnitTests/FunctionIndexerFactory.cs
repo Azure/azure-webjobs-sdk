@@ -22,8 +22,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             public FakeStorageAccountProvider()
                 : base(null)
             {
-
             }
+
             public override XStorageAccount Get(string name)
             {
                 return XStorageAccount.New(CloudStorageAccount.DevelopmentStorageAccount);
@@ -42,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<XStorageAccountProvider>(new FakeStorageAccountProvider());
-                    
+
 
                     if (nameResolver != null)
                     {
@@ -54,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                         services.AddSingleton<IExtensionRegistry>(extensionRegistry);
                     }
                 })
-                .AddStorageBindings()
+                .AddAzureStorage()
                 .Build();
 
             ITriggerBindingProvider triggerBindingProvider = host.Services.GetService<ITriggerBindingProvider>();

@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Threading;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Bindings.Cancellation;
@@ -58,6 +59,8 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IFunctionExecutor, FunctionExecutor>();
             services.TryAddSingleton<IJobHostContextFactory, JobHostContextFactory>();
 
+            services.TryAddSingleton<ILoadbalancerQueue, InMemoryLoadbalancerQueue>();
+
             // Anybody can add IBindingProvider via DI. 
             // Consume the whole list via a CompositeBindingProvider
             services.TryAddSingleton<CompositeBindingProviderFactory>();
@@ -113,10 +116,25 @@ namespace Microsoft.Azure.WebJobs
             return services;
         }
 
+        public static IHostBuilder ConfigureWebJobsFastLogging(this IHostBuilder builder, IEventCollectorFactory fastLogger)
+        {
+            builder.ConfigureServices(services =>
+            {
+                services.AddWebJobsFastLogging(fastLogger);
+            });
+            return builder;
+        }
+
+        // This is an alternative to AddWebJobsLogging
+        public static IServiceCollection AddWebJobsFastLogging(this IServiceCollection services, IEventCollectorFactory fastLogger)
+        {
+            services.AddSingleton<IFunctionOutputLoggerProvider, FastTableLoggerProvider>();
+            services.AddSingleton<IFunctionOutputLogger, FastTableLoggerProvider>();
+
+            services.AddSingleton(fastLogger);
+            return services;
+        }
         
-
-
-                
         /// <summary>
         /// Adds builtin bindings 
         /// </summary>

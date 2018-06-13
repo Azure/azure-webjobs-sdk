@@ -31,8 +31,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         public PollLogsStrategy(bool performInitialScan = true)
         {
             _registrations = new Dictionary<CloudBlobContainer, ICollection<ITriggerExecutor<ICloudBlob>>>(
-                new StorageBlobContainerComparer());
-            _logListeners = new Dictionary<CloudBlobClient, BlobLogListener>(new StorageBlobClientComparer());
+                new CloudBlobContainerComparer());
+            _logListeners = new Dictionary<CloudBlobClient, BlobLogListener>(new CloudBlobClientComparer());
             _initialScanThread = new Thread(ScanContainers);
             _blobsFoundFromScanOrNotification = new ConcurrentQueue<ICloudBlob>();
             _cancellationTokenSource = new CancellationTokenSource();

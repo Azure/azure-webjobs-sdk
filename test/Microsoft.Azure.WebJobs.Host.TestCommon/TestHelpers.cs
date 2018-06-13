@@ -2,20 +2,24 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Config;
-using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
 using Microsoft.Azure.WebJobs.Host.Indexers;
+using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.WindowsAzure.Storage.Table;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.TestCommon
@@ -23,13 +27,19 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
     public static class TestHelpers
     {
         // Test error if not reached within a timeout 
-        public static Task<TResult> AwaitWithTimeout<TResult>(TaskCompletionSource<TResult> taskSource)
+        public static Task<TResult> AwaitWithTimeout<TResult>(this TaskCompletionSource<TResult> taskSource)
         {
-            // $$$ use a timeout here. 
             return taskSource.Task;
         }
 
-        public static async Task Await(Func<Task<bool>> condition, int timeout = 60 * 1000, int pollingInterval = 2 * 1000, bool throwWhenDebugging = false, string userMessage = null)
+        // Test error if not reached within a timeout 
+        public static TResult AwaitWithTimeout<TResult>(this Task<TResult> taskSource)
+        {
+            Await(() => taskSource.IsCompleted).Wait();
+            return taskSource.Result;
+        }
+
+        public static async Task Await(Func<Task<bool>> condition, int timeout = 60 * 1000, int pollingInterval = 50, bool throwWhenDebugging = false, Func<string> userMessageCallback = null)
         {
             DateTime start = DateTime.Now;
             while (!await condition())
@@ -49,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             }
         }
 
-        public static async Task Await(Func<bool> condition, int timeout = 60 * 1000, int pollingInterval = 2 * 1000, bool throwWhenDebugging = false, Func<string> userMessageCallback = null)
+        public static async Task Await(Func<bool> condition, int timeout = 60 * 1000, int pollingInterval = 50, bool throwWhenDebugging = false, Func<string> userMessageCallback = null)
         {
             await Await(() => Task.FromResult(condition()), timeout, pollingInterval, throwWhenDebugging, userMessageCallback);
         }
@@ -79,6 +89,8 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             var constructor = typeof(T).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { }, null);
             return (T)constructor.Invoke(null);
         }
+
+    
 
         // Test that we get an indexing error (FunctionIndexingException)  
         // functionName - the function name that has the indexing error. 
@@ -110,7 +122,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                    services.AddSingleton<IWebJobsExceptionHandlerFactory, TestExceptionHandlerFactory>();
                })
                .ConfigureTestLogger()
-               .AddStorageBindings();
+               .AddAzureStorage();
         }
 
         public static IHostBuilder ConfigureDefaultTestHost<TProgram>(this IHostBuilder builder,
@@ -122,7 +134,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                     services.AddSingleton<IJobHost, JobHost<TProgram>>();
 
                     services.AddSingleton<IJobActivator>(new FakeActivator(instance));
-                }).AddStorageBindings();
+                }).AddAzureStorage();
         }
 
         public static IHostBuilder ConfigureDefaultTestHost<TProgram>(this IHostBuilder builder,
@@ -142,7 +154,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                     {
                         services.AddSingleton<IJobActivator>(activator);
                     }
-                }).AddStorageBindings();
+                }).AddAzureStorage();
         }
 
         public static IHostBuilder ConfigureTestLogger(this IHostBuilder builder)
@@ -151,6 +163,22 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
              {
                  logging.AddProvider(new TestLoggerProvider());
              });
+        }
+
+        public static IHostBuilder ConfigureCatchFailures<TResult>(
+            this IHostBuilder builder,
+            TaskCompletionSource<TResult> src,
+            bool signalOnFirst,
+            IEnumerable<string> ignoreFailureFunctions)
+        {
+            var logger = new ExpectManualCompletionFunctionInstanceLogger<TResult>(
+                src,
+                signalOnFirst,
+                ignoreFailureFunctions);
+            return builder.ConfigureServices(services =>
+            {
+                services.AddSingleton<IFunctionInstanceLogger>(logger);
+            });
         }
 
 
@@ -192,10 +220,10 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             host.Call(typeof(T).GetMethod(methodName));
         }
 
-        public static CloudStorageAccount GetStorageAccount(this IHost host)
+        public static XStorageAccount GetStorageAccount(this IHost host)
         {
             var provider = host.Services.GetRequiredService<XStorageAccountProvider>(); // $$$ ok?
-            return provider.GetHost().SdkObject;            
+            return provider.GetHost();
         }
 
         public static TOptions GetOptions<TOptions>(this IHost host) where TOptions : class, new()
@@ -211,11 +239,27 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 
             return new AmbientConnectionStringProvider(config);
         }
-        
+
 
         public static IJobHostMetadataProvider CreateMetadataProvider(this IHost host)
         {
             return host.Services.GetService<IJobHostMetadataProvider>();
+        }
+
+        public static async Task<CloudQueue> CreateQueueAsync(XStorageAccount account, string queueName)
+        {
+            CloudQueueClient client = account.CreateCloudQueueClient();
+            CloudQueue queue = client.GetQueueReference(queueName);
+            await queue.CreateIfNotExistsAsync();
+            return queue;
+        }
+
+        public static async Task<CloudTable> CreateTableAsync(XStorageAccount account, string tableName)
+        {
+            CloudTableClient client = account.CreateCloudTableClient();
+            CloudTable table = client.GetTableReference(tableName);
+            await table.CreateIfNotExistsAsync();
+            return table;
         }
     }
 }

@@ -24,7 +24,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
 
         public static Task DeleteMessageAsync(this CloudQueue queue, CloudQueueMessage message, CancellationToken cancellationToken)
         {
-            return queue.DeleteMessageAsync(message.Id, message.PopReceipt, null, null, cancellationToken);
+            // $$$ How to pass cancellationtoken?
+            return queue.DeleteMessageAsync(message);
         }
 
         public static Task UpdateMessageAsync(this CloudQueue queue, CloudQueueMessage message, TimeSpan visibilityTimeout, MessageUpdateFields updateFields, CancellationToken cancellationToken)

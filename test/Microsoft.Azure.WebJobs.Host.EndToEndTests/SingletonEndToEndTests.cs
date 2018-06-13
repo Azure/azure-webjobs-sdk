@@ -649,7 +649,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 })
                 .AddExtension<TestTriggerAttributeBindingProvider>()
                 .AddStorageForRuntimeInternals();
-                        
+
             extraConfig?.Invoke(hostBuilder); // test hook gets final say to replace. 
 
             IHost host = hostBuilder.Build();
@@ -805,9 +805,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private class TestFixture : IDisposable
         {
-            private Lazy<CloudStorageAccount> _storageAccountLazy = new Lazy<CloudStorageAccount>(GetStorageAccount);
+            private Lazy<XStorageAccount> _storageAccountLazy = new Lazy<XStorageAccount>(GetStorageAccount);
 
-            public CloudStorageAccount StorageAccount => _storageAccountLazy.Value;
+            public XStorageAccount StorageAccount => _storageAccountLazy.Value;
 
             public TestFixture()
             {
@@ -820,7 +820,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 _secondaryLockDirectory = blobClient.GetContainerReference("azure-webjobs-hosts").GetDirectoryReference("locks");
             }
 
-            private static CloudStorageAccount GetStorageAccount()
+            private static XStorageAccount GetStorageAccount()
             {
                 // Create a default host since we know that's where the account
                 // is coming from

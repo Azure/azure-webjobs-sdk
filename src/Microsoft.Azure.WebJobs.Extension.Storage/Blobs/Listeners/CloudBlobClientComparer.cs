@@ -8,7 +8,7 @@ using System.Collections.Generic;
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {
     // IStorageBlobClients are flyweights; distinct references do not equate to distinct storage accounts.
-    internal class StorageBlobClientComparer : IEqualityComparer<CloudBlobClient>
+    internal class CloudBlobClientComparer : IEqualityComparer<CloudBlobClient>
     {
         public bool Equals(CloudBlobClient x, CloudBlobClient y)
         {

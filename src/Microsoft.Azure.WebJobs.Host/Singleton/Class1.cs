@@ -11,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host
 {
     // $$$ An Inmemory implementation of IDistributedLockManager. 
     // Can use this when running on a single node and don't need to coordinate across multiple machines. 
-    internal class InMemorySingletonManager : IDistributedLockManager
+    public class InMemorySingletonManager : IDistributedLockManager
     {
         Dictionary<string, FakeLock> _locks = new Dictionary<string, FakeLock>();
 

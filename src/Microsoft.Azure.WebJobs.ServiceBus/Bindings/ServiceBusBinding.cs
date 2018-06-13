@@ -20,7 +20,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
         private readonly IAsyncObjectToTypeConverter<ServiceBusEntity> _converter;
         private readonly EntityType _entityType;
         private readonly MessagingProvider _messagingProvider;
-        private readonly ServiceBusOptions _config;
+        private readonly ServiceBusOptions _options;
+
 
         public ServiceBusBinding(string parameterName, IArgumentBinding<ServiceBusEntity> argumentBinding, ServiceBusAccount account, ServiceBusOptions config, IBindableServiceBusPath path, ServiceBusAttribute attr)
         {

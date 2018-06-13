@@ -21,11 +21,11 @@ using WebJobs.Extension.Storage;
 
 namespace Microsoft.Extensions.Hosting
 {
-    public static class IStorageHostBuilderExtensions
+    public static class StorageHostBuilderExtensions
     {
         // $$$ Extensions need some way to register services!  Callable from Script (so not via an explicit Extension method) 
 
-        public static IHostBuilder AddStorageBindings(this IHostBuilder builder)
+        public static IHostBuilder AddAzureStorage(this IHostBuilder builder)
         {
             // add webjobs to user agent for all storage calls
             OperationContext.GlobalSendingRequest += (sender, e) =>

@@ -51,7 +51,8 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             if (taskSource == null)
             {
                 var progResult = prog as IProgramWithResult<TResult>;
-                taskSource = progResult.TaskSource;
+                taskSource = new TaskCompletionSource<TResult>();
+                progResult.TaskSource = taskSource;
             }
 
             TResult result = default(TResult);
@@ -87,6 +88,6 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
     // $$$ Meanth to simplify some tests - is this worth it? 
     public interface IProgramWithResult<TResult>
     {
-        TaskCompletionSource<TResult> TaskSource { get; }
+        TaskCompletionSource<TResult> TaskSource { get; set; }
     }
 }

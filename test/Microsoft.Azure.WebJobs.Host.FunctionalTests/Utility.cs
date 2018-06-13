@@ -13,20 +13,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
     static class Utility
     {
-        // Helper for quickly testing indexing errors       
-        public static void AssertIndexingError<TProgram>(string methodName, string expectedErrorMessage)
-        {
-            // Need to pass an account to get passed initial validation checks. 
-
-            IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<TProgram>()
-                .ConfigureServices(services => services.AddFakeStorageAccountProvider())
-                .AddStorageBindings()
-                .Build();
-
-            host.GetJobHost<TProgram>().AssertIndexingError(methodName, expectedErrorMessage);
-        }
-
         public static IHostBuilder ConfigureDefaultTestHost<TProgram>(this IHostBuilder builder, XStorageAccount account)
         {
             return builder.ConfigureDefaultTestHost<TProgram>()

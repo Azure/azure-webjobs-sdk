@@ -441,32 +441,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void CloudStorageAccount_CanCall()
-        {
-            // Arrange
-            var account = CreateFakeStorageAccount();
-
-            // Act
-            CloudStorageAccount result = Call<CloudStorageAccount>(account, typeof(CloudStorageAccountProgram),
-                "BindToCloudStorageAccount", (s) => CloudStorageAccountProgram.TaskSource = s);
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.Equal(account.BlobEndpoint, result.BlobEndpoint);
-        }
-
-        private class CloudStorageAccountProgram
-        {
-            public static TaskCompletionSource<CloudStorageAccount> TaskSource { get; set; }
-
-            [NoAutomaticTrigger]
-            public static void BindToCloudStorageAccount(CloudStorageAccount account)
-            {
-                TaskSource.TrySetResult(account);
-            }
-        }
-
-        [Fact]
         public void Queue_IfBoundToOutPoco_CanCall()
         {
             var account = CreateFakeStorageAccount();
@@ -971,9 +945,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void Table_IfBoundToCollectorAndETagDoesNotMatch_Throws()
+        public async Task Table_IfBoundToCollectorAndETagDoesNotMatch_Throws()
         {
-            TestBindToConcurrentlyUpdatedTableEntity(typeof(BindTableToCollectorFoo), "collector");
+            await TestBindToConcurrentlyUpdatedTableEntity(typeof(BindTableToCollectorFoo), "collector");
         }
 
         private class BindTableToCollectorFoo
@@ -1003,7 +977,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private static XStorageAccount GetRealStorage()
         {
             // Arrange            
-            
+
             var acs = Environment.GetEnvironmentVariable("AzureWebJobsDashboard");
             var account = XStorageAccount.NewFromConnectionString(acs);
             return account;
@@ -1017,7 +991,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             var client = account.CreateCloudTableClient();
             CloudTable table = client.GetTableReference(TableName);
-            await table.CreateIfNotExistsAsync();
+            await table.CreateIfNotExistsAsync(); // $$$ Should clear existing values. 
             table.InsertOrReplace(CreateTableEntity(PartitionKey, RowKey + "1", "Value", "x1", "*"));
             table.InsertOrReplace(CreateTableEntity(PartitionKey, RowKey + "2", "Value", "x2", "*"));
             table.InsertOrReplace(CreateTableEntity(PartitionKey, RowKey + "3", "Value", "x3", "*"));
@@ -1034,7 +1008,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                     services.AddSingleton<IJobActivator>(jobActivator);
                     services.AddSingleton<XStorageAccountProvider>(new FakeStorageAccountProvider(account));
                 })
-                .AddStorageBindings()
+                .AddAzureStorage()
                 .Build();
 
             // Act
@@ -1107,7 +1081,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 {
                     services.AddSingleton<XStorageAccountProvider>(new FakeStorageAccountProvider(account));
                 })
-                .AddStorageBindings()
+                .AddAzureStorage()
                 .Build();
 
             var prog = host.GetJobHost<BindTableEntityToJObjectProgram>();
@@ -1229,9 +1203,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void TableEntity_IfBoundToSdkTableEntityAndUpdatedConcurrently_Throws()
+        public async Task TableEntity_IfBoundToSdkTableEntityAndUpdatedConcurrently_Throws()
         {
-            TestBindTableEntityToConcurrentlyUpdatedValue(typeof(BindTableEntityToConcurrentlyUpdatedSdkTableEntity));
+            await TestBindTableEntityToConcurrentlyUpdatedValue(typeof(BindTableEntityToConcurrentlyUpdatedSdkTableEntity));
         }
 
         private class BindTableEntityToConcurrentlyUpdatedSdkTableEntity
@@ -1359,7 +1333,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         private static XStorageAccount CreateFakeStorageAccount()
         {
-            return new XFakeStorageAccount(); 
+            return new XFakeStorageAccount();
         }
 
         private static ITableEntity CreateTableEntity(string partitionKey, string rowKey, string propertyName,
@@ -1548,8 +1522,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 Assert.Equal(3, strings.Length);
                 for (int i = 0; i < 3; ++i)
                 {
-                    int value;
-                    bool parsed = int.TryParse(strings[i], out value);
+                    bool parsed = int.TryParse(strings[i], out int value);
                     string message = String.Format("Unable to parse CloudBlob strings[{0}]: '{1}'", i, strings[i]);
                     Assert.True(parsed, message);
                     // Ensure expected value in CloudBlob
