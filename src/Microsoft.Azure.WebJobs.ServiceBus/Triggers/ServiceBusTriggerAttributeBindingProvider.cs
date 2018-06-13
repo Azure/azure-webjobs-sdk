@@ -23,14 +23,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
                 new UserTypeArgumentBindingProvider()); // Must come last, because it will attempt to bind all types.
 
         private readonly INameResolver _nameResolver;
-        private readonly ServiceBusOptions _config;
+        private readonly ServiceBusOptions _options;
         private readonly MessagingProvider _messagingProvider;
         private readonly IConnectionStringProvider _connectionStringProvider;
 
-        public ServiceBusTriggerAttributeBindingProvider(INameResolver nameResolver, ServiceBusOptions config, MessagingProvider messagingProvider, IConnectionStringProvider connectionStringProvider)
+        public ServiceBusTriggerAttributeBindingProvider(INameResolver nameResolver, ServiceBusOptions options, MessagingProvider messagingProvider, IConnectionStringProvider connectionStringProvider)
         {
             _nameResolver = nameResolver ?? throw new ArgumentNullException(nameof(nameResolver));
-            _config = config ?? throw new ArgumentNullException(nameof(config));
+            _options = options ?? throw new ArgumentNullException(nameof(options));
             _messagingProvider = messagingProvider ?? throw new ArgumentNullException(nameof(messagingProvider));
             _connectionStringProvider = connectionStringProvider;
         }
@@ -73,16 +73,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
                 throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Can't bind ServiceBusTrigger to type '{0}'.", parameter.ParameterType));
             }
 
-            ServiceBusAccount account = new ServiceBusAccount(_config, _connectionStringProvider, attribute);
+            ServiceBusAccount account = new ServiceBusAccount(_options, _connectionStringProvider, attribute);
 
             ITriggerBinding binding;
             if (queueName != null)
             {
-                binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, _config, _messagingProvider, queueName);
+                binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, _options, _messagingProvider, queueName);
             }
             else
             {
-                binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, _config, _messagingProvider, topicName, subscriptionName);
+                binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, _options, _messagingProvider, topicName, subscriptionName);
             }
 
             return Task.FromResult<ITriggerBinding>(binding);

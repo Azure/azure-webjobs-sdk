@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.Hosting
 {
-    public static class IHostBuilderExtensions
+    public static class ServiceBusHostBuilderExtensions
     {
         public static IHostBuilder AddServiceBus(this IHostBuilder builder)
         {

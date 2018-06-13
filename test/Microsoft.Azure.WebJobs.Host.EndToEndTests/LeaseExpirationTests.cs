@@ -27,12 +27,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private static CancellationTokenSource _tokenSource;
         private readonly CloudQueueClient _queueClient;
         private readonly CloudQueue _queue;
-        private readonly JobHostOptions _config;
+        private readonly JobHostOptions _options;
 
         public LeaseExpirationTests()
         {
             RandomNameResolver nameResolver = new RandomNameResolver();
-            _config = new JobHostOptions()
+            _options = new JobHostOptions()
             {
                 // NameResolver = nameResolver,
                 // TODO: DI:
@@ -84,7 +84,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await _queue.AddMessageAsync(new CloudQueueMessage("Test"));
 
             _tokenSource = new CancellationTokenSource();
-            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_config), new Mock<IJobHostContextFactory>().Object);
+            JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(_options), new Mock<IJobHostContextFactory>().Object);
 
             _tokenSource.Token.Register(host.Stop);
             host.RunAndBlock();

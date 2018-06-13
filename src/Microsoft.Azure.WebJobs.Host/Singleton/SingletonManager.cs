@@ -33,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host
     internal class SingletonManager : IHostSingletonManager
     {
         private readonly INameResolver _nameResolver;
-        private readonly SingletonOptions _config;
+        private readonly SingletonOptions _options;
         private readonly ILogger _logger;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IDistributedLockManager _lockManager;
@@ -49,12 +49,12 @@ namespace Microsoft.Azure.WebJobs.Host
         {
         }
 
-        public SingletonManager(IDistributedLockManager lockManager, IOptions<SingletonOptions> config, IWebJobsExceptionHandler exceptionHandler,
+        public SingletonManager(IDistributedLockManager lockManager, IOptions<SingletonOptions> options, IWebJobsExceptionHandler exceptionHandler,
             ILoggerFactory loggerFactory, IHostIdProvider hostIdProvider, INameResolver nameResolver = null)
         {
             _lockManager = lockManager;
             _nameResolver = nameResolver;
-            _config = config.Value;
+            _options = options.Value;
             _loggerFactory = loggerFactory;
             _exceptionHandler = exceptionHandler;
             _logger = _loggerFactory?.CreateLogger(LogCategories.Singleton);
@@ -74,11 +74,11 @@ namespace Microsoft.Azure.WebJobs.Host
             }
         }
 
-        internal virtual SingletonOptions Config
+        internal virtual SingletonOptions Options
         {
             get
             {
-                return _config;
+                return _options;
             }
         }
 
@@ -100,7 +100,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
             if (lockHandle == null)
             {
-                TimeSpan acquisitionTimeout = GetLockAcquisitionTimeout(attribute, _config);
+                TimeSpan acquisitionTimeout = GetLockAcquisitionTimeout(attribute, _options);
                 throw new TimeoutException(string.Format("Unable to acquire singleton lock blob lease for blob '{0}' (timeout of {1} exceeded).", lockId, acquisitionTimeout.ToString("g")));
             }
 
@@ -109,19 +109,19 @@ namespace Microsoft.Azure.WebJobs.Host
 
         public async virtual Task<RenewableLockHandle> TryLockAsync(string lockId, string functionInstanceId, SingletonAttribute attribute, CancellationToken cancellationToken, bool retry = true)
         {
-            TimeSpan lockPeriod = GetLockPeriod(attribute, _config);
+            TimeSpan lockPeriod = GetLockPeriod(attribute, _options);
             IDistributedLock handle = await _lockManager.TryLockAsync(attribute.Account, lockId, functionInstanceId, null, lockPeriod, cancellationToken);
 
             if ((handle == null) && retry)
             {
                 // Someone else has the lease. Continue trying to periodically get the lease for
                 // a period of time
-                TimeSpan acquisitionTimeout = GetLockAcquisitionTimeout(attribute, _config);
+                TimeSpan acquisitionTimeout = GetLockAcquisitionTimeout(attribute, _options);
                 TimeSpan timeWaited = TimeSpan.Zero;
                 while ((handle == null) && (timeWaited < acquisitionTimeout))
                 {
-                    await Task.Delay(_config.LockAcquisitionPollingInterval);
-                    timeWaited += _config.LockAcquisitionPollingInterval;
+                    await Task.Delay(_options.LockAcquisitionPollingInterval);
+                    timeWaited += _options.LockAcquisitionPollingInterval;
                     handle = await _lockManager.TryLockAsync(attribute.Account, lockId, functionInstanceId, null, lockPeriod, cancellationToken);
                 }
             }

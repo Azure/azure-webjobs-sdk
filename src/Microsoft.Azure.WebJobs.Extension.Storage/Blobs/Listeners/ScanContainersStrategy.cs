@@ -26,9 +26,9 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         public ScanContainersStrategy()
         {
             _registrations = new Dictionary<CloudBlobContainer, ICollection<ITriggerExecutor<ICloudBlob>>>(
-                new StorageBlobContainerComparer());
+                new CloudBlobContainerComparer());
             _lastModifiedTimestamps = new Dictionary<CloudBlobContainer, DateTime>(
-                new StorageBlobContainerComparer());
+                new CloudBlobContainerComparer());
             _blobWrittenNotifications = new ConcurrentQueue<ICloudBlob>();
         }
 

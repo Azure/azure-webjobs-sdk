@@ -7,11 +7,11 @@ using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
 {
-    internal class StringToStorageBlobConverter : IAsyncConverter<string, ICloudBlob>
+    internal class StringToCloudBlobConverter : IAsyncConverter<string, ICloudBlob>
     {
         private readonly CloudBlobClient _client;
 
-        public StringToStorageBlobConverter(CloudBlobClient client)
+        public StringToCloudBlobConverter(CloudBlobClient client)
         {
             _client = client;
         }

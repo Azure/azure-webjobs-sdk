@@ -10,15 +10,15 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 {
     internal class ServiceBusAccount
     {
-        private readonly ServiceBusOptions _config;
+        private readonly ServiceBusOptions _options;
         private readonly IConnectionStringProvider _connectionStringProvider;
         private readonly IConnectionProvider _connectionProvider;
         private string _connectionString;
 
 
-        public ServiceBusAccount(ServiceBusOptions config, IConnectionStringProvider connectionStringProvider, IConnectionProvider connectionProvider = null)
+        public ServiceBusAccount(ServiceBusOptions options, IConnectionStringProvider connectionStringProvider, IConnectionProvider connectionProvider = null)
         {
-            _config = config ?? throw new ArgumentNullException(nameof(config));
+            _options = options ?? throw new ArgumentNullException(nameof(options));
             _connectionStringProvider = connectionStringProvider;
             _connectionProvider = connectionProvider;
         }
@@ -33,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             {
                 if (string.IsNullOrEmpty(_connectionString))
                 {
-                    _connectionString = _config.ConnectionString;
+                    _connectionString = _options.ConnectionString;
                     if (_connectionProvider != null && !string.IsNullOrEmpty(_connectionProvider.Connection))
                     {
                         _connectionString = _connectionStringProvider.GetConnectionString(_connectionProvider.Connection);

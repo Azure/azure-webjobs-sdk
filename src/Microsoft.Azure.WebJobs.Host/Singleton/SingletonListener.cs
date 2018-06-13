@@ -27,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         {
             _attribute = attribute;
             _singletonManager = singletonManager;
-            _singletonConfig = _singletonManager.Config;
+            _singletonConfig = _singletonManager.Options;
             _innerListener = innerListener;
 
             string boundScopeId = _singletonManager.GetBoundScopeId(_attribute.ScopeId);

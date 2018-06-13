@@ -256,7 +256,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                         { "AzureWebJobsDashboard", null }
                     });
                 })
-                .AddStorageBindings()
+                .AddAzureStorage()
                 .Build();
 
             Assert.Null(host.GetOptions<JobHostInternalStorageOptions>().InternalContainer);

@@ -82,9 +82,4 @@
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Logging\" />
-  </ItemGroup>
-
 </Project>

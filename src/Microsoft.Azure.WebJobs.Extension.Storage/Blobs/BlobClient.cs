@@ -15,9 +15,9 @@ namespace Microsoft.Azure.WebJobs
         // Tested against storage service on July 2016. All other unsafe and reserved characters work fine.
         private static readonly char[] UnsafeBlobNameCharacters = { '\\' };
 
-        public static string GetAccountName(this CloudStorageAccount client)
+        public static string GetAccountName(this CloudStorageAccount account)
         {
-            return client?.Credentials?.AccountName;
+            return account.Credentials?.AccountName;
         }
 
         public static string GetAccountName(this CloudBlobClient client)

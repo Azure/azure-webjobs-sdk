@@ -53,7 +53,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var host = new HostBuilder()
                 .ConfigureDefaultTestHost(programType)
                 .AddExtension(new CloudBlobStreamAdapterExtension(cloudBlobStreamBinderTypes))
-                .AddStorageBindings()
+                .AddAzureStorage()
                 .UseStorage(account)
                 .Build();
 
@@ -68,7 +68,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             var host = new HostBuilder()
               .ConfigureDefaultTestHost(programType)
-              .AddStorageBindings()
+              .AddAzureStorage()
               .UseStorage(account)
               .Build();
 

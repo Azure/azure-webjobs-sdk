@@ -1034,7 +1034,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                     services.AddSingleton<IJobActivator>(jobActivator);
                     services.AddSingleton<XStorageAccountProvider>(new FakeStorageAccountProvider(account));
                 })
-                .AddStorageBindings()
+                .AddAzureStorage()
                 .Build();
 
             // Act
@@ -1107,7 +1107,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 {
                     services.AddSingleton<XStorageAccountProvider>(new FakeStorageAccountProvider(account));
                 })
-                .AddStorageBindings()
+                .AddAzureStorage()
                 .Build();
 
             var prog = host.GetJobHost<BindTableEntityToJObjectProgram>();

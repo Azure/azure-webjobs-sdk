@@ -8,7 +8,7 @@ using Microsoft.WindowsAzure.Storage.Blob;
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {
     // IStorageBlobContainers are flyweights; distinct references do not equate to distinct containers.
-    internal class StorageBlobContainerComparer : IEqualityComparer<CloudBlobContainer>
+    internal class CloudBlobContainerComparer : IEqualityComparer<CloudBlobContainer>
     {
         public bool Equals(CloudBlobContainer x, CloudBlobContainer y)
         {

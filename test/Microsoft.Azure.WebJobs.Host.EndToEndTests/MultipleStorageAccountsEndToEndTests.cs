@@ -261,7 +261,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     {
                         services.AddSingleton<INameResolver>(nameResolver);
                     })
-                    .AddStorageBindings()
+                    .AddAzureStorage()
                     .Build();
 
                 Account1 = Host.GetStorageAccount();

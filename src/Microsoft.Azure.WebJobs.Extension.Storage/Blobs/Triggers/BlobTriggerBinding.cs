@@ -151,7 +151,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
         {
             return new CompositeAsyncObjectToTypeConverter<ICloudBlob>(
                 new BlobOutputConverter<ICloudBlob>(new AsyncConverter<ICloudBlob, ICloudBlob>(new IdentityConverter<ICloudBlob>())),
-                new BlobOutputConverter<string>(new StringToStorageBlobConverter(client)));
+                new BlobOutputConverter<string>(new StringToCloudBlobConverter(client)));
         }
 
         public async Task<ITriggerData> BindAsync(object value, ValueBindingContext context)

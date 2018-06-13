@@ -32,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         public ScanBlobScanLogHybridPollingStrategy(IBlobScanInfoManager blobScanInfoManager) : base()
         {
             _blobScanInfoManager = blobScanInfoManager;
-            _scanInfo = new Dictionary<CloudBlobContainer, ContainerScanInfo>(new StorageBlobContainerComparer());
+            _scanInfo = new Dictionary<CloudBlobContainer, ContainerScanInfo>(new CloudBlobContainerComparer());
             _pollLogStrategy = new PollLogsStrategy(performInitialScan: false);
             _cancellationTokenSource = new CancellationTokenSource();
             _blobsFoundFromScanOrNotification = new ConcurrentQueue<ICloudBlob>();

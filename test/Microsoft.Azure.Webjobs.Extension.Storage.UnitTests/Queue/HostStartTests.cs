@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {            
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost<InvalidQueueNameProgram>()
-                .AddStorageBindings()
+                .AddAzureStorage()
                 .UseFakeStorage()            
                 .Build();
 
