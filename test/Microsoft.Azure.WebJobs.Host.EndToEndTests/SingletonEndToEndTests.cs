@@ -17,6 +17,7 @@ using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -252,10 +253,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task SingletonFunction_StorageAccountOverride()
         {
-            IHost host = CreateTestJobHost(1);
+            IHost host = CreateTestJobHost<TestJobs1>(1, (hostBuilder) =>
+            {
+                hostBuilder.ConfigureServices((services) =>
+                {
+                    services.AddSingleton<IDistributedLockManager, CustomLockManager>();
+                });
+            });
             await host.StartAsync();
 
-            MethodInfo method = typeof(TestJobs).GetMethod("SingletonJob_StorageAccountOverride");
+            MethodInfo method = typeof(TestJobs1).GetMethod(nameof(TestJobs1.SingletonJob_StorageAccountOverride));
 
             await host.GetJobHost().CallAsync(method, new { message = "{}" });
 
@@ -265,6 +272,24 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // make sure the lease blob was only created in the secondary account
             await VerifyLeaseDoesNotExistAsync(method, SingletonScope.Function, null);
             await VerifyLeaseState(method, SingletonScope.Function, null, LeaseState.Available, LeaseStatus.Unlocked, directory: _secondaryLockDirectory);
+        }
+
+        // Allow a host to override container resolution. 
+        class CustomLockManager : StorageBaseDistributedLockManager
+        {
+            private readonly XStorageAccountProvider _storage;
+
+            public CustomLockManager(ILoggerFactory logger, XStorageAccountProvider storage) : base(logger)
+            {
+                _storage = storage;
+            }
+            protected override CloudBlobContainer GetContainer(string accountName)
+            {
+                var account = _storage.Get(accountName);
+                var client = account.CreateCloudBlobClient();
+                var container = client.GetContainerReference(StorageBaseDistributedLockManager.DefaultContainerName);
+                return container;
+            }
         }
 
         [Fact]
@@ -363,6 +388,25 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             public string Description { get; set; }
         }
 
+        public class TestJobs1
+        {
+            public TestJobs1(int hostId) { }
+
+            [Singleton(Account = Secondary)]
+            [NoAutomaticTrigger]
+            public async Task SingletonJob_StorageAccountOverride()
+            {
+                await VerifyLeaseState(
+                    GetType().GetMethod("SingletonJob_StorageAccountOverride"),
+                    SingletonScope.Function,
+                    null,
+                    LeaseState.Leased, LeaseStatus.Locked,
+                    _secondaryLockDirectory);
+
+                await Task.Delay(50);
+            }
+        }
+
         public class TestJobs
         {
             private const string Secondary = "SecondaryStorage";
@@ -457,21 +501,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 IncrementJobInvocationCount();
 
                 UpdateScopeLock("TestValue", false);
-            }
-
-            [Singleton(Account = Secondary)]
-            [NoAutomaticTrigger]
-            public async Task SingletonJob_StorageAccountOverride()
-            {
-                await VerifyLeaseState(
-                    GetType().GetMethod("SingletonJob_StorageAccountOverride"),
-                    SingletonScope.Function,
-                    null,
-                    LeaseState.Leased, LeaseStatus.Locked,
-                    _secondaryLockDirectory);
-
-                await Task.Delay(50);
-                IncrementJobInvocationCount();
             }
 
             // Job with an implicit Singleton lock on the trigger listener
@@ -570,7 +599,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 FailureDetected = false;
             }
 
-            private void IncrementJobInvocationCount()
+            protected void IncrementJobInvocationCount()
             {
                 lock (syncLock)
                 {
@@ -582,7 +611,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 }
             }
 
-            private static void UpdateScopeLock(string scope, bool isLocked)
+            protected static void UpdateScopeLock(string scope, bool isLocked)
             {
                 bool scopeIsLocked = false;
                 if (scopeLocks.TryGetValue(scope, out scopeIsLocked)
@@ -594,12 +623,18 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
-        private IHost CreateTestJobHost(int hostId)
+        private IHost CreateTestJobHost(int hostId, Action<IHostBuilder> extraConfig = null)
+        {
+            return CreateTestJobHost<TestJobs>(hostId, extraConfig);
+        }
+
+        private IHost CreateTestJobHost<TProg>(int hostId, Action<IHostBuilder> extraConfig = null)
         {
             TestJobActivator activator = new TestJobActivator(hostId);
 
-            IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<TestJobs>()
+            var hostBuilder = new HostBuilder()
+                .ConfigureDefaultTestHost<TProg>()
+                .ConfigureTestLogger()
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<IJobActivator>(activator);
@@ -613,8 +648,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     });
                 })
                 .AddExtension<TestTriggerAttributeBindingProvider>()
-                .AddStorageForRuntimeInternals()
-                .Build();
+                .AddStorageForRuntimeInternals();
+                        
+            extraConfig?.Invoke(hostBuilder); // test hook gets final say to replace. 
+
+            IHost host = hostBuilder.Build();
 
             return host;
         }

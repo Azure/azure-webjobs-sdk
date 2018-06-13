@@ -7,27 +7,34 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
-using WebJobs.Host.Storage;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
-    // Provides a blob-leased based implementation 
-    internal abstract class BlobLeaseDistributedLockManager : IDistributedLockManager
+    /// <summary>
+    /// Provides a CloudBlob lease-based implementation of the <see cref="IDistributedLockManager"/> service for singleton locking.
+    /// This class can be overridden to control where the container comes from. 
+    /// The default derived implementation is <see cref="CloudBlobContainerDistributedLockManager"/> which is container based. 
+    /// Hosts can provide a derived implementation to leverage the accountName and allow different hosts to share.
+    /// </summary>
+    public abstract class StorageBaseDistributedLockManager : IDistributedLockManager
     {
         internal const string FunctionInstanceMetadataKey = "FunctionInstance";
+
+        // Convention for container name to use. 
+        public const string DefaultContainerName = HostContainerNames.Hosts; 
 
         private readonly ConcurrentDictionary<string, CloudBlobDirectory> _lockDirectoryMap = new ConcurrentDictionary<string, CloudBlobDirectory>(StringComparer.OrdinalIgnoreCase);
 
         private readonly ILogger _logger;
 
-        public BlobLeaseDistributedLockManager(
-            ILogger logger)
+        public StorageBaseDistributedLockManager(
+            ILoggerFactory loggerFactory) // Take an ILoggerFactory since that's a DI component.
         {
-            _logger = logger;
+            _logger = loggerFactory.CreateLogger(LogCategories.Singleton);
         }
 
         public Task<bool> RenewAsync(IDistributedLock lockHandle, CancellationToken cancellationToken)
@@ -96,7 +103,7 @@ namespace Microsoft.Azure.WebJobs.Host
         {
             if (string.IsNullOrEmpty(accountName))
             {
-                accountName = ConnectionStringNames.Storage;
+                accountName = string.Empty; // must be non-null for a dictionary key
             }
 
             CloudBlobDirectory storageDirectory = null;
@@ -392,81 +399,5 @@ namespace Microsoft.Azure.WebJobs.Host
                 return message;
             }
         }
-        // BlobLease manager based on a SAS connection to a container. 
-        // This lets many hosts share a singel storage container. 
-        public class SasContainer : BlobLeaseDistributedLockManager
-        {
-            private readonly CloudBlobContainer _container;
-
-            public SasContainer(
-                CloudBlobContainer container,
-                ILogger logger) : base(logger)
-            {
-                _container = container;
-            }
-
-            protected override CloudBlobContainer GetContainer(string accountName)
-            {
-                return _container;
-            }
-        }
-
-        // BlobLease manager based on a storage connection string. 
-        public class DedicatedStorage : BlobLeaseDistributedLockManager
-        {
-            private readonly BlobManagerXStorageAccountProvider _accountProvider;
-
-            public DedicatedStorage(
-                BlobManagerXStorageAccountProvider accountProvider,
-                ILogger logger) : base(logger)
-            {
-                _accountProvider = accountProvider;
-            }
-
-            protected override CloudBlobContainer GetContainer(string accountName)
-            {
-                return _accountProvider.GetContainer(accountName);
-                /* $$$ Missing steps 
-                // Get the container via a full connection string 
-                Task<IStorageAccount> task = _accountProvider.GetStorageAccountAsync(accountName, CancellationToken.None);
-                IStorageAccount storageAccount = task.Result;
-                // singleton requires block blobs, cannot be premium
-                storageAccount.AssertTypeOneOf(StorageAccountType.GeneralPurpose, StorageAccountType.BlobOnly);
-                var blobClient = storageAccount.CreateBlobClient();
-                var container = blobClient.GetContainerReference(HostContainerNames.Hosts);
-                return container;
-                */
-            }
-        }
-    }
-    
-    // $$$
-    // Should this be pluggable so callers can handle accountName resolution? 
-    // Scenario: Allow multiple hosts (with different storage) to use the same blob leases. 
-    internal class BlobManagerXStorageAccountProvider
-    {
-        private readonly LegacyConfig _config;
-
-        public BlobManagerXStorageAccountProvider() { }
-
-        // public CloudStorageAccount GetAccount(string accountName);
-        public BlobManagerXStorageAccountProvider(IOptions<LegacyConfig> config)
-        {
-            _config = config.Value;
-        }
-
-        public virtual CloudBlobContainer GetContainer(string accountName)
-        {
-            // empty account defaults to main Storage 
-            // Resolve all %% pairs 
-            // then lookup account 
-            CloudStorageAccount account = _config.GetStorageAccount();
-            
-            var blobClient = account.CreateCloudBlobClient();
-            var container = blobClient.GetContainerReference(HostContainerNames.Hosts);
-            return container;
-
-        }
-
     }
 }

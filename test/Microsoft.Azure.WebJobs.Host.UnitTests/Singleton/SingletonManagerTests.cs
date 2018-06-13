@@ -21,7 +21,8 @@ using Moq;
 using Xunit;
 using FakeStorage;
 
-using SingletonLockHandle = Microsoft.Azure.WebJobs.Host.BlobLeaseDistributedLockManager.SingletonLockHandle;
+using SingletonLockHandle = Microsoft.Azure.WebJobs.Host.StorageBaseDistributedLockManager.SingletonLockHandle;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 {
@@ -44,8 +45,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         }
     }
 
-#if true // $$$ Enable this 
-
     public class SingletonManagerTests
     {
         private const string TestHostId = "testhost";
@@ -54,7 +53,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         private const string TestLeaseId = "testleaseid";
         private const string Secondary = "SecondaryStorage";
 
-        private BlobLeaseDistributedLockManager _core;
+        private StorageBaseDistributedLockManager _core;
         private SingletonManager _singletonManager;
         private SingletonOptions _singletonConfig;
 
@@ -76,15 +75,17 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         //private CloudBlobDirectory _mockBlobDirectory;
         //private CloudBlobDirectory _mockSecondaryBlobDirectory;
 
-        class FakeLeaseProvidder : BlobManagerXStorageAccountProvider
+        class FakeLeaseProvidder : StorageBaseDistributedLockManager
         {
             internal FakeStorage.FakeAccount _account1 = new FakeStorage.FakeAccount();
             internal FakeStorage.FakeAccount _account2 = new FakeStorage.FakeAccount();
 
-            public override CloudBlobContainer GetContainer(string accountName)
+            public FakeLeaseProvidder(ILoggerFactory logger) : base(logger) { }
+
+            protected override CloudBlobContainer GetContainer(string accountName)
             {
                 FakeStorage.FakeAccount account;
-                if (accountName == ConnectionStringNames.Storage) {
+                if (string.IsNullOrEmpty(accountName) || accountName == ConnectionStringNames.Storage) {
                     account = _account1;
                 } else if (accountName == Secondary)
                 {
@@ -100,44 +101,26 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
         public SingletonManagerTests()
         {
-            var x = new FakeLeaseProvidder();
-            _mockBlobDirectory = x._account1.CreateCloudBlobClient().GetContainerReference(HostContainerNames.Hosts).GetDirectoryReference(HostDirectoryNames.SingletonLocks); 
-            _mockSecondaryBlobDirectory = x._account2.CreateCloudBlobClient().GetContainerReference(HostContainerNames.Hosts).GetDirectoryReference(HostDirectoryNames.SingletonLocks);
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            // We want to see all logs, so set the default level to Trace.
+            LogCategoryFilter filter = new LogCategoryFilter { DefaultLevel = Extensions.Logging.LogLevel.Trace };
+            _loggerProvider = new TestLoggerProvider(filter.Filter);
+            loggerFactory.AddProvider(_loggerProvider);
 
-            /*
-            _mockAccountProvider = new Mock<IStorageAccountProvider>(MockBehavior.Strict);
-            _mockBlobDirectory = new Mock<IStorageBlobDirectory>(MockBehavior.Strict);
-            _mockSecondaryBlobDirectory = new Mock<IStorageBlobDirectory>(MockBehavior.Strict);
-            _mockStorageAccount = new Mock<IStorageAccount>(MockBehavior.Strict);
-            _mockStorageAccount.SetupGet(a => a.Type).Returns(StorageAccountType.GeneralPurpose);
-            _mockSecondaryStorageAccount = new Mock<IStorageAccount>(MockBehavior.Strict);
-            _mockSecondaryStorageAccount.SetupGet(a => a.Type).Returns(StorageAccountType.GeneralPurpose);
-            Mock<IStorageBlobClient> mockBlobClient = new Mock<IStorageBlobClient>(MockBehavior.Strict);
-            Mock<IStorageBlobClient> mockSecondaryBlobClient = new Mock<IStorageBlobClient>(MockBehavior.Strict);
-            Mock<IStorageBlobContainer> mockBlobContainer = new Mock<IStorageBlobContainer>(MockBehavior.Strict);
+            var logger = loggerFactory?.CreateLogger(LogCategories.Singleton);
 
-            mockBlobContainer.Setup(p => p.GetDirectoryReference(HostDirectoryNames.SingletonLocks)).Returns(_mockBlobDirectory.Object);
 
-            mockBlobClient.Setup(p => p.GetContainerReference(HostContainerNames.Hosts)).Returns(mockBlobContainer.Object);
-            Mock<IStorageBlobContainer> mockSecondaryBlobContainer = new Mock<IStorageBlobContainer>(MockBehavior.Strict);
-            mockSecondaryBlobContainer.Setup(p => p.GetDirectoryReference(HostDirectoryNames.SingletonLocks)).Returns(_mockSecondaryBlobDirectory.Object);
-            mockSecondaryBlobClient.Setup(p => p.GetContainerReference(HostContainerNames.Hosts)).Returns(mockSecondaryBlobContainer.Object);
-            _mockStorageAccount.Setup(p => p.CreateBlobClient(null)).Returns(mockBlobClient.Object);
-            _mockSecondaryStorageAccount.Setup(p => p.CreateBlobClient(null)).Returns(mockSecondaryBlobClient.Object);
+            var leaseProvider = new FakeLeaseProvidder(loggerFactory);
+            _mockBlobDirectory = leaseProvider._account1.CreateCloudBlobClient().GetContainerReference(HostContainerNames.Hosts).GetDirectoryReference(HostDirectoryNames.SingletonLocks); 
+            _mockSecondaryBlobDirectory = leaseProvider._account2.CreateCloudBlobClient().GetContainerReference(HostContainerNames.Hosts).GetDirectoryReference(HostDirectoryNames.SingletonLocks);
 
-            _mockAccountProvider.Setup(p => p.TryGetAccountAsync(ConnectionStringNames.Storage, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(_mockStorageAccount.Object);
-            _mockAccountProvider.Setup(p => p.TryGetAccountAsync(Secondary, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(_mockSecondaryStorageAccount.Object);
-            */
             _mockExceptionDispatcher = new Mock<IWebJobsExceptionHandler>(MockBehavior.Strict);
 
             _mockStorageBlob = new Mock<CloudBlockBlob>(MockBehavior.Strict,
                 new Uri("https://fakeaccount.blob.core.windows.net/" + HostContainerNames.Hosts + "/" + HostDirectoryNames.SingletonLocks + "/" + TestLockId));
 
             _mockBlobMetadata = new Dictionary<string, string>();
-            // _mockBlobDirectory.Setup(p => p.GetBlockBlobReference(TestLockId)).Returns(_mockStorageBlob.Object);
-            x._account1.SetBlob(HostContainerNames.Hosts, HostDirectoryNames.SingletonLocks + "/" + TestLockId, _mockStorageBlob.Object);
+            leaseProvider._account1.SetBlob(HostContainerNames.Hosts, HostDirectoryNames.SingletonLocks + "/" + TestLockId, _mockStorageBlob.Object);
             
 
             _singletonConfig = new SingletonOptions();
@@ -149,15 +132,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             _nameResolver = new TestNameResolver();
 
-            ILoggerFactory loggerFactory = new LoggerFactory();
-            // We want to see all logs, so set the default level to Trace.
-            LogCategoryFilter filter = new LogCategoryFilter { DefaultLevel = Extensions.Logging.LogLevel.Trace };
-            _loggerProvider = new TestLoggerProvider(filter.Filter);
-            loggerFactory.AddProvider(_loggerProvider);
-
-            var logger = loggerFactory?.CreateLogger(LogCategories.Singleton);
-            
-            _core = new BlobLeaseDistributedLockManager.DedicatedStorage(x, logger);
+            _core = leaseProvider;
 
             _singletonManager = new SingletonManager(_core, new OptionsWrapper<SingletonOptions>(_singletonConfig), _mockExceptionDispatcher.Object, loggerFactory, new FixedHostIdProvider(TestHostId), _nameResolver);
 
@@ -210,7 +185,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             Assert.Equal(_mockStorageBlob.Object, innerHandle.Blob);
             Assert.Equal(TestLeaseId, innerHandle.LeaseId);
             Assert.Equal(1, _mockStorageBlob.Object.Metadata.Keys.Count);
-            Assert.Equal(_mockStorageBlob.Object.Metadata[BlobLeaseDistributedLockManager.FunctionInstanceMetadataKey], TestInstanceId);
+            Assert.Equal(_mockStorageBlob.Object.Metadata[StorageBaseDistributedLockManager.FunctionInstanceMetadataKey], TestInstanceId);
         }
 
         [Fact]
@@ -239,7 +214,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             Assert.Equal(_mockStorageBlob.Object, innerHandle.Blob);
             Assert.Equal(TestLeaseId, innerHandle.LeaseId);
             Assert.Equal(1, _mockStorageBlob.Object.Metadata.Keys.Count);
-            Assert.Equal(_mockStorageBlob.Object.Metadata[BlobLeaseDistributedLockManager.FunctionInstanceMetadataKey], TestInstanceId);
+            Assert.Equal(_mockStorageBlob.Object.Metadata[StorageBaseDistributedLockManager.FunctionInstanceMetadataKey], TestInstanceId);
 
             // wait for enough time that we expect some lease renewals to occur
             int duration = 2000;
@@ -712,5 +687,4 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             }
         }
     }
-#endif
 }
