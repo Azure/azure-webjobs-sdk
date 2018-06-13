@@ -15,24 +15,24 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
 {
     internal class HostMessageListenerFactory : IListenerFactory
     {
-        private readonly QueueMoniker _queue;
+        private readonly string _queueName;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IFunctionIndexLookup _functionLookup;
         private readonly IFunctionInstanceLogger _functionInstanceLogger;
         private readonly IFunctionExecutor _executor;
-        private readonly ISuperhack _storageServices;
+        private readonly ILoadbalancerQueue _storageServices;
 
         public HostMessageListenerFactory(
-            ISuperhack storageServices,
-            QueueMoniker queue,
+            ILoadbalancerQueue storageServices,
+            string queueName,
             IWebJobsExceptionHandler exceptionHandler,
             ILoggerFactory loggerFactory,
             IFunctionIndexLookup functionLookup,
             IFunctionInstanceLogger functionInstanceLogger,
             IFunctionExecutor executor)
         {
-            _queue = queue ?? throw new ArgumentNullException(nameof(queue));
+            _queueName = queueName ?? throw new ArgumentNullException(nameof(queueName));
             _storageServices = storageServices ?? throw new ArgumentNullException(nameof(storageServices));
             _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
             _functionLookup = functionLookup ?? throw new ArgumentNullException(nameof(functionLookup));
@@ -47,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         {
             var triggerExecutor = new HostMessageExecutor(_executor, _functionLookup, _functionInstanceLogger);
 
-            IListener listener = _storageServices.CreateQueueListenr(_queue, null, triggerExecutor.ExecuteAsync);
+            IListener listener = _storageServices.CreateQueueListenr(_queueName, null, triggerExecutor.ExecuteAsync);
     
             return Task.FromResult(listener);
         }

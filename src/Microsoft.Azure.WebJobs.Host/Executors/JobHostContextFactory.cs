@@ -46,11 +46,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IFunctionOutputLogger _functionOutputLogger;
         private readonly IConverterManager _converterManager;
         private readonly IAsyncCollector<FunctionInstanceLogEntry> _eventCollector;
-        private readonly ISuperhack _storageServices;
+        private readonly ILoadbalancerQueue _storageServices;
         private readonly ILegacyLogger _legacyLogger;
 
         public JobHostContextFactory(
-            ISuperhack storageServices,
+            ILoadbalancerQueue storageServices,
             ILegacyLogger legacyLogger,
             IFunctionExecutor functionExecutor,
             IFunctionIndexProvider functionIndexProvider,

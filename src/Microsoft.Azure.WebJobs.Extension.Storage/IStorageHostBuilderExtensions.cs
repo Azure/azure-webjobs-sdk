@@ -39,7 +39,7 @@ namespace Microsoft.Extensions.Hosting
                 .ConfigureServices((context, services) =>
                 {
                     // $$$ Move to Host.Storage? 
-                    services.TryAddSingleton<ISuperhack, Class1>();
+                    services.TryAddSingleton<ILoadbalancerQueue, StorageLoadbalancerQueue>();
 
                     services.TryAddSingleton<SharedQueueWatcher>();
 
