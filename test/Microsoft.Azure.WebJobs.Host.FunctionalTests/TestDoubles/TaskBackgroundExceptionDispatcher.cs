@@ -8,6 +8,7 @@ using Microsoft.Azure.WebJobs.Host.Timers;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
 {
+    // $$$ Move to common. 
     internal class TaskBackgroundExceptionHandler<TResult> : IWebJobsExceptionHandler
     {
         private readonly TaskCompletionSource<TResult> _taskSource;

@@ -7,6 +7,7 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 
 namespace Microsoft.Azure.WebJobs.Host.Loggers
 {
+    // This is a DI interface.
     internal interface IFunctionInstanceLogger
     {
         Task<string> LogFunctionStartedAsync(FunctionStartedMessage message, CancellationToken cancellationToken);

@@ -23,6 +23,8 @@ namespace FakeStorage
         {
             _client = client;
             _store = _client._account._queueStore;
+
+            this.SetInternalField(nameof(CloudQueue.ServiceClient), _client);
         }
 
         static internal Uri GetQueueUri(string queueName)
@@ -55,8 +57,8 @@ namespace FakeStorage
 
         public override Task ClearAsync()
         {
-            throw new NotImplementedException();
-            // return base.ClearAsync();
+            _store.Clear(this.Name);
+            return Task.CompletedTask;
         }
 
         public override Task ClearAsync(QueueRequestOptions options, OperationContext operationContext)

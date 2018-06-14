@@ -104,7 +104,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         private sealed class DisposeInstanceProgram : IDisposable
         {
-            public static TaskCompletionSource<object> TaskSource { get; set; }
+            public static TaskCompletionSource<object> TaskSource = new TaskCompletionSource<object>();
 
             public void Run([QueueTrigger(QueueName)] CloudQueueMessage message)
             {
@@ -137,12 +137,14 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await account.AddQueueMessageAsync(message, QueueName);
 
             IHost host = new HostBuilder()
-              .ConfigureDefaultTestHost<DisposeInstanceProgram>(null, activator)
+              .ConfigureDefaultTestHost<InstanceCustomActivatorProgram>(null, activator)
               .UseStorage(account)
               .Build();
 
             // Act            
             var jobHost = host.GetJobHost<InstanceCustomActivatorProgram>();
+            Assert.NotNull(jobHost);
+
             var result = await jobHost.RunTriggerAsync<string>(InstanceCustomActivatorProgram.TaskSource);
 
             // Assert
@@ -158,7 +160,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 _resultFactory = resultFactory ?? throw new ArgumentNullException("resultFactory");
             }
 
-            public static TaskCompletionSource<string> TaskSource { get; set; }
+            public static TaskCompletionSource<string> TaskSource { get; set; } = new TaskCompletionSource<string>();
 
             public void Run([QueueTrigger(QueueName)] CloudQueueMessage ignore)
             {

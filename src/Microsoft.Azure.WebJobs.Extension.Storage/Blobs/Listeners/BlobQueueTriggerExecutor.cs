@@ -17,20 +17,17 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {
     internal class BlobQueueTriggerExecutor : ITriggerExecutor<CloudQueueMessage>
     {
-        private readonly IBlobETagReader _eTagReader;
         private readonly IBlobCausalityReader _causalityReader;
         private readonly IBlobWrittenWatcher _blobWrittenWatcher;
         private readonly ConcurrentDictionary<string, BlobQueueRegistration> _registrations;
 
         public BlobQueueTriggerExecutor(IBlobWrittenWatcher blobWrittenWatcher)
-            : this(BlobETagReader.Instance, BlobCausalityReader.Instance, blobWrittenWatcher)
+            : this(BlobCausalityReader.Instance, blobWrittenWatcher)
         {
         }
 
-        public BlobQueueTriggerExecutor(IBlobETagReader eTagReader,
-            IBlobCausalityReader causalityReader, IBlobWrittenWatcher blobWrittenWatcher)
+        public BlobQueueTriggerExecutor(IBlobCausalityReader causalityReader, IBlobWrittenWatcher blobWrittenWatcher)
         {
-            _eTagReader = eTagReader;
             _causalityReader = causalityReader;
             _blobWrittenWatcher = blobWrittenWatcher;
             _registrations = new ConcurrentDictionary<string, BlobQueueRegistration>();

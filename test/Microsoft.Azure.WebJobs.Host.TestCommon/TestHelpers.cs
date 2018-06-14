@@ -2,13 +2,16 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
 using Microsoft.Azure.WebJobs.Host.Indexers;
+using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,13 +26,19 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
     public static class TestHelpers
     {
         // Test error if not reached within a timeout 
-        public static Task<TResult> AwaitWithTimeout<TResult>(TaskCompletionSource<TResult> taskSource)
+        public static Task<TResult> AwaitWithTimeout<TResult>(this TaskCompletionSource<TResult> taskSource)
         {
-            // $$$ use a timeout here. 
             return taskSource.Task;
         }
 
-        public static async Task Await(Func<Task<bool>> condition, int timeout = 60 * 1000, int pollingInterval = 2 * 1000, bool throwWhenDebugging = false, Func<string> userMessageCallback = null)
+        // Test error if not reached within a timeout 
+        public static TResult AwaitWithTimeout<TResult>(this Task<TResult> taskSource)
+        {
+            Await(() => taskSource.IsCompleted).Wait();
+            return taskSource.Result;
+        }
+
+        public static async Task Await(Func<Task<bool>> condition, int timeout = 60 * 1000, int pollingInterval = 50, bool throwWhenDebugging = false, Func<string> userMessageCallback = null)
         {
             DateTime start = DateTime.Now;
             while (!await condition())
@@ -49,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             }
         }
 
-        public static async Task Await(Func<bool> condition, int timeout = 60 * 1000, int pollingInterval = 2 * 1000, bool throwWhenDebugging = false, Func<string> userMessageCallback = null)
+        public static async Task Await(Func<bool> condition, int timeout = 60 * 1000, int pollingInterval = 50, bool throwWhenDebugging = false, Func<string> userMessageCallback = null)
         {
             await Await(() => Task.FromResult(condition()), timeout, pollingInterval, throwWhenDebugging, userMessageCallback);
         }
@@ -151,6 +160,18 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
              {
                  logging.AddProvider(new TestLoggerProvider());
              });
+        }
+
+        public static IHostBuilder ConfigureCatchFailures<TResult>(
+            this IHostBuilder builder, 
+            TaskCompletionSource<TResult> src,
+            IEnumerable<string> ignoreFailureFunctions)
+        {
+            var logger = new ExpectManualCompletionFunctionInstanceLogger<TResult>(src, ignoreFailureFunctions);
+            return builder.ConfigureServices(services =>
+            {
+                services.AddSingleton<IFunctionInstanceLogger>(logger);
+            });
         }
 
 

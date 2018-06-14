@@ -12,7 +12,7 @@ namespace FakeStorage
     internal class FakeStorageBlobContainer : CloudBlobContainer
     {
         internal readonly MemoryBlobStore _store;
-        private readonly FakeStorageBlobClient _parent;
+        internal readonly FakeStorageBlobClient _client;
 
         public FakeStorageBlobContainer(FakeStorageBlobClient client, string containerName)
              : base(client.GetContainerUri(containerName))
@@ -22,8 +22,9 @@ namespace FakeStorage
                 throw new ArgumentException(nameof(containerName));
             }
             _store = client._store;
-            _parent = client;
-            
+            _client = client;
+
+            this.SetInternalField(nameof(ServiceClient), client);
         }
 
         public override bool Equals(object obj)
@@ -194,14 +195,18 @@ namespace FakeStorage
 
         public override Task<ICloudBlob> GetBlobReferenceFromServerAsync(string blobName)
         {
-            throw new NotImplementedException();
-            return base.GetBlobReferenceFromServerAsync(blobName);
+            // throw new NotImplementedException();
+            // return base.GetBlobReferenceFromServerAsync(blobName);
+            var blob = _store.GetBlobReferenceFromServer(this, this.Name, blobName);
+            return Task.FromResult<ICloudBlob>(blob);
         }
 
         public override Task<ICloudBlob> GetBlobReferenceFromServerAsync(string blobName, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
-            throw new NotImplementedException();
-            return base.GetBlobReferenceFromServerAsync(blobName, accessCondition, options, operationContext);
+            //throw new NotImplementedException();
+            // return base.GetBlobReferenceFromServerAsync(blobName, accessCondition, options, operationContext);
+            var blob = _store.GetBlobReferenceFromServer(this, this.Name, blobName);
+            return Task.FromResult<ICloudBlob>(blob);
         }
 
         public override Task<ICloudBlob> GetBlobReferenceFromServerAsync(string blobName, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)

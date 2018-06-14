@@ -37,6 +37,8 @@ namespace FakeStorage
             {
                 _properties = new FakeStorageBlobProperties();
             }
+
+            this.SetInternalField(nameof(ServiceClient), parent._client);
         }
 
         public override Task AbortCopyAsync(string copyId)

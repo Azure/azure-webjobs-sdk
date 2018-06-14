@@ -17,7 +17,7 @@ namespace FakeStorage
         private readonly ConcurrentDictionary<string, Container> _items = new ConcurrentDictionary<string, Container>();
         private ServiceProperties _properties = new ServiceProperties(new LoggingProperties(), new MetricsProperties(), new MetricsProperties(), new CorsProperties());
 
-        public void SetBlob(string containerName, string blobName, CloudBlockBlob blob)
+        public void SetBlob(string containerName, string blobName, ICloudBlob blob)
         {
             CreateIfNotExists(containerName);
             _items[containerName].SetBlob(blobName, blob);

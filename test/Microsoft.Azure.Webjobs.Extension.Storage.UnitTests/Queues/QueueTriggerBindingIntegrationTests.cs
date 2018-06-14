@@ -26,9 +26,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             IQueueTriggerArgumentBindingProvider provider = new UserTypeArgumentBindingProvider();
             ParameterInfo pi = new StubParameterInfo("parameterName", typeof(UserDataType));
             var argumentBinding = provider.TryCreate(pi);
-            Mock<CloudQueue> queueMock = new Mock<CloudQueue>(MockBehavior.Strict);
-            queueMock.Setup(q => q.Name).Returns("queueName");
-            CloudQueue queue = queueMock.Object;
+            
+            var fakeAccount = new FakeStorage.FakeAccount();
+            CloudQueue queue = fakeAccount.CreateCloudQueueClient().GetQueueReference("queueName");
+
             IWebJobsExceptionHandler exceptionHandler = new WebJobsExceptionHandler(new Mock<IHost>().Object);
             var enqueueWatcher = new Host.Queues.Listeners.SharedQueueWatcher();
             _binding = new QueueTriggerBinding("parameterName", queue, argumentBinding,

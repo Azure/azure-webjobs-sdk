@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Newtonsoft.Json;
 using Xunit;
+using FakeStorage;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
@@ -722,46 +723,16 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private static TResult CallQueueTrigger<TResult>(object message, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
-            throw new NotImplementedException();
-#if false
-            // Arrange
-            TaskCompletionSource<TResult> functionTaskSource = new TaskCompletionSource<TResult>();
-            var serviceProvider = FunctionalTest.CreateConfigurationForManualCompletion<TResult>(
-                CreateFakeStorageAccount(), programType, functionTaskSource);
-            Task<TResult> functionTask = functionTaskSource.Task;
-            setTaskSource.Invoke(functionTaskSource);
-            Task callTask;
-            bool completed;
+            var account = new XFakeStorageAccount();
+            var method = programType.GetMethod("Run");
+            Assert.NotNull(method);
 
-            using (serviceProvider)
+            var result = FunctionalTest.Call<TResult>(account, programType, method, new Dictionary<string, object>
             {
-                var host = serviceProvider.GetJobHost();
-                try
-                {
-                    callTask = host.CallAsync(programType.GetMethod("Run"), new { message = message });
+                { "message", message }
+            }, setTaskSource);
 
-                    // Act
-                    completed = Task.WhenAll(callTask, functionTask).WaitUntilCompleted(3 * 1000);
-                }
-                finally
-                {
-                    setTaskSource.Invoke(null);
-                }
-            }
-
-            // Assert
-            Assert.True(completed);
-
-            // Give a nicer test failure message for faulted tasks.
-            if (functionTask.Status == TaskStatus.Faulted)
-            {
-                functionTask.GetAwaiter().GetResult();
-            }
-
-            Assert.Equal(TaskStatus.RanToCompletion, functionTask.Status);
-            Assert.Equal(TaskStatus.RanToCompletion, callTask.Status);
-            return functionTask.Result;
-#endif
+            return result;
         }
 
         private static XStorageAccount CreateFakeStorageAccount()
