@@ -1,10 +1,10 @@
-﻿using Microsoft.Azure.WebJobs.Hosting;
-using Microsoft.Extensions.Configuration;
+﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the MIT License. See License.txt in the project root for license information.
+
+using System;
+using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using Xunit;
 
 [assembly: WebJobsStartup(typeof(Microsoft.Azure.WebJobs.Host.UnitTests.Hosting.WebJobsStartupTests.ExternalTestStartup))]
@@ -17,7 +17,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
         public void GenericUseWebJobsStartup_CallsStartupMethods()
         {
             using (new StartupScope())
-            { 
+            {
                 var builder = new HostBuilder()
                     .UseWebJobsStartup<TestStartup>();
 

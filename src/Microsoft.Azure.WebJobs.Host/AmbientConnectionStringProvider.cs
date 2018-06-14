@@ -48,8 +48,5 @@ namespace Microsoft.Azure.WebJobs.Host
 
         private string FindConnectionString(string connectionName) =>
             _configuration.GetConnectionString(connectionName) ?? _configuration[connectionName];
-
     }
-
-
 }

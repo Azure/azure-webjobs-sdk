@@ -1,7 +1,6 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -55,7 +54,7 @@ namespace Microsoft.Azure.WebJobs
         }
 
         public override string Name => "FakeAccount";
-        public override bool IsDevelopmentStorageAccount() { return true; }        
+        public override bool IsDevelopmentStorageAccount() { return true; }
 
 #endif
     }
@@ -69,8 +68,7 @@ namespace Microsoft.Azure.WebJobs
             var queue = client.GetQueueReference(queueName);
             await queue.CreateIfNotExistsAsync();
             await queue.ClearAsync();
-            await queue.AddMessageAsync(message);            
+            await queue.AddMessageAsync(message);
         }
     }
-
 }

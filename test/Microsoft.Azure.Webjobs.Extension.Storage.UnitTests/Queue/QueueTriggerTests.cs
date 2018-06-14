@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Newtonsoft.Json;
 using Xunit;
@@ -24,16 +23,18 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             if (contents is string str)
             {
                 message = new CloudQueueMessage(str);
-            } else if (contents is byte[] bytearray)
+            }
+            else if (contents is byte[] bytearray)
             {
                 message = CloudQueueMessage.CreateCloudQueueMessageFromByteArray(bytearray);
-            } else
+            }
+            else
             {
                 throw new InvalidOperationException("bad test");
             }
-                        
+
             var queue = await CreateQueue(account, QueueName);
-            
+
             // message.InsertionTime is provided by FakeStorageAccount when the message is inserted.
             await queue.AddMessageAsync(message);
         }
@@ -44,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // Arrange
             string expectedGuid = Guid.NewGuid().ToString();
             CloudQueueMessage expectedMessage = new CloudQueueMessage(expectedGuid);
-            var  account = CreateFakeStorageAccount();
+            var account = CreateFakeStorageAccount();
             var queue = await CreateQueue(account, QueueName);
             await queue.AddMessageAsync(expectedMessage);
 
@@ -429,11 +430,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             // Arrange
             const int expectedInt32Value = 123;
-            var account = CreateFakeStorageAccount();            
-                        
+            var account = CreateFakeStorageAccount();
+
             Poco value = new Poco { Int32Value = expectedInt32Value };
             string content = JsonConvert.SerializeObject(value, typeof(Poco), settings: null);
-            
+
             await SetupAsync(account, content);
 
             // Act
@@ -454,10 +455,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 Int32Value = 123
             };
             var account = CreateFakeStorageAccount();
-            
+
             Poco value = new Poco { Child = expectedChild };
             string content = JsonConvert.SerializeObject(value, typeof(Poco), settings: null);
-            
+
             await SetupAsync(account, content);
 
             // Act
@@ -549,7 +550,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             // Arrange
             CloudQueueMessage expectedMessage = new CloudQueueMessage("ignore");
-            
+
             // Act
             CloudQueueMessage result = CallQueueTrigger<CloudQueueMessage>(expectedMessage,
                 typeof(BindToCloudQueueMessageProgram), (s) => BindToCloudQueueMessageProgram.TaskSource = s);
@@ -563,7 +564,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             // Arrange
             const int expectedDequeueCount = 123;
-            var message = new CloudQueueMessage("ignore").SetDequeueCount(expectedDequeueCount);            
+            var message = new CloudQueueMessage("ignore").SetDequeueCount(expectedDequeueCount);
 
             // Act
             int result = CallQueueTrigger<int>(message, typeof(BindToDequeueCountBindingDataProgram),

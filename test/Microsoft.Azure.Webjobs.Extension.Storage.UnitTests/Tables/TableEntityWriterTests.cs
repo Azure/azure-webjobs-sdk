@@ -3,7 +3,6 @@
 
 using Microsoft.Azure.WebJobs.Host.Tables;
 using Microsoft.WindowsAzure.Storage.Table;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Tables
@@ -11,7 +10,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Tables
     public class TableEntityWriterTests
     {
         [Fact]
-        public async Task FlushAfterAdd_PersistsEntity()
+        public void FlushAfterAdd_PersistsEntity()
         {
             // Arrange
             var account = new XFakeStorageAccount();
@@ -30,6 +29,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Tables
             // Assert
             DynamicTableEntity persisted = table.Retrieve<DynamicTableEntity>(partitionKey, rowKey);
             Assert.NotNull(persisted);
-        }        
+        }
     }
 }

@@ -8,7 +8,6 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Config;
-using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Configuration;
@@ -16,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.WindowsAzure.Storage;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.TestCommon
@@ -29,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             return taskSource.Task;
         }
 
-        public static async Task Await(Func<Task<bool>> condition, int timeout = 60 * 1000, int pollingInterval = 2 * 1000, bool throwWhenDebugging = false, string userMessage = null)
+        public static async Task Await(Func<Task<bool>> condition, int timeout = 60 * 1000, int pollingInterval = 2 * 1000, bool throwWhenDebugging = false, Func<string> userMessageCallback = null)
         {
             DateTime start = DateTime.Now;
             while (!await condition())
@@ -195,7 +195,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
         public static CloudStorageAccount GetStorageAccount(this IHost host)
         {
             var provider = host.Services.GetRequiredService<XStorageAccountProvider>(); // $$$ ok?
-            return provider.GetHost().SdkObject;            
+            return provider.GetHost().SdkObject;
         }
 
         public static TOptions GetOptions<TOptions>(this IHost host) where TOptions : class, new()
@@ -211,7 +211,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 
             return new AmbientConnectionStringProvider(config);
         }
-        
+
 
         public static IJobHostMetadataProvider CreateMetadataProvider(this IHost host)
         {

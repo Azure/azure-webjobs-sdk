@@ -971,9 +971,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void Table_IfBoundToCollectorAndETagDoesNotMatch_Throws()
+        public async Task Table_IfBoundToCollectorAndETagDoesNotMatch_Throws()
         {
-            TestBindToConcurrentlyUpdatedTableEntity(typeof(BindTableToCollectorFoo), "collector");
+            await TestBindToConcurrentlyUpdatedTableEntity(typeof(BindTableToCollectorFoo), "collector");
         }
 
         private class BindTableToCollectorFoo
@@ -1003,7 +1003,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private static XStorageAccount GetRealStorage()
         {
             // Arrange            
-            
+
             var acs = Environment.GetEnvironmentVariable("AzureWebJobsDashboard");
             var account = XStorageAccount.NewFromConnectionString(acs);
             return account;
@@ -1229,9 +1229,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void TableEntity_IfBoundToSdkTableEntityAndUpdatedConcurrently_Throws()
+        public async Task TableEntity_IfBoundToSdkTableEntityAndUpdatedConcurrently_Throws()
         {
-            TestBindTableEntityToConcurrentlyUpdatedValue(typeof(BindTableEntityToConcurrentlyUpdatedSdkTableEntity));
+            await TestBindTableEntityToConcurrentlyUpdatedValue(typeof(BindTableEntityToConcurrentlyUpdatedSdkTableEntity));
         }
 
         private class BindTableEntityToConcurrentlyUpdatedSdkTableEntity
@@ -1359,7 +1359,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         private static XStorageAccount CreateFakeStorageAccount()
         {
-            return new XFakeStorageAccount(); 
+            return new XFakeStorageAccount();
         }
 
         private static ITableEntity CreateTableEntity(string partitionKey, string rowKey, string propertyName,
@@ -1548,8 +1548,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 Assert.Equal(3, strings.Length);
                 for (int i = 0; i < 3; ++i)
                 {
-                    int value;
-                    bool parsed = int.TryParse(strings[i], out value);
+                    bool parsed = int.TryParse(strings[i], out int value);
                     string message = String.Format("Unable to parse CloudBlob strings[{0}]: '{1}'", i, strings[i]);
                     Assert.True(parsed, message);
                     // Ensure expected value in CloudBlob
