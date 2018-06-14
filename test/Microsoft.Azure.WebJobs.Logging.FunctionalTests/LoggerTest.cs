@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging.Internal;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
@@ -709,6 +710,122 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
             Assert.Same(exToThrow, thrownEx);
             Assert.Same(exToThrow, caughtException);
         }
+
+        [Fact]
+        public async Task OnExceptionBackgroundFlushResumesOnNextAdd()
+        {
+            Exception exToThrow1 = new InvalidOperationException("First storage exception");
+            Exception exToThrow2 = new InvalidOperationException("Second storage exception");
+
+            Mock<CloudTable> mockTable = new Mock<CloudTable>(MockBehavior.Strict, new Uri("https://fakeaccount.table.core.windows.net/sometable"));
+            mockTable
+                .SetupSequence(t => t.ExecuteBatchAsync(It.IsAny<TableBatchOperation>()))
+                // First background flush
+                .ReturnsAsync(new List<TableResult> { new TableResult() })
+                .ThrowsAsync(exToThrow1)
+                // Second background flush
+                .ReturnsAsync(new List<TableResult> { new TableResult() })
+                .ThrowsAsync(exToThrow2);
+
+            Mock<ILogTableProvider> mockProvider = new Mock<ILogTableProvider>(MockBehavior.Strict);
+            mockProvider
+                .Setup(c => c.GetTable(It.IsAny<string>()))
+                .Returns(mockTable.Object);
+
+            List<Exception> caughtExceptions = new List<Exception>();
+            LogWriter writer = (LogWriter)LogFactory.NewWriter(defaultHost, "exceptions", mockProvider.Object, (ex) =>
+           {
+               caughtExceptions.Add(ex);
+           });
+            writer.FlushInterval = TimeSpan.FromMilliseconds(500);
+
+            FunctionInstanceLogItem item1 = new FunctionInstanceLogItem
+            {
+                FunctionInstanceId = Guid.NewGuid(),
+                FunctionName = "test",
+                StartTime = DateTime.UtcNow,
+                LogOutput = "output 1",
+            };
+
+            FunctionInstanceLogItem item2 = new FunctionInstanceLogItem
+            {
+                FunctionInstanceId = item1.FunctionInstanceId,
+                FunctionName = item1.FunctionName,
+                StartTime = item1.StartTime,
+                LogOutput = "output 2"
+            };
+
+            await writer.AddAsync(item1);
+            await TestHelpers.Await(() => caughtExceptions.Count == 1, timeout: 5000, pollingInterval: 100, userMessageCallback: () => $"Expected caughtExceptions == 1; Actual: {caughtExceptions.Count}");
+
+            // Without fixes to the error handling in the background flusher task, this second condition would never be met because no further flushes would occur after the first exception.
+            await writer.AddAsync(item2);
+            await TestHelpers.Await(() => caughtExceptions.Count == 2, timeout: 5000, pollingInterval: 100, userMessageCallback: () => $"Expected caughtExceptions == 2; Actual: {caughtExceptions.Count}");
+
+            Assert.Same(exToThrow1, caughtExceptions[0]);
+            Assert.Same(exToThrow2, caughtExceptions[1]);
+
+            mockTable.VerifyAll();
+        }
+
+        [Theory]
+        [InlineData(10000, 100)] // nothing should be dropped
+        [InlineData(40, 80)] // half of the entries should be dropped
+        [InlineData(20, 80)] // 3/4's of the entries should be dropped
+        public async Task LogsAreDroppedWhenBufferIsFull(int maxBufferedEntryCount, int logItemCount)
+        {
+            List<Exception> caughtExceptions = new List<Exception>();
+            LogWriter writer = (LogWriter)LogFactory.NewWriter(defaultHost, "c1", this, (ex) => caughtExceptions.Add(ex));
+            writer.MaxBufferedEntryCount = maxBufferedEntryCount;
+            ILogReader reader = LogFactory.NewReader(this);
+
+            var logItems = new List<FunctionInstanceLogItem>();
+            for (int i = 0; i < logItemCount; i++)
+            {
+                logItems.Add(new FunctionInstanceLogItem
+                {
+                    FunctionInstanceId = Guid.NewGuid(),
+                    FunctionName = "test",
+                    StartTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(50),
+                    EndTime = DateTime.UtcNow,
+                    LogOutput = "output 1"
+                });
+            }
+
+            foreach (var item in logItems)
+            {
+                await writer.AddAsync(item);
+            }
+
+            await writer.FlushAsync();
+
+            var id = logItems[0].FunctionId;
+
+            if (maxBufferedEntryCount < logItemCount)
+            {
+                Assert.NotEmpty(caughtExceptions);
+                Assert.StartsWith("The limit on the number of bufferable log entries was reached.", caughtExceptions[0].Message);
+            }
+
+            // Counts should be intact
+            var segment1 = await reader.GetAggregateStatsAsync(id, DateTime.MinValue, DateTime.MaxValue, null);
+            var runs = segment1.Results.Sum(x => x.TotalRun);
+            Assert.Equal(runs, logItemCount);
+
+            // Some of the results should be missing
+            var segmentRecent = await reader.GetRecentFunctionInstancesAsync(new RecentFunctionQuery
+            {
+                FunctionId = id,
+                Start = DateTime.MinValue,
+                End = DateTime.MaxValue,
+                MaximumResults = 1000
+            }, null);
+
+            int expectedLoggedCount = Math.Min(logItemCount, maxBufferedEntryCount);
+            Assert.NotNull(segmentRecent);
+            Assert.Equal(expectedLoggedCount, segmentRecent.Results.Length);
+        }
+
 
         static Task<IRecentFunctionEntry[]> GetRecentAsync(ILogReader reader, FunctionId functionId)
         {
