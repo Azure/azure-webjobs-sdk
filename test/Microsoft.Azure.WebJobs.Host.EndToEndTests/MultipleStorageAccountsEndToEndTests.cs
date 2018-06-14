@@ -82,7 +82,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.Equal(TestData, resultMessage.AsString);
         }
 
-        [Theory]
+        [Theory(Skip = "Hanging in AppVeyor")]
         [InlineData("QueueToBlob_DifferentAccounts_PrimaryToSecondary_NameResolver")]
         [InlineData("QueueToBlob_DifferentAccounts_PrimaryToSecondary_FullSettingName")]
         public async Task QueueToBlob_DifferentAccounts_PrimaryToSecondary_NameResolver_Succeeds(string methodName)
