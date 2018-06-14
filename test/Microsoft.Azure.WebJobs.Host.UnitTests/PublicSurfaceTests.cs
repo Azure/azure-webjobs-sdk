@@ -142,6 +142,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var expected = new[]
             {
                 "ApplyConversion`2",
+                "BindingExpressionAttribute",
                 "DefaultNameResolver",
                 "FunctionInstanceLogEntry",
                 "IConverter`2",
