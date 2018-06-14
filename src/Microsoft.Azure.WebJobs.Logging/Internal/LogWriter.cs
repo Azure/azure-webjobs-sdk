@@ -19,8 +19,7 @@ namespace Microsoft.Azure.WebJobs.Logging
     {
         // Logs from AddAsync() are batched up. They can be explicitly flushed via FlushAsync() and 
         // they get autotmatically flushed at Interval. 
-        // Calling AddAsync() will startup the background flusher. Calling FlushAsync() explicitly will disable it. 
-        private static TimeSpan _flushInterval = TimeSpan.FromSeconds(45);
+        // Calling AddAsync() will startup the background flusher. Calling FlushAsync() explicitly will disable it.
         private CancellationTokenSource _cancelBackgroundFlusher = null;
         private Task _backgroundFlusherTask = null;
 
@@ -50,6 +49,9 @@ namespace Microsoft.Azure.WebJobs.Logging
         private CloudTableInstanceCountLogger _instanceLogger;
 
         private Action<Exception> _onException;
+
+        public int MaxBufferedEntryCount { get; set; } = 10000;
+        public TimeSpan FlushInterval { get; set; } = TimeSpan.FromSeconds(45);
 
         public LogWriter(string hostName, string machineName, ILogTableProvider logTableProvider, Action<Exception> onException = null)
         {
@@ -81,15 +83,17 @@ namespace Microsoft.Azure.WebJobs.Logging
             {
                 try
                 {
-                    await Task.Delay(_flushInterval, cancellationToken);
+                    await Task.Delay(FlushInterval, cancellationToken);
+                    await this.FlushCoreAsync();
                 }
-                catch (OperationCanceledException)
+                catch
                 {
-                    // Don't return yet. One last chance to flush 
-                    return;
+                    lock (_lock)
+                    {
+                        _backgroundFlusherTask = null;
+                        return;
+                    }
                 }
-
-                await this.FlushCoreAsync();
             }
         }
 
@@ -152,6 +156,15 @@ namespace Microsoft.Azure.WebJobs.Logging
             // Both Start and Completed log here. Completed will overwrite a Start entry. 
             lock (_lock)
             {
+                // Permanent failures when flushing to storage can result in many log entries being buffered.
+                // This basically becomes a memory leak. Mitigate by enforcing a max.
+                if (_activeFuncs.Count >= MaxBufferedEntryCount || _completedFunctions.Count >= MaxBufferedEntryCount)
+                {
+                    _onException?.Invoke(new Exception($"The limit on the number of bufferable log entries was reached. A total of '{MaxBufferedEntryCount}' log entries were dropped."));
+                    _activeFuncs.Clear();
+                    _completedFunctions.Clear();
+                }
+
                 _activeFuncs[item.FunctionInstanceId] = item;
             }
 
@@ -237,6 +250,9 @@ namespace Microsoft.Azure.WebJobs.Logging
                     }
                 }
 
+                // Just making a note while I'm in this code fixing something else. 
+                // It looks like this will drop data if there is any type of error when communicating with storage. 
+                // Other code paths drop the data after successfully writing to storage
                 foreach (var val in flush)
                 {
                     _timespan.Remove(val.RowKey);
@@ -268,7 +284,7 @@ namespace Microsoft.Azure.WebJobs.Logging
             // Before writing, give items a chance to refresh 
             foreach (var item in itemsSnapshot)
             {
-                item.Refresh(_flushInterval);
+                item.Refresh(FlushInterval);
             }
 
             // Write entries
