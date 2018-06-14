@@ -12,7 +12,7 @@ branches:
   - dev
   - master
   - next
-image: Visual Studio 2017 Preview
+image: Visual Studio 2017
 max_jobs: 1
 install:
 - ps: |
@@ -52,6 +52,14 @@ test_script:
     $success = $success -and $?
 
     dotnet test .\test\Microsoft.Azure.WebJobs.EventHubs.UnitTests\ -v q --no-build
+
+    $success = $success -and $?
+    
+    dotnet test .\test\Microsoft.Azure.Webjobs.Extension.Storage.UnitTests\ -v q --no-build
+
+    $success = $success -and $?
+    
+    dotnet test .\test\Microsoft.Azure.WebJobs.ServiceBus.UnitTests\ -v q --no-build
 
     $success = $success -and $?
 
