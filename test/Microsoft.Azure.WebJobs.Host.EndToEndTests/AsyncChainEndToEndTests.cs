@@ -205,7 +205,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             using (_functionCompletedEvent = new ManualResetEvent(initialState: false))
             {
-                var eventCollectorProvider = new TestEventCollectorProvider();
+                var eventCollectorProvider = new TestEventCollectorProvider();                
 
                 // enable the aggregator
                 _hostBuilder.ConfigureServices(services =>
@@ -240,8 +240,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.True(count == 4, $"Expected 4. Actual {count}.{Environment.NewLine}{loggerProvider.GetLogString()}");
 
                 // Make sure the eventCollector was logged 
-                var eventCollector = host.Services.GetService<IAsyncCollector<FunctionInstanceLogEntry>>() as TestFunctionEventCollector;
-                eventCollector.AssertFunctionCount(4, loggerProvider.GetLogString());
+                eventCollectorProvider.EventCollector.AssertFunctionCount(4, loggerProvider.GetLogString());
 
                 host.Dispose();
             }

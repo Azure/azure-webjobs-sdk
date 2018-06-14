@@ -25,6 +25,8 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             string functionName = nameof(ILoggerFunctions.ILogger);
             IHost host = ConfigureHostBuilder().Build();
+            var loggerProvider = host.GetTestLoggerProvider();
+
             using (host)
             {
                 var method = typeof(ILoggerFunctions).GetMethod(functionName);
@@ -33,7 +35,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             // Six loggers are the startup, singleton, results, function and function.user
             // Note: We currently have 3 additional Logger<T> categories that need to be renamed
-            var loggerProvider = host.GetTestLoggerProvider();
             Assert.Equal(7, loggerProvider.CreatedLoggers.Count); // $$$ was 9?
 
             var functionLogger = loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.CreateFunctionUserCategory(functionName)).Single();
@@ -58,6 +59,8 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             string functionName = nameof(ILoggerFunctions.TraceWriterWithILoggerFactory);
 
             IHost host = ConfigureHostBuilder().Build();
+            var loggerProvider = host.GetTestLoggerProvider();
+
             using (host)
             {
                 var method = typeof(ILoggerFunctions).GetMethod(functionName);
@@ -65,7 +68,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
 
             // Five loggers are the startup, singleton, results, function and function.user
-            var loggerProvider = host.GetTestLoggerProvider();
             Assert.Equal(7, loggerProvider.CreatedLoggers.Count); // $$$ was 9? 
             var functionLogger = loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.CreateFunctionUserCategory(functionName)).Single();
             Assert.Equal(2, functionLogger.GetLogMessages().Count);
