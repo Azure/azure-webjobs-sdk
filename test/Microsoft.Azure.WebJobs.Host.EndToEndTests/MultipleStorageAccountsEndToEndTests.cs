@@ -36,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _fixture = fixture;
         }
 
-        [Fact]
+        [Fact(Skip = "Hanging in AppVeyor")]
         public async Task BlobToBlob_DifferentAccounts_PrimaryToSecondary_Succeeds()
         {
             CloudBlockBlob resultBlob = null;
