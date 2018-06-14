@@ -244,14 +244,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
-        public class TestFixture : IDisposable
+        public class TestFixture : IAsyncLifetime
         {
-            public TestFixture()
-            {
-                Initialize().Wait();
-            }
-
-            private async Task Initialize()
+            public async Task InitializeAsync()
             {
                 RandomNameResolver nameResolver = new TestNameResolver();
 
@@ -269,7 +264,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string secondaryConnectionString = config[$"AzureWebJobs{Secondary}"];
                 Account2 = CloudStorageAccount.Parse(secondaryConnectionString);
 
-                await CleanContainers();
+                await CleanContainersAsync();
 
                 CloudBlobClient blobClient1 = Account1.CreateCloudBlobClient();
                 string inputName = nameResolver.ResolveInString(Input);
@@ -338,14 +333,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             public CloudTable OutputTable2 { get; private set; }
 
-            public void Dispose()
+            public async Task DisposeAsync()
             {
-                Host.StopAsync().GetAwaiter().GetResult();
+                await Host.StopAsync();
 
-                CleanContainers().Wait();
+                await CleanContainersAsync();
             }
 
-            private async Task CleanContainers()
+            private async Task CleanContainersAsync()
             {
                 await Clean(Account1);
                 await Clean(Account2);
