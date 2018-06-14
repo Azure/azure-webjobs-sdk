@@ -61,6 +61,7 @@ namespace Microsoft.Extensions.Hosting
             return builder
                .ConfigureServices((context, services) =>
                {
+                   // Replace existing runtime services with storage-backed implementations.
                    // Add runtime services that depend on storage.
                    services.AddSingleton<IDistributedLockManager>(provider => Create(provider));
                                       

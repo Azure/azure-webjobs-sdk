@@ -18,5 +18,7 @@ namespace Microsoft.Azure.WebJobs
         /// <see cref="JobHostConfiguration.DashboardConnectionString"/> can be set to null and the runtime will use the container.
         /// </summary>
         public CloudBlobContainer InternalContainer { get; set; }
+
+        public string AzureWebJobsInternalSasBlobContainer { get; set; }
     }
 }

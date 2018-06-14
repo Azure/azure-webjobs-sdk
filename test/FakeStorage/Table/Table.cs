@@ -12,28 +12,6 @@ using System.Threading.Tasks;
 
 namespace FakeStorage
 {   
-    public class FakeTableClient : CloudTableClient
-        {
-
-        public static Uri FakeUri = new Uri("http://localhost:10000/fakeaccount/");
-
-        internal FakeAccount _account;
-
-        public FakeTableClient(FakeAccount account) : 
-            base (FakeUri, account._creds)
-        {
-            _account = account;
-        }
-
-        
-
-        public override CloudTable GetTableReference(string tableName)
-        {
-            return new FakeTable(this, tableName);
-        }
-
-    }
-
     public class FakeTable : CloudTable
     {
         private readonly FakeTableClient _client;

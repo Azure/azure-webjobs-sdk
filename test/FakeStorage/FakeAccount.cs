@@ -3,6 +3,7 @@
 
 using Microsoft.WindowsAzure.Storage.Auth;
 using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
 using System;
 using System.Collections.Generic;
@@ -17,6 +18,12 @@ namespace FakeStorage
 
         internal readonly MemoryBlobStore _blobStore = new MemoryBlobStore();
         internal readonly MemoryTableStore Store = new MemoryTableStore();
+        internal readonly MemoryQueueStore _queueStore = new MemoryQueueStore();
+
+        public CloudQueueClient CreateCloudQueueClient()
+        {
+            return new FakeQueueClient(this);
+        }
 
         public CloudTableClient CreateCloudTableClient()
         {

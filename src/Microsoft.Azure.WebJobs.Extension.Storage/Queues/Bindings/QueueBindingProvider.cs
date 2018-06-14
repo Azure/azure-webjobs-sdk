@@ -225,8 +225,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
                 QueueAttribute attrResolved,
                 CancellationToken cancellation)
             {
-                IAsyncConverter<QueueAttribute, CloudQueue> convert = this;
-                var queue = await convert.ConvertAsync(attrResolved, cancellation);
+                CloudQueue queue = await _bindingProvider.GetQueueAsync(attrResolved);
+                await queue.CreateIfNotExistsAsync(cancellation);
                 return queue;
             }
         }

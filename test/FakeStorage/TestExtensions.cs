@@ -31,8 +31,8 @@ namespace FakeStorage
 
         public static T SetInternalField<T>(this T obj, string name, object value)
         {
-            var prop = obj.GetType().GetProperty(nameof(name),
-              BindingFlags.Instance | BindingFlags.NonPublic);
+            var prop = obj.GetType().GetProperty(name,
+              BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
 
             prop.SetValue(obj, value);
             return obj;
@@ -49,55 +49,37 @@ namespace FakeStorage
 
         public static CloudQueueMessage SetDequeueCount(this CloudQueueMessage msg, int value)
         {
-            var prop = msg.GetType().GetProperty(nameof(CloudQueueMessage.DequeueCount),
-                BindingFlags.Instance | BindingFlags.NonPublic);
-
-            prop.SetValue(msg, value);
+            msg.SetInternalField(nameof(CloudQueueMessage.DequeueCount), value);
             return msg;
         }
 
         public static CloudQueueMessage SetExpirationTime(this CloudQueueMessage msg, DateTimeOffset? value)
         {
-            var prop = msg.GetType().GetProperty(nameof(CloudQueueMessage.ExpirationTime),
-                BindingFlags.Instance | BindingFlags.NonPublic);
-
-            prop.SetValue(msg, value);
+            msg.SetInternalField(nameof(CloudQueueMessage.ExpirationTime), value);
             return msg;
         }
 
         public static CloudQueueMessage SetId(this CloudQueueMessage msg, string value)
         {
-            var prop = msg.GetType().GetProperty(nameof(CloudQueueMessage.Id),
-                BindingFlags.Instance | BindingFlags.NonPublic);
-
-            prop.SetValue(msg, value);
+            msg.SetInternalField(nameof(CloudQueueMessage.Id), value);
             return msg;
         }
 
         public static CloudQueueMessage SetInsertionTime(this CloudQueueMessage msg, DateTimeOffset? value)
         {
-            var prop = msg.GetType().GetProperty(nameof(CloudQueueMessage.InsertionTime),
-                BindingFlags.Instance | BindingFlags.NonPublic);
-
-            prop.SetValue(msg, value);
+            msg.SetInternalField(nameof(CloudQueueMessage.InsertionTime), value);
             return msg;
         }
 
         public static CloudQueueMessage SetNextVisibleTime(this CloudQueueMessage msg, DateTimeOffset? value)
         {
-            var prop = msg.GetType().GetProperty(nameof(CloudQueueMessage.NextVisibleTime),
-                BindingFlags.Instance | BindingFlags.NonPublic);
-
-            prop.SetValue(msg, value);
+            msg.SetInternalField(nameof(CloudQueueMessage.NextVisibleTime), value);
             return msg;
         }
 
         public static CloudQueueMessage SetPopReceipt(this CloudQueueMessage msg, string value)
         {
-            var prop = msg.GetType().GetProperty(nameof(CloudQueueMessage.PopReceipt),
-                BindingFlags.Instance | BindingFlags.NonPublic);
-
-            prop.SetValue(msg, value);
+            msg.SetInternalField(nameof(CloudQueueMessage.PopReceipt), value);
             return msg;
         }
     }
