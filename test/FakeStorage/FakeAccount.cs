@@ -36,7 +36,7 @@ namespace FakeStorage
         }
 
         // For testing, set a blob instance. 
-        public void SetBlob(string containerName, string blobName, CloudBlockBlob blob)
+        public void SetBlob(string containerName, string blobName, ICloudBlob blob)
         {
             _blobStore.SetBlob(containerName, blobName, blob);
         }

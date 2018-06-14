@@ -177,7 +177,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var account = CreateFakeStorageAccount();
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost<ProgramWithTriggerAndBindingData>()
-                .UseFakeStorage()
+                .UseStorage(account)
                 .Build();
 
             var trigger = new ProgramWithTriggerAndBindingData.Poco { xyz = "abc" };

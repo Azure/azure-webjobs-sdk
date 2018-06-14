@@ -31,13 +31,27 @@ namespace FakeStorage
 
         public static T SetInternalField<T>(this T obj, string name, object value)
         {
-            var prop = obj.GetType().GetProperty(name,
+            var t = obj.GetType();
+            
+            var prop = t.GetProperty(name,
               BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+
+            if (!prop.CanWrite)
+            {
+                t = t.BaseType;
+                prop = t.GetProperty(name,
+                    BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            }
 
             prop.SetValue(obj, value);
             return obj;
         }
 
+        public static BlobProperties SetEtag(this BlobProperties props, string etag )
+        {
+            props.SetInternalField(nameof(BlobProperties.ETag), etag);
+            return props;
+        }
 
         public static BlobResultSegment NewBlobResultSegment(
             BlobContinuationToken continuationToken,

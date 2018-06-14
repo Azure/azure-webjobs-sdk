@@ -33,6 +33,15 @@ namespace FakeStorage
             _items[queueName].DeleteMessage(message);
         }
 
+        public void Clear(string queueName)
+        {
+            Queue queue;
+            if (_items.TryGetValue(queueName, out queue))
+            {
+                queue.Clear();
+            }
+        }
+
         public bool Exists(string queueName)
         {
             return _items.ContainsKey(queueName);
@@ -148,6 +157,17 @@ namespace FakeStorage
                 }
                 return message;
             }
-        }
+
+            public void Clear()
+            {
+                CloudQueueMessage msg;
+                while (this._visibleMessages.TryDequeue(out msg))
+                {
+                    // nop
+                }
+
+                this._invisibleMessages.Clear();
+            }
+        }  
     }
 }

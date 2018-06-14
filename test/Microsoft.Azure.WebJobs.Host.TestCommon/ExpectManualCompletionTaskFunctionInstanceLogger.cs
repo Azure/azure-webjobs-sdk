@@ -10,7 +10,7 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
 {
-    internal class ExpectManualCompletionFunctionInstanceLogger<TResult> : IFunctionInstanceLogger
+    public class ExpectManualCompletionFunctionInstanceLogger<TResult> : IFunctionInstanceLogger
     {
         private readonly TaskCompletionSource<TResult> _taskSource;
         private readonly HashSet<string> _ignoreFailureFunctions;
@@ -23,12 +23,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
                 new HashSet<string>(ignoreFailureFunctions) : new HashSet<string>();
         }
 
-        public Task<string> LogFunctionStartedAsync(FunctionStartedMessage message, CancellationToken cancellationToken)
+        Task<string> IFunctionInstanceLogger.LogFunctionStartedAsync(FunctionStartedMessage message, CancellationToken cancellationToken)
         {
             return Task.FromResult(String.Empty);
         }
 
-        public Task LogFunctionCompletedAsync(FunctionCompletedMessage message, CancellationToken cancellationToken)
+        Task IFunctionInstanceLogger.LogFunctionCompletedAsync(FunctionCompletedMessage message, CancellationToken cancellationToken)
         {
             if (message != null && message.Failure != null && message.Function != null &&
                 !_ignoreFailureFunctions.Contains(message.Function.FullName))
@@ -36,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
                 _taskSource.SetException(message.Failure.Exception);
             }
 
-            return Task.FromResult(0);
+            return Task.CompletedTask;
         }
 
         public Task DeleteLogFunctionStartedAsync(string startedMessageId, CancellationToken cancellationToken)
