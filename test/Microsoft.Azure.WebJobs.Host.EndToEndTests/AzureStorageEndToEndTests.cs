@@ -318,7 +318,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // Stop the host and wait for it to finish
             await host.StopAsync();
 
-            Assert.True(signaled);
+            Assert.True(signaled, $"Function chain did not complete. Logs:{Environment.NewLine}{host.GetTestLoggerProvider().GetLogString()}");
 
             // Verify
             await VerifyTableResultsAsync();

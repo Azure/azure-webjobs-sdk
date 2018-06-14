@@ -684,14 +684,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _numBlobsRead = 1;
         }
 
-        public class TestFixture : IDisposable
+        public class TestFixture : IAsyncLifetime
         {
-            public TestFixture()
-            {
-                Initialize().Wait();
-            }
-
-            private async Task Initialize()
+            public async Task InitializeAsync()
             {
                 RandomNameResolver nameResolver = new RandomNameResolver();
 
@@ -728,7 +723,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.False(await appendBlobContainer.ExistsAsync());
                 await appendBlobContainer.CreateAsync();
 
-                Host.Start();
+                await Host.StartAsync();
 
                 // upload some test blobs
                 CloudBlockBlob blob = BlobContainer.GetBlockBlobReference("blob1");
@@ -807,20 +802,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 private set;
             }
 
-            public void Dispose()
-            {
-                Host.StopAsync().GetAwaiter().GetResult();
-
-                // $$$ reenalbe this 
-                // VerifyLockState("WebJobs.Internal.Blobs.Listener", LeaseState.Available, LeaseStatus.Unlocked).Wait();
-
-                CloudBlobClient blobClient = StorageAccount.CreateCloudBlobClient();
-                foreach (var testContainer in blobClient.ListContainersSegmentedAsync(TestArtifactPrefix, null).Result.Results)
-                {
-                    testContainer.DeleteAsync().Wait();
-                }
-            }
-
             public async Task VerifyLockState(string lockId, LeaseState state, LeaseStatus status)
             {
                 CloudBlobClient blobClient = StorageAccount.CreateCloudBlobClient();
@@ -833,6 +814,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 Assert.Equal(state, lockBlob.Properties.LeaseState);
                 Assert.Equal(status, lockBlob.Properties.LeaseStatus);
+            }
+
+            public async Task DisposeAsync()
+            {
+                await Host.StopAsync();
+
+                // $$$ reenalbe this 
+                // VerifyLockState("WebJobs.Internal.Blobs.Listener", LeaseState.Available, LeaseStatus.Unlocked).Wait();
+
+                CloudBlobClient blobClient = StorageAccount.CreateCloudBlobClient();
+                foreach (var testContainer in (await blobClient.ListContainersSegmentedAsync(TestArtifactPrefix, null)).Results)
+                {
+                    await testContainer.DeleteAsync();
+                }
             }
         }
 
