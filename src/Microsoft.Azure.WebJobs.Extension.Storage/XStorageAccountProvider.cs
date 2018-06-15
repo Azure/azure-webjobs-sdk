@@ -59,6 +59,7 @@ namespace Microsoft.Azure.WebJobs
     {
         protected CloudStorageAccount _account;
 
+        // $$$ Can we get rid of this? It breaks the abstraction
         public CloudStorageAccount SdkObject => _account;
 
         public static XStorageAccount NewFromConnectionString(string accountConnectionString)

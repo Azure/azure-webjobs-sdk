@@ -277,12 +277,12 @@ namespace FakeStorage
 
         public override Task<bool> ExistsAsync()
         {
-            return base.ExistsAsync();
+            return Task.FromResult(_store.Exists(this.Name));
         }
 
         public override Task<bool> ExistsAsync(BlobRequestOptions options, OperationContext operationContext)
         {
-            return base.ExistsAsync(options, operationContext);
+            return Task.FromResult(_store.Exists(this.Name));
         }
 
         public override Task<bool> ExistsAsync(BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)

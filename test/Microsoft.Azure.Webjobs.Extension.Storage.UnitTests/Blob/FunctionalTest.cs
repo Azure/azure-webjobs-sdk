@@ -28,7 +28,8 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             XStorageAccount account, 
             Type programType, 
             Action<TaskCompletionSource<TResult>> setTaskSource,
-            IEnumerable<string> ignoreFailureFunctions = null)
+            IEnumerable<string> ignoreFailureFunctions = null,
+            bool signalOnFirst = false)
         {
             TaskCompletionSource<TResult> src = new TaskCompletionSource<TResult>();
             setTaskSource(src);
@@ -39,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
               .ConfigureDefaultTestHost(programType)
               .AddAzureStorage()
               .UseStorage(account)
-              .ConfigureCatchFailures(src, ignoreFailureFunctions)
+              .ConfigureCatchFailures(src, signalOnFirst, ignoreFailureFunctions)
               .ConfigureServices(services =>
               {
                   // services.AddSingleton<IWebJobsExceptionHandler>(tracker);
@@ -76,9 +77,18 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
         }
 
+        // Caller has already setup a trigger.
+        // Runs the first triggered function and then returns. 
+        // Expected that this instance provided some side-effect (ie, wrote to storage)
+        // that the caller can monitor.
         internal static void RunTrigger(XStorageAccount account, Type programType)
         {
-            throw new NotImplementedException();
+            TaskCompletionSource<bool> src = new TaskCompletionSource<bool>();
+            RunTrigger<bool>(
+                account,
+                programType,
+                (x) => x = src,
+                signalOnFirst: true);
         }
 
         internal static object CreateConfigurationForCallFailure(XStorageAccount account, Type type, TaskCompletionSource<object> backgroundTaskSource)
@@ -100,9 +110,27 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             return null;
         }
 
-        internal static Exception CallFailure(XStorageAccount account, Type programType, MethodInfo methodInfo, object p)
+        // Call the method, and expect a failure. Return the exception. 
+        internal static Exception CallFailure(XStorageAccount account, Type programType, MethodInfo methodInfo, object arguments)
         {
-            throw new NotImplementedException();
+            var host = new HostBuilder()
+                .ConfigureDefaultTestHost(programType)
+                .AddAzureStorage()
+                .UseStorage(account)
+                .Build();
+
+            var jobHost = host.GetJobHost();
+
+            try
+            {
+                jobHost.Call(methodInfo, arguments);
+            }
+            catch (Exception e)
+            {
+                return e;
+            }
+            Assert.True(false, "Expected trigger to fail"); // throws
+            return null;
         }
 
         internal static void Call(XStorageAccount account, Type programType, MethodInfo methodInfo, object arguments, Type[] cloudBlobStreamBinderTypes)

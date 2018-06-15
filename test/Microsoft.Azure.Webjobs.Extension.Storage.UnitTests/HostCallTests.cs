@@ -441,32 +441,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void CloudStorageAccount_CanCall()
-        {
-            // Arrange
-            var account = CreateFakeStorageAccount();
-
-            // Act
-            CloudStorageAccount result = Call<CloudStorageAccount>(account, typeof(CloudStorageAccountProgram),
-                "BindToCloudStorageAccount", (s) => CloudStorageAccountProgram.TaskSource = s);
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.Equal(account.BlobEndpoint, result.BlobEndpoint);
-        }
-
-        private class CloudStorageAccountProgram
-        {
-            public static TaskCompletionSource<CloudStorageAccount> TaskSource { get; set; }
-
-            [NoAutomaticTrigger]
-            public static void BindToCloudStorageAccount(CloudStorageAccount account)
-            {
-                TaskSource.TrySetResult(account);
-            }
-        }
-
-        [Fact]
         public void Queue_IfBoundToOutPoco_CanCall()
         {
             var account = CreateFakeStorageAccount();
@@ -1017,7 +991,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             var client = account.CreateCloudTableClient();
             CloudTable table = client.GetTableReference(TableName);
-            await table.CreateIfNotExistsAsync();
+            await table.CreateIfNotExistsAsync(); // $$$ Should clear existing values. 
             table.InsertOrReplace(CreateTableEntity(PartitionKey, RowKey + "1", "Value", "x1", "*"));
             table.InsertOrReplace(CreateTableEntity(PartitionKey, RowKey + "2", "Value", "x2", "*"));
             table.InsertOrReplace(CreateTableEntity(PartitionKey, RowKey + "3", "Value", "x3", "*"));

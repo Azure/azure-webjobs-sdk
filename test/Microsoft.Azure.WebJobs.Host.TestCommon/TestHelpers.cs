@@ -165,9 +165,13 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
         public static IHostBuilder ConfigureCatchFailures<TResult>(
             this IHostBuilder builder, 
             TaskCompletionSource<TResult> src,
+            bool signalOnFirst,
             IEnumerable<string> ignoreFailureFunctions)
         {
-            var logger = new ExpectManualCompletionFunctionInstanceLogger<TResult>(src, ignoreFailureFunctions);
+            var logger = new ExpectManualCompletionFunctionInstanceLogger<TResult>(
+                src,
+                signalOnFirst,
+                ignoreFailureFunctions);
             return builder.ConfigureServices(services =>
             {
                 services.AddSingleton<IFunctionInstanceLogger>(logger);
