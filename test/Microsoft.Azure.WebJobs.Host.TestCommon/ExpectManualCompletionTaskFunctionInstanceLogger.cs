@@ -21,7 +21,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
         public ExpectManualCompletionFunctionInstanceLogger(
             TaskCompletionSource<TResult> taskSource, 
             bool signalOnFirst, // if true, signal after the first instance has run
-            IEnumerable<string> ignoreFailureFunctions  // whitelist expected failures
+            IEnumerable<string> ignoreFailureFunctions = null // whitelist expected failures
             )
         {
             _signalOnFirst = signalOnFirst;
