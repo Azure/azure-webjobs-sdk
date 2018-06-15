@@ -29,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private static ManualResetEvent _allMessagesProcessed;
         private CloudQueueClient _queueClient;
 
-        public static void ParallelQueueTrigger([QueueTrigger(TestQueueName)] int sleepTimeInSeconds)
+        public static async Task ParallelQueueTrigger([QueueTrigger(TestQueueName)] int sleepTimeInSeconds)
         {
             Console.WriteLine("----> Start");
             lock (_lock)
@@ -43,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
 
             Console.WriteLine("----> Sleep Start");
-            Thread.Sleep(sleepTimeInSeconds * 1000);
+            await Task.Delay(sleepTimeInSeconds * 1000);
             Console.WriteLine("----> Sleep Stop");
 
             lock (_lock)
