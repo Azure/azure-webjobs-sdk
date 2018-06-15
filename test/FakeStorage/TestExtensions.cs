@@ -60,7 +60,14 @@ namespace FakeStorage
             IEnumerable<ICloudBlob> results
             )
         {
-            throw new NotImplementedException();
+            // Ctor is private. 
+            IEnumerable<IListBlobItem> l = results;
+
+            var ctor = typeof(BlobResultSegment).GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] {
+                typeof(IEnumerable<IListBlobItem>), typeof(BlobContinuationToken)
+            }, null);
+            var result = (BlobResultSegment) ctor.Invoke(new object[] { results, continuationToken });
+            return result;
         }
 
         public static CloudQueueMessage SetDequeueCount(this CloudQueueMessage msg, int value)

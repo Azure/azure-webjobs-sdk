@@ -101,7 +101,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             // Path to the status blob is:
             // blobScanInfo/{hostId}/{accountName}/{containerName}/scanInfo
             string blobName = string.Format(CultureInfo.InvariantCulture, "{0}/{1}/scanInfo", storageAccountName, containerName);
-            return _blobScanInfoDirectory.GetBlockBlobReference(blobName);
+            return _blobScanInfoDirectory.SafeGetBlockBlobReference(blobName);
         }
 
         internal class ScanInfo

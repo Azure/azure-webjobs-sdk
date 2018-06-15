@@ -241,33 +241,36 @@ namespace FakeStorage
             return base.DownloadRangeToStreamAsync(target, offset, length, accessCondition, options, operationContext, cancellationToken);
         }
 
-        public override async Task<string> DownloadTextAsync()
+        private async Task<string> DownloadTextCoreAsync(Encoding encoding)
         {
+            encoding = encoding ?? Encoding.UTF8;
             using (Stream stream = await OpenReadAsync(CancellationToken.None))
             {
-                using (TextReader reader = new StreamReader(stream, Encoding.UTF8))
+                using (TextReader reader = new StreamReader(stream, encoding))
                 {
                     return reader.ReadToEnd();
                 }
             }
         }
 
+        public override Task<string> DownloadTextAsync()
+        {
+            return DownloadTextCoreAsync(Encoding.UTF8);
+        }
+
         public override Task<string> DownloadTextAsync(AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
-            throw new NotImplementedException();
-            return base.DownloadTextAsync(accessCondition, options, operationContext);
+            return DownloadTextCoreAsync(Encoding.UTF8);
         }
 
         public override Task<string> DownloadTextAsync(Encoding encoding, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
-            throw new NotImplementedException();
-            return base.DownloadTextAsync(encoding, accessCondition, options, operationContext);
+            return DownloadTextCoreAsync(encoding);
         }
 
         public override Task<string> DownloadTextAsync(Encoding encoding, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
-            return base.DownloadTextAsync(encoding, accessCondition, options, operationContext, cancellationToken);
+            return DownloadTextCoreAsync(encoding);
         }
 
         public override Task<int> DownloadToByteArrayAsync(byte[] target, int index)

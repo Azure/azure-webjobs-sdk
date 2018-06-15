@@ -133,7 +133,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             var blobScanInfoDirectory = blobClient.GetContainerReference(HostContainerNames.Hosts).GetDirectoryReference(blobScanInfoDirectoryPath);
 
             string blobName = string.Format(CultureInfo.InvariantCulture, "{0}/{1}/scanInfo", storageAccountName, containerName);
-            return blobScanInfoDirectory.GetBlockBlobReference(blobName);
+            return blobScanInfoDirectory.SafeGetBlockBlobReference(blobName);
         }
     }
 }

@@ -38,6 +38,11 @@ namespace FakeStorage
                 _properties = new FakeStorageBlobProperties();
             }
 
+            // currentBlob.Properties.LastModified.Value.UtcDateTime;
+            // CloudBlob.Properties  {   return this.attributes.Properties }
+            //   where attributes is internal BlobAttributes class. 
+            // return BlobProperties
+
             this.SetInternalField(nameof(ServiceClient), parent._client);
         }
 

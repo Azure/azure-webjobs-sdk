@@ -216,27 +216,62 @@ namespace FakeStorage
         }
 
         public override Task<BlobResultSegment> ListBlobsSegmentedAsync(BlobContinuationToken currentToken)
-        {
-            throw new NotImplementedException();
+        {            
             return base.ListBlobsSegmentedAsync(currentToken);
         }
 
         public override Task<BlobResultSegment> ListBlobsSegmentedAsync(string prefix, BlobContinuationToken currentToken)
         {
-            throw new NotImplementedException();
             return base.ListBlobsSegmentedAsync(prefix, currentToken);
         }
 
         public override Task<BlobResultSegment> ListBlobsSegmentedAsync(string prefix, bool useFlatBlobListing, BlobListingDetails blobListingDetails, int? maxResults, BlobContinuationToken currentToken, BlobRequestOptions options, OperationContext operationContext)
         {
-            throw new NotImplementedException();
-            return base.ListBlobsSegmentedAsync(prefix, useFlatBlobListing, blobListingDetails, maxResults, currentToken, options, operationContext);
+            return ListBlobsSegmentedCoreAsync(prefix, useFlatBlobListing, blobListingDetails, maxResults, currentToken, options, operationContext, CancellationToken.None);
         }
 
         public override Task<BlobResultSegment> ListBlobsSegmentedAsync(string prefix, bool useFlatBlobListing, BlobListingDetails blobListingDetails, int? maxResults, BlobContinuationToken currentToken, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
-            return base.ListBlobsSegmentedAsync(prefix, useFlatBlobListing, blobListingDetails, maxResults, currentToken, options, operationContext, cancellationToken);
+            return ListBlobsSegmentedCoreAsync(prefix, useFlatBlobListing, blobListingDetails, maxResults, currentToken, options, operationContext, cancellationToken);
+        }
+
+        private Task<BlobResultSegment> ListBlobsSegmentedCoreAsync(string prefix, bool useFlatBlobListing,
+         BlobListingDetails blobListingDetails, int? maxResults, BlobContinuationToken currentToken,
+         BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
+        {
+            if (options != null)
+            {
+                throw new NotImplementedException();
+            }
+
+            if (operationContext != null)
+            {
+                throw new NotImplementedException();
+            }
+
+            string fullPrefix;
+
+            if (!String.IsNullOrEmpty(prefix))
+            {
+                fullPrefix = this.Name + "/" + prefix;
+            }
+            else
+            {
+                fullPrefix = this.Name;
+            }
+
+            Func<string, FakeStorageBlobContainer> containerFactory = (name) =>
+            {
+                if (name != this.Name)
+                {
+                    throw new InvalidOperationException();
+                }
+
+                return this;
+            };
+            var segment = _store.ListBlobsSegmented(containerFactory, fullPrefix,
+                useFlatBlobListing, blobListingDetails, maxResults, currentToken);
+            return Task.FromResult(segment);
         }
 
         public override Task SetPermissionsAsync(BlobContainerPermissions permissions)
