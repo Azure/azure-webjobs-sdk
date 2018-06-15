@@ -33,25 +33,7 @@ test_script:
 - ps: >-
     $success = $true
 
-    dotnet test .\test\Microsoft.Azure.WebJobs.Host.UnitTests\ -v q --no-build
-
-    $success = $success -and $?
-
-    dotnet test .\test\Microsoft.Azure.WebJobs.Host.FunctionalTests\ -v q --no-build
-
-    $success = $success -and $?
-
-    dotnet test .\test\Microsoft.Azure.WebJobs.Logging.FunctionalTests\ -v q --no-build
-
-    $success = $success -and $?
-
-    # see results in app insights AntaresDemo 'functionse2eai'
-
     dotnet test .\test\Microsoft.Azure.WebJobs.Host.EndToEndTests\ -v q --no-build
-
-    $success = $success -and $?
-
-    dotnet test .\test\Microsoft.Azure.WebJobs.EventHubs.UnitTests\ -v q --no-build
 
     $success = $success -and $?
 

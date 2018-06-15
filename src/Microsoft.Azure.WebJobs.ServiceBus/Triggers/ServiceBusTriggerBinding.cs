@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
+using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Converters;
 using Microsoft.Azure.WebJobs.Host.Listeners;
@@ -12,7 +13,6 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.ServiceBus.Bindings;
 using Microsoft.Azure.WebJobs.ServiceBus.Listeners;
-using Microsoft.Azure.ServiceBus;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
 {
@@ -27,19 +27,20 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         private readonly string _topicName;
         private readonly string _subscriptionName;
         private readonly string _entityPath;
-        private readonly ServiceBusConfiguration _config;
+        private readonly ServiceBusOptions _options;
+        private readonly MessagingProvider _messagingProvider;
 
         public ServiceBusTriggerBinding(string parameterName, Type parameterType, ITriggerDataArgumentBinding<Message> argumentBinding, ServiceBusAccount account,
-            ServiceBusConfiguration config, string queueName)
-            : this(parameterName, parameterType, argumentBinding, account, config)
+            ServiceBusOptions options, MessagingProvider messagingProvider, string queueName)
+            : this(parameterName, parameterType, argumentBinding, account, options, messagingProvider)
         {
             _queueName = queueName;
             _entityPath = queueName;
         }
 
         public ServiceBusTriggerBinding(string parameterName, Type parameterType, ITriggerDataArgumentBinding<Message> argumentBinding, ServiceBusAccount account,
-            ServiceBusConfiguration config, string topicName, string subscriptionName)
-            : this(parameterName, parameterType, argumentBinding, account, config)
+            ServiceBusOptions options, MessagingProvider messagingProvider, string topicName, string subscriptionName)
+            : this(parameterName, parameterType, argumentBinding, account, options, messagingProvider)
         {
             _topicName = topicName;
             _subscriptionName = subscriptionName;
@@ -47,14 +48,15 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         }
 
         private ServiceBusTriggerBinding(string parameterName, Type parameterType, ITriggerDataArgumentBinding<Message> argumentBinding,
-            ServiceBusAccount account, ServiceBusConfiguration config)
+            ServiceBusAccount account, ServiceBusOptions options, MessagingProvider messagingProvider)
         {
             _parameterName = parameterName;
             _converter = CreateConverter(parameterType);
             _argumentBinding = argumentBinding;
             _bindingDataContract = CreateBindingDataContract(argumentBinding.BindingDataContract);
             _account = account;
-            _config = config;
+            _options = options;
+            _messagingProvider = messagingProvider;
         }
 
         public Type TriggerValueType
@@ -114,11 +116,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             IListenerFactory factory = null;
             if (_queueName != null)
             {
-                factory = new ServiceBusQueueListenerFactory(_account, _queueName, context.Executor, _config);
+                factory = new ServiceBusQueueListenerFactory(_account, _queueName, context.Executor, _options, _messagingProvider);
             }
             else
             {
-                factory = new ServiceBusSubscriptionListenerFactory(_account, _topicName, _subscriptionName, context.Executor, _config);
+                factory = new ServiceBusSubscriptionListenerFactory(_account, _topicName, _subscriptionName, context.Executor, _options, _messagingProvider);
             }
             return factory.CreateAsync(context.CancellationToken);
         }

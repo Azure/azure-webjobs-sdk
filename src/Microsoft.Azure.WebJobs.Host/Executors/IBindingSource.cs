@@ -7,7 +7,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal interface IBindingSource
+    public interface IBindingSource
     {
         Task<IReadOnlyDictionary<string, IValueProvider>> BindAsync(ValueBindingContext context);
     }

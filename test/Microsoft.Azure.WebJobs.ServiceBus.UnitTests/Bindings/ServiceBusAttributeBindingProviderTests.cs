@@ -6,9 +6,10 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Bindings;
-using Microsoft.Azure.WebJobs.ServiceBus.Bindings;
 using Microsoft.Azure.ServiceBus;
+using Microsoft.Azure.WebJobs.Host.Bindings;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.ServiceBus.Bindings;
 using Moq;
 using Xunit;
 
@@ -22,12 +23,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
         public ServiceBusAttributeBindingProviderTests()
         {
             Mock<INameResolver> mockResolver = new Mock<INameResolver>(MockBehavior.Strict);
-
-            ServiceBusConfiguration config = new ServiceBusConfiguration();
-            _mockMessagingProvider = new Mock<MessagingProvider>(MockBehavior.Strict, config);
-            
-            config.MessagingProvider = _mockMessagingProvider.Object;
-            _provider = new ServiceBusAttributeBindingProvider(mockResolver.Object, config);
+            ServiceBusOptions config = new ServiceBusOptions();
+            _provider = new ServiceBusAttributeBindingProvider(mockResolver.Object, config, TestHelpers.GetConnectionStringProvider());
         }
 
         [Fact]
@@ -55,7 +52,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
         }
 
         public static void TestJob_AccountOverride(
-            [ServiceBusAttribute("test"), 
+            [ServiceBusAttribute("test"),
              ServiceBusAccount("testaccount")] out Message message)
         {
             message = new Message();

@@ -154,7 +154,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         {
             // create a set containing our own core assemblies
             HashSet<Assembly> assemblies = new HashSet<Assembly>();
-            assemblies.Add(typeof(BlobAttribute).Assembly);
+            assemblies.Add(typeof(FunctionNameAttribute).Assembly);
 
             // add any extension assemblies
             assemblies.UnionWith(extensions.GetExtensionAssemblies());

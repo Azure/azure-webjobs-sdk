@@ -17,13 +17,15 @@ using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 {
-    public class ApplicationInsightsLoggerTests
+    public class ApplicationInsightsLoggerTests : IDisposable
     {
         private readonly Guid _invocationId = Guid.NewGuid();
         private readonly Guid _hostInstanceId = Guid.NewGuid();
@@ -39,6 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         private readonly TelemetryClient _client;
         private readonly int _durationMs = 450;
         private readonly IFunctionInstance _functionInstance;
+        private readonly IHost _host;
 
         public ApplicationInsightsLoggerTests()
         {
@@ -50,16 +53,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 ["anotherParam"] = "some value"
             };
 
-            TelemetryConfiguration config = new TelemetryConfiguration
-            {
-                TelemetryChannel = _channel,
-                InstrumentationKey = "some key"
-            };
+            _host = new HostBuilder()
+                .AddApplicationInsights("some key", (c, l) => true, null)
+                .Build();
 
-            // Add the same initializers that we use in the product code
-            DefaultTelemetryClientFactory.AddInitializers(config);
+            TelemetryConfiguration telemteryConfiguration = _host.Services.GetService<TelemetryConfiguration>();
+            telemteryConfiguration.TelemetryChannel = _channel;
 
-            _client = new TelemetryClient(config);
+            _client = _host.Services.GetService<TelemetryClient>();
 
             var descriptor = new FunctionDescriptor
             {
@@ -676,6 +677,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Duration = TimeSpan.FromMilliseconds(_durationMs),
                 Exception = ex
             };
+        }
+
+        public void Dispose()
+        {
+            _channel?.Dispose();
+            _host?.Dispose();
         }
     }
 }

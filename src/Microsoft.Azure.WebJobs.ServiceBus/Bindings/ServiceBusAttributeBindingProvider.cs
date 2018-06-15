@@ -23,21 +23,23 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
                 new AsyncCollectorArgumentBindingProvider());
 
         private readonly INameResolver _nameResolver;
-        private readonly ServiceBusConfiguration _config;
+        private readonly ServiceBusOptions _options;
+        private readonly IConnectionStringProvider _connectionStringProvider;
 
-        public ServiceBusAttributeBindingProvider(INameResolver nameResolver, ServiceBusConfiguration config)
+        public ServiceBusAttributeBindingProvider(INameResolver nameResolver, ServiceBusOptions options, IConnectionStringProvider connectionStringProvider)
         {
             if (nameResolver == null)
             {
                 throw new ArgumentNullException("nameResolver");
             }
-            if (config == null)
+            if (options == null)
             {
                 throw new ArgumentNullException("config");
             }
 
             _nameResolver = nameResolver;
-            _config = config;
+            _options = options;
+            _connectionStringProvider = connectionStringProvider;
         }
 
         public Task<IBinding> TryCreateAsync(BindingProviderContext context)
@@ -65,7 +67,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
                 throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Can't bind ServiceBus to type '{0}'.", parameter.ParameterType));
             }
 
-            ServiceBusAccount account = new ServiceBusAccount(_config, attribute);
+            ServiceBusAccount account = new ServiceBusAccount(_options, _connectionStringProvider, attribute);
 
             IBinding binding = new ServiceBusBinding(parameter.Name, argumentBinding, account, path, attribute);
             return Task.FromResult<IBinding>(binding);

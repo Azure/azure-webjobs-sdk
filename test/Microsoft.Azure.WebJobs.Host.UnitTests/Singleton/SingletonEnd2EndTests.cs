@@ -1,27 +1,35 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host.TestCommon;
 using System;
-using System.Threading;
-using Xunit;
-using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 {
-    public class SingletonEnd2EndTests 
+    public class SingletonEnd2EndTests
     {
         [Fact]
         public async Task ValidateExclusion()
         {
-            var core = new FakeSingletonManager();
-            var host = TestHelpers.NewJobHost<Program>(core);
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<Program>()
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<IDistributedLockManager, FakeSingletonManager>();
+                })
+                .Build();
 
-            var task1 = host.CallAsync("Func1", null);
-            var task2 = host.CallAsync("Func1", null);
-            
-            await Task.WhenAll(task1, task2); 
+            var jobHost = host.GetJobHost<Program>();
+            var task1 = jobHost.CallAsync("Func1", null);
+            var task2 = jobHost.CallAsync("Func1", null);
+
+            await Task.WhenAll(task1, task2);
         }
 
         // Ensure singletons are serialized 

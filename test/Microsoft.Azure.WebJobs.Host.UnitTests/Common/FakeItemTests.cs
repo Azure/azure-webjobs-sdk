@@ -5,13 +5,13 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.Host.UnitTests.Indexers;
+using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using Xunit;
-using Microsoft.Azure.WebJobs.Description;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
@@ -47,22 +47,22 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void Test()
         {
-            var nr = new DictNameResolver();
-            nr.Add("appsetting1", "val1");
-
             var client = new FakeItemClient();
             client._dict["ModifyInPlace"] = new Item
             {
                 Value = 123
             };
 
-            var host = TestHelpers.NewJobHost<Functions>(nr, client);
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<Functions>()
+                .AddExtension(client)
+                .Build();
 
             // With out parameter 
             {
                 client._dict["SetToNull"] = new Item(); // should get ovewritten with null
 
-                host.Call("SetToNull");
+                host.GetJobHost().Call(typeof(Functions).GetMethod(nameof(Functions.SetToNull)));
 
                 var item = (Item)client._dict["SetToNull"];
                 Assert.Equal(null, item);
@@ -70,7 +70,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             // Modifying in-place
             {
-                host.Call("ModifyInPlace");
+                host.GetJobHost().Call(typeof(Functions).GetMethod(nameof(Functions.ModifyInPlace)));
 
                 var item = (Item)client._dict["ModifyInPlace"];
                 Assert.Equal(124, item.Value);

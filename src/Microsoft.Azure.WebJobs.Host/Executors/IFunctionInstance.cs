@@ -6,7 +6,7 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal interface IFunctionInstance
+    public interface IFunctionInstance
     {
         Guid Id { get; }
 

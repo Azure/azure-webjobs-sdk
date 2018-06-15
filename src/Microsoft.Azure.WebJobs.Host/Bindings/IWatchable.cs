@@ -3,7 +3,8 @@
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    internal interface IWatchable
+    // $$$ ok? 
+    public interface IWatchable
     {
         IWatcher Watcher { get; }
     }

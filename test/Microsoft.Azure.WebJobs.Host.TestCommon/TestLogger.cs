@@ -77,5 +77,10 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 
             _logAction?.Invoke(logMessage);
         }
+
+        public override string ToString()
+        {
+            return Category;
+        }
     }
 }

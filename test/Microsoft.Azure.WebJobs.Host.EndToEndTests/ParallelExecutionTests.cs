@@ -5,7 +5,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Xunit;
@@ -28,8 +29,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private static ManualResetEvent _allMessagesProcessed;
         private CloudQueueClient _queueClient;
 
-        public static void ParallelQueueTrigger([QueueTrigger(TestQueueName)] int sleepTimeInSeconds)
+        public static async Task ParallelQueueTrigger([QueueTrigger(TestQueueName)] int sleepTimeInSeconds)
         {
+            Console.WriteLine("----> Start");
             lock (_lock)
             {
                 _receivedMessages++;
@@ -40,7 +42,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 }
             }
 
-            Thread.Sleep(sleepTimeInSeconds * 1000);
+            Console.WriteLine("----> Sleep Start");
+            await Task.Delay(sleepTimeInSeconds * 1000);
+            Console.WriteLine("----> Sleep Stop");
 
             lock (_lock)
             {
@@ -50,6 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     _allMessagesProcessed.Set();
                 }
             }
+            Console.WriteLine("----> Stop");
         }
 
         [Theory]
@@ -66,15 +71,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _numberOfQueueMessages = batchSize * 3;
 
             RandomNameResolver nameResolver = new RandomNameResolver();
-            JobHostConfiguration hostConfiguration = new JobHostConfiguration()
-            {
-                NameResolver = nameResolver,
-                TypeLocator = new FakeTypeLocator(typeof(ParallelExecutionTests)),
-            };
-            hostConfiguration.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
-            hostConfiguration.Queues.BatchSize = batchSize;
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<ParallelExecutionTests>()
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<INameResolver>(nameResolver);
+                    services.Configure<JobHostQueuesOptions>(o => o.BatchSize = batchSize);
+                })
+                .Build();
 
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(hostConfiguration.StorageConnectionString);
+            CloudStorageAccount storageAccount = host.GetStorageAccount();
             _queueClient = storageAccount.CreateCloudQueueClient();
             CloudQueue queue = _queueClient.GetQueueReference(nameResolver.ResolveInString(TestQueueName));
 
@@ -87,11 +93,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
 
             using (_allMessagesProcessed = new ManualResetEvent(initialState: false))
-            using (JobHost host = new JobHost(hostConfiguration))
+            using (host)
             {
-                host.Start();
+                await host.StartAsync();
                 _allMessagesProcessed.WaitOne(TimeSpan.FromSeconds(90));
-                host.Stop();
+                await host.StopAsync();
             }
 
             Assert.Equal(_numberOfQueueMessages, _receivedMessages);
@@ -100,7 +106,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // the actual value will vary sometimes based on the speed of the machine
             // running the test.
             int delta = _maxSimultaneouslyRunningFunctions - maxExpectedParallelism;
-            Assert.True(delta == 0 || delta == 1);
+            Assert.True(delta == 0 || delta == 1, $"Expected delta of 0 or 1. Actual: {delta}.");
         }
 
         public void Dispose()

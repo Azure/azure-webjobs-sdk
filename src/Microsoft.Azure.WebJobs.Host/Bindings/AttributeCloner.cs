@@ -367,13 +367,6 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         { 
             if (formatterType != null)
             {
-                // Special-case Table as there is no way to declare this ResolutionPolicy
-                // and use BindingTemplate in the Core assembly
-                if (formatterType == typeof(WebJobs.ODataFilterResolutionPolicy))
-                {
-                    return new ODataFilterResolutionPolicy();
-                }
-
                 if (!typeof(IResolutionPolicy).IsAssignableFrom(formatterType))
                 {
                     throw new InvalidOperationException($"The {nameof(AutoResolveAttribute.ResolutionPolicyType)} on {propInfo.Name} must derive from {typeof(IResolutionPolicy).Name}.");

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using Microsoft.Extensions.Hosting;
 using System;
 using System.Diagnostics;
 using System.Runtime.ExceptionServices;
@@ -14,16 +15,10 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
     /// </summary>
     public class WebJobsExceptionHandler : IWebJobsExceptionHandler
     {
-        private JobHost _host;
+        private IHost _host;
 
-        /// <inheritdoc />
-        public void Initialize(JobHost host)
+        public WebJobsExceptionHandler(IHost host)
         {
-            if (host == null)
-            {
-                throw new ArgumentNullException("host");
-            }
-
             _host = host;
         }
 
@@ -41,11 +36,12 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
             }
             finally
             {
-                _host.Dispose();
+                // TODO: FACAVAL: This shouldn't be here! - review
+                (_host as IDisposable)?.Dispose();
             }
 
             await Task.Delay(timeoutGracePeriod);
-            await this.OnUnhandledExceptionAsync(exceptionInfo);
+            await OnUnhandledExceptionAsync(exceptionInfo);
         }
 
         /// <inheritdoc />
