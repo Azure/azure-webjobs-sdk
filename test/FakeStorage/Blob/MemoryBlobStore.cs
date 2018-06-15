@@ -306,14 +306,20 @@ namespace FakeStorage
                     return blob._hook;
                 }
 
+                FakeStorageBlobProperties properties = new FakeStorageBlobProperties()
+                {
+                    ETag = blob.ETag,
+                    LastModified = blob.LastModified,
+                };
+
                 switch (blob.BlobType)
                 {
                     case BlobType.BlockBlob:
-                        return new FakeStorageBlockBlob(blobName, parent);
+                        return new FakeStorageBlockBlob(blobName, parent, properties);
                     case BlobType.PageBlob:
-                        return new FakeStoragePageBlob(blobName, parent);                        
+                        return new FakeStoragePageBlob(blobName, parent, properties);                        
                     case BlobType.AppendBlob:
-                        return new FakeStorageAppendBlob(blobName, parent);
+                        return new FakeStorageAppendBlob(blobName, parent, properties);
                     default:
                         throw new InvalidOperationException(string.Format("Type '{0}' is not supported.", blob.BlobType));
                 }

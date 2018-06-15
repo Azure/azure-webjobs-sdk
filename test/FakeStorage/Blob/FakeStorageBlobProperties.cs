@@ -17,5 +17,14 @@ namespace FakeStorage
         public LeaseStatus LeaseStatus { get; set; }
 
         public BlobProperties SdkObject { get; set; }
+
+
+        public BlobProperties GetRealProperties()
+        {
+            var props = new BlobProperties();
+            props.SetInternalField(nameof(BlobProperties.LastModified), this.LastModified);
+            props.SetEtag(this.ETag);
+            return props;
+        }
     }
 }

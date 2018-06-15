@@ -14,11 +14,13 @@ namespace FakeStorage
 {
     public class FakeAccount
     {
-        internal StorageCredentials _creds;
+        internal StorageCredentials _creds = new StorageCredentials("fakeaccount", "key1");
 
         internal readonly MemoryBlobStore _blobStore = new MemoryBlobStore();
         internal readonly MemoryTableStore Store = new MemoryTableStore();
         internal readonly MemoryQueueStore _queueStore = new MemoryQueueStore();
+
+        public string Name => _creds.AccountName;
 
         public CloudQueueClient CreateCloudQueueClient()
         {

@@ -15,6 +15,31 @@ using Microsoft.WindowsAzure.Storage.Table;
 
 namespace FakeStorage
 {
+    // Provide an accessor for getting to private fields. 
+    class Wrapper
+    {
+        private readonly object _value;
+
+        public Wrapper(object value)
+        {
+            _value = value;
+        }
+        public Wrapper GetField(string name)
+        {
+            var t = _value.GetType();
+            var prop = t.GetField(name,
+              BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+
+            var next = prop.GetValue(_value);
+            return new Wrapper(next);
+        }
+
+        public void SetInternalField(string name, object value)
+        {
+            _value.SetInternalField(name, value);
+        }
+    }
+
     // $$$
     public static class TestExtensions
     {

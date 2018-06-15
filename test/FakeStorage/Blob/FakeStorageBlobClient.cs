@@ -16,13 +16,13 @@ namespace FakeStorage
         public static Uri FakeUri = new Uri("https://fakeaccount.blob.core.windows.net");
 
         internal readonly MemoryBlobStore _store;
-        private readonly StorageCredentials _credentials;
 
         public FakeStorageBlobClient(FakeAccount account)
             : base(FakeUri)
         {
             _store = account._blobStore;
-            _credentials = account._creds;
+
+            this.SetInternalField(nameof(Credentials), account._creds);
         }
 
         internal Uri GetContainerUri(string containerName)
@@ -81,27 +81,26 @@ namespace FakeStorage
 
         public Task<ServiceProperties> GetServicePropertiesAsync(CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
             ServiceProperties properties = _store.GetServiceProperties();
             return Task.FromResult(properties);
         }
 
         public override Task<ServiceProperties> GetServicePropertiesAsync()
         {
-            throw new NotImplementedException();
-            return base.GetServicePropertiesAsync();
+            ServiceProperties properties = _store.GetServiceProperties();
+            return Task.FromResult(properties);
         }
 
         public override Task<ServiceProperties> GetServicePropertiesAsync(BlobRequestOptions options, OperationContext operationContext)
         {
-            throw new NotImplementedException();
-            return base.GetServicePropertiesAsync(options, operationContext);
+            ServiceProperties properties = _store.GetServiceProperties();
+            return Task.FromResult(properties);
         }
 
         public override Task<ServiceProperties> GetServicePropertiesAsync(BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
-            return base.GetServicePropertiesAsync(options, operationContext, cancellationToken);
+            ServiceProperties properties = _store.GetServiceProperties();
+            return Task.FromResult(properties);
         }
 
         public override Task<ServiceStats> GetServiceStatsAsync()
@@ -123,15 +122,26 @@ namespace FakeStorage
         }
 
         public override Task<BlobResultSegment> ListBlobsSegmentedAsync(string prefix, BlobContinuationToken currentToken)
-        {
-            throw new NotImplementedException();
-            return base.ListBlobsSegmentedAsync(prefix, currentToken);
+        {            
+            return base.ListBlobsSegmentedAsync(prefix, currentToken); // chain
         }
 
         public override Task<BlobResultSegment> ListBlobsSegmentedAsync(string prefix, bool useFlatBlobListing, BlobListingDetails blobListingDetails, int? maxResults, BlobContinuationToken currentToken, BlobRequestOptions options, OperationContext operationContext)
         {
-            throw new NotImplementedException();
-            return base.ListBlobsSegmentedAsync(prefix, useFlatBlobListing, blobListingDetails, maxResults, currentToken, options, operationContext);
+            if (options != null)
+            {
+                throw new NotImplementedException();
+            }
+
+            if (operationContext != null)
+            {
+                throw new NotImplementedException();
+            }
+
+            Func<string, FakeStorageBlobContainer> containerFactory = (n) => new FakeStorageBlobContainer(this, n);
+            BlobResultSegment segment = _store.ListBlobsSegmented(containerFactory, prefix, useFlatBlobListing,
+                blobListingDetails, maxResults, currentToken);
+            return Task.FromResult(segment);
         }
 
         public override Task<ContainerResultSegment> ListContainersSegmentedAsync(BlobContinuationToken currentToken)
@@ -160,27 +170,26 @@ namespace FakeStorage
 
         public Task SetServicePropertiesAsync(ServiceProperties properties, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
             _store.SetServiceProperties(properties);
-            return Task.FromResult(0);
+            return Task.CompletedTask;
         }
 
         public override Task SetServicePropertiesAsync(ServiceProperties properties)
         {
-            throw new NotImplementedException();
-            return base.SetServicePropertiesAsync(properties);
+            _store.SetServiceProperties(properties);
+            return Task.CompletedTask;
         }
 
         public override Task SetServicePropertiesAsync(ServiceProperties properties, BlobRequestOptions requestOptions, OperationContext operationContext)
         {
-            throw new NotImplementedException();
-            return base.SetServicePropertiesAsync(properties, requestOptions, operationContext);
+            _store.SetServiceProperties(properties);
+            return Task.CompletedTask;
         }
 
         public override Task SetServicePropertiesAsync(ServiceProperties properties, BlobRequestOptions requestOptions, OperationContext operationContext, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
-            return base.SetServicePropertiesAsync(properties, requestOptions, operationContext, cancellationToken);
+            _store.SetServiceProperties(properties);
+            return Task.CompletedTask;
         }
 
         public override string ToString()

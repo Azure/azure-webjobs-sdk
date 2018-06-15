@@ -33,6 +33,7 @@ namespace FakeStorage
             if (properties != null)
             {
                 _properties = properties;
+                ApplyProperties();                
             }
             else
             {
@@ -41,7 +42,19 @@ namespace FakeStorage
 
             this.SetInternalField(nameof(ServiceClient), parent._client);
         }
-        
+
+        private void ApplyProperties()
+        {
+            if (_properties != null)
+            {
+                var realProps = _properties.GetRealProperties();
+                realProps.SetInternalField(nameof(BlobType), BlobType.BlockBlob);
+
+                // { return this.attributes.Properties; }
+                new Wrapper(this).GetField("attributes").SetInternalField("Properties", realProps);
+            }
+        }
+ 
         public override Task AbortCopyAsync(string copyId)
         {
             throw new NotImplementedException();
@@ -63,32 +76,33 @@ namespace FakeStorage
         public Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId,
             CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return AcquireLeaseCore(leaseTime, proposedLeaseId);
+        }
+
+        public override Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId = null)
+        {
+            return AcquireLeaseCore(leaseTime, proposedLeaseId);
+        }
+
+        public override Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
+        {
+            return AcquireLeaseCore(leaseTime, proposedLeaseId);
+        }
+
+        public override Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
+        {
+            return AcquireLeaseCore(leaseTime, proposedLeaseId);
+        }
+
+        private Task<String> AcquireLeaseCore(TimeSpan? leaseTime, string proposedLeaseId)
+        {
             if (proposedLeaseId != null)
             {
                 throw new NotImplementedException();
             }
 
-            string leaseId = _store.AcquireLease(_containerName, _blobName, leaseTime);
+            string leaseId = _store.AcquireLease(this._containerName, _blobName, leaseTime);
             return Task.FromResult(leaseId);
-        }
-
-        public override Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId = null)
-        {
-            //throw new NotImplementedException();
-            return base.AcquireLeaseAsync(leaseTime, proposedLeaseId);
-        }
-
-        public override Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
-        {
-            //throw new NotImplementedException();
-            return base.AcquireLeaseAsync(leaseTime, proposedLeaseId, accessCondition, options, operationContext);
-        }
-
-        public override Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
-        {
-            //throw new NotImplementedException();
-            return base.AcquireLeaseAsync(leaseTime, proposedLeaseId, accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task<TimeSpan> BreakLeaseAsync(TimeSpan? breakPeriod)
@@ -376,6 +390,8 @@ namespace FakeStorage
             {
                 _metadata.Add(item);
             }
+
+            ApplyProperties();
 
             return Task.FromResult(0);
         }

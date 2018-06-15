@@ -57,7 +57,7 @@ namespace Microsoft.Azure.WebJobs
             return _account2.CreateCloudTableClient();
         }
 
-        public override string Name => "FakeAccount";
+        public override string Name => _account2.Name;
         public override bool IsDevelopmentStorageAccount() { return true; }
 
 #endif
