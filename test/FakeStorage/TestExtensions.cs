@@ -36,9 +36,11 @@ namespace FakeStorage
             var prop = t.GetProperty(name,
               BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
 
-            if (!prop.CanWrite)
+            // Reflection has a quirk.  While a property is inherited, the setter may not be. 
+            // Need to request the property on the type it was declared. 
+            while (!prop.CanWrite)
             {
-                t = t.BaseType;
+                t = t.BaseType;                
                 prop = t.GetProperty(name,
                     BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
             }
