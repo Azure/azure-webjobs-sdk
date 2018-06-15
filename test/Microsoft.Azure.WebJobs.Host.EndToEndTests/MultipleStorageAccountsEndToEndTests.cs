@@ -36,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _fixture = fixture;
         }
 
-        [Fact(Skip = "Hanging in AppVeyor")]
+        [Fact]
         public async Task BlobToBlob_DifferentAccounts_PrimaryToSecondary_Succeeds()
         {
             CloudBlockBlob resultBlob = null;
@@ -52,7 +52,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.Equal(TestData, data);
         }
 
-        [Fact(Skip = "Hanging in AppVeyor")]
+        [Fact]
         public async Task BlobToBlob_DifferentAccounts_SecondaryToPrimary_Succeeds()
         {
             CloudBlockBlob resultBlob = null;
@@ -82,7 +82,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.Equal(TestData, resultMessage.AsString);
         }
 
-        [Theory(Skip = "Hanging in AppVeyor")]
+        [Theory]
         [InlineData("QueueToBlob_DifferentAccounts_PrimaryToSecondary_NameResolver")]
         [InlineData("QueueToBlob_DifferentAccounts_PrimaryToSecondary_FullSettingName")]
         public async Task QueueToBlob_DifferentAccounts_PrimaryToSecondary_NameResolver_Succeeds(string methodName)
