@@ -29,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private static ManualResetEvent _allMessagesProcessed;
         private CloudQueueClient _queueClient;
 
-        public static void ParallelQueueTrigger([QueueTrigger(TestQueueName)] int sleepTimeInSeconds)
+        public static async Task ParallelQueueTrigger([QueueTrigger(TestQueueName)] int sleepTimeInSeconds)
         {
             lock (_lock)
             {
@@ -41,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 }
             }
 
-            Thread.Sleep(sleepTimeInSeconds * 1000);
+            await Task.Delay(sleepTimeInSeconds * 1000);
 
             lock (_lock)
             {
@@ -102,7 +102,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // the actual value will vary sometimes based on the speed of the machine
             // running the test.
             int delta = _maxSimultaneouslyRunningFunctions - maxExpectedParallelism;
-            Assert.True(delta == 0 || delta == 1);
+            Assert.True(delta == 0 || delta == 1, $"Expected delta of 0 or 1. Actual: {delta}.");
         }
 
         public void Dispose()
