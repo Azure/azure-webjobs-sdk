@@ -4,13 +4,14 @@
 using System;
 using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.ServiceBus.Bindings;
 using Microsoft.Azure.WebJobs.ServiceBus.Triggers;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Config
 {
@@ -19,29 +20,33 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
     /// </summary>
     public class ServiceBusExtensionConfig : IExtensionConfigProvider
     {
-        private ServiceBusConfiguration _serviceBusConfig;
-
-        /// <summary>
-        /// default constructor. Callers can reference this without having any assembly references to service bus assemblies. 
-        /// </summary>
-        public ServiceBusExtensionConfig()
-            : this(null)
-        {
-        }
+        private readonly INameResolver _nameResolver;
+        private readonly IConnectionStringProvider _connectionStringProvider;
+        private readonly ILoggerFactory _loggerFactory;
+        private readonly ServiceBusOptions _serviceBusConfig;
+        private readonly MessagingProvider _messagingProvider;
 
         /// <summary>
         /// Creates a new <see cref="ServiceBusExtensionConfig"/> instance.
         /// </summary>
-        /// <param name="serviceBusConfig">The <see cref="ServiceBusConfiguration"></see> to use./></param>
-        public ServiceBusExtensionConfig(ServiceBusConfiguration serviceBusConfig)
+        /// <param name="serviceBusConfig">The <see cref="ServiceBusOptions"></see> to use./></param>
+        public ServiceBusExtensionConfig(IOptions<ServiceBusOptions> serviceBusConfig,
+            MessagingProvider messagingProvider,
+            INameResolver nameResolver,
+            IConnectionStringProvider connectionStringProvider,
+            ILoggerFactory loggerFactory)
         {
-            _serviceBusConfig = serviceBusConfig != null ? serviceBusConfig : new ServiceBusConfiguration();
+            _serviceBusConfig = serviceBusConfig.Value;
+            _messagingProvider = messagingProvider;
+            _nameResolver = nameResolver;
+            _connectionStringProvider = connectionStringProvider;
+            _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         }
 
         /// <summary>
-        /// Gets the <see cref="ServiceBusConfiguration"/>
+        /// Gets the <see cref="ServiceBusOptions"/>
         /// </summary>
-        public ServiceBusConfiguration Config
+        public ServiceBusOptions Config
         {
             get
             {
@@ -61,20 +66,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
             // coming from MessageReceivers.
             Config.ExceptionHandler = (e) =>
             {
-                LogExceptionReceivedEvent(e, context.Config.LoggerFactory);
+                LogExceptionReceivedEvent(e, _loggerFactory);
             };
 
-            // get the services we need to construct our binding providers
-            INameResolver nameResolver = context.Config.GetService<INameResolver>();
-            IExtensionRegistry extensions = context.Config.GetService<IExtensionRegistry>();
-
             // register our trigger binding provider
-            ServiceBusTriggerAttributeBindingProvider triggerBindingProvider = new ServiceBusTriggerAttributeBindingProvider(nameResolver, _serviceBusConfig);
-            extensions.RegisterExtension<ITriggerBindingProvider>(triggerBindingProvider);
+            ServiceBusTriggerAttributeBindingProvider triggerBindingProvider = new ServiceBusTriggerAttributeBindingProvider(_nameResolver, _serviceBusConfig, _messagingProvider, _connectionStringProvider);
+            context.AddBindingRule<ServiceBusTriggerAttribute>().BindToTrigger(triggerBindingProvider);
 
             // register our binding provider
-            ServiceBusAttributeBindingProvider bindingProvider = new ServiceBusAttributeBindingProvider(nameResolver, _serviceBusConfig);
-            extensions.RegisterExtension<IBindingProvider>(bindingProvider);
+            ServiceBusAttributeBindingProvider bindingProvider = new ServiceBusAttributeBindingProvider(_nameResolver, _serviceBusConfig, _connectionStringProvider);
+            context.AddBindingRule<ServiceBusAttribute>().Bind(bindingProvider);
         }
 
         internal static void LogExceptionReceivedEvent(ExceptionReceivedEventArgs e, ILoggerFactory loggerFactory)

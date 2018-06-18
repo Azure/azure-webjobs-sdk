@@ -14,7 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
 #if PUBLICPROTOCOL
     public class ParameterLog
 #else
-    internal class ParameterLog
+    public class ParameterLog // $$$ ok? Access from Extensions
 #endif
     {
         /// <summary>Gets or sets the log type.</summary>

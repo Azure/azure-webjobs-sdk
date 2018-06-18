@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Concurrent;
 using Microsoft.Azure.ServiceBus.Core;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -13,20 +14,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     /// </summary>
     public class MessagingProvider
     {
-        private readonly ServiceBusConfiguration _config;
+        private readonly ServiceBusOptions _options;
         private readonly ConcurrentDictionary<string, MessageReceiver> _messageReceiverCache = new ConcurrentDictionary<string, MessageReceiver>();
 
         /// <summary>
         /// Constructs a new instance.
         /// </summary>
-        /// <param name="config">The <see cref="ServiceBusConfiguration"/>.</param>
-        public MessagingProvider(ServiceBusConfiguration config)
+        /// <param name="serviceBusOptions">The <see cref="ServiceBusOptions"/>.</param>
+        public MessagingProvider(IOptions<ServiceBusOptions> serviceBusOptions)
         {
-            if (config == null)
-            {
-                throw new ArgumentNullException("config");
-            }
-            _config = config;
+            _options = serviceBusOptions?.Value ?? throw new ArgumentNullException(nameof(serviceBusOptions));
         }
 
         /// <summary>
@@ -41,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 throw new ArgumentNullException("entityPath");
             }
 
-            return new MessageProcessor(GetOrAddMessageReceiver(entityPath, connectionString), _config.MessageOptions);
+            return new MessageProcessor(GetOrAddMessageReceiver(entityPath, connectionString), _options.MessageOptions);
         }
 
         /// <summary>
@@ -69,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             return _messageReceiverCache.GetOrAdd(cacheKey,
                 new MessageReceiver(connectionString, entityPath)
                 {
-                    PrefetchCount = _config.PrefetchCount
+                    PrefetchCount = _options.PrefetchCount
                 });
         }
     }

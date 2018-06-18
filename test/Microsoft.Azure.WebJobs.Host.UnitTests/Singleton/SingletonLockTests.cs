@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Moq;
 using Xunit;
-using SingletonLockHandle = Microsoft.Azure.WebJobs.Host.BlobLeaseDistributedLockManager.SingletonLockHandle;
+using SingletonLockHandle = Microsoft.Azure.WebJobs.Host.StorageBaseDistributedLockManager.SingletonLockHandle;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 {

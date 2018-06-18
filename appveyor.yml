@@ -1,61 +1,13 @@
-version: 3.0.{build}
-init:
-- ps: | 
-    if ($env:FUNCTIONS_NIGHTLY -eq "1") {
-      $version = Get-Date -Format "yyyyMMdd-HHmm"
-      Update-AppveyorBuild -Version $version -Message "Functions Scheduled Build"
-    }
+version: '{build}'
 pull_requests:
   do_not_increment_build_number: true
 branches:
   only:
   - dev
   - master
-  - next
+  - v2.x
 image: Visual Studio 2017
-max_jobs: 1
-install:
-- ps: |
-    $env:CommitHash = "$env:APPVEYOR_REPO_COMMIT"
-
-    .\dotnet-install.ps1 -Version 2.1.300 -Architecture x86
-cache: '%USERPROFILE%\.nuget\packages'
-build_script:
-- ps: |
-    $buildNumber = 0
-    $hasTag = Test-Path env:APPVEYOR_REPO_TAG_NAME
-    if (-not $hasTag) {
-      $buildNumber = $env:APPVEYOR_BUILD_NUMBER
-      Write-Host "No git tag found. Setting packages suffix to '$buildNumber'"
-    }    
-    .\build.ps1 -packageSuffix "$buildNumber"
-test_script:
-- ps: >-
-    $success = $true
-
-    dotnet test .\test\Microsoft.Azure.WebJobs.Host.UnitTests\ -v q --no-build
-
-    $success = $success -and $?
-
-    dotnet test .\test\Microsoft.Azure.WebJobs.Host.FunctionalTests\ -v q --no-build
-
-    $success = $success -and $?
-
-    dotnet test .\test\Microsoft.Azure.WebJobs.Logging.FunctionalTests\ -v q --no-build
-
-    $success = $success -and $?
-
-    # see results in app insights AntaresDemo 'functionse2eai'
-
-    dotnet test .\test\Microsoft.Azure.WebJobs.Host.EndToEndTests\ -v q --no-build
-
-    $success = $success -and $?
-
-    dotnet test .\test\Microsoft.Azure.WebJobs.EventHubs.UnitTests\ -v q --no-build
-
-    $success = $success -and $?
-
-    if (-not $success) { exit 1 }
-artifacts:
-- path: buildoutput\*.nupkg
-  name: Binaries
+clone_folder: c:\projects\azure-webjobs-sdk
+on_finish:
+  - cmd: '"C:\Program Files (x86)\Microsoft SDKs\Windows\v8.1A\bin\NETFX 4.5.1 Tools\sn.exe" -Vr *,*'
+  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))

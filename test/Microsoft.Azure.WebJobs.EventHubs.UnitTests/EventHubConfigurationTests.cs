@@ -7,12 +7,12 @@ using System.Reflection;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.EventHubs.Processor;
 using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Azure.WebJobs.Host.Bindings;
-using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.ServiceBus;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -35,35 +35,25 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
         [Fact]
         public void Initialize_PerformsExpectedRegistrations()
         {
-            JobHostConfiguration config = new JobHostConfiguration();
-            config.AddService<INameResolver>(new RandomNameResolver());
+            var host = new HostBuilder()
+                .ConfigureDefaultTestHost()
+                .ConfigureServices(c =>
+                {
+                    c.AddSingleton<INameResolver>(new RandomNameResolver());
+                })
+                .AddEventHubs()
+                .Build();
 
-            TestLoggerProvider loggerProvider = new TestLoggerProvider();
-            ILoggerFactory loggerFactory = new LoggerFactory();
-            loggerFactory.AddProvider(loggerProvider);
-            config.LoggerFactory = loggerFactory;
-
-            EventHubConfiguration eventHubConfiguration = new EventHubConfiguration();
-
-            IExtensionRegistry extensions = config.GetService<IExtensionRegistry>();
-            ITriggerBindingProvider[] triggerBindingProviders = extensions.GetExtensions<ITriggerBindingProvider>().ToArray();
-            Assert.Empty(triggerBindingProviders);
-            IBindingProvider[] bindingProviders = extensions.GetExtensions<IBindingProvider>().ToArray();
-            Assert.Empty(bindingProviders);
-
-            ExtensionConfigContext context = new ExtensionConfigContext
-            {
-                Config = config,
-            };
-            ((IExtensionConfigProvider)eventHubConfiguration).Initialize(context);
+            IExtensionRegistry extensions = host.Services.GetService<IExtensionRegistry>();
 
             // ensure the EventHubTriggerAttributeBindingProvider was registered
-            triggerBindingProviders = extensions.GetExtensions<ITriggerBindingProvider>().ToArray();
-            EventHubTriggerAttributeBindingProvider triggerBindingProvider = (EventHubTriggerAttributeBindingProvider)triggerBindingProviders.Single();
+            var triggerBindingProviders = extensions.GetExtensions<ITriggerBindingProvider>().ToArray();
+            EventHubTriggerAttributeBindingProvider triggerBindingProvider = triggerBindingProviders.OfType<EventHubTriggerAttributeBindingProvider>().Single();
             Assert.NotNull(triggerBindingProvider);
 
             // ensure the EventProcessorOptions ExceptionReceived event is wired up
-            var eventProcessorOptions = eventHubConfiguration.EventProcessorOptions;
+            var eventHubConfiguration = host.Services.GetService<EventHubConfiguration>();
+            var eventProcessorOptions = eventHubConfiguration.GetOptions();
             var ex = new EventHubsException(false, "Kaboom!");
             var ctor = typeof(ExceptionReceivedEventArgs).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance).Single();
             var args = (ExceptionReceivedEventArgs)ctor.Invoke(new object[] { "TestHostName", "TestPartitionId", ex, "TestAction" });
@@ -71,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             handler.Method.Invoke(handler.Target, new object[] { args });
 
             string expectedMessage = "EventProcessorHost error (Action=TestAction, HostName=TestHostName, PartitionId=TestPartitionId)";
-            var logMessage = loggerProvider.GetAllLogMessages().Single();
+            var logMessage = host.GetTestLoggerProvider().GetAllLogMessages().Single();
             Assert.Equal(LogLevel.Error, logMessage.Level);
             Assert.Equal(expectedMessage, logMessage.FormattedMessage);
             Assert.Same(ex, logMessage.Exception);
@@ -84,7 +74,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             Assert.False(ex.IsTransient);
             var ctor = typeof(ExceptionReceivedEventArgs).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance).Single();
             var e = (ExceptionReceivedEventArgs)ctor.Invoke(new object[] { "TestHostName", "TestPartitionId", ex, "TestAction" });
-            EventHubConfiguration.LogExceptionReceivedEvent(e, _loggerFactory);
+            EventHubExtensionConfigProvider.LogExceptionReceivedEvent(e, _loggerFactory);
 
             string expectedMessage = "EventProcessorHost error (Action=TestAction, HostName=TestHostName, PartitionId=TestPartitionId)";
             var logMessage = _loggerProvider.GetAllLogMessages().Single();
@@ -100,7 +90,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             Assert.True(ex.IsTransient);
             var ctor = typeof(ExceptionReceivedEventArgs).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance).Single();
             var e = (ExceptionReceivedEventArgs)ctor.Invoke(new object[] { "TestHostName", "TestPartitionId", ex, "TestAction" });
-            EventHubConfiguration.LogExceptionReceivedEvent(e, _loggerFactory);
+            EventHubExtensionConfigProvider.LogExceptionReceivedEvent(e, _loggerFactory);
 
             string expectedMessage = "EventProcessorHost error (Action=TestAction, HostName=TestHostName, PartitionId=TestPartitionId)";
             var logMessage = _loggerProvider.GetAllLogMessages().Single();
@@ -115,7 +105,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             var ex = new OperationCanceledException("Testing");
             var ctor = typeof(ExceptionReceivedEventArgs).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance).Single();
             var e = (ExceptionReceivedEventArgs)ctor.Invoke(new object[] { "TestHostName", "TestPartitionId", ex, "TestAction" });
-            EventHubConfiguration.LogExceptionReceivedEvent(e, _loggerFactory);
+            EventHubExtensionConfigProvider.LogExceptionReceivedEvent(e, _loggerFactory);
 
             string expectedMessage = "EventProcessorHost error (Action=TestAction, HostName=TestHostName, PartitionId=TestPartitionId)";
             var logMessage = _loggerProvider.GetAllLogMessages().Single();
@@ -130,7 +120,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             var ex = new MissingMethodException("What method??");
             var ctor = typeof(ExceptionReceivedEventArgs).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance).Single();
             var e = (ExceptionReceivedEventArgs)ctor.Invoke(new object[] { "TestHostName", "TestPartitionId", ex, "TestAction" });
-            EventHubConfiguration.LogExceptionReceivedEvent(e, _loggerFactory);
+            EventHubExtensionConfigProvider.LogExceptionReceivedEvent(e, _loggerFactory);
 
             string expectedMessage = "EventProcessorHost error (Action=TestAction, HostName=TestHostName, PartitionId=TestPartitionId)";
             var logMessage = _loggerProvider.GetAllLogMessages().Single();

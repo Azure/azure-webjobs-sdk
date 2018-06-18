@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal interface IFunctionInvoker
+    public interface IFunctionInvoker
     {
         IReadOnlyList<string> ParameterNames { get; }
 

@@ -5,38 +5,35 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Bindings;
-using Microsoft.Azure.WebJobs.Host.Blobs;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
 using Microsoft.Azure.WebJobs.Host.Indexers;
-using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Loggers;
-using Microsoft.Azure.WebJobs.Host.Queues;
-using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
-using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
     internal static class FunctionalTest
     {
-        public static void Call(IStorageAccount account, Type programType, MethodInfo method,
+        public static void Call(XStorageAccount account, Type programType, MethodInfo method,
             IDictionary<string, object> arguments, params Type[] cloudBlobStreamBinderTypes)
         {
             // Arrange
             TaskCompletionSource<object> backgroundTaskSource = new TaskCompletionSource<object>();
-            var serviceProvider = CreateConfigurationForManualCompletion<object>(account,
+            IHost host = CreateConfigurationForManualCompletion<object>(account,
                 programType, backgroundTaskSource, cloudBlobStreamBinderTypes: cloudBlobStreamBinderTypes);
             Task backgroundTask = backgroundTaskSource.Task;
 
-            using (JobHost host = new JobHost(serviceProvider))
+            using (host)
             {
-                Task task = host.CallAsync(method, arguments);
+                var jobHost = host.GetJobHost();
+                Task task = jobHost.CallAsync(method, arguments);
 
                 // Act
                 bool completed = Task.WhenAny(task, backgroundTask).WaitUntilCompleted(3 * 1000);
@@ -64,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         // Stops running the host as soon as the program marks the task as completed.
-        public static TResult Call<TResult>(IStorageAccount account, Type programType, MethodInfo method,
+        public static TResult Call<TResult>(XStorageAccount account, Type programType, MethodInfo method,
             IDictionary<string, object> arguments, Action<TaskCompletionSource<TResult>> setTaskSource)
         {
             // Arrange
@@ -76,8 +73,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             try
             {
-                using (JobHost host = new JobHost(serviceProvider))
+                using (serviceProvider)
                 {
+                    var host = serviceProvider.GetJobHost();
                     Task callTask = host.CallAsync(method, arguments);
 
                     // Act
@@ -109,18 +107,18 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         // Stops running the host as soon as the program marks the task as completed.
-        public static Exception CallFailure(IStorageAccount account, Type programType, MethodInfo method,
+        public static Exception CallFailure(XStorageAccount account, Type programType, MethodInfo method,
             IDictionary<string, object> arguments)
         {
             // Arrange
             TaskCompletionSource<object> backgroundTaskSource = new TaskCompletionSource<object>();
-            var serviceProvider = CreateConfigurationForCallFailure(account, programType,
+            var host = CreateConfigurationForCallFailure(account, programType,
                 backgroundTaskSource);
             Task backgroundTask = backgroundTaskSource.Task;
 
-            using (JobHost host = new JobHost(serviceProvider))
+            using (host)
             {
-                Task callTask = host.CallAsync(method, arguments);
+                Task callTask = host.GetJobHost().CallAsync(method, arguments);
 
                 // Act
                 bool completed = Task.WhenAny(callTask, backgroundTask).WaitUntilCompleted(3 * 1000);
@@ -139,28 +137,28 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
         }
 
-        public static JobHostConfiguration CreateConfigurationForCallFailure(IStorageAccount storageAccount,
+        public static IHost CreateConfigurationForCallFailure(XStorageAccount storageAccount,
             Type programType, TaskCompletionSource<object> taskSource)
         {
             return CreateConfiguration<object>(storageAccount, programType, new NullExtensionTypeLocator(),
                 taskSource, new NullFunctionInstanceLogger());
         }
 
-        private static JobHostConfiguration CreateConfigurationForInstanceFailure(IStorageAccount storageAccount,
+        private static IHost CreateConfigurationForInstanceFailure(XStorageAccount storageAccount,
             Type programType, TaskCompletionSource<Exception> taskSource)
         {
             return CreateConfiguration<Exception>(storageAccount, programType, new NullExtensionTypeLocator(),
                 taskSource, new ExpectInstanceFailureTaskFunctionInstanceLogger(taskSource));
         }
 
-        public static JobHostConfiguration CreateConfigurationForInstanceSuccess(IStorageAccount storageAccount,
+        public static IHost CreateConfigurationForInstanceSuccess(XStorageAccount storageAccount,
             Type programType, TaskCompletionSource<object> taskSource, IExtensionRegistry extensions = null)
         {
-            return CreateConfiguration<object>(storageAccount, programType, new NullExtensionTypeLocator(),
-                taskSource, new ExpectInstanceSuccessTaskFunctionInstanceLogger(taskSource), extensions);
+            return CreateConfiguration<object>(storageAccount, programType, new NullExtensionTypeLocator(), taskSource,
+                new ExpectInstanceSuccessTaskFunctionInstanceLogger(taskSource), extensions);
         }
 
-        public static JobHostConfiguration CreateConfigurationForManualCompletion<TResult>(IStorageAccount storageAccount,
+        public static IHost CreateConfigurationForManualCompletion<TResult>(XStorageAccount storageAccount,
             Type programType, TaskCompletionSource<TResult> taskSource, IExtensionRegistry extensions = null, params Type[] cloudBlobStreamBinderTypes)
         {
             IEnumerable<string> ignoreFailureFunctionIds = null;
@@ -168,16 +166,16 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 ignoreFailureFunctionIds, extensions, cloudBlobStreamBinderTypes);
         }
 
-        private static JobHostConfiguration CreateConfigurationForManualCompletion<TResult>(
-            IStorageAccount storageAccount, Type programType, TaskCompletionSource<TResult> taskSource,
+        private static IHost CreateConfigurationForManualCompletion<TResult>(
+            XStorageAccount storageAccount, Type programType, TaskCompletionSource<TResult> taskSource,
             IEnumerable<string> ignoreFailureFunctions, IExtensionRegistry extensions = null, params Type[] cloudBlobStreamBinderTypes)
         {
             return CreateConfigurationForManualCompletion<TResult>(storageAccount, programType,
-                DefaultJobActivator.Instance, taskSource, ignoreFailureFunctions, extensions, cloudBlobStreamBinderTypes);
+                new DefaultJobActivator(), taskSource, ignoreFailureFunctions, extensions, cloudBlobStreamBinderTypes);
         }
 
-        private static JobHostConfiguration CreateConfigurationForManualCompletion<TResult>(
-            IStorageAccount storageAccount, Type programType, IJobActivator activator,
+        private static IHost CreateConfigurationForManualCompletion<TResult>(
+            XStorageAccount storageAccount, Type programType, IJobActivator activator,
             TaskCompletionSource<TResult> taskSource, IEnumerable<string> ignoreFailureFunctions, IExtensionRegistry extensions = null,
             params Type[] cloudBlobStreamBinderTypes)
         {
@@ -193,44 +191,59 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
 
             return CreateConfiguration<TResult>(storageAccount, programType, extensionTypeLocator, activator, taskSource,
-                new ExpectManualCompletionFunctionInstanceLogger<TResult>(taskSource, ignoreFailureFunctions), extensions);
+                new ExpectManualCompletionFunctionInstanceLogger<TResult>(taskSource, false, ignoreFailureFunctions), extensions);
         }
 
-        private static JobHostConfiguration CreateConfiguration<TResult>(IStorageAccount storageAccount, Type programType,
+        private static IHost CreateConfiguration<TResult>(XStorageAccount storageAccount, Type programType,
             IExtensionTypeLocator extensionTypeLocator, TaskCompletionSource<TResult> taskSource,
             IFunctionInstanceLogger functionInstanceLogger, IExtensionRegistry extensions = null)
         {
             return CreateConfiguration<TResult>(storageAccount, programType, extensionTypeLocator,
-                DefaultJobActivator.Instance, taskSource, functionInstanceLogger, extensions);
+                new DefaultJobActivator(), taskSource, functionInstanceLogger, extensions);
         }
 
-        private static JobHostConfiguration CreateConfiguration<TResult>(IStorageAccount storageAccount, Type programType,
-            IExtensionTypeLocator extensionTypeLocator, IJobActivator activator,
-            TaskCompletionSource<TResult> taskSource, IFunctionInstanceLogger functionInstanceLogger, IExtensionRegistry extensions = null)
+        private static IHost CreateConfiguration<TResult>(XStorageAccount storageAccount, Type programType,
+            IExtensionTypeLocator extensionTypeLocator, IJobActivator activator, TaskCompletionSource<TResult> taskSource,
+            IFunctionInstanceLogger functionInstanceLogger, IExtensionRegistry extensions = null)
         {
-            IStorageAccountProvider storageAccountProvider = new FakeStorageAccountProvider
-            {
-                StorageAccount = storageAccount
-            };
+            XStorageAccountProvider storageAccountProvider = null; //  new FakeStorageAccountProvider(storageAccount); $$$
+
             IHostIdProvider hostIdProvider = new FakeHostIdProvider();
             IWebJobsExceptionHandler exceptionHandler = new TaskBackgroundExceptionHandler<TResult>(taskSource);
 
-            return TestHelpers.NewConfig(
-                programType,
-                new FakeQueueConfiguration(storageAccountProvider),
-                storageAccountProvider,
-                extensionTypeLocator,
-                activator,
-                extensions,
-                exceptionHandler,
-                new NullFunctionInstanceLoggerProvider(functionInstanceLogger),
-                new NullHostInstanceLoggerProvider(),
-                new NullFunctionOutputLoggerProvider()
-                );
+            return new HostBuilder()
+                .ConfigureDefaultTestHost(programType)
+                .ConfigureServices(services =>
+                {
+                    // services.AddSingleton<IOptionsFactory<JobHostQueuesOptions>, FakeQueuesOptionsFactory>(); $$$ ???
+
+                    services.AddSingletonIfNotNull<XStorageAccountProvider>(storageAccountProvider);
+                    services.AddSingletonIfNotNull<IJobActivator>(activator);
+                    services.AddSingletonIfNotNull<IWebJobsExceptionHandler>(exceptionHandler);
+                    services.AddSingletonIfNotNull<IExtensionRegistry>(extensions);
+
+                    services.AddSingleton<IExtensionTypeLocator>(extensionTypeLocator);
+                    services.AddSingleton<IFunctionInstanceLoggerProvider>(new NullFunctionInstanceLoggerProvider(functionInstanceLogger));
+                    services.AddSingleton<IHostInstanceLoggerProvider>(new NullHostInstanceLoggerProvider());
+                    services.AddSingleton<IFunctionOutputLoggerProvider>(new NullFunctionOutputLoggerProvider());
+                    services.AddSingleton<IHostIdProvider>(hostIdProvider);
+                })
+                .AddAzureStorage()
+                .Build();
+        }
+
+        private static IServiceCollection AddSingletonIfNotNull<T>(this IServiceCollection services, T instance) where T : class
+        {
+            if (instance != null)
+            {
+                services.AddSingleton<T>(instance);
+            }
+
+            return services;
         }
 
         // Stops running the host as soon as the first function logs completion.
-        public static void RunTrigger(IStorageAccount account, Type programType, IExtensionRegistry extensions = null)
+        public static void RunTrigger(XStorageAccount account, Type programType, IExtensionRegistry extensions = null)
         {
             // Arrange
             TaskCompletionSource<object> taskSource = new TaskCompletionSource<object>();
@@ -241,26 +254,26 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         // Stops running the host as soon as the program marks the task as completed.
-        public static TResult RunTrigger<TResult>(IStorageAccount account, Type programType,
+        public static TResult RunTrigger<TResult>(XStorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
-            return RunTrigger<TResult>(account, programType, setTaskSource, DefaultJobActivator.Instance,
+            return RunTrigger<TResult>(account, programType, setTaskSource, new DefaultJobActivator(),
                 ignoreFailureFunctions: null);
         }
 
-        public static TResult RunTrigger<TResult>(IStorageAccount account, Type programType,
+        public static TResult RunTrigger<TResult>(XStorageAccount account, Type programType,
             IJobActivator activator, Action<TaskCompletionSource<TResult>> setTaskSource)
         {
             return RunTrigger<TResult>(account, programType, setTaskSource, activator, ignoreFailureFunctions: null);
         }
 
-        public static TResult RunTrigger<TResult>(IStorageAccount account, Type programType,
+        public static TResult RunTrigger<TResult>(XStorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource, IEnumerable<string> ignoreFailureFunctions)
         {
-            return RunTrigger<TResult>(account, programType, setTaskSource, DefaultJobActivator.Instance, ignoreFailureFunctions);
+            return RunTrigger<TResult>(account, programType, setTaskSource, new DefaultJobActivator(), ignoreFailureFunctions);
         }
 
-        public static TResult RunTrigger<TResult>(IStorageAccount account, Type programType,
+        public static TResult RunTrigger<TResult>(XStorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource, IJobActivator activator,
             IEnumerable<string> ignoreFailureFunctions)
         {
@@ -282,12 +295,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
         }
 
-        public static TResult RunTrigger<TResult>(JobHostConfiguration config, Task<TResult> task)
+        public static TResult RunTrigger<TResult>(IHost host, Task<TResult> task)
         {
             // Arrange
             bool completed;
 
-            using (JobHost host = new JobHost(config))
+            using (host)
             {
                 host.Start();
 
@@ -301,7 +314,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 {
                     completed = task.WaitUntilCompleted(25 * 1000);
                 }
-                
+
                 // Assert
                 Assert.True(completed);
 
@@ -317,16 +330,16 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         // Stops running the host as soon as the first function logs completion.
-        public static Exception RunTriggerFailure(IStorageAccount account, Type programType)
+        public static Exception RunTriggerFailure(XStorageAccount account, Type programType)
         {
             // Arrange
             TaskCompletionSource<Exception> taskSource = new TaskCompletionSource<Exception>();
-            var serviceProvider = CreateConfigurationForInstanceFailure(account, programType,
-                taskSource);
+            IHost host = CreateConfigurationForInstanceFailure(account, programType, taskSource);
+
             // The task for failed function invocation (should complete successfully with a non-null exception).
             Task<Exception> task = taskSource.Task;
 
-            using (JobHost host = new JobHost(serviceProvider))
+            using (host)
             {
                 host.Start();
 
@@ -350,29 +363,29 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         // Stops running the host as soon as the program marks the task as completed.
-        public static Exception RunTriggerFailure<TResult>(IStorageAccount account, Type programType,
+        public static Exception RunTriggerFailure<TResult>(XStorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
             // Arrange
             TaskCompletionSource<Exception> failureTaskSource = new TaskCompletionSource<Exception>();
-            var serviceProvider = CreateConfigurationForInstanceFailure(account, programType, failureTaskSource);
+            IHost host = CreateConfigurationForInstanceFailure(account, programType, failureTaskSource);
             TaskCompletionSource<TResult> successTaskSource = new TaskCompletionSource<TResult>();
-            
+
             // The task for failed function invocation (should complete successfully with an exception).
             Task<Exception> failureTask = failureTaskSource.Task;
-            
+
             // The task for successful function invocation (should not complete).
             Task<TResult> successTask = successTaskSource.Task;
             setTaskSource.Invoke(successTaskSource);
 
             try
             {
-                using (JobHost host = new JobHost(serviceProvider))
+                using (host)
                 {
                     host.Start();
 
                     // Act
-                    bool completed = Task.WhenAny(failureTask, successTask).WaitUntilCompleted(3 * 1000);
+                    bool completed = Task.WhenAny(failureTask, successTask).WaitUntilCompleted(300 * 1000);
 
                     // Assert
                     Assert.True(completed);
@@ -389,7 +402,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                     // Give a nicer test failure message for faulted tasks.
                     if (failureTask.Status == TaskStatus.Faulted)
                     {
-                        successTask.GetAwaiter().GetResult();
+                        failureTask.GetAwaiter().GetResult();
                     }
 
                     Assert.Equal(TaskStatus.RanToCompletion, failureTask.Status);

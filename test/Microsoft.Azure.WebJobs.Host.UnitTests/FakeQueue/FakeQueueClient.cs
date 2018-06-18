@@ -7,15 +7,23 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
-using Microsoft.Azure.WebJobs.Host.Triggers;
-using Xunit;
 using Newtonsoft.Json.Linq;
+using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
     // For sending fake queue messages. 
     public class FakeQueueClient : IExtensionConfigProvider, IConverter<FakeQueueAttribute, FakeQueueClient>
     {
+        private readonly INameResolver _nameResolver;
+        private readonly IConverterManager _converterManager;
+
+        public FakeQueueClient(INameResolver nameResolver, IConverterManager converterManager)
+        {
+            _nameResolver = nameResolver;
+            _converterManager = converterManager;
+        }
+
         public List<FakeQueueData> _items = new List<FakeQueueData>();
 
         public Dictionary<string, List<FakeQueueData>> _prefixedItems = new Dictionary<string, List<FakeQueueData>>();
@@ -48,29 +56,27 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             rule.AddOpenConverter<OpenType.Poco, FakeQueueData>(ConvertPocoToFakeQueueMessage);
 
-            INameResolver nameResolver = context.Config.GetService<INameResolver>();
-            IConverterManager cm = context.Config.GetService<IConverterManager>();            
-
-            if (this.SetConverters != null)
-            {
-                this.SetConverters(context);
-            }
-
-            IExtensionRegistry extensions = context.Config.GetService<IExtensionRegistry>();            
+            SetConverters?.Invoke(context);
 
             // Binds [FakeQueue] --> IAsyncCollector<FakeQueueData>
             rule.BindToCollector<FakeQueueData>(BuildFromAttr);
 
             // Binds [FakeQueue] --> FakeQueueClient
-            rule.BindToInput<FakeQueueClient>(this);            
+            rule.BindToInput<FakeQueueClient>(this);
 
-            var triggerBindingProvider = new FakeQueueTriggerBindingProvider(this, cm);
-            extensions.RegisterExtension<ITriggerBindingProvider>(triggerBindingProvider);
+            var triggerBindingProvider = new FakeQueueTriggerBindingProvider(this, _converterManager);
+            context.AddBindingRule<FakeQueueTriggerAttribute>()
+                .BindToTrigger(triggerBindingProvider);
         }
 
-        private async Task<object> ConvertPocoToFakeQueueMessage(object arg, Attribute attrResolved, ValueBindingContext context)
+        private Task<object> ConvertFakeQueueMessageToPoco(object src, Attribute attribute, ValueBindingContext context)
         {
-            return new FakeQueueData { Message = JObject.FromObject(arg).ToString() };
+            throw new NotImplementedException();
+        }
+
+        private Task<object> ConvertPocoToFakeQueueMessage(object arg, Attribute attrResolved, ValueBindingContext context)
+        {
+            return Task.FromResult<object>(new FakeQueueData { Message = JObject.FromObject(arg).ToString() });
         }
 
         FakeQueueClient IConverter<FakeQueueAttribute, FakeQueueClient>.Convert(FakeQueueAttribute attr)

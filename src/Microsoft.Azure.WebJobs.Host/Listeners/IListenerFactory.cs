@@ -10,7 +10,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
     /// Interface defining methods used to create <see cref="IListener"/>s for
     /// trigger parameter bindings.
     /// </summary>
-    internal interface IListenerFactory
+    public interface IListenerFactory
     {
         /// <summary>
         /// Creates a listener.

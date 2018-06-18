@@ -5,9 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Hosting;
 using Moq;
 using Xunit;
-using Microsoft.Azure.WebJobs.Host.TestCommon;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 {
@@ -37,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             // Act
             var instance = product.CreateInstance();
             product.InvokeAsync(instance, expectedArguments).GetAwaiter().GetResult();
-            
+
             // Assert
             instanceFactoryMock.VerifyAll();
             methodInvokerMock.VerifyAll();
@@ -70,9 +71,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             var tsc = new TaskCompletionSource<object>();
             prog._waiter = tsc.Task;
             var activator = new FakeActivator(prog);
-            var host = TestHelpers.NewJobHost<MyProg>(activator);
 
-            var task = host.CallAsync("MyProg.Method");
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<MyProg>(activator: activator)
+                .Build();
+
+            var task = host.GetJobHost<MyProg>().CallAsync("MyProg.Method");
             Assert.True(!task.IsCompleted);
 
             Assert.False(prog._disposed, "User job should not yet be disposed.");

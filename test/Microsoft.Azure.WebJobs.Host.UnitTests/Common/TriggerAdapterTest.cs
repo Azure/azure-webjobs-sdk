@@ -10,6 +10,7 @@ using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Extensions.Hosting;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
@@ -19,9 +20,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
     {
         class MyTriggerBindingProvider : ITriggerBindingProvider
         {
-            public async Task<ITriggerBinding> TryCreateAsync(TriggerBindingProviderContext context)
+            public Task<ITriggerBinding> TryCreateAsync(TriggerBindingProviderContext context)
             {
-                return new MyTriggerBinding();
+                return Task.FromResult<ITriggerBinding>(new MyTriggerBinding());
             }
         }
         class MyTriggerBinding : ITriggerBinding
@@ -30,14 +31,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
 
             public IReadOnlyDictionary<string, Type> BindingDataContract => new Dictionary<string, Type>(); // empty
 
-            public async Task<ITriggerData> BindAsync(object value, ValueBindingContext context)
+            public Task<ITriggerData> BindAsync(object value, ValueBindingContext context)
             {
-                return new TriggerData(new Dictionary<string, object>());
+                return Task.FromResult<ITriggerData>(new TriggerData(new Dictionary<string, object>()));
             }
 
-            public async Task<IListener> CreateListenerAsync(ListenerFactoryContext context)
+            public Task<IListener> CreateListenerAsync(ListenerFactoryContext context)
             {
-                return new NullListener();
+                return Task.FromResult<IListener>(new NullListener());
             }
 
             public ParameterDescriptor ToParameterDescriptor()
@@ -105,32 +106,35 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         [Fact]
         public async Task TestNoStringTriggerAdapter()
         {
-            var queueClient = new FakeQueueClient();
-            var config = TestHelpers.NewConfig<ProgNoString>(new ExtNoStringConverter(), queueClient);
-            var host = new JobHost(config);
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<ProgNoString>()
+                .AddExtension<ExtNoStringConverter>()
+                .Build();
 
             var args = new Dictionary<string, object>();
             args["data"] = new FakeQueueData { Message = "15" };
 
-            await host.CallAsync("FuncAsInt", args);
+            await host.GetJobHost<ProgNoString>().CallAsync("FuncAsInt", args);
             Assert.Equal(15, ProgNoString._value);
         }
 
         [Fact]
         public async Task TestTriggerAdapter()
         {
-            var queueClient = new FakeQueueClient();
-            var config = TestHelpers.NewConfig<Prog>(new Ext(), queueClient);
-            var host = new JobHost(config);
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<Prog>()
+                .AddExtension<FakeQueueClient>()
+                .AddExtension<Ext>()
+                .Build();
 
             var args = new Dictionary<string, object>();
             args["data"] = new FakeQueueData { Message = "15" };
 
-            // Test various converters. 
-            await host.CallAsync("FuncAsString", args);
+            // Test various converters.
+            await host.GetJobHost<Prog>().CallAsync("FuncAsString", args);
             Assert.Equal("15", Prog._value);
 
-            await host.CallAsync("FuncAsInt", args);
+            await host.GetJobHost<Prog>().CallAsync("FuncAsInt", args);
             Assert.Equal(15, Prog._value);
         }
     }
