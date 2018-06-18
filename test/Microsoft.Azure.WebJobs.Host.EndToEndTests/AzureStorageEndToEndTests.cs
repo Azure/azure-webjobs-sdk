@@ -313,12 +313,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await UploadTestObject();
             }
 
-            bool signaled = _functionChainWaitHandle.WaitOne(15 * 1000);
+            var waitTime = TimeSpan.FromSeconds(15);
+            bool signaled = _functionChainWaitHandle.WaitOne(waitTime);
 
             // Stop the host and wait for it to finish
             await host.StopAsync();
 
-            Assert.True(signaled, $"Function chain did not complete. Logs:{Environment.NewLine}{host.GetTestLoggerProvider().GetLogString()}");
+            Assert.True(signaled, $"[{DateTime.UtcNow.ToString("HH:mm:ss.fff")}] Function chain did not complete in {waitTime}. Logs:{Environment.NewLine}{host.GetTestLoggerProvider().GetLogString()}");
 
             // Verify
             await VerifyTableResultsAsync();
