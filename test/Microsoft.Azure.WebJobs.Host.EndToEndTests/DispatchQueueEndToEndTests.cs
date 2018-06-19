@@ -65,7 +65,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _output = output;
         }
 
-        [Fact]
+        [Fact(Skip = "Brettsam investigating")]
         // same trigger type, multiple functions
         public async Task DispatchQueueBatchTriggerTest()
         {
@@ -98,7 +98,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Brettsam investigating")]
         public async void PoisonQueueTest()
         {
             _host = new HostBuilder()

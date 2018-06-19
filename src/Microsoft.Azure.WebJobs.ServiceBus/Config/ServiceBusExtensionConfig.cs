@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
         private readonly INameResolver _nameResolver;
         private readonly IConnectionStringProvider _connectionStringProvider;
         private readonly ILoggerFactory _loggerFactory;
-        private readonly ServiceBusOptions _serviceBusConfig;
+        private readonly ServiceBusOptions _serviceBusOptions;
         private readonly MessagingProvider _messagingProvider;
 
         /// <summary>
@@ -36,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
             IConnectionStringProvider connectionStringProvider,
             ILoggerFactory loggerFactory)
         {
-            _serviceBusConfig = serviceBusConfig.Value;
+            _serviceBusOptions = serviceBusConfig.Value;
             _messagingProvider = messagingProvider;
             _nameResolver = nameResolver;
             _connectionStringProvider = connectionStringProvider;
@@ -46,11 +46,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
         /// <summary>
         /// Gets the <see cref="ServiceBusOptions"/>
         /// </summary>
-        public ServiceBusOptions Config
+        public ServiceBusOptions Options
         {
             get
             {
-                return _serviceBusConfig;
+                return _serviceBusOptions;
             }
         }
 
@@ -64,17 +64,17 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
 
             // Set the default exception handler for background exceptions
             // coming from MessageReceivers.
-            Config.ExceptionHandler = (e) =>
+            Options.ExceptionHandler = (e) =>
             {
                 LogExceptionReceivedEvent(e, _loggerFactory);
             };
 
             // register our trigger binding provider
-            ServiceBusTriggerAttributeBindingProvider triggerBindingProvider = new ServiceBusTriggerAttributeBindingProvider(_nameResolver, _serviceBusConfig, _messagingProvider, _connectionStringProvider);
+            ServiceBusTriggerAttributeBindingProvider triggerBindingProvider = new ServiceBusTriggerAttributeBindingProvider(_nameResolver, _serviceBusOptions, _messagingProvider, _connectionStringProvider);
             context.AddBindingRule<ServiceBusTriggerAttribute>().BindToTrigger(triggerBindingProvider);
 
             // register our binding provider
-            ServiceBusAttributeBindingProvider bindingProvider = new ServiceBusAttributeBindingProvider(_nameResolver, _serviceBusConfig, _connectionStringProvider);
+            ServiceBusAttributeBindingProvider bindingProvider = new ServiceBusAttributeBindingProvider(_nameResolver, _serviceBusOptions, _connectionStringProvider);
             context.AddBindingRule<ServiceBusAttribute>().Bind(bindingProvider);
         }
 

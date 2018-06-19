@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
     internal static class FunctionIndexerFactory
     {
-        public class FakeStorageAccountProvider : XStorageAccountProvider
+        public class FakeStorageAccountProvider : StorageAccountProvider
         {
             private readonly XStorageAccount _account;
 
@@ -41,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 .ConfigureDefaultTestHost()
                 .ConfigureServices(services =>
                 {
-                    services.AddSingleton<XStorageAccountProvider>(new FakeStorageAccountProvider());
+                    services.AddSingleton<StorageAccountProvider>(new FakeStorageAccountProvider());
 
 
                     if (nameResolver != null)

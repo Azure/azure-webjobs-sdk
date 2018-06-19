@@ -277,9 +277,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         // Allow a host to override container resolution. 
         class CustomLockManager : StorageBaseDistributedLockManager
         {
-            private readonly XStorageAccountProvider _storage;
+            private readonly StorageAccountProvider _storage;
 
-            public CustomLockManager(ILoggerFactory logger, XStorageAccountProvider storage) : base(logger)
+            public CustomLockManager(ILoggerFactory logger, StorageAccountProvider storage) : base(logger)
             {
                 _storage = storage;
             }
@@ -632,23 +632,23 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             TestJobActivator activator = new TestJobActivator(hostId);
 
-            var hostBuilder = new HostBuilder()
+            var hostBuilder = RuntimeConfigurationExtensions.AddAzureStorageCoreServices(new HostBuilder()
                 .ConfigureDefaultTestHost<TProg>()
                 .ConfigureTestLogger()
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<IJobActivator>(activator);
                     services.AddSingleton<INameResolver>(_resolver);
-                    services.Configure<JobHostOptions>(o => o.HostId = TestHostId);
-                    services.Configure<JobHostQueuesOptions>(o => o.MaxPollingInterval = TimeSpan.FromSeconds(2));
-                    services.Configure<SingletonOptions>(o =>
+                    services.Configure((JobHostOptions o) => o.HostId = TestHostId);
+                    services.Configure((JobHostQueuesOptions o) => o.MaxPollingInterval = TimeSpan.FromSeconds(2));
+                    services.Configure((SingletonOptions o) =>
                     {
                         o.LockAcquisitionTimeout = TimeSpan.FromSeconds(10);
                         o.LockAcquisitionPollingInterval = TimeSpan.FromMilliseconds(500);
                     });
                 })
                 .AddExtension<TestTriggerAttributeBindingProvider>()
-                .AddStorageForRuntimeInternals();
+);
 
             extraConfig?.Invoke(hostBuilder); // test hook gets final say to replace. 
 

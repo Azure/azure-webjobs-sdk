@@ -60,7 +60,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
             };
 
             IReadOnlyDictionary<string, object> valueBindingData = null;
-            var config = new ServiceBusOptions();
+
+            var config = new ServiceBusOptions
+            {
+                ConnectionString = "Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=TestKey;SharedAccessKey=00000000000000000"
+            };
+
             var messageReceiver = new MessageReceiver(config.ConnectionString, "test");
             var bindingData = ServiceBusTriggerBinding.CreateBindingData(message, messageReceiver, valueBindingData);
             Assert.Equal(9, bindingData.Count);

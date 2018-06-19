@@ -58,19 +58,16 @@ namespace FakeStorage
         public override Task AbortCopyAsync(string copyId)
         {
             throw new NotImplementedException();
-            return base.AbortCopyAsync(copyId);
         }
 
         public override Task AbortCopyAsync(string copyId, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.AbortCopyAsync(copyId, accessCondition, options, operationContext);
         }
 
         public override Task AbortCopyAsync(string copyId, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.AbortCopyAsync(copyId, accessCondition, options, operationContext, cancellationToken);
         }
 
         public Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId,
@@ -108,55 +105,46 @@ namespace FakeStorage
         public override Task<TimeSpan> BreakLeaseAsync(TimeSpan? breakPeriod)
         {
             throw new NotImplementedException();
-            return base.BreakLeaseAsync(breakPeriod);
         }
 
         public override Task<TimeSpan> BreakLeaseAsync(TimeSpan? breakPeriod, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.BreakLeaseAsync(breakPeriod, accessCondition, options, operationContext);
         }
 
         public override Task<TimeSpan> BreakLeaseAsync(TimeSpan? breakPeriod, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.BreakLeaseAsync(breakPeriod, accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task<string> ChangeLeaseAsync(string proposedLeaseId, AccessCondition accessCondition)
         {
             throw new NotImplementedException();
-            return base.ChangeLeaseAsync(proposedLeaseId, accessCondition);
         }
 
         public override Task<string> ChangeLeaseAsync(string proposedLeaseId, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.ChangeLeaseAsync(proposedLeaseId, accessCondition, options, operationContext);
         }
 
         public override Task<string> ChangeLeaseAsync(string proposedLeaseId, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.ChangeLeaseAsync(proposedLeaseId, accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task<CloudBlockBlob> CreateSnapshotAsync()
         {
             throw new NotImplementedException();
-            return base.CreateSnapshotAsync();
         }
 
         public override Task<CloudBlockBlob> CreateSnapshotAsync(IDictionary<string, string> metadata, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.CreateSnapshotAsync(metadata, accessCondition, options, operationContext);
         }
 
         public override Task<CloudBlockBlob> CreateSnapshotAsync(IDictionary<string, string> metadata, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.CreateSnapshotAsync(metadata, accessCondition, options, operationContext, cancellationToken);
         }
 
         public Task DeleteAsync(CancellationToken cancellationToken)
@@ -168,91 +156,76 @@ namespace FakeStorage
         public override Task DeleteAsync()
         {
             throw new NotImplementedException();
-            return base.DeleteAsync();
         }
 
         public override Task DeleteAsync(DeleteSnapshotsOption deleteSnapshotsOption, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.DeleteAsync(deleteSnapshotsOption, accessCondition, options, operationContext);
         }
 
         public override Task DeleteAsync(DeleteSnapshotsOption deleteSnapshotsOption, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.DeleteAsync(deleteSnapshotsOption, accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task<bool> DeleteIfExistsAsync()
         {
             throw new NotImplementedException();
-            return base.DeleteIfExistsAsync();
         }
 
         public override Task<bool> DeleteIfExistsAsync(DeleteSnapshotsOption deleteSnapshotsOption, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.DeleteIfExistsAsync(deleteSnapshotsOption, accessCondition, options, operationContext);
         }
 
         public override Task<bool> DeleteIfExistsAsync(DeleteSnapshotsOption deleteSnapshotsOption, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.DeleteIfExistsAsync(deleteSnapshotsOption, accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task<IEnumerable<ListBlockItem>> DownloadBlockListAsync()
         {
             throw new NotImplementedException();
-            return base.DownloadBlockListAsync();
         }
 
         public override Task<IEnumerable<ListBlockItem>> DownloadBlockListAsync(BlockListingFilter blockListingFilter, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.DownloadBlockListAsync(blockListingFilter, accessCondition, options, operationContext);
         }
 
         public override Task<IEnumerable<ListBlockItem>> DownloadBlockListAsync(BlockListingFilter blockListingFilter, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.DownloadBlockListAsync(blockListingFilter, accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task<int> DownloadRangeToByteArrayAsync(byte[] target, int index, long? blobOffset, long? length)
         {
             throw new NotImplementedException();
-            return base.DownloadRangeToByteArrayAsync(target, index, blobOffset, length);
         }
 
         public override Task<int> DownloadRangeToByteArrayAsync(byte[] target, int index, long? blobOffset, long? length, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.DownloadRangeToByteArrayAsync(target, index, blobOffset, length, accessCondition, options, operationContext);
         }
 
         public override Task<int> DownloadRangeToByteArrayAsync(byte[] target, int index, long? blobOffset, long? length, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.DownloadRangeToByteArrayAsync(target, index, blobOffset, length, accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task DownloadRangeToStreamAsync(Stream target, long? offset, long? length)
         {
             throw new NotImplementedException();
-            return base.DownloadRangeToStreamAsync(target, offset, length);
         }
 
         public override Task DownloadRangeToStreamAsync(Stream target, long? offset, long? length, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.DownloadRangeToStreamAsync(target, offset, length, accessCondition, options, operationContext);
         }
 
         public override Task DownloadRangeToStreamAsync(Stream target, long? offset, long? length, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.DownloadRangeToStreamAsync(target, offset, length, accessCondition, options, operationContext, cancellationToken);
         }
 
         private async Task<string> DownloadTextCoreAsync(Encoding encoding)
@@ -290,55 +263,46 @@ namespace FakeStorage
         public override Task<int> DownloadToByteArrayAsync(byte[] target, int index)
         {
             throw new NotImplementedException();
-            return base.DownloadToByteArrayAsync(target, index);
         }
 
         public override Task<int> DownloadToByteArrayAsync(byte[] target, int index, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.DownloadToByteArrayAsync(target, index, accessCondition, options, operationContext);
         }
 
         public override Task<int> DownloadToByteArrayAsync(byte[] target, int index, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.DownloadToByteArrayAsync(target, index, accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task DownloadToFileAsync(string path, FileMode mode)
         {
             throw new NotImplementedException();
-            return base.DownloadToFileAsync(path, mode);
         }
 
         public override Task DownloadToFileAsync(string path, FileMode mode, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.DownloadToFileAsync(path, mode, accessCondition, options, operationContext);
         }
 
         public override Task DownloadToFileAsync(string path, FileMode mode, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.DownloadToFileAsync(path, mode, accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task DownloadToStreamAsync(Stream target)
         {
             throw new NotImplementedException();
-            return base.DownloadToStreamAsync(target);
         }
 
         public override Task DownloadToStreamAsync(Stream target, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.DownloadToStreamAsync(target, accessCondition, options, operationContext);
         }
 
         public override Task DownloadToStreamAsync(Stream target, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.DownloadToStreamAsync(target, accessCondition, options, operationContext, cancellationToken);
         }
 
         public override bool Equals(object obj)
@@ -446,37 +410,31 @@ namespace FakeStorage
         public override Task PutBlockAsync(string blockId, Stream blockData, string contentMD5)
         {
             throw new NotImplementedException();
-            return base.PutBlockAsync(blockId, blockData, contentMD5);
         }
 
         public override Task PutBlockAsync(string blockId, Stream blockData, string contentMD5, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.PutBlockAsync(blockId, blockData, contentMD5, accessCondition, options, operationContext);
         }
 
         public override Task PutBlockAsync(string blockId, Stream blockData, string contentMD5, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.PutBlockAsync(blockId, blockData, contentMD5, accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task PutBlockListAsync(IEnumerable<string> blockList)
         {
             throw new NotImplementedException();
-            return base.PutBlockListAsync(blockList);
         }
 
         public override Task PutBlockListAsync(IEnumerable<string> blockList, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.PutBlockListAsync(blockList, accessCondition, options, operationContext);
         }
 
         public override Task PutBlockListAsync(IEnumerable<string> blockList, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.PutBlockListAsync(blockList, accessCondition, options, operationContext, cancellationToken);
         }
 
          public override Task ReleaseLeaseAsync(AccessCondition accessCondition)

@@ -295,7 +295,7 @@ namespace FakeStorage
 
     static class Ext
     {
-        public static  string RetrievePartitionKey(this TableOperation operation)
+        public static string RetrievePartitionKey(this TableOperation operation)
         {
             return GetInternalField<string>(operation, "RetrievePartitionKey");
         }
@@ -317,8 +317,5 @@ namespace FakeStorage
             var val = prop.GetValue(obj);
             return (T)val;
         }
-
-
     }
-
 }

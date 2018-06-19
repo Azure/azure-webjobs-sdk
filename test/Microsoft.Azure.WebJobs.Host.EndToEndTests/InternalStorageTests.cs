@@ -47,8 +47,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var fakeSasUri = container.Uri + sig;
             var prog = new BasicProg();
 
-            IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<BasicProg>(prog)
+            IHost host = RuntimeConfigurationExtensions.AddAzureStorageCoreServices(new HostBuilder()
+                .ConfigureDefaultTestHost(prog)
                 .ConfigureAppConfiguration(config =>
                 {
                     // Set env to the SAS container and clear out all other storage. 
@@ -59,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                             { "AzureWebJobsDashboard", null }
                     });
                 })
-                .AddStorageForRuntimeInternals()
+)
                 .Build();
 
             var internalOptions = host.Services.GetService<DistributedLockManagerContainerProvider>();

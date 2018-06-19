@@ -20,25 +20,15 @@ namespace SampleHost
         {
             var builder = new HostBuilder()
                 .UseEnvironment("Development")
-                .ConfigureWebJobsHost(o =>
-                {
-                    // Example setting options properties:
-                    // o.HostId = "testhostid";
-                })
-                // These can be toggled independently!
+                .ConfigureWebJobsHost()
                 .AddWebJobsLogging() // Enables WebJobs v1 classic logging 
-                .AddStorageForRuntimeInternals() // enables WebJobs to run distributed, via a storage account to coordinate
-                .AddAzureStorage() // adds [Blob], etc bindings for Azure Storage. 
+                .AddAzureStorageCoreServices()
+                .AddAzureStorage()
                 .AddApplicationInsights()
                 .ConfigureAppConfiguration(config =>
                 {
                     // Adding command line as a configuration source
                     config.AddCommandLine(args);
-                    config.AddInMemoryCollection(new Dictionary<string, string>()
-                    {
-                        // Configuration options set from configuration providers:
-                        { "HostId", "testhostidfromprovider" }
-                    });
                 })
                 .ConfigureLogging(b =>
                 {

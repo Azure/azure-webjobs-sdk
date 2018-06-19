@@ -49,7 +49,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var host = new HostBuilder()
                 .ConfigureDefaultTestHost()
                 .Build();
-            var provider = host.Services.GetService<XStorageAccountProvider>();
+            var provider = host.Services.GetService<StorageAccountProvider>();
             _storageAccount = provider.GetHost().SdkObject;
             CloudBlobClient blobClient = _storageAccount.CreateCloudBlobClient();
             _testContainer = blobClient.GetContainerReference(_nameResolver.ResolveInString(SingleTriggerContainerName));

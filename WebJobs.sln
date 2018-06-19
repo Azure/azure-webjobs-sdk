@@ -41,7 +41,7 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "WebJobs.Shared", "src\Micro
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.ServiceBus.UnitTests", "test\Microsoft.Azure.WebJobs.ServiceBus.UnitTests\WebJobs.ServiceBus.UnitTests.csproj", "{D37637D5-7EF9-43CB-86BE-537473CD613B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.Extension.Storage", "src\Microsoft.Azure.WebJobs.Extension.Storage\WebJobs.Extension.Storage.csproj", "{A9733406-267C-4A53-AB07-D3A834E22153}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.Extensions.Storage", "src\Microsoft.Azure.WebJobs.Extensions.Storage\WebJobs.Extensions.Storage.csproj", "{A9733406-267C-4A53-AB07-D3A834E22153}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.Host.Storage", "src\Microsoft.Azure.WebJobs.Host.Storage\WebJobs.Host.Storage.csproj", "{DED33098-FE99-436C-96CC-B59A30BEF027}"
 EndProject
@@ -49,7 +49,7 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "WebJobs.Shared.Storage", "s
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.EventHubs", "src\Microsoft.Azure.WebJobs.Extensions.EventHubs\WebJobs.EventHubs.csproj", "{8498FA6B-3843-44A4-A351-E35711B7FFDF}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.Extension.Storage.UnitTests", "test\Microsoft.Azure.Webjobs.Extension.Storage.UnitTests\WebJobs.Extension.Storage.UnitTests.csproj", "{0CC5741F-ACDA-4DB8-9C17-074E8896F244}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.Extensions.Storage.UnitTests", "test\Microsoft.Azure.Webjobs.Extensions.Storage.UnitTests\WebJobs.Extensions.Storage.UnitTests.csproj", "{0CC5741F-ACDA-4DB8-9C17-074E8896F244}"
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "WebJobs.Protocols", "src\Microsoft.Azure.WebJobs.Protocols\WebJobs.Protocols.shproj", "{6FCD0852-6019-4CD5-9B7E-0DE021A72BD7}"
 EndProject

@@ -87,7 +87,6 @@ namespace FakeStorage
                 return
                     (other._tableName == this._tableName) &&
                     (other._store == this._store);
-
             }
             return false;
         }
@@ -237,4 +236,3 @@ namespace FakeStorage
         }
     }
 }
-

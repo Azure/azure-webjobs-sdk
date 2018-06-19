@@ -206,29 +206,29 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             IExtensionTypeLocator extensionTypeLocator, IJobActivator activator, TaskCompletionSource<TResult> taskSource,
             IFunctionInstanceLogger functionInstanceLogger, IExtensionRegistry extensions = null)
         {
-            XStorageAccountProvider storageAccountProvider = null; //  new FakeStorageAccountProvider(storageAccount); $$$
+            StorageAccountProvider storageAccountProvider = null; //  new FakeStorageAccountProvider(storageAccount); $$$
 
             IHostIdProvider hostIdProvider = new FakeHostIdProvider();
             IWebJobsExceptionHandler exceptionHandler = new TaskBackgroundExceptionHandler<TResult>(taskSource);
 
-            return new HostBuilder()
+            return StorageHostBuilderExtensions.AddAzureStorage(new HostBuilder()
                 .ConfigureDefaultTestHost(programType)
                 .ConfigureServices(services =>
                 {
                     // services.AddSingleton<IOptionsFactory<JobHostQueuesOptions>, FakeQueuesOptionsFactory>(); $$$ ???
 
-                    services.AddSingletonIfNotNull<XStorageAccountProvider>(storageAccountProvider);
-                    services.AddSingletonIfNotNull<IJobActivator>(activator);
-                    services.AddSingletonIfNotNull<IWebJobsExceptionHandler>(exceptionHandler);
-                    services.AddSingletonIfNotNull<IExtensionRegistry>(extensions);
+                    services.AddSingletonIfNotNull(storageAccountProvider);
+                    services.AddSingletonIfNotNull(activator);
+                    services.AddSingletonIfNotNull(exceptionHandler);
+                    services.AddSingletonIfNotNull(extensions);
 
-                    services.AddSingleton<IExtensionTypeLocator>(extensionTypeLocator);
+                    services.AddSingleton(extensionTypeLocator);
                     services.AddSingleton<IFunctionInstanceLoggerProvider>(new NullFunctionInstanceLoggerProvider(functionInstanceLogger));
                     services.AddSingleton<IHostInstanceLoggerProvider>(new NullHostInstanceLoggerProvider());
                     services.AddSingleton<IFunctionOutputLoggerProvider>(new NullFunctionOutputLoggerProvider());
-                    services.AddSingleton<IHostIdProvider>(hostIdProvider);
+                    services.AddSingleton(hostIdProvider);
                 })
-                .AddAzureStorage()
+)
                 .Build();
         }
 

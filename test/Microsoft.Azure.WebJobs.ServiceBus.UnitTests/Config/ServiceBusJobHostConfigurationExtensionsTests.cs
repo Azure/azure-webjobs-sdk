@@ -47,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
             // verify that a default ServiceBusConfiguration was created, with the host (obsolete)
             // service bus connection string propagated
             string serviceBusConnection = Environment.GetEnvironmentVariable("AzureWebJobsServiceBus");
-            Assert.Equal(serviceBusConnection, serviceBusExtensionConfig.Config.ConnectionString);
+            Assert.Equal(serviceBusConnection, serviceBusExtensionConfig.Options.ConnectionString);
         }
 
         [Fact]
@@ -74,7 +74,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
             // verify that the service bus config provider was registered
             var serviceBusExtensionConfig = configProviders.OfType<ServiceBusExtensionConfig>().Single();
 
-            Assert.Equal(fakeConnStr, serviceBusExtensionConfig.Config.ConnectionString);
+            Assert.Equal(fakeConnStr, serviceBusExtensionConfig.Options.ConnectionString);
         }
     }
 }

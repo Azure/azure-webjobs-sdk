@@ -222,7 +222,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 
         public static XStorageAccount GetStorageAccount(this IHost host)
         {
-            var provider = host.Services.GetRequiredService<XStorageAccountProvider>(); // $$$ ok?
+            var provider = host.Services.GetRequiredService<StorageAccountProvider>(); // $$$ ok?
             return provider.GetHost();
         }
 

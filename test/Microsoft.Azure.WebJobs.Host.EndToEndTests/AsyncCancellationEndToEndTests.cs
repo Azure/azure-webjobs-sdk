@@ -43,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 })
                 .Build();
 
-            var accountProvider = _host.Services.GetService<XStorageAccountProvider>();
+            var accountProvider = _host.Services.GetService<StorageAccountProvider>();
             _storageAccount = accountProvider.GetHost().SdkObject;
 
             _invokeInFunction = () => { };

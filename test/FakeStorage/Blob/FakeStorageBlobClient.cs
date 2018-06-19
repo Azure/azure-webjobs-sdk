@@ -42,25 +42,21 @@ namespace FakeStorage
         public override Task<ICloudBlob> GetBlobReferenceFromServerAsync(Uri blobUri)
         {
             throw new NotImplementedException();
-            return base.GetBlobReferenceFromServerAsync(blobUri);
         }
 
         public override Task<ICloudBlob> GetBlobReferenceFromServerAsync(Uri blobUri, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.GetBlobReferenceFromServerAsync(blobUri, accessCondition, options, operationContext);
         }
 
         public override Task<ICloudBlob> GetBlobReferenceFromServerAsync(StorageUri blobUri, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.GetBlobReferenceFromServerAsync(blobUri, accessCondition, options, operationContext);
         }
 
         public override Task<ICloudBlob> GetBlobReferenceFromServerAsync(StorageUri blobUri, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.GetBlobReferenceFromServerAsync(blobUri, accessCondition, options, operationContext, cancellationToken);
         }
 
         public override CloudBlobContainer GetContainerReference(string containerName)
@@ -76,7 +72,6 @@ namespace FakeStorage
         public override CloudBlobContainer GetRootContainerReference()
         {
             throw new NotImplementedException();
-            return base.GetRootContainerReference();
         }
 
         public Task<ServiceProperties> GetServicePropertiesAsync(CancellationToken cancellationToken)
@@ -106,19 +101,16 @@ namespace FakeStorage
         public override Task<ServiceStats> GetServiceStatsAsync()
         {
             throw new NotImplementedException();
-            return base.GetServiceStatsAsync();
         }
 
         public override Task<ServiceStats> GetServiceStatsAsync(BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.GetServiceStatsAsync(options, operationContext);
         }
 
         public override Task<ServiceStats> GetServiceStatsAsync(BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.GetServiceStatsAsync(options, operationContext, cancellationToken);
         }
 
         public override Task<BlobResultSegment> ListBlobsSegmentedAsync(string prefix, BlobContinuationToken currentToken)
@@ -147,25 +139,21 @@ namespace FakeStorage
         public override Task<ContainerResultSegment> ListContainersSegmentedAsync(BlobContinuationToken currentToken)
         {
             throw new NotImplementedException();
-            return base.ListContainersSegmentedAsync(currentToken);
         }
 
         public override Task<ContainerResultSegment> ListContainersSegmentedAsync(string prefix, BlobContinuationToken currentToken)
         {
             throw new NotImplementedException();
-            return base.ListContainersSegmentedAsync(prefix, currentToken);
         }
 
         public override Task<ContainerResultSegment> ListContainersSegmentedAsync(string prefix, ContainerListingDetails detailsIncluded, int? maxResults, BlobContinuationToken currentToken, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.ListContainersSegmentedAsync(prefix, detailsIncluded, maxResults, currentToken, options, operationContext);
         }
 
         public override Task<ContainerResultSegment> ListContainersSegmentedAsync(string prefix, ContainerListingDetails detailsIncluded, int? maxResults, BlobContinuationToken currentToken, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.ListContainersSegmentedAsync(prefix, detailsIncluded, maxResults, currentToken, options, operationContext, cancellationToken);
         }
 
         public Task SetServicePropertiesAsync(ServiceProperties properties, CancellationToken cancellationToken)

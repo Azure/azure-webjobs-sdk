@@ -718,7 +718,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     .ConfigureDefaultTestHost<TestFixture>()
                     .Build();
 
-                var provider = host.Services.GetService<XStorageAccountProvider>();
+                var provider = host.Services.GetService<StorageAccountProvider>();
                 StorageAccount = provider.GetHost().SdkObject;
             }
 

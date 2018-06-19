@@ -114,5 +114,4 @@ namespace Microsoft.Azure.WebJobs
             }
         }
     }
-
 }

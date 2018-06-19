@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.ServiceBus" Version="2.0.0" />
+    <PackageReference Include="StyleCop.Analyzers" Version="1.1.0-beta004" />
     <PackageReference Include="WindowsAzure.Storage" Version="8.6.0" />
   </ItemGroup>
 
@@ -22,6 +23,10 @@
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Converters\IObjectToTypeConverter.cs" Link="Converters\IObjectToTypeConverter.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Triggers\ITriggerDataArgumentBinding.cs" Link="Triggers\ITriggerDataArgumentBinding.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\TypeUtility.cs" Link="TypeUtility.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="..\..\stylecop.json" Link="stylecop.json" />
   </ItemGroup>
 
   <ItemGroup>

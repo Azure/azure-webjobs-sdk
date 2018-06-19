@@ -690,9 +690,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 RandomNameResolver nameResolver = new RandomNameResolver();
 
-                Host = new HostBuilder()
+                Host = RuntimeConfigurationExtensions.AddAzureStorageCoreServices(new HostBuilder()
                     .ConfigureDefaultTestHost<BlobBindingEndToEndTests>()
-                    .AddStorageForRuntimeInternals()
+)
                     .ConfigureServices(services =>
                     {
                         services.AddSingleton<INameResolver>(nameResolver);
@@ -701,7 +701,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 JobHost = Host.GetJobHost();
 
-                var provider = Host.Services.GetService<XStorageAccountProvider>();
+                var provider = Host.Services.GetService<StorageAccountProvider>();
                 StorageAccount = provider.GetHost().SdkObject;
                 CloudBlobClient blobClient = StorageAccount.CreateCloudBlobClient();
 

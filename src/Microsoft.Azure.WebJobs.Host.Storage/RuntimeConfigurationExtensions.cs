@@ -56,7 +56,7 @@ namespace Microsoft.Extensions.Hosting
 
         // Make the Runtime itself use storage for its internal operations. 
         // Uses v1 app settings, via a LegacyConfigSetup object. 
-        public static IHostBuilder AddStorageForRuntimeInternals(this IHostBuilder builder)
+        public static IHostBuilder AddAzureStorageCoreServices(this IHostBuilder builder)
         {
             return builder
                .ConfigureServices((context, services) =>

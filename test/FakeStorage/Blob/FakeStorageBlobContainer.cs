@@ -96,13 +96,11 @@ namespace FakeStorage
         public override CloudBlob GetBlobReference(string blobName)
         {
             throw new NotImplementedException();
-            return base.GetBlobReference(blobName);
         }
 
         public override CloudBlob GetBlobReference(string blobName, DateTimeOffset? snapshotTime)
         {
             throw new NotImplementedException();
-            return base.GetBlobReference(blobName, snapshotTime);
         }
 
         // $$$ will built-in just work? 
@@ -115,25 +113,21 @@ namespace FakeStorage
         public override Task CreateAsync()
         {
             throw new NotImplementedException();
-            return base.CreateAsync();
         }
 
         public override Task CreateAsync(BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.CreateAsync(options, operationContext);
         }
 
         public override Task CreateAsync(BlobContainerPublicAccessType accessType, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.CreateAsync(accessType, options, operationContext);
         }
 
         public override Task CreateAsync(BlobContainerPublicAccessType accessType, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.CreateAsync(accessType, options, operationContext, cancellationToken);
         }
 
         public override Task<bool> CreateIfNotExistsAsync()
@@ -160,37 +154,31 @@ namespace FakeStorage
         public override Task DeleteAsync()
         {
             throw new NotImplementedException();
-            return base.DeleteAsync();
         }
 
         public override Task DeleteAsync(AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.DeleteAsync(accessCondition, options, operationContext);
         }
 
         public override Task DeleteAsync(AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.DeleteAsync(accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task<bool> DeleteIfExistsAsync()
         {
             throw new NotImplementedException();
-            return base.DeleteIfExistsAsync();
         }
 
         public override Task<bool> DeleteIfExistsAsync(AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.DeleteIfExistsAsync(accessCondition, options, operationContext);
         }
 
         public override Task<bool> DeleteIfExistsAsync(AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.DeleteIfExistsAsync(accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task<ICloudBlob> GetBlobReferenceFromServerAsync(string blobName)
@@ -277,37 +265,31 @@ namespace FakeStorage
         public override Task SetPermissionsAsync(BlobContainerPermissions permissions)
         {
             throw new NotImplementedException();
-            return base.SetPermissionsAsync(permissions);
         }
 
         public override Task SetPermissionsAsync(BlobContainerPermissions permissions, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.SetPermissionsAsync(permissions, accessCondition, options, operationContext);
         }
 
         public override Task SetPermissionsAsync(BlobContainerPermissions permissions, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.SetPermissionsAsync(permissions, accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task<BlobContainerPermissions> GetPermissionsAsync()
         {
             throw new NotImplementedException();
-            return base.GetPermissionsAsync();
         }
 
         public override Task<BlobContainerPermissions> GetPermissionsAsync(AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.GetPermissionsAsync(accessCondition, options, operationContext);
         }
 
         public override Task<BlobContainerPermissions> GetPermissionsAsync(AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.GetPermissionsAsync(accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task<bool> ExistsAsync()
@@ -328,127 +310,106 @@ namespace FakeStorage
         public override Task FetchAttributesAsync()
         {
             throw new NotImplementedException();
-            return base.FetchAttributesAsync();
         }
 
         public override Task FetchAttributesAsync(AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.FetchAttributesAsync(accessCondition, options, operationContext);
         }
 
         public override Task FetchAttributesAsync(AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.FetchAttributesAsync(accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task SetMetadataAsync()
         {
             throw new NotImplementedException();
-            return base.SetMetadataAsync();
         }
 
         public override Task SetMetadataAsync(AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.SetMetadataAsync(accessCondition, options, operationContext);
         }
 
         public override Task SetMetadataAsync(AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.SetMetadataAsync(accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId = null)
         {
             throw new NotImplementedException();
-            return base.AcquireLeaseAsync(leaseTime, proposedLeaseId);
         }
 
         public override Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.AcquireLeaseAsync(leaseTime, proposedLeaseId, accessCondition, options, operationContext);
         }
 
         public override Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.AcquireLeaseAsync(leaseTime, proposedLeaseId, accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task RenewLeaseAsync(AccessCondition accessCondition)
         {
             throw new NotImplementedException();
-            return base.RenewLeaseAsync(accessCondition);
         }
 
         public override Task RenewLeaseAsync(AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.RenewLeaseAsync(accessCondition, options, operationContext);
         }
 
         public override Task RenewLeaseAsync(AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.RenewLeaseAsync(accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task<string> ChangeLeaseAsync(string proposedLeaseId, AccessCondition accessCondition)
         {
             throw new NotImplementedException();
-            return base.ChangeLeaseAsync(proposedLeaseId, accessCondition);
         }
 
         public override Task<string> ChangeLeaseAsync(string proposedLeaseId, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.ChangeLeaseAsync(proposedLeaseId, accessCondition, options, operationContext);
         }
 
         public override Task<string> ChangeLeaseAsync(string proposedLeaseId, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.ChangeLeaseAsync(proposedLeaseId, accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task ReleaseLeaseAsync(AccessCondition accessCondition)
         {
             throw new NotImplementedException();
-            return base.ReleaseLeaseAsync(accessCondition);
         }
 
         public override Task ReleaseLeaseAsync(AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.ReleaseLeaseAsync(accessCondition, options, operationContext);
         }
 
         public override Task ReleaseLeaseAsync(AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.ReleaseLeaseAsync(accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task<TimeSpan> BreakLeaseAsync(TimeSpan? breakPeriod)
         {
             throw new NotImplementedException();
-            return base.BreakLeaseAsync(breakPeriod);
         }
 
         public override Task<TimeSpan> BreakLeaseAsync(TimeSpan? breakPeriod, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             throw new NotImplementedException();
-            return base.BreakLeaseAsync(breakPeriod, accessCondition, options, operationContext);
         }
 
         public override Task<TimeSpan> BreakLeaseAsync(TimeSpan? breakPeriod, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
-            return base.BreakLeaseAsync(breakPeriod, accessCondition, options, operationContext, cancellationToken);
         }
     }
 }
