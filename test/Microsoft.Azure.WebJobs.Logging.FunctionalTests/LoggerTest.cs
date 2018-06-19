@@ -804,7 +804,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
             if (maxBufferedEntryCount < logItemCount)
             {
                 Assert.NotEmpty(caughtExceptions);
-                Assert.StartsWith("The limit on the number of bufferable log entries was reached.", caughtExceptions[0].Message);
+                Assert.StartsWith("The limit on the number of buffered log entries was reached.", caughtExceptions[0].Message);
             }
 
             // Counts should be intact
