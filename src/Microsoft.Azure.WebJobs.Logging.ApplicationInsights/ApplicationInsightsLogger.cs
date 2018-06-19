@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
@@ -306,10 +307,11 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
             IOperationHolder<RequestTelemetry> requestOperation = scopeProps.GetValueOrDefault<IOperationHolder<RequestTelemetry>>(OperationContext);
 
-            // We somehow never started the operation, so there's no way to complete it.
             if (requestOperation == null)
             {
-                throw new InvalidOperationException("No started telemetry was found.");
+                // We somehow never started the operation, perhaps, it was auto-tracked by the AI SDK 
+                // so there's no way to complete it.
+                return;
             }
 
             RequestTelemetry requestTelemetry = requestOperation.Telemetry;
@@ -381,24 +383,30 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 return;
             }
 
-            string functionName = stateValues.GetValueOrDefault<string>(ScopeKeys.FunctionName);
-            string functionInvocationId = stateValues.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId);
-            string eventName = stateValues.GetValueOrDefault<string>(ScopeKeys.Event);
-
-            // If we have the invocation id, function name, and event, we know it's a new function. That means
-            // that we want to start a new operation and let App Insights track it for us.
-            if (!string.IsNullOrEmpty(functionName) &&
-                !string.IsNullOrEmpty(functionInvocationId) &&
-                eventName == LogConstants.FunctionStartEvent)
+            // In some cases, requests are automatically tracked by ApplicationInsights SDK,
+            // HTTP trigger is one of such cases, ServiceBus and EventHubs triggers will be auto-tracked as well
+            // based on presence of Activity.Current, we can tell whether it is necessary to track request here
+            if (Activity.Current == null)
             {
-                RequestTelemetry request = new RequestTelemetry()
-                {
-                    Name = functionName
-                };
+                string functionName = stateValues.GetValueOrDefault<string>(ScopeKeys.FunctionName);
+                string functionInvocationId = stateValues.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId);
+                string eventName = stateValues.GetValueOrDefault<string>(ScopeKeys.Event);
 
-                // We'll need to store this operation context so we can stop it when the function completes
-                IOperationHolder<RequestTelemetry> operation = _telemetryClient.StartOperation(request);
-                stateValues[OperationContext] = operation;
+                // If we have the invocation id, function name, and event, we know it's a new function. That means
+                // that we want to start a new operation and let App Insights track it for us.
+                if (!string.IsNullOrEmpty(functionName) &&
+                    !string.IsNullOrEmpty(functionInvocationId) &&
+                    eventName == LogConstants.FunctionStartEvent)
+                {
+                    RequestTelemetry request = new RequestTelemetry()
+                    {
+                        Name = functionName
+                    };
+
+                    // We'll need to store this operation context so we can stop it when the function completes
+                    IOperationHolder<RequestTelemetry> operation = _telemetryClient.StartOperation(request);
+                    stateValues[OperationContext] = operation;
+                }
             }
         }
 
@@ -428,15 +436,6 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             }
 
             return address;
-        }
-
-        internal static ObjectResult GetResponse(HttpRequest httpRequest)
-        {
-            // Grab the response stored by functions
-            object value = null;
-            httpRequest.HttpContext?.Items?.TryGetValue(ApplicationInsightsScopeKeys.FunctionsHttpResponse, out value);
-
-            return value as ObjectResult;
         }
     }
 }
