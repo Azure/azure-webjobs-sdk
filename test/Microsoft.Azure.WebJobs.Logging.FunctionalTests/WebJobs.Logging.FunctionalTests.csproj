@@ -128,6 +128,10 @@
       <Project>{b5a04006-ab0c-4800-ae4c-080d31867de3}</Project>
       <Name>WebJobs.Logging</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Microsoft.Azure.WebJobs.Host.TestCommon\WebJobs.Host.TestCommon.csproj">
+      <Project>{4A832C21-66EA-4DE4-8124-F27F8900CBA9}</Project>
+      <Name>WebJobs.Host.TestCommon</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
