@@ -731,7 +731,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
                 .Returns(mockTable.Object);
 
             List<Exception> caughtExceptions = new List<Exception>();
-            LogWriter writer = (LogWriter)LogFactory.NewWriter(defaultHost, "exceptions", mockProvider.Object, (ex) =>
+            LogWriter writer = (LogWriter)LogFactory.NewWriter(DefaultHost, "exceptions", mockProvider.Object, (ex) =>
            {
                caughtExceptions.Add(ex);
            });
@@ -754,11 +754,11 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
             };
 
             await writer.AddAsync(item1);
-            await TestHelpers.Await(() => caughtExceptions.Count == 1, timeout: 5000, pollingInterval: 100, userMessageCallback: () => $"Expected caughtExceptions == 1; Actual: {caughtExceptions.Count}");
+            await TestHelpers.Await(() => caughtExceptions.Count == 1, timeout: 5000, pollingInterval: 100, userMessage: $"Expected caughtExceptions == 1; Actual: {caughtExceptions.Count}");
 
             // Without fixes to the error handling in the background flusher task, this second condition would never be met because no further flushes would occur after the first exception.
             await writer.AddAsync(item2);
-            await TestHelpers.Await(() => caughtExceptions.Count == 2, timeout: 5000, pollingInterval: 100, userMessageCallback: () => $"Expected caughtExceptions == 2; Actual: {caughtExceptions.Count}");
+            await TestHelpers.Await(() => caughtExceptions.Count == 2, timeout: 5000, pollingInterval: 100, userMessage: $"Expected caughtExceptions == 2; Actual: {caughtExceptions.Count}");
 
             Assert.Same(exToThrow1, caughtExceptions[0]);
             Assert.Same(exToThrow2, caughtExceptions[1]);
@@ -773,7 +773,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
         public async Task LogsAreDroppedWhenBufferIsFull(int maxBufferedEntryCount, int logItemCount)
         {
             List<Exception> caughtExceptions = new List<Exception>();
-            LogWriter writer = (LogWriter)LogFactory.NewWriter(defaultHost, "c1", this, (ex) => caughtExceptions.Add(ex));
+            LogWriter writer = (LogWriter)LogFactory.NewWriter(DefaultHost, "c1", this, (ex) => caughtExceptions.Add(ex));
             writer.MaxBufferedEntryCount = maxBufferedEntryCount;
             ILogReader reader = LogFactory.NewReader(this);
 
@@ -802,7 +802,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
             if (maxBufferedEntryCount < logItemCount)
             {
                 Assert.NotEmpty(caughtExceptions);
-                Assert.StartsWith("The limit on the number of bufferable log entries was reached.", caughtExceptions[0].Message);
+                Assert.StartsWith("The limit on the number of buffered log entries was reached.", caughtExceptions[0].Message);
             }
 
             // Counts should be intact
