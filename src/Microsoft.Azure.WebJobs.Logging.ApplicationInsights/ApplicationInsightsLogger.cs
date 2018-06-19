@@ -393,7 +393,6 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             {
                 RequestTelemetry request = new RequestTelemetry()
                 {
-                    Id = functionInvocationId,
                     Name = functionName
                 };
 

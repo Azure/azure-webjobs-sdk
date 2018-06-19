@@ -12,11 +12,13 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
+using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -64,11 +66,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     {
                         QuickPulseServiceEndpoint = "http://localhost:4005/QuickPulseService.svc/"
                     });
+
+                    var channel = services.Single(s => s.ServiceType == typeof(ITelemetryChannel));
+                    services.Remove(channel);
+                    services.AddSingleton<ITelemetryChannel>(_channel);
+
+                    var channelModule = services.Single(s => s.ImplementationInstance is ServerTelemetryChannel);
+                    services.Remove(channelModule);
+                    services.AddSingleton<ITelemetryModule>(_channel);
                 })
                 .Build();
-
-            TelemetryConfiguration telemteryConfiguration = host.Services.GetService<TelemetryConfiguration>();
-            telemteryConfiguration.TelemetryChannel = _channel;
 
             return host;
         }
@@ -243,6 +250,28 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
+        [Fact]
+        public async Task ApplicationInsights_AIUsedExplicitlyFromFunctionCode()
+        {
+            string testName = nameof(TestApplicationInsightsExplicitCall);
+            using (IHost host = ConfigureHost())
+            {
+                await host.StartAsync();
+                var methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+                await host.GetJobHost().CallAsync(methodInfo, null);
+                await host.StopAsync();
+
+                EventTelemetry[] eventTelemetries = _channel.Telemetries.OfType<EventTelemetry>().ToArray();
+                Assert.Single(eventTelemetries);
+
+                RequestTelemetry requestTelemetry = _channel.Telemetries.OfType<RequestTelemetry>().Single();
+
+                Assert.Equal(requestTelemetry.Context.Operation.Name, eventTelemetries[0].Context.Operation.Name);
+                Assert.Equal(requestTelemetry.Context.Operation.Id, eventTelemetries[0].Context.Operation.Id);
+                Assert.Equal(requestTelemetry.Id, eventTelemetries[0].Context.Operation.ParentId);
+            }
+        }
+
         // Test Functions
         [NoAutomaticTrigger]
         public static void TestApplicationInsightsInformation(string input, TraceWriter trace, ILogger logger)
@@ -283,6 +312,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
+        [NoAutomaticTrigger]
+        public static void TestApplicationInsightsWarning(TraceWriter trace, ILogger logger)
+        {
+            trace.Warning("Trace");
+            logger.LogWarning("Logger");
+        }
+
+        [NoAutomaticTrigger]
+        public static void TestApplicationInsightsExplicitCall(ILogger logger)
+        {
+            var telemetryClient = new TelemetryClient(); // use TelemetryConfiguration.Active
+            telemetryClient.TrackEvent("custom event");
+        }
+
         private static void ValidateMetric(MetricTelemetry telemetry, string expectedOperationName)
         {
             Assert.Equal(expectedOperationName, telemetry.Context.Operation.Name);
@@ -305,13 +348,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private static void ValidateCustomScopeProperty(ISupportProperties telemetry)
         {
             Assert.Equal(_customScopeValue, telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}{_customScopeKey}"]);
-        }
-
-        [NoAutomaticTrigger]
-        public static void TestApplicationInsightsWarning(TraceWriter trace, ILogger logger)
-        {
-            trace.Warning("Trace");
-            logger.LogWarning("Logger");
         }
 
         private class ApplicationInsightsTestListener

@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
@@ -9,8 +10,8 @@ using Microsoft.ApplicationInsights.DependencyCollector;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
+using Microsoft.ApplicationInsights.WindowsServer.Channel.Implementation;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
-using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.Implementation;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
@@ -59,7 +60,6 @@ namespace Microsoft.Extensions.Logging
 
             builder.ConfigureServices((context, services) =>
             {
-                services.AddSingleton<ITelemetryInitializer, OperationCorrelationTelemetryInitializer>();
                 services.AddSingleton<ITelemetryInitializer, HttpDependenciesParsingTelemetryInitializer>();
                 services.AddSingleton<ITelemetryInitializer, WebJobsRoleEnvironmentTelemetryInitializer>();
                 services.AddSingleton<ITelemetryInitializer, WebJobsTelemetryInitializer>();
@@ -79,50 +79,38 @@ namespace Microsoft.Extensions.Logging
                     excludedDomains.Add("localhost");
                     excludedDomains.Add("127.0.0.1");
 
-                    var includedActivities = dependencyCollector.IncludeDiagnosticSourceActivities;
-                    includedActivities.Add("Microsoft.Azure.EventHubs");
-                    includedActivities.Add("Microsoft.Azure.ServiceBus");
-
                     return dependencyCollector;
                 });
                 services.AddSingleton<ITelemetryChannel>(serverChannel);
                 services.AddSingleton<TelemetryConfiguration>(provider =>
                 {
                     ITelemetryChannel channel = provider.GetService<ITelemetryChannel>();
-                    TelemetryConfiguration config = new TelemetryConfiguration(instrumentationKey, channel);
-                    
-                    foreach (ITelemetryInitializer initializer in provider.GetServices<ITelemetryInitializer>())
+                    TelemetryConfiguration config = TelemetryConfiguration.CreateDefault();
+                    SetupTelemetryConfiguration(
+                        config,
+                        instrumentationKey, 
+                        filter, 
+                        samplingSettings,
+                        channel,
+                        provider.GetServices<ITelemetryInitializer>(),
+                        provider.GetServices<ITelemetryModule>());
+
+                    // Function users have no access to TelemetryConfiguration from host DI container,
+                    // so we'll expect user to work with TelemteryConfiguration.Active
+                    // Also, some ApplicaitonInsights internal operations (heartbeats) depend on
+                    // the TelemetryConfiguration.Active being set so, we'll set up Active once per process lifetime.
+                    TelemetryConfiguration activeConfig = TelemetryConfiguration.Active;
+                    if (string.IsNullOrEmpty(activeConfig.InstrumentationKey))
                     {
-                        config.TelemetryInitializers.Add(initializer);
+                        SetupTelemetryConfiguration(
+                            activeConfig,
+                            instrumentationKey,
+                            filter,
+                            samplingSettings,
+                            channel,
+                            provider.GetServices<ITelemetryInitializer>(),
+                            provider.GetServices<ITelemetryModule>());
                     }
-
-                    QuickPulseTelemetryModule quickPulseModule = null;
-                    foreach (ITelemetryModule module in provider.GetServices<ITelemetryModule>())
-                    {
-                        if (module is QuickPulseTelemetryModule telemetryModule)
-                        {
-                            quickPulseModule = telemetryModule;
-                        }
-                        module.Initialize(config);
-                    }
-
-                    QuickPulseTelemetryProcessor processor = null;
-                    config.TelemetryProcessorChainBuilder
-                        .Use((next) =>
-                        {
-                            processor = new QuickPulseTelemetryProcessor(next);
-                            return processor;
-                        })
-                        .Use((next) => new FilteringTelemetryProcessor(filter, next));
-
-                    if (samplingSettings != null)
-                    {
-                        config.TelemetryProcessorChainBuilder.Use((next) =>
-                            new AdaptiveSamplingTelemetryProcessor(samplingSettings, null, next));
-                    }
-
-                    config.TelemetryProcessorChainBuilder.Build();
-                    quickPulseModule?.RegisterTelemetryProcessor(processor);
 
                     return config;
                 });
@@ -147,6 +135,65 @@ namespace Microsoft.Extensions.Logging
         {
             AssemblyFileVersionAttribute fileVersionAttr = assembly.GetCustomAttribute<AssemblyFileVersionAttribute>();
             return fileVersionAttr?.Version ?? LoggingConstants.Unknown;
+        }
+
+        private static void SetupTelemetryConfiguration(
+            TelemetryConfiguration configuration,
+            string instrumentationKey,
+            Func<string, LogLevel, bool> filter,
+            SamplingPercentageEstimatorSettings samplingSettings,
+            ITelemetryChannel channel,
+            IEnumerable<ITelemetryInitializer> telemetryInitializers,
+            IEnumerable<ITelemetryModule> telemetryModules)
+        {
+            if (instrumentationKey != null)
+            {
+                configuration.InstrumentationKey = instrumentationKey;
+            }
+
+            configuration.TelemetryChannel = channel;
+
+            foreach (ITelemetryInitializer initializer in telemetryInitializers)
+            {
+                configuration.TelemetryInitializers.Add(initializer);
+            }
+
+            QuickPulseTelemetryModule quickPulseModule = null;
+            foreach (ITelemetryModule module in telemetryModules)
+            {
+                if (module is QuickPulseTelemetryModule telemetryModule)
+                {
+                    quickPulseModule = telemetryModule;
+                }
+
+                module.Initialize(configuration);
+            }
+
+            QuickPulseTelemetryProcessor quickPulseProcessor = null;
+            configuration.TelemetryProcessorChainBuilder
+                .Use((next) =>
+                {
+                    quickPulseProcessor = new QuickPulseTelemetryProcessor(next);
+                    return quickPulseProcessor;
+                })
+                .Use((next) => new FilteringTelemetryProcessor(filter, next));
+
+            if (samplingSettings != null)
+            {
+                configuration.TelemetryProcessorChainBuilder.Use((next) =>
+                    new AdaptiveSamplingTelemetryProcessor(samplingSettings, null, next));
+            }
+
+            configuration.TelemetryProcessorChainBuilder.Build();
+            quickPulseModule?.RegisterTelemetryProcessor(quickPulseProcessor);
+
+            foreach (ITelemetryProcessor processor in configuration.TelemetryProcessors)
+            {
+                if (processor is ITelemetryModule module)
+                {
+                    module.Initialize(configuration);
+                }
+            }
         }
     }
 }

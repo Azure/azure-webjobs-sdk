@@ -32,13 +32,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         private readonly Dictionary<string, object> _inputBindingScope = new Dictionary<string, object>
         {
-            [LogConstants.CategoryNameKey] = "Host.Bindings.Input",
+            [LogConstants.CategoryNameKey] = LogCategories.Bindings,
             [LogConstants.LogLevelKey] = LogLevel.Information
         };
 
         private readonly Dictionary<string, object> _outputBindingScope = new Dictionary<string, object>
         {
-            [LogConstants.CategoryNameKey] = "Host.Bindings.Output",
+            [LogConstants.CategoryNameKey] = LogCategories.Bindings,
             [LogConstants.LogLevelKey] = LogLevel.Information
         };
 

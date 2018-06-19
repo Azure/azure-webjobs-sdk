@@ -3,10 +3,11 @@
 
 using System.Collections.Concurrent;
 using Microsoft.ApplicationInsights.Channel;
+using Microsoft.ApplicationInsights.Extensibility;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
-    public class TestTelemetryChannel : ITelemetryChannel
+    public class TestTelemetryChannel : ITelemetryChannel, ITelemetryModule
     {
         public ConcurrentBag<ITelemetry> Telemetries = new ConcurrentBag<ITelemetry>();
 
@@ -25,6 +26,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         public void Send(ITelemetry item)
         {
             Telemetries.Add(item);
+        }
+
+        public void Initialize(TelemetryConfiguration configuration)
+        {
         }
     }
 }

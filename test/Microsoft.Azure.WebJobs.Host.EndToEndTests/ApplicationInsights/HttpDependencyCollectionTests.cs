@@ -83,9 +83,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             List<DependencyTelemetry> dependencies = _channel.Telemetries.OfType<DependencyTelemetry>().ToList();
 
             List<DependencyTelemetry> inDependencies = dependencies
-                .Where(d => d.Properties.Single(p => p.Key == "Category").Value == "Host.Bindings.Input").ToList();
+                .Where(d => d.Properties.Single(p => p.Key == "Container").Value == _inputContainerName).ToList();
             List<DependencyTelemetry> outDependencies = dependencies
-                .Where(d => d.Properties.Single(p => p.Key == "Category").Value == "Host.Bindings.Output").ToList();
+                .Where(d => d.Properties.Single(p => p.Key == "Container").Value == _outputContainerName).ToList();
 
             // only bindings calls are reported
             Assert.Equal(dependencies.Count, inDependencies.Count + outDependencies.Count);
@@ -182,22 +182,21 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             RequestTelemetry request = _channel.Telemetries.OfType<RequestTelemetry>().Single();
             List<DependencyTelemetry> dependencies = _channel.Telemetries.OfType<DependencyTelemetry>().ToList();
 
-            List<DependencyTelemetry> inDependencies = dependencies
-                .Where(d => d.Properties.Single(p => p.Key == "Category").Value == "Host.Bindings.Input").ToList();
-            List<DependencyTelemetry> outDependencies = dependencies
-                .Where(d => d.Properties.Single(p => p.Key == "Category").Value == "Host.Bindings.Output").ToList();
+            List<DependencyTelemetry> blobDependencies = dependencies.Where(d => d.Type == "Azure blob").ToList();
+            List<DependencyTelemetry> queueDependencies = dependencies.Where(d => d.Type == "Azure queue").ToList();
 
             Assert.True(dependencies.Count >= 3);
+
             // only bindings calls are reported
-            Assert.Equal(dependencies.Count, inDependencies.Count + outDependencies.Count);
+            Assert.Equal(dependencies.Count, blobDependencies.Count + queueDependencies.Count);
 
             // one HEAD, one GET to download blob
-            Assert.True(inDependencies.Count >= 2);
+            Assert.True(blobDependencies.Count >= 2);
 
             // one http call to enqueue message 
-            Assert.True(outDependencies.Count >= 1);
+            Assert.True(queueDependencies.Count >= 1);
 
-            foreach (var inputDep in inDependencies)
+            foreach (var inputDep in blobDependencies)
             {
                 ValidateBlobDependency(
                     inputDep,
@@ -209,7 +208,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             }
 
             ValidateQueueDependency(
-                outDependencies.Single(),
+                queueDependencies.First(),
                 _outputQueueName,
                 "BlobTrigger",
                 request.Context.Operation.Id,
@@ -239,16 +238,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             RequestTelemetry request = _channel.Telemetries.OfType<RequestTelemetry>().Single();
             List<DependencyTelemetry> dependencies = _channel.Telemetries.OfType<DependencyTelemetry>().ToList();
 
-            List<DependencyTelemetry> outDependencies = dependencies
-                .Where(d => d.Properties.Single(p => p.Key == "Category").Value == "Host.Bindings.Output").ToList();
+            List<DependencyTelemetry> bindingsDependencies = dependencies
+                .Where(d => d.Properties.Single(p => p.Key == "Category").Value == LogCategories.Bindings).ToList();
 
             // only bindings calls are reported, queue read happens before that and is not reported
             Assert.True(dependencies.Count >= 4);
 
             // PUT container, HEAD blob, PUT lease, PUT content
-            Assert.Equal(dependencies.Count, outDependencies.Count);
+            Assert.Equal(dependencies.Count, bindingsDependencies.Count);
 
-            foreach (var outputDep in outDependencies)
+            foreach (var outputDep in bindingsDependencies)
             {
                 ValidateBlobDependency(
                     outputDep,
@@ -345,6 +344,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             string operationId,
             string requestId)
         {
+            Assert.Equal(LogCategories.Bindings, dependency.Properties["Category"]);
             Assert.Equal("Information", dependency.Properties["LogLevel"]);
             Assert.True(!string.IsNullOrEmpty(dependency.ResultCode));
             Assert.NotNull(dependency.Target);
