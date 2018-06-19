@@ -160,7 +160,7 @@ namespace Microsoft.Azure.WebJobs.Logging
                 // This basically becomes a memory leak. Mitigate by enforcing a max.
                 if (_activeFuncs.Count >= MaxBufferedEntryCount || _completedFunctions.Count >= MaxBufferedEntryCount)
                 {
-                    _onException?.Invoke(new Exception($"The limit on the number of bufferable log entries was reached. A total of '{MaxBufferedEntryCount}' log entries were dropped."));
+                    _onException?.Invoke(new Exception($"The limit on the number of buffered log entries was reached. A total of '{MaxBufferedEntryCount}' log entries were dropped."));
                     _activeFuncs.Clear();
                     _completedFunctions.Clear();
                 }
