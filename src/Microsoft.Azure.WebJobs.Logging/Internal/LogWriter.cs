@@ -250,6 +250,7 @@ namespace Microsoft.Azure.WebJobs.Logging
                     }
                 }
 
+                // https://github.com/Azure/azure-webjobs-sdk/issues/1761
                 // Just making a note while I'm in this code fixing something else. 
                 // It looks like this will drop data if there is any type of error when communicating with storage. 
                 // Other code paths drop the data after successfully writing to storage
