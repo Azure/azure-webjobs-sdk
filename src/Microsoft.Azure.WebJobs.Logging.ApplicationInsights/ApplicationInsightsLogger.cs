@@ -342,9 +342,10 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 switch (prop.Key)
                 {
                     case LogConstants.NameKey:
-                    case LogConstants.InvocationIdKey:
                     case LogConstants.StartTimeKey:
                     case LogConstants.DurationKey:
+                    case LogConstants.SucceededKey:
+                    case LogConstants.EndTimeKey:
                         // These values are set by the calls to Start/Stop the telemetry. Other
                         // Loggers may want them, but we'll ignore.
                         break;

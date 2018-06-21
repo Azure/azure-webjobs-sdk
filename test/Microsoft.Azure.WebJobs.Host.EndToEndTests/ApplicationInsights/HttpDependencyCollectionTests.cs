@@ -124,11 +124,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
         [Fact]
         public async Task UserCodeHttpCallsAreReported()
         {
+            string testName = nameof(UserCodeHttpCall);
             using (var host = ConfigureHost(LogLevel.Information))
             {
                 await host.StartAsync();
                 await host.GetJobHost()
-                    .CallAsync(typeof(HttpDependencyCollectionTests).GetMethod("UserCodeHttpCall"));
+                    .CallAsync(typeof(HttpDependencyCollectionTests).GetMethod(testName));
 
                 _functionWaitHandle.WaitOne();
                 await Task.Delay(1000);
@@ -145,9 +146,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             DependencyTelemetry dependency = dependencies.Single();
             ValidateDependency(
                 dependency,
-                "UserCodeHttpCall",
+                testName,
                 request.Context.Operation.Id,
-                request.Id);
+                request.Id,
+                LogCategories.CreateFunctionCategory(testName));
 
             Assert.Equal("Http", dependency.Type);
             Assert.Equal("www.microsoft.com", dependency.Target);
@@ -321,7 +323,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 Assert.Equal(blobName, dependency.Properties["Blob"]);
             }
 
-            ValidateDependency(dependency, operationName, operationId, requestId);
+            ValidateDependency(dependency, operationName, operationId, requestId, LogCategories.Bindings);
         }
 
 
@@ -335,16 +337,17 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.Equal("Azure queue", dependency.Type);
             Assert.True(dependency.Name.EndsWith(queueName));
 
-            ValidateDependency(dependency, operationName, operationId, requestId);
+            ValidateDependency(dependency, operationName, operationId, requestId, LogCategories.Bindings);
         }
 
         private void ValidateDependency(
             DependencyTelemetry dependency,
             string operationName,
             string operationId,
-            string requestId)
+            string requestId,
+            string category)
         {
-            Assert.Equal(LogCategories.Bindings, dependency.Properties["Category"]);
+            Assert.Equal(category, dependency.Properties["Category"]);
             Assert.Equal("Information", dependency.Properties["LogLevel"]);
             Assert.True(!string.IsNullOrEmpty(dependency.ResultCode));
             Assert.NotNull(dependency.Target);

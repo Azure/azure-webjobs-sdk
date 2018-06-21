@@ -3,6 +3,8 @@
 
 using System.Linq;
 using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.Channel;
+using Microsoft.ApplicationInsights.DependencyCollector;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
@@ -26,8 +28,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 var config = host.Services.GetService<TelemetryConfiguration>();
 
                 // Verify Initializers
-                Assert.Equal(3, config.TelemetryInitializers.Count);
+                Assert.Equal(5, config.TelemetryInitializers.Count);
                 // These will throw if there are not exactly one
+                Assert.Single(config.TelemetryInitializers.OfType<OperationCorrelationTelemetryInitializer>());
+                Assert.Single(config.TelemetryInitializers.OfType<HttpDependenciesParsingTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<WebJobsTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<WebJobsSanitizingInitializer>());
@@ -39,9 +43,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
                 // Verify Modules
                 Assert.Equal(2, modules.Count);
-                Assert.Single(modules.OfType<ServerTelemetryChannel>());
+                Assert.Single(modules.OfType<DependencyTrackingTelemetryModule>());
                 Assert.Single(modules.OfType<QuickPulseTelemetryModule>());
-                Assert.Same(config.TelemetryChannel, modules.OfType<ServerTelemetryChannel>().Single());
+                Assert.Same(config.TelemetryChannel, host.Services.GetServices<ITelemetryChannel>().Single());
                 // Verify client
                 var client = host.Services.GetService<TelemetryClient>();
                 Assert.NotNull(client);
