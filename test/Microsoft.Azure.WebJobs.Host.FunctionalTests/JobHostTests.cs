@@ -464,6 +464,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             var builder = new HostBuilder()
                 .ConfigureDefaultTestHost<BindingErrorsProgram>()
+                .AddAzureStorage()
                 .ConfigureLogging(logging =>
                 {
                     logging.AddProvider(mockProvider.Object);

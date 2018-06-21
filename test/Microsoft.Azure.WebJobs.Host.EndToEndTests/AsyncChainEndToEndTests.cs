@@ -60,6 +60,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             _hostBuilder = new HostBuilder()
                 .ConfigureDefaultTestHost<AsyncChainEndToEndTests>()
+                .AddAzureStorage()
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<INameResolver>(_resolver);
@@ -716,6 +717,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 // of a default host.
                 IHost host = new HostBuilder()
                     .ConfigureDefaultTestHost<TestFixture>()
+                    .AddAzureStorage()
                     .Build();
 
                 var provider = host.Services.GetService<StorageAccountProvider>();

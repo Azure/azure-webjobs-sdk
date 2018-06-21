@@ -220,6 +220,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
                 var hostBuilder = RuntimeConfigurationExtensions.AddAzureStorageCoreServices(new HostBuilder()
                  .ConfigureDefaultTestHost()
+                 .AddAzureStorage()
                  .ConfigureAppConfiguration(c =>
                  {
                      c.AddEnvironmentVariables();
@@ -242,6 +243,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {            
             var hostBuilder = RuntimeConfigurationExtensions.AddAzureStorageCoreServices(new HostBuilder()
              .ConfigureDefaultTestHost()
+             .AddAzureStorage()
              .ConfigureAppConfiguration(c =>
              {
              })
@@ -274,6 +276,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             var hostBuilder = RuntimeConfigurationExtensions.AddAzureStorageCoreServices(new HostBuilder()
              .ConfigureDefaultTestHost()
+             .AddAzureStorage()
              .ConfigureAppConfiguration(c =>
              {
                  c.AddInMemoryCollection(new Dictionary<string, string>

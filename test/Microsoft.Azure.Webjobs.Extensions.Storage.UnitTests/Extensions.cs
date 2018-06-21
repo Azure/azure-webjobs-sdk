@@ -9,12 +9,35 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
 
 namespace Microsoft.Azure.WebJobs
 {
     static class MoreStorageExtensions
     {
+        public static XStorageAccount GetStorageAccount(this IHost host)
+        {
+            var provider = host.Services.GetRequiredService<StorageAccountProvider>(); // $$$ ok?
+            return provider.GetHost();
+        }
+
+        public static async Task<CloudQueue> CreateQueueAsync(this XStorageAccount account, string queueName)
+        {
+            CloudQueueClient client = account.CreateCloudQueueClient();
+            CloudQueue queue = client.GetQueueReference(queueName);
+            await queue.CreateIfNotExistsAsync();
+            return queue;
+        }
+
+        public static async Task<CloudTable> CreateTableAsync(this XStorageAccount account, string tableName)
+        {
+            CloudTableClient client = account.CreateCloudTableClient();
+            CloudTable table = client.GetTableReference(tableName);
+            await table.CreateIfNotExistsAsync();
+            return table;
+        }
+
         // $$$ Rationalize with AddFakeStorageAccountProvider in FunctionTests.
         public static IHostBuilder UseFakeStorage(this IHostBuilder builder)
         {
@@ -23,7 +46,9 @@ namespace Microsoft.Azure.WebJobs
 
         public static IHostBuilder UseStorage(this IHostBuilder builder, XStorageAccount account)
         {
-            builder.ConfigureServices(services =>
+            builder
+                .AddAzureStorage()
+                .ConfigureServices(services =>
            {
                services.Add(ServiceDescriptor.Singleton<StorageAccountProvider>(new FakeStorageAccountProvider(account)));
            });

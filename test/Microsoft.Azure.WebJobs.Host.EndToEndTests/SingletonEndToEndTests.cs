@@ -634,6 +634,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             var hostBuilder = RuntimeConfigurationExtensions.AddAzureStorageCoreServices(new HostBuilder()
                 .ConfigureDefaultTestHost<TProg>()
+                .AddAzureStorage()
                 .ConfigureTestLogger()
                 .ConfigureServices(services =>
                 {
@@ -826,6 +827,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 // is coming from
                 IHost host = new HostBuilder()
                     .ConfigureDefaultTestHost()
+                    .AddAzureStorage()
                     .Build();
 
                 return host.GetStorageAccount();
@@ -837,6 +839,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 // is coming from
                 IHost host = new HostBuilder()
                     .ConfigureDefaultTestHost()
+                    .AddAzureStorage()
                     .Build();
 
                 return host.Services.GetService<IConfiguration>()[key];

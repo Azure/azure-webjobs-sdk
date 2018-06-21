@@ -12,6 +12,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage;
 using Moq;
 using Newtonsoft.Json;
@@ -48,33 +49,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Data
                 () => indexer.IndexMethodAsyncCore(method, stubIndex, CancellationToken.None).GetAwaiter().GetResult());
             Assert.Equal("Can't bind parameter 'doubleValue' to type 'System.String'.",
                 exception.Message);
-        }
-
-        [Fact]
-        public void BindStringableParameter_CanInvoke()
-        {
-            // Arrange
-            using (var host = JobHostFactory.Create<TestFunctions>())
-            {
-                MethodInfo method = typeof(TestFunctions).GetMethod("BindStringableParameter");
-                Assert.NotNull(method); // Guard
-                Guid guid = Guid.NewGuid();
-                string expectedGuidValue = guid.ToString("D");
-                string message = JsonConvert.SerializeObject(new MessageWithStringableProperty { GuidValue = guid });
-
-                try
-                {
-                    // Act
-                    host.Call(method, new { message = message });
-
-                    // Assert
-                    Assert.Equal(expectedGuidValue, TestFunctions.Result);
-                }
-                finally
-                {
-                    TestFunctions.Result = null;
-                }
-            }
         }
 
         [Fact]

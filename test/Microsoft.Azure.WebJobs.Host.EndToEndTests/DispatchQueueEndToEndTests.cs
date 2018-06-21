@@ -71,6 +71,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             _host = new HostBuilder()
                 .ConfigureDefaultTestHost<SampleTrigger>()
+                .AddAzureStorage()
                 .AddExtension<DispatchQueueTestConfig>()
                 .ConfigureServices(services =>
                 {
@@ -103,6 +104,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             _host = new HostBuilder()
                 .ConfigureDefaultTestHost<SampleTriggerWithPoisonQueue>()
+                .AddAzureStorage()
                 .AddExtension<DispatchQueueTestConfig>()
                 .ConfigureServices(services =>
                 {

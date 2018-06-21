@@ -26,10 +26,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             const string expectedKey = "abc";
             const int expectedValue = 123;
             XStorageAccount account = CreateFakeStorageAccount();
-            CloudQueue triggerQueue = await TestHelpers.CreateQueueAsync(account, TriggerQueueName);
+            CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage("ignore"));
 
-            CloudTable table = await TestHelpers.CreateTableAsync(account, TableName);
+            CloudTable table = await account.CreateTableAsync(TableName);
             Dictionary<string, EntityProperty> properties = new Dictionary<string, EntityProperty>
             {
                 { expectedKey, new EntityProperty(expectedValue) }
@@ -58,10 +58,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // Arrange
             const string expectedValue = "abc";
             XStorageAccount account = CreateFakeStorageAccount();
-            CloudQueue triggerQueue = await TestHelpers.CreateQueueAsync(account, TriggerQueueName);
+            CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage("ignore"));
 
-            CloudTable table = await TestHelpers.CreateTableAsync(account, TableName);
+            CloudTable table = await account.CreateTableAsync(TableName);
             Dictionary<string, EntityProperty> properties = new Dictionary<string, EntityProperty>
             {
                 { "Value", new EntityProperty(expectedValue) }
@@ -84,10 +84,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             const string originalValue = "abc";
             const string expectedValue = "def";
             XStorageAccount account = CreateFakeStorageAccount();
-            CloudQueue triggerQueue = await TestHelpers.CreateQueueAsync(account, TriggerQueueName);
+            CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage(expectedValue));
 
-            CloudTable table = await TestHelpers.CreateTableAsync(account, TableName);
+            CloudTable table = await account.CreateTableAsync(TableName);
             Dictionary<string, EntityProperty> originalProperties = new Dictionary<string, EntityProperty>
             {
                 { "Value", new EntityProperty(originalValue) }
@@ -115,10 +115,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // Arrange
             byte[] expectedValue = new byte[] { 0x12, 0x34 };
             XStorageAccount account = CreateFakeStorageAccount();
-            CloudQueue triggerQueue = await TestHelpers.CreateQueueAsync(account, TriggerQueueName);
+            CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage("ignore"));
 
-            CloudTable table = await TestHelpers.CreateTableAsync(account, TableName);
+            CloudTable table = await account.CreateTableAsync(TableName);
             Dictionary<string, EntityProperty> properties = new Dictionary<string, EntityProperty>
             {
                 { "Value", new EntityProperty(expectedValue) }
@@ -141,10 +141,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             byte[] originalValue = new byte[] { 0x12, 0x34 };
             byte[] expectedValue = new byte[] { 0x56, 0x78 };
             XStorageAccount account = CreateFakeStorageAccount();
-            CloudQueue triggerQueue = await TestHelpers.CreateQueueAsync(account, TriggerQueueName);
+            CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(CloudQueueMessage.CreateCloudQueueMessageFromByteArray(expectedValue));
 
-            CloudTable table = await TestHelpers.CreateTableAsync(account, TableName);
+            CloudTable table = await account.CreateTableAsync(TableName);
             Dictionary<string, EntityProperty> originalProperties = new Dictionary<string, EntityProperty>
             {
                 { "Value", new EntityProperty(originalValue) }
@@ -171,10 +171,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             // Arrange
             XStorageAccount account = CreateFakeStorageAccount();
-            CloudQueue triggerQueue = await TestHelpers.CreateQueueAsync(account, TriggerQueueName);
+            CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage("ignore"));
 
-            CloudTable table = await TestHelpers.CreateTableAsync(account, TableName);
+            CloudTable table = await account.CreateTableAsync(TableName);
             table.Insert(new DynamicTableEntity(PartitionKey, RowKey));
 
             // Act
@@ -196,10 +196,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             // Arrange
             XStorageAccount account = CreateFakeStorageAccount();
-            CloudQueue triggerQueue = await TestHelpers.CreateQueueAsync(account, TriggerQueueName);
+            CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage("ignore"));
 
-            CloudTable table = await TestHelpers.CreateTableAsync(account, TableName);
+            CloudTable table = await account.CreateTableAsync(TableName);
             table.Insert(new DynamicTableEntity(PartitionKey, RowKey));
 
             // Act
@@ -220,7 +220,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             // Arrange
             XStorageAccount account = CreateFakeStorageAccount();
-            CloudQueue triggerQueue = await TestHelpers.CreateQueueAsync(account, TriggerQueueName);
+            CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             const string tableName = TableName + "B";
             const string partitionKey = PartitionKey + "B";
             const string rowKey = RowKey + "B";
@@ -232,7 +232,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             };
             await triggerQueue.AddMessageAsync(new CloudQueueMessage(JsonConvert.SerializeObject(message)));
 
-            CloudTable table = await TestHelpers.CreateTableAsync(account, tableName);
+            CloudTable table = await account.CreateTableAsync(tableName);
             Dictionary<string, EntityProperty> originalProperties = new Dictionary<string, EntityProperty>
             {
                 { "Value", new EntityProperty(123) }

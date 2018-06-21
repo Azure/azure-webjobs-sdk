@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Threading;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using Moq;
@@ -67,7 +68,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         [Fact]
         public void TestNameResolver()
         {
-            DictNameResolver nameResolver = new DictNameResolver();
+            var nameResolver = new FakeNameResolver();
             nameResolver.Add("name", "VALUE");
 
             FunctionDescriptor func = IndexMethod("NameResolver", nameResolver).Item1;

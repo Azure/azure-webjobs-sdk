@@ -213,6 +213,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             return StorageHostBuilderExtensions.AddAzureStorage(new HostBuilder()
                 .ConfigureDefaultTestHost(programType)
+                .AddAzureStorage()
                 .ConfigureServices(services =>
                 {
                     // services.AddSingleton<IOptionsFactory<JobHostQueuesOptions>, FakeQueuesOptionsFactory>(); $$$ ???

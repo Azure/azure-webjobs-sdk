@@ -33,12 +33,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public static FunctionIndexer Create(CloudStorageAccount account = null, INameResolver nameResolver = null,
             IExtensionRegistry extensionRegistry = null, ILoggerFactory loggerFactory = null)
         {
-#if false
-            throw new System.NotImplementedException();
-#else
-            // IStorageAccountProvider storageAccountProvider = GetStorageAccountProvider(account);
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost()
+                .AddAzureStorage()
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<StorageAccountProvider>(new FakeStorageAccountProvider());
@@ -68,7 +65,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             // TODO: This should be using DI internally and not be so complicated to construct
             return new FunctionIndexer(triggerBindingProvider, bindingProvider, new DefaultJobActivator(), executor,
                 extensionRegistry, singletonManager, loggerFactory);
-#endif
         }
 
         /*
