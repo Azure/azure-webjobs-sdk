@@ -48,6 +48,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // pull from a default host
             var host = new HostBuilder()
                 .ConfigureDefaultTestHost()
+                .AddAzureStorage()
                 .Build();
             var provider = host.Services.GetService<StorageAccountProvider>();
             _storageAccount = provider.GetHost().SdkObject;
@@ -64,6 +65,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             return new HostBuilder()
                 .ConfigureDefaultTestHost<TProgram>()
+                .AddAzureStorage()
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<IJobActivator>(activator);

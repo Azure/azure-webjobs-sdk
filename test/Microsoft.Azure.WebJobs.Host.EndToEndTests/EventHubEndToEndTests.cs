@@ -140,6 +140,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 var host = new HostBuilder()
                     .ConfigureDefaultTestHost<EventHubTestJobs>()
+                    .AddAzureStorage()
                     .AddEventHubs()
                     .ConfigureServices(services =>
                     {

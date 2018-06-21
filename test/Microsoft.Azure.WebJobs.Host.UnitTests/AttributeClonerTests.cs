@@ -226,25 +226,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         // Test on an attribute that does NOT implement IAttributeInvokeDescriptor
-        // Key parameter is on the ctor
-        [Fact]
-        public void InvokeStringBlobAttribute()
-        {
-            foreach (var attr in new BlobAttribute[] {
-                new BlobAttribute("container/{name}"),
-                new BlobAttribute("container/constant", FileAccess.ReadWrite),
-                new BlobAttribute("container/{name}", FileAccess.Write)
-            })
-            {
-                var cloner = new AttributeCloner<BlobAttribute>(attr, GetBindingContract("name"));
-                BlobAttribute attr2 = cloner.ResolveFromInvokeString("c/n");
-
-                Assert.Equal("c/n", attr2.BlobPath);
-                Assert.Equal(attr.Access, attr2.Access);
-            }
-        }
-
-        // Test on an attribute that does NOT implement IAttributeInvokeDescriptor
         // Multiple resolved properties.
         [Fact]
         public void InvokeStringMultipleResolvedProperties()
@@ -498,43 +479,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 // Verify message. 
                 Assert.True(e.Message.StartsWith("Default contract can only refer to the 'sys' binding data: "));
             }            
-        }
-
-        [Fact]
-        public void CloneNoDefaultCtor()
-        {
-            var a1 = new BlobAttribute("container/{name}.txt", FileAccess.Write);
-
-            Dictionary<string, object> values = new Dictionary<string, object>()
-            {
-                { "name", "green" },
-            };
-            var ctx = GetCtx(values);
-
-            var cloner = new AttributeCloner<BlobAttribute>(a1, GetBindingContract("name"));
-            var attr2 = cloner.ResolveFromBindingData(ctx);
-
-            Assert.Equal("container/green.txt", attr2.BlobPath);
-            Assert.Equal(a1.Access, attr2.Access);
-        }
-
-        [Fact]
-        public void CloneNoDefaultCtorShortList()
-        {
-            // Use shorter parameter list.
-            var a1 = new BlobAttribute("container/{name}.txt");
-
-            Dictionary<string, object> values = new Dictionary<string, object>()
-            {
-                { "name", "green" },
-            };
-            var ctx = GetCtx(values);
-
-            var cloner = new AttributeCloner<BlobAttribute>(a1, GetBindingContract("name"));
-            var attr2 = cloner.ResolveFromBindingData(ctx);
-
-            Assert.Equal("container/green.txt", attr2.BlobPath);
-            Assert.Equal(a1.Access, attr2.Access);
         }
 
         // Malformed %% fail in ctor.

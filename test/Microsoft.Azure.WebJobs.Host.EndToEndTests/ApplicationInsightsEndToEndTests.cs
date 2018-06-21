@@ -53,6 +53,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             var host = new HostBuilder()
                 .ConfigureDefaultTestHost<ApplicationInsightsEndToEndTests>()
+                .AddAzureStorage()
                 .ConfigureServices(services =>
                 {
                     services.Configure<FunctionResultAggregatorOptions>(o =>

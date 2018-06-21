@@ -67,7 +67,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void TestObjectArray()
         {
             var client = new FakeQueueTypedClient();
-            var nr = new DictNameResolver();
+            var nr = new FakeNameResolver();
             nr.Add("appsetting1", "val1");
 
             var host = new HostBuilder()
@@ -88,7 +88,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void Test()
         {
             var client = new FakeQueueTypedClient();
-            var nr = new DictNameResolver();
+            var nr = new FakeNameResolver();
             nr.Add("appsetting1", "val1");
             var host = new HostBuilder()
                 .ConfigureDefaultTestHost<Functions>()

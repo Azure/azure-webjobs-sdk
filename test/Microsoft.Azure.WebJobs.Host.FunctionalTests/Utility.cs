@@ -16,6 +16,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public static IHostBuilder ConfigureDefaultTestHost<TProgram>(this IHostBuilder builder, XStorageAccount account)
         {
             return builder.ConfigureDefaultTestHost<TProgram>()
+                .AddAzureStorage()
                 .ConfigureServices(services => services.AddFakeStorageAccountProvider(account));
         }
 

@@ -121,8 +121,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                    // Register this to fail a test if a background exception is thrown
                    services.AddSingleton<IWebJobsExceptionHandlerFactory, TestExceptionHandlerFactory>();
                })
-               .ConfigureTestLogger()
-               .AddAzureStorage();
+               .ConfigureTestLogger();
         }
 
         public static IHostBuilder ConfigureDefaultTestHost<TProgram>(this IHostBuilder builder,
@@ -134,7 +133,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                     services.AddSingleton<IJobHost, JobHost<TProgram>>();
 
                     services.AddSingleton<IJobActivator>(new FakeActivator(instance));
-                }).AddAzureStorage();
+                });
         }
 
         public static IHostBuilder ConfigureDefaultTestHost<TProgram>(this IHostBuilder builder,
@@ -154,7 +153,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                     {
                         services.AddSingleton<IJobActivator>(activator);
                     }
-                }).AddAzureStorage();
+                });
         }
 
         public static IHostBuilder ConfigureTestLogger(this IHostBuilder builder)
@@ -219,13 +218,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
         {
             host.Call(typeof(T).GetMethod(methodName));
         }
-
-        public static XStorageAccount GetStorageAccount(this IHost host)
-        {
-            var provider = host.Services.GetRequiredService<StorageAccountProvider>(); // $$$ ok?
-            return provider.GetHost();
-        }
-
+        
         public static TOptions GetOptions<TOptions>(this IHost host) where TOptions : class, new()
         {
             return host.Services.GetService<IOptions<TOptions>>().Value;
@@ -246,20 +239,47 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             return host.Services.GetService<IJobHostMetadataProvider>();
         }
 
-        public static async Task<CloudQueue> CreateQueueAsync(XStorageAccount account, string queueName)
+        public static List<string> GetAssemblyReferences(Assembly assembly)
         {
-            CloudQueueClient client = account.CreateCloudQueueClient();
-            CloudQueue queue = client.GetQueueReference(queueName);
-            await queue.CreateIfNotExistsAsync();
-            return queue;
+            var assemblyRefs = assembly.GetReferencedAssemblies();
+            var names = (from assemblyRef in assemblyRefs
+                         orderby assemblyRef.Name.ToLowerInvariant()
+                         select assemblyRef.Name).ToList();
+            return names;
         }
 
-        public static async Task<CloudTable> CreateTableAsync(XStorageAccount account, string tableName)
+        public static void AssertPublicTypes(IEnumerable<string> expected, Assembly assembly)
         {
-            CloudTableClient client = account.CreateCloudTableClient();
-            CloudTable table = client.GetTableReference(tableName);
-            await table.CreateIfNotExistsAsync();
-            return table;
+            var publicTypes = (assembly.GetExportedTypes()
+                .Select(type => type.Name)
+                .OrderBy(n => n));
+
+            AssertPublicTypes(expected.ToArray(), publicTypes.ToArray());
+        }
+
+        public static void AssertPublicTypes(string[] expected, string[] actual)
+        {
+            var newlyIntroducedPublicTypes = actual.Except(expected).ToArray();
+
+            if (newlyIntroducedPublicTypes.Length > 0)
+            {
+                string message = String.Format("Found {0} unexpected public type{1}: \r\n{2}",
+                    newlyIntroducedPublicTypes.Length,
+                    newlyIntroducedPublicTypes.Length == 1 ? "" : "s",
+                    string.Join("\r\n", newlyIntroducedPublicTypes));
+                Assert.True(false, message);
+            }
+
+            var missingPublicTypes = expected.Except(actual).ToArray();
+
+            if (missingPublicTypes.Length > 0)
+            {
+                string message = String.Format("missing {0} public type{1}: \r\n{2}",
+                    missingPublicTypes.Length,
+                    missingPublicTypes.Length == 1 ? "" : "s",
+                    string.Join("\r\n", missingPublicTypes));
+                Assert.True(false, message);
+            }
         }
     }
 }

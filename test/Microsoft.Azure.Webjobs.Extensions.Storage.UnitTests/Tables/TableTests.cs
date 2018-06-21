@@ -150,7 +150,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             // Arrange
             XStorageAccount account = CreateFakeStorageAccount();
-            CloudQueue triggerQueue = await TestHelpers.CreateQueueAsync(account, TriggerQueueName);
+            CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage("ignore"));
 
             // Act
@@ -171,7 +171,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // Arrange
             const string expectedValue = "abc";
             XStorageAccount account = CreateFakeStorageAccount();
-            CloudQueue triggerQueue = await TestHelpers.CreateQueueAsync(account, TriggerQueueName);
+            CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage(expectedValue));
 
             // Act
@@ -215,7 +215,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // Arrange
             const string expectedValue = "abc";
             XStorageAccount account = CreateFakeStorageAccount();
-            CloudQueue triggerQueue = await TestHelpers.CreateQueueAsync(account, TriggerQueueName);
+            CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage(expectedValue));
 
             // Act
@@ -231,7 +231,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // Arrange
             const string expectedValue = "abc";
             XStorageAccount account = CreateFakeStorageAccount();
-            CloudQueue triggerQueue = await TestHelpers.CreateQueueAsync(account, TriggerQueueName);
+            CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage(expectedValue));
 
             // Act
@@ -273,7 +273,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 }
             };
             XStorageAccount account = CreateFakeStorageAccount();
-            CloudQueue triggerQueue = await TestHelpers.CreateQueueAsync(account, TriggerQueueName);
+            CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage(JsonConvert.SerializeObject(expected)));
 
             // Act

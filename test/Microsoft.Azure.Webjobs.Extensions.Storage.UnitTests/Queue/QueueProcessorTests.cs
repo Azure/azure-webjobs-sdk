@@ -155,6 +155,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             {
                 IHost host = new HostBuilder()
                     .ConfigureDefaultTestHost()
+                    .AddAzureStorage()
                     .Build();
 
                 var accountProvider = host.Services.GetService<StorageAccountProvider>();

@@ -49,6 +49,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             IHost host = RuntimeConfigurationExtensions.AddAzureStorageCoreServices(new HostBuilder()
                 .ConfigureDefaultTestHost(prog)
+                .AddAzureStorage()
                 .ConfigureAppConfiguration(config =>
                 {
                     // Set env to the SAS container and clear out all other storage. 

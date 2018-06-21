@@ -69,6 +69,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             IHost host = new HostBuilder()
                .ConfigureDefaultTestHost<ProgramWithStaticBadName>()
+               .AddAzureStorage()
                .Build();
 
             string errorMessage = GetErrorMessageForBadQueueName(ProgramWithStaticBadName.BadQueueName, "name");

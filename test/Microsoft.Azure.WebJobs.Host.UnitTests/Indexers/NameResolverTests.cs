@@ -26,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         [Fact]
         public static void NotRecursive()
         {
-            var resolver = new DictNameResolver();            
+            var resolver = new FakeNameResolver();            
             resolver.Add("one", "1");
             resolver.Add("two", "2");
             resolver.Add("<", "%");
@@ -57,23 +57,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
             // rogue exceptions are caught and wrapped. 
             Assert.Throws<InvalidOperationException>(() => resolver.ResolveWholeString("%abc%"));
-        }
-    }
-
-    class DictNameResolver : INameResolver
-    {
-        public Dictionary<string, string> _dict = new Dictionary<string, string>();
-
-        public void Add(string name, string value)
-        {
-            _dict.Add(name, value);
-        }
-
-        public string Resolve(string name)
-        {
-            string val;
-            _dict.TryGetValue(name, out val);
-            return val;
         }
     }
 

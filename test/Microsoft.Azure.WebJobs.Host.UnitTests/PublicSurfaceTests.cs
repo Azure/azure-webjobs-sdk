@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
 using Xunit;
@@ -17,43 +18,17 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
     /// we review such additions carefully.
     /// </summary>
     public class PublicSurfaceTests
-    {
-        [Fact]
-        public void AssemblyReferences_InJobsAssembly()
-        {
-            // The DLL containing the binding attributes should be truly minimal and have no extra dependencies. 
-            var names = GetAssemblyReferences(typeof(QueueTriggerAttribute).Assembly)
-                .OrderBy(n => n);
-
-            var expectedReferences = new string[]
-            {
-                "Microsoft.Azure.WebJobs",
-                "Microsoft.Azure.WebJobs.Host",
-                "Microsoft.Extensions.DependencyInjection.Abstractions",
-                "Microsoft.Extensions.Hosting.Abstractions",
-                "Microsoft.Extensions.Logging.Abstractions",
-                "Microsoft.Extensions.Options",
-                "Microsoft.WindowsAzure.Storage",
-                "netstandard",
-                "Newtonsoft.Json",
-                "System.ComponentModel.Annotations",
-            }.OrderBy(n => n);
-
-            Assert.True(expectedReferences.SequenceEqual(names, StringComparer.Ordinal), 
-                "Assembly references do not match the expected references");
-        }
-
+    {    
         [Fact]
         public void AssemblyReferences_InJobsHostAssembly()
         {
-            var names = GetAssemblyReferences(typeof(JobHost).Assembly);
+            var names = TestHelpers.GetAssemblyReferences(typeof(JobHost).Assembly);
 
             foreach (var name in names)
             {
                 if (name.StartsWith("Microsoft.WindowsAzure"))
                 {
-                    // Only azure dependency is on the storage sdk
-                    Assert.Equal("Microsoft.WindowsAzure.Storage", name);
+                    Assert.True(false, "Should not have azure dependency: " + name);
                 }
             }
         }
@@ -86,79 +61,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "Segment`1"
             };
 
-            AssertPublicTypes(expected, assembly);
-        }
-
-        [Fact]
-        public void ServiceBusPublicSurface_LimitedToSpecificTypes()
-        {
-            var assembly = typeof(ServiceBusAttribute).Assembly;
-
-            var expected = new[]
-            {
-                "EntityType",
-                "MessageProcessor",
-                "MessagingProvider",
-                "ServiceBusAccountAttribute",
-                "ServiceBusAttribute",
-                "ServiceBusTriggerAttribute",
-                "ServiceBusExtensionConfig",
-                "ServiceBusHostBuilderExtensions",
-                "ServiceBusOptions"
-            };
-
-            AssertPublicTypes(expected, assembly);
-        }
-
-        [Fact]
-        public void EventHubsPublicSurface_LimitedToSpecificTypes()
-        {
-            var assembly = typeof(EventHubAttribute).Assembly;
-
-            var expected = new[]
-            {
-                "EventHubAttribute",
-                "EventHubTriggerAttribute",
-                "EventHubConfiguration",
-                "EventHubExtensionConfigProvider",
-                "EventHubHostBuilderExtensions"
-            };
-
-            AssertPublicTypes(expected, assembly);
-        }
-
-        [Fact]
-        public void WebJobsPublicSurface_LimitedToSpecificTypes()
-        {
-            var assembly = typeof(QueueTriggerAttribute).Assembly;
-
-            var expected = new[]
-            {
-               "BlobAttribute",
-                "BlobNameValidationAttribute",
-                "BlobParameterDescriptor",
-                "BlobTriggerAttribute",
-                "BlobTriggerParameterDescriptor",
-                "IQueueProcessorFactory",
-                "JobHostBlobsOptions",
-                "JobHostQueuesOptions",
-                "PoisonMessageEventArgs",
-                "QueueAttribute",
-                "QueueParameterDescriptor",
-                "QueueProcessor",
-                "QueueProcessorFactoryContext",
-                "QueueTriggerAttribute",
-                "QueueTriggerParameterDescriptor",
-                "StorageHostBuilderExtensions",
-                "TableAttribute",
-                "TableEntityParameterDescriptor",
-                "TableExtension",
-                "TableParameterDescriptor",
-                "XStorageAccount",
-                "StorageAccountProvider",
-            };
-
-            AssertPublicTypes(expected, assembly);
+            TestHelpers.AssertPublicTypes(expected, assembly);
         }
 
         [Fact]
@@ -310,7 +213,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "WebJobsStartupAttribute",
             };
 
-            AssertPublicTypes(expected, assembly);
+            TestHelpers.AssertPublicTypes(expected, assembly);
         }
 
         [Fact]
@@ -324,50 +227,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "ApplicationInsightsHostBuilderExtensions"
             };
 
-            AssertPublicTypes(expected, assembly);
-        }
-
-        private static List<string> GetAssemblyReferences(Assembly assembly)
-        {
-            var assemblyRefs = assembly.GetReferencedAssemblies();
-            var names = (from assemblyRef in assemblyRefs
-                         orderby assemblyRef.Name.ToLowerInvariant()
-                         select assemblyRef.Name).ToList();
-            return names;
-        }
-
-        private static void AssertPublicTypes(IEnumerable<string> expected, Assembly assembly)
-        {
-            var publicTypes = (assembly.GetExportedTypes()
-                .Select(type => type.Name)
-                .OrderBy(n => n));
-
-            AssertPublicTypes(expected.ToArray(), publicTypes.ToArray());
-        }
-
-        private static void AssertPublicTypes(string[] expected, string[] actual)
-        {
-            var newlyIntroducedPublicTypes = actual.Except(expected).ToArray();
-
-            if (newlyIntroducedPublicTypes.Length > 0)
-            {
-                string message = String.Format("Found {0} unexpected public type{1}: \r\n{2}",
-                    newlyIntroducedPublicTypes.Length,
-                    newlyIntroducedPublicTypes.Length == 1 ? "" : "s",
-                    string.Join("\r\n", newlyIntroducedPublicTypes));
-                Assert.True(false, message);
-            }
-
-            var missingPublicTypes = expected.Except(actual).ToArray();
-
-            if (missingPublicTypes.Length > 0)
-            {
-                string message = String.Format("missing {0} public type{1}: \r\n{2}",
-                    missingPublicTypes.Length,
-                    missingPublicTypes.Length == 1 ? "" : "s",
-                    string.Join("\r\n", missingPublicTypes));
-                Assert.True(false, message);
-            }
-        }
+            TestHelpers.AssertPublicTypes(expected, assembly);
+        }     
     }
 }

@@ -532,6 +532,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 IHost host = new HostBuilder()
                     .ConfigureDefaultTestHost<TestFixture>()
+                    .AddAzureStorage()
                     .Build();
 
                 var provider = host.Services.GetService<StorageAccountProvider>();

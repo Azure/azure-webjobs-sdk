@@ -28,6 +28,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             IHost host = new HostBuilder()
                .ConfigureDefaultTestHost<InstanceProgram>(prog)
+               .AddAzureStorage()
                .UseStorage(account)
                .Build();
 
@@ -61,6 +62,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var prog = new InstanceAsyncProgram();
             IHost host = new HostBuilder()
                .ConfigureDefaultTestHost<InstanceAsyncProgram>(prog)
+               .AddAzureStorage()
                .UseStorage(account)
                .Build();
 

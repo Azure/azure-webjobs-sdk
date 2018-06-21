@@ -106,6 +106,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 IHost host = new HostBuilder()
                     .ConfigureDefaultTestHost<ServiceBusTestJobs>()
+                    .AddAzureStorage()
                     .AddServiceBus()
                     .ConfigureServices(services =>
                     {
@@ -136,6 +137,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 IHost host = new HostBuilder()
                    .ConfigureDefaultTestHost<ServiceBusTestJobs>(nameResolver: _nameResolver)
+                   .AddAzureStorage()
                    .AddServiceBus()
                    .ConfigureServices(services =>
                    {
@@ -202,6 +204,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             return new HostBuilder()
                 .ConfigureDefaultTestHost<ServiceBusTestJobs>()
+                .AddAzureStorage()
                 .AddServiceBus()
                 .ConfigureServices(services =>
                 {
