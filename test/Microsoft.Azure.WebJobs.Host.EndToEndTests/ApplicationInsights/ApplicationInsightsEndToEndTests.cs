@@ -654,10 +654,5 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             setActive.Invoke(null, new object[] {value});
         }
-
-        public void Dispose()
-        {
-            _channel?.Dispose();
-        }
     }
 }

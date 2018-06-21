@@ -377,7 +377,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             TelemetryConfiguration telemteryConfiguration = host.Services.GetService<TelemetryConfiguration>();
             telemteryConfiguration.TelemetryChannel = _channel;
 
-            XStorageAccountProvider provider = host.Services.GetService<XStorageAccountProvider>();
+            StorageAccountProvider provider = host.Services.GetService<StorageAccountProvider>();
             CloudStorageAccount storageAccount = provider.GetHost().SdkObject;
             _blobClient = storageAccount.CreateCloudBlobClient();
             _queueClient = storageAccount.CreateCloudQueueClient();
