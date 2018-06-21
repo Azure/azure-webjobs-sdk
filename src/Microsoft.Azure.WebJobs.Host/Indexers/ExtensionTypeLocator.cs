@@ -9,7 +9,6 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
     internal class ExtensionTypeLocator : IExtensionTypeLocator
     {
         private readonly ITypeLocator _typeLocator;
-        private IReadOnlyList<Type> _cloudBlobStreamBinderTypes;
         private readonly static IReadOnlyList<Type> _emptyList = new List<Type>().AsReadOnly();
 
         public ExtensionTypeLocator(ITypeLocator typeLocator)

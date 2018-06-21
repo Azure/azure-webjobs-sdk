@@ -231,16 +231,16 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             // A fake connection string for event hubs. This just needs to parse. It won't actually get invoked.
             private const string FakeConnectionString = "Endpoint=sb://test89123-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey;EntityPath=path2";
 
-            public static EventHubClient TestClient { get => testClient; set => testClient = value; }
-
-            public List<byte[]> SentEvents { get => sentEvents; set => sentEvents = value; }
-
-            public static string FakeConnectionString1 => FakeConnectionString;
-
             public TestEventHubAsyncCollector()
                 : base(TestClient)
             {
             }
+
+            public static EventHubClient TestClient { get => testClient; set => testClient = value; }
+
+            public static string FakeConnectionString1 => FakeConnectionString;
+
+            public List<byte[]> SentEvents { get => sentEvents; set => sentEvents = value; }
 
             protected override Task SendBatchAsync(IEnumerable<EventData> batch)
             {

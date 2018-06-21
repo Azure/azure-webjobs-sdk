@@ -32,9 +32,9 @@ namespace Microsoft.Azure.WebJobs
         {
             return new Listener
             {
-                _parent = this,
-                queue = queue,
-                callback = callback
+                Parent = this,
+                Queue = queue,
+                Callback = callback
             };
         }
 
@@ -74,9 +74,9 @@ namespace Microsoft.Azure.WebJobs
 
         class Listener : IListener
         {
-            internal InMemoryLoadbalancerQueue _parent;
-            internal string queue; // queue to listen on
-            internal Func<string, CancellationToken, Task<FunctionResult>> callback;
+            internal InMemoryLoadbalancerQueue Parent;
+            internal string Queue; // queue to listen on
+            internal Func<string, CancellationToken, Task<FunctionResult>> Callback;
 
             public void Cancel()
             {
