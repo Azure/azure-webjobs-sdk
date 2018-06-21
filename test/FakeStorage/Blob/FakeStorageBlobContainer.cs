@@ -9,7 +9,7 @@ using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace FakeStorage
 {
-    internal class FakeStorageBlobContainer : CloudBlobContainer
+    public class FakeStorageBlobContainer : CloudBlobContainer
     {
         internal readonly MemoryBlobStore _store;
         internal readonly FakeStorageBlobClient _client;
@@ -24,7 +24,7 @@ namespace FakeStorage
             _store = client._store;
             _client = client;
 
-            this.SetInternalField(nameof(ServiceClient), client);
+            this.SetInternalProperty(nameof(ServiceClient), client);
         }
 
         public override bool Equals(object obj)
@@ -204,7 +204,7 @@ namespace FakeStorage
         }
 
         public override Task<BlobResultSegment> ListBlobsSegmentedAsync(BlobContinuationToken currentToken)
-        {            
+        {
             return base.ListBlobsSegmentedAsync(currentToken);
         }
 

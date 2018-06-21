@@ -5,13 +5,12 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Auth;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Shared.Protocol;
 
 namespace FakeStorage
 {
-    internal class FakeStorageBlobClient : CloudBlobClient
+    public class FakeStorageBlobClient : CloudBlobClient
     {
         public static Uri FakeUri = new Uri("https://fakeaccount.blob.core.windows.net");
 
@@ -22,12 +21,12 @@ namespace FakeStorage
         {
             _store = account._blobStore;
 
-            this.SetInternalField(nameof(Credentials), account._creds);
+            this.SetInternalProperty(nameof(Credentials), account._creds);
         }
 
         internal Uri GetContainerUri(string containerName)
         {
-            return new Uri(this.BaseUri.ToString() +  containerName); // Uri already has trailing slash 
+            return new Uri(this.BaseUri.ToString() + containerName); // Uri already has trailing slash 
         }
 
         public override bool Equals(object obj)
@@ -114,7 +113,7 @@ namespace FakeStorage
         }
 
         public override Task<BlobResultSegment> ListBlobsSegmentedAsync(string prefix, BlobContinuationToken currentToken)
-        {            
+        {
             return base.ListBlobsSegmentedAsync(prefix, currentToken); // chain
         }
 

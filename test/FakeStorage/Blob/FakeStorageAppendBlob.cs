@@ -44,7 +44,7 @@ namespace FakeStorage
             //   where attributes is internal BlobAttributes class. 
             // return BlobProperties
 
-            this.SetInternalField(nameof(ServiceClient), parent._client);
+            this.SetInternalProperty(nameof(ServiceClient), parent._client);
         }
 
         private void ApplyProperties()
@@ -52,7 +52,7 @@ namespace FakeStorage
             if (_properties != null)
             {
                 var realProps = _properties.GetRealProperties();
-                realProps.SetInternalField(nameof(BlobType), BlobType.AppendBlob);
+                realProps.SetInternalProperty(nameof(BlobType), BlobType.AppendBlob);
 
                 // { return this.attributes.Properties; }
                 new Wrapper(this).GetField("attributes").SetInternalField("Properties", realProps);

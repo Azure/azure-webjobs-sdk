@@ -38,7 +38,7 @@ namespace FakeStorage
                 _properties = new FakeStorageBlobProperties();
             }
 
-            this.SetInternalField(nameof(ServiceClient), parent._client);
+            this.SetInternalProperty(nameof(ServiceClient), parent._client);
         }
 
         private void ApplyProperties()
@@ -46,7 +46,7 @@ namespace FakeStorage
             if (_properties != null)
             {
                 var realProps = _properties.GetRealProperties();
-                realProps.SetInternalField(nameof(BlobType), BlobType.PageBlob);
+                realProps.SetInternalProperty(nameof(BlobType), BlobType.PageBlob);
 
                 // { return this.attributes.Properties; }
                 new Wrapper(this).GetField("attributes").SetInternalField("Properties", realProps);

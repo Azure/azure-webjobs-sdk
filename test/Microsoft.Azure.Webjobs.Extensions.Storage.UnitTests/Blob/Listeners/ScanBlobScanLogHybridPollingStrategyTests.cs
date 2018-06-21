@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using FakeStorage;
 using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
@@ -32,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
 
             RunExecuterWithExpectedBlobs(new List<string>(), product, executor);
 
-            string expectedBlobName = await CreateAblobAndUploadToContainer(container);
+            string expectedBlobName = await CreateBlobAndUploadToContainer(container);
 
             RunExecuterWithExpectedBlobs(new List<string>() { expectedBlobName }, product, executor);
 
@@ -60,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             List<string> expectedNames = new List<string>();
             for (int i = 0; i < 5; i++)
             {
-                expectedNames.Add(await CreateAblobAndUploadToContainer(container));
+                expectedNames.Add(await CreateBlobAndUploadToContainer(container));
             }
 
             RunExecuteWithMultiPollingInterval(expectedNames, product, executor, testScanBlobLimitPerPoll);
@@ -93,7 +94,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             List<string> firstContainerExpectedNames = new List<string>();
             for (int i = 0; i < 5; i++)
             {
-                firstContainerExpectedNames.Add(await CreateAblobAndUploadToContainer(firstContainer));
+                firstContainerExpectedNames.Add(await CreateBlobAndUploadToContainer(firstContainer));
             }
 
             RunExecuteWithMultiPollingInterval(firstContainerExpectedNames, product, executor, testScanBlobLimitPerPoll / containerCount);
@@ -103,7 +104,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             List<string> secondContainerExpectedNames = new List<string>();
             for (int i = 0; i < 2; i++)
             {
-                secondContainerExpectedNames.Add(await CreateAblobAndUploadToContainer(secondContainer));
+                secondContainerExpectedNames.Add(await CreateBlobAndUploadToContainer(secondContainer));
             }
 
             RunExecuteWithMultiPollingInterval(secondContainerExpectedNames, product, executor, testScanBlobLimitPerPoll / containerCount);
@@ -112,7 +113,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             RunExecuterWithExpectedBlobs(new List<string>(), product, executor);
         }
 
-#if false // $$$
         [Fact]
         public async Task BlobPolling_IgnoresClockSkew()
         {
@@ -122,14 +122,14 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             var client = account.CreateCloudBlobClient();
             var now = DateTimeOffset.UtcNow;
             var timeMap = new Dictionary<string, DateTimeOffset>();
-            var container = new SkewableFakeStorageBlobContainer(new MemoryBlobStore(), containerName, client,
+            var container = new SkewableFakeStorageBlobContainer(containerName, client as FakeStorageBlobClient,
                 (blobs) =>
                 {
                     // Simulate some extreme clock skew -- the first one's LastUpdated
                     // wll be 60 seconds ago and the second will be 59 seconds ago.
-                    foreach (IStorageBlob blob in blobs.Results)
+                    foreach (ICloudBlob blob in blobs.Results)
                     {
-                        ((FakeStorageBlobProperties)blob.Properties).LastModified = timeMap[blob.Name];
+                        blob.Properties.SetLastModified(timeMap[blob.Name]);
                     }
                 });
             IBlobListenerStrategy product = new ScanBlobScanLogHybridPollingStrategy(new TestBlobScanInfoManager());
@@ -142,19 +142,20 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             product.Start();
 
             List<string> expectedNames = new List<string>();
-            expectedNames.Add(await CreateAblobAndUploadToContainer(container));
+            expectedNames.Add(await CreateBlobAndUploadToContainer(container));
             timeMap[expectedNames.Single()] = now.AddSeconds(-60);
             RunExecuterWithExpectedBlobs(expectedNames, product, executor);
 
             expectedNames.Clear();
 
-            expectedNames.Add(await CreateAblobAndUploadToContainer(container));
+            expectedNames.Add(await CreateBlobAndUploadToContainer(container));
             timeMap[expectedNames.Single()] = now.AddSeconds(-59);
 
             // We should see the new item.
             RunExecuterWithExpectedBlobs(expectedNames, product, executor);
+
+            Assert.Equal(2, container.CallCount);
         }
-#endif
 
         [Fact]
         public async Task RegisterAsync_InitializesWithScanInfoManager()
@@ -169,7 +170,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             // Create a few blobs.
             for (int i = 0; i < 5; i++)
             {
-                await CreateAblobAndUploadToContainer(container);
+                await CreateBlobAndUploadToContainer(container);
             }
 
             await scanInfoManager.UpdateLatestScanAsync(account.Name, containerName, DateTime.UtcNow);
@@ -179,7 +180,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             await Task.Delay(10);
 
             var expectedNames = new List<string>();
-            expectedNames.Add(await CreateAblobAndUploadToContainer(container));
+            expectedNames.Add(await CreateBlobAndUploadToContainer(container));
 
             RunExecuterWithExpectedBlobs(expectedNames, product, executor);
         }
@@ -209,7 +210,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             var firstExpectedNames = new List<string>();
             for (int i = 0; i < 3; i++)
             {
-                firstExpectedNames.Add(await CreateAblobAndUploadToContainer(firstContainer));
+                firstExpectedNames.Add(await CreateBlobAndUploadToContainer(firstContainer));
             }
             RunExecuteWithMultiPollingInterval(firstExpectedNames, product, executor, testScanBlobLimitPerPoll / 2);
 
@@ -224,7 +225,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             var secondExpectedNames = new List<string>();
             for (int i = 0; i < 7; i++)
             {
-                secondExpectedNames.Add(await CreateAblobAndUploadToContainer(secondContainer));
+                secondExpectedNames.Add(await CreateBlobAndUploadToContainer(secondContainer));
             }
             RunExecuteWithMultiPollingInterval(secondExpectedNames, product, executor, testScanBlobLimitPerPoll / 2);
 
@@ -234,7 +235,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
         }
 
 
-#if false // $$$
         [Fact]
         public async Task ExecuteAsync_UpdatesScanInfo_WithEarliestFailure()
         {
@@ -246,14 +246,15 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             var timeMap = new Dictionary<string, DateTimeOffset>();
 
             var account = CreateFakeStorageAccount();
-            CloudBlobContainer container = new SkewableFakeStorageBlobContainer(new MemoryBlobStore(), containerName,
-                account.CreateCloudBlobClient(), blobs =>
+            var client = account.CreateCloudBlobClient() as FakeStorageBlobClient;
+            var container = new SkewableFakeStorageBlobContainer(containerName, client,
+                blobs =>
                 {
                     // Set a blob with "throw" to a specific date and time. Make sure the error blob
                     // is earlier than the others.
-                    foreach (IStorageBlob blob in blobs.Results)
+                    foreach (ICloudBlob blob in blobs.Results)
                     {
-                        ((FakeStorageBlobProperties)blob.Properties).LastModified = timeMap[blob.Name];
+                        blob.Properties.SetLastModified(timeMap[blob.Name]);
                     }
                 });
 
@@ -275,12 +276,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
                 string name;
                 if (i % 3 == 0)
                 {
-                    name = await CreateAblobAndUploadToContainer(container, "throw");
+                    name = await CreateBlobAndUploadToContainer(container, "throw");
                     timeMap[name] = earliestErrorTime.AddMinutes(i);
                 }
                 else
                 {
-                    name = await CreateAblobAndUploadToContainer(container, "test");
+                    name = await CreateBlobAndUploadToContainer(container, "test");
                     timeMap[name] = earliestErrorTime.AddMinutes(10);
                 }
                 expectedNames.Add(name);
@@ -290,8 +291,8 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             DateTime? storedTime = await testScanInfoManager.LoadLatestScanAsync(accountName, containerName);
             Assert.True(storedTime < earliestErrorTime);
             Assert.Equal(1, testScanInfoManager.UpdateCounts[accountName][containerName]);
+            Assert.Equal(2, container.CallCount);
         }
-#endif
 
         private static XStorageAccount CreateFakeStorageAccount()
         {
@@ -372,7 +373,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             }
         }
 
-        private async Task<string> CreateAblobAndUploadToContainer(CloudBlobContainer container, string blobContent = "test")
+        private async Task<string> CreateBlobAndUploadToContainer(CloudBlobContainer container, string blobContent = "test")
         {
             string blobName = Path.GetRandomFileName().Replace(".", "");
             var blob = container.GetBlockBlobReference(blobName);
@@ -393,29 +394,29 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             }
         }
 
-
-#if false // $$$
-        private class SkewableFakeStorageBlobContainer : CloudBlobContainer
+        private class SkewableFakeStorageBlobContainer : FakeStorageBlobContainer
         {
             private Action<BlobResultSegment> _onListBlobsSegmented;
 
-            public SkewableFakeStorageBlobContainer(MemoryBlobStore store, string containerName,
-                IStorageBlobClient parent, Action<IStorageBlobResultSegment> onListBlobsSegmented)
-                : base(store, containerName, parent)
+            // To protect against storage updates that change the overloads.
+            // Tests check this to make sure we're calling into our overload below.
+            public int CallCount = 0;
+
+            public SkewableFakeStorageBlobContainer(string containerName, FakeStorageBlobClient parent,
+                Action<BlobResultSegment> onListBlobsSegmented)
+                : base(parent, containerName)
             {
                 _onListBlobsSegmented = onListBlobsSegmented;
             }
-                        
 
-            public override async Task<BlobResultSegment> ListBlobsSegmentedAsync(string prefix, bool useFlatBlobListing, BlobListingDetails blobListingDetails, int? maxResults, BlobContinuationToken currentToken, BlobRequestOptions options, OperationContext operationContext)
+            public override async Task<BlobResultSegment> ListBlobsSegmentedAsync(string prefix, bool useFlatBlobListing, BlobListingDetails blobListingDetails, int? maxResults, BlobContinuationToken currentToken, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
             {
                 var results = await base.ListBlobsSegmentedAsync(prefix, useFlatBlobListing, blobListingDetails, maxResults, currentToken, options, operationContext);
-
                 _onListBlobsSegmented(results);
+                CallCount++;
                 return results;
             }
         }
-#endif
 
         private class TestBlobScanInfoManager : IBlobScanInfoManager
         {

@@ -27,7 +27,7 @@ namespace FakeStorage
             _client = client;
             _store = _client._account._queueStore;
 
-            this.SetInternalField(nameof(CloudQueue.ServiceClient), _client);
+            this.SetInternalProperty(nameof(CloudQueue.ServiceClient), _client);
         }
 
         static internal Uri GetQueueUri(string queueName)

@@ -6,17 +6,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
-using Microsoft.WindowsAzure.Storage.Table;
 
 namespace FakeStorage
 {
     // Provide an accessor for getting to private fields. 
-    class Wrapper
+    internal class Wrapper
     {
         private readonly object _value;
 
@@ -36,7 +34,7 @@ namespace FakeStorage
 
         public void SetInternalField(string name, object value)
         {
-            _value.SetInternalField(name, value);
+            _value.SetInternalProperty(name, value);
         }
     }
 
@@ -51,13 +49,13 @@ namespace FakeStorage
                 null);
 
             var result = ctor.Invoke(new object[] { uri, prefix, container });
-            return (CloudBlobDirectory) result;
+            return (CloudBlobDirectory)result;
         }
 
-        public static T SetInternalField<T>(this T obj, string name, object value)
+        public static T SetInternalProperty<T>(this T obj, string name, object value)
         {
             var t = obj.GetType();
-            
+
             var prop = t.GetProperty(name,
               BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
 
@@ -65,7 +63,7 @@ namespace FakeStorage
             // Need to request the property on the type it was declared. 
             while (!prop.CanWrite)
             {
-                t = t.BaseType;                
+                t = t.BaseType;
                 prop = t.GetProperty(name,
                     BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
             }
@@ -74,9 +72,16 @@ namespace FakeStorage
             return obj;
         }
 
-        public static BlobProperties SetEtag(this BlobProperties props, string etag )
+        public static BlobProperties SetEtag(this BlobProperties props, string etag)
         {
-            props.SetInternalField(nameof(BlobProperties.ETag), etag);
+            props.SetInternalProperty(nameof(BlobProperties.ETag), etag);
+            return props;
+        }
+
+        public static BlobProperties SetLastModified(this BlobProperties props, DateTimeOffset? modified)
+        {
+            props.SetInternalProperty(nameof(BlobProperties.LastModified), modified);
+
             return props;
         }
 
@@ -91,43 +96,43 @@ namespace FakeStorage
             var ctor = typeof(BlobResultSegment).GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] {
                 typeof(IEnumerable<IListBlobItem>), typeof(BlobContinuationToken)
             }, null);
-            var result = (BlobResultSegment) ctor.Invoke(new object[] { results, continuationToken });
+            var result = (BlobResultSegment)ctor.Invoke(new object[] { results, continuationToken });
             return result;
         }
 
         public static CloudQueueMessage SetDequeueCount(this CloudQueueMessage msg, int value)
         {
-            msg.SetInternalField(nameof(CloudQueueMessage.DequeueCount), value);
+            msg.SetInternalProperty(nameof(CloudQueueMessage.DequeueCount), value);
             return msg;
         }
 
         public static CloudQueueMessage SetExpirationTime(this CloudQueueMessage msg, DateTimeOffset? value)
         {
-            msg.SetInternalField(nameof(CloudQueueMessage.ExpirationTime), value);
+            msg.SetInternalProperty(nameof(CloudQueueMessage.ExpirationTime), value);
             return msg;
         }
 
         public static CloudQueueMessage SetId(this CloudQueueMessage msg, string value)
         {
-            msg.SetInternalField(nameof(CloudQueueMessage.Id), value);
+            msg.SetInternalProperty(nameof(CloudQueueMessage.Id), value);
             return msg;
         }
 
         public static CloudQueueMessage SetInsertionTime(this CloudQueueMessage msg, DateTimeOffset? value)
         {
-            msg.SetInternalField(nameof(CloudQueueMessage.InsertionTime), value);
+            msg.SetInternalProperty(nameof(CloudQueueMessage.InsertionTime), value);
             return msg;
         }
 
         public static CloudQueueMessage SetNextVisibleTime(this CloudQueueMessage msg, DateTimeOffset? value)
         {
-            msg.SetInternalField(nameof(CloudQueueMessage.NextVisibleTime), value);
+            msg.SetInternalProperty(nameof(CloudQueueMessage.NextVisibleTime), value);
             return msg;
         }
 
         public static CloudQueueMessage SetPopReceipt(this CloudQueueMessage msg, string value)
         {
-            msg.SetInternalField(nameof(CloudQueueMessage.PopReceipt), value);
+            msg.SetInternalProperty(nameof(CloudQueueMessage.PopReceipt), value);
             return msg;
         }
     }

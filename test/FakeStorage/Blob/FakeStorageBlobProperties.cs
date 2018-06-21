@@ -22,7 +22,7 @@ namespace FakeStorage
         public BlobProperties GetRealProperties()
         {
             var props = new BlobProperties();
-            props.SetInternalField(nameof(BlobProperties.LastModified), this.LastModified);
+            props.SetInternalProperty(nameof(BlobProperties.LastModified), this.LastModified);
             props.SetEtag(this.ETag);
             return props;
         }
