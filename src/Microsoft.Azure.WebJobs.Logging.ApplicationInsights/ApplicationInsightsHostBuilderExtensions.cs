@@ -65,9 +65,6 @@ namespace Microsoft.Extensions.Logging
                 services.AddSingleton<ITelemetryInitializer, WebJobsTelemetryInitializer>();
                 services.AddSingleton<ITelemetryInitializer, WebJobsSanitizingInitializer>();
                 services.AddSingleton<ITelemetryModule, QuickPulseTelemetryModule>();
-
-                ServerTelemetryChannel serverChannel = new ServerTelemetryChannel();
-                services.AddSingleton<ITelemetryModule>(serverChannel);
                 services.AddSingleton<ITelemetryModule, DependencyTrackingTelemetryModule>(provider =>
                 {
                     var dependencyCollector = new DependencyTrackingTelemetryModule();
@@ -81,6 +78,8 @@ namespace Microsoft.Extensions.Logging
 
                     return dependencyCollector;
                 });
+
+                ServerTelemetryChannel serverChannel = new ServerTelemetryChannel();
                 services.AddSingleton<ITelemetryChannel>(serverChannel);
                 services.AddSingleton<TelemetryConfiguration>(provider =>
                 {
@@ -107,7 +106,7 @@ namespace Microsoft.Extensions.Logging
                             instrumentationKey,
                             filter,
                             samplingSettings,
-                            channel,
+                            new ServerTelemetryChannel(),
                             provider.GetServices<ITelemetryInitializer>(),
                             provider.GetServices<ITelemetryModule>());
                     }
@@ -157,6 +156,8 @@ namespace Microsoft.Extensions.Logging
             {
                 configuration.TelemetryInitializers.Add(initializer);
             }
+
+            (channel as ServerTelemetryChannel)?.Initialize(configuration);
 
             QuickPulseTelemetryModule quickPulseModule = null;
             foreach (ITelemetryModule module in telemetryModules)

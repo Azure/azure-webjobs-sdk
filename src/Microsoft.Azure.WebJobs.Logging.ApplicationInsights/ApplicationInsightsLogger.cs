@@ -383,30 +383,24 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 return;
             }
 
-            // In some cases, requests are automatically tracked by ApplicationInsights SDK,
-            // HTTP trigger is one of such cases, ServiceBus and EventHubs triggers will be auto-tracked as well
-            // based on presence of Activity.Current, we can tell whether it is necessary to track request here
-            if (Activity.Current == null)
+            string functionName = stateValues.GetValueOrDefault<string>(ScopeKeys.FunctionName);
+            string functionInvocationId = stateValues.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId);
+            string eventName = stateValues.GetValueOrDefault<string>(ScopeKeys.Event);
+
+            // If we have the invocation id, function name, and event, we know it's a new function. That means
+            // that we want to start a new operation and let App Insights track it for us.
+            if (!string.IsNullOrEmpty(functionName) &&
+                !string.IsNullOrEmpty(functionInvocationId) &&
+                eventName == LogConstants.FunctionStartEvent)
             {
-                string functionName = stateValues.GetValueOrDefault<string>(ScopeKeys.FunctionName);
-                string functionInvocationId = stateValues.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId);
-                string eventName = stateValues.GetValueOrDefault<string>(ScopeKeys.Event);
-
-                // If we have the invocation id, function name, and event, we know it's a new function. That means
-                // that we want to start a new operation and let App Insights track it for us.
-                if (!string.IsNullOrEmpty(functionName) &&
-                    !string.IsNullOrEmpty(functionInvocationId) &&
-                    eventName == LogConstants.FunctionStartEvent)
+                RequestTelemetry request = new RequestTelemetry()
                 {
-                    RequestTelemetry request = new RequestTelemetry()
-                    {
-                        Name = functionName
-                    };
+                    Name = functionName
+                };
 
-                    // We'll need to store this operation context so we can stop it when the function completes
-                    IOperationHolder<RequestTelemetry> operation = _telemetryClient.StartOperation(request);
-                    stateValues[OperationContext] = operation;
-                }
+                // We'll need to store this operation context so we can stop it when the function completes
+                IOperationHolder<RequestTelemetry> operation = _telemetryClient.StartOperation(request);
+                stateValues[OperationContext] = operation;
             }
         }
 
