@@ -16,13 +16,13 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             this.ElementType = typeof(string);
         }
 
-        internal override async Task<object> ConvertAsync(
+        internal override Task<object> ConvertAsync(
             TMessage value,
             Dictionary<string, object> bindingData,
             ValueBindingContext context)
         {
-            var obj = this.ConvertToStringAsync(value);
-            return obj;
+            var obj = ConvertToStringAsync(value);
+            return Task.FromResult<object>(obj);
         }
     }
 }

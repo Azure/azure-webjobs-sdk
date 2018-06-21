@@ -26,8 +26,11 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
         public EventHubConfigurationTests()
         {
             _loggerFactory = new LoggerFactory();
-            var filter = new LogCategoryFilter();
-            filter.DefaultLevel = LogLevel.Debug;
+            var filter = new LogCategoryFilter
+            {
+                DefaultLevel = LogLevel.Debug
+            };
+
             _loggerProvider = new TestLoggerProvider(filter.Filter);
             _loggerFactory.AddProvider(_loggerProvider);
         }

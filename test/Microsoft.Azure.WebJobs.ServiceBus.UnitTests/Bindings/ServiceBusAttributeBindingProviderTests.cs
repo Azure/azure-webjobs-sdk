@@ -17,7 +17,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
 {
     public class ServiceBusAttributeBindingProviderTests
     {
-        private readonly Mock<MessagingProvider> _mockMessagingProvider;
         private readonly ServiceBusAttributeBindingProvider _provider;
 
         public ServiceBusAttributeBindingProviderTests()

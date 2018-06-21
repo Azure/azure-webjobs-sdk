@@ -181,7 +181,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 .ConfigureServices(services =>
                 {
                     services.Configure<FunctionResultAggregatorOptions>(o => o.IsEnabled = false);
-
                 });
         }
 

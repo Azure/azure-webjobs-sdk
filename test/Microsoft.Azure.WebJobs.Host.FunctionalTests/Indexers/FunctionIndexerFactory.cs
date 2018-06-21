@@ -17,8 +17,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
     {
         public class FakeStorageAccountProvider : StorageAccountProvider
         {
-            private readonly StorageAccount _account;
-
             public FakeStorageAccountProvider()
                 : base(null)
             {
