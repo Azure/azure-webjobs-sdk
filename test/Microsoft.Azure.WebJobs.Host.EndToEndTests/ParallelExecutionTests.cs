@@ -76,7 +76,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 })
                 .Build();
 
-            XStorageAccount storageAccount = host.GetStorageAccount();
+            StorageAccount storageAccount = host.GetStorageAccount();
             _queueClient = storageAccount.CreateCloudQueueClient();
             CloudQueue queue = _queueClient.GetQueueReference(nameResolver.ResolveInString(TestQueueName));
 

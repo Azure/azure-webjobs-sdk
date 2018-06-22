@@ -21,11 +21,11 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private readonly JobHostQueuesOptions _queueOptions;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IBlobWrittenWatcher _blobWrittenWatcher;
-        private readonly XStorageAccount _hostAccount;
+        private readonly StorageAccount _hostAccount;
         private readonly ILoggerFactory _loggerFactory;
 
         public SharedBlobQueueListenerFactory(
-            XStorageAccount hostAccount,
+            StorageAccount hostAccount,
             SharedQueueWatcher sharedQueueWatcher,
             CloudQueue hostBlobTriggerQueue,
             JobHostQueuesOptions queueOptions,

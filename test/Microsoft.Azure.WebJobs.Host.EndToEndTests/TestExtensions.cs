@@ -8,7 +8,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
     static class TestExtensions
     {
-        public static XStorageAccount GetStorageAccount(this IHost host)
+        public static StorageAccount GetStorageAccount(this IHost host)
         {
             var provider = host.Services.GetRequiredService<StorageAccountProvider>(); // $$$ ok?
             return provider.GetHost();

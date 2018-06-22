@@ -262,7 +262,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Account1 = Host.GetStorageAccount();
                 var config = Host.Services.GetService<IConfiguration>();
                 string secondaryConnectionString = config[$"AzureWebJobs{Secondary}"];
-                Account2 = XStorageAccount.NewFromConnectionString(secondaryConnectionString);
+                Account2 = StorageAccount.NewFromConnectionString(secondaryConnectionString);
 
                 await CleanContainersAsync();
 
@@ -318,8 +318,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 private set;
             }
 
-            public XStorageAccount Account1 { get; private set; }
-            public XStorageAccount Account2 { get; private set; }
+            public StorageAccount Account1 { get; private set; }
+            public StorageAccount Account2 { get; private set; }
 
             public CloudBlobContainer OutputContainer1 { get; private set; }
 
@@ -347,7 +347,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
-        private async static Task Clean(XStorageAccount account)
+        private async static Task Clean(StorageAccount account)
         {
             CloudBlobClient blobClient = account.CreateCloudBlobClient();
             foreach (var testContainer in (await blobClient.ListContainersSegmentedAsync(TestArtifactPrefix, null)).Results)

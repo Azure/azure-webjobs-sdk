@@ -17,7 +17,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         // $$$ Reconcile with TestJobHost.
 
         internal static TResult RunTrigger<TResult>(
-            XStorageAccount account,
+            StorageAccount account,
             Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource,
             IEnumerable<string> ignoreFailureFunctions = null,
@@ -67,7 +67,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         // Runs the first triggered function and then returns. 
         // Expected that this instance provided some side-effect (ie, wrote to storage)
         // that the caller can monitor.
-        internal static void RunTrigger(XStorageAccount account, Type programType)
+        internal static void RunTrigger(StorageAccount account, Type programType)
         {
             TaskCompletionSource<bool> src = new TaskCompletionSource<bool>();
             RunTrigger<bool>(
@@ -77,12 +77,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 signalOnFirst: true);
         }
 
-        internal static object CreateConfigurationForCallFailure(XStorageAccount account, Type type, TaskCompletionSource<object> backgroundTaskSource)
+        internal static object CreateConfigurationForCallFailure(StorageAccount account, Type type, TaskCompletionSource<object> backgroundTaskSource)
         {
             throw new NotImplementedException();
         }
 
-        internal static Exception RunTriggerFailure<TResult>(XStorageAccount account, Type programType, Action<TaskCompletionSource<TResult>> setTaskSource)
+        internal static Exception RunTriggerFailure<TResult>(StorageAccount account, Type programType, Action<TaskCompletionSource<TResult>> setTaskSource)
         {
             try
             {
@@ -97,7 +97,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         // Call the method, and expect a failure. Return the exception. 
-        internal static Exception CallFailure(XStorageAccount account, Type programType, MethodInfo methodInfo, object arguments)
+        internal static Exception CallFailure(StorageAccount account, Type programType, MethodInfo methodInfo, object arguments)
         {
             var host = new HostBuilder()
                 .ConfigureDefaultTestHost(programType)
@@ -119,7 +119,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             return null;
         }
 
-        internal static void Call(XStorageAccount account, Type programType, MethodInfo methodInfo, object arguments, Type[] cloudBlobStreamBinderTypes)
+        internal static void Call(StorageAccount account, Type programType, MethodInfo methodInfo, object arguments, Type[] cloudBlobStreamBinderTypes)
         {
             var host = new HostBuilder()
                 .ConfigureDefaultTestHost(programType)
@@ -132,7 +132,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             jobHost.Call(methodInfo, arguments);
         }
 
-        internal static TResult Call<TResult>(XStorageAccount account, Type programType, MethodInfo methodInfo, IDictionary<string, object> arguments, Action<TaskCompletionSource<TResult>> setTaskSource)
+        internal static TResult Call<TResult>(StorageAccount account, Type programType, MethodInfo methodInfo, IDictionary<string, object> arguments, Action<TaskCompletionSource<TResult>> setTaskSource)
         {
             TaskCompletionSource<TResult> src = new TaskCompletionSource<TResult>();
             setTaskSource(src);

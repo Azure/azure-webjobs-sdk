@@ -13,7 +13,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
     static class Utility
     {
-        public static IHostBuilder ConfigureDefaultTestHost<TProgram>(this IHostBuilder builder, XStorageAccount account)
+        public static IHostBuilder ConfigureDefaultTestHost<TProgram>(this IHostBuilder builder, StorageAccount account)
         {
             return builder.ConfigureDefaultTestHost<TProgram>()
                 .AddAzureStorage()
@@ -41,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 .AddSingleton<IFunctionInstanceLoggerProvider, NullFunctionInstanceLoggerProvider>();
         }
 
-        public static IServiceCollection AddFakeStorageAccountProvider(this IServiceCollection services, XStorageAccount account)
+        public static IServiceCollection AddFakeStorageAccountProvider(this IServiceCollection services, StorageAccount account)
         {
             throw new NotImplementedException();
             /*

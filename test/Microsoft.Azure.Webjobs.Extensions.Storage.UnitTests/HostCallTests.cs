@@ -77,7 +77,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task Blob_IfBoundToTypeAndBlobIsMissing_Creates(string methodName)
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             var client = account.CreateCloudBlobClient();
             CloudBlobContainer container = client.GetContainerReference(ContainerName);
             CloudBlockBlob blob = container.GetBlockBlobReference(BlobName);
@@ -94,7 +94,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task BlobTrigger_IfHasUnboundParameter_CanCall()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudBlobClient client = account.CreateCloudBlobClient();
             CloudBlobContainer container = client.GetContainerReference(ContainerName);
             const string inputBlobName = "note-monday.csv";
@@ -176,7 +176,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task BlobTrigger_IfCopiedViaTextReaderTextWriter_CanCall()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudBlobClient client = account.CreateCloudBlobClient();
             CloudBlobContainer container = client.GetContainerReference(ContainerName);
             CloudBlockBlob inputBlob = container.GetBlockBlobReference(BlobName);
@@ -203,7 +203,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task BlobTrigger_IfBoundToICloudBlob_CanCallWithBlockBlob()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudBlobClient client = account.CreateCloudBlobClient();
             CloudBlobContainer container = client.GetContainerReference(ContainerName);
             CloudBlockBlob blob = container.GetBlockBlobReference(BlobName);
@@ -229,7 +229,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task BlobTrigger_IfBoundToICloudBlob_CanCallWithPageBlob()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudBlobClient client = account.CreateCloudBlobClient();
             CloudBlobContainer container = client.GetContainerReference(ContainerName);
             CloudPageBlob blob = container.GetPageBlobReference(BlobName);
@@ -255,7 +255,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public void BlobTrigger_IfBoundToICloudBlobAndTriggerArgumentIsMissing_CallThrows()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
 
             // Act
             Exception exception = CallFailure(account, typeof(BlobTriggerBindToICloudBlobProgram), "Call");
@@ -269,7 +269,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task BlobTrigger_IfBoundToCloudBlockBlob_CanCall()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudBlobClient client = account.CreateCloudBlobClient();
             CloudBlobContainer container = client.GetContainerReference(ContainerName);
             CloudBlockBlob blob = container.GetBlockBlobReference(BlobName);
@@ -294,7 +294,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public void BlobTrigger_IfBoundToCloudBLockBlobAndTriggerArgumentIsMissing_CallThrows()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
 
             // Act
             Exception exception = CallFailure(account, typeof(BlobTriggerBindToCloudBlockBlobProgram), "Call");
@@ -318,7 +318,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task BlobTrigger_IfBoundToCloudPageBlob_CanCall()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudBlobClient client = account.CreateCloudBlobClient();
             CloudBlobContainer container = client.GetContainerReference(ContainerName);
             CloudPageBlob blob = container.GetPageBlobReference(BlobName);
@@ -508,7 +508,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         [Fact]
         public void Queue_IfBoundToIAsyncCollectorInt_NotSupported()
         {
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
 
             // Act
             FunctionIndexingException ex = Assert.Throws<FunctionIndexingException>(() =>
@@ -522,7 +522,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         private static async Task TestEnqueueMultiplePocoMessages(string methodName)
         {
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
 
             // Act
             Call(account, typeof(QueueProgram), methodName);
@@ -545,7 +545,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public void Queue_IfBoundToIAsyncCollector_AddEnqueuesImmediately()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
 
             // Act
             Call(account, typeof(QueueProgram), "BindToIAsyncCollectorEnqueuesImmediately");
@@ -555,7 +555,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public void Queue_IfBoundToCloudQueue_CanCall()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
 
             // Act
             CloudQueue result = Call<CloudQueue>(account, typeof(BindToCloudQueueProgram), "BindToCloudQueue",
@@ -570,7 +570,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task Queue_IfBoundToCloudQueueAndQueueIsMissing_Creates()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
 
             // Act
             CloudQueue result = Call<CloudQueue>(account, typeof(BindToCloudQueueProgram), "BindToCloudQueue",
@@ -600,7 +600,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task Queue_IfBoundToTypeAndQueueIsMissing_CreatesAndSends(string methodName, string expectedMessage)
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
 
             // Act
             Call(account, typeof(MissingQueueProgram), methodName);
@@ -615,7 +615,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task Queue_IfBoundToOutPocoAndQueueIsMissing_CreatesAndSends()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
 
             // Act
             Call(account, typeof(MissingQueueProgram), "FuncWithOutT");
@@ -630,7 +630,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task Queue_IfBoundToOutStructAndQueueIsMissing_CreatesAndSends()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
 
             // Act
             Call(account, typeof(MissingQueueProgram), "FuncWithOutT");
@@ -649,7 +649,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task Queue_IfBoundToTypeAndQueueIsMissing_DoesNotCreate(string methodName)
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
 
             // Act
             Call(account, typeof(MissingQueueProgram), methodName);
@@ -663,7 +663,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public void Binder_IfBindingBlobToTextWriter_CanCall()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
 
             // Act
             Call(account, typeof(BindToBinderBlobTextWriterProgram), "Call");
@@ -747,7 +747,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task BlobTrigger_IfCopiedViaPoco_CanCall()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudBlobClient client = account.CreateCloudBlobClient();
             CloudBlobContainer container = client.GetContainerReference(ContainerName);
             CloudBlockBlob inputBlob = container.GetBlockBlobReference(BlobName);
@@ -808,7 +808,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task Table_IfBoundToTypeAndTableIsMissing_DoesNotCreate(string methodName)
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudTableClient client = account.CreateCloudTableClient();
             CloudTable table = client.GetTableReference(TableName);
 
@@ -823,7 +823,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task Table_IfBoundToCloudTableAndTableIsMissing_Creates()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
 
             // Act
             CloudTable result = Call<CloudTable>(account, typeof(BindToCloudTableProgram), "BindToCloudTable",
@@ -932,7 +932,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private static void TestTableBoundToCollectorCanCall(Type programType)
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
 
             // Act
             Call(account, programType, "Call");
@@ -974,12 +974,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
         }
 
-        private static XStorageAccount GetRealStorage()
+        private static StorageAccount GetRealStorage()
         {
             // Arrange            
 
             var acs = Environment.GetEnvironmentVariable("AzureWebJobsDashboard");
-            var account = XStorageAccount.NewFromConnectionString(acs);
+            var account = StorageAccount.NewFromConnectionString(acs);
             return account;
         }
 
@@ -987,7 +987,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         [Trait("SecretsRequired", "true")]
         public async Task TableEntity_IfBoundToJArray_CanCall()
         {
-            XStorageAccount account = GetRealStorage(); // Fake storage doesn't implement table filters
+            StorageAccount account = GetRealStorage(); // Fake storage doesn't implement table filters
 
             var client = account.CreateCloudTableClient();
             CloudTable table = client.GetTableReference(TableName);
@@ -1140,7 +1140,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task TableEntity_IfBoundToPocoTableEntity_CanCall()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             var client = account.CreateCloudTableClient();
             var table = client.GetTableReference(TableName);
             await table.CreateIfNotExistsAsync();
@@ -1266,7 +1266,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private static async Task TestBindToConcurrentlyUpdatedTableEntity(Type programType, string parameterName)
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             var client = account.CreateCloudTableClient();
             CloudTable table = client.GetTableReference(TableName);
             await table.CreateIfNotExistsAsync();
@@ -1297,21 +1297,21 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Assert.True(invalidOperationException.Message.StartsWith("Entity PK='PK',RK='RK' does not match eTag"));
         }
 
-        private static void Call(XStorageAccount account, Type programType, string methodName,
+        private static void Call(StorageAccount account, Type programType, string methodName,
             params Type[] cloudBlobStreamBinderTypes)
         {
             FunctionalTest.Call(account, programType, programType.GetMethod(methodName), arguments: null,
                 cloudBlobStreamBinderTypes: cloudBlobStreamBinderTypes);
         }
 
-        private static void Call(XStorageAccount account, Type programType, string methodName,
+        private static void Call(StorageAccount account, Type programType, string methodName,
             IDictionary<string, object> arguments, params Type[] cloudBlobStreamBinderTypes)
         {
             FunctionalTest.Call(account, programType, programType.GetMethod(methodName), arguments,
                 cloudBlobStreamBinderTypes);
         }
 
-        private static TResult Call<TResult>(XStorageAccount account, Type programType, string methodName,
+        private static TResult Call<TResult>(StorageAccount account, Type programType, string methodName,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
             IDictionary<string, object> arguments = null;
@@ -1319,19 +1319,19 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 setTaskSource);
         }
 
-        private static TResult Call<TResult>(XStorageAccount account, Type programType, string methodName,
+        private static TResult Call<TResult>(StorageAccount account, Type programType, string methodName,
             IDictionary<string, object> arguments, Action<TaskCompletionSource<TResult>> setTaskSource)
         {
             return FunctionalTest.Call<TResult>(account, programType, programType.GetMethod(methodName), arguments,
                 setTaskSource);
         }
 
-        private static Exception CallFailure(XStorageAccount account, Type programType, string methodName)
+        private static Exception CallFailure(StorageAccount account, Type programType, string methodName)
         {
             return FunctionalTest.CallFailure(account, programType, programType.GetMethod(methodName), null);
         }
 
-        private static XStorageAccount CreateFakeStorageAccount()
+        private static StorageAccount CreateFakeStorageAccount()
         {
             return new XFakeStorageAccount();
         }

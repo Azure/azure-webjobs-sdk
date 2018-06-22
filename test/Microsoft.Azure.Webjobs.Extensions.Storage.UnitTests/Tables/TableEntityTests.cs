@@ -25,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // Arrange
             const string expectedKey = "abc";
             const int expectedValue = 123;
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage("ignore"));
 
@@ -57,7 +57,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             // Arrange
             const string expectedValue = "abc";
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage("ignore"));
 
@@ -83,7 +83,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // Arrange
             const string originalValue = "abc";
             const string expectedValue = "def";
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage(expectedValue));
 
@@ -114,7 +114,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             // Arrange
             byte[] expectedValue = new byte[] { 0x12, 0x34 };
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage("ignore"));
 
@@ -140,7 +140,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // Arrange
             byte[] originalValue = new byte[] { 0x12, 0x34 };
             byte[] expectedValue = new byte[] { 0x56, 0x78 };
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(CloudQueueMessage.CreateCloudQueueMessageFromByteArray(expectedValue));
 
@@ -170,7 +170,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task TableEntity_IfUpdatesPartitionKey_Throws()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage("ignore"));
 
@@ -195,7 +195,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task TableEntity_IfUpdatesRowKey_Throws()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage("ignore"));
 
@@ -219,7 +219,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task TableEntity_IfBoundUsingRouteParameters_Binds()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             const string tableName = TableName + "B";
             const string partitionKey = PartitionKey + "B";
@@ -255,23 +255,23 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Assert.Equal(456, property.Int32Value.Value);
         }
 
-        private static XStorageAccount CreateFakeStorageAccount()
+        private static StorageAccount CreateFakeStorageAccount()
         {
             return new XFakeStorageAccount();
         }
 
-        private static void RunTrigger(XStorageAccount account, Type programType)
+        private static void RunTrigger(StorageAccount account, Type programType)
         {
             FunctionalTest.RunTrigger(account, programType);
         }
 
-        private static TResult RunTrigger<TResult>(XStorageAccount account, Type programType,
+        private static TResult RunTrigger<TResult>(StorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
             return FunctionalTest.RunTrigger<TResult>(account, programType, setTaskSource);
         }
 
-        private static Exception RunTriggerFailure(XStorageAccount account, Type programType)
+        private static Exception RunTriggerFailure(StorageAccount account, Type programType)
         {
             return FunctionalTest.RunTriggerFailure<bool>(account, programType, (tcs) => {/* do nothing */});
         }
