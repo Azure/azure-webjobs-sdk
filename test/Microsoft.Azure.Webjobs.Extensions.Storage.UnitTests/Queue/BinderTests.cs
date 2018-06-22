@@ -30,12 +30,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Assert.Equal("No binding found for attribute 'Microsoft.Azure.WebJobs.QueueTriggerAttribute'.", exception.Message);
         }
 
-        private static XStorageAccount CreateFakeStorageAccount()
+        private static StorageAccount CreateFakeStorageAccount()
         {
             return new XFakeStorageAccount();
         }
 
-        private static CloudQueue CreateQueue(XStorageAccount account, string queueName)
+        private static CloudQueue CreateQueue(StorageAccount account, string queueName)
         {
             CloudQueueClient client = account.CreateCloudQueueClient();
             CloudQueue queue = client.GetQueueReference(queueName);
@@ -43,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             return queue;
         }
 
-        private static Exception RunTriggerFailure<TResult>(XStorageAccount account, Type programType,
+        private static Exception RunTriggerFailure<TResult>(StorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
             return FunctionalTest.RunTriggerFailure<TResult>(account, programType, setTaskSource);

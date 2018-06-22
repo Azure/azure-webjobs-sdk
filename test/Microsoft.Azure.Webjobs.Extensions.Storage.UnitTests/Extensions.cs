@@ -16,13 +16,13 @@ namespace Microsoft.Azure.WebJobs
 {
     static class MoreStorageExtensions
     {
-        public static XStorageAccount GetStorageAccount(this IHost host)
+        public static StorageAccount GetStorageAccount(this IHost host)
         {
             var provider = host.Services.GetRequiredService<StorageAccountProvider>(); // $$$ ok?
             return provider.GetHost();
         }
 
-        public static async Task<CloudQueue> CreateQueueAsync(this XStorageAccount account, string queueName)
+        public static async Task<CloudQueue> CreateQueueAsync(this StorageAccount account, string queueName)
         {
             CloudQueueClient client = account.CreateCloudQueueClient();
             CloudQueue queue = client.GetQueueReference(queueName);
@@ -30,7 +30,7 @@ namespace Microsoft.Azure.WebJobs
             return queue;
         }
 
-        public static async Task<CloudTable> CreateTableAsync(this XStorageAccount account, string tableName)
+        public static async Task<CloudTable> CreateTableAsync(this StorageAccount account, string tableName)
         {
             CloudTableClient client = account.CreateCloudTableClient();
             CloudTable table = client.GetTableReference(tableName);
@@ -44,7 +44,7 @@ namespace Microsoft.Azure.WebJobs
             return builder.UseStorage(new XFakeStorageAccount());
         }
 
-        public static IHostBuilder UseStorage(this IHostBuilder builder, XStorageAccount account)
+        public static IHostBuilder UseStorage(this IHostBuilder builder, StorageAccount account)
         {
             builder
                 .AddAzureStorage()

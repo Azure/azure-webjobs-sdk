@@ -32,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // Arrange
             CloudStorageAccount realAccount = CloudStorageAccount.DevelopmentStorageAccount;
 
-            XStorageAccount account = XStorageAccount.New(realAccount);
+            StorageAccount account = StorageAccount.New(realAccount);
 
             // Act
             var t = typeof(CloudStorageAccountProgram);

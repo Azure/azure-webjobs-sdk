@@ -18,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private const string QueueName = "input";
 
 
-        private async Task SetupAsync(XStorageAccount account, object contents)
+        private async Task SetupAsync(StorageAccount account, object contents)
         {
             CloudQueueMessage message;
             if (contents is string str)
@@ -702,19 +702,19 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Assert.Same(expectedPopReceipt, result);
         }
 
-        private static TResult RunTrigger<TResult>(XStorageAccount account, Type programType,
+        private static TResult RunTrigger<TResult>(StorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
             return FunctionalTest.RunTrigger<TResult>(account, programType, setTaskSource);
         }
 
-        private static TResult RunTrigger<TResult>(XStorageAccount account, Type programType,
+        private static TResult RunTrigger<TResult>(StorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource, IEnumerable<string> ignoreFailureFunctions)
         {
             return FunctionalTest.RunTrigger<TResult>(account, programType, setTaskSource, ignoreFailureFunctions);
         }
 
-        private static Exception RunTriggerFailure<TResult>(XStorageAccount account, Type programType,
+        private static Exception RunTriggerFailure<TResult>(StorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
             return FunctionalTest.RunTriggerFailure<TResult>(account, programType, setTaskSource);
@@ -735,12 +735,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             return result;
         }
 
-        private static XStorageAccount CreateFakeStorageAccount()
+        private static StorageAccount CreateFakeStorageAccount()
         {
             return new XFakeStorageAccount();
         }
 
-        private static async Task<CloudQueue> CreateQueue(XStorageAccount account, string queueName)
+        private static async Task<CloudQueue> CreateQueue(StorageAccount account, string queueName)
         {
             var client = account.CreateCloudQueueClient();
             CloudQueue queue = client.GetQueueReference(queueName);

@@ -17,16 +17,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
     {
         public class FakeStorageAccountProvider : StorageAccountProvider
         {
-            private readonly XStorageAccount _account;
+            private readonly StorageAccount _account;
 
             public FakeStorageAccountProvider()
                 : base(null)
             {
             }
 
-            public override XStorageAccount Get(string name)
+            public override StorageAccount Get(string name)
             {
-                return XStorageAccount.New(CloudStorageAccount.DevelopmentStorageAccount);
+                return StorageAccount.New(CloudStorageAccount.DevelopmentStorageAccount);
             }
         }
 

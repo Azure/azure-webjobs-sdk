@@ -24,8 +24,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
     internal class BlobTriggerBinding : ITriggerBinding
     {
         private readonly ParameterInfo _parameter;
-        private readonly XStorageAccount _hostAccount;
-        private readonly XStorageAccount _dataAccount;
+        private readonly StorageAccount _hostAccount;
+        private readonly StorageAccount _dataAccount;
         private readonly CloudBlobClient _blobClient;
         private readonly string _accountName;
         private readonly IBlobPathSource _path;
@@ -42,8 +42,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
         private readonly IHostSingletonManager _singletonManager;
 
         public BlobTriggerBinding(ParameterInfo parameter,
-            XStorageAccount hostAccount,
-            XStorageAccount dataAccount,
+            StorageAccount hostAccount,
+            StorageAccount dataAccount,
             IBlobPathSource path,
             IHostIdProvider hostIdProvider,
             JobHostQueuesOptions queueOptions,

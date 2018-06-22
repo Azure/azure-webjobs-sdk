@@ -18,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private bool _started;
         private bool _disposed;
 
-        public SharedBlobListener(string hostId, XStorageAccount storageAccount,
+        public SharedBlobListener(string hostId, StorageAccount storageAccount,
             IWebJobsExceptionHandler exceptionHandler)
         {
             _strategy = CreateStrategy(hostId, storageAccount);
@@ -86,7 +86,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             }
         }
 
-        private static IBlobListenerStrategy CreateStrategy(string hostId, XStorageAccount account)
+        private static IBlobListenerStrategy CreateStrategy(string hostId, StorageAccount account)
         {
             if (!account.IsDevelopmentStorageAccount())
             {

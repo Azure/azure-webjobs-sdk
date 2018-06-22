@@ -86,7 +86,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
         }
 
-        private static CloudBlobContainer CreateContainer(XStorageAccount account, string containerName)
+        private static CloudBlobContainer CreateContainer(StorageAccount account, string containerName)
         {
             var client = account.CreateCloudBlobClient();
             CloudBlobContainer container = client.GetContainerReference(containerName);
@@ -94,7 +94,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             return container;
         }
 
-        private static XStorageAccount CreateFakeStorageAccount()
+        private static StorageAccount CreateFakeStorageAccount()
         {
             var account = new XFakeStorageAccount();
 
@@ -104,13 +104,13 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             return account;
         }
 
-        private static TResult RunTrigger<TResult>(XStorageAccount account, Type programType,
+        private static TResult RunTrigger<TResult>(StorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
             return FunctionalTest.RunTrigger<TResult>(account, programType, setTaskSource);
         }
 
-        private static TResult RunTrigger<TResult>(XStorageAccount account, Type programType,
+        private static TResult RunTrigger<TResult>(StorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource, IEnumerable<string> ignoreFailureFunctions)
         {
             return FunctionalTest.RunTrigger<TResult>(account, programType, setTaskSource, ignoreFailureFunctions);

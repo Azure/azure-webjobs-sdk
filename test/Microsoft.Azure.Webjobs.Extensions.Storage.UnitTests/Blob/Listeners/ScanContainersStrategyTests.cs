@@ -54,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             product.Execute();
         }
 
-        private static XStorageAccount CreateFakeStorageAccount()
+        private static StorageAccount CreateFakeStorageAccount()
         {
             return new XFakeStorageAccount();
         }

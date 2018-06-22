@@ -149,7 +149,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task Table_IfBoundToCloudTable_BindsAndCreatesTable()
         {
             // Arrange
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage("ignore"));
 
@@ -170,7 +170,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             // Arrange
             const string expectedValue = "abc";
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage(expectedValue));
 
@@ -214,7 +214,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             // Arrange
             const string expectedValue = "abc";
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage(expectedValue));
 
@@ -230,7 +230,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             // Arrange
             const string expectedValue = "abc";
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage(expectedValue));
 
@@ -272,7 +272,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                     Property = "jkl"
                 }
             };
-            XStorageAccount account = CreateFakeStorageAccount();
+            StorageAccount account = CreateFakeStorageAccount();
             CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
             await triggerQueue.AddMessageAsync(new CloudQueueMessage(JsonConvert.SerializeObject(expected)));
 
@@ -386,7 +386,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         // Assert the given table has the given entity with PropertyName=ExpectedValue
         private async Task AssertStringPropertyAsync(
-            XStorageAccount account,
+            StorageAccount account,
             string propertyName,
             string expectedValue,
             string tableName = TableName,
@@ -407,17 +407,17 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Assert.Equal(expectedValue, property.StringValue);
         }
 
-        private static XStorageAccount CreateFakeStorageAccount()
+        private static StorageAccount CreateFakeStorageAccount()
         {
             return new XFakeStorageAccount();
         }
 
-        private static void RunTrigger(XStorageAccount account, Type programType)
+        private static void RunTrigger(StorageAccount account, Type programType)
         {
             FunctionalTest.RunTrigger(account, programType);
         }
 
-        private static TResult RunTrigger<TResult>(XStorageAccount account, Type programType,
+        private static TResult RunTrigger<TResult>(StorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
             return FunctionalTest.RunTrigger<TResult>(account, programType, setTaskSource);

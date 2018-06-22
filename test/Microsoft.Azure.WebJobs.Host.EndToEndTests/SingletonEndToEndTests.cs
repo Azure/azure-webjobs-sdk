@@ -806,9 +806,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private class TestFixture : IDisposable
         {
-            private Lazy<XStorageAccount> _storageAccountLazy = new Lazy<XStorageAccount>(GetStorageAccount);
+            private Lazy<StorageAccount> _storageAccountLazy = new Lazy<StorageAccount>(GetStorageAccount);
 
-            public XStorageAccount StorageAccount => _storageAccountLazy.Value;
+            public StorageAccount StorageAccount => _storageAccountLazy.Value;
 
             public TestFixture()
             {
@@ -821,7 +821,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 _secondaryLockDirectory = blobClient.GetContainerReference("azure-webjobs-hosts").GetDirectoryReference("locks");
             }
 
-            private static XStorageAccount GetStorageAccount()
+            private static StorageAccount GetStorageAccount()
             {
                 // Create a default host since we know that's where the account
                 // is coming from

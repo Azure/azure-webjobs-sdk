@@ -69,12 +69,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Assert.Equal(expectedContent, content);
         }
 
-        private static XStorageAccount CreateFakeStorageAccount()
+        private static StorageAccount CreateFakeStorageAccount()
         {
             return new XFakeStorageAccount();         
         }        
 
-        private static CloudQueue CreateQueue(XStorageAccount account, string queueName)
+        private static CloudQueue CreateQueue(StorageAccount account, string queueName)
         {
             var client = account.CreateCloudQueueClient();
             var queue = client.GetQueueReference(queueName);
@@ -82,18 +82,18 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             return queue;
         }
 
-        private static CloudBlobContainer GetContainerReference(XStorageAccount account, string containerName)
+        private static CloudBlobContainer GetContainerReference(StorageAccount account, string containerName)
         {
             var client = account.CreateCloudBlobClient();
             return client.GetContainerReference(ContainerName);
         }
 
-        private static void RunTrigger(XStorageAccount account, Type programType)
+        private static void RunTrigger(StorageAccount account, Type programType)
         {
             FunctionalTest.RunTrigger(account, programType);
         }
 
-        private static TResult RunTrigger<TResult>(XStorageAccount account, Type programType,
+        private static TResult RunTrigger<TResult>(StorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
             return FunctionalTest.RunTrigger<TResult>(account, programType, setTaskSource);

@@ -27,8 +27,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private readonly ISharedContextProvider _sharedContextProvider;
         private readonly ILoggerFactory _loggerFactory;
         private readonly string _functionId;
-        private readonly XStorageAccount _hostAccount;
-        private readonly XStorageAccount _dataAccount;
+        private readonly StorageAccount _hostAccount;
+        private readonly StorageAccount _dataAccount;
         private readonly CloudBlobContainer _container;
         private readonly IBlobPathSource _input;
         private readonly ITriggeredFunctionExecutor _executor;
@@ -43,8 +43,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             ISharedContextProvider sharedContextProvider,
             ILoggerFactory loggerFactory,
             string functionId,
-            XStorageAccount hostAccount,
-            XStorageAccount dataAccount,
+            StorageAccount hostAccount,
+            StorageAccount dataAccount,
             CloudBlobContainer container,
             IBlobPathSource input,
             ITriggeredFunctionExecutor executor,

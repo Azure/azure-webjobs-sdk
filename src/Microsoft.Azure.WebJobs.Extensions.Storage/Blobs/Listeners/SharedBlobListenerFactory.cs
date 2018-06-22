@@ -9,12 +9,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {
     internal class SharedBlobListenerFactory : IFactory<SharedBlobListener>
     {
-        private readonly XStorageAccount _account;
+        private readonly StorageAccount _account;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IContextSetter<IBlobWrittenWatcher> _blobWrittenWatcherSetter;
         private readonly string _hostId;
 
-        public SharedBlobListenerFactory(string hostId, XStorageAccount account,
+        public SharedBlobListenerFactory(string hostId, StorageAccount account,
             IWebJobsExceptionHandler exceptionHandler,
             IContextSetter<IBlobWrittenWatcher> blobWrittenWatcherSetter)
         {
