@@ -3,27 +3,21 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Executors;
-using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
 using Microsoft.Azure.WebJobs.Host.Listeners;
-using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.Azure.WebJobs.Host.Queues;
-using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using Microsoft.WindowsAzure.Storage.Queue.Protocol;
 using Moq;
 using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
-#if false // $$$ enable this 
     public class DispatchQueueTests
     {
         private const string HostId = "functionalTestHost";
@@ -31,10 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         // provide default mock
         private Mock<IHostIdProvider> _hostIdMock;
         private Mock<IWebJobsExceptionHandler> _exceptionMock;
-        private Mock<IContextSetter<IMessageEnqueuedWatcher>> _messageEnqueueSetterMock;
-        private Mock<IStorageAccountProvider> _accountProviderMock;
 
-        private JobHostQueuesOptions _queueConfiguration;
         private ISharedContextProvider _sharedContextProvider;
         private SharedQueueHandler _sharedQueue;
 
@@ -42,81 +33,42 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         public DispatchQueueTests()
         {
-            _accountProviderMock = new Mock<IStorageAccountProvider>();
-            IStorageAccountProvider accountProvider = new FakeStorageAccountProvider
-            {
-                StorageAccount = new FakeStorageAccount()
-            };
-            _accountProviderMock.Setup(m => m.TryGetAccountAsync(ConnectionStringNames.Storage, It.IsAny<CancellationToken>()))
-                .Returns<string, CancellationToken>((name, cancel) => accountProvider.TryGetAccountAsync(name, cancel));
 
             _hostIdMock = new Mock<IHostIdProvider>();
             _hostIdMock.Setup(m => m.GetHostIdAsync(It.IsAny<CancellationToken>())).ReturnsAsync(HostId);
 
             _exceptionMock = new Mock<IWebJobsExceptionHandler>();
 
-            _queueConfiguration = new FakeQueuesOptionsFactory(accountProvider).Create(string.Empty);
-
             _sharedContextProvider = new SharedContextProvider();
-
-            _messageEnqueueSetterMock = new Mock<IContextSetter<IMessageEnqueuedWatcher>>();
 
             ILoggerFactory factory = new LoggerFactory();
             factory.AddProvider(_loggerProvider);
 
-            _sharedQueue = new SharedQueueHandler(_accountProviderMock.Object,
-                                                _hostIdMock.Object,
-                                                _exceptionMock.Object,
-                                                factory,
-                                                new OptionsWrapper<JobHostQueuesOptions>(_queueConfiguration),
-                                                _sharedContextProvider,
-                                                _messageEnqueueSetterMock.Object
-                                                );
+            ILoadBalancerQueue loadBalancerQueue = new InMemoryLoadBalancerQueue();
+
+            _sharedQueue = new SharedQueueHandler(_hostIdMock.Object, _exceptionMock.Object,
+                factory, _sharedContextProvider, loadBalancerQueue);
         }
 
         [Fact]
-        public async Task InMemoryDispatchQueueHandlerTest()
+        public async Task DelaysInitializationException()
         {
-            string error = "no storage account found";
-            _accountProviderMock.Setup(m => m.TryGetAccountAsync(ConnectionStringNames.Storage, It.IsAny<CancellationToken>())).
-                ThrowsAsync(new Exception(error));
+            var sharedQueueName = HostQueueNames.GetHostSharedQueueName(HostId);
+            var sharedPoisonQueueName = HostQueueNames.GetHostSharedPoisonQueueName(HostId);
 
+            var mockLoadBalancerQueue = new Mock<ILoadBalancerQueue>();
+            mockLoadBalancerQueue
+                .Setup(m => m.CreateQueueListener(sharedQueueName, sharedPoisonQueueName, It.IsAny<Func<string, CancellationToken, Task<FunctionResult>>>()))
+                .Throws(new InvalidOperationException("boom!"));
+
+            _sharedQueue = new SharedQueueHandler(_hostIdMock.Object, _exceptionMock.Object,
+                new LoggerFactory(), _sharedContextProvider, mockLoadBalancerQueue.Object);
+
+            // This should not throw.
             await _sharedQueue.InitializeAsync(CancellationToken.None);
-            Assert.Empty(_loggerProvider.GetAllLogMessages());
 
-            // listenercontext should return inMemoryDispatchQueueHandler when there's no storage account
-            var descriptorMock = new Mock<FunctionDescriptor>();
-            var triggerExecutorMock = new Mock<ITriggeredFunctionExecutor>();
-            ListenerFactoryContext context = new ListenerFactoryContext(
-                descriptorMock.Object,
-                triggerExecutorMock.Object,
-                _sharedQueue,
-                CancellationToken.None);
-
-            var messageHandlerMock = new Mock<IMessageHandler>();
-            var condition = new AutoResetEvent(false);
-            messageHandlerMock.Setup(m => m.TryExecuteAsync(It.IsAny<JObject>(), It.IsAny<CancellationToken>()))
-                .Returns(async () =>
-                {
-                    await Task.Yield();
-                    condition.Set();  // will run asynchronously
-                    return new FunctionResult(true);
-                });
-
-            var dispatchQueue = context.GetDispatchQueue(messageHandlerMock.Object);
-            // make sure initialization error is traced
-            Assert.Equal(error, _loggerProvider.GetAllLogMessages().Single().Exception.Message);
-            Assert.Equal(SharedQueueHandler.InitErrorMessage, _loggerProvider.GetAllLogMessages().Single().FormattedMessage);
-            Assert.IsType<InMemoryDispatchQueueHandler>(dispatchQueue);
-
-            await dispatchQueue.EnqueueAsync(JObject.Parse("{}"), CancellationToken.None);
-            // without storage account, it is still possible to perform local enqueue, dequeue
-            Assert.True(condition.WaitOne(200));
-
-            // following two should be NOOP, inner queueListener was never created
-            await _sharedQueue.StartQueueAsync(CancellationToken.None);
-            await _sharedQueue.StopQueueAsync(CancellationToken.None);
-            // no NullPointerException
+            // This should throw, only when someone tries to use the shared queue.
+            var ex = Assert.Throws<InvalidOperationException>(() => _sharedQueue.RegisterHandler("TestFunction", null));
         }
 
         [Fact]
@@ -146,15 +98,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                     return new FunctionResult(true);
                 });
 
-            Assert.True(_sharedQueue.RegisterHandler("mockFunction1", messageHandlerMock.Object));
-
-            // register another INotificationHandler to sharedQueueWatcher
-            // so that we can tell when the sharedQueueListener is notified
-            var notifies = 0;
-            var notificationMock = new Mock<INotificationCommand>();
-            notificationMock.Setup(m => m.Notify()).Callback(() => Interlocked.Increment(ref notifies));
-            _sharedContextProvider.GetOrCreateInstance<SharedQueueWatcher>(null)
-                .Register(HostQueueNames.GetHostSharedQueueName(HostId), notificationMock.Object);
+            _sharedQueue.RegisterHandler("mockFunction1", messageHandlerMock.Object);
 
             await _sharedQueue.StartQueueAsync(CancellationToken.None);
 
@@ -171,7 +115,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await TestHelpers.Await(() => calls >= max, 1000, 200);
             await _sharedQueue.StopQueueAsync(CancellationToken.None);
 
-            Assert.Equal(max, notifies);
             Assert.Equal(max, calls);
         }
 
@@ -239,7 +182,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                     .ReturnsAsync(() => { testcase.CallCount++; return new FunctionResult(true); });
                 if (testcase.Register)
                 {
-                    Assert.True(_sharedQueue.RegisterHandler(index.ToString(), functionMock.Object));
+                    _sharedQueue.RegisterHandler(index.ToString(), functionMock.Object);
                 }
                 for (int i = 0; i < testcase.TotalEnqueues; i++)
                 {
@@ -251,5 +194,4 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             return Task.WhenAll(enqueues);
         }
     }
-#endif
 }

@@ -6,7 +6,6 @@ using System.Threading;
 using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.Azure.WebJobs.Host.Triggers;
 
 namespace Microsoft.Azure.WebJobs.Host.Listeners
 {
@@ -87,15 +86,8 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                     throw new InvalidOperationException("Please provide a call back function");
                 }
 
-                if (_sharedQueue.RegisterHandler(Descriptor.Id, handler))
-                {
-                    _dispatchQueue = new DispatchQueueHandler(_sharedQueue, Descriptor.Id);
-                }
-                else
-                {
-                    // failed to register messageHandler, fall back to in memory implementation
-                    _dispatchQueue = new InMemoryDispatchQueueHandler(handler);
-                }
+                _sharedQueue.RegisterHandler(Descriptor.Id, handler);
+                _dispatchQueue = new DispatchQueueHandler(_sharedQueue, Descriptor.Id);
             }
             else if (handler != null)
             {

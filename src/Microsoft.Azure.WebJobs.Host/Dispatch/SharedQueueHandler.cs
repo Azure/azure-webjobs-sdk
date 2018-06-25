@@ -3,18 +3,14 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.Azure.WebJobs.Host.Queues;
-using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Microsoft.Azure.WebJobs.Host.Timers;
-using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -22,15 +18,15 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
 {
     internal class SharedQueueHandler
     {
-        internal const string InitErrorMessage = "Shared queue initialization error, fallback to in memory implementation";
+        internal const string InitErrorMessage = "Shared queue initialization error.";
 
         private readonly IHostIdProvider _hostIdProvider;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ISharedContextProvider _sharedContextProvider;
-        private readonly ILoadbalancerQueue _storageServices;
+        private readonly ILoadBalancerQueue _storageServices;
 
-        private Exception _initializationEx; // delay initialization error until consumer showed up
+        private ExceptionDispatchInfo _initializationEx; // delay initialization error until consumer showed up
         private SharedQueueExecutor _triggerExecutor;
         private State _state;
         private IListener _sharedQueuelistener; // QueueListener
@@ -41,9 +37,9 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
                            IWebJobsExceptionHandler exceptionHandler,
                            ILoggerFactory loggerFactory,
                            ISharedContextProvider sharedContextProvider,
-                           ILoadbalancerQueue storageServices
+                           ILoadBalancerQueue storageServices
                 )
-        {            
+        {
             _hostIdProvider = hostIdProvider;
             _exceptionHandler = exceptionHandler;
             _loggerFactory = loggerFactory;
@@ -108,13 +104,13 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
 
                 // queueWatcher will update queueListener's polling interval when queueWriter performes an enqueue operation
                 _sharedQueueWriter = _storageServices.GetQueueWriter<QueueMessage>(sharedQueue);
-                                
-                _sharedQueuelistener = _storageServices.CreateQueueListenr(sharedQueue, sharedPoisonQueue, _triggerExecutor.ExecuteAsync);
+
+                _sharedQueuelistener = _storageServices.CreateQueueListener(sharedQueue, sharedPoisonQueue, _triggerExecutor.ExecuteAsync);
             }
             catch (Exception ex)
             {
-                // initialization exception will fail all registrations
-                _initializationEx = ex;
+                // Only throw this exception later if someone attempts to use the SharedQueueHandler.
+                _initializationEx = ExceptionDispatchInfo.Capture(ex);
             }
 
             _state = State.Initialized;
@@ -136,9 +132,8 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
             _state = State.Started;
         }
 
-        // Calling this method to register consumers of sharedQueue
-        // if there were an initialization error, this method will return false and log out exception
-        internal bool RegisterHandler(string functionId, IMessageHandler handler)
+        // Calling this method to register consumers of sharedQueue        
+        internal void RegisterHandler(string functionId, IMessageHandler handler)
         {
             if (_state != State.Initialized)
             {
@@ -149,15 +144,11 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
 
             if (_initializationEx != null)
             {
-                // possible issue with the connection String "TriggerTests.TestByteArrayDispatch"
-                // surface this error to developer
-                var logger = _loggerFactory?.CreateLogger(LogCategories.Startup);
-                logger?.LogWarning(_initializationEx, InitErrorMessage);
-
-                return false;
+                // If initialization failed, throw the exception now.
+                _initializationEx.Throw();
             }
+
             _triggerExecutor.Register(functionId, handler);
-            return true;
         }
 
         // assume functionId is already registered with _triggerExecutor
@@ -172,7 +163,7 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
         }
 
         // IStorageQueueMessage is used in QueueTriggerBindingData
-        private class SharedQueueExecutor 
+        private class SharedQueueExecutor
         {
             // concurrent dictionary, since CompositeListener start all Listeners in parallele
             // if we can assume all users of sharedQueue register their handler before calling listener.startAsync

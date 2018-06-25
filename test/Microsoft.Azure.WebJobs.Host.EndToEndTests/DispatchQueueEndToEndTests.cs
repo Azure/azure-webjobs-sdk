@@ -7,7 +7,6 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -26,9 +25,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         // also make it easy to debug
         private static ITestOutputHelper _output;
         private static Stopwatch _stopwatch = new Stopwatch();
-
-        private CloudQueue _sharedQueue;
-        private CloudQueue _poisonQueue;
 
         // Each test should set this up; it will be used during cleanup.
         private IHost _host;
@@ -65,42 +61,61 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _output = output;
         }
 
-        [Fact(Skip = "Brettsam investigating")]
-        // same trigger type, multiple functions
-        public async Task DispatchQueueBatchTriggerTest()
+        [Fact]
+        public async Task DispatchQueueBatchTriggerTest_InMemory()
         {
-            _host = new HostBuilder()
+            // The InMemoryLoadBalancerQueue is registered by default
+            await RunTest();
+
+            Assert.IsType<InMemoryLoadBalancerQueue>(_host.Services.GetService<ILoadBalancerQueue>());
+        }
+
+        [Fact]
+        public async Task DispatchQueueBatchTriggerTest_Storage()
+        {
+            await RunTest(hb => hb.AddAzureStorage());
+
+            // This type is internal, so validate on name.
+            string loadBalancerName = _host.Services.GetService<ILoadBalancerQueue>().GetType().Name;
+            Assert.Equal("StorageLoadBalancerQueue", loadBalancerName);
+        }
+
+        public async Task RunTest(Action<IHostBuilder> configure = null)
+        {
+            IHostBuilder hostBuilder = new HostBuilder()
                 .ConfigureDefaultTestHost<SampleTrigger>()
-                .AddAzureStorage()
                 .AddExtension<DispatchQueueTestConfig>()
                 .ConfigureServices(services =>
                 {
                     // each test will have a unique hostId so that consecutive test run will not be affected by clean up code
                     services.Configure<JobHostOptions>(o => o.HostId = "bttest");
-                })
-                .Build();
-                        
-            {
-                _funcInvocation = new ConcurrentStringSet();
 
-                _host.Start();
+                });
 
-                _stopwatch.Restart();
+            configure?.Invoke(hostBuilder);
 
-                int twoFuncCount = DispatchQueueTestConfig.BatchSize * 2;
-                await TestHelpers.Await(() => _funcInvocation.TotalAdd() >= twoFuncCount || _funcInvocation.HasDuplicate(),
-                                        7000, 1000);
+            _host = hostBuilder.Build();
 
-                // make sure each function is triggered once and only once
-                Assert.Equal(twoFuncCount, _funcInvocation.TotalAdd());
-                Assert.False(_funcInvocation.HasDuplicate());
+            _funcInvocation = new ConcurrentStringSet();
 
-                _stopwatch.Stop();
-            }
+            _host.Start();
+
+            _stopwatch.Restart();
+
+            int twoFuncCount = DispatchQueueTestConfig.BatchSize * 2;
+            await TestHelpers.Await(
+                () => _funcInvocation.TotalAdd() >= twoFuncCount || _funcInvocation.HasDuplicate(),
+                timeout: 10000);
+
+            // make sure each function is triggered once and only once
+            Assert.Equal(twoFuncCount, _funcInvocation.TotalAdd());
+            Assert.False(_funcInvocation.HasDuplicate());
+
+            _stopwatch.Stop();
         }
 
-        [Fact(Skip = "Brettsam investigating")]
-        public async void PoisonQueueTest()
+        [Fact]
+        public async Task PoisonQueueTest_Storage()
         {
             _host = new HostBuilder()
                 .ConfigureDefaultTestHost<SampleTriggerWithPoisonQueue>()
@@ -112,36 +127,40 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     services.Configure<JobHostOptions>(o => o.HostId = "pqtest");
                 })
                 .Build();
-                        
-            {
-                _funcInvocation = new ConcurrentStringSet();
 
-                _host.Start();
+            _funcInvocation = new ConcurrentStringSet();
+            _host.Start();
+            _stopwatch.Restart();
 
-                _stopwatch.Restart();
+            // this test takes long since it does at least 5 dequeue on the poison message
+            // count retries caused by failures and poison queue function process
+            int funcWithExceptionCount = DispatchQueueTestConfig.BatchSize + _host.GetOptions<JobHostQueuesOptions>().MaxDequeueCount;
 
-                // this test takes long since it does at least 5 dequeue on the poison message
-                // count retries caused by failures and poison queue function process
-                int funcWithExceptionCount = DispatchQueueTestConfig.BatchSize + _host.GetOptions<JobHostQueuesOptions>().MaxDequeueCount;
-                await TestHelpers.Await(() => _funcInvocation.TotalAdd() >= funcWithExceptionCount, 10000, 1000);
+            await TestHelpers.Await(
+              () => _funcInvocation.TotalAdd() >= funcWithExceptionCount,
+              timeout: 10000);
 
-                Assert.Equal(funcWithExceptionCount, _funcInvocation.TotalAdd());
-                Assert.True(_funcInvocation.HasDuplicate());
-                Assert.True(SampleTriggerWithPoisonQueue.PoisonQueueResult);
+            Assert.Equal(funcWithExceptionCount, _funcInvocation.TotalAdd());
+            Assert.True(_funcInvocation.HasDuplicate());
+            Assert.True(SampleTriggerWithPoisonQueue.PoisonQueueResult);
 
-                _stopwatch.Stop();
-            }
+            _stopwatch.Stop();
         }
 
         public void Dispose()
         {
             // each test will have a different hostId
             // and therefore a different sharedQueue and poisonQueue
-            CloudQueueClient client = _host.GetStorageAccount().CreateCloudQueueClient();
-            _sharedQueue = client.GetQueueReference("azure-webjobs-shared-" + _host.GetOptions<JobHostOptions>().HostId);
-            _poisonQueue = client.GetQueueReference("azure-webjobs-poison-" + _host.GetOptions<JobHostOptions>().HostId);
-            _sharedQueue.DeleteIfExistsAsync().Wait();
-            _poisonQueue.DeleteIfExistsAsync().Wait();
+            // InMemory test does not use a storage account
+            CloudQueueClient client = _host.GetStorageAccount()?.CreateCloudQueueClient();
+
+            if (client != null)
+            {
+                var sharedQueue = client.GetQueueReference("azure-webjobs-shared-" + _host.GetOptions<JobHostOptions>().HostId);
+                var poisonQueue = client.GetQueueReference("azure-webjobs-poison-" + _host.GetOptions<JobHostOptions>().HostId);
+                sharedQueue.DeleteIfExistsAsync().Wait();
+                poisonQueue.DeleteIfExistsAsync().Wait();
+            }
 
             _host.Dispose();
         }

@@ -33,13 +33,13 @@ namespace Microsoft.Extensions.Hosting
                 // TODO: FACAVAL - This is not supported on by the latest version of the
                 // storage SDK. Need to re-add this when the capability is reintroduced.
                 // e.UserAgent += " AzureWebJobs";
-            }; 
+            };
 
             return builder
                 .ConfigureServices((context, services) =>
                 {
                     // $$$ Move to Host.Storage? 
-                    services.TryAddSingleton<ILoadbalancerQueue, StorageLoadbalancerQueue>();
+                    services.AddSingleton<ILoadBalancerQueue, StorageLoadBalancerQueue>();
 
                     services.TryAddSingleton<SharedQueueWatcher>();
 
@@ -69,7 +69,4 @@ namespace Microsoft.Extensions.Hosting
                 .AddExtension<BlobTriggerExtensionConfig>();
         }
     }
-
-
-
 }

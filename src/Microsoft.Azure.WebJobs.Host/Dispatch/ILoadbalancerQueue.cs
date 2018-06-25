@@ -2,11 +2,14 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Azure.WebJobs.Host.Protocols;
+using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs
 {
@@ -14,98 +17,93 @@ namespace Microsoft.Azure.WebJobs
     /// Service for queues used to loadbalance across instances. 
     /// Implementation determines the storage account. 
     /// </summary>
-    public interface ILoadbalancerQueue
+    public interface ILoadBalancerQueue
     {
-        // Host may use queues internally for distributing work items. 
         IAsyncCollector<T> GetQueueWriter<T>(string queueName);
 
-        IListener CreateQueueListenr(
-            string queue, // queue to listen on
-            string poisonQueue, // optional. Message enqueue here if callback fails
-            Func<string, CancellationToken, Task<FunctionResult>> callback
-            );
+        IListener CreateQueueListener(string queueName, string poisonQueueName,
+            Func<string, CancellationToken, Task<FunctionResult>> callback);
     }
 
-    public class InMemoryLoadbalancerQueue : ILoadbalancerQueue
+    public class InMemoryLoadBalancerQueue : ILoadBalancerQueue
     {
-        public IListener CreateQueueListenr(string queue, string poisonQueue, Func<string, CancellationToken, Task<FunctionResult>> callback)
+        private ConcurrentDictionary<string, BufferBlock<string>> _queues = new ConcurrentDictionary<string, BufferBlock<string>>();
+
+        public IListener CreateQueueListener(string queueName, string poisonQueueName, Func<string, CancellationToken, Task<FunctionResult>> callback)
         {
-            return new Listener
-            {
-                Parent = this,
-                Queue = queue,
-                Callback = callback
-            };
+            // InMemoryLoadBalancerQueue does nothing with poisonQueueName
+
+            var queue = _queues.GetOrAdd(queueName, CreateQueue);
+            return new InMemoryQueueListener(queue, null, callback);
         }
 
-        Dictionary<string, Queue<object>> _queues = new Dictionary<string, Queue<object>>();
-
-        private Queue<object> GetQueue(string name)
+        private BufferBlock<string> CreateQueue(string queuName)
         {
-            lock (_queues)
-            {
-                Queue<object> q;
-                if (!_queues.TryGetValue(name, out q))
-                {
-                    q = new Queue<object>();
-                    _queues[name] = q;
-                }
-                return q;
-            }
-        }
-
-        private void Add<T>(string queue, T item)
-        {
-            var q = GetQueue(queue);
-            lock (q)
-            {
-                q.Enqueue(item);
-            }
+            return new BufferBlock<string>();
         }
 
         public IAsyncCollector<T> GetQueueWriter<T>(string queueName)
         {
-            return new Writer<T>
-            {
-                 _parent = this,
-                  _queue = queueName
-            };
+            var queue = _queues.GetOrAdd(queueName, CreateQueue);
+            return new InMemoryQueueWriter<T>(queue);
         }
 
-        class Listener : IListener
+        private class InMemoryQueueListener : IListener
         {
-            internal InMemoryLoadbalancerQueue Parent;
-            internal string Queue; // queue to listen on
-            internal Func<string, CancellationToken, Task<FunctionResult>> Callback;
+            private readonly BufferBlock<string> _queue;
+            private readonly ActionBlock<string> _invoker;
+            private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+
+            public InMemoryQueueListener(BufferBlock<string> queue, BufferBlock<string> poisonQueue,
+                Func<string, CancellationToken, Task<FunctionResult>> callback)
+            {
+                _queue = queue;
+
+                // map the queue to an ActionBlock, which will execute the callback
+                _invoker = new ActionBlock<string>(async s =>
+                {
+                    await callback(s, _cts.Token);
+                });
+            }
 
             public void Cancel()
             {
+                Task.Run(async () => await StopAsync(CancellationToken.None)).GetAwaiter().GetResult();
             }
 
             public void Dispose()
             {
+                _cts.Dispose();
             }
 
             public Task StartAsync(CancellationToken cancellationToken)
             {
+                _queue.LinkTo(_invoker, new DataflowLinkOptions { PropagateCompletion = true });
                 return Task.CompletedTask;
             }
 
-            public Task StopAsync(CancellationToken cancellationToken)
+            public async Task StopAsync(CancellationToken cancellationToken)
             {
-                return Task.CompletedTask;
+                _queue.Complete();
+                _cts.Cancel();
+
+                await _invoker.Completion;
             }
         }
 
-        class Writer<T> : IAsyncCollector<T>
+        private class InMemoryQueueWriter<T> : IAsyncCollector<T>
         {
-            internal string _queue;
-            internal InMemoryLoadbalancerQueue _parent;
+            private readonly BufferBlock<string> _queue;
 
-            public Task AddAsync(T item, CancellationToken cancellationToken = default(CancellationToken))
+            public InMemoryQueueWriter(BufferBlock<string> queue)
             {
-                _parent.Add(_queue, item);
-                return Task.CompletedTask;
+                _queue = queue;
+            }
+
+            public async Task AddAsync(T item, CancellationToken cancellationToken = default(CancellationToken))
+            {
+                string serializedItem = JsonConvert.SerializeObject(item, JsonSerialization.Settings);
+                await _queue.SendAsync(serializedItem);
             }
 
             public Task FlushAsync(CancellationToken cancellationToken = default(CancellationToken))

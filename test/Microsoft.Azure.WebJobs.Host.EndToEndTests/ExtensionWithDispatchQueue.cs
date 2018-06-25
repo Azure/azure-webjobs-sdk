@@ -189,7 +189,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 {
                 }
 
-                private Task DelayEnqueue()
+                private async Task DelayEnqueue()
                 {
                     List<Task> tasks = new List<Task>();
                     for (int i = 0; i < DispatchQueueTestConfig.BatchSize; i++)
@@ -197,7 +197,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         JObject payload = JObject.Parse("{ order:" + i + "}");
                         tasks.Add(_dispatchQueue.EnqueueAsync(payload, CancellationToken.None));
                     }
-                    return Task.WhenAll(tasks);
+                    await Task.WhenAll(tasks);
                 }
             }
 

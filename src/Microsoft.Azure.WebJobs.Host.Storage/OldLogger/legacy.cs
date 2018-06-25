@@ -1,6 +1,10 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Threading;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Dispatch;
@@ -12,12 +16,6 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace WebJobs.Host.Storage.OldLogger
 {
@@ -30,7 +28,7 @@ namespace WebJobs.Host.Storage.OldLogger
         private readonly IFunctionInstanceLogger _functionInstanceLogger;
         private readonly IFunctionExecutor _functionExecutor;
         private readonly SharedQueueHandler _sharedQueueHandler;
-        private readonly ILoadbalancerQueue _storageServices;
+        private readonly ILoadBalancerQueue _storageServices;
         private readonly LegacyConfig _storageAccountProvider;
 
         public Legacy(
@@ -40,7 +38,7 @@ namespace WebJobs.Host.Storage.OldLogger
                 IFunctionInstanceLogger functionInstanceLogger,
                 IFunctionExecutor functionExecutor,
                 SharedQueueHandler sharedQueueHandler,
-                ILoadbalancerQueue storageServices
+                ILoadBalancerQueue storageServices
             )
         {
             _storageAccountProvider = storageAccountProvider;
@@ -53,12 +51,12 @@ namespace WebJobs.Host.Storage.OldLogger
         }
 
         public bool Init(
-            IFunctionIndex functions, 
-            IListenerFactory functionsListenerFactory, 
-            out IFunctionExecutor hostCallExecutor, 
-            out IListener listener, 
-            out HostOutputMessage hostOutputMessage, 
-            string hostId, 
+            IFunctionIndex functions,
+            IListenerFactory functionsListenerFactory,
+            out IFunctionExecutor hostCallExecutor,
+            out IListener listener,
+            out HostOutputMessage hostOutputMessage,
+            string hostId,
             CancellationToken shutdownToken)
         {
             string sharedQueueName = HostQueueNames.GetHostQueueName(hostId);
@@ -113,6 +111,5 @@ namespace WebJobs.Host.Storage.OldLogger
 
             return true;
         }
-
     }
 }

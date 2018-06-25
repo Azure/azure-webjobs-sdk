@@ -89,7 +89,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
         private readonly ILoggerFactory _loggerFactory;
 
         public BlobTriggerAttributeBindingProvider(INameResolver nameResolver,
-
             StorageAccountProvider accountProvider,
             IHostIdProvider hostIdProvider,
             IOptions<JobHostQueuesOptions> queueOptions,

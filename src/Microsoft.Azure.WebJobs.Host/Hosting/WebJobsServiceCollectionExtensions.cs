@@ -59,7 +59,7 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IFunctionExecutor, FunctionExecutor>();
             services.TryAddSingleton<IJobHostContextFactory, JobHostContextFactory>();
 
-            services.TryAddSingleton<ILoadbalancerQueue, InMemoryLoadbalancerQueue>();
+            services.TryAddSingleton<ILoadBalancerQueue, InMemoryLoadBalancerQueue>();
 
             // Anybody can add IBindingProvider via DI. 
             // Consume the whole list via a CompositeBindingProvider

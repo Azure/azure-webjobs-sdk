@@ -20,7 +20,7 @@ using Newtonsoft.Json;
 namespace WebJobs.Extensions.Storage
 {
     // $$$ This exposes Azure Storage implementations for runtime state objects. 
-    class StorageLoadbalancerQueue : ILoadbalancerQueue
+    internal class StorageLoadBalancerQueue : ILoadBalancerQueue
     {
         private readonly JobHostQueuesOptions _queueOptions;
         private readonly ILoggerFactory _loggerFactory;
@@ -28,48 +28,50 @@ namespace WebJobs.Extensions.Storage
         private readonly SharedQueueWatcher _sharedWatcher;
         private readonly StorageAccountProvider _storageAccountProvider;
 
-        public StorageLoadbalancerQueue(
+        public StorageLoadBalancerQueue(
             StorageAccountProvider storageAccountProvider,
-               IOptions<JobHostQueuesOptions> queueOptions,
-               IWebJobsExceptionHandler exceptionHandler,
-               SharedQueueWatcher sharedWatcher, 
-               ILoggerFactory loggerFactory)
-            {
+            IOptions<JobHostQueuesOptions> queueOptions,
+            IWebJobsExceptionHandler exceptionHandler,
+            SharedQueueWatcher sharedWatcher,
+            ILoggerFactory loggerFactory)
+        {
             _storageAccountProvider = storageAccountProvider;
             _queueOptions = queueOptions.Value;
             _exceptionHandler = exceptionHandler;
             _sharedWatcher = sharedWatcher;
             _loggerFactory = loggerFactory;
-            }
-        
-        public IAsyncCollector<T> GetQueueWriter<T>(string queue)
-        {
-            return new QueueWriter<T>(this, Convert(queue));
         }
 
-        class QueueWriter<T> : IAsyncCollector<T>
+        private CloudQueue CreateQueue(string queueName)
         {
-            StorageLoadbalancerQueue _parent;
+            var account = _storageAccountProvider.GetHost();
+            return account.CreateCloudQueueClient().GetQueueReference(queueName);
+        }
+
+        public IAsyncCollector<T> GetQueueWriter<T>(string queueName)
+        {
+            return new StorageLoadBalancerQueueWriter<T>(this, CreateQueue(queueName));
+        }
+
+        private class StorageLoadBalancerQueueWriter<T> : IAsyncCollector<T>
+        {
+            StorageLoadBalancerQueue _parent;
             CloudQueue _queue;
 
-            public QueueWriter(StorageLoadbalancerQueue parent, CloudQueue queue)
+            public StorageLoadBalancerQueueWriter(StorageLoadBalancerQueue parent, CloudQueue queue)
             {
-                this._parent = parent;
-                this._queue = queue;
+                _parent = parent;
+                _queue = queue;
             }
-
 
             public async Task AddAsync(T item, CancellationToken cancellationToken = default(CancellationToken))
             {
-                string contents = JsonConvert.SerializeObject(
-                    item, 
-                    JsonSerialization.Settings);
+                string contents = JsonConvert.SerializeObject(item, JsonSerialization.Settings);
 
                 var msg = new CloudQueueMessage(contents);
                 await _queue.AddMessageAndCreateIfNotExistsAsync(msg, cancellationToken);
 
                 _parent._sharedWatcher.Notify(_queue.Name);
-
             }
 
             public Task FlushAsync(CancellationToken cancellationToken = default(CancellationToken))
@@ -78,31 +80,17 @@ namespace WebJobs.Extensions.Storage
             }
         }
 
-        CloudQueue Convert(string queueMoniker)
-        {
-            // var account = Task.Run(() => _storageAccountProvider.GetDashboardAccountAsync(CancellationToken.None)).GetAwaiter().GetResult();
-            var account = _storageAccountProvider.Get("Dashboard"); // $$$
-            var queue = account.CreateCloudQueueClient().GetQueueReference(queueMoniker);
-            return queue;
-        }
-
-        public IListener CreateQueueListenr(
-            string queue,
-            string poisonQueue,
-            Func<string, CancellationToken,  Task<FunctionResult>> callback
-            )
+        public IListener CreateQueueListener(string queue, string poisonQueue,
+            Func<string, CancellationToken, Task<FunctionResult>> callback)
         {
             // Provide an upper bound on the maximum polling interval for run/abort from dashboard.
             // This ensures that if users have customized this value the Dashboard will remain responsive.
             TimeSpan maxPollingInterval = QueuePollingIntervals.DefaultMaximum;
 
-            var wrapper = new Wrapper
-            {
-                _callback = callback
-            };
+            var wrapper = new StorageLoadBalancerQueueTriggerExecutor(callback);
 
-            IListener listener = new QueueListener(Convert(queue),
-                poisonQueue: Convert(poisonQueue),
+            IListener listener = new QueueListener(CreateQueue(queue),
+                poisonQueue: CreateQueue(poisonQueue),
                 triggerExecutor: wrapper,
                 exceptionHandler: _exceptionHandler,
                 loggerFactory: _loggerFactory,
@@ -113,10 +101,14 @@ namespace WebJobs.Extensions.Storage
             return listener;
         }
 
-        // $$$ cleanup
-        class Wrapper : ITriggerExecutor<CloudQueueMessage>
+        private class StorageLoadBalancerQueueTriggerExecutor : ITriggerExecutor<CloudQueueMessage>
         {
-            public Func<string, CancellationToken, Task<FunctionResult>> _callback;
+            private readonly Func<string, CancellationToken, Task<FunctionResult>> _callback;
+
+            public StorageLoadBalancerQueueTriggerExecutor(Func<string, CancellationToken, Task<FunctionResult>> callback)
+            {
+                _callback = callback;
+            }
 
             public Task<FunctionResult> ExecuteAsync(CloudQueueMessage value, CancellationToken cancellationToken)
             {
