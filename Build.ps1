@@ -14,7 +14,9 @@ $projects =
   "src\Microsoft.Azure.WebJobs.Logging\WebJobs.Logging.csproj",
   "src\Microsoft.Azure.WebJobs.Logging.ApplicationInsights\WebJobs.Logging.ApplicationInsights.csproj",
   "src\Microsoft.Azure.WebJobs.Extensions.EventHubs\WebJobs.EventHubs.csproj",
-  "src\Microsoft.Azure.WebJobs.ServiceBus\WebJobs.ServiceBus.csproj"
+  "src\Microsoft.Azure.WebJobs.ServiceBus\WebJobs.ServiceBus.csproj",
+  "src\Microsoft.Azure.WebJobs.Extensions.Storage\WebJobs.Extensions.Storage.csproj",
+  "src\Microsoft.Azure.WebJobs.Host.Storage\WebJobs.Host.Storage.csproj"
 
 foreach ($project in $projects)
 {
