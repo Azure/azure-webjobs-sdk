@@ -20,9 +20,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
         private readonly IAsyncObjectToTypeConverter<ServiceBusEntity> _converter;
         private readonly EntityType _entityType;
         private readonly MessagingProvider _messagingProvider;
-        private readonly ServiceBusOptions _options;
-
-
+        
         public ServiceBusBinding(string parameterName, IArgumentBinding<ServiceBusEntity> argumentBinding, ServiceBusAccount account, ServiceBusOptions config, IBindableServiceBusPath path, ServiceBusAttribute attr)
         {
             _parameterName = parameterName;
@@ -84,17 +82,18 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 
         internal static ParameterDisplayHints CreateParameterDisplayHints(string entityPath, bool isInput)
         {
-            ParameterDisplayHints descriptor = new ParameterDisplayHints();
-
-            descriptor.Description = isInput ?
+            ParameterDisplayHints descriptor = new ParameterDisplayHints
+            {
+                Description = isInput ?
                 string.Format(CultureInfo.CurrentCulture, "dequeue from '{0}'", entityPath) :
-                string.Format(CultureInfo.CurrentCulture, "enqueue to '{0}'", entityPath);
+                string.Format(CultureInfo.CurrentCulture, "enqueue to '{0}'", entityPath),
 
-            descriptor.Prompt = isInput ?
+                Prompt = isInput ?
                 "Enter the queue message body" :
-                "Enter the output entity name";
+                "Enter the output entity name",
 
-            descriptor.DefaultValue = isInput ? null : entityPath;
+                DefaultValue = isInput ? null : entityPath
+            };
 
             return descriptor;
         }

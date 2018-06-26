@@ -113,6 +113,5 @@ namespace WebJobs.Host.Storage.OldLogger
 
             return true;
         }
-
     }
 }

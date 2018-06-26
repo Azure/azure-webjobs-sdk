@@ -24,6 +24,5 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             TestHelpers.AssertPublicTypes(expected, assembly);
         }
-
     }
 }

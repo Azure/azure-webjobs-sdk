@@ -24,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
     internal class BlobTriggerExtensionConfig : IExtensionConfigProvider
     {
         private StorageAccountProvider _accountProvider;
-        private BlobTriggerAttributeBindingProvider _triggerBinder;
+        private readonly BlobTriggerAttributeBindingProvider _triggerBinder;
 
         public BlobTriggerExtensionConfig(StorageAccountProvider accountProvider, BlobTriggerAttributeBindingProvider triggerBinder)
         {
@@ -89,7 +89,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
         private readonly ILoggerFactory _loggerFactory;
 
         public BlobTriggerAttributeBindingProvider(INameResolver nameResolver,
-
             StorageAccountProvider accountProvider,
             IHostIdProvider hostIdProvider,
             IOptions<JobHostQueuesOptions> queueOptions,

@@ -51,7 +51,5 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 return _connectionString;
             }
         }
-
-
     }
 }

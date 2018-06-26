@@ -69,7 +69,4 @@ namespace Microsoft.Extensions.Hosting
                 .AddExtension<BlobTriggerExtensionConfig>();
         }
     }
-
-
-
 }
