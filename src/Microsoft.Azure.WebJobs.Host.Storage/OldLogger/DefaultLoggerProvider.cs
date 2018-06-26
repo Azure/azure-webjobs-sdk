@@ -44,7 +44,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             return _functionOutputLogger;
         }
 
-        private async Task EnsureLoggersAsync(CancellationToken cancellationToken)
+        private void EnsureLoggers()
         {
             if (_loggersSet)
             {
@@ -53,8 +53,8 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
 
             IFunctionInstanceLogger functionLogger = new FunctionInstanceLogger(_loggerFactory);
 
-                        
-            if (this._storageAccountProvider.Dashboard != null)
+
+            if (_storageAccountProvider.Dashboard != null)
             {
                 var dashboardAccount = _storageAccountProvider.GetDashboardStorageAccount();
 
@@ -75,6 +75,10 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             }
 
             _loggersSet = true;
+        }
+        private Task EnsureLoggersAsync(CancellationToken cancellationToken)
+        {
+            return Task.Run(() => EnsureLoggers(), cancellationToken);
         }
     }
 }

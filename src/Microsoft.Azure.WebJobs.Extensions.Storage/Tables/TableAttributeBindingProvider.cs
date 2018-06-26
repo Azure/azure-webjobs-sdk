@@ -24,13 +24,8 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
 
         public TableAttributeBindingProvider(INameResolver nameResolver, StorageAccountProvider accountProvider)
         {
-            if (accountProvider == null)
-            {
-                throw new ArgumentNullException("accountProvider");
-            }
-
             _nameResolver = nameResolver;
-            _accountProvider = accountProvider;
+            _accountProvider = accountProvider ?? throw new ArgumentNullException(nameof(accountProvider));
 
             _entityBindingProvider =
                 new CompositeEntityArgumentBindingProvider(
@@ -38,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
                 new PocoEntityArgumentBindingProvider()); // Supports all types; must come after other providers
         }
 
-        public async Task<IBinding> TryCreateAsync(BindingProviderContext context)
+        private IBinding TryCreate(BindingProviderContext context)
         {
             ParameterInfo parameter = context.Parameter;
             var tableAttribute = TypeUtility.GetResolvedAttribute<TableAttribute>(context.Parameter);
@@ -63,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
                 // This should have been caught by the other rule-based binders. 
                 // We never expect this to get thrown. 
                 throw new InvalidOperationException("Can't bind Table to type '" + parameter.ParameterType + "'.");
-            }            
+            }
             else
             {
                 string partitionKey = Resolve(tableAttribute.PartitionKey);
@@ -82,6 +77,11 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
             }
 
             return binding;
+        }
+
+        public Task<IBinding> TryCreateAsync(BindingProviderContext context)
+        {
+            return Task.Run(() => TryCreate(context));
         }
 
         private string Resolve(string name)

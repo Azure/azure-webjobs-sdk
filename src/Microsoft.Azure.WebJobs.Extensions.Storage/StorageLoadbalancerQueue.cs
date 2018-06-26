@@ -69,7 +69,6 @@ namespace WebJobs.Extensions.Storage
                 await _queue.AddMessageAndCreateIfNotExistsAsync(msg, cancellationToken);
 
                 _parent._sharedWatcher.Notify(_queue.Name);
-
             }
 
             public Task FlushAsync(CancellationToken cancellationToken = default(CancellationToken))
