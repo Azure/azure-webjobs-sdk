@@ -189,6 +189,7 @@
         <UnitTestProjects Include="test\Microsoft.Azure.WebJobs.Host.UnitTests\WebJobs.Host.UnitTests.csproj"/>
         <UnitTestProjects Include="test\Microsoft.Azure.WebJobs.Host.FunctionalTests\WebJobs.Host.FunctionalTests.csproj"/>
         <UnitTestProjects Include="test\Microsoft.Azure.WebJobs.ServiceBus.UnitTests\WebJobs.ServiceBus.UnitTests.csproj"/>
+        <UnitTestProjects Include="test\Microsoft.Azure.WebJobs.Logging.FunctionalTests\WebJobs.Logging.FunctionalTests.csproj"/>
         <UnitTestProjects Include="test\Dashboard.UnitTests\Dashboard.UnitTests.csproj"/>
     </ItemGroup>
 
@@ -208,6 +209,7 @@
         <TestBinaries Include="test\Microsoft.Azure.WebJobs.ServiceBus.UnitTests\WebJobs.ServiceBus.UnitTests.csproj"/>
         <TestBinaries Include="test\Dashboard.UnitTests\Dashboard.UnitTests.csproj"/>
         <TestBinaries Include="test\Microsoft.Azure.WebJobs.Host.EndToEndTests\WebJobs.Host.EndToEndTests.csproj"/>
+        <TestBinaries Include="test\Microsoft.Azure.WebJobs.Logging.FunctionalTests\WebJobs.Logging.FunctionalTests.csproj"/>
     </ItemGroup>
 
     <MSBuild Projects="@(TestBinaries)"
