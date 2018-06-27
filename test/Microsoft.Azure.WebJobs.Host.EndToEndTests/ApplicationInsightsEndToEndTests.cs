@@ -154,10 +154,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             LogCategoryFilter filter = new LogCategoryFilter();
             filter.DefaultLevel = defaultLevel;
+            TestLoggerProvider testLoggerProvider = new TestLoggerProvider();
 
             var loggerFactory = new LoggerFactory()
                 .AddApplicationInsights(
                     new TestTelemetryClientFactory(filter.Filter, _channel));
+
+            loggerFactory.AddProvider(testLoggerProvider);
 
             JobHostConfiguration config = new JobHostConfiguration
             {
@@ -174,6 +177,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 using (JobHost host = new JobHost(config))
                 {
                     await host.StartAsync();
+
+                    // QuickPulse only tracks when there's an active listener. Wait until some
+                    // real data starts flowing before kicking off the test scenario
+                    await TestHelpers.Await(() => listener.IsReady, pollingInterval: 100);
 
                     var methodInfo = GetType().GetMethod(nameof(TestApplicationInsightsWarning), BindingFlags.Public | BindingFlags.Static);
                     List<Task> invokeTasks = new List<Task>();
@@ -201,8 +208,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         // The calculated RPS may off, so give some wiggle room. The important thing is that it's generating 
                         // RequestTelemetry and not being filtered.
                         return sum >= min;
-                    }, timeout: 3000, pollingInterval: 100,
-                    userMessageCallback: () => $"Expected sum to be greater than '{min}'. Actual: '{sum}'. DefaultLevel: '{defaultLevel}'.");
+                    }, timeout: 10000, pollingInterval: 100,
+                    userMessageCallback: () =>
+                    {
+                        var items = listener.GetQuickPulseItems();
+                        var s = items.Select(i => $"[{i.Timestamp.ToString("HH':'mm':'ss'.'fffK")}] {i.Metrics.Single(p => p.Name == @"\ApplicationInsights\Requests/Sec")}");
+                        return $"Expected sum to be greater than '{min}'. Actual: '{sum}'. DefaultLevel: '{defaultLevel}'.{Environment.NewLine}QuickPulse items ({items.Count()}): {string.Join(Environment.NewLine, s)}{Environment.NewLine}Logs: {testLoggerProvider.GetLogString()}";
+                    });
 
                     await host.StopAsync();
                 }
@@ -288,16 +300,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private class ApplicationInsightsTestListener : IDisposable
         {
             private readonly HttpListener _applicationInsightsListener = new HttpListener();
-            private readonly List<QuickPulsePayload> _quickPulseItems = new List<QuickPulsePayload>();
-            private readonly object _syncLock = new object();
+            private ConcurrentQueue<QuickPulsePayload> _quickPulseItems = new ConcurrentQueue<QuickPulsePayload>();
             private Thread _listenerThread;
+
+            public bool IsReady { get; private set; } = false;
 
             public IEnumerable<QuickPulsePayload> GetQuickPulseItems()
             {
-                lock (_syncLock)
-                {
-                    return _quickPulseItems.ToList();
-                }
+                return _quickPulseItems.ToList();
             }
 
             public void StartListening()
@@ -360,10 +370,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 if (request.Url.LocalPath == "/QuickPulseService.svc/post")
                 {
                     QuickPulsePayload[] quickPulse = JsonConvert.DeserializeObject<QuickPulsePayload[]>(result);
-                    lock (_syncLock)
+                    foreach (var i in quickPulse)
                     {
-                        _quickPulseItems.AddRange(quickPulse);
+                        _quickPulseItems.Enqueue(i);
                     }
+
+                    // Now that we've gotten some real data, mark as ready
+                    IsReady = true;
                 }
             }
 
@@ -501,6 +514,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             public string StreamId { get; set; }
 
             public QuickPulseMetric[] Metrics { get; set; }
+
+            public override string ToString()
+            {
+                string s = string.Join(Environment.NewLine, Metrics.Select(m => $"  {m}"));
+                return $"[{Timestamp.ToString("HH':'mm':'ss'.'fffK")}] Metrics:{Environment.NewLine}{s}";
+            }
         }
 
         private class QuickPulseMetric
@@ -510,6 +529,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             public double Value { get; set; }
 
             public int Weight { get; set; }
+
+            public override string ToString()
+            {
+                return $"{Name}: {Value} ({Weight})";
+            }
         }
 
         private class TestTelemetryClientFactory : DefaultTelemetryClientFactory
