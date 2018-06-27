@@ -78,5 +78,24 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Assert.Equal(samplingSettings.MaxTelemetryItemsPerSecond, ((AdaptiveSamplingTelemetryProcessor) config.TelemetryProcessors[2]).MaxTelemetryItemsPerSecond);
             }
         }
+
+        [Fact]
+        public void DepednencyInjectionConfiguration_NoFilterConfiguresSampling()
+        {
+            var samplingSettings = new SamplingPercentageEstimatorSettings { MaxTelemetryItemsPerSecond = 1 };
+            using (var host = new HostBuilder()
+                .AddApplicationInsights("some key", samplingSettings)
+                .Build())
+            {
+                var config = host.Services.GetService<TelemetryConfiguration>();
+                Assert.Equal(4, config.TelemetryProcessors.Count);
+                Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[0]);
+                Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[1]);
+                Assert.IsType<AdaptiveSamplingTelemetryProcessor>(config.TelemetryProcessors[2]);
+
+                Assert.Equal(samplingSettings.MaxTelemetryItemsPerSecond, ((AdaptiveSamplingTelemetryProcessor)config.TelemetryProcessors[2]).MaxTelemetryItemsPerSecond);
+
+            }
+        }
     }
 }

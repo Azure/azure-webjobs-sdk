@@ -28,10 +28,11 @@ namespace Microsoft.Extensions.Logging
         /// </summary>
         /// <param name="builder">The host builder.</param>
         /// <param name="instrumentationKey">The Application Insights instrumentation key.</param>
+        /// <param name="samplingSettings">The <see cref="SamplingPercentageEstimatorSettings"/> to use for configuring adaptive sampling. If null, sampling is disabled.</param>
         /// <returns>A <see cref="IHostBuilder"/> for chaining additional operations.</returns>
         public static IHostBuilder AddApplicationInsights(this IHostBuilder builder, string instrumentationKey, SamplingPercentageEstimatorSettings samplingSettings)
         {
-            return AddApplicationInsights(builder, instrumentationKey, (_, level) => level > LogLevel.Debug, null);
+            return AddApplicationInsights(builder, instrumentationKey, (_, level) => level > LogLevel.Debug, samplingSettings);
         }
 
         /// <summary>
