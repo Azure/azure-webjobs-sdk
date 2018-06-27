@@ -29,7 +29,7 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
-    public class ApplicationInsightsEndToEndTests
+    public class ApplicationInsightsEndToEndTests : IDisposable
     {
         private const string _mockApplicationInsightsUrl = "http://localhost:4005/v2/track/";
         private const string _mockQuickPulseUrl = "http://localhost:4005/QuickPulseService.svc/";
@@ -74,7 +74,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 })
                 .Build();
 
-            SetActiveTelemetryConfiguration(host.Services.GetService<TelemetryConfiguration>());
+            TelemetryConfiguration.Active.TelemetryChannel = _channel;
             return host;
         }
 
@@ -645,14 +645,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             public int Weight { get; set; }
         }
 
-        private void SetActiveTelemetryConfiguration(TelemetryConfiguration value)
+        public void Dispose()
         {
             TelemetryConfiguration.Active.Dispose();
 
             MethodInfo setActive =
                 typeof(TelemetryConfiguration).GetMethod("set_Active", BindingFlags.Static | BindingFlags.NonPublic);
 
-            setActive.Invoke(null, new object[] {value});
+            setActive.Invoke(null, new object[] { TelemetryConfiguration.CreateDefault() });
         }
     }
 }

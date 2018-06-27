@@ -46,13 +46,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
         private CloudQueue _triggerQueue;
 
         [Fact]
-        public async Task BindingsAreNotReportedWhenDisabled()
+        public async Task BindingsAreNotReportedWhenFiltered()
         {
             using (var host = ConfigureHost(LogLevel.Warning))
             {
                 await host.StartAsync();
                 await host.GetJobHost()
-                    .CallAsync(typeof(HttpDependencyCollectionTests).GetMethod("BlobInputAndOutputBindings"));
+                    .CallAsync(typeof(HttpDependencyCollectionTests).GetMethod(nameof(BlobInputAndOutputBindings)));
 
                 _functionWaitHandle.WaitOne();
                 await Task.Delay(1000);
@@ -71,7 +71,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             {
                 await host.StartAsync();
                 await host.GetJobHost()
-                    .CallAsync(typeof(HttpDependencyCollectionTests).GetMethod("BlobInputAndOutputBindings"));
+                    .CallAsync(typeof(HttpDependencyCollectionTests).GetMethod(nameof(BlobInputAndOutputBindings)));
 
                 _functionWaitHandle.WaitOne();
                 await Task.Delay(1000);
@@ -79,7 +79,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 await host.StopAsync();
             }
 
-            RequestTelemetry request = _channel.Telemetries.OfType<RequestTelemetry>().Single(r => r.Name == "BlobInputAndOutputBindings");
+            RequestTelemetry request = _channel.Telemetries.OfType<RequestTelemetry>().Single(r => r.Name == nameof(BlobInputAndOutputBindings));
             List<DependencyTelemetry> dependencies = _channel.Telemetries.OfType<DependencyTelemetry>().ToList();
 
             List<DependencyTelemetry> inDependencies = dependencies
@@ -96,7 +96,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                     inputDep,
                     _inputContainerName, 
                     "in",
-                    "BlobInputAndOutputBindings",
+                    nameof(BlobInputAndOutputBindings),
                     request.Context.Operation.Id,
                     request.Id);
             }
@@ -107,7 +107,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                     outputDep, 
                     _outputContainerName,
                     "out",
-                    "BlobInputAndOutputBindings",
+                    nameof(BlobInputAndOutputBindings),
                     request.Context.Operation.Id,
                     request.Id);
             }
@@ -204,7 +204,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                     inputDep,
                     _triggerContainerName,
                     "triggerBlob",
-                    "BlobTrigger",
+                    nameof(BlobTrigger),
                     request.Context.Operation.Id,
                     request.Id);
             }
@@ -212,7 +212,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             ValidateQueueDependency(
                 queueDependencies.First(),
                 _outputQueueName,
-                "BlobTrigger",
+                nameof(BlobTrigger),
                 request.Context.Operation.Id,
                 request.Id);
         }
@@ -241,7 +241,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             List<DependencyTelemetry> dependencies = _channel.Telemetries.OfType<DependencyTelemetry>().ToList();
 
             List<DependencyTelemetry> bindingsDependencies = dependencies
-                .Where(d => d.Properties.Single(p => p.Key == "Category").Value == LogCategories.Bindings).ToList();
+                .Where(d => d.Properties.Single(p => p.Key == LogConstants.CategoryNameKey).Value == LogCategories.Bindings).ToList();
 
             // only bindings calls are reported, queue read happens before that and is not reported
             Assert.True(dependencies.Count >= 4);
@@ -255,7 +255,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                     outputDep,
                     _outputContainerName,
                     "out1",
-                    "QueueTrigger",
+                    nameof(QueueTrigger),
                     request.Context.Operation.Id,
                     request.Id);
             }
@@ -347,9 +347,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             string requestId,
             string category)
         {
-            Assert.Equal(category, dependency.Properties["Category"]);
-            Assert.Equal("Information", dependency.Properties["LogLevel"]);
-            Assert.True(!string.IsNullOrEmpty(dependency.ResultCode));
+            Assert.Equal(category, dependency.Properties[LogConstants.CategoryNameKey]);
+            Assert.Equal(LogLevel.Information.ToString(), dependency.Properties[LogConstants.LogLevelKey]);
+            Assert.False(string.IsNullOrEmpty(dependency.ResultCode));
             Assert.NotNull(dependency.Target);
             Assert.NotNull(dependency.Data);
             Assert.NotNull(dependency.Name);
