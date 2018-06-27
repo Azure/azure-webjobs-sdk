@@ -17,4 +17,5 @@
   <assembly name="Microsoft.Azure.WebJobs.Host.UnitTests"/>
   <assembly name="Microsoft.Azure.WebJobs.ServiceBus.UnitTests"/>
   <assembly name="Microsoft.Azure.WebJobs.Storage.IntegrationTests"/>
+  <assembly name="Microsoft.Azure.WebJobs.Logging.FunctionalTests"/>
 </assemblies>
