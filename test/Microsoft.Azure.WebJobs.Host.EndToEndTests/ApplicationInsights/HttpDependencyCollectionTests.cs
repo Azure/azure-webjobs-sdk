@@ -375,6 +375,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                     });
                 })
                 .AddApplicationInsights(_mockApplicationInsightsKey, filter.Filter, null)
+                .AddAzureStorage()
                 .Build();
 
             TelemetryConfiguration telemteryConfiguration = host.Services.GetService<TelemetryConfiguration>();
