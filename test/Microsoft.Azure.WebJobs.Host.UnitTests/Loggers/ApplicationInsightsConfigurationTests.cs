@@ -10,6 +10,7 @@ using Microsoft.ApplicationInsights.DependencyCollector;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
+using Microsoft.ApplicationInsights.WindowsServer;
 using Microsoft.ApplicationInsights.WindowsServer.Channel.Implementation;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
@@ -44,9 +45,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 var modules = host.Services.GetServices<ITelemetryModule>().ToList();
 
                 // Verify Modules
-                Assert.Equal(2, modules.Count);
+                Assert.Equal(3, modules.Count);
                 Assert.Single(modules.OfType<DependencyTrackingTelemetryModule>());
                 Assert.Single(modules.OfType<QuickPulseTelemetryModule>());
+                Assert.Single(modules.OfType<AppServicesHeartbeatTelemetryModule>());
                 Assert.Same(config.TelemetryChannel, host.Services.GetServices<ITelemetryChannel>().Single());
                 // Verify client
                 var client = host.Services.GetService<TelemetryClient>();
@@ -126,9 +128,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 var modules = host.Services.GetServices<ITelemetryModule>().ToList();
 
                 // Verify Modules
-                Assert.Equal(2, modules.Count);
+                Assert.Equal(3, modules.Count);
                 Assert.Single(modules.OfType<DependencyTrackingTelemetryModule>());
                 Assert.Single(modules.OfType<QuickPulseTelemetryModule>());
+                Assert.Single(modules.OfType<AppServicesHeartbeatTelemetryModule>());
                 Assert.NotSame(config.TelemetryChannel, host.Services.GetServices<ITelemetryChannel>().Single());
                 // Verify client
                 var client = host.Services.GetService<TelemetryClient>();

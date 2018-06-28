@@ -10,6 +10,7 @@ using Microsoft.ApplicationInsights.DependencyCollector;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
+using Microsoft.ApplicationInsights.WindowsServer;
 using Microsoft.ApplicationInsights.WindowsServer.Channel.Implementation;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
 using Microsoft.Azure.WebJobs;
@@ -78,11 +79,16 @@ namespace Microsoft.Extensions.Logging
 
                     return dependencyCollector;
                 });
+                services.AddSingleton<ITelemetryModule, AppServicesHeartbeatTelemetryModule>();
 
                 ServerTelemetryChannel serverChannel = new ServerTelemetryChannel();
                 services.AddSingleton<ITelemetryChannel>(serverChannel);
                 services.AddSingleton<TelemetryConfiguration>(provider =>
                 {
+                    // Because of https://github.com/Microsoft/ApplicationInsights-dotnet-server/issues/943
+                    // we have to touch (and create) Active configuration before initializing telemetry modules 
+                    TelemetryConfiguration activeConfig = TelemetryConfiguration.Active;
+
                     ITelemetryChannel channel = provider.GetService<ITelemetryChannel>();
                     TelemetryConfiguration config = TelemetryConfiguration.CreateDefault();
                     SetupTelemetryConfiguration(
@@ -95,10 +101,9 @@ namespace Microsoft.Extensions.Logging
                         provider.GetServices<ITelemetryModule>());
 
                     // Function users have no access to TelemetryConfiguration from host DI container,
-                    // so we'll expect user to work with TelemteryConfiguration.Active
-                    // Also, some ApplicaitonInsights internal operations (heartbeats) depend on
+                    // so we'll expect user to work with TelemetryConfiguration.Active
+                    // Also, some ApplicationInsights internal operations (heartbeats) depend on
                     // the TelemetryConfiguration.Active being set so, we'll set up Active once per process lifetime.
-                    TelemetryConfiguration activeConfig = TelemetryConfiguration.Active;
                     if (string.IsNullOrEmpty(activeConfig.InstrumentationKey))
                     {
                         SetupTelemetryConfiguration(
@@ -110,7 +115,6 @@ namespace Microsoft.Extensions.Logging
                             provider.GetServices<ITelemetryInitializer>(),
                             provider.GetServices<ITelemetryModule>());
                     }
-
                     return config;
                 });
                 services.AddSingleton<TelemetryClient>(provider =>
