@@ -3,9 +3,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -303,14 +305,16 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         {
             IDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionary() ?? new Dictionary<string, object>();
 
-            RequestTelemetry requestTelemetry = scopeProps.GetValueOrDefault<RequestTelemetry>(OperationContext);
+            IOperationHolder<RequestTelemetry> requestOperation = scopeProps.GetValueOrDefault<IOperationHolder<RequestTelemetry>>(OperationContext);
 
-            // We somehow never started the operation, so there's no way to complete it.
-            if (requestTelemetry == null)
+            if (requestOperation == null)
             {
-                throw new InvalidOperationException("No started telemetry was found.");
+                // We somehow never started the operation, perhaps, it was auto-tracked by the AI SDK 
+                // so there's no way to complete it.
+                return;
             }
 
+            RequestTelemetry requestTelemetry = requestOperation.Telemetry;
             requestTelemetry.Success = exception == null;
             requestTelemetry.ResponseCode = "0";
 
@@ -326,8 +330,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             }
 
             // Note: we do not have to set Duration, StartTime, etc. These are handled by the call to Stop()
-            requestTelemetry.Stop();
-            _telemetryClient.TrackRequest(requestTelemetry);
+            _telemetryClient.StopOperation(requestOperation);
         }
 
         private static void ApplyFunctionResultProperties(RequestTelemetry requestTelemetry, IEnumerable<KeyValuePair<string, object>> stateValues)
@@ -339,9 +342,10 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 switch (prop.Key)
                 {
                     case LogConstants.NameKey:
-                    case LogConstants.InvocationIdKey:
                     case LogConstants.StartTimeKey:
                     case LogConstants.DurationKey:
+                    case LogConstants.SucceededKey:
+                    case LogConstants.EndTimeKey:
                         // These values are set by the calls to Start/Stop the telemetry. Other
                         // Loggers may want them, but we'll ignore.
                         break;
@@ -373,7 +377,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             return DictionaryLoggerScope.Push(state);
         }
 
-        private static void StartTelemetryIfFunctionInvocation(IDictionary<string, object> stateValues)
+        private void StartTelemetryIfFunctionInvocation(IDictionary<string, object> stateValues)
         {
             if (stateValues == null)
             {
@@ -392,13 +396,12 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             {
                 RequestTelemetry request = new RequestTelemetry()
                 {
-                    Id = functionInvocationId,
                     Name = functionName
                 };
 
                 // We'll need to store this operation context so we can stop it when the function completes
-                request.Start();
-                stateValues[OperationContext] = request;
+                IOperationHolder<RequestTelemetry> operation = _telemetryClient.StartOperation(request);
+                stateValues[OperationContext] = operation;
             }
         }
 
@@ -428,15 +431,6 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             }
 
             return address;
-        }
-
-        internal static ObjectResult GetResponse(HttpRequest httpRequest)
-        {
-            // Grab the response stored by functions
-            object value = null;
-            httpRequest.HttpContext?.Items?.TryGetValue(ApplicationInsightsScopeKeys.FunctionsHttpResponse, out value);
-
-            return value as ObjectResult;
         }
     }
 }

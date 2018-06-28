@@ -35,7 +35,6 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             // Apply our special scope properties
             IDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionary() ?? new Dictionary<string, object>();
 
-            telemetry.Context.Operation.Id = scopeProps.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId);
             telemetry.Context.Operation.Name = scopeProps.GetValueOrDefault<string>(ScopeKeys.FunctionName);
 
             // Apply Category and LogLevel to all telemetry

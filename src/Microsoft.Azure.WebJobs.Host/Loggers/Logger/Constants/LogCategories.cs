@@ -40,6 +40,11 @@ namespace Microsoft.Azure.WebJobs.Logging
         public const string Results = "Host.Results";
 
         /// <summary>
+        /// The category for function bindings.
+        /// </summary>
+        public const string Bindings = "Host.Bindings";
+
+        /// <summary>
         /// The category for logs written for a specific function invocation.
         /// </summary>
         public static string CreateFunctionCategory(string functionName) => $"Function.{functionName}";
