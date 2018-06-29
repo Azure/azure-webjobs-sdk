@@ -43,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [Fact]
-        public async Task EventHubTriggerTest_SingleDispatch()
+        public async Task EventHub_SingleDispatch()
         {
             await _host.StartAsync();
 
@@ -68,7 +68,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [Fact]
-        public async Task EventHubTriggerTest_MultipleDispatch()
+        public async Task EventHub_MultipleDispatch()
         {
             // send some events BEFORE starting the host, to ensure
             // the events are received in batch
