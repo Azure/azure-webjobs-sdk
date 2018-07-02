@@ -111,7 +111,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     };
 
                     exceptionInfo = ExceptionDispatchInfo.Capture(exception);
-
                     exceptionInfo = await InvokeExceptionFiltersAsync(parameterHelper.JobInstance, exceptionInfo, functionInstance, parameterHelper.FilterContextProperties, cancellationToken);
                 }
 
@@ -133,8 +132,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     logCompletedCancellationToken = cancellationToken;
                 }
 
-                await NotifyCompleteAsync(instanceLogEntry, functionCompletedMessage.Arguments, exceptionInfo);
-                _resultsLogger?.LogFunctionResult(instanceLogEntry);
+                if (instanceLogEntry != null)
+                {
+                    await NotifyCompleteAsync(instanceLogEntry, functionCompletedMessage.Arguments, exceptionInfo);
+                    _resultsLogger?.LogFunctionResult(instanceLogEntry);
+                }
 
                 if (functionCompletedMessage != null &&
                     ((functionTraceLevel >= TraceLevel.Info) || (functionCompletedMessage.Failure != null && functionTraceLevel >= TraceLevel.Error)))
@@ -752,34 +754,39 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         }
 
         // Called after function completes. 
-        private Task NotifyCompleteAsync(FunctionInstanceLogEntry intanceLogEntry, IDictionary<string, string> arguments, ExceptionDispatchInfo exceptionInfo)
+        private Task NotifyCompleteAsync(FunctionInstanceLogEntry instance, IDictionary<string, string> arguments, ExceptionDispatchInfo exceptionInfo)
         {
-            intanceLogEntry.LiveTimer.Stop();
+            if (instance == null)
+            {
+                throw new ArgumentNullException(nameof(instance));
+            }
+
+            instance.LiveTimer.Stop();
 
             // log result            
-            intanceLogEntry.EndTime = DateTime.UtcNow;
-            intanceLogEntry.Duration = intanceLogEntry.LiveTimer.Elapsed;
-            intanceLogEntry.Arguments = arguments;
+            instance.EndTime = DateTime.UtcNow;
+            instance.Duration = instance.LiveTimer.Elapsed;
+            instance.Arguments = arguments;
 
-            Debug.Assert(intanceLogEntry.IsCompleted);
+            Debug.Assert(instance.IsCompleted);
 
             // Log completed
             if (exceptionInfo != null)
             {
                 var ex = exceptionInfo.SourceException;
-                intanceLogEntry.Exception = ex;
+                instance.Exception = ex;
                 if (ex.InnerException != null)
                 {
                     ex = ex.InnerException;
                 }
-                intanceLogEntry.ErrorDetails = ex.Message;
+                instance.ErrorDetails = ex.Message;
             }
 
             if (_functionEventCollector == null)
             {
                 return Task.CompletedTask;
             }
-            return _functionEventCollector.AddAsync(intanceLogEntry);
+            return _functionEventCollector.AddAsync(instance);
         }
 
         // Handle various phases of parameter building and logging.
