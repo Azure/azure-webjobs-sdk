@@ -10,6 +10,7 @@ using Microsoft.ApplicationInsights.DependencyCollector;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
+using Microsoft.ApplicationInsights.SnapshotCollector;
 using Microsoft.ApplicationInsights.WindowsServer;
 using Microsoft.ApplicationInsights.WindowsServer.Channel.Implementation;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
@@ -102,6 +103,22 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Assert.IsType<AdaptiveSamplingTelemetryProcessor>(config.TelemetryProcessors[2]);
 
                 Assert.Equal(samplingSettings.MaxTelemetryItemsPerSecond, ((AdaptiveSamplingTelemetryProcessor)config.TelemetryProcessors[2]).MaxTelemetryItemsPerSecond);
+            }
+        }
+
+        [Fact]
+        public void DepednencyInjectionConfiguration_ConfiguresSnapshotCollector()
+        {
+            var snapshotConfiguration = new SnapshotCollectorConfiguration();
+            using (var host = new HostBuilder()
+                .AddApplicationInsights("some key", (c, l) => true, null, snapshotConfiguration)
+                .Build())
+            {
+                var config = host.Services.GetService<TelemetryConfiguration>();
+                Assert.Equal(4, config.TelemetryProcessors.Count);
+                Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[0]);
+                Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[1]);
+                Assert.IsType<SnapshotCollectorTelemetryProcessor>(config.TelemetryProcessors[2]);
             }
         }
 

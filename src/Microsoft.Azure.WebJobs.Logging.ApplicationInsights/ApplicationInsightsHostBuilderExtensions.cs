@@ -10,6 +10,7 @@ using Microsoft.ApplicationInsights.DependencyCollector;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
+using Microsoft.ApplicationInsights.SnapshotCollector;
 using Microsoft.ApplicationInsights.WindowsServer;
 using Microsoft.ApplicationInsights.WindowsServer.Channel.Implementation;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
@@ -39,6 +40,19 @@ namespace Microsoft.Extensions.Logging
         }
 
         /// <summary>
+        /// Registers Application Insights and <see cref="ApplicationInsightsLoggerProvider"/> with an <see cref="IHostBuilder"/>。
+        /// </summary>
+        /// <param name="builder">The host builder.</param>
+        /// <param name="instrumentationKey">The Application Insights instrumentation key.</param>
+        /// <param name="samplingSettings">Sampling settings</param>
+        /// <param name="snapshotCollectorConfiguration">Snapshot collector configuration.</param>
+        /// <returns>A <see cref="IHostBuilder"/> for chaining additional operations.</returns>
+        public static IHostBuilder AddApplicationInsights(this IHostBuilder builder, string instrumentationKey, SamplingPercentageEstimatorSettings samplingSettings, SnapshotCollectorConfiguration snapshotCollectorConfiguration)
+        {
+            return AddApplicationInsights(builder, instrumentationKey, (_, level) => level > LogLevel.Debug, samplingSettings, snapshotCollectorConfiguration);
+        }
+
+        /// <summary>
         /// Registers Application Insights and <see cref="ApplicationInsightsLoggerProvider"/> with an <see cref="IHostBuilder"/>.
         /// </summary>
         /// <param name="builder">The host builder.</param>
@@ -47,12 +61,14 @@ namespace Microsoft.Extensions.Logging
         /// and category should be logged. You can use <see cref="LogCategoryFilter.Filter(string, LogLevel)"/>
         /// or write a custom filter.</param>
         /// <param name="samplingSettings">The <see cref="SamplingPercentageEstimatorSettings"/> to use for configuring adaptive sampling. If null, sampling is disabled.</param>
+        /// <param name="snapshotCollectorConfiguration">The <see cref="SnapshotCollectorConfiguration" /> to use for configuring snapshot collector. If null, snapshot collector is disabled.</param>
         /// <returns>A <see cref="IHostBuilder"/> for chaining additional operations.</returns>
         public static IHostBuilder AddApplicationInsights(
             this IHostBuilder builder, 
             string instrumentationKey,
             Func<string, LogLevel, bool> filter,
-            SamplingPercentageEstimatorSettings samplingSettings)
+            SamplingPercentageEstimatorSettings samplingSettings,
+            SnapshotCollectorConfiguration snapshotCollectorConfiguration = null)
         {
             if (string.IsNullOrEmpty(instrumentationKey))
             {
@@ -96,6 +112,7 @@ namespace Microsoft.Extensions.Logging
                         instrumentationKey, 
                         filter, 
                         samplingSettings,
+                        snapshotCollectorConfiguration,
                         channel,
                         provider.GetServices<ITelemetryInitializer>(),
                         provider.GetServices<ITelemetryModule>());
@@ -111,6 +128,7 @@ namespace Microsoft.Extensions.Logging
                             instrumentationKey,
                             filter,
                             samplingSettings,
+                            snapshotCollectorConfiguration,
                             new ServerTelemetryChannel(),
                             provider.GetServices<ITelemetryInitializer>(),
                             provider.GetServices<ITelemetryModule>());
@@ -145,6 +163,7 @@ namespace Microsoft.Extensions.Logging
             string instrumentationKey,
             Func<string, LogLevel, bool> filter,
             SamplingPercentageEstimatorSettings samplingSettings,
+            SnapshotCollectorConfiguration snapshotCollectorConfiguration,
             ITelemetryChannel channel,
             IEnumerable<ITelemetryInitializer> telemetryInitializers,
             IEnumerable<ITelemetryModule> telemetryModules)
@@ -187,6 +206,11 @@ namespace Microsoft.Extensions.Logging
             {
                 configuration.TelemetryProcessorChainBuilder.Use((next) =>
                     new AdaptiveSamplingTelemetryProcessor(samplingSettings, null, next));
+            }
+
+            if (snapshotCollectorConfiguration != null)
+            {
+                configuration.TelemetryProcessorChainBuilder.UseSnapshotCollector(snapshotCollectorConfiguration);
             }
 
             configuration.TelemetryProcessorChainBuilder.Build();
