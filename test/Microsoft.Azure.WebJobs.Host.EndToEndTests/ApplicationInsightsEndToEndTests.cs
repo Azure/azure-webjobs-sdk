@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.Tracing;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -31,6 +32,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private const string _mockApplicationInsightsKey = "some_key";
         private const string _customScopeKey = "MyCustomScopeKey";
         private const string _customScopeValue = "MyCustomScopeValue";
+
+        private const string _dateFormat = "HH':'mm':'ss'.'fffK";
 
         [Fact]
         public async Task ApplicationInsights_SuccessfulFunction()
@@ -169,6 +172,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             };
             config.Aggregator.IsEnabled = false;
 
+            using (var qpListener = new QuickPulseEventListener())
             using (var listener = new ApplicationInsightsTestListener())
             {
                 listener.StartListening();
@@ -180,7 +184,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                     // QuickPulse only tracks when there's an active listener. Wait until some
                     // real data starts flowing before kicking off the test scenario
-                    await TestHelpers.Await(() => listener.IsReady, pollingInterval: 100);
+                    await TestHelpers.Await(() => listener.IsReady);
 
                     var methodInfo = GetType().GetMethod(nameof(TestApplicationInsightsWarning), BindingFlags.Public | BindingFlags.Static);
                     List<Task> invokeTasks = new List<Task>();
@@ -208,12 +212,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         // The calculated RPS may off, so give some wiggle room. The important thing is that it's generating 
                         // RequestTelemetry and not being filtered.
                         return sum >= min;
-                    }, timeout: 10000, pollingInterval: 100,
+                    }, timeout: 5000, pollingInterval: 100,
                     userMessageCallback: () =>
                     {
-                        var items = listener.GetQuickPulseItems();
-                        var s = items.Select(i => $"[{i.Timestamp.ToString("HH':'mm':'ss'.'fffK")}] {i.Metrics.Single(p => p.Name == @"\ApplicationInsights\Requests/Sec")}");
-                        return $"Expected sum to be greater than '{min}'. Actual: '{sum}'. DefaultLevel: '{defaultLevel}'.{Environment.NewLine}QuickPulse items ({items.Count()}): {string.Join(Environment.NewLine, s)}{Environment.NewLine}Logs: {testLoggerProvider.GetLogString()}";
+                        var items = listener.GetQuickPulseItems().OrderBy(i => i.Timestamp).Take(10);
+                        var s = items.Select(i => $"[{i.Timestamp.ToString(_dateFormat)}] {i.Metrics.Single(p => p.Name == @"\ApplicationInsights\Requests/Sec")}");
+                        return $"Expected sum to be greater than '{min}'. Actual: '{sum}'. DefaultLevel: '{defaultLevel}'.{Environment.NewLine}QuickPulse items ({items.Count()}): {string.Join(Environment.NewLine, s)}{Environment.NewLine}QuickPulse Logs:{qpListener.Log}{Environment.NewLine}Logs: {testLoggerProvider.GetLogString()}";
                     });
 
                     await host.StopAsync();
@@ -303,7 +307,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             private ConcurrentQueue<QuickPulsePayload> _quickPulseItems = new ConcurrentQueue<QuickPulsePayload>();
             private Thread _listenerThread;
 
-            public bool IsReady { get; private set; } = false;
+            private bool _pingReceived = false;
+            private int _dataReceived = 0;
+
+            // We want to make sure the QuickPulse module has sent us a few requests before continuing
+            public bool IsReady => _pingReceived && (_dataReceived >= 2);
 
             public IEnumerable<QuickPulsePayload> GetQuickPulseItems()
             {
@@ -375,8 +383,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         _quickPulseItems.Enqueue(i);
                     }
 
-                    // Now that we've gotten some real data, mark as ready
-                    IsReady = true;
+                    Interlocked.Increment(ref _dataReceived);
+                }
+                else if (request.Url.LocalPath == "/QuickPulseService.svc/ping")
+                {
+                    _pingReceived = true;
                 }
             }
 
@@ -518,7 +529,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             public override string ToString()
             {
                 string s = string.Join(Environment.NewLine, Metrics.Select(m => $"  {m}"));
-                return $"[{Timestamp.ToString("HH':'mm':'ss'.'fffK")}] Metrics:{Environment.NewLine}{s}";
+                return $"[{Timestamp.ToString(_dateFormat)}] Metrics:{Environment.NewLine}{s}";
             }
         }
 
@@ -533,6 +544,34 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             public override string ToString()
             {
                 return $"{Name}: {Value} ({Weight})";
+            }
+        }
+
+        // For debugging QuickPulse failures
+        private class QuickPulseEventListener : EventListener
+        {
+            private readonly StringBuilder _sb = new StringBuilder();
+
+            public string Log => _sb.ToString();
+
+            protected override void OnEventWritten(EventWrittenEventArgs eventData)
+            {
+                var trimmedData = eventData.Payload.ToList();
+                trimmedData.RemoveAt(trimmedData.Count - 1);
+
+                string log = string.Format(eventData.Message, trimmedData.ToArray());
+
+                _sb.AppendLine($"[{DateTime.UtcNow.ToString(_dateFormat)}] {log}");
+            }
+
+            protected override void OnEventSourceCreated(EventSource eventSource)
+            {
+                if (eventSource.Name == "Microsoft-ApplicationInsights-Extensibility-PerformanceCollector-QuickPulse")
+                {
+                    EnableEvents(eventSource, EventLevel.LogAlways);
+                }
+
+                base.OnEventSourceCreated(eventSource);
             }
         }
 
