@@ -23,9 +23,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             IConverterManager converterManager,
             EventHubConfiguration eventHubConfig)
         {
-            this._nameResolver = nameResolver;
-            this._converterManager = converterManager;
-            this._eventHubConfig = eventHubConfig;
+            _nameResolver = nameResolver;
+            _converterManager = converterManager;
+            _eventHubConfig = eventHubConfig;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]

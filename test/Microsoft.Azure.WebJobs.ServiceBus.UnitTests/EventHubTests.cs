@@ -9,6 +9,8 @@ using Microsoft.ServiceBus;
 using System.Linq;
 using System.Reflection;
 using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
+using System.Diagnostics;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
 {
@@ -504,7 +506,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
                             }
                         }
                     }
-                }
+                },
+                Trace = new TestTraceWriter(TraceLevel.Verbose)
             };
 
             (config as IExtensionConfigProvider).Initialize(context);

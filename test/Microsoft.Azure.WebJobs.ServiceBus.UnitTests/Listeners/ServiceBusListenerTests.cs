@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.ServiceBus.Listeners;
 using Microsoft.ServiceBus.Messaging;
 using Moq;
@@ -42,7 +43,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
                 .Returns(_mockMessageProcessor.Object);
 
             ServiceBusTriggerExecutor triggerExecutor = new ServiceBusTriggerExecutor(_mockExecutor.Object);
-            _listener = new ServiceBusListener(_messagingFactory, _entityPath, triggerExecutor, config);
+            var exceptionHandler = MessagingExceptionHandler.Subscribe(messageOptions, new TestTraceWriter(TraceLevel.Verbose));
+            _listener = new ServiceBusListener(_messagingFactory, _entityPath, triggerExecutor, config, exceptionHandler);
         }
 
         [Fact]

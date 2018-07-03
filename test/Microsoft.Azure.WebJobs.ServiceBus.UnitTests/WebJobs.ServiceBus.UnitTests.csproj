@@ -218,7 +218,7 @@
     <Compile Include="ServiceBusTriggerAttributeTests.cs" />
     <Compile Include="Triggers\ServiceBusSubscriptionListenerFactoryTests.cs" />
     <Compile Include="Triggers\ServiceBusTriggerBindingIntegrationTests.cs" />
-    <Compile Include="UtilityTests.cs" />
+    <Compile Include="MessagingExceptionHandlerTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\src\Common\PublicKey.snk">

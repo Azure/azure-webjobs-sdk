@@ -12,13 +12,13 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
 {
-    public class UtilityTests
+    public class MessagingExceptionHandlerTests
     {
         private readonly ILoggerFactory _loggerFactory;
         private readonly TestLoggerProvider _loggerProvider;
         private readonly TestTraceWriter _traceWriter;
 
-        public UtilityTests()
+        public MessagingExceptionHandlerTests()
         {
             _loggerFactory = new LoggerFactory();
             var filter = new LogCategoryFilter();
@@ -30,14 +30,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         }
 
         [Fact]
-        public void LogExceptionReceivedEvent_NonTransientEvent_LoggedAsError()
+        public void ServiceBus_LogExceptionReceivedEvent_NonTransientEvent_LoggedAsError()
         {
             var ex = new MessageLockLostException("Lost the lock");
             Assert.False(ex.IsTransient);
             ExceptionReceivedEventArgs e = new ExceptionReceivedEventArgs(ex, "Complete");
-            Utility.LogExceptionReceivedEvent(e, "Test", _traceWriter, _loggerFactory);
+            var options = new OnMessageOptions();
+            var handler = MessagingExceptionHandler.Subscribe(options, _traceWriter, _loggerFactory);
+            handler.LogExceptionReceivedEvent(e);
 
-            var expectedMessage = $"Test error (Action=Complete)";
+            var expectedMessage = $"MessageReceiver error (Action=Complete) : {e.Exception.ToString()}";
             var traceEvent = _traceWriter.GetTraces().Single();
             Assert.Equal(TraceLevel.Error, traceEvent.Level);
             Assert.Same(ex, traceEvent.Exception);
@@ -50,52 +52,58 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         }
 
         [Fact]
-        public void LogExceptionReceivedEvent_TransientEvent_LoggedAsVerbose()
+        public void ServiceBus_LogExceptionReceivedEvent_TransientEvent_LoggedAsVerbose()
         {
             var ex = new MessagingCommunicationException("Test Path");
             Assert.True(ex.IsTransient);
             ExceptionReceivedEventArgs e = new ExceptionReceivedEventArgs(ex, "Connect");
-            Utility.LogExceptionReceivedEvent(e, "Test", _traceWriter, _loggerFactory);
+            var options = new OnMessageOptions();
+            var handler = MessagingExceptionHandler.Subscribe(options, _traceWriter, _loggerFactory);
+            handler.LogExceptionReceivedEvent(e);
 
-            var expectedMessage = $"Test error (Action=Connect)";
+            var expectedMessage = $"MessageReceiver error (Action=Connect) : {ex.ToString()}";
             var traceEvent = _traceWriter.GetTraces().Single();
-            Assert.Equal(TraceLevel.Verbose, traceEvent.Level);
-            Assert.Equal($"{expectedMessage} : {ex.ToString()}", traceEvent.Message);
+            Assert.Equal(TraceLevel.Info, traceEvent.Level);
+            Assert.Equal(expectedMessage, traceEvent.Message);
             Assert.Same(ex, traceEvent.Exception);
 
             var logMessage = _loggerProvider.GetAllLogMessages().Single();
-            Assert.Equal(LogLevel.Debug, logMessage.Level);
+            Assert.Equal(LogLevel.Information, logMessage.Level);
             Assert.Same(ex, logMessage.Exception);
             Assert.Equal(expectedMessage, logMessage.FormattedMessage);
         }
 
         [Fact]
-        public void LogExceptionReceivedEvent_OperationCanceledException_LoggedAsVerbose()
+        public void ServiceBus_LogExceptionReceivedEvent_OperationCanceledException_LoggedAsVerbose()
         {
             var ex = new OperationCanceledException("Testing");
             ExceptionReceivedEventArgs e = new ExceptionReceivedEventArgs(ex, "Receive");
-            Utility.LogExceptionReceivedEvent(e, "Test", _traceWriter, _loggerFactory);
+            var options = new OnMessageOptions();
+            var handler = MessagingExceptionHandler.Subscribe(options, _traceWriter, _loggerFactory);
+            handler.LogExceptionReceivedEvent(e);
 
-            var expectedMessage = $"Test error (Action=Receive)";
+            var expectedMessage = $"MessageReceiver error (Action=Receive) : {ex.ToString()}";
             var traceEvent = _traceWriter.GetTraces().Single();
-            Assert.Equal(TraceLevel.Verbose, traceEvent.Level);
-            Assert.Equal($"{expectedMessage} : {ex.ToString()}", traceEvent.Message);
+            Assert.Equal(TraceLevel.Info, traceEvent.Level);
+            Assert.Equal(expectedMessage, traceEvent.Message);
             Assert.Same(ex, traceEvent.Exception);
 
             var logMessage = _loggerProvider.GetAllLogMessages().Single();
-            Assert.Equal(LogLevel.Debug, logMessage.Level);
+            Assert.Equal(LogLevel.Information, logMessage.Level);
             Assert.Same(ex, logMessage.Exception);
             Assert.Equal(expectedMessage, logMessage.FormattedMessage);
         }
 
         [Fact]
-        public void LogExceptionReceivedEvent_NonMessagingException_LoggedAsError()
+        public void ServiceBus_LogExceptionReceivedEvent_NonMessagingException_LoggedAsError()
         {
             var ex = new MissingMethodException("What method??");
             ExceptionReceivedEventArgs e = new ExceptionReceivedEventArgs(ex, "Unknown");
-            Utility.LogExceptionReceivedEvent(e, "Test", _traceWriter, _loggerFactory);
+            var options = new OnMessageOptions();
+            var handler = MessagingExceptionHandler.Subscribe(options, _traceWriter, _loggerFactory);
+            handler.LogExceptionReceivedEvent(e);
 
-            var expectedMessage = $"Test error (Action=Unknown)";
+            var expectedMessage = $"MessageReceiver error (Action=Unknown) : {e.Exception.ToString()}";
             var traceEvent = _traceWriter.GetTraces().Single();
             Assert.Equal(TraceLevel.Error, traceEvent.Level);
             Assert.Same(ex, traceEvent.Exception);
@@ -103,6 +111,27 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
 
             var logMessage = _loggerProvider.GetAllLogMessages().Single();
             Assert.Equal(LogLevel.Error, logMessage.Level);
+            Assert.Same(ex, logMessage.Exception);
+            Assert.Equal(expectedMessage, logMessage.FormattedMessage);
+        }
+
+        [Fact]
+        public void EventHub_LogExceptionReceivedEvent_PartitionExceptions_LoggedAsTrace()
+        {
+            var ex = new ReceiverDisconnectedException("New receiver with higher epoch of '30402' is created hence current receiver with epoch '30402' is getting disconnected.");
+            ExceptionReceivedEventArgs e = new ExceptionReceivedEventArgs(ex, "Receive");
+            var options = new EventProcessorOptions();
+            var handler = MessagingExceptionHandler.Subscribe(options, _traceWriter, _loggerFactory);
+            handler.LogExceptionReceivedEvent(e);
+
+            var expectedMessage = $"EventProcessorHost error (Action=Receive) : {ex.ToString()}";
+            var traceEvent = _traceWriter.GetTraces().Single();
+            Assert.Equal(TraceLevel.Info, traceEvent.Level);
+            Assert.Same(ex, traceEvent.Exception);
+            Assert.Equal(expectedMessage, traceEvent.Message);
+
+            var logMessage = _loggerProvider.GetAllLogMessages().Single();
+            Assert.Equal(LogLevel.Information, logMessage.Level);
             Assert.Same(ex, logMessage.Exception);
             Assert.Equal(expectedMessage, logMessage.FormattedMessage);
         }

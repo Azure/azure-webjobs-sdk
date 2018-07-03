@@ -60,7 +60,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
             var handler = eventDelegate.GetInvocationList().Single();
             handler.Method.Invoke(handler.Target, new object[] { null, args });
 
-            string expectedMessage = "EventProcessorHost error (Action=Testing)";
+            string expectedMessage = "EventProcessorHost error (Action=Testing) : System.Exception: Kaboom!";
             var trace = traceWriter.GetTraces().Last();
             Assert.Equal(expectedMessage, trace.Message);
             Assert.Same(ex, trace.Exception);

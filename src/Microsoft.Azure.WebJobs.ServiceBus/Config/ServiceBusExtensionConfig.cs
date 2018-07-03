@@ -51,23 +51,15 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
                 throw new ArgumentNullException("context");
             }
 
-            // Register an exception handler for background exceptions
-            // coming from MessageReceivers.
-            //
-            // The message options is a host level instance that is shared
-            // across all bindings, so we have to subscribe to it at the
-            // host level.
-            Config.MessageOptions.ExceptionReceived += (s, e) =>
-            {
-                Utility.LogExceptionReceivedEvent(e, "MessageReceiver", context.Trace, context.Config.LoggerFactory);
-            };
-
             // get the services we need to construct our binding providers
             INameResolver nameResolver = context.Config.GetService<INameResolver>();
             IExtensionRegistry extensions = context.Config.GetService<IExtensionRegistry>();
 
+            // register the background exception handler
+            var exceptionHandler = MessagingExceptionHandler.Subscribe(Config.MessageOptions, context.Trace, context.Config.LoggerFactory);
+
             // register our trigger binding provider
-            ServiceBusTriggerAttributeBindingProvider triggerBindingProvider = new ServiceBusTriggerAttributeBindingProvider(nameResolver, _serviceBusConfig);
+            ServiceBusTriggerAttributeBindingProvider triggerBindingProvider = new ServiceBusTriggerAttributeBindingProvider(nameResolver, _serviceBusConfig, exceptionHandler);
             extensions.RegisterExtension<ITriggerBindingProvider>(triggerBindingProvider);
 
             // register our binding provider

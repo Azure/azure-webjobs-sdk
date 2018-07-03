@@ -27,8 +27,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Triggers
             IQueueTriggerArgumentBindingProvider provider = new UserTypeArgumentBindingProvider();
             ParameterInfo pi = new StubParameterInfo("parameterName", typeof(UserDataType));
             var argumentBinding = provider.TryCreate(pi);
-            _queueBinding = new ServiceBusTriggerBinding("parameterName", typeof(UserDataType), argumentBinding, null, AccessRights.Manage, new ServiceBusConfiguration(), "queueName");
-            _topicBinding = new ServiceBusTriggerBinding("parameterName", typeof(UserDataType), argumentBinding, null, AccessRights.Manage, new ServiceBusConfiguration(), "subscriptionName", "topicName");
+            var config = new ServiceBusConfiguration();
+            var exceptionHandler = MessagingExceptionHandler.Subscribe(config.MessageOptions, new TestTraceWriter(TraceLevel.Verbose));
+            _queueBinding = new ServiceBusTriggerBinding("parameterName", typeof(UserDataType), argumentBinding, null, AccessRights.Manage, new ServiceBusConfiguration(), "queueName", exceptionHandler);
+            _topicBinding = new ServiceBusTriggerBinding("parameterName", typeof(UserDataType), argumentBinding, null, AccessRights.Manage, new ServiceBusConfiguration(), "subscriptionName", "topicName", exceptionHandler);
         }
 
         [Theory]

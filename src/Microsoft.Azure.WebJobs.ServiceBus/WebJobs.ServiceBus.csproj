@@ -194,6 +194,9 @@
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Converters\IObjectToTypeConverter.cs">
       <Link>Converters\IObjectToTypeConverter.cs</Link>
     </Compile>
+    <Compile Include="..\Microsoft.Azure.WebJobs.Host\Extensions\LogLevelExtensions.cs">
+      <Link>Extensions\LogLevelExtensions.cs</Link>
+    </Compile>
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Listeners\IListenerFactory.cs">
       <Link>Listeners\IListenerFactory.cs</Link>
     </Compile>
@@ -244,6 +247,7 @@
     <Compile Include="EventHubs\EventHubTriggerAttributeBindingProvider.cs" />
     <Compile Include="EventHubs\EventHubTriggerInputBindingStrategy.cs" />
     <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="MessagingExceptionHandler.cs" />
     <Compile Include="MessagingProvider.cs" />
     <Compile Include="Listeners\NamespaceManagerExtensions.cs" />
     <Compile Include="Listeners\ServiceBusListener.cs" />
@@ -278,7 +282,6 @@
     <Compile Include="Listeners\ServiceBusCausalityHelper.cs" />
     <Compile Include="Triggers\ServiceBusTriggerAttributeBindingProvider.cs" />
     <Compile Include="Triggers\ServiceBusTriggerBinding.cs" />
-    <Compile Include="Utility.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj">

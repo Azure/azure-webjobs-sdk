@@ -1,9 +1,11 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.ServiceBus.Triggers;
 using Microsoft.ServiceBus;
@@ -26,7 +28,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
             _mockMessagingProvider = new Mock<MessagingProvider>(MockBehavior.Strict, config);
 
             config.MessagingProvider = _mockMessagingProvider.Object;
-            _provider = new ServiceBusTriggerAttributeBindingProvider(mockResolver.Object, config);
+            var exceptionHandler = MessagingExceptionHandler.Subscribe(config.MessageOptions, new TestTraceWriter(TraceLevel.Verbose));
+            _provider = new ServiceBusTriggerAttributeBindingProvider(mockResolver.Object, config, exceptionHandler);
         }
 
         [Fact]

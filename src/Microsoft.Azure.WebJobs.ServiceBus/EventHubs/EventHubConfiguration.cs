@@ -444,6 +444,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 .AddConverter<byte[], EventData>(ConvertBytes2EventData)
                 .AddConverter<EventData, byte[]>(ConvertEventData2Bytes);
 
+            // register the background exception handler
+            MessagingExceptionHandler.Subscribe(_options, context.Trace, context.Config.LoggerFactory);
+
             // register our trigger binding provider
             INameResolver nameResolver = context.Config.NameResolver;
             IConverterManager cm = context.Config.GetService<IConverterManager>();
@@ -454,17 +457,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             // register our binding provider
             context.AddBindingRule<EventHubAttribute>()
                 .BindToCollector(BuildFromAttribute);
-
-            // Register an exception handler for background exceptions
-            // coming from the EventProcessorHost.
-            //
-            // EventProcessorOptions is a host level instance that is shared
-            // across all bindings, so we have to subscribe to it at the
-            // host level.
-            _options.ExceptionReceived += (s, e) =>
-            {
-                Utility.LogExceptionReceivedEvent(e, "EventProcessorHost", context.Trace, context.Config.LoggerFactory);
-            };
         }
 
         private IAsyncCollector<EventData> BuildFromAttribute(EventHubAttribute attribute)

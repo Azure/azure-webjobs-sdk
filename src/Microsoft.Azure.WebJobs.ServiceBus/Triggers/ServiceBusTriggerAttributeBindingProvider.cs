@@ -24,8 +24,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
 
         private readonly INameResolver _nameResolver;
         private readonly ServiceBusConfiguration _config;
+        private readonly MessagingExceptionHandler _exceptionHandler;
 
-        public ServiceBusTriggerAttributeBindingProvider(INameResolver nameResolver, ServiceBusConfiguration config)
+        public ServiceBusTriggerAttributeBindingProvider(INameResolver nameResolver, ServiceBusConfiguration config, MessagingExceptionHandler exceptionHandler)
         {
             if (nameResolver == null)
             {
@@ -38,6 +39,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
 
             _nameResolver = nameResolver;
             _config = config;
+            _exceptionHandler = exceptionHandler;
         }
 
         public Task<ITriggerBinding> TryCreateAsync(TriggerBindingProviderContext context)
@@ -87,11 +89,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             ITriggerBinding binding;
             if (queueName != null)
             {
-                binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, attribute.Access, _config, queueName);
+                binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, attribute.Access, _config, queueName, _exceptionHandler);
             }
             else
             {
-                binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, attribute.Access, _config, topicName, subscriptionName);
+                binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, attribute.Access, _config, topicName, subscriptionName, _exceptionHandler);
             }
 
             return Task.FromResult<ITriggerBinding>(binding);

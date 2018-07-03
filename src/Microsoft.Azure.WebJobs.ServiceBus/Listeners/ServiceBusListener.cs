@@ -18,12 +18,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         private readonly ServiceBusTriggerExecutor _triggerExecutor;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly MessageProcessor _messageProcessor;
+        private readonly MessagingExceptionHandler _exceptionHandler;
         private MessagingFactory _messagingFactory;
         private MessageReceiver _receiver;
         private bool _disposed;
         private bool _started;
 
-        public ServiceBusListener(MessagingFactory messagingFactory, string entityPath, ServiceBusTriggerExecutor triggerExecutor, ServiceBusConfiguration config)
+        public ServiceBusListener(MessagingFactory messagingFactory, string entityPath, ServiceBusTriggerExecutor triggerExecutor, ServiceBusConfiguration config, MessagingExceptionHandler exceptionHandler)
         {
             _messagingFactory = messagingFactory;
             _entityPath = entityPath;
@@ -31,6 +32,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             _cancellationTokenSource = new CancellationTokenSource();
             _messagingProvider = config.MessagingProvider;
             _messageProcessor = config.MessagingProvider.CreateMessageProcessor(entityPath);
+            _exceptionHandler = exceptionHandler;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -52,6 +54,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         public Task StopAsync(CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
+
+            // important to disable the exception handler BEFORE aborting
+            // the messaging factory, to avoid spurious error logs due
+            // to receive attempts on a closed connection, etc.
+            _exceptionHandler.Unsubscribe();
 
             if (!_started)
             {

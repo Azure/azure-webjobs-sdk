@@ -30,18 +30,19 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         private readonly string _entityPath;
         private readonly AccessRights _accessRights;
         private readonly ServiceBusConfiguration _config;
+        private readonly MessagingExceptionHandler _exceptionHandler;
 
         public ServiceBusTriggerBinding(string parameterName, Type parameterType, ITriggerDataArgumentBinding<BrokeredMessage> argumentBinding, ServiceBusAccount account,
-            AccessRights accessRights, ServiceBusConfiguration config, string queueName)
-            : this(parameterName, parameterType, argumentBinding, account, accessRights, config)
+            AccessRights accessRights, ServiceBusConfiguration config, string queueName, MessagingExceptionHandler exceptionHandler)
+            : this(parameterName, parameterType, argumentBinding, account, accessRights, config, exceptionHandler)
         {
             _queueName = queueName;
             _entityPath = queueName;
         }
 
         public ServiceBusTriggerBinding(string parameterName, Type parameterType, ITriggerDataArgumentBinding<BrokeredMessage> argumentBinding, ServiceBusAccount account,
-            AccessRights accessRights, ServiceBusConfiguration config, string topicName, string subscriptionName)
-            : this(parameterName, parameterType, argumentBinding, account, accessRights, config)
+            AccessRights accessRights, ServiceBusConfiguration config, string topicName, string subscriptionName, MessagingExceptionHandler exceptionHandler)
+            : this(parameterName, parameterType, argumentBinding, account, accessRights, config, exceptionHandler)
         {
             _topicName = topicName;
             _subscriptionName = subscriptionName;
@@ -49,7 +50,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         }
 
         private ServiceBusTriggerBinding(string parameterName, Type parameterType, ITriggerDataArgumentBinding<BrokeredMessage> argumentBinding, 
-            ServiceBusAccount account, AccessRights accessRights, ServiceBusConfiguration config) 
+            ServiceBusAccount account, AccessRights accessRights, ServiceBusConfiguration config, MessagingExceptionHandler exceptionHandler) 
         {
             _parameterName = parameterName;
             _converter = CreateConverter(parameterType);
@@ -59,6 +60,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             _namespaceName = ServiceBusClient.GetNamespaceName(account);
             _accessRights = accessRights;
             _config = config;
+            _exceptionHandler = exceptionHandler;
         }
 
         public Type TriggerValueType
@@ -118,11 +120,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             IListenerFactory factory = null;
             if (_queueName != null)
             {
-                factory = new ServiceBusQueueListenerFactory(_account, _queueName, context.Executor, _accessRights, _config);
+                factory = new ServiceBusQueueListenerFactory(_account, _queueName, context.Executor, _accessRights, _config, _exceptionHandler);
             }
             else
             {
-                factory = new ServiceBusSubscriptionListenerFactory(_account, _topicName, _subscriptionName, context.Executor, _accessRights, _config);
+                factory = new ServiceBusSubscriptionListenerFactory(_account, _topicName, _subscriptionName, context.Executor, _accessRights, _config, _exceptionHandler);
             }
             return factory.CreateAsync(context.CancellationToken);
         }
