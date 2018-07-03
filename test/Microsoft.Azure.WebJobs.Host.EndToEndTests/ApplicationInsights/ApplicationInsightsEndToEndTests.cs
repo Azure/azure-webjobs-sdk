@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.Tracing;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -18,7 +19,6 @@ using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
-using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,17 +40,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private const string _customScopeKey = "MyCustomScopeKey";
         private const string _customScopeValue = "MyCustomScopeValue";
 
+        private const string _dateFormat = "HH':'mm':'ss'.'fffK";
+
         private IHost ConfigureHost(LogCategoryFilter filter = null)
         {
             if (filter == null)
             {
-                filter = new LogCategoryFilter();
-                filter.DefaultLevel = LogLevel.Information;
+                filter = new LogCategoryFilter
+                {
+                    DefaultLevel = LogLevel.Information
+                };
             }
 
             var host = new HostBuilder()
                 .ConfigureDefaultTestHost<ApplicationInsightsEndToEndTests>()
-                .AddAzureStorage()
                 .ConfigureServices(services =>
                 {
                     services.Configure<FunctionResultAggregatorOptions>(o =>
@@ -63,9 +66,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 {
                     var quickPulse = services.Single(s => s.ImplementationType == typeof(QuickPulseTelemetryModule));
                     services.Remove(quickPulse);
-                    services.AddSingleton<ITelemetryModule>(new QuickPulseTelemetryModule()
+                    services.AddSingleton<ITelemetryModule, QuickPulseTelemetryModule>(s =>
                     {
-                        QuickPulseServiceEndpoint = _mockQuickPulseUrl
+                        return new QuickPulseTelemetryModule()
+                        {
+                            QuickPulseServiceEndpoint = "http://localhost:4005/QuickPulseService.svc/"
+                        };
                     });
 
                     var channel = services.Single(s => s.ServiceType == typeof(ITelemetryChannel));
@@ -86,7 +92,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 await host.StartAsync();
                 var methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
-                await host.GetJobHost().CallAsync(methodInfo, new {input = "function input"});
+                await host.GetJobHost().CallAsync(methodInfo, new { input = "function input" });
                 await host.StopAsync();
 
                 Assert.Equal(11, _channel.Telemetries.Count);
@@ -134,7 +140,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 await host.StartAsync();
                 var methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
-                await Assert.ThrowsAsync<FunctionInvocationException>(() => host.GetJobHost().CallAsync(methodInfo, new {input = "function input"}));
+                await Assert.ThrowsAsync<FunctionInvocationException>(() => host.GetJobHost().CallAsync(methodInfo, new { input = "function input" }));
                 await host.StopAsync();
 
                 Assert.Equal(14, _channel.Telemetries.Count);
@@ -186,9 +192,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [InlineData(LogLevel.Warning, 10)] // 2x warning trace per request
         public async Task QuickPulse_Works_EvenIfFiltered(LogLevel defaultLevel, int expectedTelemetryItems)
         {
-            LogCategoryFilter filter = new LogCategoryFilter();
-            filter.DefaultLevel = defaultLevel;
+            LogCategoryFilter filter = new LogCategoryFilter
+            {
+                DefaultLevel = defaultLevel
+            };
 
+            using (var qpListener = new QuickPulseEventListener())
             using (IHost host = ConfigureHost(filter))
             {
                 var listener = new ApplicationInsightsTestListener();
@@ -202,8 +211,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     {
                         await host.StartAsync();
 
-                        // let quick pulse start
-                        await Task.Delay(5000);
+                        // QuickPulse only tracks when there's an active listener. Wait until we 
+                        // get the ping before kicking off the test scenario
+                        await TestHelpers.Await(() => listener.IsReady);
 
                         var methodInfo = GetType().GetMethod(nameof(TestApplicationInsightsWarning),
                             BindingFlags.Public | BindingFlags.Static);
@@ -213,38 +223,39 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                             await jobHost.CallAsync(methodInfo);
                         }
 
-                        // let host run and proccess items asyncronously
-                        await Task.Delay(2000);
-                        await host.StopAsync();
+                        // If we stop the host too early, the QuickPulse items may not all be flushed. So wait until 
+                        // we see them before continuing. 
+                        double min = requests - 2;
+                        double? sum = null;
+
+                        await TestHelpers.Await(() =>
+                        {
+                            // Sum up all req/sec calls that we've received.
+                            var reqPerSec = listener.GetQuickPulseItems()
+                               .Select(p => p.Metrics.Where(q => q.Name == @"\ApplicationInsights\Requests/Sec").Single());
+                            sum = reqPerSec.Sum(p => p.Value);
+
+                            // All requests will go to QuickPulse.
+                            // The calculated RPS may off, so give some wiggle room. The important thing is that it's generating 
+                            // RequestTelemetry and not being filtered.
+                            return sum >= min;
+                        }, timeout: 5000,
+                        userMessageCallback: () =>
+                        {
+                            var items = listener.GetQuickPulseItems().OrderBy(i => i.Timestamp).Take(10);
+                            var s = items.Select(i => $"[{i.Timestamp.ToString(_dateFormat)}] {i.Metrics.Single(p => p.Name == @"\ApplicationInsights\Requests/Sec")}");
+                            return $"Expected sum to be greater than '{min}'. Actual: '{sum}'. DefaultLevel: '{defaultLevel}'.{Environment.NewLine}QuickPulse items ({items.Count()}): {string.Join(Environment.NewLine, s)}{Environment.NewLine}QuickPulse Logs:{qpListener.Log}{Environment.NewLine}Logs: {host.GetTestLoggerProvider().GetLogString()}";
+                        });
                     }
                 }
                 finally
                 {
+                    await host.StopAsync();
                     listener.StopListening();
+                    listener.Dispose();
                 }
 
-                // wait for everything to flush
-                await Task.Delay(2000);
-
                 Assert.Equal(expectedTelemetryItems, _channel.Telemetries.Count);
-
-                Assert.True(listener.QuickPulseItems.Count > 0);
-                // Sum up all req/sec calls that we've received.
-                var reqPerSec = listener
-                    .QuickPulseItems.Select(p =>
-                        p.Metrics.Single(q => q.Name == @"\ApplicationInsights\Requests/Sec")).ToList();
-
-                Assert.True(reqPerSec.Count > 0);
-                double sum = reqPerSec.Sum(p => p.Value);
-
-                // All requests will go to QuickPulse.
-                // The calculated RPS may off, so give some wiggle room. The important thing is that it's generating 
-                // RequestTelemetry and not being filtered.
-
-                double max = requests + 3;
-                double min = requests - 2;
-                Assert.True(sum > min && sum < max,
-                    $"Expected sum to be greater than {min} and less than {max}. DefaultLevel: {defaultLevel}. Actual: {sum}");
             }
         }
 
@@ -384,15 +395,26 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.Equal(_customScopeValue, telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}{_customScopeKey}"]);
         }
 
-        private class ApplicationInsightsTestListener
+        private class ApplicationInsightsTestListener : IDisposable
         {
-
             private readonly HttpListener _applicationInsightsListener = new HttpListener();
             private Task _listenTask;
 
-            public ConcurrentQueue<QuickPulsePayload> QuickPulseItems { get; } = new ConcurrentQueue<QuickPulsePayload>();
+            private readonly ConcurrentQueue<QuickPulsePayload> _quickPulseItems = new ConcurrentQueue<QuickPulsePayload>();
 
             private CancellationTokenSource _tcs;
+
+            private bool _pingReceived = false;
+            private int _dataReceived = 0;
+
+            // We want to make sure the QuickPulse module has sent us a few requests before continuing
+            public bool IsReady => _pingReceived && (_dataReceived >= 2);
+
+            public IEnumerable<QuickPulsePayload> GetQuickPulseItems()
+            {
+                return _quickPulseItems.ToList();
+            }
+
             public void StartListening()
             {
                 _tcs = new CancellationTokenSource();
@@ -418,7 +440,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             private Task Listen(CancellationToken cancellationToken)
             {
                 // process a request, then continue to wait for the next
-                return Task.Run(async () => 
+                return Task.Run(async () =>
                 {
                     while (_applicationInsightsListener.IsListening && !cancellationToken.IsCancellationRequested)
                     {
@@ -467,8 +489,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     QuickPulsePayload[] quickPulse = JsonConvert.DeserializeObject<QuickPulsePayload[]>(result);
                     foreach (var i in quickPulse)
                     {
-                        QuickPulseItems.Enqueue(i);
+                        _quickPulseItems.Enqueue(i);
                     }
+
+                    Interlocked.Increment(ref _dataReceived);
+                }
+                else if (request.Url.LocalPath == "/QuickPulseService.svc/ping")
+                {
+                    _pingReceived = true;
                 }
             }
 
@@ -512,6 +540,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         return Encoding.UTF8.GetString(outputStream.ToArray());
                     }
                 }
+            }
+
+            public void Dispose()
+            {
+                _applicationInsightsListener.Stop();
+                _applicationInsightsListener.Close();
+                (_applicationInsightsListener as IDisposable)?.Dispose();
             }
         }
 
@@ -569,8 +604,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         private static void ValidateException(
-            ExceptionTelemetry telemetry, 
-            string expectedCategory, 
+            ExceptionTelemetry telemetry,
+            string expectedCategory,
             string expectedOperationName,
             string expectedOperationId,
             string expectedParentId)
@@ -634,6 +669,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             public string StreamId { get; set; }
 
             public QuickPulseMetric[] Metrics { get; set; }
+
+            public override string ToString()
+            {
+                string s = string.Join(Environment.NewLine, Metrics.Select(m => $"  {m}"));
+                return $"[{Timestamp.ToString(_dateFormat)}] Metrics:{Environment.NewLine}{s}";
+            }
         }
 
         private class QuickPulseMetric
@@ -643,6 +684,40 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             public double Value { get; set; }
 
             public int Weight { get; set; }
+            public override string ToString()
+            {
+                return $"{Name}: {Value} ({Weight})";
+            }
+        }
+
+        // For debugging QuickPulse failures
+        private class QuickPulseEventListener : EventListener
+        {
+            private readonly StringBuilder _sb = new StringBuilder();
+
+            public string Log => _sb.ToString();
+
+            protected override void OnEventWritten(EventWrittenEventArgs eventData)
+            {
+                var trimmedData = eventData.Payload.ToList();
+                trimmedData.RemoveAt(trimmedData.Count - 1);
+
+                string log = string.Format(eventData.Message, trimmedData.ToArray());
+
+                _sb.AppendLine($"[{DateTime.UtcNow.ToString(_dateFormat)}] {log}");
+
+                base.OnEventWritten(eventData);
+            }
+
+            protected override void OnEventSourceCreated(EventSource eventSource)
+            {
+                if (eventSource.Name == "Microsoft-ApplicationInsights-Extensibility-PerformanceCollector-QuickPulse")
+                {
+                    EnableEvents(eventSource, EventLevel.LogAlways);
+                }
+
+                base.OnEventSourceCreated(eventSource);
+            }
         }
 
         public void Dispose()

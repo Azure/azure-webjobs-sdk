@@ -15,12 +15,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
         public ApplicationInsightsLoggerProvider(TelemetryClient client)
         {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            _client = client;
+            _client = client ?? throw new ArgumentNullException(nameof(client));
         }
 
         public ILogger CreateLogger(string categoryName) => new ApplicationInsightsLogger(_client, categoryName);

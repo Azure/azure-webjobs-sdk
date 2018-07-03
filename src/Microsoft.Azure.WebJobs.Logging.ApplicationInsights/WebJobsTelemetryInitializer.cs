@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         private const string ComputerNameKey = "COMPUTERNAME";
         private const string WebSiteInstanceIdKey = "WEBSITE_INSTANCE_ID";
 
-        private static string _roleInstanceName = GetRoleInstanceName();
+        private static readonly string _roleInstanceName = GetRoleInstanceName();
 
         public void Initialize(ITelemetry telemetry)
         {

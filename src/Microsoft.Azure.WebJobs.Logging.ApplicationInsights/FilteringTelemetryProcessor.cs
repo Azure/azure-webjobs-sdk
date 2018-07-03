@@ -12,7 +12,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
     internal class FilteringTelemetryProcessor : ITelemetryProcessor
     {
-        private Func<string, LogLevel, bool> _filter;
+        private readonly Func<string, LogLevel, bool> _filter;
         private ITelemetryProcessor _next;
 
         public FilteringTelemetryProcessor(Func<string, LogLevel, bool> filter, ITelemetryProcessor next)
@@ -33,12 +33,9 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         {
             bool enabled = true;
 
-            ISupportProperties telemetry = item as ISupportProperties;
-
-            if (telemetry != null && _filter != null)
+            if (item is ISupportProperties telemetry && _filter != null)
             {
-                string categoryName = null;
-                if (!telemetry.Properties.TryGetValue(LogConstants.CategoryNameKey, out categoryName))
+                if (!telemetry.Properties.TryGetValue(LogConstants.CategoryNameKey, out string categoryName))
                 {
                     // If no category is specified, it will be filtered by the default filter
                     categoryName = string.Empty;
@@ -55,10 +52,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 }
 
                 // Extract the log level and apply the filter
-                string logLevelString = null;
-                LogLevel logLevel;
-                if (telemetry.Properties.TryGetValue(LogConstants.LogLevelKey, out logLevelString) &&
-                    Enum.TryParse(logLevelString, out logLevel))
+                if (telemetry.Properties.TryGetValue(LogConstants.LogLevelKey, out string logLevelString) &&
+                    Enum.TryParse(logLevelString, out LogLevel logLevel))
                 {
                     enabled = _filter(categoryName, logLevel);
                 }
