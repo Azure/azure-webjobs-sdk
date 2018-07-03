@@ -113,22 +113,22 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await host.StopAsync();
             }
 
-            Assert.Equal(9, _channel.Telemetries.Count);
+            Assert.Equal(10, _channel.Telemetries.Count);
 
             // Validate the traces. Order by message string as the requests may come in
             // slightly out-of-order or on different threads
             TraceTelemetry[] telemetries = _channel.Telemetries
-             .OfType<TraceTelemetry>()
-             .OrderBy(t => t.Message)
+                .OfType<TraceTelemetry>()
+                .OrderBy(t => t.Message)
+                .ToArray();
 
-             .ToArray();
-
-            ValidateTrace(telemetries[0], "Found the following functions:\r\n", LogCategories.Startup);
-            ValidateTrace(telemetries[1], "Job host started", LogCategories.Startup);
-            ValidateTrace(telemetries[2], "Job host stopped", LogCategories.Startup);
-            ValidateTrace(telemetries[3], "Logger", LogCategories.Function, testName, hasCustomScope: true);
-            ValidateTrace(telemetries[4], "ServicePointManager.DefaultConnectionLimit", LogCategories.Startup, expectedLevel: SeverityLevel.Warning);
-            ValidateTrace(telemetries[5], "Trace", LogCategories.Function, testName);
+            ValidateTrace(telemetries[0], "Error", LogCategories.Function, testName, expectedLevel: SeverityLevel.Error);
+            ValidateTrace(telemetries[1], "Found the following functions:\r\n", LogCategories.Startup);
+            ValidateTrace(telemetries[2], "Job host started", LogCategories.Startup);
+            ValidateTrace(telemetries[3], "Job host stopped", LogCategories.Startup);
+            ValidateTrace(telemetries[4], "Logger", LogCategories.Function, testName, hasCustomScope: true);
+            ValidateTrace(telemetries[5], "ServicePointManager.DefaultConnectionLimit", LogCategories.Startup, expectedLevel: SeverityLevel.Warning);
+            ValidateTrace(telemetries[6], "Trace", LogCategories.Function, testName);
 
             // Validate the exception
             ExceptionTelemetry[] exceptions = _channel.Telemetries

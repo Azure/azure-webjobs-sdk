@@ -360,24 +360,29 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 }
             }
 
-            var telemetry = _channel.Telemetries.Single() as ExceptionTelemetry;
+            Assert.Equal(2, _channel.Telemetries.Count());
+            var exceptionTelemetry = _channel.Telemetries.OfType<ExceptionTelemetry>().Single();
+            var traceTelemetry = _channel.Telemetries.OfType<TraceTelemetry>().Single();
 
-            Assert.Equal(SeverityLevel.Error, telemetry.SeverityLevel);
+            Assert.Equal(SeverityLevel.Error, exceptionTelemetry.SeverityLevel);
 
-            Assert.Equal(LogCategories.Function, telemetry.Properties[LogConstants.CategoryNameKey]);
-            Assert.Equal(LogLevel.Error.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
-            Assert.Equal("Error with customer: {customer}.", telemetry.Properties[LogConstants.CustomPropertyPrefix + LogConstants.OriginalFormatKey]);
-            Assert.Equal("Error with customer: John Doe.", telemetry.Properties[LogConstants.FormattedMessageKey]);
-            Assert.Equal("John Doe", telemetry.Properties[LogConstants.CustomPropertyPrefix + "customer"]);
-            Assert.Same(ex, telemetry.Exception);
-            Assert.Equal(scopeGuid.ToString(), telemetry.Context.Operation.Id);
-            Assert.Equal(_functionShortName, telemetry.Context.Operation.Name);
+            Assert.Equal(LogCategories.Function, exceptionTelemetry.Properties[LogConstants.CategoryNameKey]);
+            Assert.Equal(LogLevel.Error.ToString(), exceptionTelemetry.Properties[LogConstants.LogLevelKey]);
+            Assert.Equal("Error with customer: {customer}.", exceptionTelemetry.Properties[LogConstants.CustomPropertyPrefix + LogConstants.OriginalFormatKey]);
+            Assert.Equal("Error with customer: John Doe.", exceptionTelemetry.Properties[LogConstants.FormattedMessageKey]);
+            Assert.Equal("John Doe", exceptionTelemetry.Properties[LogConstants.CustomPropertyPrefix + "customer"]);
+            Assert.Same(ex, exceptionTelemetry.Exception);
+            Assert.Equal(scopeGuid.ToString(), exceptionTelemetry.Context.Operation.Id);
+            Assert.Equal(_functionShortName, exceptionTelemetry.Context.Operation.Name);
 
-            string internalMessage = GetInternalExceptionMessages(telemetry).Single();
+            string internalMessage = GetInternalExceptionMessages(exceptionTelemetry).Single();
             Assert.Equal("Failure", internalMessage);
 
             // We should not have the request logged.
-            Assert.False(telemetry.Properties.TryGetValue(LogConstants.CustomPropertyPrefix + ApplicationInsightsScopeKeys.HttpRequest, out string request));
+            Assert.False(exceptionTelemetry.Properties.TryGetValue(LogConstants.CustomPropertyPrefix + ApplicationInsightsScopeKeys.HttpRequest, out string request));
+
+            Assert.Equal("Error with customer: John Doe.", traceTelemetry.Message);
+            Assert.Equal(SeverityLevel.Error, traceTelemetry.SeverityLevel);
         }
 
         [Fact]
@@ -561,18 +566,23 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             logger.LogError(0, outerEx, "Log message");
 
-            var telemetry = _channel.Telemetries.Single() as ExceptionTelemetry;
+            Assert.Equal(2, _channel.Telemetries.Count());
+            var exceptionTelemetry = _channel.Telemetries.OfType<ExceptionTelemetry>().Single();
+            var traceTelemetry = _channel.Telemetries.OfType<TraceTelemetry>().Single();
 
-            string[] internalMessages = GetInternalExceptionMessages(telemetry).ToArray();
+            string[] internalMessages = GetInternalExceptionMessages(exceptionTelemetry).ToArray();
 
             Assert.Equal(2, internalMessages.Length);
             Assert.Equal("Outer", internalMessages[0]);
             Assert.Equal("Inner", internalMessages[1]);
 
-            Assert.Equal(outerEx, telemetry.Exception);
-            Assert.Equal(LogCategories.Function, telemetry.Properties[LogConstants.CategoryNameKey]);
-            Assert.Equal(LogLevel.Error.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
-            Assert.Equal("Log message", telemetry.Properties[LogConstants.FormattedMessageKey]);
+            Assert.Equal(outerEx, exceptionTelemetry.Exception);
+            Assert.Equal(LogCategories.Function, exceptionTelemetry.Properties[LogConstants.CategoryNameKey]);
+            Assert.Equal(LogLevel.Error.ToString(), exceptionTelemetry.Properties[LogConstants.LogLevelKey]);
+            Assert.Equal("Log message", exceptionTelemetry.Properties[LogConstants.FormattedMessageKey]);
+
+            Assert.Equal(SeverityLevel.Error, traceTelemetry.SeverityLevel);
+            Assert.Equal("Log message", traceTelemetry.Message);
         }
 
         private static IEnumerable<string> GetInternalExceptionMessages(ExceptionTelemetry telemetry)
