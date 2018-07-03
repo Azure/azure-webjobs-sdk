@@ -187,10 +187,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [Theory]
-        [InlineData(LogLevel.None, 0)]
-        [InlineData(LogLevel.Information, 30)] // 3 start, 2 stop, 4x traces per request, 1x requests
-        [InlineData(LogLevel.Warning, 10)] // 2x warning trace per request
-        public async Task QuickPulse_Works_EvenIfFiltered(LogLevel defaultLevel, int expectedTelemetryItems)
+        [InlineData(LogLevel.None, 0, 0)]
+        [InlineData(LogLevel.Information, 5, 5)] // 3 start, 2 stop, 4x traces per request, 1x requests
+        [InlineData(LogLevel.Warning, 2, 0)] // 2x warning trace per request
+        public async Task QuickPulse_Works_EvenIfFiltered(LogLevel defaultLevel, int tracesPerRequest, int additionalTraces)
         {
             LogCategoryFilter filter = new LogCategoryFilter
             {
@@ -201,7 +201,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             using (IHost host = ConfigureHost(filter))
             {
                 var listener = new ApplicationInsightsTestListener();
-                int requests = 5;
+                int functionsCalled = 0;
+                bool keepRunning = true;
+                Task functionTask = null;
 
                 try
                 {
@@ -211,23 +213,22 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     {
                         await host.StartAsync();
 
-                        // QuickPulse only tracks when there's an active listener. Wait until we 
-                        // get the ping before kicking off the test scenario
-                        await TestHelpers.Await(() => listener.IsReady);
-
                         var methodInfo = GetType().GetMethod(nameof(TestApplicationInsightsWarning),
                             BindingFlags.Public | BindingFlags.Static);
 
-                        for (int i = 0; i < requests; i++)
+                        // Start a task to make calls in a loop.
+                        functionTask = Task.Run(async () =>
                         {
-                            await jobHost.CallAsync(methodInfo);
-                        }
+                            while (keepRunning)
+                            {
+                                await Task.Delay(100);
+                                await jobHost.CallAsync(methodInfo);
+                                functionsCalled++;
+                            }
+                        });
 
-                        // If we stop the host too early, the QuickPulse items may not all be flushed. So wait until 
-                        // we see them before continuing. 
-                        double min = requests - 2;
+                        // Wait until we're seeing telemetry come through the QuickPulse service
                         double? sum = null;
-
                         await TestHelpers.Await(() =>
                         {
                             // Sum up all req/sec calls that we've received.
@@ -236,25 +237,27 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                             sum = reqPerSec.Sum(p => p.Value);
 
                             // All requests will go to QuickPulse.
-                            // The calculated RPS may off, so give some wiggle room. The important thing is that it's generating 
-                            // RequestTelemetry and not being filtered.
-                            return sum >= min;
+                            // Just make sure we have some coming through. Choosing 5 as an arbitrary number.
+                            return sum >= 5;
                         }, timeout: 5000,
                         userMessageCallback: () =>
                         {
                             var items = listener.GetQuickPulseItems().OrderBy(i => i.Timestamp).Take(10);
                             var s = items.Select(i => $"[{i.Timestamp.ToString(_dateFormat)}] {i.Metrics.Single(p => p.Name == @"\ApplicationInsights\Requests/Sec")}");
-                            return $"Expected sum to be greater than '{min}'. Actual: '{sum}'. DefaultLevel: '{defaultLevel}'.{Environment.NewLine}QuickPulse items ({items.Count()}): {string.Join(Environment.NewLine, s)}{Environment.NewLine}QuickPulse Logs:{qpListener.Log}{Environment.NewLine}Logs: {host.GetTestLoggerProvider().GetLogString()}";
+                            return $"Actual QuickPulse sum: '{sum}'. DefaultLevel: '{defaultLevel}'.{Environment.NewLine}QuickPulse items ({items.Count()}): {string.Join(Environment.NewLine, s)}{Environment.NewLine}QuickPulse Logs:{qpListener.GetLog(20)}{Environment.NewLine}Logs: {host.GetTestLoggerProvider().GetLogString()}";
                         });
                     }
                 }
                 finally
                 {
+                    keepRunning = false;
+                    await functionTask;
                     await host.StopAsync();
                     listener.StopListening();
                     listener.Dispose();
                 }
 
+                int expectedTelemetryItems = additionalTraces + (functionsCalled * tracesPerRequest);
                 Assert.Equal(expectedTelemetryItems, _channel.Telemetries.Count);
             }
         }
@@ -404,12 +407,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             private CancellationTokenSource _tcs;
 
-            private bool _pingReceived = false;
-            private int _dataReceived = 0;
-
-            // We want to make sure the QuickPulse module has sent us a few requests before continuing
-            public bool IsReady => _pingReceived && (_dataReceived >= 2);
-
             public IEnumerable<QuickPulsePayload> GetQuickPulseItems()
             {
                 return _quickPulseItems.ToList();
@@ -491,12 +488,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     {
                         _quickPulseItems.Enqueue(i);
                     }
-
-                    Interlocked.Increment(ref _dataReceived);
-                }
-                else if (request.Url.LocalPath == "/QuickPulseService.svc/ping")
-                {
-                    _pingReceived = true;
                 }
             }
 
@@ -693,9 +684,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         // For debugging QuickPulse failures
         private class QuickPulseEventListener : EventListener
         {
-            private readonly StringBuilder _sb = new StringBuilder();
+            private readonly IList<string> _logs = new List<string>();
 
-            public string Log => _sb.ToString();
+            public string GetLog(int lines)
+            {
+                return string.Join(Environment.NewLine, _logs.Take(lines));
+            }
 
             protected override void OnEventWritten(EventWrittenEventArgs eventData)
             {
@@ -704,7 +698,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 string log = string.Format(eventData.Message, trimmedData.ToArray());
 
-                _sb.AppendLine($"[{DateTime.UtcNow.ToString(_dateFormat)}] {log}");
+                _logs.Add($"[{DateTime.UtcNow.ToString(_dateFormat)}] {log}");
 
                 base.OnEventWritten(eventData);
             }
