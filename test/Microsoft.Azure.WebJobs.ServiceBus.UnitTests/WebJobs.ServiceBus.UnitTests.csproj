@@ -7,19 +7,12 @@
     <RootNamespace>Microsoft.Azure.WebJobs.ServiceBus.UnitTests</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="EventHubAsyncCollectorTests.cs" />
     <Compile Remove="EventHubTests.cs" />
     <Compile Remove="Listeners\EventHubListenerTests.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <AdditionalFiles Include="..\..\stylecop.json" Link="stylecop.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="EventHubAsyncCollectorTests.cs" />
-    <Content Include="EventHubTests.cs" />
-    <Content Include="Listeners\EventHubListenerTests.cs" />
   </ItemGroup>
 
   <ItemGroup>

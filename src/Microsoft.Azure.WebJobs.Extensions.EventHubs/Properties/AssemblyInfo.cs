@@ -4,3 +4,4 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("WebJobs.EventHubs.UnitTests")]
+[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]

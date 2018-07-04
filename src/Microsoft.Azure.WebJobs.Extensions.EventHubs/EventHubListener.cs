@@ -14,22 +14,21 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.EventHubs
 {
-    // Created from the EventHubTrigger attribute to listen on the EventHub. 
     internal sealed class EventHubListener : IListener, IEventProcessorFactory
     {
         private readonly ITriggeredFunctionExecutor _executor;
-        private readonly EventProcessorHost _eventListener;
+        private readonly EventProcessorHost _eventProcessorHost;
         private readonly bool _singleDispatch;
         private readonly EventProcessorOptions _options;
         private readonly EventHubConfiguration _config;
         private readonly ILogger _logger;
         private bool _started;
 
-        public EventHubListener(ITriggeredFunctionExecutor executor, EventProcessorHost eventListener, bool single, EventHubConfiguration config, ILogger logger)
+        public EventHubListener(ITriggeredFunctionExecutor executor, EventProcessorHost eventProcessorHost, bool singleDispatch, EventHubConfiguration config, ILogger logger)
         {
             _executor = executor;
-            _eventListener = eventListener;
-            _singleDispatch = single;
+            _eventProcessorHost = eventProcessorHost;
+            _singleDispatch = singleDispatch;
             _options = config.GetOptions();
             _config = config;
             _logger = logger;
@@ -40,15 +39,13 @@ namespace Microsoft.Azure.WebJobs.EventHubs
             StopAsync(CancellationToken.None).Wait();
         }
 
-        void IDisposable.Dispose() // via IListener
+        void IDisposable.Dispose()
         {
-            // nothing to do. 
         }
 
-        // This will get called once when starting the JobHost. 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            await _eventListener.RegisterEventProcessorFactoryAsync(this, _options);
+            await _eventProcessorHost.RegisterEventProcessorFactoryAsync(this, _options);
             _started = true;
         }
 
@@ -56,150 +53,171 @@ namespace Microsoft.Azure.WebJobs.EventHubs
         {
             if (_started)
             {
-                await _eventListener.UnregisterEventProcessorAsync();
+                await _eventProcessorHost.UnregisterEventProcessorAsync();
             }
             _started = false;
         }
 
-        // This will get called per-partition. 
         IEventProcessor IEventProcessorFactory.CreateEventProcessor(PartitionContext context)
         {
-            return new Listener(this, _logger);
+            return new EventProcessor(_config, _executor, _logger, _singleDispatch);
         }
 
-        internal static Func<Func<Task>, Task> CreateCheckpointStrategy(int batchCheckpointFrequency)
+        /// <summary>
+        /// Wrapper for un-mockable checkpoint APIs to aid in unit testing
+        /// </summary>
+        internal interface ICheckpointer
         {
-            if (batchCheckpointFrequency <= 0)
-            {
-                throw new InvalidOperationException("Batch checkpoint frequency must be larger than 0.");
-            }
-            else if (batchCheckpointFrequency == 1)
-            {
-                return (checkpoint) => checkpoint();
-            }
-            else
-            {
-                int batchCounter = 0;
-                return async (checkpoint) =>
-                {
-                    batchCounter++;
-                    if (batchCounter >= batchCheckpointFrequency)
-                    {
-                        batchCounter = 0;
-                        await checkpoint();
-                    }
-                };
-            }
+            Task CheckpointAsync(PartitionContext context);
         }
 
         // We get a new instance each time Start() is called. 
         // We'll get a listener per partition - so they can potentialy run in parallel even on a single machine.
-        private class Listener : IEventProcessor
+        internal class EventProcessor : IEventProcessor, IDisposable, ICheckpointer
         {
-            private readonly EventHubListener _parent;
+            private readonly ITriggeredFunctionExecutor _executor;
+            private readonly bool _singleDispatch;
             private readonly ILogger _logger;
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private readonly Func<PartitionContext, Task> _checkpoint;
+            private readonly ICheckpointer _checkpointer;
+            private readonly int _batchCheckpointFrequency;
+            private int _batchCounter = 0;
+            private bool _disposed = false;
 
-
-            public Listener(EventHubListener parent, ILogger logger)
+            public EventProcessor(EventHubConfiguration config, ITriggeredFunctionExecutor executor, ILogger logger, bool singleDispatch, ICheckpointer checkpointer = null)
             {
-                _parent = parent;
-                var checkpointStrategy = CreateCheckpointStrategy(parent._config.BatchCheckpointFrequency);
-                _checkpoint = (context) => checkpointStrategy(context.CheckpointAsync);
+                _checkpointer = checkpointer ?? this;
+                _executor = executor;
+                _singleDispatch = singleDispatch;
+                _batchCheckpointFrequency = config.BatchCheckpointFrequency;
                 _logger = logger;
             }
 
-            public async Task CloseAsync(PartitionContext context, CloseReason reason)
+            public Task CloseAsync(PartitionContext context, CloseReason reason)
             {
-                _cts.Cancel(); // Signal interuption to ProcessEventsAsync()
+                // signal cancellation for any in progress executions 
+                _cts.Cancel();
 
-                // Finish listener
-                if (reason == CloseReason.Shutdown)
-                {
-                    await context.CheckpointAsync();
-                }
+                return Task.CompletedTask;
             }
 
             public Task OpenAsync(PartitionContext context)
             {
-                return Task.FromResult(0);
+                return Task.CompletedTask;
             }
 
             public Task ProcessErrorAsync(PartitionContext context, Exception error)
             {
-                string errorMessage = $"Error processing EventHub message from Partition Id:{context.PartitionId}, Owner:{context.Owner}, EventHubPath:{context.EventHubPath}";
+                string errorMessage = $"Error processing event from Partition Id:{context.PartitionId}, Owner:{context.Owner}, EventHubPath:{context.EventHubPath}";
                 _logger.LogError(error, errorMessage);
+
                 return Task.CompletedTask;
             }
 
             public async Task ProcessEventsAsync(PartitionContext context, IEnumerable<EventData> messages)
             {
-                EventHubTriggerInput value = new EventHubTriggerInput
+                var triggerInput = new EventHubTriggerInput
                 {
                     Events = messages.ToArray(),
                     PartitionContext = context
                 };
 
-                // Single dispatch 
-                if (_parent._singleDispatch)
+                if (_singleDispatch)
                 {
-                    int len = value.Events.Length;
-
-                    List<Task> dispatches = new List<Task>();
-                    for (int i = 0; i < len; i++)
+                    // Single dispatch
+                    int eventCount = triggerInput.Events.Length;
+                    List<Task> invocationTasks = new List<Task>();
+                    for (int i = 0; i < eventCount; i++)
                     {
                         if (_cts.IsCancellationRequested)
                         {
-                            // If we stopped the listener, then we may lose the lease and be unable to checkpoint. 
-                            // So skip running the rest of the batch. The new listener will pick it up. 
-                            continue;
+                            break;
                         }
-                        else
+
+                        var input = new TriggeredFunctionData
                         {
-                            TriggeredFunctionData input = new TriggeredFunctionData
-                            {
-                                ParentId = null,
-                                TriggerValue = value.GetSingleEventTriggerInput(i)
-                            };
-                            Task task = _parent._executor.TryExecuteAsync(input, _cts.Token);
-                            dispatches.Add(task);
-                        }
+                            TriggerValue = triggerInput.GetSingleEventTriggerInput(i)
+                        };
+                        Task task = _executor.TryExecuteAsync(input, _cts.Token);
+                        invocationTasks.Add(task);
                     }
 
                     // Drain the whole batch before taking more work
-                    if (dispatches.Count > 0)
+                    if (invocationTasks.Count > 0)
                     {
-                        await Task.WhenAll(dispatches);
+                        await Task.WhenAll(invocationTasks);
                     }
                 }
                 else
                 {
                     // Batch dispatch
-                    TriggeredFunctionData input = new TriggeredFunctionData
+                    var input = new TriggeredFunctionData
                     {
-                        ParentId = null,
-                        TriggerValue = value
+                        TriggerValue = triggerInput
                     };
 
-                    FunctionResult result = await _parent._executor.TryExecuteAsync(input, _cts.Token);
+                    await _executor.TryExecuteAsync(input, _cts.Token);
                 }
-
+                // Dispose all messages to help with memory pressure. If this is missed, the finalizer thread will still get them.
                 bool hasEvents = false;
-
-                // Dispose all messages to help with memory pressure. If this is missed, the finalizer thread will still get them. 
                 foreach (var message in messages)
                 {
                     hasEvents = true;
                     message.Dispose();
                 }
 
-                // Don't checkpoint if no events. This can reset the sequence counter to 0. 
+                // Checkpoint if we procesed any events.
+                // Don't checkpoint if no events. This can reset the sequence counter to 0.
+                // Note: we intentionally checkpoint the batch regardless of function 
+                // success/failure. EventHub doesn't support any sort "poison event" model,
+                // so that is the responsibility of the user's function currently. E.g.
+                // the function should have try/catch handling around all event processing
+                // code, and capture/log/persist failed events, since they won't be retried.
                 if (hasEvents)
                 {
-                    await _checkpoint(context);
+                    await CheckpointAsync(context);
                 }
             }
-        } // end class Listener 
+
+            private async Task CheckpointAsync(PartitionContext context)
+            {
+                if (_batchCheckpointFrequency == 1)
+                {
+                    await _checkpointer.CheckpointAsync(context);
+                }
+                else
+                {
+                    // only checkpoint every N batches
+                    if (++_batchCounter >= _batchCheckpointFrequency)
+                    {
+                        _batchCounter = 0;
+                        await _checkpointer.CheckpointAsync(context);
+                    }
+                }
+            }
+
+            protected virtual void Dispose(bool disposing)
+            {
+                if (!_disposed)
+                {
+                    if (disposing)
+                    {
+                        _cts.Dispose();
+                    }
+
+                    _disposed = true;
+                }
+            }
+
+            public void Dispose()
+            {
+                Dispose(true);
+            }
+
+            async Task ICheckpointer.CheckpointAsync(PartitionContext context)
+            {
+                await context.CheckpointAsync();
+            }
+        } 
     }
 }

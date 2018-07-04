@@ -31,7 +31,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private TestFixture Fixture { get; }
 
         [Fact]
-        public async Task EventHubTriggerTest_SingleDispatch()
+        public async Task EventHub_SingleDispatch()
         {
             var method = typeof(EventHubTestJobs).GetMethod("SendEvent_TestHub", BindingFlags.Static | BindingFlags.Public);
             var id = Guid.NewGuid().ToString();
@@ -47,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [Fact]
-        public async Task EventHubTriggerTest_MultipleDispatch()
+        public async Task EventHub_MultipleDispatch()
         {
             // send some events BEFORE starting the host, to ensure
             // the events are received in batch

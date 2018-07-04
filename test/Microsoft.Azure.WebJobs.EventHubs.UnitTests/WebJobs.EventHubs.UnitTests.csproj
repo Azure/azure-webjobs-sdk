@@ -22,12 +22,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\Microsoft.Azure.WebJobs.ServiceBus.UnitTests\EventHubAsyncCollectorTests.cs" Link="EventHubAsyncCollectorTests.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.ServiceBus.UnitTests\EventHubTests.cs" Link="EventHubTests.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.ServiceBus.UnitTests\Listeners\EventHubListenerTests.cs" Link="EventHubListenerTests.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\src\Microsoft.Azure.WebJobs.Extensions.EventHubs\WebJobs.EventHubs.csproj" />
     <ProjectReference Include="..\Microsoft.Azure.WebJobs.Host.TestCommon\WebJobs.Host.TestCommon.csproj" />
   </ItemGroup>

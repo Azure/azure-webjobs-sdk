@@ -243,7 +243,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             Assert.Equal(5, eventHubConfig.BatchCheckpointFrequency);
         }
 
-        private PartitionContext GetPartitionContext()
+        internal static PartitionContext GetPartitionContext()
         {
             var constructor = typeof(PartitionContext).GetConstructor(
                 BindingFlags.NonPublic | BindingFlags.Instance,
