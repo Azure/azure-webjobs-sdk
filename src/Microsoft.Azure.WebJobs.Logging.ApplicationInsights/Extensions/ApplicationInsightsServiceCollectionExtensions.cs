@@ -65,12 +65,14 @@ namespace Microsoft.Extensions.DependencyInjection
                 excludedDomains.Add("localhost");
                 excludedDomains.Add("127.0.0.1");
 
+                var includedActivities = dependencyCollector.IncludeDiagnosticSourceActivities;
+                includedActivities.Add("Microsoft.Azure.ServiceBus");
+
                 return dependencyCollector;
             });
             services.AddSingleton<ITelemetryModule, AppServicesHeartbeatTelemetryModule>();
 
-            ServerTelemetryChannel serverChannel = new ServerTelemetryChannel();
-            services.AddSingleton<ITelemetryChannel>(serverChannel);
+            services.AddSingleton<ITelemetryChannel, ServerTelemetryChannel>();
             services.AddSingleton<TelemetryConfiguration>(provider =>
             {
                 ApplicationInsightsLoggerOptions options = provider.GetService<IOptions<ApplicationInsightsLoggerOptions>>().Value;

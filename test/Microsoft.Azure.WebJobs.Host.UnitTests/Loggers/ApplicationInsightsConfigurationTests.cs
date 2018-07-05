@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DependencyCollector;
@@ -26,7 +25,7 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 {
-    public class ApplicationInsightsConfigurationTests : IDisposable
+    public class ApplicationInsightsConfigurationTests
     {
         [Fact]
         public void DependencyInjectionConfiguration_Configures()
@@ -337,16 +336,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             ruleSelector.Select(options, providerType, category, out LogLevel? minLevel, out Func<string, string, LogLevel, bool> filter);
 
             return new LoggerFilterRule(providerType.FullName, category, minLevel, filter);
-        }
-
-        public void Dispose()
-        {
-            TelemetryConfiguration.Active.Dispose();
-
-            MethodInfo setActive =
-                typeof(TelemetryConfiguration).GetMethod("set_Active", BindingFlags.Static | BindingFlags.NonPublic);
-
-            setActive.Invoke(null, new object[] { TelemetryConfiguration.CreateDefault() });
         }
     }
 }

@@ -143,5 +143,10 @@ namespace Microsoft.Azure.WebJobs.Logging
         /// Gets the name of the key used to store a metric sum.
         /// </summary>
         public const string MetricValueKey = "Value";
+
+        /// <summary>
+        /// Gets the name of the key used to store function execution time in the ApplicationInsights RequestTelemetry properties.
+        /// </summary>
+        public const string FunctionExecutionTimeKey = "FunctionExecutionTimeMs";
     }
 }

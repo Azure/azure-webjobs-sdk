@@ -62,12 +62,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 {
                     ServiceDescriptor quickPulse = services.Single(s => s.ImplementationType == typeof(QuickPulseTelemetryModule));
                     services.Remove(quickPulse);
-                    services.AddSingleton<ITelemetryModule, QuickPulseTelemetryModule>(s =>
+                    services.AddSingleton<ITelemetryModule, QuickPulseTelemetryModule>(s => new QuickPulseTelemetryModule()
                     {
-                        return new QuickPulseTelemetryModule()
-                        {
-                            QuickPulseServiceEndpoint = "http://localhost:4005/QuickPulseService.svc/"
-                        };
+                        QuickPulseServiceEndpoint = _mockQuickPulseUrl
                     });
 
                     ServiceDescriptor channel = services.Single(s => s.ServiceType == typeof(ITelemetryChannel));
@@ -295,7 +292,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [Fact]
-        public async Task ApplicationInsights_HttpTriggerIsTrackedOnce()
+        public async Task ApplicationInsights_OuterRequestIsTrackedOnce()
         {
             string testName = nameof(TestApplicationInsightsInformation);
             using (IHost host = ConfigureHost())
@@ -317,16 +314,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await host.StopAsync();
 
                 // Validate the request
-                // There must be only one reported by the function code
+                // There must be only one reported by the AppInsights request collector
                 RequestTelemetry[] requestTelemetries = _channel.Telemetries.OfType<RequestTelemetry>().ToArray();
                 Assert.Single(requestTelemetries);
+                
+                RequestTelemetry functionRequest = requestTelemetries.Single();
+                Assert.Same(outerRequest, functionRequest);
 
-
-                // and outer one, we started in the test should not - it does not have category and log level
-                RequestTelemetry funtionRequest = requestTelemetries.Single();
-                Assert.NotSame(outerRequest, funtionRequest);
-
-                ValidateRequest(funtionRequest, testName, true);
+                ValidateRequest(functionRequest, testName, true);
             }
         }
 
@@ -737,12 +732,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         public void Dispose()
         {
-            TelemetryConfiguration.Active.Dispose();
-
-            MethodInfo setActive =
-                typeof(TelemetryConfiguration).GetMethod("set_Active", BindingFlags.Static | BindingFlags.NonPublic);
-
-            setActive.Invoke(null, new object[] { TelemetryConfiguration.CreateDefault() });
+            _channel?.Dispose();
         }
     }
 }
