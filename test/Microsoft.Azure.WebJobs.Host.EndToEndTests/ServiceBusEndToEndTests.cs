@@ -12,7 +12,6 @@ using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.ServiceBus.Core;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.ServiceBus;
-using Microsoft.Azure.WebJobs.ServiceBus.Config;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -22,7 +21,7 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
-    public class ServiceBusEndToEndTests
+    public class ServiceBusEndToEndTests : IDisposable
     {
         private const string Prefix = "core-test-";
         private const string FirstQueueName = Prefix + "queue1";
@@ -48,7 +47,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         public ServiceBusEndToEndTests()
         {
-
             var config = new ConfigurationBuilder()
                 .AddEnvironmentVariables()
                 .Build();
@@ -65,113 +63,85 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task ServiceBusEndToEnd()
         {
-            try
-            {
-                await ServiceBusEndToEndInternal();
-            }
-            finally
-            {
-                await Cleanup();
-            }
+            await ServiceBusEndToEndInternal();
         }
 
         [Fact]
         public async Task ServiceBusBinderTest()
         {
-            try
-            {
-                var hostType = typeof(ServiceBusTestJobs);
-                var host = CreateHost();
-                var method = typeof(ServiceBusTestJobs).GetMethod("ServiceBusBinderTest");
+            var hostType = typeof(ServiceBusTestJobs);
+            var host = CreateHost();
+            var method = typeof(ServiceBusTestJobs).GetMethod("ServiceBusBinderTest");
 
-                int numMessages = 10;
-                var args = new { message = "Test Message", numMessages = numMessages };
-                var jobHost = host.GetJobHost<ServiceBusTestJobs>();
-                await jobHost.CallAsync(method, args);
-                await jobHost.CallAsync(method, args);
-                await jobHost.CallAsync(method, args);
+            int numMessages = 10;
+            var args = new { message = "Test Message", numMessages = numMessages };
+            var jobHost = host.GetJobHost<ServiceBusTestJobs>();
+            await jobHost.CallAsync(method, args);
+            await jobHost.CallAsync(method, args);
+            await jobHost.CallAsync(method, args);
 
-                var count = await CleanUpEntity(BinderQueueName);
+            var count = await CleanUpEntity(BinderQueueName);
 
-                Assert.Equal(numMessages * 3, count);
-            }
-            finally
-            {
-                await Cleanup();
-            }
+            Assert.Equal(numMessages * 3, count);
         }
 
         [Fact]
         public async Task CustomMessageProcessorTest()
         {
-            try
-            {
-                IHost host = new HostBuilder()
-                    .ConfigureDefaultTestHost<ServiceBusTestJobs>(b =>
-                    {
-                        b.AddAzureStorage()
-                        .AddServiceBus();
-                    })
-                    .ConfigureServices(services =>
-                    {
-                        services.AddSingleton<MessagingProvider, CustomMessagingProvider>();
-                    })
-                    .Build();
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<ServiceBusTestJobs>(b =>
+                {
+                    b.AddAzureStorage()
+                    .AddServiceBus();
+                })
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<MessagingProvider, CustomMessagingProvider>();
+                })
+                .Build();
 
-                var loggerProvider = host.GetTestLoggerProvider();
+            var loggerProvider = host.GetTestLoggerProvider();
 
-                await ServiceBusEndToEndInternal(host: host);
+            await ServiceBusEndToEndInternal(host: host);
 
-                // in addition to verifying that our custom processor was called, we're also
-                // verifying here that extensions can log
-                IEnumerable<LogMessage> messages = loggerProvider.GetAllLogMessages().Where(m => m.Category == CustomMessagingProvider.CustomMessagingCategory);
-                Assert.Equal(4, messages.Count(p => p.FormattedMessage.Contains("Custom processor Begin called!")));
-                Assert.Equal(4, messages.Count(p => p.FormattedMessage.Contains("Custom processor End called!")));
-            }
-            finally
-            {
-                await Cleanup();
-            }
+            // in addition to verifying that our custom processor was called, we're also
+            // verifying here that extensions can log
+            IEnumerable<LogMessage> messages = loggerProvider.GetAllLogMessages().Where(m => m.Category == CustomMessagingProvider.CustomMessagingCategory);
+            Assert.Equal(4, messages.Count(p => p.FormattedMessage.Contains("Custom processor Begin called!")));
+            Assert.Equal(4, messages.Count(p => p.FormattedMessage.Contains("Custom processor End called!")));
         }
 
         [Fact]
         public async Task MultipleAccountTest()
         {
-            try
-            {
-                IHost host = new HostBuilder()
-                   .ConfigureDefaultTestHost<ServiceBusTestJobs>(b =>
-                   {
-                       b.AddAzureStorage()
-                       .AddServiceBus();
-                   }, nameResolver: _nameResolver)
-                   .ConfigureServices(services =>
-                   {
-                       services.AddSingleton<MessagingProvider, CustomMessagingProvider>();
-                   })
-                   .Build();
+            IHost host = new HostBuilder()
+               .ConfigureDefaultTestHost<ServiceBusTestJobs>(b =>
+               {
+                   b.AddAzureStorage()
+                   .AddServiceBus();
+               }, nameResolver: _nameResolver)
+               .ConfigureServices(services =>
+               {
+                   services.AddSingleton<MessagingProvider, CustomMessagingProvider>();
+               })
+               .Build();
 
-                await WriteQueueMessage(_secondaryConnectionString, FirstQueueName, "Test");
+            await WriteQueueMessage(_secondaryConnectionString, FirstQueueName, "Test");
 
-                _topicSubscriptionCalled1 = new ManualResetEvent(initialState: false);
+            _topicSubscriptionCalled1 = new ManualResetEvent(initialState: false);
 
-                await host.StartAsync();
+            await host.StartAsync();
 
-                _topicSubscriptionCalled1.WaitOne(SBTimeout);
+            _topicSubscriptionCalled1.WaitOne(SBTimeout);
 
-                // ensure all logs have had a chance to flush
-                await Task.Delay(3000);
+            // ensure all logs have had a chance to flush
+            await Task.Delay(3000);
 
-                // Wait for the host to terminate
-                await host.StopAsync();
-                host.Dispose();
+            // Wait for the host to terminate
+            await host.StopAsync();
+            host.Dispose();
 
-                Assert.Equal("Test-topic-1", _resultMessage1);
-            }
-            finally
-            {
-                await Cleanup();
-            }
+            Assert.Equal("Test-topic-1", _resultMessage1);
         }
 
         private async Task<int> CleanUpEntity(string queueName, string connectionString = null)
@@ -468,6 +438,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 return Task.CompletedTask;
             }
+        }
+
+        public void Dispose()
+        {
+            Cleanup().GetAwaiter().GetResult();
         }
     }
 }

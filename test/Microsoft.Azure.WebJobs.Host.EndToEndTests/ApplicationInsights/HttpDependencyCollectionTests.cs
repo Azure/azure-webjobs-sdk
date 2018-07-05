@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -21,7 +22,7 @@ using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 {
-    public class HttpDependencyCollectionTests
+    public class HttpDependencyCollectionTests : IDisposable
     {
         private const string TestArtifactPrefix = "e2etestsai";
         private const string OutputQueueNamePattern = TestArtifactPrefix + "out%rnd%";
@@ -144,7 +145,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.Single(dependencies);
 
             DependencyTelemetry dependency = dependencies.Single();
-            ValidateDependency(
+            TelemetryValidationHelpers.ValidateHttpDependency(
                 dependency,
                 testName,
                 request.Context.Operation.Id,
@@ -323,7 +324,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 Assert.Equal(blobName, dependency.Properties["Blob"]);
             }
 
-            ValidateDependency(dependency, operationName, operationId, requestId, LogCategories.Bindings);
+            TelemetryValidationHelpers.ValidateHttpDependency(dependency, operationName, operationId, requestId, LogCategories.Bindings);
         }
 
 
@@ -337,26 +338,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.Equal("Azure queue", dependency.Type);
             Assert.True(dependency.Name.EndsWith(queueName));
 
-            ValidateDependency(dependency, operationName, operationId, requestId, LogCategories.Bindings);
-        }
-
-        private void ValidateDependency(
-            DependencyTelemetry dependency,
-            string operationName,
-            string operationId,
-            string requestId,
-            string category)
-        {
-            Assert.Equal(category, dependency.Properties[LogConstants.CategoryNameKey]);
-            Assert.Equal(LogLevel.Information.ToString(), dependency.Properties[LogConstants.LogLevelKey]);
-            Assert.False(string.IsNullOrEmpty(dependency.ResultCode));
-            Assert.NotNull(dependency.Target);
-            Assert.NotNull(dependency.Data);
-            Assert.NotNull(dependency.Name);
-            Assert.NotNull(dependency.Id);
-            Assert.Equal(operationId, dependency.Context.Operation.Id);
-            Assert.Equal(operationName, dependency.Context.Operation.Name);
-            Assert.Equal(requestId, dependency.Context.Operation.ParentId);
+            TelemetryValidationHelpers.ValidateHttpDependency(dependency, operationName, operationId, requestId, LogCategories.Bindings);
         }
 
         public IHost ConfigureHost(LogLevel logLevel)
