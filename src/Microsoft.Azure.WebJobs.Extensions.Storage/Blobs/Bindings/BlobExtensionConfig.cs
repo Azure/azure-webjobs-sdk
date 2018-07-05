@@ -198,13 +198,13 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             }
         }
 
-        private async Task<CloudBlobClient> GetClientAsync(
+        private Task<CloudBlobClient> GetClientAsync(
          BlobAttribute blobAttribute,
          CancellationToken cancellationToken)
         {
             var account = _accountProvider.Get(blobAttribute.Connection, _nameResolver);
             var client = account.CreateCloudBlobClient();
-            return client;
+            return Task.FromResult(client);
         }
 
         private async Task<CloudBlobContainer> GetContainerAsync(

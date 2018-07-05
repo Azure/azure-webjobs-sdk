@@ -192,7 +192,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
                 return new QueueAsyncCollector(queue, _messageEnqueuedWatcherGetter.Value);
             }
 
-            internal async Task<CloudQueue> GetQueueAsync(QueueAttribute attrResolved)
+            internal Task<CloudQueue> GetQueueAsync(QueueAttribute attrResolved)
             {
                 // var account = await _accountProvider.GetStorageAccountAsync(attrResolved, CancellationToken.None);
                 var account = _accountProvider.Get(attrResolved.Connection);
@@ -201,7 +201,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
                 string queueName = attrResolved.QueueName.ToLowerInvariant();
                 QueueClient.ValidateQueueName(queueName);
 
-                return client.GetQueueReference(queueName);
+                return Task.FromResult(client.GetQueueReference(queueName));
             }
 
             internal CloudQueue GetQueue(QueueAttribute attrResolved)

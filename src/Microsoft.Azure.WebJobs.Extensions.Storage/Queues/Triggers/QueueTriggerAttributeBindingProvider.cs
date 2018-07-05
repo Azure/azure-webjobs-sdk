@@ -45,14 +45,14 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             _loggerFactory = loggerFactory;
         }
 
-        public async Task<ITriggerBinding> TryCreateAsync(TriggerBindingProviderContext context)
+        public Task<ITriggerBinding> TryCreateAsync(TriggerBindingProviderContext context)
         {
             ParameterInfo parameter = context.Parameter;
             var queueTrigger = TypeUtility.GetResolvedAttribute<QueueTriggerAttribute>(context.Parameter);
 
             if (queueTrigger == null)
             {
-                return null;
+                return Task.FromResult<ITriggerBinding>(null);
             }
 
             string queueName = Resolve(queueTrigger.QueueName);
@@ -76,7 +76,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             ITriggerBinding binding = new QueueTriggerBinding(parameter.Name, queue, argumentBinding,
                 _queueOptions, _exceptionHandler, _messageEnqueuedWatcherSetter,
                 _loggerFactory);
-            return binding;
+            return Task.FromResult(binding);
         }
 
         private static string NormalizeAndValidate(string queueName)

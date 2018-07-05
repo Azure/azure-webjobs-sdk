@@ -67,14 +67,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             }
         }
 
-        private static async Task<string> GetBase64StringAsync(Message clonedMessage,
+        private static Task<string> GetBase64StringAsync(Message clonedMessage,
             CancellationToken cancellationToken)
         {
             if (clonedMessage.Body == null)
             {
-                return null;
+                return Task.FromResult<string>(null);
             }
-            return Convert.ToBase64String(clonedMessage.Body);
+            return Task.FromResult(Convert.ToBase64String(clonedMessage.Body));
         }
 
         private static Task<string> GetDescriptionAsync(Message clonedMessage)
@@ -85,14 +85,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             return Task.FromResult(description);
         }
 
-        private static async Task<string> GetTextAsync(Message clonedMessage,
+        private static Task<string> GetTextAsync(Message clonedMessage,
             CancellationToken cancellationToken)
         {
             if (clonedMessage.Body == null)
             {
-                return null;
+                return Task.FromResult<string>(null);
             }
-            return StrictEncodings.Utf8.GetString(clonedMessage.Body);
+            return Task.FromResult(StrictEncodings.Utf8.GetString(clonedMessage.Body));
         }
     }
 }
