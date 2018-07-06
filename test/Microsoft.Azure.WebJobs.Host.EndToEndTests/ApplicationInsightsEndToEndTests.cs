@@ -189,6 +189,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     {
                         await host.StartAsync();
 
+                        await TestHelpers.Await(() => listener.IsReady, pollingInterval: 100);
+
                         var methodInfo = GetType().GetMethod(nameof(TestApplicationInsightsWarning), BindingFlags.Public | BindingFlags.Static);
                         List<Task> invokeTasks = new List<Task>();
 
@@ -317,11 +319,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             private readonly HttpListener _applicationInsightsListener = new HttpListener();
             private ConcurrentQueue<QuickPulsePayload> _quickPulseItems = new ConcurrentQueue<QuickPulsePayload>();
             private Thread _listenerThread;
+            private int _posts;
 
             public IEnumerable<QuickPulsePayload> GetQuickPulseItems()
             {
                 return _quickPulseItems.ToList();
             }
+
+            // Make sure collection has started.
+            public bool IsReady => _posts >= 2;
 
             public void StartListening()
             {
@@ -387,6 +393,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     {
                         _quickPulseItems.Enqueue(i);
                     }
+                    _posts++;
                 }
             }
 
