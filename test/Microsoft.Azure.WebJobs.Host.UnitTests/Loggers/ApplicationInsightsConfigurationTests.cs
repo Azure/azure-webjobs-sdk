@@ -10,6 +10,7 @@ using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DependencyCollector;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
+using Microsoft.ApplicationInsights.Extensibility.Implementation.ApplicationId;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
 using Microsoft.ApplicationInsights.SnapshotCollector;
 using Microsoft.ApplicationInsights.WindowsServer;
@@ -76,6 +77,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[0]);
                 Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[1]);
                 Assert.Empty(config.TelemetryProcessors.OfType<AdaptiveSamplingTelemetryProcessor>());
+
+                // Verify ApplicationIdProvider
+                Assert.NotNull(config.ApplicationIdProvider);
+                Assert.IsType<ApplicationInsightsApplicationIdProvider>(config.ApplicationIdProvider);
             }
         }
 
@@ -199,6 +204,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[0]);
                 Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[1]);
                 Assert.Empty(config.TelemetryProcessors.OfType<AdaptiveSamplingTelemetryProcessor>());
+
+                // Verify ApplicationIdProvider
+                Assert.NotNull(config.ApplicationIdProvider);
+                Assert.IsType<ApplicationInsightsApplicationIdProvider>(config.ApplicationIdProvider);
             }
         }
 

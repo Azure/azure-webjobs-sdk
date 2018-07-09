@@ -10,6 +10,7 @@ using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DependencyCollector;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
+using Microsoft.ApplicationInsights.Extensibility.Implementation.ApplicationId;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
 using Microsoft.ApplicationInsights.SnapshotCollector;
 using Microsoft.ApplicationInsights.WindowsServer;
@@ -50,6 +51,9 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddSingleton<ITelemetryInitializer, WebJobsTelemetryInitializer>();
             services.AddSingleton<ITelemetryInitializer, WebJobsSanitizingInitializer>();
             services.AddSingleton<ITelemetryModule, QuickPulseTelemetryModule>();
+
+            services.AddSingleton<IApplicationIdProvider, ApplicationInsightsApplicationIdProvider>();
+
             services.AddSingleton<ITelemetryModule, DependencyTrackingTelemetryModule>(provider =>
             {
                 var dependencyCollector = new DependencyTrackingTelemetryModule();
@@ -79,6 +83,9 @@ namespace Microsoft.Extensions.DependencyInjection
 
                 ITelemetryChannel channel = provider.GetService<ITelemetryChannel>();
                 TelemetryConfiguration config = TelemetryConfiguration.CreateDefault();
+
+                IApplicationIdProvider appIdProvider = provider.GetService<IApplicationIdProvider>();
+
                 SetupTelemetryConfiguration(
                     config,
                     options.InstrumentationKey,
@@ -87,6 +94,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     channel,
                     provider.GetServices<ITelemetryInitializer>(),
                     provider.GetServices<ITelemetryModule>(),
+                    appIdProvider,
                     filterOptions);
 
                 // Function users have no access to TelemetryConfiguration from host DI container,
@@ -103,6 +111,7 @@ namespace Microsoft.Extensions.DependencyInjection
                         new ServerTelemetryChannel(),
                         provider.GetServices<ITelemetryInitializer>(),
                         provider.GetServices<ITelemetryModule>(),
+                        new ApplicationInsightsApplicationIdProvider(),
                         filterOptions);
                 }
                 return config;
@@ -160,6 +169,7 @@ namespace Microsoft.Extensions.DependencyInjection
             ITelemetryChannel channel,
             IEnumerable<ITelemetryInitializer> telemetryInitializers,
             IEnumerable<ITelemetryModule> telemetryModules,
+            IApplicationIdProvider applicationIdProvider,
             LoggerFilterOptions filterOptions)
         {
             if (instrumentationKey != null)
@@ -217,6 +227,8 @@ namespace Microsoft.Extensions.DependencyInjection
                     module.Initialize(configuration);
                 }
             }
+
+            configuration.ApplicationIdProvider = applicationIdProvider;
         }
         internal static string GetAssemblyFileVersion(Assembly assembly)
         {
