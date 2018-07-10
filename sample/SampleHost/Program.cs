@@ -1,16 +1,10 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs;
-using Microsoft.Extensions.Logging;
-using Microsoft.Azure.WebJobs.Hosting;
-using Microsoft.Extensions.Hosting;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Configuration;
-using System.Collections.Generic;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace SampleHost
 {
@@ -20,15 +14,20 @@ namespace SampleHost
         {
             var builder = new HostBuilder()
                 .UseEnvironment("Development")
-                .ConfigureWebJobsHost()
+                .ConfigureWebJobsHost(o =>
+                {
+                    // TEMP - remove once https://github.com/Azure/azure-webjobs-sdk/issues/1802 is fixed
+                    o.HostId = "ecad61-62cf-47f4-93b4-6efcded6";
+                })
                 .AddWebJobsLogging() // Enables WebJobs v1 classic logging 
                 .AddAzureStorageCoreServices()
                 .AddAzureStorage()
+                .AddServiceBus()
                 .AddApplicationInsights()
-                .ConfigureAppConfiguration(config =>
+                .ConfigureAppConfiguration(b =>
                 {
                     // Adding command line as a configuration source
-                    config.AddCommandLine(args);
+                    b.AddCommandLine(args);
                 })
                 .ConfigureLogging(b =>
                 {
@@ -37,11 +36,10 @@ namespace SampleHost
                 })
                 .UseConsoleLifetime();
 
-            var jobHost = builder.Build();
-
-            using (jobHost)
+            var host = builder.Build();
+            using (host)
             {
-                await jobHost.RunAsync();
+                await host.RunAsync();
             }
         }
     }

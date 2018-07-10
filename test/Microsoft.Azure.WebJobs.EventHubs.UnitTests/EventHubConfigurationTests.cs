@@ -97,7 +97,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
 
             string expectedMessage = "EventProcessorHost error (Action=TestAction, HostName=TestHostName, PartitionId=TestPartitionId)";
             var logMessage = _loggerProvider.GetAllLogMessages().Single();
-            Assert.Equal(LogLevel.Debug, logMessage.Level);
+            Assert.Equal(LogLevel.Information, logMessage.Level);
             Assert.Same(ex, logMessage.Exception);
             Assert.Equal(expectedMessage, logMessage.FormattedMessage);
         }
@@ -112,7 +112,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
 
             string expectedMessage = "EventProcessorHost error (Action=TestAction, HostName=TestHostName, PartitionId=TestPartitionId)";
             var logMessage = _loggerProvider.GetAllLogMessages().Single();
-            Assert.Equal(LogLevel.Debug, logMessage.Level);
+            Assert.Equal(LogLevel.Information, logMessage.Level);
             Assert.Same(ex, logMessage.Exception);
             Assert.Equal(expectedMessage, logMessage.FormattedMessage);
         }
@@ -128,6 +128,22 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             string expectedMessage = "EventProcessorHost error (Action=TestAction, HostName=TestHostName, PartitionId=TestPartitionId)";
             var logMessage = _loggerProvider.GetAllLogMessages().Single();
             Assert.Equal(LogLevel.Error, logMessage.Level);
+            Assert.Same(ex, logMessage.Exception);
+            Assert.Equal(expectedMessage, logMessage.FormattedMessage);
+        }
+
+        [Fact]
+        public void LogExceptionReceivedEvent_PartitionExceptions_LoggedAsInfo()
+        {
+            var ctor = typeof(ReceiverDisconnectedException).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { typeof(string) }, null);
+            var ex = (ReceiverDisconnectedException)ctor.Invoke(new object[] { "New receiver with higher epoch of '30402' is created hence current receiver with epoch '30402' is getting disconnected." });
+            ctor = typeof(ExceptionReceivedEventArgs).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance).Single();
+            var e = (ExceptionReceivedEventArgs)ctor.Invoke(new object[] { "TestHostName", "TestPartitionId", ex, "TestAction" });
+            EventHubExtensionConfigProvider.LogExceptionReceivedEvent(e, _loggerFactory);
+
+            string expectedMessage = "EventProcessorHost error (Action=TestAction, HostName=TestHostName, PartitionId=TestPartitionId)";
+            var logMessage = _loggerProvider.GetAllLogMessages().Single();
+            Assert.Equal(LogLevel.Information, logMessage.Level);
             Assert.Same(ex, logMessage.Exception);
             Assert.Equal(expectedMessage, logMessage.FormattedMessage);
         }
