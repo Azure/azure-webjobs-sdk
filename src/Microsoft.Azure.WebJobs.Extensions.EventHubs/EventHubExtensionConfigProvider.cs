@@ -87,23 +87,38 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 var logger = loggerFactory?.CreateLogger(LogCategories.Executor);
                 string message = $"EventProcessorHost error (Action={e.Action}, HostName={e.Hostname}, PartitionId={e.PartitionId})";
 
-                var ehex = e.Exception as EventHubsException;
-                if (!(e.Exception is OperationCanceledException) && (ehex == null || !ehex.IsTransient))
-                {
-                    // any non-transient exceptions or unknown exception types
-                    // we want to log as errors
-                    logger?.LogError(0, e.Exception, message);
-                }
-                else
-                {
-                    // transient errors we log as verbose so we have a record
-                    // of them, but we don't treat them as actual errors
-                    logger?.LogDebug(0, e.Exception, message);
-                }
+                var logLevel = GetLogLevel(e.Exception);
+                logger?.Log(logLevel, 0, message, e.Exception, (s, ex) => message);
             }
             catch
             {
                 // best effort logging
+            }
+        }
+
+        private static LogLevel GetLogLevel(Exception ex)
+        {
+            if (ex is ReceiverDisconnectedException ||
+                ex is LeaseLostException)
+            {
+                // For EventProcessorHost these exceptions can happen as part
+                // of normal partition balancing across instances, so we want to
+                // trace them, but not treat them as errors.
+                return LogLevel.Information;
+            }
+
+            var ehex = ex as EventHubsException;
+            if (!(ex is OperationCanceledException) && (ehex == null || !ehex.IsTransient))
+            {
+                // any non-transient exceptions or unknown exception types
+                // we want to log as errors
+                return LogLevel.Error;
+            }
+            else
+            {
+                // transient messaging errors we log as info so we have a record
+                // of them, but we don't treat them as actual errors
+                return LogLevel.Information;
             }
         }
 

@@ -1,14 +1,13 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
+using System.Linq;
 using Microsoft.Azure.ServiceBus;
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.ServiceBus.Config;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Linq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
@@ -36,19 +35,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
         }
 
         [Fact]
-        public void ConnectionString_ReturnsExpectedDefaultUntilSetExplicitly()
-        {
-            ServiceBusOptions config = new ServiceBusOptions();
-
-            string defaultConnection = null; // AmbientConnectionStringProvider.Instance.GetConnectionString(ConnectionStringNames.ServiceBus);
-            Assert.Equal(defaultConnection, config.ConnectionString);
-
-            string testConnection = "testconnection";
-            config.ConnectionString = testConnection;
-            Assert.Equal(testConnection, config.ConnectionString);
-        }
-
-        [Fact]
         public void PrefetchCount_GetSet()
         {
             ServiceBusOptions config = new ServiceBusOptions();
@@ -73,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
         }
 
         [Fact]
-        public void LogExceptionReceivedEvent_TransientEvent_LoggedAsVerbose()
+        public void LogExceptionReceivedEvent_TransientEvent_LoggedAsInformation()
         {
             var ex = new ServiceBusException(true);
             Assert.True(ex.IsTransient);
@@ -82,7 +68,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
 
             var expectedMessage = $"MessageReceiver error (Action=TestAction, ClientId=TestClient, EntityPath=TestEntity, Endpoint=TestEndpoint)";
             var logMessage = _loggerProvider.GetAllLogMessages().Single();
-            Assert.Equal(LogLevel.Debug, logMessage.Level);
+            Assert.Equal(LogLevel.Information, logMessage.Level);
             Assert.Same(ex, logMessage.Exception);
             Assert.Equal(expectedMessage, logMessage.FormattedMessage);
         }

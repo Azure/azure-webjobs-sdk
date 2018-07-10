@@ -78,10 +78,11 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IFunctionOutputLogger, ConsoleFunctionOutputLogger>();
             services.TryAddSingleton<IFunctionInstanceLogger, FunctionInstanceLogger>();
             services.TryAddSingleton<IHostInstanceLogger, NullHostInstanceLogger>();
-            
+
 
             // TODO: FACAVAL FIX THIS - Right now, We're only registering the FixedIdProvider
             // need to register the dynamic ID provider and verify if the logic in it can be improved (and have the storage dependency removed)
+            // Tracked by https://github.com/Azure/azure-webjobs-sdk/issues/1802
             services.TryAddSingleton<IHostIdProvider, FixedHostIdProvider>();
 
             services.TryAddSingleton<IDistributedLockManager, InMemorySingletonManager>();
