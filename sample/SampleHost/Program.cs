@@ -23,6 +23,7 @@ namespace SampleHost
                 .AddAzureStorageCoreServices()
                 .AddAzureStorage()
                 .AddServiceBus()
+                .AddEventHubs()
                 .AddApplicationInsights()
                 .ConfigureAppConfiguration(b =>
                 {
