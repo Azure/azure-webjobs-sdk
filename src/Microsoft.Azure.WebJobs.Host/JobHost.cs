@@ -99,7 +99,7 @@ namespace Microsoft.Azure.WebJobs
             return StartAsyncCore(cancellationToken);
         }
 
-        private async Task StartAsyncCore(CancellationToken cancellationToken)
+        protected virtual async Task StartAsyncCore(CancellationToken cancellationToken)
         {
             await EnsureHostInitializedAsync(cancellationToken);
 
@@ -145,7 +145,7 @@ namespace Microsoft.Azure.WebJobs
             return _stopTask;
         }
 
-        private async Task StopAsyncCore(CancellationToken cancellationToken)
+        protected virtual async Task StopAsyncCore(CancellationToken cancellationToken)
         {
             await _listener.StopAsync(cancellationToken);
 

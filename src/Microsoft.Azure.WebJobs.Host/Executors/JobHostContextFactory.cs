@@ -102,7 +102,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 _loggerFactory.AddProvider(new FunctionOutputLoggerProvider());
 
                 IFunctionIndex functions = await _functionIndexProvider.GetAsync(combinedCancellationToken);
-                IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), _singletonManager, _activator, _nameResolver, _loggerFactory);
+                IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), _singletonManager, _activator, _nameResolver, _loggerFactory, _jobHostOptions.Value.AllowPartialHostStartup);
 
                 IFunctionExecutor hostCallExecutor;
                 IListener listener;
