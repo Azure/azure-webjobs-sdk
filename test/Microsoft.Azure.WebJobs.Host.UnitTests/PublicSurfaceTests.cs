@@ -90,6 +90,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "DefaultWebJobsExceptionHandlerFactory",
                 "DirectInvokeString",
                 "ExceptionFormatter",
+                "ExecutionContext",
+                "ExecutionContextOptions",
                 "ExecutionReason",
                 "ExtensionConfigContext",
                 "FluentBinder",

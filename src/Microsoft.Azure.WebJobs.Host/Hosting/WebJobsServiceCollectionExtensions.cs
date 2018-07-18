@@ -117,18 +117,19 @@ namespace Microsoft.Azure.WebJobs
             return services;
         }
 
-        public static IHostBuilder ConfigureWebJobsFastLogging(this IHostBuilder builder, IEventCollectorFactory fastLogger)
-        {
-            builder.ConfigureServices(services =>
-            {
-                services.AddWebJobsFastLogging(fastLogger);
-            });
-            return builder;
-        }
-
         // This is an alternative to AddWebJobsLogging
         public static IServiceCollection AddWebJobsFastLogging(this IServiceCollection services, IEventCollectorFactory fastLogger)
         {
+            if (services == null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
+            if (fastLogger == null)
+            {
+                throw new ArgumentNullException(nameof(fastLogger));
+            }
+
             services.AddSingleton<IFunctionOutputLoggerProvider, FastTableLoggerProvider>();
             services.AddSingleton<IFunctionOutputLogger, FastTableLoggerProvider>();
 
@@ -162,7 +163,28 @@ namespace Microsoft.Azure.WebJobs
             // arbitrary binding to binding data 
             services.AddSingleton<IBindingProvider, DataBindingProvider>();
 
+            return services;
+        }
 
+        /// <summary>
+        /// Adds the ability to bind to an <see cref="ExecutionContext"/> from a WebJobs function.
+        /// </summary>
+        /// <param name="services">The service collection to configure.</param>
+        /// <param name="configure">An optional <see cref="Action{ExecutionContextBindingOptions}"/> to configure the provided <see cref="ExecutionContextOptions"/>.</param>
+        /// <returns></returns>
+        public static IServiceCollection AddExecutionContextBinding(this IServiceCollection services, Action<ExecutionContextOptions> configure = null)
+        {
+            if (services == null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
+            services.AddSingleton<IBindingProvider, ExecutionContextBindingProvider>();
+
+            if (configure != null)
+            {
+                services.Configure(configure);
+            }
 
             return services;
         }
