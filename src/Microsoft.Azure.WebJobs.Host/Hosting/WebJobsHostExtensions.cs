@@ -3,7 +3,9 @@
 
 using System;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -106,6 +108,47 @@ namespace Microsoft.Extensions.Hosting
             {
                 builder.UseWebJobsStartup(type);
             }
+
+            return builder;
+        }
+
+        public static IHostBuilder ConfigureWebJobsFastLogging(this IHostBuilder builder, IEventCollectorFactory fastLogger)
+        {
+            if (builder == null)
+            {
+                throw new ArgumentNullException(nameof(builder));
+            }
+
+            if (fastLogger == null)
+            {
+                throw new ArgumentNullException(nameof(fastLogger));
+            }
+
+            builder.ConfigureServices(services =>
+            {
+                services.AddWebJobsFastLogging(fastLogger);
+            });
+
+            return builder;
+        }
+
+        /// <summary>
+        /// Adds the ability to bind to an <see cref="ExecutionContext"/> from a WebJobs function.
+        /// </summary>
+        /// <param name="builder">The <see cref="IHostBuilder"/> to configure.</param>
+        /// <param name="configure">An optional <see cref="Action{ExecutionContextBindingOptions}"/> to configure the provided <see cref="ExecutionContextOptions"/>.</param>
+        /// <returns></returns>
+        public static IHostBuilder AddExecutionContextBinding(this IHostBuilder builder, Action<ExecutionContextOptions> configure = null)
+        {
+            if (builder == null)
+            {
+                throw new ArgumentNullException(nameof(builder));
+            }
+
+            builder.ConfigureServices(services =>
+            {
+                services.AddExecutionContextBinding(configure);
+            });
 
             return builder;
         }
