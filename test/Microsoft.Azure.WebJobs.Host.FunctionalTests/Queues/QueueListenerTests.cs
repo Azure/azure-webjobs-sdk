@@ -113,6 +113,54 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Queues
             Assert.Equal(0, queue.ApproximateMessageCount);
         }
 
+        [Fact]
+        public async Task MaxDequeueCountExceeded_MoveMessageToPoisonQueue()
+        {
+            TraceWriter trace = new TestTraceWriter(TraceLevel.Verbose);
+            CloudQueue queue = Fixture.CreateNewQueue();
+            CloudQueue poisonQueue = Fixture.CreateNewQueue();
+
+            JobHostQueuesConfiguration queuesConfig = new JobHostQueuesConfiguration { MaxDequeueCount = 2 };
+
+            StorageQueue storageQueue = new StorageQueue(new StorageQueueClient(Fixture.QueueClient), queue);
+            StorageQueue storagePoisonQueue = new StorageQueue(new StorageQueueClient(Fixture.QueueClient), poisonQueue);
+            Mock<ITriggerExecutor<IStorageQueueMessage>> mockTriggerExecutor = new Mock<ITriggerExecutor<IStorageQueueMessage>>(MockBehavior.Strict);
+
+            string messageContent = Guid.NewGuid().ToString();
+            CloudQueueMessage message = new CloudQueueMessage(messageContent);
+            await queue.AddMessageAsync(message, CancellationToken.None);
+            CloudQueueMessage messageFromCloud = await queue.GetMessageAsync();
+
+            QueueListener listener = new QueueListener(storageQueue, storagePoisonQueue, mockTriggerExecutor.Object, new WebJobsExceptionHandler(), trace,
+                null, null, queuesConfig);
+
+            mockTriggerExecutor
+                .Setup(m => m.ExecuteAsync(It.IsAny<IStorageQueueMessage>(), CancellationToken.None))
+                .ReturnsAsync(new FunctionResult(false));
+
+            await listener.ProcessMessageAsync(new StorageQueueMessage(messageFromCloud), TimeSpan.FromMinutes(10), CancellationToken.None);
+
+            // pull the message and process it again (to have it go through the poison queue flow)
+            messageFromCloud = await queue.GetMessageAsync();
+            Assert.Equal(2, messageFromCloud.DequeueCount);
+            //Put message back in the queue and read it to increase dequeuecount
+            TimeSpan visibilityTimeout = TimeSpan.FromMilliseconds(0);
+            await queue.UpdateMessageAsync(messageFromCloud, visibilityTimeout, MessageUpdateFields.Visibility, CancellationToken.None);
+            messageFromCloud = await queue.GetMessageAsync();
+            Assert.Equal(3, messageFromCloud.DequeueCount);
+
+            await listener.ProcessMessageAsync(new StorageQueueMessage(messageFromCloud), TimeSpan.FromMinutes(10), CancellationToken.None);
+
+            // Make sure the message was processed and deleted.
+            await queue.FetchAttributesAsync();
+            Assert.Equal(0, queue.ApproximateMessageCount);
+
+            // The Listener has inserted a message to the poison queue.
+            await poisonQueue.FetchAttributesAsync();
+            Assert.Equal(1, poisonQueue.ApproximateMessageCount);
+
+            mockTriggerExecutor.Verify(m => m.ExecuteAsync(It.IsAny<IStorageQueueMessage>(), CancellationToken.None), Times.Exactly(1));
+        }
         public class TestFixture : IDisposable
         {
             private const string TestQueuePrefix = "queuelistenertests";

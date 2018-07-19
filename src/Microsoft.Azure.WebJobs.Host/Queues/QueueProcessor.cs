@@ -92,6 +92,10 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
         /// <returns>True if the message processing should continue, false otherwise.</returns>
         public virtual async Task<bool> BeginProcessingMessageAsync(CloudQueueMessage message, CancellationToken cancellationToken)
         {
+            if (message.DequeueCount > MaxDequeueCount)
+            {
+                return await Task.FromResult<bool>(false);
+            }
             return await Task.FromResult<bool>(true);
         }
 
@@ -117,17 +121,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
             {
                 if (message.DequeueCount >= MaxDequeueCount)
                 {
-                    // These values may change if the message is inserted into another queue. We'll store them here and make sure
-                    // the message always has the original values before we pass it to a customer-facing method.
-                    string id = message.Id;
-                    string popReceipt = message.PopReceipt;
-
-                    await CopyMessageToPoisonQueueAsync(message, _poisonQueue, cancellationToken);
-
-                    // TEMP: Re-evaluate these property updates when we update Storage SDK: https://github.com/Azure/azure-webjobs-sdk/issues/1144
-                    message.UpdateChangedProperties(id, popReceipt);
-
-                    await DeleteMessageAsync(message, cancellationToken);
+                    await MoveMessageToPoisonQueueAsync(message, cancellationToken);
                 }
                 else
                 {
@@ -139,6 +133,30 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
                 // For queues without a corresponding poison queue, leave the message invisible when processing
                 // fails to prevent a fast infinite loop.
                 // Specifically, don't call ReleaseMessage(message)
+            }
+        }
+
+        /// <summary>
+        /// Copies properties from the specified message and moves it to the poison queue.
+        /// </summary>
+        /// <param name="message">The poison message</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to use</param>
+        /// <returns></returns>
+        internal async Task MoveMessageToPoisonQueueAsync(CloudQueueMessage message, CancellationToken cancellationToken)
+        {
+            if (_poisonQueue != null)
+            {
+                // These values may change if the message is inserted into another queue. We'll store them here and make sure
+                // the message always has the original values before we pass it to a customer-facing method.
+                string id = message.Id;
+                string popReceipt = message.PopReceipt;
+
+                await CopyMessageToPoisonQueueAsync(message, _poisonQueue, cancellationToken);
+
+                // TEMP: Re-evaluate these property updates when we update Storage SDK: https://github.com/Azure/azure-webjobs-sdk/issues/1144
+                message.UpdateChangedProperties(id, popReceipt);
+
+                await DeleteMessageAsync(message, cancellationToken);
             }
         }
 
