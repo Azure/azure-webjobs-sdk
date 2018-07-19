@@ -271,7 +271,6 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             {
                 if (!await _queueProcessor.BeginProcessingMessageAsync(message.SdkObject, cancellationToken))
                 {
-                    await _queueProcessor.MoveMessageToPoisonQueueAsync(message.SdkObject, cancellationToken);
                     return;
                 }
 

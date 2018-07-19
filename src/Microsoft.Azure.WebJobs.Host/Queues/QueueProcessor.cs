@@ -94,6 +94,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
         {
             if (message.DequeueCount > MaxDequeueCount)
             {
+                await HandlePoisonMessageAsync(message, cancellationToken);
                 return await Task.FromResult<bool>(false);
             }
             return await Task.FromResult<bool>(true);
@@ -121,7 +122,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
             {
                 if (message.DequeueCount >= MaxDequeueCount)
                 {
-                    await MoveMessageToPoisonQueueAsync(message, cancellationToken);
+                    await HandlePoisonMessageAsync(message, cancellationToken);
                 }
                 else
                 {
@@ -136,13 +137,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
             }
         }
 
-        /// <summary>
-        /// Copies properties from the specified message and moves it to the poison queue.
-        /// </summary>
-        /// <param name="message">The poison message</param>
-        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to use</param>
-        /// <returns></returns>
-        internal async Task MoveMessageToPoisonQueueAsync(CloudQueueMessage message, CancellationToken cancellationToken)
+        private async Task HandlePoisonMessageAsync(CloudQueueMessage message, CancellationToken cancellationToken)
         {
             if (_poisonQueue != null)
             {
