@@ -27,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             _queue = fixture.Queue;
             _poisonQueue = fixture.PoisonQueue;
-
+            
             _queuesConfig = new JobHostQueuesOptions();
             QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, null, _queuesConfig);
             _processor = new QueueProcessor(context);
@@ -146,6 +146,42 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var delta = message.NextVisibleTime - DateTime.UtcNow;
             Assert.True(delta.Value.TotalMinutes > 4);
         }
+
+        [Fact]
+        public async Task BeginProcessingMessageAsync_MaxDequeueCountExceeded_MovesMessageToPoisonQueue()
+        {
+            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, null, _queuesConfig, _poisonQueue);
+            QueueProcessor localProcessor = new QueueProcessor(context);
+
+            bool poisonMessageHandlerCalled = false;
+            localProcessor.MessageAddedToPoisonQueue += (sender, e) =>
+            {
+                Assert.Same(sender, localProcessor);
+                Assert.Same(_poisonQueue, e.PoisonQueue);
+                Assert.NotNull(e.Message);
+                poisonMessageHandlerCalled = true;
+            };
+
+            string messageContent = Guid.NewGuid().ToString();
+            CloudQueueMessage message = new CloudQueueMessage(messageContent);
+            await _queue.AddMessageAsync(message, CancellationToken.None);
+            CloudQueueMessage messageFromCloud = await _queue.GetMessageAsync();
+            for (int i = 0; i < context.MaxDequeueCount; i++)
+            {
+                await _queue.UpdateMessageAsync(messageFromCloud, TimeSpan.FromMilliseconds(0), MessageUpdateFields.Visibility, CancellationToken.None);
+                messageFromCloud = await _queue.GetMessageAsync();
+            }
+
+            Assert.Equal(6, messageFromCloud.DequeueCount);
+            bool continueProcessing = await localProcessor.BeginProcessingMessageAsync(messageFromCloud, CancellationToken.None);
+            Assert.False(continueProcessing);
+
+            CloudQueueMessage poisonMessage = await _poisonQueue.GetMessageAsync();
+            Assert.NotNull(poisonMessage);
+            Assert.Equal(messageContent, poisonMessage.AsString);
+            Assert.True(poisonMessageHandlerCalled);
+        }
+
 
         public class TestFixture : IDisposable
         {
