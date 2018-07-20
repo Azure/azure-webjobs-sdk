@@ -10,6 +10,7 @@ using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Host.Indexers
 {
@@ -17,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
     {
         private readonly ITypeLocator _typeLocator;
         private readonly ITriggerBindingProvider _triggerBindingProvider;
-        private readonly IBindingProvider _bindingProvider;
+        private readonly CompositeBindingProvider _bindingProviderFactory;
         private readonly IJobActivator _activator;
         private readonly IFunctionExecutor _executor;
         private readonly IExtensionRegistry _extensions;
@@ -25,24 +26,26 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly ILoggerFactory _loggerFactory;
         private readonly SharedQueueHandler _sharedQueue;
         private readonly TimeoutAttribute _defaultTimeout;
+        private readonly bool _allowPartialHostStartup;
 
         private IFunctionIndex _index;
 
         public FunctionIndexProvider(ITypeLocator typeLocator,
             ITriggerBindingProvider triggerBindingProvider,
-            IBindingProvider bindingProvider,
+            CompositeBindingProvider bindingProviderFactory,
             IJobActivator activator,
             IFunctionExecutor executor,
             IExtensionRegistry extensions,
             SingletonManager singletonManager,
             ILoggerFactory loggerFactory,
             SharedQueueHandler sharedQueue,
-            TimeoutAttribute defaultTimeout)
+            IOptions<JobHostFunctionTimeoutOptions> timeoutOptions,
+            IOptions<JobHostOptions> hostOptions)
         {
 
             _typeLocator = typeLocator ?? throw new ArgumentNullException(nameof(typeLocator));
             _triggerBindingProvider = triggerBindingProvider ?? throw new ArgumentNullException(nameof(triggerBindingProvider));
-            _bindingProvider = bindingProvider ?? throw new ArgumentNullException(nameof(bindingProvider));
+            _bindingProviderFactory = bindingProviderFactory ?? throw new ArgumentNullException(nameof(bindingProviderFactory));
             _activator = activator ?? throw new ArgumentNullException(nameof(activator));
             _executor = executor ?? throw new ArgumentNullException(nameof(executor));
             _extensions = extensions ?? throw new ArgumentNullException(nameof(extensions));
@@ -50,7 +53,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _sharedQueue = sharedQueue ?? throw new ArgumentNullException(nameof(sharedQueue));
 
             _loggerFactory = loggerFactory;
-            _defaultTimeout = defaultTimeout;
+            _defaultTimeout = timeoutOptions.Value.ToAttribute();
+            _allowPartialHostStartup = hostOptions.Value.AllowPartialHostStartup;
         }
 
         public async Task<IFunctionIndex> GetAsync(CancellationToken cancellationToken)
@@ -66,7 +70,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private async Task<IFunctionIndex> CreateAsync(CancellationToken cancellationToken)
         {
             FunctionIndex index = new FunctionIndex();
-            FunctionIndexer indexer = new FunctionIndexer(_triggerBindingProvider, _bindingProvider, _activator, _executor, _extensions, _singletonManager, _loggerFactory, null, _sharedQueue);
+            IBindingProvider bindingProvider = _bindingProviderFactory;
+            FunctionIndexer indexer = new FunctionIndexer(_triggerBindingProvider, bindingProvider, _activator, _executor, _extensions, _singletonManager, _loggerFactory, null, _sharedQueue, allowPartialHostStartup: _allowPartialHostStartup);
             IReadOnlyList<Type> types = _typeLocator.GetTypes();
 
             foreach (Type type in types)

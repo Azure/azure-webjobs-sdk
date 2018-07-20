@@ -4,10 +4,11 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -42,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             await TestHelpers.Await(async () =>
             {
-                resultBlob = (CloudBlockBlob) (await _fixture.OutputContainer2.ListBlobsSegmentedAsync("blob1", null)).Results.SingleOrDefault();
+                resultBlob = (CloudBlockBlob)(await _fixture.OutputContainer2.ListBlobsSegmentedAsync("blob1", null)).Results.SingleOrDefault();
                 return resultBlob != null;
             });
 
@@ -58,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             await TestHelpers.Await(async () =>
             {
-                resultBlob = (CloudBlockBlob) (await _fixture.OutputContainer1.ListBlobsSegmentedAsync(null)).Results.SingleOrDefault();
+                resultBlob = (CloudBlockBlob)(await _fixture.OutputContainer1.ListBlobsSegmentedAsync(null)).Results.SingleOrDefault();
                 return resultBlob != null;
             });
 
@@ -93,7 +94,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 { "Name", name },
                 { "Value", TestData }
             };
-            await _fixture.Host.CallAsync(method, new { input = jObject.ToString() });
+            await _fixture.JobHost.CallAsync(method, new { input = jObject.ToString() });
 
             var blobReference = await _fixture.OutputContainer2.GetBlobReferenceFromServerAsync(name);
             await TestHelpers.Await(() => blobReference.ExistsAsync());
@@ -128,7 +129,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task Table_PrimaryAndSecondary_Succeeds()
         {
-            await _fixture.Host.CallAsync(typeof(MultipleStorageAccountsEndToEndTests).GetMethod("Table_PrimaryAndSecondary"));
+            await _fixture.JobHost.CallAsync(typeof(MultipleStorageAccountsEndToEndTests).GetMethod("Table_PrimaryAndSecondary"));
 
             TestTableEntity entity1 = null;
             TestTableEntity entity2 = null;
@@ -156,10 +157,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task CloudStorageAccount_PrimaryAndSecondary_Succeeds()
         {
-            await _fixture.Host.CallAsync(typeof(MultipleStorageAccountsEndToEndTests).GetMethod("BindToCloudStorageAccount"));
+            await _fixture.JobHost.CallAsync(typeof(MultipleStorageAccountsEndToEndTests).GetMethod(nameof(MultipleStorageAccountsEndToEndTests.BindToCloudStorageAccount)));
 
-            Assert.Equal(_fixture.Account1.Credentials.AccountName, primaryAccountResult.Credentials.AccountName);
-            Assert.Equal(_fixture.Account2.Credentials.AccountName, secondaryAccountResult.Credentials.AccountName);
+            Assert.Equal(_fixture.Account1.SdkObject.Credentials.AccountName, primaryAccountResult.Credentials.AccountName);
+            Assert.Equal(_fixture.Account2.SdkObject.Credentials.AccountName, secondaryAccountResult.Credentials.AccountName);
         }
 
         public static void BlobToBlob_DifferentAccounts_PrimaryToSecondary(
@@ -243,31 +244,27 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
-        public class TestFixture : IDisposable
+        public class TestFixture : IAsyncLifetime
         {
-            public TestFixture()
-            {
-                Initialize().Wait();
-            }
-
-            private async Task Initialize()
+            public async Task InitializeAsync()
             {
                 RandomNameResolver nameResolver = new TestNameResolver();
-                JobHostConfiguration hostConfiguration = new JobHostConfiguration()
-                {
-                    NameResolver = nameResolver,
-                    TypeLocator = new FakeTypeLocator(typeof(MultipleStorageAccountsEndToEndTests)),
-                };
 
-                hostConfiguration.AddService<IWebJobsExceptionHandler>(new TestExceptionHandler());
+                Host = new HostBuilder()
+                    .ConfigureDefaultTestHost<MultipleStorageAccountsEndToEndTests>()
+                    .ConfigureServices(services =>
+                    {
+                        services.AddSingleton<INameResolver>(nameResolver);
+                    })
+                    .AddAzureStorage()
+                    .Build();
 
-                Config = hostConfiguration;
+                Account1 = Host.GetStorageAccount();
+                var config = Host.Services.GetService<IConfiguration>();
+                string secondaryConnectionString = config[$"AzureWebJobs{Secondary}"];
+                Account2 = StorageAccount.NewFromConnectionString(secondaryConnectionString);
 
-                Account1 = CloudStorageAccount.Parse(hostConfiguration.StorageConnectionString);
-                string secondaryConnectionString = AmbientConnectionStringProvider.Instance.GetConnectionString(Secondary);
-                Account2 = CloudStorageAccount.Parse(secondaryConnectionString);
-
-                await CleanContainers();
+                await CleanContainersAsync();
 
                 CloudBlobClient blobClient1 = Account1.CreateCloudBlobClient();
                 string inputName = nameResolver.ResolveInString(Input);
@@ -310,24 +307,19 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await inputQueue1.AddMessageAsync(new CloudQueueMessage(TestData));
                 await inputQueue2.AddMessageAsync(new CloudQueueMessage(TestData));
 
-                Host = new JobHost(hostConfiguration);
                 Host.Start();
             }
 
-            public JobHost Host
+            public JobHost JobHost => Host.GetJobHost();
+
+            public IHost Host
             {
                 get;
                 private set;
             }
 
-            public JobHostConfiguration Config
-            {
-                get;
-                private set;
-            }
-
-            public CloudStorageAccount Account1 { get; private set; }
-            public CloudStorageAccount Account2 { get; private set; }
+            public StorageAccount Account1 { get; private set; }
+            public StorageAccount Account2 { get; private set; }
 
             public CloudBlobContainer OutputContainer1 { get; private set; }
 
@@ -341,21 +333,21 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             public CloudTable OutputTable2 { get; private set; }
 
-            public void Dispose()
+            public async Task DisposeAsync()
             {
-                Host.Stop();
+                await Host.StopAsync();
 
-                CleanContainers().Wait();
+                await CleanContainersAsync();
             }
 
-            private async Task CleanContainers()
+            private async Task CleanContainersAsync()
             {
                 await Clean(Account1);
                 await Clean(Account2);
             }
         }
 
-        private async static Task Clean(CloudStorageAccount account)
+        private async static Task Clean(StorageAccount account)
         {
             CloudBlobClient blobClient = account.CreateCloudBlobClient();
             foreach (var testContainer in (await blobClient.ListContainersSegmentedAsync(TestArtifactPrefix, null)).Results)

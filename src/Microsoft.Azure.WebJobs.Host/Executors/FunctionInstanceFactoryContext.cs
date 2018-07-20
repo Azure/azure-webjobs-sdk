@@ -8,7 +8,7 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal class FunctionInstanceFactoryContext
+    public class FunctionInstanceFactoryContext
     {
         public Guid Id { get; set; }
         public Guid? ParentId { get; set; }

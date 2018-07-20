@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Concurrent;
 using Microsoft.Azure.ServiceBus.Core;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -13,26 +14,24 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     /// </summary>
     public class MessagingProvider
     {
-        private readonly ServiceBusConfiguration _config;
+        private readonly ServiceBusOptions _options;
         private readonly ConcurrentDictionary<string, MessageReceiver> _messageReceiverCache = new ConcurrentDictionary<string, MessageReceiver>();
+        private readonly ConcurrentDictionary<string, MessageSender> _messageSenderCache = new ConcurrentDictionary<string, MessageSender>();
 
         /// <summary>
         /// Constructs a new instance.
         /// </summary>
-        /// <param name="config">The <see cref="ServiceBusConfiguration"/>.</param>
-        public MessagingProvider(ServiceBusConfiguration config)
+        /// <param name="serviceBusOptions">The <see cref="ServiceBusOptions"/>.</param>
+        public MessagingProvider(IOptions<ServiceBusOptions> serviceBusOptions)
         {
-            if (config == null)
-            {
-                throw new ArgumentNullException("config");
-            }
-            _config = config;
+            _options = serviceBusOptions?.Value ?? throw new ArgumentNullException(nameof(serviceBusOptions));
         }
 
         /// <summary>
         /// Creates a <see cref="MessageProcessor"/> for the specified ServiceBus entity.
         /// </summary>
         /// <param name="entityPath">The ServiceBus entity to create a <see cref="MessageProcessor"/> for.</param>
+        /// <param name="connectionString">The ServiceBus connection string.</param>
         /// <returns>The <see cref="MessageProcessor"/>.</returns>
         public virtual MessageProcessor CreateMessageProcessor(string entityPath, string connectionString)
         {
@@ -40,8 +39,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             {
                 throw new ArgumentNullException("entityPath");
             }
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                throw new ArgumentNullException("connectionString");
+            }
 
-            return new MessageProcessor(GetOrAddMessageReceiver(entityPath, connectionString), _config.MessageOptions);
+            return new MessageProcessor(GetOrAddMessageReceiver(entityPath, connectionString), _options.MessageOptions);
         }
 
         /// <summary>
@@ -50,8 +53,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// <remarks>
         /// You can override this method to customize the <see cref="MessageReceiver"/>.
         /// </remarks>
-        /// <param name="factory">The <see cref="MessagingFactory"/> to use.</param>
         /// <param name="entityPath">The ServiceBus entity to create a <see cref="MessageReceiver"/> for.</param>
+        /// <param name="connectionString">The ServiceBus connection string.</param>
         /// <returns></returns>
         public virtual MessageReceiver CreateMessageReceiver(string entityPath, string connectionString)
         {
@@ -59,8 +62,35 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             {
                 throw new ArgumentNullException("entityPath");
             }
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                throw new ArgumentNullException("connectionString");
+            }
 
             return GetOrAddMessageReceiver(entityPath, connectionString);
+        }
+
+        /// <summary>
+        /// Creates a <see cref="MessageSender"/> for the specified ServiceBus entity.
+        /// </summary>
+        /// <remarks>
+        /// You can override this method to customize the <see cref="MessageSender"/>.
+        /// </remarks>
+        /// <param name="entityPath">The ServiceBus entity to create a <see cref="MessageSender"/> for.</param>
+        /// <param name="connectionString">The ServiceBus connection string.</param>
+        /// <returns></returns>
+        public virtual MessageSender CreateMessageSender(string entityPath, string connectionString)
+        {
+            if (string.IsNullOrEmpty(entityPath))
+            {
+                throw new ArgumentNullException("entityPath");
+            }
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                throw new ArgumentNullException("connectionString");
+            }
+
+            return GetOrAddMessageSender(entityPath, connectionString);
         }
 
         private MessageReceiver GetOrAddMessageReceiver(string entityPath, string connectionString)
@@ -69,8 +99,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             return _messageReceiverCache.GetOrAdd(cacheKey,
                 new MessageReceiver(connectionString, entityPath)
                 {
-                    PrefetchCount = _config.PrefetchCount
+                    PrefetchCount = _options.PrefetchCount
                 });
+        }
+
+        private MessageSender GetOrAddMessageSender(string entityPath, string connectionString)
+        {
+            string cacheKey = $"{entityPath}-{connectionString}";
+            return _messageSenderCache.GetOrAdd(cacheKey, new MessageSender(connectionString, entityPath));
         }
     }
 }

@@ -12,11 +12,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
 {
     /// <summary>Defines constants for reasons a function is executed.</summary>
     [JsonConverter(typeof(StringEnumConverter))]
-#if PUBLICPROTOCOL
     public enum ExecutionReason
-#else
-    internal enum ExecutionReason
-#endif
     {
         /// <summary>Indicates a function executed because of an automatic trigger.</summary>
         AutomaticTrigger,

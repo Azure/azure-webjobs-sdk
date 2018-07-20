@@ -107,9 +107,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             [AutoResolve]
             public string PropWithoutPolicy { get; set; }
 
-            [AutoResolve(ResolutionPolicyType = typeof(WebJobs.ODataFilterResolutionPolicy))]
-            public string PropWithMarkerPolicy { get; set; }
-
             [AutoResolve(ResolutionPolicyType = typeof(AutoResolveAttribute))]
             public string PropWithInvalidPolicy { get; set; }
 
@@ -226,25 +223,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Attr1 attr2 = cloner.ResolveFromInvokeString("xy");
 
             Assert.Equal("xy", attr2.Path);
-        }
-
-        // Test on an attribute that does NOT implement IAttributeInvokeDescriptor
-        // Key parameter is on the ctor
-        [Fact]
-        public void InvokeStringBlobAttribute()
-        {
-            foreach (var attr in new BlobAttribute[] {
-                new BlobAttribute("container/{name}"),
-                new BlobAttribute("container/constant", FileAccess.ReadWrite),
-                new BlobAttribute("container/{name}", FileAccess.Write)
-            })
-            {
-                var cloner = new AttributeCloner<BlobAttribute>(attr, GetBindingContract("name"));
-                BlobAttribute attr2 = cloner.ResolveFromInvokeString("c/n");
-
-                Assert.Equal("c/n", attr2.BlobPath);
-                Assert.Equal(attr.Access, attr2.Access);
-            }
         }
 
         // Test on an attribute that does NOT implement IAttributeInvokeDescriptor
@@ -503,43 +481,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }            
         }
 
-        [Fact]
-        public void CloneNoDefaultCtor()
-        {
-            var a1 = new BlobAttribute("container/{name}.txt", FileAccess.Write);
-
-            Dictionary<string, object> values = new Dictionary<string, object>()
-            {
-                { "name", "green" },
-            };
-            var ctx = GetCtx(values);
-
-            var cloner = new AttributeCloner<BlobAttribute>(a1, GetBindingContract("name"));
-            var attr2 = cloner.ResolveFromBindingData(ctx);
-
-            Assert.Equal("container/green.txt", attr2.BlobPath);
-            Assert.Equal(a1.Access, attr2.Access);
-        }
-
-        [Fact]
-        public void CloneNoDefaultCtorShortList()
-        {
-            // Use shorter parameter list.
-            var a1 = new BlobAttribute("container/{name}.txt");
-
-            Dictionary<string, object> values = new Dictionary<string, object>()
-            {
-                { "name", "green" },
-            };
-            var ctx = GetCtx(values);
-
-            var cloner = new AttributeCloner<BlobAttribute>(a1, GetBindingContract("name"));
-            var attr2 = cloner.ResolveFromBindingData(ctx);
-
-            Assert.Equal("container/green.txt", attr2.BlobPath);
-            Assert.Equal(a1.Access, attr2.Access);
-        }
-
         // Malformed %% fail in ctor.
         // It's important that the failure comes from the attr cloner ctor because that means it
         // will occur during indexing time (ie, sooner than runtime).
@@ -607,19 +548,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             IResolutionPolicy policy = AttributeCloner<AttributeWithResolutionPolicy>.GetPolicy(attr.ResolutionPolicyType, propInfo);
 
             Assert.IsType<TestResolutionPolicy>(policy);
-        }
-
-        [Fact]
-        public void GetPolicy_ReturnsODataFilterPolicy_ForMarkerType()
-        {
-            // This is a special-case marker type to handle TableAttribute.Filter. We cannot directly list ODataFilterResolutionPolicy
-            // because BindingTemplate doesn't exist in the core assembly.
-            PropertyInfo propInfo = typeof(AttributeWithResolutionPolicy).GetProperty(nameof(AttributeWithResolutionPolicy.PropWithMarkerPolicy));
-
-            AutoResolveAttribute attr = propInfo.GetCustomAttribute<AutoResolveAttribute>();
-            IResolutionPolicy policy = AttributeCloner<AttributeWithResolutionPolicy>.GetPolicy(attr.ResolutionPolicyType, propInfo);
-
-            Assert.IsType<Host.Bindings.ODataFilterResolutionPolicy>(policy);
         }
 
         [Fact]

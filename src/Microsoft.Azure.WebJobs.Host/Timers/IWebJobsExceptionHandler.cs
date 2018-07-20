@@ -13,12 +13,6 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
     public interface IWebJobsExceptionHandler
     {
         /// <summary>
-        /// Called during host creation. Allows a reference to the host.
-        /// </summary>
-        /// <param name="host">The JobHost.</param>
-        void Initialize(JobHost host);
-
-        /// <summary>
         /// Called when a timeout occurs.
         /// </summary>
         /// <returns>A Task.</returns>

@@ -13,17 +13,19 @@ branches:
   - master
   - next
 image: Visual Studio 2017
+max_jobs: 1
 install:
-- ps: >-
+- ps: |
     $env:CommitHash = "$env:APPVEYOR_REPO_COMMIT"
-cache: '%USERPROFILE%\.nuget\packages'
+
+    .\dotnet-install.ps1 -Version 2.1.300 -Architecture x86
 build_script:
 - ps: |
     $buildNumber = 0
     $hasTag = Test-Path env:APPVEYOR_REPO_TAG_NAME
     if (-not $hasTag) {
       $buildNumber = $env:APPVEYOR_BUILD_NUMBER
-      Write-Host “No git tag found. Setting package suffix to '$buildNumber'"
+      Write-Host "No git tag found. Setting packages suffix to '$buildNumber'"
     }    
     .\build.ps1 -packageSuffix "$buildNumber"
 test_script:
@@ -49,6 +51,14 @@ test_script:
     $success = $success -and $?
 
     dotnet test .\test\Microsoft.Azure.WebJobs.EventHubs.UnitTests\ -v q --no-build
+
+    $success = $success -and $?
+    
+    dotnet test .\test\Microsoft.Azure.Webjobs.Extensions.Storage.UnitTests\ -v q --no-build
+
+    $success = $success -and $?
+    
+    dotnet test .\test\Microsoft.Azure.WebJobs.ServiceBus.UnitTests\ -v q --no-build
 
     $success = $success -and $?
 

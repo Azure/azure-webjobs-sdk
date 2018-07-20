@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace Microsoft.Azure.WebJobs.Host.Indexers
 {
-    internal interface IFunctionIndexLookup
+    public interface IFunctionIndexLookup
     {
         IFunctionDefinition Lookup(string functionId);
 

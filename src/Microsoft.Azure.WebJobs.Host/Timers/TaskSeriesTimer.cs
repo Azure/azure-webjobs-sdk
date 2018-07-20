@@ -5,8 +5,6 @@ using System;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Storage;
-using Microsoft.WindowsAzure.Storage;
 
 namespace Microsoft.Azure.WebJobs.Host.Timers
 {
@@ -149,7 +147,7 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
                         TaskSeriesCommandResult result = await _command.ExecuteAsync(cancellationToken);
                         wait = result.Wait;
                     }
-                    catch (StorageException ex) when (ex.IsTaskCanceled())
+                    catch (Exception ex) when (ex.InnerException is TaskCanceledException)
                     {
                         // TaskCanceledExceptions coming from storage are wrapped in a StorageException.
                         // We'll handle them all here so they don't have to be managed for every call.

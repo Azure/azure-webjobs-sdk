@@ -12,7 +12,7 @@ using Microsoft.Azure.EventHubs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Azure.WebJobs.Logging;
 
-namespace Microsoft.Azure.WebJobs.ServiceBus
+namespace Microsoft.Azure.WebJobs.EventHubs
 {
     internal class EventHubTriggerAttributeBindingProvider : ITriggerBindingProvider
     {

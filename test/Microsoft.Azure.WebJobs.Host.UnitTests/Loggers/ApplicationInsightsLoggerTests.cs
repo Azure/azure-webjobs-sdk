@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Reflection;
@@ -17,13 +18,15 @@ using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 {
-    public class ApplicationInsightsLoggerTests
+    public class ApplicationInsightsLoggerTests : IDisposable
     {
         private readonly Guid _invocationId = Guid.NewGuid();
         private readonly Guid _hostInstanceId = Guid.NewGuid();
@@ -39,6 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         private readonly TelemetryClient _client;
         private readonly int _durationMs = 450;
         private readonly IFunctionInstance _functionInstance;
+        private readonly IHost _host;
 
         public ApplicationInsightsLoggerTests()
         {
@@ -50,16 +54,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 ["anotherParam"] = "some value"
             };
 
-            TelemetryConfiguration config = new TelemetryConfiguration
-            {
-                TelemetryChannel = _channel,
-                InstrumentationKey = "some key"
-            };
+            _host = new HostBuilder()
+                .AddApplicationInsights("some key", (c, l) => true, null)
+                .Build();
 
-            // Add the same initializers that we use in the product code
-            DefaultTelemetryClientFactory.AddInitializers(config);
+            TelemetryConfiguration telemteryConfiguration = _host.Services.GetService<TelemetryConfiguration>();
+            telemteryConfiguration.TelemetryChannel = _channel;
 
-            _client = new TelemetryClient(config);
+            _client = _host.Services.GetService<TelemetryClient>();
 
             var descriptor = new FunctionDescriptor
             {
@@ -76,8 +78,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             var result = CreateDefaultInstanceLogEntry();
             ILogger logger = CreateLogger(LogCategories.Results);
 
+            string expectedOperationId, expectedRequestId;
             using (logger.BeginFunctionScope(CreateFunctionInstance(_invocationId), _hostInstanceId))
             {
+                expectedRequestId = Activity.Current.Id;
+                expectedOperationId = Activity.Current.RootId;
+
                 // sleep briefly to provide a non-zero Duration
                 await Task.Delay(100);
                 logger.LogFunctionResult(result);
@@ -85,8 +91,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             RequestTelemetry telemetry = _channel.Telemetries.Single() as RequestTelemetry;
 
-            Assert.Equal(_invocationId.ToString(), telemetry.Id);
-            Assert.Equal(_invocationId.ToString(), telemetry.Context.Operation.Id);
+            Assert.Equal(expectedRequestId, telemetry.Id);
+            Assert.Equal(expectedOperationId, telemetry.Context.Operation.Id);
+            Assert.Null(telemetry.Context.Operation.ParentId);
+            Assert.Contains(LogConstants.InvocationIdKey, telemetry.Properties.Keys);
+            Assert.Equal(_invocationId.ToString(), telemetry.Properties[LogConstants.InvocationIdKey]);
             Assert.Equal(_functionShortName, telemetry.Name);
             Assert.Equal(_functionShortName, telemetry.Context.Operation.Name);
             Assert.True(telemetry.Duration > TimeSpan.Zero, "Expected a non-zero Duration.");
@@ -104,8 +113,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             var result = CreateDefaultInstanceLogEntry(fex);
             ILogger logger = CreateLogger(LogCategories.Results);
 
+            string expectedOperationId, expectedRequestId;
             using (logger.BeginFunctionScope(CreateFunctionInstance(_invocationId), _hostInstanceId))
             {
+                expectedRequestId = Activity.Current.Id;
+                expectedOperationId = Activity.Current.RootId;
+
                 logger.LogFunctionResult(result);
             }
 
@@ -114,20 +127,21 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             ExceptionTelemetry exceptionTelemetry = _channel.Telemetries.OfType<ExceptionTelemetry>().Single();
 
             Assert.Equal(2, _channel.Telemetries.Count);
-            Assert.Equal(_invocationId.ToString(), requestTelemetry.Id);
-            Assert.Equal(_invocationId.ToString(), requestTelemetry.Context.Operation.Id);
+            Assert.Equal(expectedRequestId, requestTelemetry.Id);
+            Assert.Equal(expectedOperationId, requestTelemetry.Context.Operation.Id);
+            Assert.Null(requestTelemetry.Context.Operation.ParentId);
             Assert.Equal(_functionShortName, requestTelemetry.Name);
             Assert.Equal(_functionShortName, requestTelemetry.Context.Operation.Name);
             Assert.Equal(defaultIp, requestTelemetry.Context.Location.Ip);
+            Assert.Contains(LogConstants.InvocationIdKey, requestTelemetry.Properties.Keys);
+            Assert.Equal(_invocationId.ToString(), requestTelemetry.Properties[LogConstants.InvocationIdKey]);
             Assert.Equal(LogCategories.Results, requestTelemetry.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(LogLevel.Error.ToString(), requestTelemetry.Properties[LogConstants.LogLevelKey]);
             // TODO: Beef up validation to include properties
 
-            // Starting the telemetry prefixes/postfixes values to the request id, but the original guid is there
-            Assert.Equal(_invocationId.ToString(), requestTelemetry.Id);
-
             // Exception needs to have associated id
-            Assert.Equal(_invocationId.ToString(), exceptionTelemetry.Context.Operation.Id);
+            Assert.Equal(expectedOperationId, exceptionTelemetry.Context.Operation.Id);
+            Assert.Equal(expectedRequestId, exceptionTelemetry.Context.Operation.ParentId);
             Assert.Equal(_functionShortName, exceptionTelemetry.Context.Operation.Name);
             Assert.Same(fex, exceptionTelemetry.Exception);
             Assert.Equal(LogCategories.Results, exceptionTelemetry.Properties[LogConstants.CategoryNameKey]);
@@ -182,6 +196,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Guid scopeGuid = Guid.NewGuid();
 
             ILogger logger = CreateLogger(_functionCategoryName);
+
+            string expectedOperationId, expectedRequestId;
             using (logger.BeginFunctionScope(CreateFunctionInstance(scopeGuid), _hostInstanceId))
             {
                 logger.LogInformation("Information");
@@ -190,6 +206,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 logger.LogError("Error");
                 logger.LogTrace("Trace");
                 logger.LogWarning("Warning");
+
+                expectedRequestId = Activity.Current.Id;
+                expectedOperationId = Activity.Current.RootId;
             }
 
             Assert.Equal(6, _channel.Telemetries.Count);
@@ -212,7 +231,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
                 Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
                 Assert.Equal(telemetry.Message, telemetry.Properties[LogConstants.CustomPropertyPrefix + LogConstants.OriginalFormatKey]);
-                Assert.Equal(scopeGuid.ToString(), telemetry.Context.Operation.Id);
+                Assert.Equal(expectedRequestId, telemetry.Context.Operation.ParentId);
+                Assert.Equal(expectedOperationId, telemetry.Context.Operation.Id);
                 Assert.Equal(_functionShortName, telemetry.Context.Operation.Name);
             }
         }
@@ -244,9 +264,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Guid scopeGuid = Guid.NewGuid();
             ILogger logger = CreateLogger(_functionCategoryName);
 
+            string expectedOperationId, expectedRequestId;
+
             using (logger.BeginFunctionScope(CreateFunctionInstance(scopeGuid), _hostInstanceId))
             {
                 logger.LogError(0, ex, "Error with customer: {customer}.", "John Doe");
+
+                expectedRequestId = Activity.Current.Id;
+                expectedOperationId = Activity.Current.RootId;
             }
 
             Assert.Equal(2, _channel.Telemetries.Count());
@@ -261,7 +286,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal("Error with customer: John Doe.", exceptionTelemetry.Properties[LogConstants.FormattedMessageKey]);
             Assert.Equal("John Doe", exceptionTelemetry.Properties[LogConstants.CustomPropertyPrefix + "customer"]);
             Assert.Same(ex, exceptionTelemetry.Exception);
-            Assert.Equal(scopeGuid.ToString(), exceptionTelemetry.Context.Operation.Id);
+            Assert.Equal(expectedOperationId, exceptionTelemetry.Context.Operation.Id);
+            Assert.Equal(expectedRequestId, exceptionTelemetry.Context.Operation.ParentId);
             Assert.Equal(_functionShortName, exceptionTelemetry.Context.Operation.Name);
 
             string internalMessage = GetInternalExceptionMessages(exceptionTelemetry).Single();
@@ -277,20 +303,29 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             ILogger logger = CreateLogger(_functionCategoryName);
             Guid scopeGuid = Guid.NewGuid();
 
+            string expectedOperationId, expectedRequestId;
             using (logger.BeginFunctionScope(CreateFunctionInstance(scopeGuid), _hostInstanceId))
             {
                 logger.LogMetric("CustomMetric", 44.9);
+
+                expectedRequestId = Activity.Current.Id;
+                expectedOperationId = Activity.Current.RootId;
             }
 
             var telemetry = _channel.Telemetries.Single() as MetricTelemetry;
 
-            Assert.Equal(2, telemetry.Properties.Count);
+            Assert.Equal(3, telemetry.Properties.Count);
             Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
 
+            // metrics are logged with EventId=1
+            Assert.Equal("1", telemetry.Properties[LogConstants.EventIdKey]);
+
             Assert.Equal("CustomMetric", telemetry.Name);
             Assert.Equal(44.9, telemetry.Sum);
-            Assert.Equal(scopeGuid.ToString(), telemetry.Context.Operation.Id);
+
+            Assert.Equal(expectedOperationId, telemetry.Context.Operation.Id);
+            Assert.Equal(expectedRequestId, telemetry.Context.Operation.ParentId);
             Assert.Equal(_functionShortName, telemetry.Context.Operation.Name);
 
             Assert.Null(telemetry.Min);
@@ -300,13 +335,44 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         }
 
         [Fact]
+        public void Log_IncludesEventId()
+        {
+            ILogger logger = CreateLogger(_functionCategoryName);
+            logger.Log(LogLevel.Information, 100, "Test", null, (s, e) => s);
+
+            var telemetry = _channel.Telemetries.Single() as ISupportProperties;
+
+            Assert.Equal(3, telemetry.Properties.Count);
+            Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
+            Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
+            Assert.Equal("100", telemetry.Properties[LogConstants.EventIdKey]);
+        }
+
+        [Fact]
+        public void Log_IgnoresEventIdZero()
+        {
+            ILogger logger = CreateLogger(_functionCategoryName);
+            logger.Log(LogLevel.Information, 0, "Test", null, (s, e) => s);
+
+            var telemetry = _channel.Telemetries.Single() as ISupportProperties;
+
+            Assert.Equal(2, telemetry.Properties.Count);
+            Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
+            Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
+        }
+
+        [Fact]
         public void LogMetric_AllProperties()
         {
             ILogger logger = CreateLogger(_functionCategoryName);
             Guid scopeGuid = Guid.NewGuid();
 
+            string expectedOperationId, expectedRequestId;
             using (logger.BeginFunctionScope(CreateFunctionInstance(scopeGuid), _hostInstanceId))
             {
+                expectedRequestId = Activity.Current.Id;
+                expectedOperationId = Activity.Current.RootId;
+
                 var props = new Dictionary<string, object>
                 {
                     ["MyCustomProp1"] = "abc",
@@ -321,13 +387,17 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             var telemetry = _channel.Telemetries.Single() as MetricTelemetry;
 
-            Assert.Equal(4, telemetry.Properties.Count);
+            Assert.Equal(5, telemetry.Properties.Count);
             Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
             Assert.Equal("abc", telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}MyCustomProp1"]);
             Assert.Equal("def", telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}MyCustomProp2"]);
 
-            Assert.Equal(scopeGuid.ToString(), telemetry.Context.Operation.Id);
+            // metrics are logged with EventId=1
+            Assert.Equal("1", telemetry.Properties[LogConstants.EventIdKey]);
+
+            Assert.Equal(expectedOperationId, telemetry.Context.Operation.Id);
+            Assert.Equal(expectedRequestId, telemetry.Context.Operation.ParentId);
             Assert.Equal(_functionShortName, telemetry.Context.Operation.Name);
 
             Assert.Equal("CustomMetric", telemetry.Name);
@@ -344,6 +414,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             ILogger logger = CreateLogger(_functionCategoryName);
             Guid scopeGuid = Guid.NewGuid();
 
+            string expectedOperationId, expectedRequestId;
             using (logger.BeginFunctionScope(CreateFunctionInstance(scopeGuid), _hostInstanceId))
             {
                 var props = new Dictionary<string, object>
@@ -356,17 +427,24 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                     ["standardDeviation"] = 5.5
                 };
                 logger.LogMetric("CustomMetric", 1.1, props);
+
+                expectedRequestId = Activity.Current.Id;
+                expectedOperationId = Activity.Current.RootId;
             }
 
             var telemetry = _channel.Telemetries.Single() as MetricTelemetry;
 
-            Assert.Equal(4, telemetry.Properties.Count);
+            Assert.Equal(5, telemetry.Properties.Count);
             Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
             Assert.Equal("abc", telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}MyCustomProp1"]);
             Assert.Equal("def", telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}MyCustomProp2"]);
 
-            Assert.Equal(scopeGuid.ToString(), telemetry.Context.Operation.Id);
+            // metrics are logged with EventId=1
+            Assert.Equal("1", telemetry.Properties[LogConstants.EventIdKey]);
+
+            Assert.Equal(expectedOperationId, telemetry.Context.Operation.Id);
+            Assert.Equal(expectedRequestId, telemetry.Context.Operation.ParentId);
             Assert.Equal(_functionShortName, telemetry.Context.Operation.Name);
 
             Assert.Equal("CustomMetric", telemetry.Name);
@@ -640,6 +718,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Duration = TimeSpan.FromMilliseconds(_durationMs),
                 Exception = ex
             };
+        }
+
+        public void Dispose()
+        {
+            _channel?.Dispose();
+            _host?.Dispose();
         }
     }
 }

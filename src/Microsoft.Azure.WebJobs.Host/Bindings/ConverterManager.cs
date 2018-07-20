@@ -87,7 +87,7 @@ namespace Microsoft.Azure.WebJobs
             });
         }
 
-        // If somebody registered a converter from Src-->Dest, then both those types  can be used to 
+        // If somebody registered a converter from Src-->Dest, then both those types can be used to 
         // resolve assemblies. 
         // The attribute type always points to the extension's assembly. 
         // Whereas some of the Src,Dest types will point to the resource's "native sdk"
@@ -99,6 +99,7 @@ namespace Microsoft.Azure.WebJobs
                 AddType(entry.Dest, funcAddType);
             }
         }
+
         private void AddType(OpenType type, Action<Type> funcAddType)
         {
             if (type is OpenType.ExactMatch x)

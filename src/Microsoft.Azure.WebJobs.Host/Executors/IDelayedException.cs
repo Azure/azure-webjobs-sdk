@@ -5,7 +5,7 @@ using System;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal interface IDelayedException
+    public interface IDelayedException
     {
         Exception Exception { get; }
         void Throw();

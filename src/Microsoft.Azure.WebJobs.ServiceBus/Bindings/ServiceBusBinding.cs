@@ -19,16 +19,17 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
         private readonly IBindableServiceBusPath _path;
         private readonly IAsyncObjectToTypeConverter<ServiceBusEntity> _converter;
         private readonly EntityType _entityType;
-
-        public ServiceBusBinding(string parameterName, IArgumentBinding<ServiceBusEntity> argumentBinding, ServiceBusAccount account, IBindableServiceBusPath path, ServiceBusAttribute attr)
+        private readonly MessagingProvider _messagingProvider;
+        
+        public ServiceBusBinding(string parameterName, IArgumentBinding<ServiceBusEntity> argumentBinding, ServiceBusAccount account, ServiceBusOptions config, IBindableServiceBusPath path, ServiceBusAttribute attr)
         {
             _parameterName = parameterName;
             _argumentBinding = argumentBinding;
             _account = account;
             _path = path;
             _entityType = attr.EntityType;
-            _converter = new OutputConverter<string>(
-                new StringToServiceBusEntityConverter(account, _path, _entityType));
+            _messagingProvider = config.MessagingProvider;
+            _converter = new OutputConverter<string>(new StringToServiceBusEntityConverter(account, _path, _entityType, _messagingProvider));
         }
 
         public bool FromAttribute
@@ -41,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
             context.CancellationToken.ThrowIfCancellationRequested();
 
             string boundQueueName = _path.Bind(context.BindingData);
-            var messageSender = new MessageSender(_account.ConnectionString, boundQueueName);
+            var messageSender = _messagingProvider.CreateMessageSender(boundQueueName, _account.ConnectionString);
 
             var entity = new ServiceBusEntity
             {
@@ -81,17 +82,18 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 
         internal static ParameterDisplayHints CreateParameterDisplayHints(string entityPath, bool isInput)
         {
-            ParameterDisplayHints descriptor = new ParameterDisplayHints();
-
-            descriptor.Description = isInput ?
+            ParameterDisplayHints descriptor = new ParameterDisplayHints
+            {
+                Description = isInput ?
                 string.Format(CultureInfo.CurrentCulture, "dequeue from '{0}'", entityPath) :
-                string.Format(CultureInfo.CurrentCulture, "enqueue to '{0}'", entityPath);
+                string.Format(CultureInfo.CurrentCulture, "enqueue to '{0}'", entityPath),
 
-            descriptor.Prompt = isInput ?
+                Prompt = isInput ?
                 "Enter the queue message body" :
-                "Enter the output entity name";
+                "Enter the output entity name",
 
-            descriptor.DefaultValue = isInput ? null : entityPath;
+                DefaultValue = isInput ? null : entityPath
+            };
 
             return descriptor;
         }

@@ -63,19 +63,24 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
                 case ContentTypes.ApplicationOctetStream:
                     return GetBase64StringAsync(clonedMessage, cancellationToken);
                 default:
-                    return GetBytesLengthAsync(clonedMessage);
+                    return GetDescriptionAsync(clonedMessage);
             }
         }
 
         private static async Task<string> GetBase64StringAsync(Message clonedMessage,
             CancellationToken cancellationToken)
         {
+            if (clonedMessage.Body == null)
+            {
+                return null;
+            }
             return Convert.ToBase64String(clonedMessage.Body);
         }
 
-        private static Task<string> GetBytesLengthAsync(Message clonedMessage)
+        private static Task<string> GetDescriptionAsync(Message clonedMessage)
         {
-            string description = string.Format(CultureInfo.InvariantCulture, "byte[{0}]", clonedMessage.Body.Length);
+            string description = clonedMessage.Body != null 
+                ? string.Format(CultureInfo.InvariantCulture, "byte[{0}]", clonedMessage.Body.Length) : "null";
 
             return Task.FromResult(description);
         }
@@ -83,6 +88,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         private static async Task<string> GetTextAsync(Message clonedMessage,
             CancellationToken cancellationToken)
         {
+            if (clonedMessage.Body == null)
+            {
+                return null;
+            }
             return StrictEncodings.Utf8.GetString(clonedMessage.Body);
         }
     }

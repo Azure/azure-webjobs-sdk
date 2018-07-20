@@ -5,7 +5,8 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    internal interface IWatcher
+    // $$$ Ok? 
+    public interface IWatcher
     {
         ParameterLog GetStatus();
     }

@@ -6,30 +6,22 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
+using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Indexers
 {
     // Default policy for locating types. 
     internal class DefaultTypeLocator : ITypeLocator
     {
-        private static readonly string WebJobsAssemblyName = AssemblyNameCache.GetName(typeof(TableAttribute).Assembly).Name;
+        private static readonly string WebJobsAssemblyName = AssemblyNameCache.GetName(typeof(FunctionNameAttribute).Assembly).Name;
 
-        private readonly TextWriter _log;
-        private readonly IExtensionRegistry _extensions;
+        private readonly ILogger _logger;
 
-        public DefaultTypeLocator(TextWriter log, IExtensionRegistry extensions)
-        {
-            if (log == null)
-            {
-                throw new ArgumentNullException("log");
-            }
-            if (extensions == null)
-            {
-                throw new ArgumentNullException("extensions");
-            }
-
-            _log = log;
-            _extensions = extensions;
+        public DefaultTypeLocator(ILoggerFactory loggerFactory)
+        {            
+            _logger = loggerFactory.CreateLogger(LogCategories.Startup);
         }
 
         // Helper to filter out assemblies that don't reference the SDK or
@@ -42,7 +34,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 return false;
             }
 
-            AssemblyName[] referencedAssemblyNames = assembly.GetReferencedAssemblies();  
+            AssemblyName[] referencedAssemblyNames = assembly.GetReferencedAssemblies();
             foreach (var referencedAssemblyName in referencedAssemblyNames)
             {
                 if (String.Equals(referencedAssemblyName.Name, WebJobsAssemblyName, StringComparison.OrdinalIgnoreCase))
@@ -68,7 +60,10 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             List<Type> allTypes = new List<Type>();
 
             var assemblies = GetUserAssemblies();
-            IEnumerable<Assembly> extensionAssemblies = _extensions.GetExtensionAssemblies();
+
+            // $$$ Previously - this would include all extension assemblies (any assembly that referenced an extension)
+            // but it's hard to determine that; and an extension assembly would also reference webjobs; so can we just include that? 
+            IEnumerable<Assembly> extensionAssemblies = new Assembly[] { this.GetType().Assembly } ; // $$$ breaking change 
             foreach (var assembly in assemblies)
             {
                 var assemblyTypes = FindTypes(assembly, extensionAssemblies);
@@ -121,16 +116,29 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
             catch (ReflectionTypeLoadException ex)
             {
-                _log.WriteLine("Warning: Only got partial types from assembly: {0}", assembly.FullName);
-                _log.WriteLine("Exception message: {0}", ex.ToString());
+                var builder = new StringBuilder();
 
+                builder.AppendLine($"Warning: Only got partial types from assembly: {assembly.FullName}");
+
+                if (ex.LoaderExceptions != null)
+                {
+                    builder.AppendLine($"The following loader failures occured when trying to load the assembly:");
+                    string loaderFailuresMessage = string.Join(Environment.NewLine, ex.LoaderExceptions.Select(e => $"   - {e.Message}"));
+                    builder.AppendLine(loaderFailuresMessage);
+
+                    builder.AppendLine("This can occur if the assemblies listed above are missing, outdated or mismatched.");
+                }
+
+                builder.AppendLine($"Exception message: {ex.ToString()}");
+
+                _logger.LogWarning(builder.ToString());
                 // In case of a type load exception, at least get the types that did succeed in loading
-                types = ex.Types;
+                types = ex.Types.Where(t => t != null).ToArray();
             }
             catch (Exception ex)
             {
-                _log.WriteLine("Warning: Failed to get types from assembly: {0}", assembly.FullName);
-                _log.WriteLine("Exception message: {0}", ex.ToString());
+                _logger.LogInformation("Warning: Failed to get types from assembly: {0}", assembly.FullName);
+                _logger.LogInformation("Exception message: {0}", ex.ToString());
             }
 
             return types;

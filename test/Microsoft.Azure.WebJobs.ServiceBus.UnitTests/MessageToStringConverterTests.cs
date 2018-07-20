@@ -26,6 +26,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         [InlineData(ContentTypes.ApplicationOctetStream, TestString)]
         [InlineData(null, TestJson)]
         [InlineData("application/xml", TestJson)]
+        [InlineData(ContentTypes.TextPlain, null)]
         public async Task ConvertAsync_ReturnsExpectedResult_WithBinarySerializer(string contentType, string value)
         {
             byte[] bytes;
@@ -50,9 +51,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         [InlineData(ContentTypes.ApplicationOctetStream, TestString)]
         [InlineData(null, TestJson)]
         [InlineData("application/xml", TestJson)]
+        [InlineData(ContentTypes.TextPlain, null)]
+        [InlineData(ContentTypes.TextPlain, "")]
         public async Task ConvertAsync_ReturnsExpectedResult_WithSerializedString(string contentType, string value)
         {
-            Message message = new Message(Encoding.UTF8.GetBytes(value));
+            Message message = new Message(value == null ? null : Encoding.UTF8.GetBytes(value));
             message.ContentType = contentType;
 
             MessageToStringConverter converter = new MessageToStringConverter();

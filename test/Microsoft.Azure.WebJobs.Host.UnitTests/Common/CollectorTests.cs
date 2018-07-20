@@ -7,6 +7,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Hosting;
+using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -27,7 +29,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             public string Bonus { get; set; }
         }
 
-
         public class ErrorProgram
         {
             // Malformed 
@@ -46,15 +47,21 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void TestError()
         {
-            FakeQueueClient client = new FakeQueueClient();
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<ErrorProgram>()
+                .AddExtension<FakeQueueClient>()
+                .Build();
+
+            FakeQueueClient client = host.GetExtension<FakeQueueClient>();
+            JobHost jobHost = host.GetJobHost();
+            var p = host.GetTestLoggerProvider();
 
             // Call 'ok' method which has no errors. Should still get the indexing errors from the other method. 
-            var host = TestHelpers.NewJobHost<ErrorProgram>(client);
-            var m = typeof(ErrorProgram).GetMethod("ValidMethod");
+            var m = typeof(ErrorProgram).GetMethod(nameof(ErrorProgram.ValidMethod));
 
             try
             {
-                host.Call("ValidMethod"); // Will force indexing. 
+                jobHost.Call(m); // Will force indexing. 
             }
             catch (FunctionIndexingException e)
             {
@@ -176,40 +183,45 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void Test()
         {
-            FakeQueueClient client = new FakeQueueClient();
-            var host = TestHelpers.NewJobHost<Functions>(client);
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<Functions>()
+                .AddExtension<FakeQueueClient>()
+                .Build();
 
-            var p7 = Invoke(host, client, "SendDirectClient");
+            JobHost jobHost = host.GetJobHost();
+            FakeQueueClient client = host.GetExtension<FakeQueueClient>();
+
+            var p7 = Invoke(jobHost, client, "SendDirectClient");
             Assert.Single(p7);
             Assert.Equal("abc", p7[0].Message);
             Assert.Equal("def", p7[0].ExtraPropertery);
 
-            var p8 = Invoke(host, client, "SendOneDerivedNative");
+            var p8 = Invoke(jobHost, client, "SendOneDerivedNative");
             Assert.Single(p8);
             DerivedFakeQueueData pd8 = (DerivedFakeQueueData)p8[0];
             Assert.Equal("Bonus!", pd8.Bonus); // verify derived prop that wouldn't serialize. 
 
-            var p9 = Invoke(host, client, "SendOneOtherNative");
+            var p9 = Invoke(jobHost, client, "SendOneOtherNative");
             Assert.Single(p9);
             Assert.Equal("direct", p9[0].ExtraPropertery); // Set by the  DirectFakeQueueData.ToEvent
 
             // Single items
-            var p1 = InvokeJson<Payload>(host, client, "SendOnePoco");
+            var p1 = InvokeJson<Payload>(jobHost, client, "SendOnePoco");
             Assert.Single(p1);
             Assert.Equal(123, p1[0].val1);
 
-            var p2 = Invoke(host, client, "SendOneNative");
+            var p2 = Invoke(jobHost, client, "SendOneNative");
             Assert.Single(p2);
             Assert.Equal("message", p2[0].Message);
             Assert.Equal("extra", p2[0].ExtraPropertery);
 
-            var p3 = Invoke(host, client, "SendOneString");
+            var p3 = Invoke(jobHost, client, "SendOneString");
             Assert.Single(p3);
             Assert.Equal("stringvalue", p3[0].Message);
 
             foreach (string methodName in new string[] { "SendDontQueue", "SendArrayNull", "SendArrayLen0" })
             {
-                var p6 = Invoke(host, client, methodName);
+                var p6 = Invoke(jobHost, client, methodName);
                 Assert.Empty(p6);
             }
 
@@ -217,7 +229,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             foreach (string methodName in new string[] {
                 "SendSyncCollectorBytes", "SendArrayString", "SendSyncCollectorString", "SendAsyncCollectorString", "SendCollectorNative" })
             {
-                var p4 = Invoke(host, client, methodName);
+                var p4 = Invoke(jobHost, client, methodName);
                 Assert.Equal(2, p4.Length);
                 Assert.Equal("first", p4[0].Message);
                 Assert.Equal("second", p4[1].Message);
@@ -225,7 +237,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             foreach (string methodName in new string[] { "SendCollectorPoco", "SendArrayPoco" })
             {
-                var p5 = InvokeJson<Payload>(host, client, methodName);
+                var p5 = InvokeJson<Payload>(jobHost, client, methodName);
                 Assert.Equal(2, p5.Length);
                 Assert.Equal(100, p5[0].val1);
                 Assert.Equal(200, p5[1].val1);

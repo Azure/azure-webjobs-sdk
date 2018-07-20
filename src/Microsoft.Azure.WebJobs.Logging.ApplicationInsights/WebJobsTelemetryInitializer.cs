@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         private const string ComputerNameKey = "COMPUTERNAME";
         private const string WebSiteInstanceIdKey = "WEBSITE_INSTANCE_ID";
 
-        private static string _roleInstanceName = GetRoleInstanceName();
+        private static readonly string _roleInstanceName = GetRoleInstanceName();
 
         public void Initialize(ITelemetry telemetry)
         {
@@ -35,12 +35,10 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             // Apply our special scope properties
             IDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionary() ?? new Dictionary<string, object>();
 
-            telemetry.Context.Operation.Id = scopeProps.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId);
             telemetry.Context.Operation.Name = scopeProps.GetValueOrDefault<string>(ScopeKeys.FunctionName);
 
             // Apply Category and LogLevel to all telemetry
-            ISupportProperties telemetryProps = telemetry as ISupportProperties;
-            if (telemetryProps != null)
+            if (telemetry is ISupportProperties telemetryProps)
             {
                 string category = scopeProps.GetValueOrDefault<string>(LogConstants.CategoryNameKey);
                 if (category != null)
@@ -52,6 +50,12 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 if (logLevel != null)
                 {
                     telemetryProps.Properties[LogConstants.LogLevelKey] = logLevel.Value.ToString();
+                }
+
+                int? eventId = scopeProps.GetValueOrDefault<int?>(LogConstants.EventIdKey);
+                if (eventId != null && eventId.HasValue && eventId.Value != 0)
+                {
+                    telemetryProps.Properties[LogConstants.EventIdKey] = eventId.Value.ToString();
                 }
             }
         }

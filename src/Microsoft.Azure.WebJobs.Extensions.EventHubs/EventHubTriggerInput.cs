@@ -4,7 +4,7 @@
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.EventHubs.Processor;
 
-namespace Microsoft.Azure.WebJobs.ServiceBus
+namespace Microsoft.Azure.WebJobs.EventHubs
 {
     // The core object we get when an EventHub is triggered. 
     // This gets converted to the user type (EventData, string, poco, etc) 

@@ -8,14 +8,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
 
-namespace Microsoft.Azure.WebJobs.ServiceBus
+namespace Microsoft.Azure.WebJobs.EventHubs
 {
     /// <summary>
     /// Core object to send events to EventHub. 
     /// Any user parameter that sends EventHub events will eventually get bound to this object. 
     /// This will queue events and send in batches, also keeping under the 256kb event hub limit per batch. 
     /// </summary>
-    public class EventHubAsyncCollector : IAsyncCollector<EventData>
+    internal class EventHubAsyncCollector : IAsyncCollector<EventData>
     {
         private readonly EventHubClient _client;
 
