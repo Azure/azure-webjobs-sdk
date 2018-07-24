@@ -13,28 +13,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
     public class MessageProcessorTests
     {
         [Fact]
-        public async Task CompleteProcessingMessageAsync_Success_CompletesMessage_WhenAutoCompleteFalse()
-        {
-            OnMessageOptions options = new OnMessageOptions
-            {
-                AutoComplete = false
-            };
-            MessageProcessor processor = new MessageProcessor(options);
-
-            BrokeredMessage message = new BrokeredMessage();
-            FunctionResult result = new FunctionResult(true);
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            {
-                await processor.CompleteProcessingMessageAsync(message, result, CancellationToken.None);
-            });
-
-            // The service bus APIs aren't unit testable, so in this test suite
-            // we rely on exception stacks to verify APIs are called as expected.
-            // this verifies that we initiated the completion
-            Assert.True(ex.ToString().Contains("Microsoft.ServiceBus.Messaging.BrokeredMessage.BeginComplete"));
-        }
-
-        [Fact]
         public async Task CompleteProcessingMessageAsync_Failure_PropagatesException()
         {
             OnMessageOptions options = new OnMessageOptions
