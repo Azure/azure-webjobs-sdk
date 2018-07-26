@@ -55,32 +55,33 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// <summary>
         /// This method completes processing of the specified message, after the job function has been invoked.
         /// </summary>
+        /// <remarks>
+        /// The message is completed by the ServiceBus SDK based on how the <see cref="MessageHandlerOptions.AutoComplete"/> option
+        /// is configured. E.g. if <see cref="MessageHandlerOptions.AutoComplete"/> is false, it is up to the job function to complete
+        /// the message.
+        /// </remarks>
         /// <param name="message">The message to complete processing for.</param>
         /// <param name="result">The <see cref="FunctionResult"/> from the job invocation.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> to use</param>
         /// <returns>A <see cref="Task"/> that will complete the message processing.</returns>
-        public virtual async Task CompleteProcessingMessageAsync(Message message, FunctionResult result, CancellationToken cancellationToken)
+        public virtual Task CompleteProcessingMessageAsync(Message message, FunctionResult result, CancellationToken cancellationToken)
         {
-            var lockToken = message.SystemProperties.IsLockTokenSet ? message.SystemProperties.LockToken : string.Empty;
-
-            if (result.Succeeded)
+            if (result == null)
             {
-                if (!MessageOptions.AutoComplete)
-                {
-                    // AutoComplete is true by default, but if set to false
-                    // we need to complete the message
-                    cancellationToken.ThrowIfCancellationRequested();
-                    await MessageReceiver.CompleteAsync(lockToken);
-                }
+                throw new ArgumentNullException(nameof(result));
             }
-            else
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!result.Succeeded)
             {
                 // if the invocation failed, we must propagate the
                 // exception back to SB so it can handle message state
                 // correctly
-                cancellationToken.ThrowIfCancellationRequested();
                 throw result.Exception;
             }
+
+            return Task.CompletedTask;
         }
     }
 }

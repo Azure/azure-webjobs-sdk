@@ -24,24 +24,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
         }
 
         [Fact]
-        public async Task CompleteProcessingMessageAsync_Success_CompletesMessage_WhenAutoCompleteFalse()
-        {
-            _options.AutoComplete = false;
-
-            Message message = new Message();
-            FunctionResult result = new FunctionResult(true);
-            var ex = await Assert.ThrowsAsync<FormatException>(async () =>
-            {
-                await _processor.CompleteProcessingMessageAsync(message, result, CancellationToken.None);
-            });
-
-            // The service bus APIs aren't unit testable, so in this test suite
-            // we rely on exception stacks to verify APIs are called as expected.
-            // this verifies that we initiated the completion
-            Assert.True(ex.ToString().Contains("Microsoft.Azure.ServiceBus.Core.MessageReceiver.OnCompleteAsync"));
-        }
-
-        [Fact]
         public async Task CompleteProcessingMessageAsync_Failure_PropagatesException()
         {
             _options.AutoComplete = false;
