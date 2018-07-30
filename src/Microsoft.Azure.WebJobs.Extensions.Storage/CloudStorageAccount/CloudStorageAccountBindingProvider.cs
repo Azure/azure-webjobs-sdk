@@ -19,19 +19,19 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.StorageAccount
             _accountProvider = accountProvider ?? throw new ArgumentNullException("accountProvider");
         }
 
-        public async Task<IBinding> TryCreateAsync(BindingProviderContext context)
+        public Task<IBinding> TryCreateAsync(BindingProviderContext context)
         {
             ParameterInfo parameter = context.Parameter;
 
             if (parameter.ParameterType != typeof(CloudStorageAccount))
             {
-                return null;
+                return Task.FromResult<IBinding>(null);
             }
 
             var accountAttribute = TypeUtility.GetHierarchicalAttributeOrNull<StorageAccountAttribute>(parameter);
             var account = _accountProvider.Get(accountAttribute?.Account);
 
-            return new CloudStorageAccountBinding(parameter.Name, account.SdkObject);
+            return Task.FromResult<IBinding>(new CloudStorageAccountBinding(parameter.Name, account.SdkObject));
         }
     }
 }

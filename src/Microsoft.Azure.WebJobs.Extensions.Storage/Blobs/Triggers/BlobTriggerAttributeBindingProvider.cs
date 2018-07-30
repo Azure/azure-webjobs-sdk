@@ -114,14 +114,14 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             _loggerFactory = loggerFactory;
         }
 
-        public async Task<ITriggerBinding> TryCreateAsync(TriggerBindingProviderContext context)
+        public Task<ITriggerBinding> TryCreateAsync(TriggerBindingProviderContext context)
         {
             ParameterInfo parameter = context.Parameter;
             var blobTriggerAttribute = TypeUtility.GetResolvedAttribute<BlobTriggerAttribute>(context.Parameter);
 
             if (blobTriggerAttribute == null)
             {
-                return null;
+                return Task.FromResult<ITriggerBinding>(null);
             }
 
             string resolvedCombinedPath = Resolve(blobTriggerAttribute.BlobPath);
@@ -137,7 +137,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
                 _hostIdProvider, _queueOptions, _blobsOptions, _exceptionHandler, _blobWrittenWatcherSetter,
                 _messageEnqueuedWatcherSetter, _sharedContextProvider, _singletonManager, _loggerFactory);
 
-            return binding;
+            return Task.FromResult(binding);
         }
 
         private string Resolve(string queueName)
