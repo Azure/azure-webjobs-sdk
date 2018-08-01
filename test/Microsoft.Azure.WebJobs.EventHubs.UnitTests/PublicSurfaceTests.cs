@@ -20,6 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "EventHubConfiguration",
                 "EventHubExtensionConfigProvider",
                 "EventHubHostBuilderExtensions",
+                "EventHubsWebJobsStartup"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);

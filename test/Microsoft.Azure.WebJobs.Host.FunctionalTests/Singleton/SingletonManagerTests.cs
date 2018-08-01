@@ -103,7 +103,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         {
             ILoggerFactory loggerFactory = new LoggerFactory();
             // We want to see all logs, so set the default level to Trace.
-            LogCategoryFilter filter = new LogCategoryFilter { DefaultLevel = Extensions.Logging.LogLevel.Trace };
+            LogCategoryFilter filter = new LogCategoryFilter { DefaultLevel = Microsoft.Extensions.Logging.LogLevel.Trace };
             _loggerProvider = new TestLoggerProvider(filter.Filter);
             loggerFactory.AddProvider(_loggerProvider);
 
@@ -231,8 +231,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             Assert.Equal(LogCategories.Singleton, logger.Category);
             var messages = logger.GetLogMessages();
             Assert.Equal(2, messages.Count);
-            Assert.NotNull(messages.Single(m => m.Level == Extensions.Logging.LogLevel.Debug && m.FormattedMessage == "Singleton lock acquired (testid)"));
-            Assert.NotNull(messages.Single(m => m.Level == Extensions.Logging.LogLevel.Debug && m.FormattedMessage == "Singleton lock released (testid)"));
+            Assert.NotNull(messages.Single(m => m.Level == Microsoft.Extensions.Logging.LogLevel.Debug && m.FormattedMessage == "Singleton lock acquired (testid)"));
+            Assert.NotNull(messages.Single(m => m.Level == Microsoft.Extensions.Logging.LogLevel.Debug && m.FormattedMessage == "Singleton lock released (testid)"));
 
             renewCount = 0;
             await Task.Delay(1000);

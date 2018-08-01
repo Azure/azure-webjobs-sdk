@@ -631,7 +631,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
             }
 
-            public override void Log<TState>(Extensions.Logging.LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+            public override void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
             {
                 FunctionIndexingException fex = exception as FunctionIndexingException;
                 if (fex != null)
