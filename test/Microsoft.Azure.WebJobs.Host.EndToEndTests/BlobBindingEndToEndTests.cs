@@ -6,7 +6,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -690,7 +692,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 RandomNameResolver nameResolver = new RandomNameResolver();
 
-                Host = RuntimeConfigurationExtensions.AddAzureStorageCoreServices(new HostBuilder()
+                Host = RuntimeStorageHostBuilderExtensions.AddAzureStorageCoreServices(new HostBuilder()
                     .ConfigureDefaultTestHost<BlobBindingEndToEndTests>()
                     .AddAzureStorage()
 )
@@ -783,7 +785,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             public INameResolver NameResolver => Host.Services.GetService<INameResolver>();
 
-            public string HostId => Host.Services.GetService<IOptions<JobHostOptions>>().Value.HostId;
+            public string HostId => Host.Services.GetService<IHostIdProvider>().GetHostIdAsync(CancellationToken.None).Result;
 
             public CloudStorageAccount StorageAccount
             {

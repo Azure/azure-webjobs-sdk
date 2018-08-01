@@ -22,120 +22,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
     public class JobHostOptionsTests
     {
-        [Fact]
-        public void ConstructorDefaults()
-        {
-            JobHostOptions config = new JobHostOptions();
-            Assert.Null(config.HostId);
-        }
-
-        [Fact]
-        public void HostId_IfNull_DoesNotThrow()
-        {
-            // Arrange
-            JobHostOptions configuration = new JobHostOptions();
-            string hostId = null;
-
-            // Act & Assert
-            configuration.HostId = hostId;
-        }
-
-        [Fact]
-        public void HostId_IfValid_DoesNotThrow()
-        {
-            // Arrange
-            JobHostOptions configuration = new JobHostOptions();
-            string hostId = "abc";
-
-            // Act & Assert
-            configuration.HostId = hostId;
-        }
-
-        [Fact]
-        public void HostId_IfMinimumLength_DoesNotThrow()
-        {
-            // Arrange
-            JobHostOptions configuration = new JobHostOptions();
-            string hostId = "a";
-
-            // Act & Assert
-            configuration.HostId = hostId;
-        }
-
-        [Fact]
-        public void HostId_IfMaximumLength_DoesNotThrow()
-        {
-            // Arrange
-            JobHostOptions configuration = new JobHostOptions();
-            const int maximumValidCharacters = 32;
-            string hostId = new string('a', maximumValidCharacters);
-
-            // Act & Assert
-            configuration.HostId = hostId;
-        }
-
-        [Fact]
-        public void HostId_IfContainsEveryValidLetter_DoesNotThrow()
-        {
-            // Arrange
-            JobHostOptions configuration = new JobHostOptions();
-            string hostId = "abcdefghijklmnopqrstuvwxyz";
-
-            // Act & Assert
-            configuration.HostId = hostId;
-        }
-
-        [Fact]
-        public void HostId_IfContainsEveryValidOtherCharacter_DoesNotThrow()
-        {
-            // Arrange
-            JobHostOptions configuration = new JobHostOptions();
-            string hostId = "0-123456789";
-
-            // Act & Assert
-            configuration.HostId = hostId;
-        }
-
-        [Fact]
-        public void HostId_IfEmpty_Throws()
-        {
-            TestHostIdThrows(String.Empty);
-        }
-
-        [Fact]
-        public void HostId_IfTooLong_Throws()
-        {
-            const int maximumValidCharacters = 32;
-            string hostId = new string('a', maximumValidCharacters + 1);
-            TestHostIdThrows(hostId);
-        }
-
-        [Fact]
-        public void HostId_IfContainsInvalidCharacter_Throws()
-        {
-            // Uppercase character are not allowed.
-            TestHostIdThrows("aBc");
-        }
-
-        [Fact]
-        public void HostId_IfStartsWithDash_Throws()
-        {
-            TestHostIdThrows("-abc");
-        }
-
-        [Fact]
-        public void HostId_IfEndsWithDash_Throws()
-        {
-            TestHostIdThrows("abc-");
-        }
-
-        [Fact]
-        public void HostId_IfContainsConsecutiveDashes_Throws()
-        {
-            TestHostIdThrows("a--bc");
-        }
-
-
         // TODO: DI: Change to use IHostingEnvironment
         //[Theory]
         //[InlineData(null, false)]
@@ -168,17 +54,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         //        Assert.Equal(TimeSpan.FromSeconds(15), config.Singleton.ListenerLockPeriod);
         //    }
         //}
-
-        private static void TestHostIdThrows(string hostId)
-        {
-            // Arrange
-            JobHostOptions configuration = new JobHostOptions();
-
-            // Act & Assert
-            ExceptionAssert.ThrowsArgument(() => { configuration.HostId = hostId; }, "value",
-                "A host ID must be between 1 and 32 characters, contain only lowercase letters, numbers, and " +
-                "dashes, not start or end with a dash, and not contain consecutive dashes.");
-        }
 
         private class FastLogger : IAsyncCollector<FunctionInstanceLogEntry>, IEventCollectorFactory
         {
@@ -218,7 +93,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             using (EnvVarHolder.Set("AzureWebJobs:InternalSasBlobContainer", fakeSasUri))
             {
-                var hostBuilder = RuntimeConfigurationExtensions.AddAzureStorageCoreServices(new HostBuilder()
+                var hostBuilder = RuntimeStorageHostBuilderExtensions.AddAzureStorageCoreServices(new HostBuilder()
                  .ConfigureDefaultTestHost()
                  .AddAzureStorage()
                  .ConfigureAppConfiguration(c =>
@@ -241,7 +116,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void JobHost_UsesSas_SetService()
         {            
-            var hostBuilder = RuntimeConfigurationExtensions.AddAzureStorageCoreServices(new HostBuilder()
+            var hostBuilder = RuntimeStorageHostBuilderExtensions.AddAzureStorageCoreServices(new HostBuilder()
              .ConfigureDefaultTestHost()
              .AddAzureStorage()
              .ConfigureAppConfiguration(c =>
@@ -274,7 +149,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             var fakeSasUri = "https://contoso.blob.core.windows.net/myContainer3?signature=foo";
 
-            var hostBuilder = RuntimeConfigurationExtensions.AddAzureStorageCoreServices(new HostBuilder()
+            var hostBuilder = RuntimeStorageHostBuilderExtensions.AddAzureStorageCoreServices(new HostBuilder()
              .ConfigureDefaultTestHost()
              .AddAzureStorage()
              .ConfigureAppConfiguration(c =>

@@ -104,19 +104,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 IFunctionIndex functions = await _functionIndexProvider.GetAsync(combinedCancellationToken);
                 IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), _singletonManager, _activator, _nameResolver, _loggerFactory, _jobHostOptions.Value.AllowPartialHostStartup);
 
-                IFunctionExecutor hostCallExecutor;
-                IListener listener;
-                HostOutputMessage hostOutputMessage;
 
                 string hostId = await _hostIdProvider.GetHostIdAsync(cancellationToken);
-                if (string.Compare(_jobHostOptions.Value.HostId, hostId, StringComparison.OrdinalIgnoreCase) != 0)
-                {
-                    // if this isn't a static host ID, provide the HostId on the config
-                    // so it is accessible
-                    _jobHostOptions.Value.HostId = hostId;
-                }
-                                
-                bool enableLegacyLogger = _legacyLogger.Init(functions, functionsListenerFactory, out hostCallExecutor, out listener, out hostOutputMessage, hostId, shutdownToken);
+                bool enableLegacyLogger = _legacyLogger.Init(functions, functionsListenerFactory, out IFunctionExecutor hostCallExecutor,
+                    out IListener listener, out HostOutputMessage hostOutputMessage, hostId, shutdownToken);
                 if (enableLegacyLogger)
                 { 
                     // Publish this to Azure logging account so that a web dashboard can see it. 

@@ -23,7 +23,7 @@ using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Microsoft.Extensions.Hosting
 {
-    public static class RuntimeConfigurationExtensions
+    public static class RuntimeStorageHostBuilderExtensions
     {
         // WebJobs v1 Classic logging. Needed for dashboard.         
         // $$$ Update title? 
@@ -34,24 +34,6 @@ namespace Microsoft.Extensions.Hosting
                {
                    services.AddWebJobsLogging();
                });
-        }
-
-        // WebJobs v1 Classic logging. Needed for dashboard.         
-        public static IServiceCollection AddWebJobsLogging(this IServiceCollection services)
-        {
-            // Logging related services (lots of them...)
-            services.TryAddSingleton<LoggerProviderFactory>();
-                        
-            services.TryAddSingleton<IFunctionOutputLoggerProvider>(p => p.GetRequiredService<LoggerProviderFactory>().GetLoggerProvider<IFunctionOutputLoggerProvider>());
-            services.TryAddSingleton<IFunctionOutputLogger>(p => p.GetRequiredService<IFunctionOutputLoggerProvider>().GetAsync(CancellationToken.None).GetAwaiter().GetResult());
-
-            services.TryAddSingleton<IFunctionInstanceLoggerProvider>(p => p.GetRequiredService<LoggerProviderFactory>().GetLoggerProvider<IFunctionInstanceLoggerProvider>());
-            services.TryAddSingleton<IFunctionInstanceLogger>(p => p.GetRequiredService<IFunctionInstanceLoggerProvider>().GetAsync(CancellationToken.None).GetAwaiter().GetResult());
-
-            services.TryAddSingleton<IHostInstanceLoggerProvider>(p => p.GetRequiredService<LoggerProviderFactory>().GetLoggerProvider<IHostInstanceLoggerProvider>());
-            services.TryAddSingleton<IHostInstanceLogger>(p => p.GetRequiredService<IHostInstanceLoggerProvider>().GetAsync(CancellationToken.None).GetAwaiter().GetResult());
-
-            return services;
         }
 
         // Make the Runtime itself use storage for its internal operations. 

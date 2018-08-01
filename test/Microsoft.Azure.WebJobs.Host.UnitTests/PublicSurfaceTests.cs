@@ -209,7 +209,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "TriggerParameterDescriptor",
                 "ValueBindingContext",
                 "WebJobsExceptionHandler",
-                "WebJobsHostExtensions",
+                "WebJobsHostBuilderExtensions",
                 "WebJobsServiceCollectionExtensions",
                 "WebJobsShutdownWatcher",
                 "WebJobsStartupAttribute",

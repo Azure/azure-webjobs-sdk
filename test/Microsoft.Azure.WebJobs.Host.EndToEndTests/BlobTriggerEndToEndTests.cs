@@ -202,9 +202,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var prog = new BlobGetsProcessedOnlyOnce_SingleHost_Program();
             
             // make sure they both have the same id
-            string hostId = Guid.NewGuid().ToString("N");
+            IHostIdProvider hostIdProvider = new FakeHostIdProvider();
             var host = NewBuilder(prog)
-                .ConfigureServices(services => services.Configure<JobHostOptions>(o => o.HostId = hostId))
+                .ConfigureServices(services => services.AddSingleton(hostIdProvider))
                 .Build();           
 
             // Process the blob first
@@ -269,13 +269,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             var prog = new BlobGetsProcessedOnlyOnce_SingleHost_Program();
 
-            // make sure they both have the same id
-            string hostId = Guid.NewGuid().ToString("N");
+            
+            var idProvider = new FakeHostIdProvider();
             var host1 = NewBuilder(prog)
-                .ConfigureServices(services => services.Configure<JobHostOptions>(o => o.HostId = hostId))
+                .ConfigureServices(services => services.AddSingleton<IHostIdProvider>(idProvider))
                 .Build();
             var host2 = NewBuilder(prog)
-                .ConfigureServices(services => services.Configure<JobHostOptions>(o => o.HostId = hostId))
+                .ConfigureServices(services => services.AddSingleton<IHostIdProvider>(idProvider))
                 .Build();
 
             using (prog._completedEvent = new ManualResetEvent(initialState: false))

@@ -12,8 +12,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     {
         private readonly string _hostId;
 
-        public FixedHostIdProvider(IOptions<JobHostOptions> options)
-            : this(options.Value?.HostId)
+        public FixedHostIdProvider()
+            : this(Guid.NewGuid().ToString("N"))
         {
         }
 
