@@ -14,11 +14,6 @@ namespace SampleHost
         {
             var builder = new HostBuilder()
                 .UseEnvironment("Development")
-                .ConfigureWebJobsHost(o =>
-                {
-                    // TEMP - remove once https://github.com/Azure/azure-webjobs-sdk/issues/1802 is fixed
-                    o.HostId = "ecad61-62cf-47f4-93b4-6efcded6";
-                })
                 .AddWebJobsLogging() // Enables WebJobs v1 classic logging 
                 .AddAzureStorageCoreServices()
                 .AddAzureStorage()

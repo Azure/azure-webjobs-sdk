@@ -624,12 +624,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             using (IHost host = hostBuilder.Build())
             {
                 JobHost jobHost = host.GetJobHost();
-
-                Assert.Null(host.Services.GetService<IOptions<JobHostOptions>>().Value.HostId);
-
+                
                 await host.StartAsync();
 
-                Assert.NotEmpty(host.Services.GetService<IOptions<JobHostOptions>>().Value.HostId);
+                IHostIdProvider idProvider = host.Services.GetService<IHostIdProvider>();
+                string hostId = await idProvider.GetHostIdAsync(CancellationToken.None);
+
+                Assert.NotEmpty(hostId);
 
                 await jobHost.CallAsync(typeof(AsyncChainEndToEndTests).GetMethod(nameof(WriteStartDataMessageToQueue)));
 

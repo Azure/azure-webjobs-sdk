@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
@@ -632,7 +633,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             TestJobActivator activator = new TestJobActivator(hostId);
 
-            var hostBuilder = RuntimeConfigurationExtensions.AddAzureStorageCoreServices(new HostBuilder()
+            var hostBuilder = RuntimeStorageHostBuilderExtensions.AddAzureStorageCoreServices(new HostBuilder()
                 .ConfigureDefaultTestHost<TProg>()
                 .AddAzureStorage()
                 .ConfigureTestLogger()
@@ -640,7 +641,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 {
                     services.AddSingleton<IJobActivator>(activator);
                     services.AddSingleton<INameResolver>(_resolver);
-                    services.Configure((JobHostOptions o) => o.HostId = TestHostId);
+                    services.AddSingleton<IHostIdProvider>(new FakeHostIdProvider(TestHostId));
                     services.Configure((JobHostQueuesOptions o) => o.MaxPollingInterval = TimeSpan.FromSeconds(2));
                     services.Configure((SingletonOptions o) =>
                     {

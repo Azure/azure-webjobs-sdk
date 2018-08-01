@@ -13,7 +13,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.Hosting
 {
-    public static class WebJobsHostExtensions
+    public static class WebJobsHostBuilderExtensions
     {
         public static IHostBuilder ConfigureWebJobsHost(this IHostBuilder builder)
         {

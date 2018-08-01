@@ -6,11 +6,21 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 
-namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
+namespace Microsoft.Azure.WebJobs.Host.TestCommon
 {
-    internal class FakeHostIdProvider : IHostIdProvider
+    public class FakeHostIdProvider : IHostIdProvider
     {
-        private readonly string _hostId = Guid.NewGuid().ToString("N");
+        private readonly string _hostId;
+
+        public FakeHostIdProvider()
+            : this(Guid.NewGuid().ToString("N"))
+        {
+        }
+
+        public FakeHostIdProvider(string hostId)
+        {
+            _hostId = hostId;
+        }
 
         public Task<string> GetHostIdAsync(CancellationToken cancellationToken)
         {

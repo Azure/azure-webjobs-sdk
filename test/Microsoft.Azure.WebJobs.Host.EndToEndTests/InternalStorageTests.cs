@@ -47,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var fakeSasUri = container.Uri + sig;
             var prog = new BasicProg();
 
-            IHost host = RuntimeConfigurationExtensions.AddAzureStorageCoreServices(new HostBuilder()
+            IHost host = RuntimeStorageHostBuilderExtensions.AddAzureStorageCoreServices(new HostBuilder()
                 .ConfigureDefaultTestHost(prog)
                 .AddAzureStorage()
                 .ConfigureAppConfiguration(config =>

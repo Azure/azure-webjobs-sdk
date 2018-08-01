@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -76,7 +77,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 .ConfigureServices(services =>
                 {
                     // each test will have a unique hostId so that consecutive test run will not be affected by clean up code
-                    services.Configure<JobHostOptions>(o => o.HostId = "bttest");
+                    services.AddSingleton<IHostIdProvider>(new FakeHostIdProvider());
                 })
                 .Build();
                         
@@ -109,7 +110,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 .ConfigureServices(services =>
                 {
                     // each test will have a unique hostId so that consecutive test run will not be affected by clean up code
-                    services.Configure<JobHostOptions>(o => o.HostId = "pqtest");
+                    services.AddSingleton<IHostIdProvider>(new FakeHostIdProvider());
                 })
                 .Build();
                         
@@ -138,8 +139,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // each test will have a different hostId
             // and therefore a different sharedQueue and poisonQueue
             CloudQueueClient client = _host.GetStorageAccount().CreateCloudQueueClient();
-            _sharedQueue = client.GetQueueReference("azure-webjobs-shared-" + _host.GetOptions<JobHostOptions>().HostId);
-            _poisonQueue = client.GetQueueReference("azure-webjobs-poison-" + _host.GetOptions<JobHostOptions>().HostId);
+            _sharedQueue = client.GetQueueReference("azure-webjobs-shared-" + _host.Services.GetService<IHostIdProvider>().GetHostIdAsync(CancellationToken.None).Result);
+            _poisonQueue = client.GetQueueReference("azure-webjobs-poison-" + _host.Services.GetService<IHostIdProvider>().GetHostIdAsync(CancellationToken.None).Result);
             _sharedQueue.DeleteIfExistsAsync().Wait();
             _poisonQueue.DeleteIfExistsAsync().Wait();
 
