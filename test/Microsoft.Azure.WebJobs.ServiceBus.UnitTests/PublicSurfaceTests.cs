@@ -29,7 +29,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "ServiceBusTriggerAttribute",
                 "ServiceBusExtensionConfig",
                 "ServiceBusHostBuilderExtensions",
-                "ServiceBusOptions"
+                "ServiceBusOptions",
+                "ServiceBusWebJobsStartup"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);

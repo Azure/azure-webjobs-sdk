@@ -206,7 +206,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             using (_functionCompletedEvent = new ManualResetEvent(initialState: false))
             {
-                var eventCollectorProvider = new TestEventCollectorProvider();                
+                var eventCollectorProvider = new TestEventCollectorProvider();
 
                 // enable the aggregator
                 _hostBuilder.ConfigureServices(services =>
@@ -484,7 +484,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await jobHost.CallAsync(methodInfo);
 
             // Validate Logger
-            LogMessage[] logErrors = host.GetTestLoggerProvider().GetAllLogMessages().Where(l => l.Level == Extensions.Logging.LogLevel.Error).ToArray();
+            LogMessage[] logErrors = host.GetTestLoggerProvider().GetAllLogMessages().Where(l => l.Level == Microsoft.Extensions.Logging.LogLevel.Error).ToArray();
             Assert.Empty(logErrors);
         }
 
