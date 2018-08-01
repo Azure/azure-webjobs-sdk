@@ -30,6 +30,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         private readonly QueueProcessor _queueProcessor;
         private readonly TimeSpan _visibilityTimeout;
 
+        private bool? _queueExists;
         private bool _foundMessageSinceLastDelay;
         private bool _disposed;
         private TaskCompletionSource<object> _stopWaitingTaskSource;
@@ -137,17 +138,36 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
                 _stopWaitingTaskSource = new TaskCompletionSource<object>();
             }
 
-            IEnumerable<CloudQueueMessage> batch;
+            IEnumerable<CloudQueueMessage> batch = null;
             try
             {
-                batch = await _queue.GetMessagesAsync(_queueProcessor.BatchSize,
-                    _visibilityTimeout,
-                    options: null,
-                    operationContext: null,
-                    cancellationToken: cancellationToken);
+                if (!_queueExists.HasValue || !_queueExists.Value)
+                {
+                    // Before querying the queue, determine if it exists. This
+                    // avoids generating unecessary exceptions (which pollute AppInsights logs)
+                    // Once we establish the queue exists, we won't do the existence
+                    // check anymore (steady state).
+                    // However the queue can always be deleted from underneath us, in which case
+                    // we need to recheck. That is handled below.
+                    _queueExists = await _queue.ExistsAsync();
+                }
+
+                if (_queueExists.Value)
+                {
+                    batch = await _queue.GetMessagesAsync(_queueProcessor.BatchSize,
+                        _visibilityTimeout,
+                        options: null,
+                        operationContext: null,
+                        cancellationToken: cancellationToken);
+                }
             }
             catch (StorageException exception)
             {
+                // if we get ANY errors querying the queue reset our existence check
+                // doing this on all errors rather than trying to special case not
+                // found, because correctness is the most important thing here
+                _queueExists = null;
+
                 if (exception.IsNotFoundQueueNotFound() ||
                     exception.IsConflictQueueBeingDeletedOrDisabled() ||
                     exception.IsServerSideError())
