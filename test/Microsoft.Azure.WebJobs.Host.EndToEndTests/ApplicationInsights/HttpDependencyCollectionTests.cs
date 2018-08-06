@@ -94,7 +94,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             {
                 ValidateBlobDependency(
                     inputDep,
-                    _inputContainerName, 
+                    _inputContainerName,
                     "in",
                     nameof(BlobInputAndOutputBindings),
                     request.Context.Operation.Id,
@@ -104,7 +104,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             foreach (var outputDep in outDependencies)
             {
                 ValidateBlobDependency(
-                    outputDep, 
+                    outputDep,
                     _outputContainerName,
                     "out",
                     nameof(BlobInputAndOutputBindings),
@@ -270,7 +270,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             _functionWaitHandle.Set();
         }
 
-        
+
         [NoAutomaticTrigger]
         public static async Task UserCodeHttpCall()
         {
@@ -307,16 +307,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
         }
 
         private void ValidateBlobDependency(
-            DependencyTelemetry dependency, 
-            string containerName, 
-            string blobName, 
+            DependencyTelemetry dependency,
+            string containerName,
+            string blobName,
             string operationName,
             string operationId,
             string requestId)
         {
             Assert.Equal("Azure blob", dependency.Type);
             Assert.Equal(containerName, dependency.Properties["Container"]);
-            
+
             // container creation does not have blob info
             if (dependency.Properties.ContainsKey("Blob"))
             {
@@ -361,7 +361,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
         public IHost ConfigureHost(LogLevel logLevel)
         {
-            var filter = new LogCategoryFilter { DefaultLevel = logLevel };
             _resolver = new RandomNameResolver();
 
             IHost host = new HostBuilder()
@@ -377,7 +376,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                         o.IsEnabled = false;
                     });
                 })
-                .AddApplicationInsights(_mockApplicationInsightsKey, filter.Filter, null)
+                .ConfigureLogging(b =>
+                {
+                    b.SetMinimumLevel(logLevel);
+                    b.AddApplicationInsights(o => o.InstrumentationKey = _mockApplicationInsightsKey);
+                })
                 .Build();
 
             TelemetryConfiguration telemteryConfiguration = host.Services.GetService<TelemetryConfiguration>();

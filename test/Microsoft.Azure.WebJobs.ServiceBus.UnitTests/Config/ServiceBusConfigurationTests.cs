@@ -20,9 +20,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
         public ServiceBusConfigurationTests()
         {
             _loggerFactory = new LoggerFactory();
-            var filter = new LogCategoryFilter();
-            filter.DefaultLevel = LogLevel.Debug;
-            _loggerProvider = new TestLoggerProvider(filter.Filter);
+            _loggerProvider = new TestLoggerProvider();
             _loggerFactory.AddProvider(_loggerProvider);
         }
 

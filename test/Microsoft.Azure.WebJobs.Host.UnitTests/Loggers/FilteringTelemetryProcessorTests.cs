@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+
 using System;
 using System.Collections.Generic;
 using Microsoft.ApplicationInsights.Channel;
@@ -31,14 +32,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         [InlineData(LogLevel.Trace, LogLevel.None, LogLevel.Information, false)]
         public void Processor_UsesFilter(LogLevel defaultLevel, LogLevel categoryLevel, LogLevel telemetryLevel, bool isEnabled)
         {
-            var filter = new LogCategoryFilter
+            var filter = new LoggerFilterOptions
             {
-                DefaultLevel = defaultLevel
+                MinLevel = defaultLevel
             };
+            filter.AddFilter(LogCategories.Results, categoryLevel);
 
-            filter.CategoryLevels[LogCategories.Results] = categoryLevel;
-
-            var processor = new FilteringTelemetryProcessor(filter.Filter, _nextTelemetryProcessorMock.Object);
+            var processor = new FilteringTelemetryProcessor(filter, _nextTelemetryProcessorMock.Object);
 
             var telemetry = new TestTelemetry();
             telemetry.Properties[LogConstants.CategoryNameKey] = LogCategories.Results;
@@ -59,9 +59,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         [Fact]
         public void Processor_No_ISupportProperties_DoesNotFilter()
         {
-            var filter = new LogCategoryFilter();
+            var filter = new LoggerFilterOptions();
 
-            var processor = new FilteringTelemetryProcessor(filter.Filter, _nextTelemetryProcessorMock.Object);
+            var processor = new FilteringTelemetryProcessor(filter, _nextTelemetryProcessorMock.Object);
 
             var telemetry = new Mock<ITelemetry>(MockBehavior.Strict);
 
@@ -75,12 +75,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         [InlineData(LogLevel.Error, true)]
         public void Processor_MissingCategory_FiltersAsDefault(LogLevel telemetryLevel, bool isEnabled)
         {
-            var filter = new LogCategoryFilter
+            var filter = new LoggerFilterOptions
             {
-                DefaultLevel = LogLevel.Information
+                MinLevel = LogLevel.Information
             };
 
-            var processor = new FilteringTelemetryProcessor(filter.Filter, _nextTelemetryProcessorMock.Object);
+            var processor = new FilteringTelemetryProcessor(filter, _nextTelemetryProcessorMock.Object);
 
             var telemetry = new TestTelemetry();
             telemetry.Properties[LogConstants.LogLevelKey] = telemetryLevel.ToString();
@@ -102,12 +102,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         public void Processor_MissingLogLevel_DoesNotFilter()
         {
             // If no loglevel, we're not sure what to do, so just let it through
-            var filter = new LogCategoryFilter
+            var filter = new LoggerFilterOptions
             {
-                DefaultLevel = LogLevel.Information
+                MinLevel = LogLevel.Information
             };
 
-            var processor = new FilteringTelemetryProcessor(filter.Filter, _nextTelemetryProcessorMock.Object);
+            var processor = new FilteringTelemetryProcessor(filter, _nextTelemetryProcessorMock.Object);
 
             var telemetry = new TestTelemetry();
             telemetry.Properties[LogConstants.CategoryNameKey] = LogCategories.Results;
@@ -121,12 +121,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         public void Processor_InvalidLogLevel_DoesNotFilter()
         {
             // If no valid loglevel, we're not sure what to do, so just let it through
-            var filter = new LogCategoryFilter
+            var filter = new LoggerFilterOptions
             {
-                DefaultLevel = LogLevel.Information
+                MinLevel = LogLevel.Information
             };
 
-            var processor = new FilteringTelemetryProcessor(filter.Filter, _nextTelemetryProcessorMock.Object);
+            var processor = new FilteringTelemetryProcessor(filter, _nextTelemetryProcessorMock.Object);
 
             var telemetry = new TestTelemetry();
             telemetry.Properties[LogConstants.CategoryNameKey] = LogCategories.Results;

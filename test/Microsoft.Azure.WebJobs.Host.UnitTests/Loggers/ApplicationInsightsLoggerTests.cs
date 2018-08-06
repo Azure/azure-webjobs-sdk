@@ -55,8 +55,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             };
 
             _host = new HostBuilder()
-                .AddApplicationInsights("some key", (c, l) => true, null)
-                .Build();
+                .ConfigureLogging(b =>
+                {
+                    b.SetMinimumLevel(LogLevel.Trace);
+                    b.AddApplicationInsights(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                    });
+                }).Build();
 
             TelemetryConfiguration telemteryConfiguration = _host.Services.GetService<TelemetryConfiguration>();
             telemteryConfiguration.TelemetryChannel = _channel;

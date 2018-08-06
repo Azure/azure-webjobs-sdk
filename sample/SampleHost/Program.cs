@@ -3,6 +3,7 @@
 
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -22,16 +23,22 @@ namespace SampleHost
                     .AddServiceBus()
                     .AddEventHubs();
                 })
-                .AddApplicationInsights()
                 .ConfigureAppConfiguration(b =>
                 {
                     // Adding command line as a configuration source
                     b.AddCommandLine(args);
                 })
-                .ConfigureLogging(b =>
+                .ConfigureLogging((context, b) =>
                 {
                     b.SetMinimumLevel(LogLevel.Debug);
                     b.AddConsole();
+
+                    // If this key exists in any config, use it to enable App Insights
+                    string appInsightsKey = context.Configuration["APPINSIGHTS_INSTRUMENTATIONKEY"];
+                    if (!string.IsNullOrEmpty(appInsightsKey))
+                    {
+                        b.AddApplicationInsights(o => o.InstrumentationKey = appInsightsKey);
+                    }
                 })
                 .UseConsoleLifetime();
 

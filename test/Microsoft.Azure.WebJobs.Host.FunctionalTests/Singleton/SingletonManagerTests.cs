@@ -102,9 +102,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         public SingletonManagerTests()
         {
             ILoggerFactory loggerFactory = new LoggerFactory();
-            // We want to see all logs, so set the default level to Trace.
-            LogCategoryFilter filter = new LogCategoryFilter { DefaultLevel = Microsoft.Extensions.Logging.LogLevel.Trace };
-            _loggerProvider = new TestLoggerProvider(filter.Filter);
+            _loggerProvider = new TestLoggerProvider();
             loggerFactory.AddProvider(_loggerProvider);
 
             var logger = loggerFactory?.CreateLogger(LogCategories.Singleton);

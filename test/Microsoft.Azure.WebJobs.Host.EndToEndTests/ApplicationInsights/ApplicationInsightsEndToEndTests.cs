@@ -42,16 +42,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private const string _dateFormat = "HH':'mm':'ss'.'fffK";
 
-        private IHost ConfigureHost(LogCategoryFilter filter = null)
+        private IHost ConfigureHost(LogLevel minLevel = LogLevel.Information)
         {
-            if (filter == null)
-            {
-                filter = new LogCategoryFilter
-                {
-                    DefaultLevel = LogLevel.Information
-                };
-            }
-
             var host = new HostBuilder()
                 .ConfigureDefaultTestHost<ApplicationInsightsEndToEndTests>()
                 .ConfigureServices(services =>
@@ -61,7 +53,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         o.IsEnabled = false;
                     });
                 })
-                .AddApplicationInsights(_mockApplicationInsightsKey, filter.Filter, null)
+                .ConfigureLogging(b =>
+                {
+                    b.SetMinimumLevel(minLevel);
+                    b.AddApplicationInsights(o => o.InstrumentationKey = _mockApplicationInsightsKey);
+                })
                 .ConfigureServices(services =>
                 {
                     var quickPulse = services.Single(s => s.ImplementationType == typeof(QuickPulseTelemetryModule));
@@ -192,13 +188,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [InlineData(LogLevel.Warning, 2, 0)] // 2x warning trace per request
         public async Task QuickPulse_Works_EvenIfFiltered(LogLevel defaultLevel, int tracesPerRequest, int additionalTraces)
         {
-            LogCategoryFilter filter = new LogCategoryFilter
-            {
-                DefaultLevel = defaultLevel
-            };
-
             using (var qpListener = new QuickPulseEventListener())
-            using (IHost host = ConfigureHost(filter))
+            using (IHost host = ConfigureHost(defaultLevel))
             {
                 var listener = new ApplicationInsightsTestListener();
                 int functionsCalled = 0;

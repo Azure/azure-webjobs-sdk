@@ -1,10 +1,6 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
@@ -18,7 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
     /// we review such additions carefully.
     /// </summary>
     public class PublicSurfaceTests
-    {    
+    {
         [Fact]
         public void AssemblyReferences_InJobsHostAssembly()
         {
@@ -188,7 +184,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "JobHostService",
                 "ListenerFactoryContext",
                 "LogCategories",
-                "LogCategoryFilter",
                 "LogConstants",
                 "LoggerExtensions",
                 "NameResolverExtensions",
@@ -227,11 +222,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             var expected = new[]
             {
+                "ApplicationInsightsLoggerOptions",
                 "ApplicationInsightsLoggerProvider",
-                "ApplicationInsightsHostBuilderExtensions"
+                "ApplicationInsightsLoggingBuilderExtensions"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);
-        }     
+        }
     }
 }

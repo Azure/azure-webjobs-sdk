@@ -10,17 +10,15 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 {
     public class TestLogger : ILogger
     {
-        private readonly Func<string, LogLevel, bool> _filter;
         private readonly Action<LogMessage> _logAction;
         private IList<LogMessage> _logMessages = new List<LogMessage>();
 
         // protect against changes to logMessages while enumerating
         private object _syncLock = new object();
 
-        public TestLogger(string category, Func<string, LogLevel, bool> filter = null, Action<LogMessage> logAction = null)
+        public TestLogger(string category, Action<LogMessage> logAction = null)
         {
             Category = category;
-            _filter = filter;
             _logAction = logAction;
         }
 
@@ -33,7 +31,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 
         public bool IsEnabled(LogLevel logLevel)
         {
-            return _filter?.Invoke(Category, logLevel) ?? true;
+            return true;
         }
 
         public IList<LogMessage> GetLogMessages()

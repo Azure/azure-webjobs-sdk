@@ -8,8 +8,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
+
+    [ProviderAlias(Alias)]
     public class ApplicationInsightsLoggerProvider : ILoggerProvider
     {
+        internal const string Alias = "ApplicationInsights";
+
         private readonly TelemetryClient _client;
         private bool _disposed;
 

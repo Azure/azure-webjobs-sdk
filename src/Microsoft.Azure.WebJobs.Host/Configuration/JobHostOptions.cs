@@ -11,8 +11,6 @@ namespace Microsoft.Azure.WebJobs
     /// </summary>
     public sealed class JobHostOptions
     {
-        private string _hostId;
-
         /// <summary>
         /// Returns true if <see cref="UseDevelopmentSettings"/> has been called on this instance.
         /// </summary>

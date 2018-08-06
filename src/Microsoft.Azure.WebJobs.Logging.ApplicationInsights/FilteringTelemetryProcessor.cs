@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Concurrent;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -12,12 +13,16 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
     internal class FilteringTelemetryProcessor : ITelemetryProcessor
     {
-        private readonly Func<string, LogLevel, bool> _filter;
+        private static readonly LoggerRuleSelector RuleSelector = new LoggerRuleSelector();
+        private static readonly Type ProviderType = typeof(ApplicationInsightsLoggerProvider);
+
+        private readonly ConcurrentDictionary<string, LoggerFilterRule> _ruleMap = new ConcurrentDictionary<string, LoggerFilterRule>();
+        private readonly LoggerFilterOptions _filterOptions;
         private ITelemetryProcessor _next;
 
-        public FilteringTelemetryProcessor(Func<string, LogLevel, bool> filter, ITelemetryProcessor next)
+        public FilteringTelemetryProcessor(LoggerFilterOptions filterOptions, ITelemetryProcessor next)
         {
-            _filter = filter;
+            _filterOptions = filterOptions;
             _next = next;
         }
 
@@ -33,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         {
             bool enabled = true;
 
-            if (item is ISupportProperties telemetry && _filter != null)
+            if (item is ISupportProperties telemetry && _filterOptions != null)
             {
                 if (!telemetry.Properties.TryGetValue(LogConstants.CategoryNameKey, out string categoryName))
                 {
@@ -55,11 +60,28 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 if (telemetry.Properties.TryGetValue(LogConstants.LogLevelKey, out string logLevelString) &&
                     Enum.TryParse(logLevelString, out LogLevel logLevel))
                 {
-                    enabled = _filter(categoryName, logLevel);
+                    LoggerFilterRule filterRule = _ruleMap.GetOrAdd(categoryName, SelectRule(categoryName));
+
+                    if (filterRule.LogLevel != null && logLevel < filterRule.LogLevel)
+                    {
+                        enabled = false;
+                    }
+                    else if (filterRule.Filter != null)
+                    {
+                        enabled = filterRule.Filter(ProviderType.FullName, categoryName, logLevel);
+                    }
                 }
             }
 
             return enabled;
+        }
+
+        private LoggerFilterRule SelectRule(string categoryName)
+        {
+            RuleSelector.Select(_filterOptions, ProviderType, categoryName,
+                out LogLevel? minLevel, out Func<string, string, LogLevel, bool> filter);
+
+            return new LoggerFilterRule(ProviderType.FullName, categoryName, minLevel, filter);
         }
     }
 }

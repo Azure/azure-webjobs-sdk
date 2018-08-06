@@ -246,7 +246,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
         public async Task FunctionListener_DoesNotThrow_IfHandled()
         {
             ILoggerFactory handlingLoggerFactory = new LoggerFactory();
-            TestLoggerProvider handlingLoggerProvider = new TestLoggerProvider(null, (m) => (m.Exception as RecoverableException).Handled = true);
+            TestLoggerProvider handlingLoggerProvider = new TestLoggerProvider((m) => (m.Exception as RecoverableException).Handled = true);
             handlingLoggerFactory.AddProvider(handlingLoggerProvider);
 
             Mock<IListener> badListener = new Mock<IListener>(MockBehavior.Strict);
@@ -272,7 +272,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
         public async Task FunctionListener_DoesNotStop_IfNotStarted()
         {
             ILoggerFactory handlingLoggerFactory = new LoggerFactory();
-            TestLoggerProvider handlingLoggerProvider = new TestLoggerProvider(null, (m) => (m.Exception as RecoverableException).Handled = true);
+            TestLoggerProvider handlingLoggerProvider = new TestLoggerProvider((m) => (m.Exception as RecoverableException).Handled = true);
             handlingLoggerFactory.AddProvider(handlingLoggerProvider);
 
             Mock<IListener> badListener = new Mock<IListener>(MockBehavior.Strict);
