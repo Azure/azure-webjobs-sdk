@@ -54,13 +54,15 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var account = CreateFakeStorageAccount();
             var provider = new FakeStorageAccountProvider(account);
             var host = new HostBuilder()
-                .ConfigureDefaultTestHost<BindToCloudBlob2Program>()
+                .ConfigureDefaultTestHost<BindToCloudBlob2Program>(b =>
+                {
+                    b.AddAzureStorage();
+                })
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<IJobActivator>(activator);
                     services.AddSingleton<StorageAccountProvider>(provider);
                 })
-                .AddAzureStorage()
                 .Build();
 
             // Set the binding data, and verify it's accessible in the function. 

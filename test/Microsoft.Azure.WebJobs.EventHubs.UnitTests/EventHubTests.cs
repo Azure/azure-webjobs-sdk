@@ -220,8 +220,10 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
         {
             // TODO: It's tough to wire all this up without using a new host.
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost()                
-                .AddEventHubs()
+                .ConfigureDefaultTestHost(builder =>
+                {
+                    builder.AddEventHubs();
+                })
                 .ConfigureAppConfiguration(c =>
                 {
                     c.AddInMemoryCollection(new Dictionary<string, string>

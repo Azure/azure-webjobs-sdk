@@ -633,9 +633,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             TestJobActivator activator = new TestJobActivator(hostId);
 
-            var hostBuilder = RuntimeStorageHostBuilderExtensions.AddAzureStorageCoreServices(new HostBuilder()
-                .ConfigureDefaultTestHost<TProg>()
-                .AddAzureStorage()
+            var hostBuilder = new HostBuilder()
+                .ConfigureDefaultTestHost<TProg>(b =>
+                {
+                    b.AddAzureStorage()
+                    .AddExtension<TestTriggerAttributeBindingProvider>();
+                    RuntimeStorageHostBuilderExtensions.AddAzureStorageCoreServices(b);
+                })
                 .ConfigureTestLogger()
                 .ConfigureServices(services =>
                 {
@@ -648,9 +652,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         o.LockAcquisitionTimeout = TimeSpan.FromSeconds(10);
                         o.LockAcquisitionPollingInterval = TimeSpan.FromMilliseconds(500);
                     });
-                })
-                .AddExtension<TestTriggerAttributeBindingProvider>()
-);
+                });
 
             extraConfig?.Invoke(hostBuilder); // test hook gets final say to replace. 
 
@@ -827,8 +829,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 // Create a default host since we know that's where the account
                 // is coming from
                 IHost host = new HostBuilder()
-                    .ConfigureDefaultTestHost()
-                    .AddAzureStorage()
+                    .ConfigureDefaultTestHost(b =>
+                    {
+                        b.AddAzureStorage();
+                    })
                     .Build();
 
                 return host.GetStorageAccount();
@@ -839,8 +843,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 // Create a default host since we know that's where the account
                 // is coming from
                 IHost host = new HostBuilder()
-                    .ConfigureDefaultTestHost()
-                    .AddAzureStorage()
+                    .ConfigureDefaultTestHost(b =>
+                    {
+                        b.AddAzureStorage();
+                    })
                     .Build();
 
                 return host.Services.GetService<IConfiguration>()[key];

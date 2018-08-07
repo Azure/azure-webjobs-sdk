@@ -313,7 +313,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
 
             FakeQueueClient fakeClient = null;
             var host = new HostBuilder()
-                .ConfigureDefaultTestHost<TFunction>(activator: activator)
+                .ConfigureDefaultTestHost<TFunction>(b=> { }, activator: activator)
                 .ConfigureServices(services =>
                 {
                     services.TryAddEnumerable(ServiceDescriptor.Singleton<IExtensionConfigProvider, FakeQueueClient>(p =>

@@ -14,11 +14,14 @@ namespace SampleHost
         {
             var builder = new HostBuilder()
                 .UseEnvironment("Development")
-                .AddWebJobsLogging() // Enables WebJobs v1 classic logging 
-                .AddAzureStorageCoreServices()
-                .AddAzureStorage()
-                .AddServiceBus()
-                .AddEventHubs()
+                .ConfigureWebJobs(b =>
+                {
+                    b.AddWebJobsLogging() // Enables WebJobs v1 classic logging 
+                    .AddAzureStorageCoreServices()
+                    .AddAzureStorage()
+                    .AddServiceBus()
+                    .AddEventHubs();
+                })
                 .AddApplicationInsights()
                 .ConfigureAppConfiguration(b =>
                 {

@@ -11,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Storage
 {
     public class StorageWebJobsStartup : IWebJobsStartup
     {
-        public void Configure(IHostBuilder builder)
+        public void Configure(IWebJobsBuilder builder)
         {
             builder.AddAzureStorage();
         }

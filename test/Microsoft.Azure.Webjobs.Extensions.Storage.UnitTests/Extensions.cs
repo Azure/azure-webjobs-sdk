@@ -39,19 +39,15 @@ namespace Microsoft.Azure.WebJobs
         }
 
         // $$$ Rationalize with AddFakeStorageAccountProvider in FunctionTests.
-        public static IHostBuilder UseFakeStorage(this IHostBuilder builder)
+        public static IWebJobsBuilder UseFakeStorage(this IWebJobsBuilder builder)
         {
             return builder.UseStorage(new XFakeStorageAccount());
         }
 
-        public static IHostBuilder UseStorage(this IHostBuilder builder, StorageAccount account)
+        public static IWebJobsBuilder UseStorage(this IWebJobsBuilder builder, StorageAccount account)
         {
-            builder
-                .AddAzureStorage()
-                .ConfigureServices(services =>
-           {
-               services.Add(ServiceDescriptor.Singleton<StorageAccountProvider>(new FakeStorageAccountProvider(account)));
-           });
+            builder.AddAzureStorage();
+            builder.Services.Add(ServiceDescriptor.Singleton<StorageAccountProvider>(new FakeStorageAccountProvider(account)));
 
             return builder;
         }

@@ -71,9 +71,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         public async Task DispatchQueueBatchTriggerTest()
         {
             _host = new HostBuilder()
-                .ConfigureDefaultTestHost<SampleTrigger>()
-                .AddAzureStorage()
-                .AddExtension<DispatchQueueTestConfig>()
+                .ConfigureDefaultTestHost<SampleTrigger>(b =>
+                {
+                    b.AddAzureStorage()
+                    .AddExtension<DispatchQueueTestConfig>();
+                })
                 .ConfigureServices(services =>
                 {
                     // each test will have a unique hostId so that consecutive test run will not be affected by clean up code
@@ -104,9 +106,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         public async void PoisonQueueTest()
         {
             _host = new HostBuilder()
-                .ConfigureDefaultTestHost<SampleTriggerWithPoisonQueue>()
-                .AddAzureStorage()
-                .AddExtension<DispatchQueueTestConfig>()
+                .ConfigureDefaultTestHost<SampleTriggerWithPoisonQueue>(b =>
+                {
+                    b.AddAzureStorage()
+                    .AddExtension<DispatchQueueTestConfig>();
+                })
                 .ConfigureServices(services =>
                 {
                     // each test will have a unique hostId so that consecutive test run will not be affected by clean up code

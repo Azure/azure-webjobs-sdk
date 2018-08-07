@@ -251,12 +251,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 RandomNameResolver nameResolver = new TestNameResolver();
 
                 Host = new HostBuilder()
-                    .ConfigureDefaultTestHost<MultipleStorageAccountsEndToEndTests>()
+                    .ConfigureDefaultTestHost<MultipleStorageAccountsEndToEndTests>(b =>
+                    {
+                        b.AddAzureStorage();
+                    })
                     .ConfigureServices(services =>
                     {
                         services.AddSingleton<INameResolver>(nameResolver);
                     })
-                    .AddAzureStorage()
                     .Build();
 
                 Account1 = Host.GetStorageAccount();

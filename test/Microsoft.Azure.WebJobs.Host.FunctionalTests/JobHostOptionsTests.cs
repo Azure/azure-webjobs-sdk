@@ -93,14 +93,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             using (EnvVarHolder.Set("AzureWebJobs:InternalSasBlobContainer", fakeSasUri))
             {
-                var hostBuilder = RuntimeStorageHostBuilderExtensions.AddAzureStorageCoreServices(new HostBuilder()
-                 .ConfigureDefaultTestHost()
-                 .AddAzureStorage()
+                var hostBuilder = new HostBuilder()
+                 .ConfigureDefaultTestHost(b =>
+                    {
+                        b.AddAzureStorage()
+                        .AddAzureStorageCoreServices();
+                    })
                  .ConfigureAppConfiguration(c =>
                  {
                      c.AddEnvironmentVariables();
-                 })
-);
+                 });
 
                 IHost host = hostBuilder.Build();
 
@@ -115,14 +117,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         // Verify that JobHostConfig pulls a Sas container from appsettings. 
         [Fact]
         public void JobHost_UsesSas_SetService()
-        {            
-            var hostBuilder = RuntimeStorageHostBuilderExtensions.AddAzureStorageCoreServices(new HostBuilder()
-             .ConfigureDefaultTestHost()
-             .AddAzureStorage()
+        {
+            var hostBuilder = new HostBuilder()
+             .ConfigureDefaultTestHost(b =>
+             {
+                 b.AddAzureStorage()
+                 .AddAzureStorageCoreServices();
+             })
              .ConfigureAppConfiguration(c =>
              {
-             })
-);
+             });
 
             // Explicitly set the service
             hostBuilder.ConfigureServices((ctx, services) =>
@@ -149,17 +153,19 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             var fakeSasUri = "https://contoso.blob.core.windows.net/myContainer3?signature=foo";
 
-            var hostBuilder = RuntimeStorageHostBuilderExtensions.AddAzureStorageCoreServices(new HostBuilder()
-             .ConfigureDefaultTestHost()
-             .AddAzureStorage()
+            var hostBuilder = new HostBuilder()
+             .ConfigureDefaultTestHost(b =>
+             {
+                 b.AddAzureStorage()
+                 .AddAzureStorageCoreServices();
+             })
              .ConfigureAppConfiguration(c =>
              {
                  c.AddInMemoryCollection(new Dictionary<string, string>
                  {
                         { "AzureWebJobs:InternalSasBlobContainer", fakeSasUri }
                  });
-             })
-);
+             });
 
             IHost host = hostBuilder.Build();
 
@@ -182,10 +188,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
 
                 IHost host = new HostBuilder()
-                .ConfigureWebJobsHost()
-                .ConfigureTypeLocator(typeof(BasicTest))
-                .ConfigureWebJobsFastLogging(fastLogger)
-                .Build();
+                    .ConfigureWebJobs(b =>
+                    {
+                        b.AddFastLogging(fastLogger);
+                    })
+                    .ConfigureTypeLocator(typeof(BasicTest))
+                    .Build();
                 
                 var randomValue = Guid.NewGuid().ToString();
 

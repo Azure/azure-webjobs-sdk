@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.Hosting
         {
             configure = configure ?? new Action<JobHostOptions>(o => { });
             return new HostBuilder()
-                .ConfigureWebJobsHost(configure);
+                .ConfigureWebJobs(o => { }, configure);
         }
     }
 }

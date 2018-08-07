@@ -20,8 +20,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
         public void UseServiceBus_ThrowsArgumentNull_WhenServiceBusConfigIsNull()
         {
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost()
-                .AddServiceBus()
+                .ConfigureDefaultTestHost(b =>
+                {
+                    b.AddServiceBus();
+                })
                 .ConfigureServices(s => s.AddSingleton<IOptions<ServiceBusOptions>>(p => null))
                 .Build();
 
@@ -34,8 +36,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
         public void UseServiceBus_NoServiceBusConfiguration_PerformsExpectedRegistration()
         {
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost()
-                .AddServiceBus()
+                .ConfigureDefaultTestHost(b =>
+                {
+                    b.AddServiceBus();
+                })
                 .Build();
 
             var extensions = host.Services.GetService<IExtensionRegistry>();
@@ -56,8 +60,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
             string fakeConnStr = "test service bus connection";
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost()
-                .AddServiceBus()
+                .ConfigureDefaultTestHost(b =>
+                {
+                    b.AddServiceBus();
+                })
                 .ConfigureServices(s =>
                 {
                     s.Configure<ServiceBusOptions>(o =>

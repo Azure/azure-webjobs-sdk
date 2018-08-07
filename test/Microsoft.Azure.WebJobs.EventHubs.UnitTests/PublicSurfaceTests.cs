@@ -19,7 +19,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "EventHubTriggerAttribute",
                 "EventHubConfiguration",
                 "EventHubExtensionConfigProvider",
-                "EventHubHostBuilderExtensions",
+                "EventHubWebJobsBuilderExtensions",
                 "EventHubsWebJobsStartup"
             };
 

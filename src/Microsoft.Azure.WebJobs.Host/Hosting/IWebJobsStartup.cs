@@ -9,6 +9,6 @@ namespace Microsoft.Azure.WebJobs.Hosting
 {
     public interface IWebJobsStartup
     {
-        void Configure(IHostBuilder builder);
+        void Configure(IWebJobsBuilder builder);
     }
 }

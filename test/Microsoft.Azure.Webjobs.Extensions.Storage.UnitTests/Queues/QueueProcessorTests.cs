@@ -190,8 +190,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             public TestFixture()
             {
                 IHost host = new HostBuilder()
-                    .ConfigureDefaultTestHost()
-                    .AddAzureStorage()
+                    .ConfigureDefaultTestHost(b =>
+                    {
+                        b.AddAzureStorage();
+                    })
                     .Build();
 
                 var accountProvider = host.Services.GetService<StorageAccountProvider>();

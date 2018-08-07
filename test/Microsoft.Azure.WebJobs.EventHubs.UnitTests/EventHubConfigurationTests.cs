@@ -39,12 +39,14 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
         public void Initialize_PerformsExpectedRegistrations()
         {
             var host = new HostBuilder()
-                .ConfigureDefaultTestHost()
+                .ConfigureDefaultTestHost(builder =>
+                {
+                    builder.AddEventHubs();
+                })
                 .ConfigureServices(c =>
                 {
                     c.AddSingleton<INameResolver>(new RandomNameResolver());
                 })
-                .AddEventHubs()
                 .Build();
 
             IExtensionRegistry extensions = host.Services.GetService<IExtensionRegistry>();

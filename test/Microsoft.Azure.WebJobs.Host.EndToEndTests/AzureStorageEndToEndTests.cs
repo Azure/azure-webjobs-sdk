@@ -208,12 +208,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _resolver = new RandomNameResolver();
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<AzureStorageEndToEndTests>()
+                .ConfigureDefaultTestHost<AzureStorageEndToEndTests>(b =>
+                {
+                    b.AddAzureStorage();
+                })
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<INameResolver>(_resolver);
                 })
-                .AddAzureStorage()
                 .Build();
 
             // write test entities
@@ -286,12 +288,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _resolver = new RandomNameResolver();
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<AzureStorageEndToEndTests>()
+                .ConfigureDefaultTestHost<AzureStorageEndToEndTests>(b =>
+                {
+                    b.AddAzureStorage();
+                })
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<INameResolver>(_resolver);
                 })
-                .AddAzureStorage()
                 .Build();
 
             if (uploadBlobBeforeHostStart)
@@ -338,7 +342,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // Reinitialize the name resolver to avoid conflicts
             _resolver = new RandomNameResolver();
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<AzureStorageEndToEndTests>()
+                .ConfigureDefaultTestHost<AzureStorageEndToEndTests>(b =>
+                {
+                    b.AddAzureStorage();
+                })
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<INameResolver>(_resolver);
@@ -348,7 +355,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         o.QueueProcessorFactory = new TestQueueProcessorFactory();
                     });
                 })
-                .AddAzureStorage()
                 .Build();
 
             TestLoggerProvider loggerProvider = host.GetTestLoggerProvider();
@@ -531,8 +537,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             public TestFixture()
             {
                 IHost host = new HostBuilder()
-                    .ConfigureDefaultTestHost<TestFixture>()
-                    .AddAzureStorage()
+                    .ConfigureDefaultTestHost<TestFixture>(b =>
+                    {
+                        b.AddAzureStorage();
+                    })
                     .Build();
 
                 var provider = host.Services.GetService<StorageAccountProvider>();

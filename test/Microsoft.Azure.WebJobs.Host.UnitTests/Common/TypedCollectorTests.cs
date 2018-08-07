@@ -71,9 +71,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             nr.Add("appsetting1", "val1");
 
             var host = new HostBuilder()
-                .ConfigureDefaultTestHost<Functions>()
+                .ConfigureDefaultTestHost<Functions>(b =>
+                {
+                    b.AddExtension(client);
+                })
                 .ConfigureServices(s => s.AddSingleton<INameResolver>(nr))
-                .AddExtension(client)
                 .Build();
 
             host.GetJobHost().Call(typeof(Functions).GetMethod(nameof(Functions.ObjectArray)));
@@ -91,9 +93,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var nr = new FakeNameResolver();
             nr.Add("appsetting1", "val1");
             var host = new HostBuilder()
-                .ConfigureDefaultTestHost<Functions>()
+                .ConfigureDefaultTestHost<Functions>(b =>
+                {
+                    b.AddExtension(client);
+                })
                 .ConfigureServices(s => s.AddSingleton<INameResolver>(nr))
-                .AddExtension(client)
                 .Build();
 
             host.GetJobHost().Call(typeof(Functions).GetMethod(nameof(Functions.T1)));

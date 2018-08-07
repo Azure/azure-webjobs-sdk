@@ -105,9 +105,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             try
             {
                 IHost host = new HostBuilder()
-                    .ConfigureDefaultTestHost<ServiceBusTestJobs>()
-                    .AddAzureStorage()
-                    .AddServiceBus()
+                    .ConfigureDefaultTestHost<ServiceBusTestJobs>(b =>
+                    {
+                        b.AddAzureStorage()
+                        .AddServiceBus();
+                    })
                     .ConfigureServices(services =>
                     {
                         services.AddSingleton<MessagingProvider, CustomMessagingProvider>();
@@ -136,9 +138,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             try
             {
                 IHost host = new HostBuilder()
-                   .ConfigureDefaultTestHost<ServiceBusTestJobs>(nameResolver: _nameResolver)
-                   .AddAzureStorage()
-                   .AddServiceBus()
+                   .ConfigureDefaultTestHost<ServiceBusTestJobs>(b =>
+                   {
+                       b.AddAzureStorage()
+                       .AddServiceBus();
+                   }, nameResolver: _nameResolver)
                    .ConfigureServices(services =>
                    {
                        services.AddSingleton<MessagingProvider, CustomMessagingProvider>();
@@ -203,9 +207,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private IHost CreateHost()
         {
             return new HostBuilder()
-                .ConfigureDefaultTestHost<ServiceBusTestJobs>()
-                .AddAzureStorage()
-                .AddServiceBus()
+                .ConfigureDefaultTestHost<ServiceBusTestJobs>(b =>
+                {
+                    b.AddAzureStorage()
+                    .AddServiceBus();
+                })
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<INameResolver>(_nameResolver);

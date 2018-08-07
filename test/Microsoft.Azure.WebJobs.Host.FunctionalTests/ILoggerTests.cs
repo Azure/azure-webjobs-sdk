@@ -108,8 +108,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             const int N = 5;
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<ILoggerFunctions>()
-                .AddAzureStorage()
+                .ConfigureDefaultTestHost<ILoggerFunctions>(b =>
+                {
+                    b.AddAzureStorage();
+                })
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<IAsyncCollector<FunctionInstanceLogEntry>>(mockAggregator.Object);

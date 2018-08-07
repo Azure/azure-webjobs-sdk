@@ -36,8 +36,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _resolver = new RandomNameResolver();
 
             _host = new HostBuilder()
-                .ConfigureDefaultTestHost<AsyncCancellationEndToEndTests>()
-                .AddAzureStorage()
+                .ConfigureDefaultTestHost<AsyncCancellationEndToEndTests>(b =>
+                {
+                    b.AddAzureStorage();
+                })
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<INameResolver, RandomNameResolver>();

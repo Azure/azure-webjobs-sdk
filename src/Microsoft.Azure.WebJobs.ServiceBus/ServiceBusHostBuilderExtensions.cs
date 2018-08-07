@@ -12,19 +12,19 @@ namespace Microsoft.Extensions.Hosting
 {
     public static class ServiceBusHostBuilderExtensions
     {
-        public static IHostBuilder AddServiceBus(this IHostBuilder builder)
+        public static IWebJobsBuilder AddServiceBus(this IWebJobsBuilder builder)
         {
-            return builder.AddExtension<ServiceBusExtensionConfig>()
-                .ConfigureServices(services =>
-                {
-                    services.AddOptions<ServiceBusOptions>()
+            builder.AddExtension<ServiceBusExtensionConfig>();
+
+            builder.Services.AddOptions<ServiceBusOptions>()
                             .Configure<IConnectionStringProvider>((o, p) =>
                             {
                                 o.ConnectionString = p.GetConnectionString(ConnectionStringNames.ServiceBus);
                             });
 
-                    services.TryAddSingleton<MessagingProvider>();
-                });
+            builder.Services.TryAddSingleton<MessagingProvider>();
+
+            return builder;
         }
     }
 }

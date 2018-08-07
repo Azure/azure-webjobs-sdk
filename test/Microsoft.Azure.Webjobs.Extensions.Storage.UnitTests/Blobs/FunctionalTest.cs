@@ -27,10 +27,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             setTaskSource(src);
 
             var host = new HostBuilder()
-              .ConfigureDefaultTestHost(programType)
-              .AddAzureStorage()
-              .UseStorage(account)
-              .ConfigureCatchFailures(src, signalOnFirst, ignoreFailureFunctions)
+              .ConfigureDefaultTestHost(builder =>
+              {
+                  builder.AddAzureStorage()
+                      .UseStorage(account)
+                      .ConfigureCatchFailures(src, signalOnFirst, ignoreFailureFunctions);
+              }, programType)
               .Build();
 
             try
@@ -100,9 +102,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         internal static Exception CallFailure(StorageAccount account, Type programType, MethodInfo methodInfo, object arguments)
         {
             var host = new HostBuilder()
-                .ConfigureDefaultTestHost(programType)
-                .AddAzureStorage()
-                .UseStorage(account)
+                .ConfigureDefaultTestHost(b =>
+                {
+                    b.AddAzureStorage()
+                    .UseStorage(account);
+                }, programType)
                 .Build();
 
             var jobHost = host.GetJobHost();
@@ -122,10 +126,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         internal static void Call(StorageAccount account, Type programType, MethodInfo methodInfo, object arguments, Type[] cloudBlobStreamBinderTypes)
         {
             var host = new HostBuilder()
-                .ConfigureDefaultTestHost(programType)
-                .AddExtension(new CloudBlobStreamAdapterExtension(cloudBlobStreamBinderTypes))
-                .AddAzureStorage()
-                .UseStorage(account)
+                .ConfigureDefaultTestHost(builder =>
+                {
+                    builder.AddExtension(new CloudBlobStreamAdapterExtension(cloudBlobStreamBinderTypes))
+                    .AddAzureStorage()
+                    .UseStorage(account);
+                }, programType)
                 .Build();
 
             var jobHost = host.GetJobHost();
@@ -138,9 +144,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             setTaskSource(src);
 
             var host = new HostBuilder()
-              .ConfigureDefaultTestHost(programType)
-              .AddAzureStorage()
-              .UseStorage(account)
+              .ConfigureDefaultTestHost(builder =>
+              {
+                  builder.AddAzureStorage()
+                  .UseStorage(account);
+              }, programType)
               .Build();
 
             var jobHost = host.GetJobHost();

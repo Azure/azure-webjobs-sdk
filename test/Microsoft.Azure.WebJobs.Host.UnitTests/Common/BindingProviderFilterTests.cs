@@ -49,8 +49,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             var nr = new FakeNameResolver().Add("x", "error");
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<Program>(nr)
-                .AddExtension<FakeExtClient>()
+                .ConfigureDefaultTestHost<Program>(b =>
+                {
+                    b.AddExtension<FakeExtClient>();
+                }, nameResolver: nr)
                 .Build();
 
             TestHelpers.AssertIndexingError(() => host.GetJobHost<Program>().Call("Func"), "Program.Func", FakeExtClient.IndexErrorMsg);
@@ -67,8 +69,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             var nr = new FakeNameResolver().Add("x", "something");
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<Program>(nr, jobActivator)
-                .AddExtension<FakeExtClient>()
+                .ConfigureDefaultTestHost<Program>(b =>
+                {
+                    b.AddExtension<FakeExtClient>();
+                }, nr, jobActivator)
                 .Build();
 
             host.GetJobHost<Program>().Call(nameof(Program.Func));
@@ -88,8 +92,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             var nr = new FakeNameResolver().Add("x", "something");
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<Program>(nr, jobActivator)
-                .AddExtension<FakeExtClient>()
+                .ConfigureDefaultTestHost<Program>(b =>
+                {
+                    b.AddExtension<FakeExtClient>();
+                }, nr, jobActivator)
                 .Build();
 
             host.GetJobHost<Program>().Call(nameof(Program.FuncNull));

@@ -23,9 +23,7 @@ namespace Microsoft.Extensions.Hosting
 {
     public static class StorageHostBuilderExtensions
     {
-        // $$$ Extensions need some way to register services!  Callable from Script (so not via an explicit Extension method) 
-
-        public static IHostBuilder AddAzureStorage(this IHostBuilder builder)
+        public static IWebJobsBuilder AddAzureStorage(this IWebJobsBuilder builder)
         {
             // add webjobs to user agent for all storage calls
             OperationContext.GlobalSendingRequest += (sender, e) =>
@@ -33,38 +31,32 @@ namespace Microsoft.Extensions.Hosting
                 // TODO: FACAVAL - This is not supported on by the latest version of the
                 // storage SDK. Need to re-add this when the capability is reintroduced.
                 // e.UserAgent += " AzureWebJobs";
-            }; 
+            };
 
-            return builder
-                .ConfigureServices((context, services) =>
-                {
-                    // $$$ Move to Host.Storage? 
-                    services.TryAddSingleton<ILoadbalancerQueue, StorageLoadbalancerQueue>();
+            // $$$ Move to Host.Storage? 
+            builder.Services.TryAddSingleton<ILoadbalancerQueue, StorageLoadbalancerQueue>();
 
-                    services.TryAddSingleton<SharedQueueWatcher>();
+            builder.Services.TryAddSingleton<SharedQueueWatcher>();
 
-                    // $$$ Remove this, should be done via DI 
-                    services.TryAddSingleton<ISharedContextProvider, SharedContextProvider>();
+            // $$$ Remove this, should be done via DI 
+            builder.Services.TryAddSingleton<ISharedContextProvider, SharedContextProvider>();
 
-                    services.TryAddSingleton<StorageAccountProvider>();
+            builder.Services.TryAddSingleton<StorageAccountProvider>();
 
-                    services.TryAddSingleton<IContextSetter<IBlobWrittenWatcher>>((p) => new ContextAccessor<IBlobWrittenWatcher>());
-                    services.TryAddSingleton((p) => p.GetService<IContextSetter<IBlobWrittenWatcher>>() as IContextGetter<IBlobWrittenWatcher>);
+            builder.Services.TryAddSingleton<IContextSetter<IBlobWrittenWatcher>>((p) => new ContextAccessor<IBlobWrittenWatcher>());
+            builder.Services.TryAddSingleton((p) => p.GetService<IContextSetter<IBlobWrittenWatcher>>() as IContextGetter<IBlobWrittenWatcher>);
 
-                    services.TryAddSingleton<IContextSetter<IMessageEnqueuedWatcher>>((p) => new ContextAccessor<IMessageEnqueuedWatcher>());
-                    services.TryAddSingleton((p) => p.GetService<IContextSetter<IMessageEnqueuedWatcher>>() as IContextGetter<IMessageEnqueuedWatcher>);
+            builder.Services.TryAddSingleton<IContextSetter<IMessageEnqueuedWatcher>>((p) => new ContextAccessor<IMessageEnqueuedWatcher>());
+            builder.Services.TryAddSingleton((p) => p.GetService<IContextSetter<IMessageEnqueuedWatcher>>() as IContextGetter<IMessageEnqueuedWatcher>);
 
-                    services.TryAddSingleton<BlobTriggerAttributeBindingProvider>();
+            builder.Services.TryAddSingleton<BlobTriggerAttributeBindingProvider>();
 
-                    services.TryAddSingleton<QueueTriggerAttributeBindingProvider>();
+            builder.Services.TryAddSingleton<QueueTriggerAttributeBindingProvider>();
 
-                    services.TryAddEnumerable(ServiceDescriptor.Singleton<IBindingProvider, CloudStorageAccountBindingProvider>());
-                })
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IBindingProvider, CloudStorageAccountBindingProvider>());
 
-                .AddExtension<TableExtension>()
-
+            return builder.AddExtension<TableExtension>()
                 .AddExtension<QueueExtension>()
-
                 .AddExtension<BlobExtensionConfig>()
                 .AddExtension<BlobTriggerExtensionConfig>();
         }

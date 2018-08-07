@@ -27,9 +27,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             var prog = new BindToCloudBlockBlobProgram();
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<BindToCloudBlockBlobProgram>(prog)
-                .AddAzureStorage()
-                .UseStorage(account)
+                .ConfigureDefaultTestHost<BindToCloudBlockBlobProgram>(prog, builder =>
+                {
+                    builder.AddAzureStorage()
+                    .UseStorage(account);
+                })
                 .Build();
 
             var jobHost = host.GetJobHost<BindToCloudBlockBlobProgram>();

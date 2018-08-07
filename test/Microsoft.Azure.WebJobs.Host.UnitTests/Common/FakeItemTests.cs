@@ -54,8 +54,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             };
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<Functions>()
-                .AddExtension(client)
+                .ConfigureDefaultTestHost<Functions>(b =>
+                {
+                    b.AddExtension(client);
+                })
                 .Build();
 
             // With out parameter 

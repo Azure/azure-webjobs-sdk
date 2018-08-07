@@ -168,9 +168,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             activator.Add(testInstance);
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<TFunction>()
+                .ConfigureDefaultTestHost<TFunction>(b=>
+                {
+                    b.AddExtension<FakeExtClient>();
+                })
                 .ConfigureServices(services => services.AddSingleton<IJobActivator>(activator))
-                .AddExtension<FakeExtClient>()
                 .Build();
 
             await host.GetJobHost().CallAsync(typeof(TFunction).GetMethod("Func"), arguments);
