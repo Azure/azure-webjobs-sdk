@@ -17,11 +17,13 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
     {
         [Fact]
         public void Queue_IfNameIsInvalid_ThrowsDuringIndexing()
-        {            
+        {
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<InvalidQueueNameProgram>()
-                .AddAzureStorage()
-                .UseFakeStorage()            
+                .ConfigureDefaultTestHost<InvalidQueueNameProgram>(b =>
+                {
+                    b.AddAzureStorage()
+                    .UseFakeStorage();
+                })
                 .Build();
 
 

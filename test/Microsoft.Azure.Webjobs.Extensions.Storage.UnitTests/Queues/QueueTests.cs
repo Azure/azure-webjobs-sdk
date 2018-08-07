@@ -38,8 +38,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             var account = CreateFakeStorageAccount();
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<GenericProgram<ICollector<string>>>()
-                .UseStorage(account)
+                .ConfigureDefaultTestHost<GenericProgram<ICollector<string>>>(b =>
+                {
+                    b.UseStorage(account);
+                })
                 .Build();
 
             host.GetJobHost().Call<GenericProgram<ICollector<string>>>("Func");
@@ -68,8 +70,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public void Catch_Bad_Name_At_IndexTime()
         {
             IHost host = new HostBuilder()
-               .ConfigureDefaultTestHost<ProgramWithStaticBadName>()
-               .AddAzureStorage()
+               .ConfigureDefaultTestHost<ProgramWithStaticBadName>(builder =>
+               {
+                   builder.AddAzureStorage();
+               })
                .Build();
 
             string errorMessage = GetErrorMessageForBadQueueName(ProgramWithStaticBadName.BadQueueName, "name");
@@ -100,8 +104,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             var nameResolver = new FakeNameResolver().Add("key", "1");
             IHost host = new HostBuilder()
-               .ConfigureDefaultTestHost<ProgramWithVariableQueueName>()
-               .UseFakeStorage()
+               .ConfigureDefaultTestHost<ProgramWithVariableQueueName>(builder =>
+               {
+                   builder.UseFakeStorage();
+               })
                .ConfigureServices(services =>
                {
                    services.AddSingleton<INameResolver>(nameResolver);
@@ -131,8 +137,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var nameResolver = new FakeNameResolver().Add("key", "$"); // Illegal
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<ProgramWithVariableQueueName>()
-                .UseFakeStorage()
+                .ConfigureDefaultTestHost<ProgramWithVariableQueueName>(builder =>
+                {
+                    builder.UseFakeStorage();
+                })
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<INameResolver>(nameResolver);
@@ -177,8 +185,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             var account = CreateFakeStorageAccount();
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<ProgramWithTriggerAndBindingData>()
-                .UseStorage(account)
+                .ConfigureDefaultTestHost<ProgramWithTriggerAndBindingData>(b =>
+                {
+                    b.UseStorage(account);
+                })
                 .Build();
 
             var trigger = new ProgramWithTriggerAndBindingData.Poco { xyz = "abc" };
@@ -236,8 +246,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             var account = CreateFakeStorageAccount();
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<ProgramWithTriggerAndCompoundBindingData>()
-                .UseStorage(account)
+                .ConfigureDefaultTestHost<ProgramWithTriggerAndCompoundBindingData>(b =>
+                {
+                    b.UseStorage(account);
+                })
                 .Build();
 
             var trigger = new ProgramWithTriggerAndCompoundBindingData.Poco
@@ -347,8 +359,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // Verify that indexing fails if the [Queue] trigger needs binding data that's not present. 
             var account = CreateFakeStorageAccount();
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<ProgramBadContract>()
-                .UseStorage(account)
+                .ConfigureDefaultTestHost<ProgramBadContract>(b =>
+                {
+                    b.UseStorage(account);
+                })
                 .Build();
 
             TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<ProgramBadContract>("Func"),
@@ -369,8 +383,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             var account = CreateFakeStorageAccount();
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<ProgramCantBindToObject>()
-                .UseStorage(account)
+                .ConfigureDefaultTestHost<ProgramCantBindToObject>(b =>
+                {
+                    b.UseStorage(account);
+                })
                 .Build();
 
             TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<ProgramCantBindToObject>("Func"),
@@ -399,8 +415,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private void Fails_Cant_Bind_To_Types_Worker<T>(string typeName)
         {
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<GenericProgram<T>>()
-                .UseFakeStorage()                
+                .ConfigureDefaultTestHost<GenericProgram<T>>(b =>
+                {
+                    b.UseFakeStorage();
+                })
                 .Build();
 
             TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<GenericProgram<T>>("Func"),

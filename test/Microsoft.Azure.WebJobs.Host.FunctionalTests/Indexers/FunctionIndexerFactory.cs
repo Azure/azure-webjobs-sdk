@@ -32,8 +32,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             IExtensionRegistry extensionRegistry = null, ILoggerFactory loggerFactory = null)
         {
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost()
-                .AddAzureStorage()
+                .ConfigureDefaultTestHost(b =>
+                {
+                    b.AddAzureStorage();
+                })
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<StorageAccountProvider>(new FakeStorageAccountProvider());
@@ -49,7 +51,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                         services.AddSingleton<IExtensionRegistry>(extensionRegistry);
                     }
                 })
-                .AddAzureStorage()
                 .Build();
 
             ITriggerBindingProvider triggerBindingProvider = host.Services.GetService<ITriggerBindingProvider>();

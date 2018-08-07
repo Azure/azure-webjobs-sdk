@@ -211,9 +211,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             IHostIdProvider hostIdProvider = new FakeHostIdProvider();
             IWebJobsExceptionHandler exceptionHandler = new TaskBackgroundExceptionHandler<TResult>(taskSource);
 
-            return StorageHostBuilderExtensions.AddAzureStorage(new HostBuilder()
-                .ConfigureDefaultTestHost(programType)
-                .AddAzureStorage()
+            return new HostBuilder()
+                .ConfigureDefaultTestHost(b =>
+                {
+                    b.AddAzureStorage();
+                }, programType)
                 .ConfigureServices(services =>
                 {
                     // services.AddSingleton<IOptionsFactory<JobHostQueuesOptions>, FakeQueuesOptionsFactory>(); $$$ ???
@@ -229,7 +231,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                     services.AddSingleton<IFunctionOutputLoggerProvider>(new NullFunctionOutputLoggerProvider());
                     services.AddSingleton(hostIdProvider);
                 })
-)
                 .Build();
         }
 

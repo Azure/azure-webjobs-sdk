@@ -33,8 +33,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             {
 
                 IHost host = new HostBuilder()
-                    .ConfigureDefaultTestHost<TProgram>()
-                    .UseFakeStorage()
+                    .ConfigureDefaultTestHost<TProgram>(builder =>
+                    {
+                        builder.UseFakeStorage();
+                    })
                     .Build();
 
                 host.GetJobHost<TProgram>().AssertIndexingError(methodName, expectedErrorMessage);
@@ -64,9 +66,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task Table_SingleOut_Supported()
         {
             IHost host = new HostBuilder()
-             .ConfigureDefaultTestHost<BindToSingleOutProgram>()
-             .AddAzureStorage()
-             .UseFakeStorage()
+             .ConfigureDefaultTestHost<BindToSingleOutProgram>(builder =>
+             {
+                 builder.AddAzureStorage()
+                     .UseFakeStorage();
+             })
              .Build();
 
             host.GetJobHost<BindToSingleOutProgram>().Call(nameof(BindToSingleOutProgram.Run));
@@ -92,9 +96,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task Table_ResolvedName()
         {
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<BindToICollectorITableEntityResolvedTableProgram>()
-                .AddAzureStorage()
-                .UseFakeStorage()
+                .ConfigureDefaultTestHost<BindToICollectorITableEntityResolvedTableProgram>(builder =>
+                {
+                    builder.AddAzureStorage()
+                        .UseFakeStorage();
+                })
                 .Build();
 
             host.GetJobHost<BindToICollectorITableEntityResolvedTableProgram>().Call("Run", new { t1 = "ZZ" });
@@ -120,11 +126,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var ext = new TableConverter();
 
             var host = new HostBuilder()
-                .ConfigureDefaultTestHost<CustomTableBindingExtensionProgram>()
-                .AddExtension(ext)
-                .AddAzureStorage()
-                .UseFakeStorage()
-                .Build();
+                .ConfigureDefaultTestHost<CustomTableBindingExtensionProgram>(builder =>
+                {
+                    builder.AddExtension(ext)
+                    .UseFakeStorage();
+                })
+            .Build();
 
             host.GetJobHost<CustomTableBindingExtensionProgram>().Call("Run"); // Act
 
@@ -198,8 +205,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             // Act
             var host = new HostBuilder()
-                .ConfigureDefaultTestHost<BindToICollectorJObjectProgramKeysInAttr>()
-                .UseFakeStorage()
+                .ConfigureDefaultTestHost<BindToICollectorJObjectProgramKeysInAttr>(builder =>
+                {
+                    builder.UseFakeStorage();
+                })
                 .Build();
 
             host.GetJobHost<BindToICollectorJObjectProgramKeysInAttr>().Call("Run");

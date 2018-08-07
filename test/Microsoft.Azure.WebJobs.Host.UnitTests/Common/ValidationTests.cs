@@ -91,8 +91,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             var nr = new FakeNameResolver().Add("k1", "v1");
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<BadFunction>(nr)
-                .AddExtension<FakeExtClient>()
+                .ConfigureDefaultTestHost<BadFunction>(b => { b.AddExtension<FakeExtClient>(); }, nr)
                 .Build();
 
             TestHelpers.AssertIndexingError(
@@ -106,8 +105,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             var nr = new FakeNameResolver().Add("k1", "v1");
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<GoodFunction>(nr)
-                .AddExtension<FakeExtClient>()
+                .ConfigureDefaultTestHost<GoodFunction>(b => { b.AddExtension<FakeExtClient>(); }, nr)
                 .Build();
 
             host.GetJobHost<GoodFunction>().Call("Good", new { k2 = "xxxx" });
@@ -166,8 +164,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             var nr = new FakeNameResolver().Add("k1", "v1");
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<LocalFunction1>(nr)
-                .AddExtension<FakeExtClient2>()
+                .ConfigureDefaultTestHost<LocalFunction1>(b=> 
+                {
+                    b.AddExtension<FakeExtClient2>();
+                }, nameResolver: nr)
                 .Build();
 
             host.GetJobHost<LocalFunction1>().Call("NoValidation", new { k2 = "xxxx" }); // Succeeds since validate doesn't run on this rule             
@@ -180,8 +180,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             var nr = new FakeNameResolver().Add("k1", "v1");
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<LocalFunction2>(nr)
-                .AddExtension<FakeExtClient2>()
+                .ConfigureDefaultTestHost<LocalFunction2>(b =>
+                {
+                    b.AddExtension<FakeExtClient2>();
+                }, nr)
                 .Build();
 
             TestHelpers.AssertIndexingError(

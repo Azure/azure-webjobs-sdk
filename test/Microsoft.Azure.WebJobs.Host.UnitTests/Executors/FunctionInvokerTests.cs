@@ -73,7 +73,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             var activator = new FakeActivator(prog);
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<MyProg>(activator: activator)
+                .ConfigureDefaultTestHost<MyProg>(b=> { }, activator: activator)
                 .Build();
 
             var task = host.GetJobHost<MyProg>().CallAsync("MyProg.Method");

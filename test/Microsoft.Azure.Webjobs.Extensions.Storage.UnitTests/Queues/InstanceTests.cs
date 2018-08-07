@@ -27,9 +27,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var prog = new InstanceProgram();
 
             IHost host = new HostBuilder()
-               .ConfigureDefaultTestHost<InstanceProgram>(prog)
-               .AddAzureStorage()
-               .UseStorage(account)
+               .ConfigureDefaultTestHost<InstanceProgram>(prog, builder =>
+               {
+                   builder.AddAzureStorage()
+                   .UseStorage(account);
+               })
                .Build();
 
             // Act
@@ -61,9 +63,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             var prog = new InstanceAsyncProgram();
             IHost host = new HostBuilder()
-               .ConfigureDefaultTestHost<InstanceAsyncProgram>(prog)
-               .AddAzureStorage()
-               .UseStorage(account)
+               .ConfigureDefaultTestHost<InstanceAsyncProgram>(prog, builder =>
+               {
+                   builder.AddAzureStorage()
+                   .UseStorage(account);
+               })
                .Build();
 
             // Act
@@ -95,8 +99,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await account.AddQueueMessageAsync(expectedMessage, QueueName);
 
             IHost host = new HostBuilder()
-               .ConfigureDefaultTestHost<DisposeInstanceProgram>()
-               .UseStorage(account)
+               .ConfigureDefaultTestHost<DisposeInstanceProgram>(builder =>
+               {
+                   builder.UseStorage(account);
+               })
                .Build();
 
             // Act & Assert
@@ -139,8 +145,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await account.AddQueueMessageAsync(message, QueueName);
 
             IHost host = new HostBuilder()
-              .ConfigureDefaultTestHost<InstanceCustomActivatorProgram>(null, activator)
-              .UseStorage(account)
+              .ConfigureDefaultTestHost<InstanceCustomActivatorProgram>(builder =>
+              {
+                  builder.UseStorage(account);
+              }, null, activator)
               .Build();
 
             // Act            

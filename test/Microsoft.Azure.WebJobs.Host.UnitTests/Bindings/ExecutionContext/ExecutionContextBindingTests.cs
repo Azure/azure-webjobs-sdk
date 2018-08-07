@@ -17,8 +17,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
         public async Task CanBindExecutionContext()
         {
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<CoreTestJobs>()
-                .AddExecutionContextBinding()
+                .ConfigureDefaultTestHost<CoreTestJobs>(b =>
+                {
+                    b.AddExecutionContextBinding();
+                })
                 .Build();
 
             var jobHost = host.GetJobHost<CoreTestJobs>();
@@ -37,10 +39,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
         public async Task SetAppDirectory()
         {
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<CoreTestJobs>()
-                .AddExecutionContextBinding(o =>
+                .ConfigureDefaultTestHost<CoreTestJobs>(b =>
                 {
-                    o.AppDirectory = @"z:\home";
+                    b.AddExecutionContextBinding(o =>
+                    {
+                        o.AppDirectory = @"z:\home";
+                    });
                 })
                 .Build();
 

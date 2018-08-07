@@ -48,8 +48,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void TestError()
         {
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<ErrorProgram>()
-                .AddExtension<FakeQueueClient>()
+                .ConfigureDefaultTestHost<ErrorProgram>(b=>
+                {
+                    b.AddExtension<FakeQueueClient>();
+                })
                 .Build();
 
             FakeQueueClient client = host.GetExtension<FakeQueueClient>();
@@ -184,8 +186,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void Test()
         {
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<Functions>()
-                .AddExtension<FakeQueueClient>()
+                .ConfigureDefaultTestHost<Functions>(b=>
+                {
+                    b.AddExtension<FakeQueueClient>();
+                })
                 .Build();
 
             JobHost jobHost = host.GetJobHost();

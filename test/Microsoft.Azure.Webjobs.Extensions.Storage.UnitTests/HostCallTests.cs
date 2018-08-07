@@ -1002,13 +1002,15 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             jobActivator.Add(instance);
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<BindTableEntityToJArrayProgram>()
+                .ConfigureDefaultTestHost<BindTableEntityToJArrayProgram>(b =>
+                {
+                    b.AddAzureStorage();
+                })
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<IJobActivator>(jobActivator);
                     services.AddSingleton<StorageAccountProvider>(new FakeStorageAccountProvider(account));
                 })
-                .AddAzureStorage()
                 .Build();
 
             // Act
@@ -1076,12 +1078,14 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             // Act
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<BindTableEntityToJObjectProgram>()
+                .ConfigureDefaultTestHost<BindTableEntityToJObjectProgram>(b =>
+                {
+                    b.AddAzureStorage();
+                })
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<StorageAccountProvider>(new FakeStorageAccountProvider(account));
                 })
-                .AddAzureStorage()
                 .Build();
 
             var prog = host.GetJobHost<BindTableEntityToJObjectProgram>();

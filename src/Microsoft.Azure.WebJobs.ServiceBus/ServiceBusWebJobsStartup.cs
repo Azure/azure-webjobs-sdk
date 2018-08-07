@@ -11,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.ServiceBus
 {
     public class ServiceBusWebJobsStartup : IWebJobsStartup
     {
-        public void Configure(IHostBuilder builder)
+        public void Configure(IWebJobsBuilder builder)
         {
             builder.AddServiceBus();
         }

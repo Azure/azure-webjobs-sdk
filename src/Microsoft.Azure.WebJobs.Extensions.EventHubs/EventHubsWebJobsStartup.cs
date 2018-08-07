@@ -11,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.EventHubs
 {
     public class EventHubsWebJobsStartup : IWebJobsStartup
     {
-        public void Configure(IHostBuilder builder)
+        public void Configure(IWebJobsBuilder builder)
         {
             builder.AddEventHubs();
         }

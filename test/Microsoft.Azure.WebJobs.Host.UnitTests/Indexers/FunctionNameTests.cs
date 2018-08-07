@@ -24,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             var logger = new MyLogger();
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<MyProg>(activator: activator)
+                .ConfigureDefaultTestHost<MyProg>(_ => { }, activator: activator)
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<IAsyncCollector<FunctionInstanceLogEntry>>(logger);

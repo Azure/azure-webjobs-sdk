@@ -139,9 +139,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.True(!string.IsNullOrEmpty(connection), "Required test connection string is missing.");
 
                 var host = new HostBuilder()
-                    .ConfigureDefaultTestHost<EventHubTestJobs>()
-                    .AddAzureStorage()
-                    .AddEventHubs()
+                    .ConfigureDefaultTestHost<EventHubTestJobs>(b =>
+                    {
+                        b.AddAzureStorage()
+                        .AddEventHubs();
+                    })
                     .ConfigureServices(services =>
                     {
                         services.AddSingleton<EventHubConfiguration>(serviceProvider =>

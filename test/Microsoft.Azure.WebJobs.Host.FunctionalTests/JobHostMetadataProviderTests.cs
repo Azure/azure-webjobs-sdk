@@ -23,8 +23,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void AttrBuilder()
         {
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost()
-                .AddAzureStorage()
+                .ConfigureDefaultTestHost(b =>
+                {
+                    b.AddAzureStorage();
+                })
                 .Build();
             
             var metadataProvider = host.CreateMetadataProvider();
@@ -93,8 +95,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void DefaultTypeForTable()
         {
             var host = new HostBuilder()
-                .ConfigureDefaultTestHost()
-                .AddAzureStorage()
+                .ConfigureDefaultTestHost(b =>
+                {
+                    b.AddAzureStorage();
+                })
                 .Build();
 
             var metadataProvider = host.CreateMetadataProvider();
@@ -114,8 +118,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void DefaultTypeForQueue()
         {
             var host = new HostBuilder()
-                .ConfigureDefaultTestHost()
-                .AddAzureStorage()
+                .ConfigureDefaultTestHost(b =>
+                {
+                    b.AddAzureStorage();
+                })
                 .Build();
 
             var metadataProvider = host.CreateMetadataProvider();

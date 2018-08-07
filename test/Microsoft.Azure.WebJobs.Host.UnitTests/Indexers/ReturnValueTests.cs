@@ -25,8 +25,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             var ext = new MyExtension();
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<TestProg>()
-                .AddExtension(ext)
+                .ConfigureDefaultTestHost<TestProg>(b =>
+                {
+                    b.AddExtension(ext);
+                })
                 .Build();
 
             host.GetJobHost<TestProg>().Call("ImplicitReturn", new { trigger = "trigger" });
@@ -39,8 +41,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             var ext = new MyExtension();
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<TestProg>()
-                .AddExtension(ext)
+                .ConfigureDefaultTestHost<TestProg>(b =>
+                {
+                    b.AddExtension(ext);
+                })
                 .Build();
 
             host.GetJobHost<TestProg>().Call("ImplicitTaskReturn", new { trigger = "trigger" });
@@ -53,8 +57,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             var ext = new MyExtension();
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<TestProg>()
-                .AddExtension(ext)
+                .ConfigureDefaultTestHost<TestProg>(b =>
+                {
+                    b.AddExtension(ext);
+                })
                 .Build();
 
             host.GetJobHost<TestProg>().Call("ExplicitReturn");
@@ -67,8 +73,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             var ext = new MyExtension();
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<TestProg>()
-                .AddExtension(ext)
+                .ConfigureDefaultTestHost<TestProg>(b =>
+                {
+                    b.AddExtension(ext);
+                })
                 .Build();
 
             host.GetJobHost<TestProg>().Call("ExplicitTaskReturn");
@@ -81,8 +89,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             var ext = new MyExtension();
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<TestProg>()
-                .AddExtension(ext)
+                .ConfigureDefaultTestHost<TestProg>(b=>
+                {
+                    b.AddExtension(ext);
+                })
                 .Build();
 
             host.GetJobHost<TestProg>().Call("ExplicitReturnWins", new { trigger = "trigger" });
@@ -95,8 +105,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             var ext = new MyExtension();
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<TestProgErrors>()
-                .AddExtension(ext)
+                .ConfigureDefaultTestHost<TestProgErrors>(b =>
+                {
+                    b.AddExtension(ext);
+                })
                 .Build();
 
             TestHelpers.AssertIndexingError(() => host.GetJobHost<TestProgErrors>().Call("Error"), "TestProgErrors.Error",

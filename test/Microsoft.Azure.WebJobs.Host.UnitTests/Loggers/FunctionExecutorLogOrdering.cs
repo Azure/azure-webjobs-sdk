@@ -35,12 +35,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             var logger = new MyLogger();
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<MyProg>()
+                .ConfigureDefaultTestHost<MyProg>(b =>
+                {
+                    b.AddExtension<TestExt>();
+                })
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<IAsyncCollector<FunctionInstanceLogEntry>>(logger);
                 })
-                .AddExtension<TestExt>()
                 .Build();
 
             host.GetJobHost<MyProg>().Call("test");
@@ -54,12 +56,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             var logger = new MyLogger();
 
             IHost host = new HostBuilder()
-             .ConfigureDefaultTestHost<MyProg>()
+             .ConfigureDefaultTestHost<MyProg>(b =>
+             {
+                 b.AddExtension<TestExt>();
+             })
              .ConfigureServices(services =>
              {
                  services.AddSingleton<IAsyncCollector<FunctionInstanceLogEntry>>(logger);
              })
-             .AddExtension<TestExt>()
              .Build();
 
             Assert.Throws<FunctionInvocationException>(() => host.GetJobHost<MyProg>().Call("testFailParam"));
@@ -73,12 +77,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             var logger = new MyLogger();
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<MyProg>()
+                .ConfigureDefaultTestHost<MyProg>(b =>
+                {
+                    b.AddExtension<TestExt>();
+                })
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<IAsyncCollector<FunctionInstanceLogEntry>>(logger);
                 })
-                .AddExtension<TestExt>()
                 .Build();
 
             Assert.Throws<FunctionInvocationException>(() => host.GetJobHost<MyProg>().Call("testFailBody"));

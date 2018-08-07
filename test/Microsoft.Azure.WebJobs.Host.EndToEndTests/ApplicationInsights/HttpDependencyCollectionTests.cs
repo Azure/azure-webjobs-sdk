@@ -365,7 +365,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             _resolver = new RandomNameResolver();
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<HttpDependencyCollectionTests>()
+                .ConfigureDefaultTestHost<HttpDependencyCollectionTests>(b =>
+                {
+                    b.AddAzureStorage();
+                })
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<INameResolver>(_resolver);
@@ -375,7 +378,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                     });
                 })
                 .AddApplicationInsights(_mockApplicationInsightsKey, filter.Filter, null)
-                .AddAzureStorage()
                 .Build();
 
             TelemetryConfiguration telemteryConfiguration = host.Services.GetService<TelemetryConfiguration>();

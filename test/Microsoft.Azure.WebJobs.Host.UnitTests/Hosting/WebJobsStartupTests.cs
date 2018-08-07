@@ -19,11 +19,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             using (new StartupScope())
             {
                 var builder = new HostBuilder()
-                    .UseWebJobsStartup<TestStartup>();
-
-                Assert.True(TestStartup.ConfigureInvoked);
+                    .ConfigureWebJobs(webJobeBuilder =>
+                    {
+                        webJobeBuilder.UseWebJobsStartup<TestStartup>();
+                    });
 
                 IHost host = builder.Build();
+
+                Assert.True(TestStartup.ConfigureInvoked);
 
                 ITestService service = host.Services.GetService<ITestService>();
 
@@ -37,11 +40,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             using (new StartupScope())
             {
                 var builder = new HostBuilder()
-                    .UseWebJobsStartup(typeof(TestStartup));
+                    .ConfigureWebJobs(webJobeBuilder =>
+                    {
+                        webJobeBuilder.UseWebJobsStartup(typeof(TestStartup));
+                    });
 
-                Assert.True(TestStartup.ConfigureInvoked);
 
                 IHost host = builder.Build();
+
+                Assert.True(TestStartup.ConfigureInvoked);
 
                 ITestService service = host.Services.GetService<ITestService>();
 
@@ -53,7 +60,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
         public void StartupTypes_FromAttributes_AreConfigured()
         {
             var builder = new HostBuilder()
-                  .UseExternalStartup(new DefaultStartupTypeDiscoverer(GetType().Assembly));
+                .ConfigureWebJobs(webJobsBuilder =>
+                {
+                    webJobsBuilder.UseExternalStartup(new DefaultStartupTypeDiscoverer(GetType().Assembly));
+                });
 
             IHost host = builder.Build();
 
@@ -82,9 +92,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
 
             public static bool ConfigureInvoked => _configureInvoked;
 
-            public void Configure(IHostBuilder builder)
+            public void Configure(IWebJobsBuilder builder)
             {
-                builder.ConfigureServices(c => c.AddSingleton<ITestService, TestService>());
+                builder.Services.AddSingleton<ITestService, TestService>();
 
                 _configureInvoked = true;
             }
@@ -98,9 +108,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
 
         public class ExternalTestStartup : IWebJobsStartup
         {
-            public void Configure(IHostBuilder builder)
+            public void Configure(IWebJobsBuilder builder)
             {
-                builder.ConfigureServices(c => c.AddSingleton<TestExternalService>());
+                builder.Services.AddSingleton<TestExternalService>();
             }
         }
 

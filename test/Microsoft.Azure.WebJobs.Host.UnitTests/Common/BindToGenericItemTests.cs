@@ -541,8 +541,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             IExtensionConfigProvider ext = prog;
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<TConfig>(activator: jobActivator)
-                .AddExtension(ext)
+                .ConfigureDefaultTestHost<TConfig>(b =>
+                {
+                    b.AddExtension(ext);
+                }, activator: jobActivator)
                 .Build();
 
             ITest<TConfig> test = prog;

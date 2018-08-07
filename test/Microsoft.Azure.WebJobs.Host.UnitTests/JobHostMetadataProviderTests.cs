@@ -29,8 +29,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var ext = new TestExtension();
 
             var host = new HostBuilder()
-                .ConfigureDefaultTestHost<MyProg>()
-                .AddExtension(ext)
+                .ConfigureDefaultTestHost<MyProg>(b =>
+                {
+                    b.AddExtension(ext);
+                })
                 .Build();
             IJobHostMetadataProvider metadataProvider = host.CreateMetadataProvider();
             Assert.Equal(1, ext._counter);
@@ -80,8 +82,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             var ext = new TestExtension2();
             var host = new HostBuilder()
-                .ConfigureDefaultTestHost()
-                .AddExtension(ext)
+                .ConfigureDefaultTestHost(b=>
+                {
+                    b.AddExtension(ext);
+                })
                 .Build();
 
             IJobHostMetadataProvider metadataProvider = host.CreateMetadataProvider();
@@ -110,8 +114,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var ext = new TestExtension3();
 
             var host = new HostBuilder()
-                .ConfigureDefaultTestHost()
-                .AddExtension(ext)
+                .ConfigureDefaultTestHost(b =>
+                {
+                    b.AddExtension(ext);
+                })
                 .Build();
 
             IJobHostMetadataProvider metadataProvider = host.CreateMetadataProvider();
@@ -138,9 +144,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             var ext = new JArrayTriggerExtension();
             var host = new HostBuilder()
-                 .ConfigureDefaultTestHost()
+                 .ConfigureDefaultTestHost(b =>
+                 {
+                     b.AddExtension(ext);
+                 })
                  .ConfigureTypeLocator() // empty 
-                 .AddExtension(ext)
                  .Build();
 
             IJobHostMetadataProvider metadataProvider = host.CreateMetadataProvider();
@@ -166,9 +174,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             var ext = new OpenTypeTriggerExtension();
             var host = new HostBuilder()
-                 .ConfigureDefaultTestHost()
+                 .ConfigureDefaultTestHost(b =>
+                 {
+                     b.AddExtension(ext);
+                 })
                  .ConfigureTypeLocator() // empty 
-                 .AddExtension(ext)
                  .Build();
             IJobHostMetadataProvider metadataProvider = host.CreateMetadataProvider();
 

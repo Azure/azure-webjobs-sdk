@@ -319,8 +319,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             {
                 // Create a default host to get some default services
                 IHost host = new HostBuilder()
-                    .ConfigureDefaultTestHost()
-                    .AddAzureStorage()
+                    .ConfigureDefaultTestHost(b =>
+                    {
+                        b.AddAzureStorage();
+                    })
                     .Build();
 
                 var storageAccount = host.GetStorageAccount();

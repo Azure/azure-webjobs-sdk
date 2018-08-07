@@ -67,8 +67,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             RandomNameResolver nameResolver = new RandomNameResolver();
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<ParallelExecutionTests>()
-                .AddAzureStorage()
+                .ConfigureDefaultTestHost<ParallelExecutionTests>(b =>
+                {
+                    b.AddAzureStorage();
+                })
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<INameResolver>(nameResolver);

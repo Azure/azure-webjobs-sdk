@@ -110,24 +110,28 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             }
             Assert.True(false, "Invoker should have failed");
         }
-
         public static IHostBuilder ConfigureDefaultTestHost(this IHostBuilder builder, params Type[] types)
         {
-            return builder.ConfigureWebJobsHost()
-               .ConfigureServices(services =>
-               {
-                   services.AddSingleton<ITypeLocator>(new FakeTypeLocator(types));
+            return builder.ConfigureDefaultTestHost(b => { }, types);
+        }
 
-                   // Register this to fail a test if a background exception is thrown
-                   services.AddSingleton<IWebJobsExceptionHandlerFactory, TestExceptionHandlerFactory>();
-               })
-               .ConfigureTestLogger();
+        public static IHostBuilder ConfigureDefaultTestHost(this IHostBuilder builder, Action<IWebJobsBuilder> configureWebJobs, params Type[] types)
+        {
+            return builder.ConfigureWebJobs(configureWebJobs)
+                  .ConfigureServices(services =>
+                 {
+                     services.AddSingleton<ITypeLocator>(new FakeTypeLocator(types));
+
+                  // Register this to fail a test if a background exception is thrown
+                  services.AddSingleton<IWebJobsExceptionHandlerFactory, TestExceptionHandlerFactory>();
+                 })
+                 .ConfigureTestLogger();
         }
 
         public static IHostBuilder ConfigureDefaultTestHost<TProgram>(this IHostBuilder builder,
-            TProgram instance)
+           TProgram instance, Action<IWebJobsBuilder> configureWebJobs)
         {
-            return builder.ConfigureDefaultTestHost(typeof(TProgram))
+            return builder.ConfigureDefaultTestHost(configureWebJobs, typeof(TProgram))
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<IJobHost, JobHost<TProgram>>();
@@ -136,10 +140,19 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                 });
         }
 
-        public static IHostBuilder ConfigureDefaultTestHost<TProgram>(this IHostBuilder builder,
+        public static IHostBuilder ConfigureDefaultTestHost<TProgram>(this IHostBuilder builder)
+        {
+            return builder.ConfigureDefaultTestHost(o=> { }, typeof(TProgram))
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<IJobHost, JobHost<TProgram>>();
+                });
+        }
+
+        public static IHostBuilder ConfigureDefaultTestHost<TProgram>(this IHostBuilder builder, Action<IWebJobsBuilder> configureWebJobs,
             INameResolver nameResolver = null, IJobActivator activator = null)
         {
-            return builder.ConfigureDefaultTestHost(typeof(TProgram))
+            return builder.ConfigureDefaultTestHost(configureWebJobs, typeof(TProgram))
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<IJobHost, JobHost<TProgram>>();
@@ -164,8 +177,8 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
              });
         }
 
-        public static IHostBuilder ConfigureCatchFailures<TResult>(
-            this IHostBuilder builder,
+        public static IWebJobsBuilder ConfigureCatchFailures<TResult>(
+            this IWebJobsBuilder builder,
             TaskCompletionSource<TResult> src,
             bool signalOnFirst,
             IEnumerable<string> ignoreFailureFunctions)
@@ -174,10 +187,10 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                 src,
                 signalOnFirst,
                 ignoreFailureFunctions);
-            return builder.ConfigureServices(services =>
-            {
-                services.AddSingleton<IFunctionInstanceLogger>(logger);
-            });
+
+            builder.Services.AddSingleton<IFunctionInstanceLogger>(logger);
+
+            return builder;
         }
 
 

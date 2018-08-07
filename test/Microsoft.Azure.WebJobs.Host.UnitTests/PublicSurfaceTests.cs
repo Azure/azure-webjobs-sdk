@@ -208,6 +208,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "TriggeredFunctionData",
                 "TriggerParameterDescriptor",
                 "ValueBindingContext",
+                "IWebJobsBuilder",
+                "WebJobsBuilderExtensions",
                 "WebJobsExceptionHandler",
                 "WebJobsHostBuilderExtensions",
                 "WebJobsServiceCollectionExtensions",

@@ -107,8 +107,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         public async Task TestNoStringTriggerAdapter()
         {
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<ProgNoString>()
-                .AddExtension<ExtNoStringConverter>()
+                .ConfigureDefaultTestHost<ProgNoString>(b =>
+                {
+                    b.AddExtension<ExtNoStringConverter>();
+                })
                 .Build();
 
             var args = new Dictionary<string, object>();
@@ -122,9 +124,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         public async Task TestTriggerAdapter()
         {
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<Prog>()
-                .AddExtension<FakeQueueClient>()
-                .AddExtension<Ext>()
+                .ConfigureDefaultTestHost<Prog>(b =>
+                {
+                    b.AddExtension<FakeQueueClient>()
+                    .AddExtension<Ext>();
+                })
                 .Build();
 
             var args = new Dictionary<string, object>();

@@ -692,15 +692,18 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 RandomNameResolver nameResolver = new RandomNameResolver();
 
-                Host = RuntimeStorageHostBuilderExtensions.AddAzureStorageCoreServices(new HostBuilder()
-                    .ConfigureDefaultTestHost<BlobBindingEndToEndTests>()
-                    .AddAzureStorage()
-)
-                    .ConfigureServices(services =>
+                Host = new HostBuilder()
+                    .ConfigureDefaultTestHost<BlobBindingEndToEndTests>(b =>
                     {
-                        services.AddSingleton<INameResolver>(nameResolver);
+                        b.AddAzureStorage();
+                        RuntimeStorageHostBuilderExtensions.AddAzureStorageCoreServices(b);
                     })
+                    .ConfigureServices(services =>
+                     {
+                         services.AddSingleton<INameResolver>(nameResolver);
+                     })
                     .Build();
+
 
                 JobHost = Host.GetJobHost();
 

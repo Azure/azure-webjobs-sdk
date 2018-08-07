@@ -27,8 +27,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Data
         {
             // Arrange
             var builder = new HostBuilder()
-                .ConfigureDefaultTestHost<TestFunctions>()
-                .UseFakeStorage();
+                .ConfigureDefaultTestHost<TestFunctions>(b =>
+                {
+                    b.UseFakeStorage();
+                });
+                
 
             var host = builder.Build().GetJobHost<TestFunctions>();
 

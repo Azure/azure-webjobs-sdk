@@ -34,7 +34,7 @@ namespace Microsoft.Azure.WebJobs
         /// </summary>
         /// <param name="services"></param>
         /// <returns></returns>
-        public static IServiceCollection AddWebJobs(this IServiceCollection services, Action<JobHostOptions> configure)
+        public static IWebJobsBuilder AddWebJobs(this IServiceCollection services, Action<JobHostOptions> configure)
         {
             if (services == null)
             {
@@ -106,87 +106,13 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IEventCollectorFactory, EventCollectorFactory>();
             services.TryAddSingleton<IAsyncCollector<FunctionInstanceLogEntry>>(p => p.GetRequiredService<IEventCollectorFactory>().Create());
 
-            // Options setup
-
-
-            services.RegisterBuiltInBindings();
-
             // Core host services
             services.TryAddSingleton<IJobHost, JobHost>();
 
-            return services;
-        }
+            var builder = new WebJobsBuilder(services);
+            builder.AddBuiltInBindings();
 
-        // This is an alternative to AddWebJobsLogging
-        public static IServiceCollection AddWebJobsFastLogging(this IServiceCollection services, IEventCollectorFactory fastLogger)
-        {
-            if (services == null)
-            {
-                throw new ArgumentNullException(nameof(services));
-            }
-
-            if (fastLogger == null)
-            {
-                throw new ArgumentNullException(nameof(fastLogger));
-            }
-
-            services.AddSingleton<IFunctionOutputLoggerProvider, FastTableLoggerProvider>();
-            services.AddSingleton<IFunctionOutputLogger, FastTableLoggerProvider>();
-
-            services.AddSingleton(fastLogger);
-            return services;
-        }
-        
-        /// <summary>
-        /// Adds builtin bindings 
-        /// </summary>
-        /// <param name="services"></param>
-        /// <returns></returns>
-        public static IServiceCollection RegisterBuiltInBindings(this IServiceCollection services)
-        {
-            if (services == null)
-            {
-                throw new ArgumentNullException(nameof(services));
-            }
-
-            // for typeof(CancellationToken)
-            services.AddSingleton<IBindingProvider, CancellationTokenBindingProvider>();
-
-            // The TraceWriter binder handles all remaining TraceWriter/TextWriter parameters. It must come after the
-            // Blob binding provider; otherwise bindings like Do([Blob("a/b")] TextWriter blob) wouldn't work.
-            // for typeof(TraceWriter), typeof(TextWriter)
-            services.AddSingleton<IBindingProvider, TraceWriterBindingProvider>();
-
-            // for typeof(ILogger)
-            services.AddSingleton<IBindingProvider, ILoggerBindingProvider>();
-
-            // arbitrary binding to binding data 
-            services.AddSingleton<IBindingProvider, DataBindingProvider>();
-
-            return services;
-        }
-
-        /// <summary>
-        /// Adds the ability to bind to an <see cref="ExecutionContext"/> from a WebJobs function.
-        /// </summary>
-        /// <param name="services">The service collection to configure.</param>
-        /// <param name="configure">An optional <see cref="Action{ExecutionContextBindingOptions}"/> to configure the provided <see cref="ExecutionContextOptions"/>.</param>
-        /// <returns></returns>
-        public static IServiceCollection AddExecutionContextBinding(this IServiceCollection services, Action<ExecutionContextOptions> configure = null)
-        {
-            if (services == null)
-            {
-                throw new ArgumentNullException(nameof(services));
-            }
-
-            services.AddSingleton<IBindingProvider, ExecutionContextBindingProvider>();
-
-            if (configure != null)
-            {
-                services.Configure(configure);
-            }
-
-            return services;
+            return builder;
         }
     }
 }

@@ -500,8 +500,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         public void DefaultType()
         {
             var host = new HostBuilder()
-                .ConfigureDefaultTestHost<ConfigNullOutParam>()
-                .AddExtension<ConfigNullOutParam>()
+                .ConfigureDefaultTestHost<ConfigNullOutParam>(b =>
+                {
+                    b.AddExtension<ConfigNullOutParam>();
+                })
                 .Build();
 
             IJobHostMetadataProvider metadataProvider = host.CreateMetadataProvider();
@@ -541,8 +543,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             IExtensionConfigProvider ext = prog;
 
             IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<TConfig>(appSettings, jobActivator)
-                .AddExtension(ext)
+                .ConfigureDefaultTestHost<TConfig>(b =>
+                {
+                    b.AddExtension(ext);
+                }, appSettings, jobActivator)
                 .Build();
 
             ITest<TConfig> test = prog;

@@ -59,8 +59,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _resolver = new RandomNameResolver();
 
             _hostBuilder = new HostBuilder()
-                .ConfigureDefaultTestHost<AsyncChainEndToEndTests>()
-                .AddAzureStorage()
+                .ConfigureDefaultTestHost<AsyncChainEndToEndTests>(b =>
+                {
+                    b.AddAzureStorage();
+                })
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<INameResolver>(_resolver);
@@ -717,8 +719,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 // We know the tests are using the default storage provider, so pull that out
                 // of a default host.
                 IHost host = new HostBuilder()
-                    .ConfigureDefaultTestHost<TestFixture>()
-                    .AddAzureStorage()
+                    .ConfigureDefaultTestHost<TestFixture>(b =>
+                    {
+                        b.AddAzureStorage();
+                    })
                     .Build();
 
                 var provider = host.Services.GetService<StorageAccountProvider>();
