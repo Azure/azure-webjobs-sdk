@@ -9,6 +9,7 @@ using Microsoft.Azure.EventHubs.Processor;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.Configuration;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -23,10 +24,10 @@ namespace Microsoft.Azure.WebJobs.EventHubs
         private readonly ILoggerFactory _loggerFactory;
         private readonly IConverterManager _converterManager;
         private readonly INameResolver _nameResolver;
-        private readonly IConfiguration _configuration;
+        private readonly IWebJobsExtensionConfiguration<EventHubExtensionConfigProvider> _configuration;
 
         public EventHubExtensionConfigProvider(EventHubConfiguration options, ILoggerFactory loggerFactory,
-            IConverterManager converterManager, INameResolver nameResolver, IConfiguration configuration)
+            IConverterManager converterManager, INameResolver nameResolver, IWebJobsExtensionConfiguration<EventHubExtensionConfigProvider> configuration)
         {
             _options = options;
             _loggerFactory = loggerFactory;
@@ -49,15 +50,12 @@ namespace Microsoft.Azure.WebJobs.EventHubs
                 throw new ArgumentNullException(nameof(context));
             }
 
-            // TODO: Can we bind these during service setup?
-            // apply at eventProcessorOptions level (maxBatchSize, prefetchCount)
-
             EventProcessorOptions options = _options.GetOptions();
             options.SetExceptionHandler(ExceptionReceivedHandler);
-            _configuration.Bind("eventHub", options);
 
             // apply at config level (batchCheckpointFrequency)
-            _configuration.Bind("eventHub", _options);
+            // TODO: Revisit this... All configurable options should move to a proper Options type.
+            _configuration.ConfigurationSection.Bind(_options);
 
             context
                 .AddConverter<string, EventData>(ConvertString2EventData)

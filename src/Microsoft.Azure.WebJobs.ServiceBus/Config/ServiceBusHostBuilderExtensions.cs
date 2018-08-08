@@ -5,6 +5,7 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.Azure.WebJobs.ServiceBus.Config;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -14,12 +15,11 @@ namespace Microsoft.Extensions.Hosting
     {
         public static IWebJobsBuilder AddServiceBus(this IWebJobsBuilder builder)
         {
-            builder.AddExtension<ServiceBusExtensionConfigProvider>();
-
-            builder.Services.AddOptions<ServiceBusOptions>()
-                .Configure<IConnectionStringProvider>((o, p) =>
+            builder.AddExtension<ServiceBusExtensionConfigProvider>()
+                .ConfigureOptions<ServiceBusOptions>((config, options) =>
                 {
-                    o.ConnectionString = p.GetConnectionString(ConnectionStringNames.ServiceBus);
+                    config.Bind(options);
+                    options.ConnectionString = config.GetConnectionString("Primary");
                 });
 
             builder.Services.TryAddSingleton<MessagingProvider>();

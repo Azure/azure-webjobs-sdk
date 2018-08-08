@@ -128,8 +128,8 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var host = new HostBuilder()
                 .ConfigureDefaultTestHost<CustomTableBindingExtensionProgram>(builder =>
                 {
-                    builder.AddExtension(ext)
-                    .UseFakeStorage();
+                    builder.UseFakeStorage()
+                    .AddExtension(ext);
                 })
             .Build();
 

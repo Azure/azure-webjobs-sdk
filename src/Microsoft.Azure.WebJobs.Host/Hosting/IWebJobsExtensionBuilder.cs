@@ -8,11 +8,16 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Azure.WebJobs
 {
-    public interface IWebJobsBuilder
+    public interface IWebJobsExtensionBuilder
     {
         /// <summary>
-        /// Gets the <see cref="IServiceCollection"/> where WebJobs services are configured.
+        /// Gets the <see cref="IServiceCollection"/> where WebJobs extension services are configured.
         /// </summary>
         IServiceCollection Services { get; }
+
+        /// <summary>
+        /// The name of the extension being configured by this builder.
+        /// </summary>
+        string ExtensionName { get; }
     }
 }

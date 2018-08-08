@@ -8,6 +8,7 @@ using System.Text;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.EventHubs.Processor;
 using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.EventHubs
 {
@@ -47,15 +48,16 @@ namespace Microsoft.Azure.WebJobs.EventHubs
         /// Constructs a new instance.
         /// </summary>
         /// <param name="options">The optional <see cref="EventProcessorOptions"/> to use when receiving events.</param>
-        public EventHubConfiguration(IConnectionStringProvider accountProvider, EventProcessorOptions options = null)
+        public EventHubConfiguration(IConnectionStringProvider accountProvider, IOptions<EventProcessorOptions> options = null)
         {
-            if (options == null)
+            _options = options?.Value;
+            if (_options == null)
             {
-                options = EventProcessorOptions.DefaultOptions;
-                options.MaxBatchSize = 64;
-                options.PrefetchCount = options.MaxBatchSize * 4;
+                _options = EventProcessorOptions.DefaultOptions;
+                _options.MaxBatchSize = 64;
+                _options.PrefetchCount = _options.MaxBatchSize * 4;
             }
-            _options = options;
+
             _defaultStorageString = accountProvider?.GetConnectionString("Storage"); // $$$ More robust way to get this?  IStorageAccountProvider is internal 
         }
 

@@ -55,9 +55,15 @@ namespace Microsoft.Extensions.Hosting
 
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IBindingProvider, CloudStorageAccountBindingProvider>());
 
-            return builder.AddExtension<TablesExtensionConfigProvider>()
-                .AddExtension<QueuesExtensionConfigProvider>()
-                .AddExtension<BlobsExtensionConfigProvider>();
+            builder.AddExtension<TablesExtensionConfigProvider>();
+
+            builder.AddExtension<QueuesExtensionConfigProvider>()
+                .BindOptions<JobHostQueuesOptions>();
+
+            builder.AddExtension<BlobsExtensionConfigProvider>()
+                .BindOptions<JobHostBlobsOptions>();
+
+            return builder;
         }
     }
 }

@@ -2,12 +2,11 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Bindings.Cancellation;
 using Microsoft.Azure.WebJobs.Host.Bindings.Data;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.Hosting;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,19 +16,26 @@ namespace Microsoft.Azure.WebJobs
 {
     public static class WebJobsBuilderExtensions
     {
-        public static IWebJobsBuilder AddExtension<TExtension>(this IWebJobsBuilder builder)
+        public static IWebJobsExtensionBuilder AddExtension<TExtension>(this IWebJobsBuilder builder)
           where TExtension : class, IExtensionConfigProvider
         {
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IExtensionConfigProvider, TExtension>());
 
-            return builder;
+            string extensionName = Utility.GetExtensionName<TExtension>();
+            return new WebJobsExtensionBuilder(builder.Services, extensionName);
         }
 
-        public static IWebJobsBuilder AddExtension(this IWebJobsBuilder builder, IExtensionConfigProvider instance)
+        public static IWebJobsExtensionBuilder AddExtension(this IWebJobsBuilder builder, IExtensionConfigProvider instance)
         {
+            if (instance == null)
+            {
+                throw new ArgumentNullException(nameof(instance));
+            }
+
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IExtensionConfigProvider>(instance));
 
-            return builder;
+            string extensionName = Utility.GetExtensionName(instance);
+            return new WebJobsExtensionBuilder(builder.Services, extensionName);
         }
 
         public static IWebJobsBuilder AddExtension(this IWebJobsBuilder builder, Type extensionConfigProviderType)

@@ -126,8 +126,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost<Prog>(b =>
                 {
-                    b.AddExtension<FakeQueueClient>()
-                    .AddExtension<Ext>();
+                    b.AddExtension<FakeQueueClient>();
+                    b.AddExtension<Ext>();
                 })
                 .Build();
 

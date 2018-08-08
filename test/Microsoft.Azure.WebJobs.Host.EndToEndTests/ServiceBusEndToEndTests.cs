@@ -12,6 +12,7 @@ using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.ServiceBus.Core;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.ServiceBus;
+using Microsoft.Azure.WebJobs.ServiceBus.Config;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -47,13 +48,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         public ServiceBusEndToEndTests()
         {
+
             var config = new ConfigurationBuilder()
                 .AddEnvironmentVariables()
                 .Build();
 
-            var connStrProvider = new AmbientConnectionStringProvider(config);
-            _primaryConnectionString = connStrProvider.GetConnectionString(ConnectionStringNames.ServiceBus);
-            _secondaryConnectionString = connStrProvider.GetConnectionString("ServiceBusSecondary");
+            var configSection = Utility.GetExtensionConfigurationSection(config, "ServiceBus");
+            _primaryConnectionString = configSection.GetConnectionString("Primary");
+            _secondaryConnectionString = configSection.GetConnectionString("Secondary");
 
             _nameResolver = new RandomNameResolver();
 
