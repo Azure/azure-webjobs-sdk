@@ -111,8 +111,8 @@ namespace Microsoft.Extensions.DependencyInjection
                         new ServerTelemetryChannel(),
                         provider.GetServices<ITelemetryInitializer>(),
                         provider.GetServices<ITelemetryModule>(),
-                        appIdProvider,
-                        new ApplicationInsightsApplicationIdProvider());
+                        new ApplicationInsightsApplicationIdProvider(),
+                        filterOptions);
                 }
                 return config;
             });
