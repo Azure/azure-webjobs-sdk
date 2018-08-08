@@ -14,14 +14,27 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
     public class WebJobsStartupTests
     {
         [Fact]
+        public void WebJobsStartupAttribute_Constructor_InitializesAlias()
+        {
+            var attribute = new WebJobsStartupAttribute(typeof(FooStartup));
+            Assert.Equal("Foo", attribute.Name);
+
+            attribute = new WebJobsStartupAttribute(typeof(FooWebJobsStartup));
+            Assert.Equal("Foo", attribute.Name);
+
+            attribute = new WebJobsStartupAttribute(typeof(FooWebJobsStartup), "Bar");
+            Assert.Equal("Bar", attribute.Name);
+        }
+
+        [Fact]
         public void GenericUseWebJobsStartup_CallsStartupMethods()
         {
             using (new StartupScope())
             {
                 var builder = new HostBuilder()
-                    .ConfigureWebJobs(webJobeBuilder =>
+                    .ConfigureWebJobs(webJobsBuilder =>
                     {
-                        webJobeBuilder.UseWebJobsStartup<TestStartup>();
+                        webJobsBuilder.UseWebJobsStartup<TestStartup>();
                     });
 
                 IHost host = builder.Build();
@@ -40,9 +53,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             using (new StartupScope())
             {
                 var builder = new HostBuilder()
-                    .ConfigureWebJobs(webJobeBuilder =>
+                    .ConfigureWebJobs(webJobsBuilder =>
                     {
-                        webJobeBuilder.UseWebJobsStartup(typeof(TestStartup));
+                        webJobsBuilder.UseWebJobsStartup(typeof(TestStartup));
                     });
 
 
@@ -111,6 +124,22 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             public void Configure(IWebJobsBuilder builder)
             {
                 builder.Services.AddSingleton<TestExternalService>();
+            }
+        }
+
+        public class FooStartup : IWebJobsStartup
+        {
+            public void Configure(IWebJobsBuilder builder)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public class FooWebJobsStartup : IWebJobsStartup
+        {
+            public void Configure(IWebJobsBuilder builder)
+            {
+                throw new NotImplementedException();
             }
         }
 

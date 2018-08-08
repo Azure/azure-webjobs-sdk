@@ -18,7 +18,7 @@ using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 {
-    [Extension("AzureBlobs")]
+    [Extension("AzureStorageBlobs", "Blobs")]
     internal class BlobsExtensionConfigProvider : IExtensionConfigProvider,
         IAsyncConverter<BlobAttribute, CloudBlobContainer>,
         IAsyncConverter<BlobAttribute, CloudBlobDirectory>,
@@ -285,13 +285,13 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             }
         }
 
-        private async Task<CloudBlobClient> GetClientAsync(
+        private Task<CloudBlobClient> GetClientAsync(
          BlobAttribute blobAttribute,
          CancellationToken cancellationToken)
         {
             var account = _accountProvider.Get(blobAttribute.Connection, _nameResolver);
             var client = account.CreateCloudBlobClient();
-            return client;
+            return Task.FromResult(client);
         }
 
         private async Task<CloudBlobContainer> GetContainerAsync(

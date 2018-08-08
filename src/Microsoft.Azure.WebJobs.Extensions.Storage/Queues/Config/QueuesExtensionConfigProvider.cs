@@ -16,7 +16,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Queues.Config
 {
-    [Extension("AzureQueues")]
+    [Extension("AzureStorageQueues", "Queues")]
     internal class QueuesExtensionConfigProvider : IExtensionConfigProvider
     {
         private readonly IContextGetter<IMessageEnqueuedWatcher> _contextGetter;
@@ -192,7 +192,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Config
                 return new QueueAsyncCollector(queue, _messageEnqueuedWatcherGetter.Value);
             }
 
-            internal async Task<CloudQueue> GetQueueAsync(QueueAttribute attrResolved)
+            internal Task<CloudQueue> GetQueueAsync(QueueAttribute attrResolved)
             {
                 // var account = await _accountProvider.GetStorageAccountAsync(attrResolved, CancellationToken.None);
                 var account = _accountProvider.Get(attrResolved.Connection);
@@ -201,7 +201,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Config
                 string queueName = attrResolved.QueueName.ToLowerInvariant();
                 QueueClient.ValidateQueueName(queueName);
 
-                return client.GetQueueReference(queueName);
+                var queue = client.GetQueueReference(queueName);
+                return Task.FromResult(queue);
             }
 
             internal CloudQueue GetQueue(QueueAttribute attrResolved)

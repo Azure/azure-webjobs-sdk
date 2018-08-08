@@ -17,10 +17,10 @@ namespace Microsoft.Extensions.Hosting
             builder.AddExtension<ServiceBusExtensionConfigProvider>();
 
             builder.Services.AddOptions<ServiceBusOptions>()
-                            .Configure<IConnectionStringProvider>((o, p) =>
-                            {
-                                o.ConnectionString = p.GetConnectionString(ConnectionStringNames.ServiceBus);
-                            });
+                .Configure<IConnectionStringProvider>((o, p) =>
+                {
+                    o.ConnectionString = p.GetConnectionString(ConnectionStringNames.ServiceBus);
+                });
 
             builder.Services.TryAddSingleton<MessagingProvider>();
 

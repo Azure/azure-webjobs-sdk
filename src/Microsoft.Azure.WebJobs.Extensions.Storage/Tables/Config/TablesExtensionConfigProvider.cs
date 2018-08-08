@@ -15,8 +15,8 @@ using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Tables.Config
 {
-    [Extension("AzureTables")]
-    public class TablesExtensionConfigProvider : IExtensionConfigProvider
+    [Extension("AzureStorageTables", "Tables")]
+    internal class TablesExtensionConfigProvider : IExtensionConfigProvider
     {
         private StorageAccountProvider _accountProvider;
         private readonly INameResolver _nameResolver;

@@ -3,12 +3,10 @@
 
 using System;
 using System.Globalization;
-using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.ServiceBus;
+using Microsoft.Azure.WebJobs.Host.Bindings;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
 {
@@ -67,14 +65,15 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             }
         }
 
-        private static async Task<string> GetBase64StringAsync(Message clonedMessage,
+        private static Task<string> GetBase64StringAsync(Message clonedMessage,
             CancellationToken cancellationToken)
         {
             if (clonedMessage.Body == null)
             {
-                return null;
+                return Task.FromResult((string)null);
             }
-            return Convert.ToBase64String(clonedMessage.Body);
+            string converted = Convert.ToBase64String(clonedMessage.Body);
+            return Task.FromResult(converted);
         }
 
         private static Task<string> GetDescriptionAsync(Message clonedMessage)
@@ -85,14 +84,15 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             return Task.FromResult(description);
         }
 
-        private static async Task<string> GetTextAsync(Message clonedMessage,
+        private static Task<string> GetTextAsync(Message clonedMessage,
             CancellationToken cancellationToken)
         {
             if (clonedMessage.Body == null)
             {
-                return null;
+                return Task.FromResult((string)null);
             }
-            return StrictEncodings.Utf8.GetString(clonedMessage.Body);
+            string s = StrictEncodings.Utf8.GetString(clonedMessage.Body);
+            return Task.FromResult(s);
         }
     }
 }

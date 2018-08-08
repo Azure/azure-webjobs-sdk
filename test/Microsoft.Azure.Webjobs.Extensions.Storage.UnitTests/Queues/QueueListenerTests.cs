@@ -377,6 +377,5 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
                 Task.WaitAll(tasks.ToArray());
             }
         }
-
     }
 }

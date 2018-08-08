@@ -21,7 +21,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "ServiceBusAccountAttribute",
                 "ServiceBusAttribute",
                 "ServiceBusTriggerAttribute",
-                "ServiceBusExtensionConfigProvider",
                 "ServiceBusHostBuilderExtensions",
                 "ServiceBusOptions",
                 "ServiceBusWebJobsStartup"
