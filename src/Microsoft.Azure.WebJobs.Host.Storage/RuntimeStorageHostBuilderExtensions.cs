@@ -42,7 +42,7 @@ namespace Microsoft.Extensions.Hosting
             builder.Services.TryAddEnumerable(
                 ServiceDescriptor.Transient<IConfigureOptions<LegacyConfig>, LegacyConfigSetup>());
 
-            builder.Services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, JobHostInternalStorageOptionsSetup>());
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, CoreWebJobsOptionsSetup<JobHostInternalStorageOptions>>());
 
             return builder;
         }

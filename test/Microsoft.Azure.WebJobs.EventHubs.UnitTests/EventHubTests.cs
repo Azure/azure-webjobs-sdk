@@ -228,9 +228,9 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
                 {
                     c.AddInMemoryCollection(new Dictionary<string, string>
                     {
-                        { "EventHub:MaxBatchSize", "100" },
-                        { "EventHub:PrefetchCount", "200" },
-                        { "EventHub:BatchCheckpointFrequency", "5" },
+                        { "AzureWebJobs:extensions:EventHubs:MaxBatchSize", "100" },
+                        { "AzureWebJobs:extensions:EventHubs:PrefetchCount", "200" },
+                        { "AzureWebJobs:extensions:EventHubs:BatchCheckpointFrequency", "5" },
                     });
                 })
                 .Build();

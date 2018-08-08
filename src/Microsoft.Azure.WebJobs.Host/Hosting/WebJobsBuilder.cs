@@ -10,13 +10,11 @@ namespace Microsoft.Azure.WebJobs.Host
 {
     internal class WebJobsBuilder : IWebJobsBuilder
     {
-        private readonly IServiceCollection _services;
-
         public WebJobsBuilder(IServiceCollection services)
         {
-            _services = services ?? throw new ArgumentNullException(nameof(services));
+            Services = services ?? throw new ArgumentNullException(nameof(services));
         }
 
-        public IServiceCollection Services => _services;
+        public IServiceCollection Services { get; }
     }
 }
