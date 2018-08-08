@@ -8,6 +8,8 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Description;
+using Microsoft.Azure.WebJobs.Extensions.Storage.Blobs.Triggers;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
 using Microsoft.Azure.WebJobs.Host.Config;
@@ -16,25 +18,91 @@ using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 {
-    internal class BlobExtensionConfig : IExtensionConfigProvider,
+    [Extension("AzureBlobs")]
+    internal class BlobsExtensionConfigProvider : IExtensionConfigProvider,
         IAsyncConverter<BlobAttribute, CloudBlobContainer>,
         IAsyncConverter<BlobAttribute, CloudBlobDirectory>,
-        IAsyncConverter<BlobAttribute, BlobExtensionConfig.MultiBlobContext>
+        IAsyncConverter<BlobAttribute, BlobsExtensionConfigProvider.MultiBlobContext>
     {
+        private readonly BlobTriggerAttributeBindingProvider _triggerBinder;
         private StorageAccountProvider _accountProvider;
         private IContextGetter<IBlobWrittenWatcher> _blobWrittenWatcherGetter;
         private INameResolver _nameResolver;
         private IConverterManager _converterManager;
-
-        public BlobExtensionConfig(StorageAccountProvider accountProvider,
+        
+        public BlobsExtensionConfigProvider(StorageAccountProvider accountProvider, 
+            BlobTriggerAttributeBindingProvider triggerBinder,
             IContextGetter<IBlobWrittenWatcher> contextAccessor,
             INameResolver nameResolver,
             IConverterManager converterManager)
         {
             _accountProvider = accountProvider;
+            _triggerBinder = triggerBinder;
             _blobWrittenWatcherGetter = contextAccessor;
             _nameResolver = nameResolver;
             _converterManager = converterManager;
+        }
+
+        public void Initialize(ExtensionConfigContext context)
+        {
+            InitilizeBlobBindings(context);
+            InitializeBlobTriggerBindings(context);
+        }
+
+        private void InitilizeBlobBindings(ExtensionConfigContext context)
+        {
+            var rule = context.AddBindingRule<BlobAttribute>();
+
+            // Bind to multiple blobs (either via a container; a blob directory, an IEnumerable<T>)
+            rule.BindToInput<CloudBlobDirectory>(this);
+            rule.BindToInput<CloudBlobContainer>(this);
+
+            rule.BindToInput<MultiBlobContext>(this); // Intermediate private context to capture state
+            rule.AddOpenConverter<MultiBlobContext, IEnumerable<BlobCollectionType>>(typeof(BlobCollectionConverter<>), this);
+
+            // BindToStream will also handle the custom Stream-->T converters.
+            rule.SetPostResolveHook(ToBlobDescr).
+                BindToStream(CreateStreamAsync, FileAccess.ReadWrite); // Precedence, must beat CloudBlobStream
+
+            // Normal blob
+            // These are not converters because Blob/Page/Append affects how we *create* the blob. 
+            rule.SetPostResolveHook(ToBlobDescr).
+                BindToInput<CloudBlockBlob>((attr, cts) => CreateBlobReference<CloudBlockBlob>(attr, cts));
+
+            rule.SetPostResolveHook(ToBlobDescr).
+                BindToInput<CloudPageBlob>((attr, cts) => CreateBlobReference<CloudPageBlob>(attr, cts));
+
+            rule.SetPostResolveHook(ToBlobDescr).
+                 BindToInput<CloudAppendBlob>((attr, cts) => CreateBlobReference<CloudAppendBlob>(attr, cts));
+
+            rule.SetPostResolveHook(ToBlobDescr).
+                BindToInput<ICloudBlob>((attr, cts) => CreateBlobReference<ICloudBlob>(attr, cts));
+
+            // CloudBlobStream's derived functionality is only relevant to writing. 
+            rule.When("Access", FileAccess.Write).
+                SetPostResolveHook(ToBlobDescr).
+                BindToInput<CloudBlobStream>(ConvertToCloudBlobStreamAsync);
+        }
+
+        private void InitializeBlobTriggerBindings(ExtensionConfigContext context)
+        {
+            var rule = context.AddBindingRule<BlobTriggerAttribute>();
+            rule.BindToTrigger<ICloudBlob>(_triggerBinder);
+
+            rule.AddConverter<ICloudBlob, DirectInvokeString>(blob => new DirectInvokeString(blob.GetBlobPath()));
+            rule.AddConverter<DirectInvokeString, ICloudBlob>(ConvertFromInvokeString);
+
+            // Common converters shared between [Blob] and [BlobTrigger]
+
+            // Trigger already has the IStorageBlob. Whereas BindToInput defines: Attr-->Stream. 
+            //  Converter manager already has Stream-->Byte[],String,TextReader
+            context.AddConverter<ICloudBlob, Stream>(ConvertToStreamAsync);
+
+            // Blob type is a property of an existing blob.             
+            // $$$ did we lose CloudBlob. That's a base class for Cloud*Blob, but does not implement ICloudBlob? 
+            context.AddConverter(new StorageBlobConverter<CloudAppendBlob>());
+            context.AddConverter(new StorageBlobConverter<CloudBlockBlob>());
+            context.AddConverter(new StorageBlobConverter<CloudPageBlob>());
         }
 
         #region Container rules
@@ -109,7 +177,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         {
             private readonly FuncAsyncConverter<ICloudBlob, T> _converter;
 
-            public BlobCollectionConverter(BlobExtensionConfig parent)
+            public BlobCollectionConverter(BlobsExtensionConfigProvider parent)
             {
                 IConverterManager cm = parent._converterManager;
                 _converter = cm.GetConverter<ICloudBlob, T, BlobAttribute>();
@@ -174,6 +242,25 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         }
         #endregion
 
+        private async Task<Stream> ConvertToStreamAsync(ICloudBlob input, CancellationToken cancellationToken)
+        {
+            WatchableReadStream watchableStream = await ReadBlobArgumentBinding.TryBindStreamAsync(input, cancellationToken);
+            return watchableStream;
+        }
+
+        // For describing InvokeStrings.
+        private async Task<ICloudBlob> ConvertFromInvokeString(DirectInvokeString input, Attribute attr, ValueBindingContext context)
+        {
+            var attrResolved = (BlobTriggerAttribute)attr;
+
+            var account = _accountProvider.Get(attrResolved.Connection);
+            var client = account.CreateCloudBlobClient();
+            BlobPath path = BlobPath.ParseAndValidate(input.Value);
+            var container = client.GetContainerReference(path.ContainerName);
+            var blob = await container.GetBlobReferenceFromServerAsync(path.BlobName);
+
+            return blob;
+        }
 
         private async Task<Stream> CreateStreamAsync(
             BlobAttribute blobAttribute,
@@ -239,43 +326,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
             return blob;
         }
-
-        public void Initialize(ExtensionConfigContext context)
-        {
-            var rule = context.AddBindingRule<BlobAttribute>();
-
-            // Bind to multiple blobs (either via a container; a blob directory, an IEnumerable<T>)
-            rule.BindToInput<CloudBlobDirectory>(this);
-
-            rule.BindToInput<CloudBlobContainer>(this);
-
-            rule.BindToInput<MultiBlobContext>(this); // Intermediate private context to capture state
-            rule.AddOpenConverter<MultiBlobContext, IEnumerable<BlobCollectionType>>(typeof(BlobCollectionConverter<>), this);
-
-            // BindToStream will also handle the custom Stream-->T converters.
-            rule.SetPostResolveHook(ToBlobDescr).
-                BindToStream(CreateStreamAsync, FileAccess.ReadWrite); // Precedence, must beat CloudBlobStream
-
-            // Normal blob
-            // These are not converters because Blob/Page/Append affects how we *create* the blob. 
-            rule.SetPostResolveHook(ToBlobDescr).
-                BindToInput<CloudBlockBlob>((attr, cts)=> CreateBlobReference<CloudBlockBlob>(attr, cts));
-
-            rule.SetPostResolveHook(ToBlobDescr).
-                BindToInput<CloudPageBlob>((attr, cts) => CreateBlobReference<CloudPageBlob>(attr, cts));
-
-            rule.SetPostResolveHook(ToBlobDescr).
-                 BindToInput<CloudAppendBlob>((attr, cts) => CreateBlobReference<CloudAppendBlob>(attr, cts));
-
-            rule.SetPostResolveHook(ToBlobDescr).
-                BindToInput<ICloudBlob>((attr, cts) => CreateBlobReference<ICloudBlob>(attr, cts));
-
-            // CloudBlobStream's derived functionality is only relevant to writing. 
-            rule.When("Access", FileAccess.Write).
-                SetPostResolveHook(ToBlobDescr).
-                BindToInput<CloudBlobStream>(ConvertToCloudBlobStreamAsync);
-        }
-
         private ParameterDescriptor ToBlobDescr(BlobAttribute attr, ParameterInfo parameter, INameResolver nameResolver)
         {
             // Resolve the connection string to get an account name. 

@@ -3,7 +3,6 @@
 
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.EventHubs;
-using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.Hosting

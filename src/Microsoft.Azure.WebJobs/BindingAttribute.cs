@@ -16,6 +16,7 @@ namespace Microsoft.Azure.WebJobs.Description
         /// Indicates that a trigger binding is capable of handling return values
         /// from a function.
         /// </summary>
+        /// $$$ Review this
         public bool TriggerHandlesReturnValue { get; set; }
     }
 }

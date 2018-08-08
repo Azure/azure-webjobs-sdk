@@ -46,7 +46,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
             IExtensionConfigProvider[] configProviders = extensions.GetExtensions<IExtensionConfigProvider>().ToArray();
 
             // verify that the service bus config provider was registered
-            var serviceBusExtensionConfig = configProviders.OfType<ServiceBusExtensionConfig>().Single();
+            var serviceBusExtensionConfig = configProviders.OfType<ServiceBusExtensionConfigProvider>().Single();
 
             // verify that a default ServiceBusConfiguration was created, with the host (obsolete)
             // service bus connection string propagated
@@ -78,7 +78,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
             IExtensionConfigProvider[] configProviders = extensions.GetExtensions<IExtensionConfigProvider>().ToArray();
 
             // verify that the service bus config provider was registered
-            var serviceBusExtensionConfig = configProviders.OfType<ServiceBusExtensionConfig>().Single();
+            var serviceBusExtensionConfig = configProviders.OfType<ServiceBusExtensionConfigProvider>().Single();
 
             Assert.Equal(fakeConnStr, serviceBusExtensionConfig.Options.ConnectionString);
         }

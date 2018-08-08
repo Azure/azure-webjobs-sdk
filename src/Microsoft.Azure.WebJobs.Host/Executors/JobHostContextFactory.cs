@@ -36,7 +36,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IHostIdProvider _hostIdProvider;
         private readonly INameResolver _nameResolver;
         private readonly IExtensionRegistry _extensions;
-        private readonly IExtensionTypeLocator _extensionTypeLocator;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly SharedQueueHandler _sharedQueueHandler;
@@ -58,7 +57,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             IHostIdProvider hostIdProvider,
             INameResolver nameResolver,
             IExtensionRegistry extensions,
-            IExtensionTypeLocator extensionTypeLocator,
             ILoggerFactory loggerFactory,
             IWebJobsExceptionHandler exceptionHandler,
             SharedQueueHandler sharedQueueHandler,
@@ -78,7 +76,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _hostIdProvider = hostIdProvider;
             _nameResolver = nameResolver;
             _extensions = extensions;
-            _extensionTypeLocator = extensionTypeLocator;
             _loggerFactory = loggerFactory;
             _exceptionHandler = exceptionHandler;
             _sharedQueueHandler = sharedQueueHandler;
@@ -103,7 +100,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                 IFunctionIndex functions = await _functionIndexProvider.GetAsync(combinedCancellationToken);
                 IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), _singletonManager, _activator, _nameResolver, _loggerFactory, _jobHostOptions.Value.AllowPartialHostStartup);
-
 
                 string hostId = await _hostIdProvider.GetHostIdAsync(cancellationToken);
                 bool enableLegacyLogger = _legacyLogger.Init(functions, functionsListenerFactory, out IFunctionExecutor hostCallExecutor,

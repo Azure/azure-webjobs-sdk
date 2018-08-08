@@ -6,6 +6,7 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Protocols;
@@ -13,17 +14,16 @@ using Microsoft.Azure.WebJobs.Host.Queues.Triggers;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Newtonsoft.Json.Linq;
 
-namespace Microsoft.Azure.WebJobs.Host.Queues.Bindings
+namespace Microsoft.Azure.WebJobs.Host.Queues.Config
 {
-    // Write up bindinging rules for [Queue] attribute. 
-    // This is fundemantentally an IAsyncCollector<IStorageQueueMessage>
-    internal class QueueExtension : IExtensionConfigProvider
+    [Extension("AzureQueues")]
+    internal class QueuesExtensionConfigProvider : IExtensionConfigProvider
     {
         private readonly IContextGetter<IMessageEnqueuedWatcher> _contextGetter;
         private readonly StorageAccountProvider _storageAccountProvider;
         private readonly QueueTriggerAttributeBindingProvider _triggerProvider;
 
-        public QueueExtension(StorageAccountProvider storageAccountProvider, IContextGetter<IMessageEnqueuedWatcher> contextGetter,
+        public QueuesExtensionConfigProvider(StorageAccountProvider storageAccountProvider, IContextGetter<IMessageEnqueuedWatcher> contextGetter,
             QueueTriggerAttributeBindingProvider triggerProvider)
         {
             _contextGetter = contextGetter;

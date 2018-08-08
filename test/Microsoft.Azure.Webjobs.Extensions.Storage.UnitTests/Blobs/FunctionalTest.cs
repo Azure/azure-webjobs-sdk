@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Hosting;
 using Xunit;
@@ -123,14 +125,18 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             return null;
         }
 
-        internal static void Call(StorageAccount account, Type programType, MethodInfo methodInfo, object arguments, Type[] cloudBlobStreamBinderTypes)
+        internal static void Call(StorageAccount account, Type programType, MethodInfo methodInfo, object arguments, params Type[] customExtensions)
         {
             var host = new HostBuilder()
-                .ConfigureDefaultTestHost(builder =>
+                .ConfigureDefaultTestHost(b =>
                 {
-                    builder.AddExtension(new CloudBlobStreamAdapterExtension(cloudBlobStreamBinderTypes))
-                    .AddAzureStorage()
+                    b.AddAzureStorage()
                     .UseStorage(account);
+
+                    foreach (var extension in customExtensions)
+                    {
+                        b.AddExtension(extension);
+                    }
                 }, programType)
                 .Build();
 

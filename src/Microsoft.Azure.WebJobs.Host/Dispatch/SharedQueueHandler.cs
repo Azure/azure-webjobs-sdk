@@ -28,7 +28,7 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ISharedContextProvider _sharedContextProvider;
-        private readonly ILoadbalancerQueue _storageServices;
+        private readonly ILoadBalancerQueue _storageServices;
 
         private Exception _initializationEx; // delay initialization error until consumer showed up
         private SharedQueueExecutor _triggerExecutor;
@@ -41,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
                            IWebJobsExceptionHandler exceptionHandler,
                            ILoggerFactory loggerFactory,
                            ISharedContextProvider sharedContextProvider,
-                           ILoadbalancerQueue storageServices
+                           ILoadBalancerQueue storageServices
                 )
         {            
             _hostIdProvider = hostIdProvider;

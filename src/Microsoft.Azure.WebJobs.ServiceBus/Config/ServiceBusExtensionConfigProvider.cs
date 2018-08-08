@@ -3,6 +3,7 @@
 
 using System;
 using Microsoft.Azure.ServiceBus;
+using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Logging;
@@ -17,7 +18,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
     /// <summary>
     /// Extension configuration provider used to register ServiceBus triggers and binders
     /// </summary>
-    public class ServiceBusExtensionConfig : IExtensionConfigProvider
+    [Extension("ServiceBus")]
+    public class ServiceBusExtensionConfigProvider : IExtensionConfigProvider
     {
         private readonly INameResolver _nameResolver;
         private readonly IConnectionStringProvider _connectionStringProvider;
@@ -26,10 +28,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
         private readonly MessagingProvider _messagingProvider;
 
         /// <summary>
-        /// Creates a new <see cref="ServiceBusExtensionConfig"/> instance.
+        /// Creates a new <see cref="ServiceBusExtensionConfigProvider"/> instance.
         /// </summary>
         /// <param name="serviceBusConfig">The <see cref="ServiceBusOptions"></see> to use./></param>
-        public ServiceBusExtensionConfig(IOptions<ServiceBusOptions> serviceBusConfig,
+        public ServiceBusExtensionConfigProvider(IOptions<ServiceBusOptions> serviceBusConfig,
             MessagingProvider messagingProvider,
             INameResolver nameResolver,
             IConnectionStringProvider connectionStringProvider,

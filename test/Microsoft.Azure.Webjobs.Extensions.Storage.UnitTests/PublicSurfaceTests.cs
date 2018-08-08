@@ -66,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "StorageHostBuilderExtensions",
                 "TableAttribute",
                 "TableEntityParameterDescriptor",
-                "TableExtension",
+                "TablesExtensionConfigProvider",
                 "TableParameterDescriptor",
                 "StorageAccount",
                 "StorageAccountProvider",

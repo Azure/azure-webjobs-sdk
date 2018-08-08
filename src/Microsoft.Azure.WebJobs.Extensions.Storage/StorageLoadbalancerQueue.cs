@@ -20,7 +20,7 @@ using Newtonsoft.Json;
 namespace WebJobs.Extensions.Storage
 {
     // $$$ This exposes Azure Storage implementations for runtime state objects. 
-    class StorageLoadbalancerQueue : ILoadbalancerQueue
+    internal class StorageLoadBalancerQueue : ILoadBalancerQueue
     {
         private readonly JobHostQueuesOptions _queueOptions;
         private readonly ILoggerFactory _loggerFactory;
@@ -28,7 +28,7 @@ namespace WebJobs.Extensions.Storage
         private readonly SharedQueueWatcher _sharedWatcher;
         private readonly StorageAccountProvider _storageAccountProvider;
 
-        public StorageLoadbalancerQueue(
+        public StorageLoadBalancerQueue(
             StorageAccountProvider storageAccountProvider,
                IOptions<JobHostQueuesOptions> queueOptions,
                IWebJobsExceptionHandler exceptionHandler,
@@ -49,10 +49,10 @@ namespace WebJobs.Extensions.Storage
 
         class QueueWriter<T> : IAsyncCollector<T>
         {
-            StorageLoadbalancerQueue _parent;
+            StorageLoadBalancerQueue _parent;
             CloudQueue _queue;
 
-            public QueueWriter(StorageLoadbalancerQueue parent, CloudQueue queue)
+            public QueueWriter(StorageLoadBalancerQueue parent, CloudQueue queue)
             {
                 this._parent = parent;
                 this._queue = queue;

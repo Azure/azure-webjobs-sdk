@@ -7,17 +7,16 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Bindings;
+using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Config;
-using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.WindowsAzure.Storage.Table;
 using Newtonsoft.Json.Linq;
 
-namespace Microsoft.Azure.WebJobs.Host.Tables
+namespace Microsoft.Azure.WebJobs.Host.Tables.Config
 {
-    // Extension for adding Azure Table  bindings. 
-    public class TableExtension : IExtensionConfigProvider
+    [Extension("AzureTables")]
+    public class TablesExtensionConfigProvider : IExtensionConfigProvider
     {
         private StorageAccountProvider _accountProvider;
         private readonly INameResolver _nameResolver;
@@ -26,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
         private const string RowKeyProperty = nameof(TableAttribute.RowKey);
         private const string PartitionKeyProperty = nameof(TableAttribute.PartitionKey);
 
-        public TableExtension(StorageAccountProvider accountProvider, INameResolver nameResolver)
+        public TablesExtensionConfigProvider(StorageAccountProvider accountProvider, INameResolver nameResolver)
         {
             _accountProvider = accountProvider;
             _nameResolver = nameResolver;
@@ -204,9 +203,9 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
             IAsyncConverter<TableAttribute, JObject>,
             IAsyncConverter<TableAttribute, JArray>
         {
-            private readonly TableExtension _bindingProvider;
+            private readonly TablesExtensionConfigProvider _bindingProvider;
 
-            public JObjectBuilder(TableExtension bindingProvider)
+            public JObjectBuilder(TablesExtensionConfigProvider bindingProvider)
             {
                 _bindingProvider = bindingProvider;
             }

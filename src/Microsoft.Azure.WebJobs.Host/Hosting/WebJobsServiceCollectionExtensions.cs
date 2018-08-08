@@ -59,7 +59,7 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IFunctionExecutor, FunctionExecutor>();
             services.TryAddSingleton<IJobHostContextFactory, JobHostContextFactory>();
 
-            services.TryAddSingleton<ILoadbalancerQueue, InMemoryLoadbalancerQueue>();
+            services.TryAddSingleton<ILoadBalancerQueue, InMemoryLoadBalancerQueue>();
 
             // Anybody can add IBindingProvider via DI. 
             // Consume the whole list via a CompositeBindingProvider
@@ -71,7 +71,6 @@ namespace Microsoft.Azure.WebJobs
 
             services.TryAddSingleton<IJobHostMetadataProviderFactory, JobHostMetadataProviderFactory>();
             services.TryAddSingleton<IJobHostMetadataProvider>(p => p.GetService<IJobHostMetadataProviderFactory>().Create());
-            services.TryAddSingleton<IExtensionTypeLocator, ExtensionTypeLocator>(); // $$$ remove
 
             // Empty logging. V1 Logging can replace this.              
             services.TryAddSingleton<ILegacyLogger, DisableLegacyLogger>(); // Gets replaced 

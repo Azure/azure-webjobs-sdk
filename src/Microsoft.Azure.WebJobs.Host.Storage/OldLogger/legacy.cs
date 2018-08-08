@@ -30,7 +30,7 @@ namespace WebJobs.Host.Storage.OldLogger
         private readonly IFunctionInstanceLogger _functionInstanceLogger;
         private readonly IFunctionExecutor _functionExecutor;
         private readonly SharedQueueHandler _sharedQueueHandler;
-        private readonly ILoadbalancerQueue _storageServices;
+        private readonly ILoadBalancerQueue _storageServices;
         private readonly LegacyConfig _storageAccountProvider;
 
         public Legacy(
@@ -40,7 +40,7 @@ namespace WebJobs.Host.Storage.OldLogger
                 IFunctionInstanceLogger functionInstanceLogger,
                 IFunctionExecutor functionExecutor,
                 SharedQueueHandler sharedQueueHandler,
-                ILoadbalancerQueue storageServices
+                ILoadBalancerQueue storageServices
             )
         {
             _storageAccountProvider = storageAccountProvider;

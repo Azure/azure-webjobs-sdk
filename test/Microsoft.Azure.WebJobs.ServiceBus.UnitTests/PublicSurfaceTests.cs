@@ -1,13 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.Logging;
-using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
@@ -27,7 +21,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "ServiceBusAccountAttribute",
                 "ServiceBusAttribute",
                 "ServiceBusTriggerAttribute",
-                "ServiceBusExtensionConfig",
+                "ServiceBusExtensionConfigProvider",
                 "ServiceBusHostBuilderExtensions",
                 "ServiceBusOptions",
                 "ServiceBusWebJobsStartup"

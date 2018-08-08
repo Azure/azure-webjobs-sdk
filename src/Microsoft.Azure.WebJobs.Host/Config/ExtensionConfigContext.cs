@@ -41,6 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         /// Get a fully qualified URL that the host will resolve to this extension 
         /// </summary>
         /// <returns>null if http handlers are not supported in this environment</returns>
+        /// $$$ Shouldn't be here
         [Obsolete("preview")]
         public Uri GetWebhookHandler()
         {

@@ -14,7 +14,7 @@ namespace Microsoft.Extensions.Hosting
     {
         public static IWebJobsBuilder AddServiceBus(this IWebJobsBuilder builder)
         {
-            builder.AddExtension<ServiceBusExtensionConfig>();
+            builder.AddExtension<ServiceBusExtensionConfigProvider>();
 
             builder.Services.AddOptions<ServiceBusOptions>()
                             .Configure<IConnectionStringProvider>((o, p) =>

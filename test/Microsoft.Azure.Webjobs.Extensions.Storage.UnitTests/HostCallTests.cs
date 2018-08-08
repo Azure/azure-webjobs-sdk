@@ -10,11 +10,11 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Blobs;
+using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
@@ -60,8 +60,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             CloudBlockBlob blob = container.GetBlockBlobReference(BlobName);
 
             // Act
-            Call(account, typeof(MissingBlobProgram), methodName, typeof(MissingBlobToCustomObjectBinder),
-                typeof(MissingBlobToCustomValueBinder));
+            Call(account, typeof(MissingBlobProgram), methodName, typeof(CustomBlobConverterExtensionConfigProvider));
 
             // Assert
             Assert.False(await blob.ExistsAsync());
@@ -83,8 +82,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             CloudBlockBlob blob = container.GetBlockBlobReference(BlobName);
 
             // Act
-            Call(account, typeof(MissingBlobProgram), methodName, typeof(MissingBlobToCustomObjectBinder),
-                typeof(MissingBlobToCustomValueBinder));
+            Call(account, typeof(MissingBlobProgram), methodName, typeof(CustomBlobConverterExtensionConfigProvider));
 
             // Assert
             Assert.True(await blob.ExistsAsync());
@@ -760,7 +758,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             };
 
             // Act
-            Call(account, typeof(CopyBlobViaPocoProgram), "CopyViaPoco", arguments, typeof(PocoBlobBinder));
+            Call(account, typeof(CopyBlobViaPocoProgram), "CopyViaPoco", arguments, typeof(CustomBlobConverterExtensionConfigProvider));
 
             // Assert
             CloudBlockBlob outputBlob = container.GetBlockBlobReference(OutputBlobName);
@@ -781,23 +779,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private class PocoBlob
         {
             public string Value;
-        }
-
-        private class PocoBlobBinder : ICloudBlobStreamBinder<PocoBlob>
-        {
-            public async Task<PocoBlob> ReadFromStreamAsync(Stream input, CancellationToken cancellationToken)
-            {
-                TextReader reader = new StreamReader(input);
-                string text = await reader.ReadToEndAsync();
-                return new PocoBlob { Value = text };
-            }
-
-            public async Task WriteToStreamAsync(PocoBlob value, Stream output, CancellationToken cancellationToken)
-            {
-                TextWriter writer = new StreamWriter(output);
-                await writer.WriteAsync(value.Value);
-                await writer.FlushAsync();
-            }
         }
 
         [Theory]
@@ -1301,18 +1282,15 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Assert.True(invalidOperationException.Message.StartsWith("Entity PK='PK',RK='RK' does not match eTag"));
         }
 
-        private static void Call(StorageAccount account, Type programType, string methodName,
-            params Type[] cloudBlobStreamBinderTypes)
+        private static void Call(StorageAccount account, Type programType, string methodName, params Type[] customExtensions)
         {
-            FunctionalTest.Call(account, programType, programType.GetMethod(methodName), arguments: null,
-                cloudBlobStreamBinderTypes: cloudBlobStreamBinderTypes);
+            FunctionalTest.Call(account, programType, programType.GetMethod(methodName), null, customExtensions);
         }
 
         private static void Call(StorageAccount account, Type programType, string methodName,
-            IDictionary<string, object> arguments, params Type[] cloudBlobStreamBinderTypes)
+            IDictionary<string, object> arguments, params Type[] customExtensions)
         {
-            FunctionalTest.Call(account, programType, programType.GetMethod(methodName), arguments,
-                cloudBlobStreamBinderTypes);
+            FunctionalTest.Call(account, programType, programType.GetMethod(methodName), arguments, customExtensions);
         }
 
         private static TResult Call<TResult>(StorageAccount account, Type programType, string methodName,
@@ -1359,55 +1337,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             public int ValueId { get; set; }
             public string Content { get; set; }
-        }
-
-        private class MissingBlobToCustomObjectBinder : ICloudBlobStreamBinder<CustomDataObject>
-        {
-            public Task<CustomDataObject> ReadFromStreamAsync(Stream input, CancellationToken cancellationToken)
-            {
-                // Read() shouldn't be called if the stream is missing. 
-                Assert.False(true, "If stream is missing, should never call Read() converter");
-
-                return Task.FromResult<CustomDataObject>(null);
-            }
-
-            public Task WriteToStreamAsync(CustomDataObject value, Stream output, CancellationToken cancellationToken)
-            {
-                Assert.NotNull(output);
-
-                if (value != null)
-                {
-                    Assert.Equal(TestValue, value.ValueId);
-
-                    const byte ignore = 0xFF;
-                    output.WriteByte(ignore);
-                }
-
-                return Task.FromResult(0);
-            }
-        }
-
-        private class MissingBlobToCustomValueBinder : ICloudBlobStreamBinder<CustomDataValue>
-        {
-            public Task<CustomDataValue> ReadFromStreamAsync(Stream input, CancellationToken cancellationToken)
-            {
-                // Read() shouldn't be called if the stream is missing. 
-                Assert.False(true, "If stream is missing, should never call Read() converter");
-
-                return Task.FromResult<CustomDataValue>(new CustomDataValue());
-            }
-
-            public Task WriteToStreamAsync(CustomDataValue value, Stream output, CancellationToken cancellationToken)
-            {
-                Assert.NotNull(output);
-
-                Assert.Equal(TestValue, value.ValueId);
-
-                const byte ignore = 0xFF;
-                output.WriteByte(ignore);
-
-                return Task.FromResult(0);
-            }
         }
 
         private class MissingBlobProgram
@@ -1725,6 +1654,74 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private struct StructTableEntity
         {
             public string Value { get; set; }
+        }
+
+        internal class CustomBlobConverterExtensionConfigProvider : IExtensionConfigProvider
+        {
+            public void Initialize(ExtensionConfigContext context)
+            {
+                context.AddConverter<Stream, PocoBlob>(s =>
+                {
+                    TextReader reader = new StreamReader(s);
+                    string text = reader.ReadToEnd();
+                    return new PocoBlob { Value = text };
+                });
+
+                context.AddConverter<ApplyConversion<PocoBlob, Stream>, object>(p =>
+                {
+                    PocoBlob value = p.Value;
+                    Stream stream = p.Existing;
+
+                    TextWriter writer = new StreamWriter(stream);
+                    writer.WriteAsync(value.Value).GetAwaiter().GetResult();
+                    writer.FlushAsync().GetAwaiter().GetResult();
+
+                    return null;
+                });
+
+                context.AddConverter<Stream, CustomDataObject>(s =>
+                {
+                    // Read() shouldn't be called if the stream is missing. 
+                    Assert.False(true, "If stream is missing, should never call Read() converter");
+                    return null;
+                });
+
+                context.AddConverter<ApplyConversion<CustomDataObject, Stream>, object>(p =>
+                {
+                    CustomDataObject value = p.Value;
+                    Stream stream = p.Existing;
+
+                    if (value != null)
+                    {
+                        Assert.Equal(TestValue, value.ValueId);
+
+                        const byte ignore = 0xFF;
+                        stream.WriteByte(ignore);
+                    }
+
+                    return null;
+                });
+
+                context.AddConverter<Stream, CustomDataValue>(s =>
+                {
+                    // Read() shouldn't be called if the stream is missing. 
+                    Assert.False(true, "If stream is missing, should never call Read() converter");
+                    return default(CustomDataValue);
+                });
+
+                context.AddConverter<ApplyConversion<CustomDataValue, Stream>, object>(p =>
+                {
+                    CustomDataValue value = p.Value;
+                    Stream stream = p.Existing;
+
+                    Assert.Equal(TestValue, value.ValueId);
+
+                    const byte ignore = 0xFF;
+                    stream.WriteByte(ignore);
+
+                    return null;
+                });
+            }
         }
     }
 }

@@ -32,6 +32,13 @@ namespace Microsoft.Azure.WebJobs
             return builder;
         }
 
+        public static IWebJobsBuilder AddExtension(this IWebJobsBuilder builder, Type extensionConfigProviderType)
+        {
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton(typeof(IExtensionConfigProvider), extensionConfigProviderType));
+
+            return builder;
+        }
+
         public static IWebJobsBuilder UseWebJobsStartup<T>(this IWebJobsBuilder builder) where T : IWebJobsStartup, new()
         {
             return builder.UseWebJobsStartup(typeof(T));

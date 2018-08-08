@@ -122,8 +122,8 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                  {
                      services.AddSingleton<ITypeLocator>(new FakeTypeLocator(types));
 
-                  // Register this to fail a test if a background exception is thrown
-                  services.AddSingleton<IWebJobsExceptionHandlerFactory, TestExceptionHandlerFactory>();
+                     // Register this to fail a test if a background exception is thrown
+                     services.AddSingleton<IWebJobsExceptionHandlerFactory, TestExceptionHandlerFactory>();
                  })
                  .ConfigureTestLogger();
         }

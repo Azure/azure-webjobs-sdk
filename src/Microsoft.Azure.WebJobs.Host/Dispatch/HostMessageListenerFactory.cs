@@ -21,10 +21,10 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         private readonly IFunctionIndexLookup _functionLookup;
         private readonly IFunctionInstanceLogger _functionInstanceLogger;
         private readonly IFunctionExecutor _executor;
-        private readonly ILoadbalancerQueue _storageServices;
+        private readonly ILoadBalancerQueue _storageServices;
 
         public HostMessageListenerFactory(
-            ILoadbalancerQueue storageServices,
+            ILoadBalancerQueue storageServices,
             string queueName,
             IWebJobsExceptionHandler exceptionHandler,
             ILoggerFactory loggerFactory,

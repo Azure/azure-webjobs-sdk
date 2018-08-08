@@ -11,10 +11,11 @@ using Microsoft.Azure.WebJobs.Host.Listeners;
 namespace Microsoft.Azure.WebJobs
 {
     /// <summary>
-    /// Service for queues used to loadbalance across instances. 
+    /// Service for queues used to load balance across instances. 
     /// Implementation determines the storage account. 
     /// </summary>
-    public interface ILoadbalancerQueue
+    /// $$$ Review this new public surface area
+    public interface ILoadBalancerQueue
     {
         // Host may use queues internally for distributing work items. 
         IAsyncCollector<T> GetQueueWriter<T>(string queueName);
@@ -26,7 +27,7 @@ namespace Microsoft.Azure.WebJobs
             );
     }
 
-    public class InMemoryLoadbalancerQueue : ILoadbalancerQueue
+    public class InMemoryLoadBalancerQueue : ILoadBalancerQueue
     {
         public IListener CreateQueueListenr(string queue, string poisonQueue, Func<string, CancellationToken, Task<FunctionResult>> callback)
         {
@@ -74,7 +75,7 @@ namespace Microsoft.Azure.WebJobs
 
         class Listener : IListener
         {
-            internal InMemoryLoadbalancerQueue Parent;
+            internal InMemoryLoadBalancerQueue Parent;
             internal string Queue; // queue to listen on
             internal Func<string, CancellationToken, Task<FunctionResult>> Callback;
 
@@ -100,7 +101,7 @@ namespace Microsoft.Azure.WebJobs
         class Writer<T> : IAsyncCollector<T>
         {
             internal string _queue;
-            internal InMemoryLoadbalancerQueue _parent;
+            internal InMemoryLoadBalancerQueue _parent;
 
             public Task AddAsync(T item, CancellationToken cancellationToken = default(CancellationToken))
             {

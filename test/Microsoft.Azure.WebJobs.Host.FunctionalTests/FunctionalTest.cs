@@ -140,21 +140,20 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public static IHost CreateConfigurationForCallFailure(StorageAccount storageAccount,
             Type programType, TaskCompletionSource<object> taskSource)
         {
-            return CreateConfiguration<object>(storageAccount, programType, new NullExtensionTypeLocator(),
-                taskSource, new NullFunctionInstanceLogger());
+            return CreateConfiguration<object>(storageAccount, programType, taskSource, new NullFunctionInstanceLogger());
         }
 
         private static IHost CreateConfigurationForInstanceFailure(StorageAccount storageAccount,
             Type programType, TaskCompletionSource<Exception> taskSource)
         {
-            return CreateConfiguration<Exception>(storageAccount, programType, new NullExtensionTypeLocator(),
-                taskSource, new ExpectInstanceFailureTaskFunctionInstanceLogger(taskSource));
+            return CreateConfiguration<Exception>(storageAccount, programType, taskSource, 
+                new ExpectInstanceFailureTaskFunctionInstanceLogger(taskSource));
         }
 
         public static IHost CreateConfigurationForInstanceSuccess(StorageAccount storageAccount,
             Type programType, TaskCompletionSource<object> taskSource, IExtensionRegistry extensions = null)
         {
-            return CreateConfiguration<object>(storageAccount, programType, new NullExtensionTypeLocator(), taskSource,
+            return CreateConfiguration<object>(storageAccount, programType, taskSource,
                 new ExpectInstanceSuccessTaskFunctionInstanceLogger(taskSource), extensions);
         }
 
@@ -171,39 +170,26 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             IEnumerable<string> ignoreFailureFunctions, IExtensionRegistry extensions = null, params Type[] cloudBlobStreamBinderTypes)
         {
             return CreateConfigurationForManualCompletion<TResult>(storageAccount, programType,
-                new DefaultJobActivator(), taskSource, ignoreFailureFunctions, extensions, cloudBlobStreamBinderTypes);
+                new DefaultJobActivator(), taskSource, ignoreFailureFunctions, extensions);
         }
 
         private static IHost CreateConfigurationForManualCompletion<TResult>(
             StorageAccount storageAccount, Type programType, IJobActivator activator,
-            TaskCompletionSource<TResult> taskSource, IEnumerable<string> ignoreFailureFunctions, IExtensionRegistry extensions = null,
-            params Type[] cloudBlobStreamBinderTypes)
+            TaskCompletionSource<TResult> taskSource, IEnumerable<string> ignoreFailureFunctions, IExtensionRegistry extensions = null)
         {
-            IExtensionTypeLocator extensionTypeLocator;
-
-            if (cloudBlobStreamBinderTypes == null || cloudBlobStreamBinderTypes.Length == 0)
-            {
-                extensionTypeLocator = new NullExtensionTypeLocator();
-            }
-            else
-            {
-                extensionTypeLocator = new FakeExtensionTypeLocator(cloudBlobStreamBinderTypes);
-            }
-
-            return CreateConfiguration<TResult>(storageAccount, programType, extensionTypeLocator, activator, taskSource,
+            return CreateConfiguration<TResult>(storageAccount, programType, activator, taskSource,
                 new ExpectManualCompletionFunctionInstanceLogger<TResult>(taskSource, false, ignoreFailureFunctions), extensions);
         }
 
-        private static IHost CreateConfiguration<TResult>(StorageAccount storageAccount, Type programType,
-            IExtensionTypeLocator extensionTypeLocator, TaskCompletionSource<TResult> taskSource,
+        private static IHost CreateConfiguration<TResult>(StorageAccount storageAccount, Type programType, TaskCompletionSource<TResult> taskSource,
             IFunctionInstanceLogger functionInstanceLogger, IExtensionRegistry extensions = null)
         {
-            return CreateConfiguration<TResult>(storageAccount, programType, extensionTypeLocator,
+            return CreateConfiguration<TResult>(storageAccount, programType,
                 new DefaultJobActivator(), taskSource, functionInstanceLogger, extensions);
         }
 
         private static IHost CreateConfiguration<TResult>(StorageAccount storageAccount, Type programType,
-            IExtensionTypeLocator extensionTypeLocator, IJobActivator activator, TaskCompletionSource<TResult> taskSource,
+            IJobActivator activator, TaskCompletionSource<TResult> taskSource,
             IFunctionInstanceLogger functionInstanceLogger, IExtensionRegistry extensions = null)
         {
             StorageAccountProvider storageAccountProvider = null; //  new FakeStorageAccountProvider(storageAccount); $$$
@@ -225,7 +211,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                     services.AddSingletonIfNotNull(exceptionHandler);
                     services.AddSingletonIfNotNull(extensions);
 
-                    services.AddSingleton(extensionTypeLocator);
                     services.AddSingleton<IFunctionInstanceLoggerProvider>(new NullFunctionInstanceLoggerProvider(functionInstanceLogger));
                     services.AddSingleton<IHostInstanceLoggerProvider>(new NullHostInstanceLoggerProvider());
                     services.AddSingleton<IFunctionOutputLoggerProvider>(new NullFunctionOutputLoggerProvider());

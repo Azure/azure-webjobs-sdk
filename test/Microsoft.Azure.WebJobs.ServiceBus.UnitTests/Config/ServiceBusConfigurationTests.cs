@@ -47,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
             var ex = new ServiceBusException(false);
             Assert.False(ex.IsTransient);
             ExceptionReceivedEventArgs e = new ExceptionReceivedEventArgs(ex, "TestAction", "TestEndpoint", "TestEntity", "TestClient");
-            ServiceBusExtensionConfig.LogExceptionReceivedEvent(e, _loggerFactory);
+            ServiceBusExtensionConfigProvider.LogExceptionReceivedEvent(e, _loggerFactory);
 
             var expectedMessage = $"MessageReceiver error (Action=TestAction, ClientId=TestClient, EntityPath=TestEntity, Endpoint=TestEndpoint)";
             var logMessage = _loggerProvider.GetAllLogMessages().Single();
@@ -62,7 +62,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
             var ex = new ServiceBusException(true);
             Assert.True(ex.IsTransient);
             ExceptionReceivedEventArgs e = new ExceptionReceivedEventArgs(ex, "TestAction", "TestEndpoint", "TestEntity", "TestClient");
-            ServiceBusExtensionConfig.LogExceptionReceivedEvent(e, _loggerFactory);
+            ServiceBusExtensionConfigProvider.LogExceptionReceivedEvent(e, _loggerFactory);
 
             var expectedMessage = $"MessageReceiver error (Action=TestAction, ClientId=TestClient, EntityPath=TestEntity, Endpoint=TestEndpoint)";
             var logMessage = _loggerProvider.GetAllLogMessages().Single();
@@ -76,7 +76,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
         {
             var ex = new MissingMethodException("What method??");
             ExceptionReceivedEventArgs e = new ExceptionReceivedEventArgs(ex, "TestAction", "TestEndpoint", "TestEntity", "TestClient");
-            ServiceBusExtensionConfig.LogExceptionReceivedEvent(e, _loggerFactory);
+            ServiceBusExtensionConfigProvider.LogExceptionReceivedEvent(e, _loggerFactory);
 
             var expectedMessage = $"MessageReceiver error (Action=TestAction, ClientId=TestClient, EntityPath=TestEntity, Endpoint=TestEndpoint)";
             var logMessage = _loggerProvider.GetAllLogMessages().Single();

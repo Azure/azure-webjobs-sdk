@@ -2,18 +2,18 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Extensions.Storage.Blobs.Triggers;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Bindings.StorageAccount;
 using Microsoft.Azure.WebJobs.Host.Blobs;
 using Microsoft.Azure.WebJobs.Host.Blobs.Bindings;
-using Microsoft.Azure.WebJobs.Host.Blobs.Triggers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Queues;
-using Microsoft.Azure.WebJobs.Host.Queues.Bindings;
+using Microsoft.Azure.WebJobs.Host.Queues.Config;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Microsoft.Azure.WebJobs.Host.Queues.Triggers;
-using Microsoft.Azure.WebJobs.Host.Tables;
+using Microsoft.Azure.WebJobs.Host.Tables.Config;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.WindowsAzure.Storage;
@@ -34,7 +34,7 @@ namespace Microsoft.Extensions.Hosting
             };
 
             // $$$ Move to Host.Storage? 
-            builder.Services.TryAddSingleton<ILoadbalancerQueue, StorageLoadbalancerQueue>();
+            builder.Services.TryAddSingleton<ILoadBalancerQueue, StorageLoadBalancerQueue>();
 
             builder.Services.TryAddSingleton<SharedQueueWatcher>();
 
@@ -55,10 +55,9 @@ namespace Microsoft.Extensions.Hosting
 
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IBindingProvider, CloudStorageAccountBindingProvider>());
 
-            return builder.AddExtension<TableExtension>()
-                .AddExtension<QueueExtension>()
-                .AddExtension<BlobExtensionConfig>()
-                .AddExtension<BlobTriggerExtensionConfig>();
+            return builder.AddExtension<TablesExtensionConfigProvider>()
+                .AddExtension<QueuesExtensionConfigProvider>()
+                .AddExtension<BlobsExtensionConfigProvider>();
         }
     }
 }

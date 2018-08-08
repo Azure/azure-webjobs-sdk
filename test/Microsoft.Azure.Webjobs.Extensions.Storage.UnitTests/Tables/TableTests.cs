@@ -123,7 +123,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public void Table_IfBoundToCustomTableBindingExtension_BindsCorrectly()
         {
             // Arrange
-            var ext = new TableConverter();
+            var ext = new TableConverterExtensionConfigProvider();
 
             var host = new HostBuilder()
                 .ConfigureDefaultTestHost<CustomTableBindingExtensionProgram>(builder =>
@@ -142,7 +142,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         // Add a rule for binding CloudTable --> CustomTableBinding<TEntity>
-        class TableConverter : IExtensionConfigProvider
+        internal class TableConverterExtensionConfigProvider : IExtensionConfigProvider
         {
             public void Initialize(ExtensionConfigContext context)
             {

@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.EventHubs.Processor;
-using Microsoft.Azure.WebJobs.EventHubs;
+using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Logging;
@@ -14,8 +14,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Microsoft.Azure.WebJobs.ServiceBus
+namespace Microsoft.Azure.WebJobs.EventHubs
 {
+    [Extension("EventHubs")]
     public class EventHubExtensionConfigProvider : IExtensionConfigProvider
     {
         private readonly EventHubConfiguration _options;

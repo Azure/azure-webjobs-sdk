@@ -31,10 +31,6 @@ namespace Microsoft.Azure.WebJobs
     /// <see cref="T:byte[]"/> (normally for reading, or as an out parameter for writing)
     /// </description>
     /// </item>
-    /// <item><description>
-    /// A custom type implementing <see cref="ICloudBlobStreamBinder{T}"/> (normally for reading, or as an out parameter for
-    /// writing)
-    /// </description></item>
     /// </list>
     /// In addition to single blob bindings,  parameters can be bound to multiple blobs.
     /// The parameter type can be CloudBlobContainer, CloudBlobDirectory or <see cref="IEnumerable{T}"/>
