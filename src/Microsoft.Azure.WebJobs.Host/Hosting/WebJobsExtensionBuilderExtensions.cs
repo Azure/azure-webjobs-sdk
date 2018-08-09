@@ -2,8 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Microsoft.Azure.WebJobs.Host.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,8 +20,13 @@ namespace Microsoft.Azure.WebJobs
         /// <returns>The configured <see cref="IWebJobsExtensionBuilder"</returns>
         public static IWebJobsExtensionBuilder BindOptions<TOptions>(this IWebJobsExtensionBuilder builder) where TOptions : class
         {
-            builder.Services.AddSingleton<IConfigureOptions<TOptions>>(p =>
-                new WebJobsExtensionOptionsConfiguration<TOptions>(p.GetService<IConfiguration>(), builder.ExtensionName));
+            builder.ConfigureOptions<TOptions>((section, options) =>
+            {
+                if (section.Exists())
+                {
+                    section.Bind(options);
+                }
+            });
 
             return builder;
         }
@@ -37,8 +40,13 @@ namespace Microsoft.Azure.WebJobs
         /// <returns>The configured <see cref="IWebJobsExtensionBuilder"</returns>
         public static IWebJobsExtensionBuilder ConfigureOptions<TOptions>(this IWebJobsExtensionBuilder builder, Action<IConfigurationSection, TOptions> configure) where TOptions : class
         {
+            if (configure == null)
+            {
+                throw new ArgumentNullException(nameof(configure));
+            }
+
             builder.Services.AddSingleton<IConfigureOptions<TOptions>>(p =>
-                new WebJobsExtensionOptionsConfiguration<TOptions>(p.GetService<IConfiguration>(), builder.ExtensionName, configure));
+                new WebJobsExtensionOptionsConfiguration<TOptions>(p.GetService<IConfiguration>(), builder.ExtensionInfo.ConfigurationSectionName, configure));
 
             return builder;
         }

@@ -11,19 +11,14 @@ namespace Microsoft.Azure.WebJobs.Host.Hosting
 {
     internal class WebJobsExtensionBuilder : IWebJobsExtensionBuilder
     {
-        public WebJobsExtensionBuilder(IServiceCollection services)
-            : this(services, null)
-        {
-        }
-
-        public WebJobsExtensionBuilder(IServiceCollection services, string extensionName)
+        public WebJobsExtensionBuilder(IServiceCollection services, ExtensionInfo extentionInfo)
         {
             Services = services ?? throw new ArgumentNullException(nameof(services));
-            ExtensionName = extensionName ?? throw new ArgumentNullException(nameof(extensionName));
+            ExtensionInfo = extentionInfo ?? throw new ArgumentNullException(nameof(extentionInfo));
         }
 
         public IServiceCollection Services { get; }
 
-        public string ExtensionName { get; }
+        public ExtensionInfo ExtensionInfo { get; }
     }
 }

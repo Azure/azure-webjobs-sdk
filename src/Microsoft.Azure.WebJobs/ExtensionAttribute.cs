@@ -13,8 +13,8 @@ namespace Microsoft.Azure.WebJobs.Description
     {
         public ExtensionAttribute(string name, string configurationSection = null)
         {
-            Name = name;
-            ConfigurationSection = configurationSection ?? name;
+            Name = name ?? throw new ArgumentNullException(nameof(name));
+            ConfigurationSection = configurationSection;
         }
 
         /// <summary>

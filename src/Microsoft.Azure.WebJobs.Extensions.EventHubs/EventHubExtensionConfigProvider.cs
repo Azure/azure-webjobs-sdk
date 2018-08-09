@@ -17,7 +17,7 @@ using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.EventHubs
 {
-    [Extension("EventHubs")]
+    [Extension("EventHubs", configurationSection: "EventHubs")]
     internal class EventHubExtensionConfigProvider : IExtensionConfigProvider
     {
         private readonly EventHubConfiguration _options;

@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Azure.WebJobs
@@ -16,8 +17,8 @@ namespace Microsoft.Azure.WebJobs
         IServiceCollection Services { get; }
 
         /// <summary>
-        /// The name of the extension being configured by this builder.
+        /// Gets an <see cref="ExtensionInfo"/> instance containing information about the extension being configured by this builder.
         /// </summary>
-        string ExtensionName { get; }
+        ExtensionInfo ExtensionInfo { get; }
     }
 }
