@@ -636,7 +636,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var hostBuilder = new HostBuilder()
                 .ConfigureDefaultTestHost<TProg>(b =>
                 {
-                    b.AddAzureStorage()
+                    b.UseHostId(TestHostId)
+                    .AddAzureStorage()
                     .AddExtension<TestTriggerAttributeBindingProvider>();
                     RuntimeStorageHostBuilderExtensions.AddAzureStorageCoreServices(b);
                 })
@@ -645,7 +646,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 {
                     services.AddSingleton<IJobActivator>(activator);
                     services.AddSingleton<INameResolver>(_resolver);
-                    services.AddSingleton<IHostIdProvider>(new FakeHostIdProvider(TestHostId));
                     services.Configure((JobHostQueuesOptions o) => o.MaxPollingInterval = TimeSpan.FromSeconds(2));
                     services.Configure((SingletonOptions o) =>
                     {

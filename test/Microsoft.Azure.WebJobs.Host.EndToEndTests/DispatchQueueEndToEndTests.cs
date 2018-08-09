@@ -73,13 +73,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _host = new HostBuilder()
                 .ConfigureDefaultTestHost<SampleTrigger>(b =>
                 {
-                    b.AddAzureStorage()
-                    .AddExtension<DispatchQueueTestConfig>();
-                })
-                .ConfigureServices(services =>
-                {
                     // each test will have a unique hostId so that consecutive test run will not be affected by clean up code
-                    services.AddSingleton<IHostIdProvider>(new FakeHostIdProvider());
+                    b.UseHostId(Guid.NewGuid().ToString("N"))
+                    .AddAzureStorage()
+                    .AddExtension<DispatchQueueTestConfig>();
                 })
                 .Build();
                         
@@ -108,13 +105,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _host = new HostBuilder()
                 .ConfigureDefaultTestHost<SampleTriggerWithPoisonQueue>(b =>
                 {
-                    b.AddAzureStorage()
-                    .AddExtension<DispatchQueueTestConfig>();
-                })
-                .ConfigureServices(services =>
-                {
                     // each test will have a unique hostId so that consecutive test run will not be affected by clean up code
-                    services.AddSingleton<IHostIdProvider>(new FakeHostIdProvider());
+                    b.UseHostId(Guid.NewGuid().ToString("N"))
+                    .AddAzureStorage()
+                    .AddExtension<DispatchQueueTestConfig>();
                 })
                 .Build();
                         

@@ -60,7 +60,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _testContainer.CreateAsync().Wait();
         }
 
-        public IHostBuilder NewBuilder<TProgram>(TProgram program)
+        public IHostBuilder NewBuilder<TProgram>(TProgram program, Action<IWebJobsBuilder> configure = null)
         {
             var activator = new FakeActivator();
             activator.Add(program);
@@ -69,6 +69,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 .ConfigureDefaultTestHost<TProgram>(b =>
                 {
                     b.AddAzureStorage();
+                    configure?.Invoke(b);
                 })
                 .ConfigureServices(services =>
                 {
@@ -206,9 +207,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var prog = new BlobGetsProcessedOnlyOnce_SingleHost_Program();
             
             // make sure they both have the same id
-            IHostIdProvider hostIdProvider = new FakeHostIdProvider();
-            var host = NewBuilder(prog)
-                .ConfigureServices(services => services.AddSingleton(hostIdProvider))
+            var host = NewBuilder(prog, builder => builder.UseHostId(Guid.NewGuid().ToString("N")))
                 .Build();           
 
             // Process the blob first
@@ -274,12 +273,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var prog = new BlobGetsProcessedOnlyOnce_SingleHost_Program();
 
             
-            var idProvider = new FakeHostIdProvider();
-            var host1 = NewBuilder(prog)
-                .ConfigureServices(services => services.AddSingleton<IHostIdProvider>(idProvider))
+            string hostId = Guid.NewGuid().ToString("N");
+            var host1 = NewBuilder(prog, builder=>builder.UseHostId(hostId))
                 .Build();
-            var host2 = NewBuilder(prog)
-                .ConfigureServices(services => services.AddSingleton<IHostIdProvider>(idProvider))
+            var host2 = NewBuilder(prog, builder => builder.UseHostId(hostId))
                 .Build();
 
             using (prog._completedEvent = new ManualResetEvent(initialState: false))

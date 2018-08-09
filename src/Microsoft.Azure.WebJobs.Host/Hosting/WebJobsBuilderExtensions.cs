@@ -6,6 +6,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Bindings.Cancellation;
 using Microsoft.Azure.WebJobs.Host.Bindings.Data;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Hosting;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Hosting;
@@ -41,6 +42,18 @@ namespace Microsoft.Azure.WebJobs
         public static IWebJobsBuilder AddExtension(this IWebJobsBuilder builder, Type extensionConfigProviderType)
         {
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton(typeof(IExtensionConfigProvider), extensionConfigProviderType));
+
+            return builder;
+        }
+
+        public static IWebJobsBuilder UseHostId(this IWebJobsBuilder builder, string hostId)
+        {
+            if (!HostIdValidator.IsValid(hostId))
+            {
+                throw new InvalidOperationException(HostIdValidator.ValidationMessage);
+            }
+
+            builder.Services.AddSingleton<IHostIdProvider>(new FixedHostIdProvider(hostId));
 
             return builder;
         }
