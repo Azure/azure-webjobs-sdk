@@ -49,6 +49,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// Gets or sets the <see cref="MessagingProvider"/> that will be used to create
         /// instances used for message processing.
         /// </summary>
+        /// TODO: https://github.com/Azure/azure-webjobs-sdk/issues/1833
         public MessagingProvider MessagingProvider
         {
             get

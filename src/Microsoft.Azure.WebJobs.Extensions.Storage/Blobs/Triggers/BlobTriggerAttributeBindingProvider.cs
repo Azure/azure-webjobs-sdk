@@ -22,8 +22,8 @@ namespace Microsoft.Azure.WebJobs.Extensions.Storage.Blobs.Triggers
         private readonly INameResolver _nameResolver;
         private readonly StorageAccountProvider _accountProvider;
         private readonly IHostIdProvider _hostIdProvider;
-        private readonly JobHostQueuesOptions _queueOptions;
-        private readonly JobHostBlobsOptions _blobsOptions;
+        private readonly QueuesOptions _queueOptions;
+        private readonly BlobsOptions _blobsOptions;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IContextSetter<IBlobWrittenWatcher> _blobWrittenWatcherSetter;
         private readonly SharedQueueWatcher _messageEnqueuedWatcherSetter;
@@ -34,8 +34,8 @@ namespace Microsoft.Azure.WebJobs.Extensions.Storage.Blobs.Triggers
         public BlobTriggerAttributeBindingProvider(INameResolver nameResolver,
             StorageAccountProvider accountProvider,
             IHostIdProvider hostIdProvider,
-            IOptions<JobHostQueuesOptions> queueOptions,
-            IOptions<JobHostBlobsOptions> blobsConfiguration,
+            IOptions<QueuesOptions> queueOptions,
+            IOptions<BlobsOptions> blobsOptions,
             IWebJobsExceptionHandler exceptionHandler,
             IContextSetter<IBlobWrittenWatcher> blobWrittenWatcherSetter,
             SharedQueueWatcher messageEnqueuedWatcherSetter,
@@ -46,7 +46,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Storage.Blobs.Triggers
             _accountProvider = accountProvider ?? throw new ArgumentNullException(nameof(accountProvider));
             _hostIdProvider = hostIdProvider ?? throw new ArgumentNullException(nameof(hostIdProvider));
             _queueOptions = (queueOptions ?? throw new ArgumentNullException(nameof(queueOptions))).Value;
-            _blobsOptions = (blobsConfiguration ?? throw new ArgumentNullException(nameof(blobsConfiguration))).Value;
+            _blobsOptions = (blobsOptions ?? throw new ArgumentNullException(nameof(blobsOptions))).Value;
             _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
             _blobWrittenWatcherSetter = blobWrittenWatcherSetter ?? throw new ArgumentNullException(nameof(blobWrittenWatcherSetter));
             _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter ?? throw new ArgumentNullException(nameof(messageEnqueuedWatcherSetter));

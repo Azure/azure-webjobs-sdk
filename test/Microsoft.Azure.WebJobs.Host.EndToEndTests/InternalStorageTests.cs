@@ -51,7 +51,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 .ConfigureDefaultTestHost(prog, b =>
                 {
                     b.AddAzureStorage();
-                    RuntimeStorageHostBuilderExtensions.AddAzureStorageCoreServices(b);
+                    RuntimeStorageWebJobsBuilderExtensions.AddAzureStorageCoreServices(b);
                 })
                 .ConfigureAppConfiguration(config =>
                 {

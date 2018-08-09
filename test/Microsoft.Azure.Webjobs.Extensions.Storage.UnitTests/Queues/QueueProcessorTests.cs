@@ -21,22 +21,22 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private CloudQueue _queue;
         private CloudQueue _poisonQueue;
         private QueueProcessor _processor;
-        private JobHostQueuesOptions _queuesConfig;
+        private QueuesOptions _queuesOptions;
 
         public QueueProcessorTests(TestFixture fixture)
         {
             _queue = fixture.Queue;
             _poisonQueue = fixture.PoisonQueue;
             
-            _queuesConfig = new JobHostQueuesOptions();
-            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, null, _queuesConfig);
+            _queuesOptions = new QueuesOptions();
+            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, null, _queuesOptions);
             _processor = new QueueProcessor(context);
         }
 
         [Fact]
         public void Constructor_DefaultsValues()
         {
-            var config = new JobHostQueuesOptions
+            var options = new QueuesOptions
             {
                 BatchSize = 32,
                 MaxDequeueCount = 2,
@@ -44,14 +44,14 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 VisibilityTimeout = TimeSpan.FromSeconds(30),
                 MaxPollingInterval = TimeSpan.FromSeconds(15)
             };
-            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, null, config);
+            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, null, options);
             QueueProcessor localProcessor = new QueueProcessor(context);
 
-            Assert.Equal(config.BatchSize, localProcessor.BatchSize);
-            Assert.Equal(config.MaxDequeueCount, localProcessor.MaxDequeueCount);
-            Assert.Equal(config.NewBatchThreshold, localProcessor.NewBatchThreshold);
-            Assert.Equal(config.VisibilityTimeout, localProcessor.VisibilityTimeout);
-            Assert.Equal(config.MaxPollingInterval, localProcessor.MaxPollingInterval);
+            Assert.Equal(options.BatchSize, localProcessor.BatchSize);
+            Assert.Equal(options.MaxDequeueCount, localProcessor.MaxDequeueCount);
+            Assert.Equal(options.NewBatchThreshold, localProcessor.NewBatchThreshold);
+            Assert.Equal(options.VisibilityTimeout, localProcessor.VisibilityTimeout);
+            Assert.Equal(options.MaxPollingInterval, localProcessor.MaxPollingInterval);
         }
 
         [Fact]
@@ -92,7 +92,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         [Fact]
         public async Task CompleteProcessingMessageAsync_MaxDequeueCountExceeded_MovesMessageToPoisonQueue()
         {
-            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, null, _queuesConfig, _poisonQueue);
+            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, null, _queuesOptions, _poisonQueue);
             QueueProcessor localProcessor = new QueueProcessor(context);
 
             bool poisonMessageHandlerCalled = false;
@@ -127,12 +127,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         [Fact]
         public async Task CompleteProcessingMessageAsync_Failure_AppliesVisibilityTimeout()
         {
-            var queuesConfig = new JobHostQueuesOptions
+            var queuesOptions = new QueuesOptions
             {
                 // configure a non-zero visibility timeout
                 VisibilityTimeout = TimeSpan.FromMinutes(5)
             };
-            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, null, queuesConfig, _poisonQueue);
+            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, null, queuesOptions, _poisonQueue);
             QueueProcessor localProcessor = new QueueProcessor(context);
 
             string messageContent = Guid.NewGuid().ToString();
@@ -150,7 +150,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         [Fact]
         public async Task BeginProcessingMessageAsync_MaxDequeueCountExceeded_MovesMessageToPoisonQueue()
         {
-            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, null, _queuesConfig, _poisonQueue);
+            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_queue, null, _queuesOptions, _poisonQueue);
             QueueProcessor localProcessor = new QueueProcessor(context);
 
             bool poisonMessageHandlerCalled = false;

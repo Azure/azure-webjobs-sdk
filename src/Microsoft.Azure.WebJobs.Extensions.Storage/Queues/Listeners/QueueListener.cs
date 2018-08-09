@@ -26,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         private readonly IMessageEnqueuedWatcher _sharedWatcher;
         private readonly List<Task> _processing = new List<Task>();
         private readonly object _stopWaitingTaskSourceLock = new object();
-        private readonly JobHostQueuesOptions _queueuOptions;
+        private readonly QueuesOptions _queueuOptions;
         private readonly QueueProcessor _queueProcessor;
         private readonly TimeSpan _visibilityTimeout;
 
@@ -41,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             IWebJobsExceptionHandler exceptionHandler,
             ILoggerFactory loggerFactory,
             SharedQueueWatcher sharedWatcher,
-            JobHostQueuesOptions queueOptions,
+            QueuesOptions queueOptions,
             QueueProcessor queueProcessor = null,
             TimeSpan? maxPollingInterval = null)
         {
@@ -323,7 +323,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         }
 
         internal static QueueProcessor CreateQueueProcessor(CloudQueue queue, CloudQueue poisonQueue, ILoggerFactory loggerFactory,
-            JobHostQueuesOptions queueConfig, EventHandler<PoisonMessageEventArgs> poisonQueueMessageAddedHandler)
+            QueuesOptions queueConfig, EventHandler<PoisonMessageEventArgs> poisonQueueMessageAddedHandler)
         {
             QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(queue, loggerFactory, queueConfig, poisonQueue);
 

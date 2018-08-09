@@ -33,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             IWebJobsExceptionHandler exceptionHandler = new WebJobsExceptionHandler(new Mock<IHost>().Object);
             var enqueueWatcher = new Host.Queues.Listeners.SharedQueueWatcher();
             _binding = new QueueTriggerBinding("parameterName", queue, argumentBinding,
-                new JobHostQueuesOptions(), exceptionHandler,
+                new QueuesOptions(), exceptionHandler,
                 enqueueWatcher,
                 null);
         }

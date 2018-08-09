@@ -15,42 +15,42 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void Constructor_Defaults()
         {
-            JobHostQueuesOptions config = new JobHostQueuesOptions();
+            QueuesOptions options = new QueuesOptions();
 
-            Assert.Equal(16, config.BatchSize);
-            Assert.Equal(8, config.NewBatchThreshold);
-            Assert.Equal(typeof(DefaultQueueProcessorFactory), config.QueueProcessorFactory.GetType());
-            Assert.Equal(QueuePollingIntervals.DefaultMaximum, config.MaxPollingInterval);
+            Assert.Equal(16, options.BatchSize);
+            Assert.Equal(8, options.NewBatchThreshold);
+            Assert.Equal(typeof(DefaultQueueProcessorFactory), options.QueueProcessorFactory.GetType());
+            Assert.Equal(QueuePollingIntervals.DefaultMaximum, options.MaxPollingInterval);
         }
 
         [Fact]
         public void NewBatchThreshold_CanSetAndGetValue()
         {
-            JobHostQueuesOptions config = new JobHostQueuesOptions();
+            QueuesOptions options = new QueuesOptions();
 
             // Unless explicitly set, NewBatchThreshold will be computed based
             // on the current BatchSize
-            config.BatchSize = 20;
-            Assert.Equal(10, config.NewBatchThreshold);
-            config.BatchSize = 32;
-            Assert.Equal(16, config.NewBatchThreshold);
+            options.BatchSize = 20;
+            Assert.Equal(10, options.NewBatchThreshold);
+            options.BatchSize = 32;
+            Assert.Equal(16, options.NewBatchThreshold);
 
             // Once set, the set value holds
-            config.NewBatchThreshold = 1000;
-            Assert.Equal(1000, config.NewBatchThreshold);
-            config.BatchSize = 8;
-            Assert.Equal(1000, config.NewBatchThreshold);
+            options.NewBatchThreshold = 1000;
+            Assert.Equal(1000, options.NewBatchThreshold);
+            options.BatchSize = 8;
+            Assert.Equal(1000, options.NewBatchThreshold);
         }
 
         [Fact]
         public void VisibilityTimeout_CanGetAndSetValue()
         {
-            JobHostQueuesOptions config = new JobHostQueuesOptions();
+            QueuesOptions options = new QueuesOptions();
 
-            Assert.Equal(TimeSpan.Zero, config.VisibilityTimeout);
+            Assert.Equal(TimeSpan.Zero, options.VisibilityTimeout);
 
-            config.VisibilityTimeout = TimeSpan.FromSeconds(30);
-            Assert.Equal(TimeSpan.FromSeconds(30), config.VisibilityTimeout);
+            options.VisibilityTimeout = TimeSpan.FromSeconds(30);
+            Assert.Equal(TimeSpan.FromSeconds(30), options.VisibilityTimeout);
         }
 
         [Fact]
@@ -60,17 +60,17 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
                 { "MaxPollingInterval", 5000 }
             };
-            var config = jo.ToObject<JobHostQueuesOptions>();
-            Assert.Equal(TimeSpan.FromMilliseconds(5000), config.MaxPollingInterval);
-            string json = JsonConvert.SerializeObject(config);
+            var options = jo.ToObject<QueuesOptions>();
+            Assert.Equal(TimeSpan.FromMilliseconds(5000), options.MaxPollingInterval);
+            string json = JsonConvert.SerializeObject(options);
 
             jo = new JObject
             {
                 { "MaxPollingInterval", "00:00:05" }
             };
-            config = jo.ToObject<JobHostQueuesOptions>();
-            Assert.Equal(TimeSpan.FromMilliseconds(5000), config.MaxPollingInterval);
-            json = JsonConvert.SerializeObject(config);
+            options = jo.ToObject<QueuesOptions>();
+            Assert.Equal(TimeSpan.FromMilliseconds(5000), options.MaxPollingInterval);
+            json = JsonConvert.SerializeObject(options);
         }
     }
 }

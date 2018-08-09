@@ -74,7 +74,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<INameResolver>(nameResolver);
-                    services.Configure<JobHostQueuesOptions>(o => o.BatchSize = batchSize);
+                    services.Configure<QueuesOptions>(o => o.BatchSize = batchSize);
                 })
                 .Build();
 

@@ -24,14 +24,14 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
 
         private readonly INameResolver _nameResolver;
         private readonly StorageAccountProvider _accountProvider;
-        private readonly JobHostQueuesOptions _queueOptions;
+        private readonly QueuesOptions _queueOptions;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly SharedQueueWatcher _messageEnqueuedWatcherSetter;
         private readonly ILoggerFactory _loggerFactory;
 
         public QueueTriggerAttributeBindingProvider(INameResolver nameResolver,
             StorageAccountProvider accountProvider,
-            IOptions<JobHostQueuesOptions> queueOptions,
+            IOptions<QueuesOptions> queueOptions,
             IWebJobsExceptionHandler exceptionHandler,
             SharedQueueWatcher messageEnqueuedWatcherSetter,
             ILoggerFactory loggerFactory)

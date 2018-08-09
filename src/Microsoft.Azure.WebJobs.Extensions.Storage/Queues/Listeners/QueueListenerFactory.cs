@@ -19,14 +19,14 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
 
         private readonly CloudQueue _queue;
         private readonly CloudQueue _poisonQueue;
-        private readonly JobHostQueuesOptions _queueOptions;
+        private readonly QueuesOptions _queueOptions;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly SharedQueueWatcher _messageEnqueuedWatcherSetter;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ITriggeredFunctionExecutor _executor;
 
         public QueueListenerFactory(CloudQueue queue,
-            JobHostQueuesOptions queueOptions,
+            QueuesOptions queueOptions,
             IWebJobsExceptionHandler exceptionHandler,
             SharedQueueWatcher messageEnqueuedWatcherSetter,
             ILoggerFactory loggerFactory,
