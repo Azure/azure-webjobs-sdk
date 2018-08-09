@@ -66,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<INameResolver>(_resolver);
-                    services.Configure<JobHostQueuesOptions>(o =>
+                    services.Configure<QueuesOptions>(o =>
                     {
                         o.MaxPollingInterval = TimeSpan.FromSeconds(2);
                     });

@@ -41,11 +41,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             _loggerFactory = new LoggerFactory();
             _loggerFactory.AddProvider(new TestLoggerProvider());
             Mock<IQueueProcessorFactory> mockQueueProcessorFactory = new Mock<IQueueProcessorFactory>(MockBehavior.Strict);
-            JobHostQueuesOptions queuesConfig = new JobHostQueuesOptions();
-            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_mockQueue.Object, _loggerFactory, queuesConfig);
+            QueuesOptions queuesOptions = new QueuesOptions();
+            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_mockQueue.Object, _loggerFactory, queuesOptions);
 
             _mockQueueProcessor = new Mock<QueueProcessor>(MockBehavior.Strict, context);
-            JobHostQueuesOptions queueConfig = new JobHostQueuesOptions
+            QueuesOptions queueConfig = new QueuesOptions
             {
                 MaxDequeueCount = 5,
                 QueueProcessorFactory = mockQueueProcessorFactory.Object
@@ -65,7 +65,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             CloudQueue queue = Fixture.CreateNewQueue();
             CloudQueue poisonQueue = Fixture.CreateNewQueue();
 
-            var queuesConfig = new JobHostQueuesOptions { MaxDequeueCount = 2 };
+            var queuesOptions = new QueuesOptions { MaxDequeueCount = 2 };
 
             Mock<ITriggerExecutor<CloudQueueMessage>> mockTriggerExecutor = new Mock<ITriggerExecutor<CloudQueueMessage>>(MockBehavior.Strict);
 
@@ -75,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             CloudQueueMessage messageFromCloud = await queue.GetMessageAsync();
 
             QueueListener listener = new QueueListener(queue, poisonQueue, mockTriggerExecutor.Object, new WebJobsExceptionHandler(null),
-                null, null, queuesConfig);
+                null, null, queuesOptions);
 
             mockTriggerExecutor
                 .Setup(m => m.ExecuteAsync(It.IsAny<CloudQueueMessage>(), CancellationToken.None))
@@ -113,7 +113,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             CloudQueueMessage messageFromCloud = await queue.GetMessageAsync();
 
             QueueListener listener = new QueueListener(queue, null, mockTriggerExecutor.Object, new WebJobsExceptionHandler(null),
-                null, null, new JobHostQueuesOptions());
+                null, null, new QueuesOptions());
             listener.MinimumVisibilityRenewalInterval = TimeSpan.FromSeconds(1);
 
             // Set up a function that sleeps to allow renewal
@@ -147,7 +147,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             bool poisonMessageHandlerInvoked = false;
             EventHandler<PoisonMessageEventArgs> poisonMessageEventHandler = (sender, e) => { poisonMessageHandlerInvoked = true; };
             Mock<IQueueProcessorFactory> mockQueueProcessorFactory = new Mock<IQueueProcessorFactory>(MockBehavior.Strict);
-            JobHostQueuesOptions queueConfig = new JobHostQueuesOptions
+            QueuesOptions queueConfig = new QueuesOptions
             {
                 MaxDequeueCount = 7,
                 QueueProcessorFactory = mockQueueProcessorFactory.Object

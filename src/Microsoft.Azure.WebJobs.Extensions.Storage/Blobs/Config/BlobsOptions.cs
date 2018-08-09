@@ -6,12 +6,12 @@ namespace Microsoft.Azure.WebJobs.Host
     /// <summary>
     /// Represents configuration for <see cref="BlobTriggerAttribute"/>.
     /// </summary>
-    public class JobHostBlobsOptions
+    public class BlobsOptions
     {
         /// <summary>
         /// Constructs a new instance.
         /// </summary>
-        public JobHostBlobsOptions()
+        public BlobsOptions()
         {
             CentralizedPoisonQueue = false;
         }

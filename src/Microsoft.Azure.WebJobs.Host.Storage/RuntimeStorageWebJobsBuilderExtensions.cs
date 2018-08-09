@@ -15,7 +15,7 @@ using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Microsoft.Extensions.Hosting
 {
-    public static class RuntimeStorageHostBuilderExtensions
+    public static class RuntimeStorageWebJobsBuilderExtensions
     {
         // WebJobs v1 Classic logging. Needed for dashboard.         
         // $$$ Update title? 

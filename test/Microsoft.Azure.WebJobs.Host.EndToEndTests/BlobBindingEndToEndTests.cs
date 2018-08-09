@@ -696,7 +696,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     .ConfigureDefaultTestHost<BlobBindingEndToEndTests>(b =>
                     {
                         b.AddAzureStorage();
-                        RuntimeStorageHostBuilderExtensions.AddAzureStorageCoreServices(b);
+                        RuntimeStorageWebJobsBuilderExtensions.AddAzureStorageCoreServices(b);
                     })
                     .ConfigureServices(services =>
                      {

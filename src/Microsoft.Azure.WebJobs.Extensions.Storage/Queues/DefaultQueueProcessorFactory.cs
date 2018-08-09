@@ -6,7 +6,7 @@ using System;
 namespace Microsoft.Azure.WebJobs.Host.Queues
 {
     /// <summary>
-    /// The default <see cref="IQueueProcessorFactory"/> implementation used by <see cref="JobHostQueuesOptions"/>.
+    /// The default <see cref="IQueueProcessorFactory"/> implementation used by <see cref="QueuesOptions"/>.
     /// </summary>
     internal class DefaultQueueProcessorFactory : IQueueProcessorFactory
     {
