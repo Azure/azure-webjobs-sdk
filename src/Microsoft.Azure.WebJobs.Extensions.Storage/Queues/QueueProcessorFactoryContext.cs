@@ -33,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> to create an <see cref="ILogger"/> from.</param>
         /// <param name="options">The queue configuration.</param>
         /// <param name="poisonQueue">The queue to move messages to when unable to process a message after the maximum dequeue count has been exceeded. May be null.</param>
-        internal QueueProcessorFactoryContext(CloudQueue queue, ILoggerFactory loggerFactory, JobHostQueuesOptions options, CloudQueue poisonQueue = null)
+        internal QueueProcessorFactoryContext(CloudQueue queue, ILoggerFactory loggerFactory, QueuesOptions options, CloudQueue poisonQueue = null)
             : this(queue, loggerFactory, poisonQueue)
         {
             BatchSize = options.BatchSize;

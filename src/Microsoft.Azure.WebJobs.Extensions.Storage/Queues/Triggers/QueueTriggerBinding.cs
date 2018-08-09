@@ -22,7 +22,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
         private readonly CloudQueue _queue;
         private readonly ITriggerDataArgumentBinding<CloudQueueMessage> _argumentBinding;
         private readonly IReadOnlyDictionary<string, Type> _bindingDataContract;
-        private readonly JobHostQueuesOptions _queueOptions;
+        private readonly QueuesOptions _queueOptions;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly SharedQueueWatcher _messageEnqueuedWatcherSetter;
         private readonly ILoggerFactory _loggerFactory;
@@ -31,7 +31,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
         public QueueTriggerBinding(string parameterName,
             CloudQueue queue,
             ITriggerDataArgumentBinding<CloudQueueMessage> argumentBinding,
-            JobHostQueuesOptions queueOptions,
+            QueuesOptions queueOptions,
             IWebJobsExceptionHandler exceptionHandler,
             SharedQueueWatcher messageEnqueuedWatcherSetter,
             ILoggerFactory loggerFactory)

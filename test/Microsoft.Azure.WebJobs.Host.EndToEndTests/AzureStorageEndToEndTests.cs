@@ -349,7 +349,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<INameResolver>(_resolver);
-                    services.Configure<JobHostQueuesOptions>(o =>
+                    services.Configure<QueuesOptions>(o =>
                     {
                         // use a custom processor so we can grab the Id and PopReceipt
                         o.QueueProcessorFactory = new TestQueueProcessorFactory();

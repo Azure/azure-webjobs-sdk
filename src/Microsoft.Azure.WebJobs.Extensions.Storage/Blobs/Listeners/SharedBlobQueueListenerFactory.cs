@@ -18,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
     {
         private readonly SharedQueueWatcher _sharedQueueWatcher;
         private readonly CloudQueue _hostBlobTriggerQueue;
-        private readonly JobHostQueuesOptions _queueOptions;
+        private readonly QueuesOptions _queueOptions;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IBlobWrittenWatcher _blobWrittenWatcher;
         private readonly StorageAccount _hostAccount;
@@ -28,7 +28,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             StorageAccount hostAccount,
             SharedQueueWatcher sharedQueueWatcher,
             CloudQueue hostBlobTriggerQueue,
-            JobHostQueuesOptions queueOptions,
+            QueuesOptions queueOptions,
             IWebJobsExceptionHandler exceptionHandler,
             ILoggerFactory loggerFactory,
             IBlobWrittenWatcher blobWrittenWatcher)

@@ -19,18 +19,18 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             CloudQueue poisonQueue = new CloudQueue(new Uri("https://test.queue.core.windows.net/poisonqueue"));
             ILoggerFactory loggerFactory = new LoggerFactory();
             loggerFactory.AddProvider(new TestLoggerProvider());
-            JobHostQueuesOptions queuesConfig = new JobHostQueuesOptions();
+            QueuesOptions queuesOptions = new QueuesOptions();
 
-            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(queue, loggerFactory, queuesConfig, poisonQueue);
+            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(queue, loggerFactory, queuesOptions, poisonQueue);
 
             Assert.Same(queue, context.Queue);
             Assert.Same(poisonQueue, context.PoisonQueue);
             Assert.NotNull(context.Logger);
 
-            Assert.Equal(queuesConfig.BatchSize, context.BatchSize);
-            Assert.Equal(queuesConfig.NewBatchThreshold, context.NewBatchThreshold);
-            Assert.Equal(queuesConfig.MaxDequeueCount, context.MaxDequeueCount);
-            Assert.Equal(queuesConfig.MaxPollingInterval, context.MaxPollingInterval);
+            Assert.Equal(queuesOptions.BatchSize, context.BatchSize);
+            Assert.Equal(queuesOptions.NewBatchThreshold, context.NewBatchThreshold);
+            Assert.Equal(queuesOptions.MaxDequeueCount, context.MaxDequeueCount);
+            Assert.Equal(queuesOptions.MaxPollingInterval, context.MaxPollingInterval);
         }
     }
 }

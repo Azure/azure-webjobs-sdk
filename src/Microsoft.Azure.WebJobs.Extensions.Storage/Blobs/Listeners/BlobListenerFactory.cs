@@ -19,8 +19,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
     {
         private const string SingletonBlobListenerScopeId = "WebJobs.Internal.Blobs";
         private readonly IHostIdProvider _hostIdProvider;
-        private readonly JobHostQueuesOptions _queueOptions;
-        private readonly JobHostBlobsOptions _blobsOptions;
+        private readonly QueuesOptions _queueOptions;
+        private readonly BlobsOptions _blobsOptions;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IContextSetter<IBlobWrittenWatcher> _blobWrittenWatcherSetter;
         private readonly SharedQueueWatcher _messageEnqueuedWatcherSetter;
@@ -35,8 +35,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private readonly IHostSingletonManager _singletonManager;
 
         public BlobListenerFactory(IHostIdProvider hostIdProvider,
-            JobHostQueuesOptions queueOptions,
-            JobHostBlobsOptions blobsOptions,
+            QueuesOptions queueOptions,
+            BlobsOptions blobsOptions,
             IWebJobsExceptionHandler exceptionHandler,
             IContextSetter<IBlobWrittenWatcher> blobWrittenWatcherSetter,
             SharedQueueWatcher messageEnqueuedWatcherSetter,

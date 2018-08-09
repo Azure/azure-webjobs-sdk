@@ -22,7 +22,7 @@ namespace WebJobs.Extensions.Storage
     // $$$ This exposes Azure Storage implementations for runtime state objects. 
     internal class StorageLoadBalancerQueue : ILoadBalancerQueue
     {
-        private readonly JobHostQueuesOptions _queueOptions;
+        private readonly QueuesOptions _queueOptions;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly SharedQueueWatcher _sharedWatcher;
@@ -30,7 +30,7 @@ namespace WebJobs.Extensions.Storage
 
         public StorageLoadBalancerQueue(
             StorageAccountProvider storageAccountProvider,
-               IOptions<JobHostQueuesOptions> queueOptions,
+               IOptions<QueuesOptions> queueOptions,
                IWebJobsExceptionHandler exceptionHandler,
                SharedQueueWatcher sharedWatcher, 
                ILoggerFactory loggerFactory)

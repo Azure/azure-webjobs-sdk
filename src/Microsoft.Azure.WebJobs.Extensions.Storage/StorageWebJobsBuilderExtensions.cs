@@ -21,7 +21,7 @@ using WebJobs.Extensions.Storage;
 
 namespace Microsoft.Extensions.Hosting
 {
-    public static class StorageHostBuilderExtensions
+    public static class StorageWebJobsBuilderExtensions
     {
         public static IWebJobsBuilder AddAzureStorage(this IWebJobsBuilder builder)
         {
@@ -58,10 +58,10 @@ namespace Microsoft.Extensions.Hosting
             builder.AddExtension<TablesExtensionConfigProvider>();
 
             builder.AddExtension<QueuesExtensionConfigProvider>()
-                .BindOptions<JobHostQueuesOptions>();
+                .BindOptions<QueuesOptions>();
 
             builder.AddExtension<BlobsExtensionConfigProvider>()
-                .BindOptions<JobHostBlobsOptions>();
+                .BindOptions<BlobsOptions>();
 
             return builder;
         }

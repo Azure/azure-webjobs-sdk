@@ -639,14 +639,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     b.UseHostId(TestHostId)
                     .AddAzureStorage()
                     .AddExtension<TestTriggerAttributeBindingProvider>();
-                    RuntimeStorageHostBuilderExtensions.AddAzureStorageCoreServices(b);
+                    RuntimeStorageWebJobsBuilderExtensions.AddAzureStorageCoreServices(b);
                 })
                 .ConfigureTestLogger()
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<IJobActivator>(activator);
                     services.AddSingleton<INameResolver>(_resolver);
-                    services.Configure((JobHostQueuesOptions o) => o.MaxPollingInterval = TimeSpan.FromSeconds(2));
+                    services.Configure((QueuesOptions o) => o.MaxPollingInterval = TimeSpan.FromSeconds(2));
                     services.Configure((SingletonOptions o) =>
                     {
                         o.LockAcquisitionTimeout = TimeSpan.FromSeconds(10);

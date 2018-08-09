@@ -12,7 +12,7 @@ namespace Microsoft.Azure.WebJobs.Host
     /// <summary>
     /// Represents configuration for <see cref="QueueTriggerAttribute"/>.
     /// </summary>
-    public class JobHostQueuesOptions
+    public class QueuesOptions
     {
         private const int DefaultMaxDequeueCount = 5;
         private const int DefaultBatchSize = 16;
@@ -28,9 +28,9 @@ namespace Microsoft.Azure.WebJobs.Host
         private int _maxDequeueCount = DefaultMaxDequeueCount;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="JobHostQueuesOptions"/> class.
+        /// Initializes a new instance of the <see cref="QueuesOptions"/> class.
         /// </summary>
-        public JobHostQueuesOptions()
+        public QueuesOptions()
         {
             _newBatchThreshold = -1;
             QueueProcessorFactory = new DefaultQueueProcessorFactory();
@@ -157,6 +157,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// Gets or sets the <see cref="IQueueProcessorFactory"/> that will be used to create
         /// <see cref="QueueProcessor"/> instances that will be used to process messages.
         /// </summary>
+        /// TODO: https://github.com/Azure/azure-webjobs-sdk/issues/1833
         public IQueueProcessorFactory QueueProcessorFactory 
         { 
             get; 

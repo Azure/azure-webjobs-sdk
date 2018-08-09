@@ -121,7 +121,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 // this test takes long since it does at least 5 dequeue on the poison message
                 // count retries caused by failures and poison queue function process
-                int funcWithExceptionCount = DispatchQueueTestConfig.BatchSize + _host.GetOptions<JobHostQueuesOptions>().MaxDequeueCount;
+                int funcWithExceptionCount = DispatchQueueTestConfig.BatchSize + _host.GetOptions<QueuesOptions>().MaxDequeueCount;
                 await TestHelpers.Await(() => _funcInvocation.TotalAdd() >= funcWithExceptionCount, 10000, 1000);
 
                 Assert.Equal(funcWithExceptionCount, _funcInvocation.TotalAdd());
