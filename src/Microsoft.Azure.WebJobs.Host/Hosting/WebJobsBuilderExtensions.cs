@@ -22,8 +22,7 @@ namespace Microsoft.Azure.WebJobs
         {
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IExtensionConfigProvider, TExtension>());
 
-            string extensionName = Utility.GetExtensionName<TExtension>();
-            return new WebJobsExtensionBuilder(builder.Services, extensionName);
+            return new WebJobsExtensionBuilder(builder.Services, ExtensionInfo.FromExtension<TExtension>());
         }
 
         public static IWebJobsExtensionBuilder AddExtension(this IWebJobsBuilder builder, IExtensionConfigProvider instance)
@@ -35,8 +34,7 @@ namespace Microsoft.Azure.WebJobs
 
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IExtensionConfigProvider>(instance));
 
-            string extensionName = Utility.GetExtensionName(instance);
-            return new WebJobsExtensionBuilder(builder.Services, extensionName);
+            return new WebJobsExtensionBuilder(builder.Services, ExtensionInfo.FromInstance(instance));
         }
 
         public static IWebJobsBuilder AddExtension(this IWebJobsBuilder builder, Type extensionConfigProviderType)

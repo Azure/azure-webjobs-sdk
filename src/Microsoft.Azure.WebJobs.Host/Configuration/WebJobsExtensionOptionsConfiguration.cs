@@ -13,21 +13,6 @@ namespace Microsoft.Azure.WebJobs.Host.Configuration
         private readonly IConfiguration _configuration;
         private readonly Action<IConfigurationSection, TOptions> _configure;
 
-        public WebJobsExtensionOptionsConfiguration(IConfiguration configuration, string extensionName)
-            : this(configuration, extensionName, BindOption)
-        {
-            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-            _extensionName = extensionName;
-        }
-
-        private static void BindOption(IConfigurationSection section, TOptions options)
-        {
-            if (section.Exists())
-            {
-                section.Bind(options);
-            }
-        }
-
         public WebJobsExtensionOptionsConfiguration(IConfiguration configuration, string extensionName, Action<IConfigurationSection, TOptions> configure)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
