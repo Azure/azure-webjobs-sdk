@@ -194,13 +194,13 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             StorageAccountProvider storageAccountProvider = null; //  new FakeStorageAccountProvider(storageAccount); $$$
 
-            IHostIdProvider hostIdProvider = new FakeHostIdProvider();
             IWebJobsExceptionHandler exceptionHandler = new TaskBackgroundExceptionHandler<TResult>(taskSource);
 
             return new HostBuilder()
                 .ConfigureDefaultTestHost(b =>
                 {
-                    b.AddAzureStorage();
+                    b.UseHostId(Guid.NewGuid().ToString("N"))
+                    .AddAzureStorage();
                 }, programType)
                 .ConfigureServices(services =>
                 {
@@ -214,7 +214,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                     services.AddSingleton<IFunctionInstanceLoggerProvider>(new NullFunctionInstanceLoggerProvider(functionInstanceLogger));
                     services.AddSingleton<IHostInstanceLoggerProvider>(new NullHostInstanceLoggerProvider());
                     services.AddSingleton<IFunctionOutputLoggerProvider>(new NullFunctionOutputLoggerProvider());
-                    services.AddSingleton(hostIdProvider);
                 })
                 .Build();
         }

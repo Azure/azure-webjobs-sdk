@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Azure.WebJobs;
 
 namespace SampleHost
 {
@@ -17,7 +18,8 @@ namespace SampleHost
                 .UseEnvironment("Development")
                 .ConfigureWebJobs(b =>
                 {
-                    b.AddWebJobsLogging() // Enables WebJobs v1 classic logging 
+                    b.UseHostId("ecad61-62cf-47f4-93b4-6efcded6")
+                    .AddWebJobsLogging() // Enables WebJobs v1 classic logging 
                     .AddAzureStorageCoreServices()
                     .AddAzureStorage()
                     .AddServiceBus()
