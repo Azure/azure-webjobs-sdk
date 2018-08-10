@@ -17,13 +17,19 @@ in a Web App. You can upload and run an executable file such as an .exe, .cmd, o
 
 ## Documentation
 
-See [the documentation](https://github.com/Azure/azure-webjobs-sdk/wiki)
+Check out the [getting started guide](https://docs.microsoft.com/en-us/azure/app-service/webjobs-sdk-get-started), the [how-to guide](https://docs.microsoft.com/en-us/azure/app-service/webjobs-sdk-how-to) and the [wiki](https://github.com/Azure/azure-webjobs-sdk/wiki).
+
+## Contributing
+
+We welcome outside contributions. If you are interested in contributing, please take a look at our [CONTRIBUTING](./CONTRIBUTING.md) guide.
+
+For details on development prereqs and running tests see [here](https://github.com/Azure/azure-webjobs-sdk/wiki/Development).
+
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
 
 ## License
 
 This project is under the benevolent umbrella of the [.NET Foundation](http://www.dotnetfoundation.org/) and is licensed under [the MIT License](https://github.com/Azure/azure-webjobs-sdk/blob/master/LICENSE.txt)
-
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
 
 ## Questions?
 
