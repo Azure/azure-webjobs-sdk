@@ -27,20 +27,23 @@ namespace WebJobs.Extensions.Storage
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly SharedQueueWatcher _sharedWatcher;
         private readonly StorageAccountProvider _storageAccountProvider;
+        private readonly IQueueProcessorFactory _queueProcessorFactory;
 
         public StorageLoadBalancerQueue(
             StorageAccountProvider storageAccountProvider,
                IOptions<QueuesOptions> queueOptions,
                IWebJobsExceptionHandler exceptionHandler,
                SharedQueueWatcher sharedWatcher, 
-               ILoggerFactory loggerFactory)
-            {
+               ILoggerFactory loggerFactory,
+               IQueueProcessorFactory queueProcessorFactory)
+        {
             _storageAccountProvider = storageAccountProvider;
             _queueOptions = queueOptions.Value;
             _exceptionHandler = exceptionHandler;
             _sharedWatcher = sharedWatcher;
             _loggerFactory = loggerFactory;
-            }
+            _queueProcessorFactory = queueProcessorFactory;
+        }
         
         public IAsyncCollector<T> GetQueueWriter<T>(string queue)
         {
@@ -77,10 +80,9 @@ namespace WebJobs.Extensions.Storage
             }
         }
 
-        CloudQueue Convert(string queueMoniker)
+        private CloudQueue Convert(string queueMoniker)
         {
-            // var account = Task.Run(() => _storageAccountProvider.GetDashboardAccountAsync(CancellationToken.None)).GetAwaiter().GetResult();
-            var account = _storageAccountProvider.Get("Dashboard"); // $$$
+            var account = _storageAccountProvider.Get(ConnectionStringNames.Dashboard); // $$$
             var queue = account.CreateCloudQueueClient().GetQueueReference(queueMoniker);
             return queue;
         }
@@ -107,6 +109,7 @@ namespace WebJobs.Extensions.Storage
                 loggerFactory: _loggerFactory,
                 sharedWatcher: _sharedWatcher,
                 queueOptions: _queueOptions,
+                queueProcessorFactory: _queueProcessorFactory,
                 maxPollingInterval: maxPollingInterval);
 
             return listener;

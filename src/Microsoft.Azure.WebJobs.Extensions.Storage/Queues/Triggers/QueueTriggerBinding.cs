@@ -27,6 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
         private readonly SharedQueueWatcher _messageEnqueuedWatcherSetter;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IObjectToTypeConverter<CloudQueueMessage> _converter;
+        private readonly IQueueProcessorFactory _queueProcessorFactory;
 
         public QueueTriggerBinding(string parameterName,
             CloudQueue queue,
@@ -34,7 +35,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             QueuesOptions queueOptions,
             IWebJobsExceptionHandler exceptionHandler,
             SharedQueueWatcher messageEnqueuedWatcherSetter,
-            ILoggerFactory loggerFactory)
+            ILoggerFactory loggerFactory,
+            IQueueProcessorFactory queueProcessorFactory)
         {
             _queue = queue ?? throw new ArgumentNullException(nameof(queue));
             _argumentBinding = argumentBinding ?? throw new ArgumentNullException(nameof(argumentBinding));
@@ -45,6 +47,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
 
             _parameterName = parameterName;
             _loggerFactory = loggerFactory;
+            _queueProcessorFactory = queueProcessorFactory;
             _converter = CreateConverter(queue);
         }
 
@@ -119,7 +122,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             }
 
             var factory = new QueueListenerFactory(_queue, _queueOptions, _exceptionHandler,
-                    _messageEnqueuedWatcherSetter, _loggerFactory, context.Executor);
+                    _messageEnqueuedWatcherSetter, _loggerFactory, context.Executor, _queueProcessorFactory);
 
             return factory.CreateAsync(context.CancellationToken);
         }

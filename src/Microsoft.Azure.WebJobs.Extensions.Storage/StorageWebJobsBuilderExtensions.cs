@@ -60,6 +60,8 @@ namespace Microsoft.Extensions.Hosting
             builder.AddExtension<QueuesExtensionConfigProvider>()
                 .BindOptions<QueuesOptions>();
 
+            builder.Services.TryAddSingleton<IQueueProcessorFactory, DefaultQueueProcessorFactory>();
+
             builder.AddExtension<BlobsExtensionConfigProvider>()
                 .BindOptions<BlobsOptions>();
 

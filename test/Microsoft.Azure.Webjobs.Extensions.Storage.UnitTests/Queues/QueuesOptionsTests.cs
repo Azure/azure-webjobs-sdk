@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -10,7 +9,7 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
-    public class JobHostQueuesConfigurationTests
+    public class QueuesOptionsTests
     {
         [Fact]
         public void Constructor_Defaults()
@@ -19,7 +18,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             Assert.Equal(16, options.BatchSize);
             Assert.Equal(8, options.NewBatchThreshold);
-            Assert.Equal(typeof(DefaultQueueProcessorFactory), options.QueueProcessorFactory.GetType());
             Assert.Equal(QueuePollingIntervals.DefaultMaximum, options.MaxPollingInterval);
         }
 

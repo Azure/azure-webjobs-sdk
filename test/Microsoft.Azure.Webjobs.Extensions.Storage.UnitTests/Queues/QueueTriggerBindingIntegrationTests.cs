@@ -35,7 +35,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             _binding = new QueueTriggerBinding("parameterName", queue, argumentBinding,
                 new QueuesOptions(), exceptionHandler,
                 enqueueWatcher,
-                null);
+                null, null);
         }
 
         [Theory]

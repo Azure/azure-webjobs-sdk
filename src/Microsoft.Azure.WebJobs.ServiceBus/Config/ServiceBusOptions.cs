@@ -4,7 +4,6 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.Azure.ServiceBus;
-using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -13,8 +12,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     /// </summary>
     public class ServiceBusOptions
     {
-        private MessagingProvider _messagingProvider;
-
         /// <summary>
         /// Constructs a new instance.
         /// </summary>
@@ -44,31 +41,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// Gets or sets the default PrefetchCount that will be used by <see cref="MessageReceiver"/>s.
         /// </summary>
         public int PrefetchCount { get; set; }
-
-        /// <summary>
-        /// Gets or sets the <see cref="MessagingProvider"/> that will be used to create
-        /// instances used for message processing.
-        /// </summary>
-        /// TODO: https://github.com/Azure/azure-webjobs-sdk/issues/1833
-        public MessagingProvider MessagingProvider
-        {
-            get
-            {
-                if (_messagingProvider == null)
-                {
-                    _messagingProvider = new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(this));
-                }
-                return _messagingProvider;
-            }
-            set
-            {
-                if (value == null)
-                {
-                    throw new ArgumentNullException("value");
-                }
-                _messagingProvider = value;
-            }
-        }
 
         internal Action<ExceptionReceivedEventArgs> ExceptionHandler { get; set; }
 

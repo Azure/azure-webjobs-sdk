@@ -3,7 +3,6 @@
 
 using System;
 using System.Globalization;
-using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Newtonsoft.Json;
 
@@ -33,7 +32,6 @@ namespace Microsoft.Azure.WebJobs.Host
         public QueuesOptions()
         {
             _newBatchThreshold = -1;
-            QueueProcessorFactory = new DefaultQueueProcessorFactory();
         }
 
         /// <summary>
@@ -151,17 +149,6 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 _visibilityTimeout = value;
             }
-        }
-
-        /// <summary>
-        /// Gets or sets the <see cref="IQueueProcessorFactory"/> that will be used to create
-        /// <see cref="QueueProcessor"/> instances that will be used to process messages.
-        /// </summary>
-        /// TODO: https://github.com/Azure/azure-webjobs-sdk/issues/1833
-        public IQueueProcessorFactory QueueProcessorFactory 
-        { 
-            get; 
-            set; 
         }
 
         /// <summary>
