@@ -17,7 +17,7 @@ in a Web App. You can upload and run an executable file such as an .exe, .cmd, o
 
 ## Documentation
 
-Check out the [getting started guide](https://docs.microsoft.com/en-us/azure/app-service/webjobs-sdk-get-started), the [how-to guide](https://docs.microsoft.com/en-us/azure/app-service/webjobs-sdk-how-to) and the [wiki](https://github.com/Azure/azure-webjobs-sdk/wiki).
+Check out the [getting started guide](https://docs.microsoft.com/en-us/azure/app-service/webjobs-sdk-get-started), the [how-to guide](https://docs.microsoft.com/en-us/azure/app-service/webjobs-sdk-how-to) and the [wiki](https://github.com/Azure/azure-webjobs-sdk/wiki). For more information on Azure and .NET see [here](https://docs.microsoft.com/en-us/dotnet/azure/?view=azure-dotnet).
 
 ## Contributing
 
