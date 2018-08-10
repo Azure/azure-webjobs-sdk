@@ -14,9 +14,13 @@ We're in the process of formalizing the coding guidelines for the SDK. For the t
 
 ## Development Workflow
 
-We actively develop in the master branch. This means that all pull requests by contributors need to be developed and submitted to the master branch.
+We actively develop in the dev branch which currently corresponds to WebJobs 3.x . This means that all pull requests by contributors need to be developed and submitted to the dev branch.
 
 When we ship a new release of the SDK, we create a tag for it.
+
+## Building and Running Tests
+
+For details on development prereqs and running tests see [here](https://github.com/Azure/azure-webjobs-sdk/wiki/Development).
 
 ## Submitting Pull Requests
 
