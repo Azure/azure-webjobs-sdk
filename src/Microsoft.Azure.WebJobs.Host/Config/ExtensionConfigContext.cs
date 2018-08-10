@@ -19,7 +19,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         private List<Action> _updates = new List<Action>();
 
         // Map of tyepof(TAttribute) --> FluentBindingRule<TAttribute>
-        private Dictionary<Type, object> _rules = new Dictionary<Type, object>();
+        private readonly Dictionary<Type, object> _rules = new Dictionary<Type, object>();
         private readonly IConverterManager _converterManager;
         private readonly IWebHookProvider _webHookProvider;
         private readonly IExtensionRegistry _extensionRegistry;
@@ -57,8 +57,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
               where TAttribute : Attribute
         {
             FluentBindingRule<TAttribute> rule;
-            object temp;
-            if (!this._rules.TryGetValue(typeof(TAttribute), out temp))
+            if (!this._rules.TryGetValue(typeof(TAttribute), out object temp))
             {
                 // Create and register
                 rule = new FluentBindingRule<TAttribute>(_nameResolver, _converterManager, _extensionRegistry);

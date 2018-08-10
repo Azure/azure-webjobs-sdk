@@ -10,6 +10,7 @@ using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.ServiceBus.Bindings;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -23,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
         {
             Mock<INameResolver> mockResolver = new Mock<INameResolver>(MockBehavior.Strict);
             ServiceBusOptions config = new ServiceBusOptions();
-            _provider = new ServiceBusAttributeBindingProvider(mockResolver.Object, config, TestHelpers.GetConnectionStringProvider());
+            _provider = new ServiceBusAttributeBindingProvider(mockResolver.Object, config, TestHelpers.GetConnectionStringProvider(), new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(config)));
         }
 
         [Fact]

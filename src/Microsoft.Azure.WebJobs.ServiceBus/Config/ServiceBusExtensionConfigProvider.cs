@@ -75,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
             context.AddBindingRule<ServiceBusTriggerAttribute>().BindToTrigger(triggerBindingProvider);
 
             // register our binding provider
-            ServiceBusAttributeBindingProvider bindingProvider = new ServiceBusAttributeBindingProvider(_nameResolver, _serviceBusOptions, _connectionStringProvider);
+            ServiceBusAttributeBindingProvider bindingProvider = new ServiceBusAttributeBindingProvider(_nameResolver, _serviceBusOptions, _connectionStringProvider, _messagingProvider);
             context.AddBindingRule<ServiceBusAttribute>().Bind(bindingProvider);
         }
 
