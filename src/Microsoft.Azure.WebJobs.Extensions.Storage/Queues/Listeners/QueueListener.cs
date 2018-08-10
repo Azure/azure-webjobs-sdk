@@ -26,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         private readonly IMessageEnqueuedWatcher _sharedWatcher;
         private readonly List<Task> _processing = new List<Task>();
         private readonly object _stopWaitingTaskSourceLock = new object();
-        private readonly QueuesOptions _queueuOptions;
+        private readonly QueuesOptions _queueOptions;
         private readonly QueueProcessor _queueProcessor;
         private readonly TimeSpan _visibilityTimeout;
 
@@ -42,12 +42,17 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             ILoggerFactory loggerFactory,
             SharedQueueWatcher sharedWatcher,
             QueuesOptions queueOptions,
-            QueueProcessor queueProcessor = null,
+            IQueueProcessorFactory queueProcessorFactory,
             TimeSpan? maxPollingInterval = null)
         {
             if (queueOptions == null)
             {
-                throw new ArgumentNullException("queueConfiguration");
+                throw new ArgumentNullException(nameof(queueOptions));
+            }
+
+            if (queueProcessorFactory == null)
+            {
+                throw new ArgumentNullException(nameof(queueProcessorFactory));
             }
 
             if (queueOptions.BatchSize <= 0)
@@ -65,7 +70,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             _poisonQueue = poisonQueue;
             _triggerExecutor = triggerExecutor;
             _exceptionHandler = exceptionHandler;
-            _queueuOptions = queueOptions;
+            _queueOptions = queueOptions;
 
             // if the function runs longer than this, the invisibility will be updated
             // on a timer periodically for the duration of the function execution
@@ -79,9 +84,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             }
 
             EventHandler<PoisonMessageEventArgs> poisonMessageEventHandler = _sharedWatcher != null ? OnMessageAddedToPoisonQueue : (EventHandler<PoisonMessageEventArgs>)null;
-            _queueProcessor = queueProcessor ?? CreateQueueProcessor(
-                _queue, _poisonQueue,
-                loggerFactory, _queueuOptions, poisonMessageEventHandler);
+            _queueProcessor = CreateQueueProcessor(_queue, _poisonQueue, loggerFactory, queueProcessorFactory, _queueOptions, poisonMessageEventHandler);
 
             TimeSpan maximumInterval = _queueProcessor.MaxPollingInterval;
             if (maxPollingInterval.HasValue && maximumInterval > maxPollingInterval.Value)
@@ -322,10 +325,10 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             }
         }
 
-        internal static QueueProcessor CreateQueueProcessor(CloudQueue queue, CloudQueue poisonQueue, ILoggerFactory loggerFactory,
-            QueuesOptions queueConfig, EventHandler<PoisonMessageEventArgs> poisonQueueMessageAddedHandler)
+        internal static QueueProcessor CreateQueueProcessor(CloudQueue queue, CloudQueue poisonQueue, ILoggerFactory loggerFactory, IQueueProcessorFactory queueProcessorFactory,
+            QueuesOptions queuesOptions, EventHandler<PoisonMessageEventArgs> poisonQueueMessageAddedHandler)
         {
-            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(queue, loggerFactory, queueConfig, poisonQueue);
+            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(queue, loggerFactory, queuesOptions, poisonQueue);
 
             QueueProcessor queueProcessor = null;
             if (HostQueueNames.IsHostQueue(queue.Name) &&
@@ -338,7 +341,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             }
             else
             {
-                queueProcessor = queueConfig.QueueProcessorFactory.Create(context);
+                queueProcessor = queueProcessorFactory.Create(context);
             }
 
             if (poisonQueueMessageAddedHandler != null)

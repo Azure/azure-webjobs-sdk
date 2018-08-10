@@ -55,14 +55,11 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             // in case a particular blob lives in a restricted "blob only" storage account (i.e. no queues).
             var defaultPoisonQueue = _hostAccount.CreateCloudQueueClient().GetQueueReference(HostQueueNames.BlobTriggerPoisonQueue);
 
-            // this special queue bypasses the QueueProcessorFactory - we don't want people to
-            // override this
-            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_hostBlobTriggerQueue, _loggerFactory,
-                _queueOptions, defaultPoisonQueue);
-            SharedBlobQueueProcessor queueProcessor = new SharedBlobQueueProcessor(context, triggerExecutor);
-
+            // This special queue bypasses the QueueProcessorFactory - we don't want people to override this.
+            // So we define our own custom queue processor factory for this listener
+            var queueProcessorFactory = new SharedBlobQueueProcessorFactory(triggerExecutor, _hostBlobTriggerQueue, _loggerFactory, _queueOptions, defaultPoisonQueue);
             IListener listener = new QueueListener(_hostBlobTriggerQueue, defaultPoisonQueue, triggerExecutor, _exceptionHandler, _loggerFactory,
-                _sharedQueueWatcher, _queueOptions, queueProcessor);
+                _sharedQueueWatcher, _queueOptions, queueProcessorFactory);
 
             return new SharedBlobQueueListener(listener, triggerExecutor);
         }
@@ -105,6 +102,30 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 }
 
                 return null;
+            }
+        }
+
+        private class SharedBlobQueueProcessorFactory : IQueueProcessorFactory
+        {
+            private readonly BlobQueueTriggerExecutor _triggerExecutor;
+            private readonly CloudQueue _queue;
+            private readonly ILoggerFactory _loggerFactory;
+            private readonly QueuesOptions _options;
+            private readonly CloudQueue _poisonQueue;
+
+            public SharedBlobQueueProcessorFactory(BlobQueueTriggerExecutor triggerExecutor, CloudQueue queue, ILoggerFactory loggerFactory, QueuesOptions queuesOptions, CloudQueue poisonQueue)
+            {
+                _triggerExecutor = triggerExecutor;
+                _queue = queue;
+                _loggerFactory = loggerFactory;
+                _options = queuesOptions;
+                _poisonQueue = poisonQueue;
+            }
+
+            public QueueProcessor Create(QueueProcessorFactoryContext context)
+            {
+                context = new QueueProcessorFactoryContext(_queue, _loggerFactory, _options, _poisonQueue);
+                return new SharedBlobQueueProcessor(context, _triggerExecutor);
             }
         }
     }

@@ -26,8 +26,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
         private readonly INameResolver _nameResolver;
         private readonly ServiceBusOptions _options;
         private readonly IConnectionStringProvider _connectionStringProvider;
+        private readonly MessagingProvider _messagingProvider;
 
-        public ServiceBusAttributeBindingProvider(INameResolver nameResolver, ServiceBusOptions options, IConnectionStringProvider connectionStringProvider)
+        public ServiceBusAttributeBindingProvider(INameResolver nameResolver, ServiceBusOptions options, IConnectionStringProvider connectionStringProvider, MessagingProvider messagingProvider)
         {
             if (nameResolver == null)
             {
@@ -41,6 +42,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
             _nameResolver = nameResolver;
             _options = options;
             _connectionStringProvider = connectionStringProvider;
+            _messagingProvider = messagingProvider;
         }
 
         public Task<IBinding> TryCreateAsync(BindingProviderContext context)
@@ -70,7 +72,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 
             ServiceBusAccount account = new ServiceBusAccount(_options, _connectionStringProvider, attribute);
 
-            IBinding binding = new ServiceBusBinding(parameter.Name, argumentBinding, account, _options, path, attribute);
+            IBinding binding = new ServiceBusBinding(parameter.Name, argumentBinding, account, _options, path, attribute, _messagingProvider);
             return Task.FromResult<IBinding>(binding);
         }
 
