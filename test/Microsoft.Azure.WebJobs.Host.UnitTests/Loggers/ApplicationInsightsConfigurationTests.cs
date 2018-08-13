@@ -167,47 +167,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                     });
                 }).Build())
             {
-                var config = TelemetryConfiguration.Active;
                 // Verify Initializers
-                Assert.Equal(5, config.TelemetryInitializers.Count);
+                Assert.Equal(1, TelemetryConfiguration.Active.TelemetryInitializers.Count);
+
                 // These will throw if there are not exactly one
-                Assert.Single(config.TelemetryInitializers.OfType<OperationCorrelationTelemetryInitializer>());
-                Assert.Single(config.TelemetryInitializers.OfType<HttpDependenciesParsingTelemetryInitializer>());
-                Assert.Single(config.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>());
-                Assert.Single(config.TelemetryInitializers.OfType<WebJobsTelemetryInitializer>());
-                Assert.Single(config.TelemetryInitializers.OfType<WebJobsSanitizingInitializer>());
+                Assert.Single(TelemetryConfiguration.Active.TelemetryInitializers.OfType<OperationCorrelationTelemetryInitializer>());
 
-                // Verify Channel
-                Assert.IsType<ServerTelemetryChannel>(config.TelemetryChannel);
-
-                var modules = host.Services.GetServices<ITelemetryModule>().ToList();
-
-                // Verify Modules
-                Assert.Equal(3, modules.Count);
-                Assert.Single(modules.OfType<DependencyTrackingTelemetryModule>());
-                Assert.Single(modules.OfType<QuickPulseTelemetryModule>());
-                Assert.Single(modules.OfType<AppServicesHeartbeatTelemetryModule>());
-                Assert.NotSame(config.TelemetryChannel, host.Services.GetServices<ITelemetryChannel>().Single());
-                // Verify client
-                var client = host.Services.GetService<TelemetryClient>();
-                Assert.NotNull(client);
-                Assert.True(client.Context.GetInternalContext().SdkVersion.StartsWith("webjobs"));
-
-                // Verify provider
-                var providers = host.Services.GetServices<ILoggerProvider>().ToList();
-                Assert.Single(providers);
-                Assert.IsType<ApplicationInsightsLoggerProvider>(providers[0]);
-                Assert.NotNull(providers[0]);
-
-                // Verify Processors
-                Assert.Equal(3, config.TelemetryProcessors.Count);
-                Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[0]);
-                Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[1]);
-                Assert.Empty(config.TelemetryProcessors.OfType<AdaptiveSamplingTelemetryProcessor>());
-
-                // Verify ApplicationIdProvider
-                Assert.NotNull(config.ApplicationIdProvider);
-                Assert.IsType<ApplicationInsightsApplicationIdProvider>(config.ApplicationIdProvider);
+                // ikey should still be set
+                Assert.Equal("some key", TelemetryConfiguration.Active.InstrumentationKey);
             }
         }
 
