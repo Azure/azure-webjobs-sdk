@@ -76,11 +76,6 @@ namespace Microsoft.Extensions.DependencyInjection
                 ApplicationInsightsLoggerOptions options = provider.GetService<IOptions<ApplicationInsightsLoggerOptions>>().Value;
                 LoggerFilterOptions filterOptions = CreateFilterOptions(provider.GetService<IOptions<LoggerFilterOptions>>().Value);
 
-                // Because of https://github.com/Microsoft/ApplicationInsights-dotnet-server/issues/943
-                // we have to touch (and create) Active configuration before initializing telemetry modules 
-                TelemetryConfiguration activeConfig = TelemetryConfiguration.Active;
-
-
                 ITelemetryChannel channel = provider.GetService<ITelemetryChannel>();
                 TelemetryConfiguration config = TelemetryConfiguration.CreateDefault();
 
@@ -97,23 +92,6 @@ namespace Microsoft.Extensions.DependencyInjection
                     appIdProvider,
                     filterOptions);
 
-                // Function users have no access to TelemetryConfiguration from host DI container,
-                // so we'll expect user to work with TelemetryConfiguration.Active
-                // Also, some ApplicationInsights internal operations (heartbeats) depend on
-                // the TelemetryConfiguration.Active being set so, we'll set up Active once per process lifetime.
-                if (string.IsNullOrEmpty(activeConfig.InstrumentationKey))
-                {
-                    SetupTelemetryConfiguration(
-                        activeConfig,
-                        options.InstrumentationKey,
-                        options.SamplingSettings,
-                        options.SnapshotConfiguration,
-                        new ServerTelemetryChannel(),
-                        provider.GetServices<ITelemetryInitializer>(),
-                        provider.GetServices<ITelemetryModule>(),
-                        new ApplicationInsightsApplicationIdProvider(),
-                        filterOptions);
-                }
                 return config;
             });
 
@@ -175,6 +153,10 @@ namespace Microsoft.Extensions.DependencyInjection
             if (instrumentationKey != null)
             {
                 configuration.InstrumentationKey = instrumentationKey;
+
+                // Because of https://github.com/Microsoft/ApplicationInsights-dotnet-server/issues/943
+                // we have to touch (and create) Active configuration before initializing telemetry modules 
+                TelemetryConfiguration.Active.InstrumentationKey = instrumentationKey;
             }
 
             configuration.TelemetryChannel = channel;
