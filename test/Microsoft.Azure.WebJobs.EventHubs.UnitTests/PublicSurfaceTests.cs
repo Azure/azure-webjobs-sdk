@@ -9,7 +9,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
     public class PublicSurfaceTests
     {
         [Fact]
-        public void EventHubsPublicSurface_LimitedToSpecificTypes()
+        public void WebJobs_Extensions_EventHubs_VerifyPublicSurfaceArea()
         {
             var assembly = typeof(EventHubAttribute).Assembly;
 

@@ -1,8 +1,6 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host;
-
 namespace Microsoft.Azure.WebJobs
 {
     /// <summary>Defines connection string names used by <see cref="IConnectionStringProvider"/>.</summary>
@@ -13,9 +11,6 @@ namespace Microsoft.Azure.WebJobs
 
         /// <summary>Gets the Azure Storage connection string name.</summary>
         public static readonly string Storage = "Storage";
-
-        /// <summary>Gets the Azure ServiceBus connection string name.</summary>
-        public static readonly string ServiceBus = "ServiceBus";
 
         /// <summary>Gets an Azure Storage SAS connection for a blob container to use with internal operations.</summary>
         public static readonly string InternalSasStorage = "InternalSasBlobContainer";

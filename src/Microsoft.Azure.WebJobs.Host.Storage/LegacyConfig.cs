@@ -1,12 +1,9 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Microsoft.Azure.WebJobs
 {
@@ -14,22 +11,22 @@ namespace Microsoft.Azure.WebJobs
     // $$$ Validate these?  And what are their capabilities? 
     public class LegacyConfigSetup : IConfigureOptions<LegacyConfig>
     {
-        private readonly IConnectionStringProvider _provider;
+        private readonly IConfiguration _configuration;
 
-        public LegacyConfigSetup(IConnectionStringProvider provider)
+        public LegacyConfigSetup(IConfiguration configuration)
         {
-            _provider = provider;
+            _configuration = configuration;
         }
 
         public void Configure(LegacyConfig options)
         {
             if (options.Dashboard == null)
             {
-                options.Dashboard = _provider.GetConnectionString("Dashboard");
+                options.Dashboard = _configuration.GetWebJobsConnectionString(ConnectionStringNames.Dashboard);
             }
             if (options.Storage == null)
             {
-                options.Storage = _provider.GetConnectionString("Storage");
+                options.Storage = _configuration.GetWebJobsConnectionString(ConnectionStringNames.Storage);
             }
         }
     }

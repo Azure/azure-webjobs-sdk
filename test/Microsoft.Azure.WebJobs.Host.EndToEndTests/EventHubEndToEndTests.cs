@@ -12,6 +12,7 @@ using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Xunit;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
@@ -148,7 +149,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     {
                         services.AddSingleton<EventHubConfiguration>(serviceProvider =>
                         {
-                            var eventHubConfig = new EventHubConfiguration(serviceProvider.GetRequiredService<IConnectionStringProvider>());
+                            var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+                            var eventHubConfig = new EventHubConfiguration(configuration);
                             eventHubConfig.AddSender(TestHubName, connection);
                             eventHubConfig.AddReceiver(TestHubName, connection);
                             return eventHubConfig;

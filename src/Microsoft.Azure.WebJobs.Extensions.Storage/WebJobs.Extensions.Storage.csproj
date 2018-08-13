@@ -12,7 +12,6 @@
   </PropertyGroup>  
   
   <ItemGroup>
-    <Compile Include="..\Microsoft.Azure.WebJobs.Host.Storage\DefaultStorageAccountProvider.cs" Link="Shared\DefaultStorageAccountProvider.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host.Storage\DefaultStorageCredentialsValidator.cs" Link="Shared\DefaultStorageCredentialsValidator.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host.Storage\Utility.cs" Link="Utility.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Bindings\BindingDataPathHelper.cs" Link="Shared\BindingDataPathHelper.cs" />

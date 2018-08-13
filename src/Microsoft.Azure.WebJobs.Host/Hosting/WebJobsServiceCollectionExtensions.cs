@@ -96,8 +96,6 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IWebJobsExceptionHandlerFactory, DefaultWebJobsExceptionHandlerFactory>();
             services.TryAddSingleton<IWebJobsExceptionHandler>(p => p.GetRequiredService<IWebJobsExceptionHandlerFactory>().Create(p.GetRequiredService<IHost>()));
 
-            services.TryAddSingleton<IConnectionStringProvider, AmbientConnectionStringProvider>();
-
             services.TryAddSingleton<INameResolver, DefaultNameResolver>();
             services.TryAddSingleton<IJobActivator, DefaultJobActivator>();
 

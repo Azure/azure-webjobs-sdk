@@ -9,6 +9,7 @@ using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Converters;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
 {
@@ -25,14 +26,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         private readonly INameResolver _nameResolver;
         private readonly ServiceBusOptions _options;
         private readonly MessagingProvider _messagingProvider;
-        private readonly IConnectionStringProvider _connectionStringProvider;
+        private readonly IConfiguration _configuration;
 
-        public ServiceBusTriggerAttributeBindingProvider(INameResolver nameResolver, ServiceBusOptions options, MessagingProvider messagingProvider, IConnectionStringProvider connectionStringProvider)
+        public ServiceBusTriggerAttributeBindingProvider(INameResolver nameResolver, ServiceBusOptions options, MessagingProvider messagingProvider, IConfiguration configuration)
         {
             _nameResolver = nameResolver ?? throw new ArgumentNullException(nameof(nameResolver));
             _options = options ?? throw new ArgumentNullException(nameof(options));
             _messagingProvider = messagingProvider ?? throw new ArgumentNullException(nameof(messagingProvider));
-            _connectionStringProvider = connectionStringProvider;
+            _configuration = configuration;
         }
 
         public Task<ITriggerBinding> TryCreateAsync(TriggerBindingProviderContext context)
@@ -73,7 +74,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
                 throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Can't bind ServiceBusTrigger to type '{0}'.", parameter.ParameterType));
             }
 
-            ServiceBusAccount account = new ServiceBusAccount(_options, _connectionStringProvider, attribute);
+            ServiceBusAccount account = new ServiceBusAccount(_options, _configuration, attribute);
 
             ITriggerBinding binding;
             if (queueName != null)

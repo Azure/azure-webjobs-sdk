@@ -4,11 +4,11 @@
 using System;
 using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.WebJobs.Description;
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.ServiceBus.Bindings;
 using Microsoft.Azure.WebJobs.ServiceBus.Triggers;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -22,25 +22,25 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
     internal class ServiceBusExtensionConfigProvider : IExtensionConfigProvider
     {
         private readonly INameResolver _nameResolver;
-        private readonly IConnectionStringProvider _connectionStringProvider;
+        private readonly IConfiguration _configuration;
         private readonly ILoggerFactory _loggerFactory;
-        private readonly ServiceBusOptions _serviceBusOptions;
+        private readonly ServiceBusOptions _options;
         private readonly MessagingProvider _messagingProvider;
 
         /// <summary>
         /// Creates a new <see cref="ServiceBusExtensionConfigProvider"/> instance.
         /// </summary>
-        /// <param name="serviceBusConfig">The <see cref="ServiceBusOptions"></see> to use./></param>
-        public ServiceBusExtensionConfigProvider(IOptions<ServiceBusOptions> serviceBusConfig,
+        /// <param name="options">The <see cref="ServiceBusOptions"></see> to use./></param>
+        public ServiceBusExtensionConfigProvider(IOptions<ServiceBusOptions> options,
             MessagingProvider messagingProvider,
             INameResolver nameResolver,
-            IConnectionStringProvider connectionStringProvider,
+            IConfiguration configuration,
             ILoggerFactory loggerFactory)
         {
-            _serviceBusOptions = serviceBusConfig.Value;
+            _options = options.Value;
             _messagingProvider = messagingProvider;
             _nameResolver = nameResolver;
-            _connectionStringProvider = connectionStringProvider;
+            _configuration = configuration;
             _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         }
 
@@ -51,7 +51,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
         {
             get
             {
-                return _serviceBusOptions;
+                return _options;
             }
         }
 
@@ -71,11 +71,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
             };
 
             // register our trigger binding provider
-            ServiceBusTriggerAttributeBindingProvider triggerBindingProvider = new ServiceBusTriggerAttributeBindingProvider(_nameResolver, _serviceBusOptions, _messagingProvider, _connectionStringProvider);
+            ServiceBusTriggerAttributeBindingProvider triggerBindingProvider = new ServiceBusTriggerAttributeBindingProvider(_nameResolver, _options, _messagingProvider, _configuration);
             context.AddBindingRule<ServiceBusTriggerAttribute>().BindToTrigger(triggerBindingProvider);
 
             // register our binding provider
-            ServiceBusAttributeBindingProvider bindingProvider = new ServiceBusAttributeBindingProvider(_nameResolver, _serviceBusOptions, _connectionStringProvider, _messagingProvider);
+            ServiceBusAttributeBindingProvider bindingProvider = new ServiceBusAttributeBindingProvider(_nameResolver, _options, _configuration, _messagingProvider);
             context.AddBindingRule<ServiceBusAttribute>().Bind(bindingProvider);
         }
 
