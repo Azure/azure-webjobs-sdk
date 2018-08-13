@@ -5,8 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
-using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.ServiceBus.Listeners;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -18,16 +18,17 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
         [Fact]
         public async Task CreateAsync_Success()
         {
-            var connectionStringProvider = TestHelpers.GetConnectionStringProvider();
-
+            var configuration = new ConfigurationBuilder()
+                .AddEnvironmentVariables()
+                .Build();
             var config = new ServiceBusOptions
             {
-                ConnectionString = connectionStringProvider.GetConnectionString(ConnectionStringNames.ServiceBus)
+                ConnectionString = configuration.GetWebJobsConnectionString("ServiceBus")
             };
 
             var messagingProvider = new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(config));
 
-            var account = new ServiceBusAccount(config, connectionStringProvider);
+            var account = new ServiceBusAccount(config, configuration);
             Mock<ITriggeredFunctionExecutor> mockExecutor = new Mock<ITriggeredFunctionExecutor>(MockBehavior.Strict);
             ServiceBusQueueListenerFactory factory = new ServiceBusQueueListenerFactory(account, "testqueue", mockExecutor.Object, config, messagingProvider);
 

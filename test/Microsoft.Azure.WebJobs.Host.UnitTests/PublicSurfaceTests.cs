@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
@@ -16,7 +17,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
     public class PublicSurfaceTests
     {
         [Fact]
-        public void AssemblyReferences_InJobsHostAssembly()
+        public void WebJobs_Host_VerifyAssemblyReferences()
         {
             var names = TestHelpers.GetAssemblyReferences(typeof(JobHost).Assembly);
 
@@ -30,7 +31,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
-        public void LoggingPublicSurface_LimitedToSpecificTypes()
+        public void WebJobs_Logging_VerifyPublicSurfaceArea()
         {
             var assembly = typeof(ILogWriter).Assembly;
 
@@ -61,13 +62,44 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
-        public void WebJobsHostPublicSurface_LimitedToSpecificTypes()
+        public void WebJobs_VerifyPublicSurfaceArea()
+        {
+            // The DLL containing the binding attributes should be truly minimal and have no extra dependencies. 
+            var assembly = typeof(AutoResolveAttribute).Assembly;
+
+            var expected = new[]
+            {
+                "AppSettingAttribute",
+                "AutoResolveAttribute",
+                "BinderExtensions",
+                "BindingAttribute",
+                "ConnectionProviderAttribute",
+                "DisableAttribute",
+                "ExtensionAttribute",
+                "FunctionNameAttribute",
+                "IAsyncCollector`1",
+                "IAttributeInvokeDescriptor`1",
+                "IBinder",
+                "ICollector`1",
+                "IConnectionProvider",
+                "NoAutomaticTriggerAttribute",
+                "SingletonAttribute",
+                "SingletonMode",
+                "SingletonScope",
+                "StorageAccountAttribute",
+                "TimeoutAttribute"
+            };
+
+            TestHelpers.AssertPublicTypes(expected, assembly);
+        }
+
+        [Fact]
+        public void WebJobs_Host_VerifyPublicSurfaceArea()
         {
             var assembly = typeof(Microsoft.Azure.WebJobs.JobHost).Assembly;
 
             var expected = new[]
             {
-                "AmbientConnectionStringProvider",
                 "ApplyConversion`2",
                 "AssemblyNameCache",
                 "Binder",
@@ -123,7 +155,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IBindingDataProvider",
                 "IBindingProvider",
                 "IBindingSource",
-                "IConnectionStringProvider",
                 "IConverter`2",
                 "IConverterManager",
                 "IConverterManagerExtensions",
@@ -214,13 +245,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "WebJobsServiceCollectionExtensions",
                 "WebJobsShutdownWatcher",
                 "WebJobsStartupAttribute",
+                "IConfigurationExtensions"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);
         }
 
         [Fact]
-        public void ApplicationInsightsPublicSurface_LimitedToSpecificTypes()
+        public void WebJobs_Logging_ApplicationInsights_VerifyPublicSurfaceArea()
         {
             var assembly = typeof(ApplicationInsightsLogger).Assembly;
 

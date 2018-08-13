@@ -5,6 +5,7 @@ namespace Microsoft.Azure.WebJobs.Host
 {
     internal static class Constants
     {
+        public const string WebJobsConfigurationSectionName = "AzureWebJobs";
         public const string EnvironmentSettingName = "AzureWebJobsEnv";
         public const string DevelopmentEnvironmentValue = "Development";
         public const string ExtensionInitializationMessage = "If you're using binding extensions (e.g. ServiceBus, Timers, etc.) make sure you've called the registration method for the extension(s) in your startup code (e.g. config.UseServiceBus(), config.UseTimers(), etc.).";

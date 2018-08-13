@@ -237,16 +237,6 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             return host.Services.GetService<IOptions<TOptions>>().Value;
         }
 
-        public static IConnectionStringProvider GetConnectionStringProvider()
-        {
-            IConfiguration config = new ConfigurationBuilder()
-                .AddEnvironmentVariables()
-                .Build();
-
-            return new AmbientConnectionStringProvider(config);
-        }
-
-
         public static IJobHostMetadataProvider CreateMetadataProvider(this IHost host)
         {
             return host.Services.GetService<IJobHostMetadataProvider>();

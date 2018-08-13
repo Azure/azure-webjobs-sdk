@@ -9,7 +9,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
     public class PublicSurfaceTests
     {
         [Fact]
-        public void ServiceBusPublicSurface_LimitedToSpecificTypes()
+        public void WebJobs_Extensions_ServiceBus_VerifyPublicSurfaceArea()
         {
             var assembly = typeof(ServiceBusAttribute).Assembly;
 

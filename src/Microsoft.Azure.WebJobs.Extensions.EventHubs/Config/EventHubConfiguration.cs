@@ -8,7 +8,7 @@ using System.Globalization;
 using System.Text;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.EventHubs.Processor;
-using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.EventHubs
@@ -40,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
         public const string LeaseContainerName = "azure-webjobs-eventhub";
 
         /// <summary>
-        /// default constructor. Callers can reference this without having any assembly references to service bus assemblies. 
+        /// default constructor. Callers can reference this without having any assembly references to eventhub assemblies. 
         /// </summary>
         public EventHubConfiguration()
             : this(null, null)
@@ -51,7 +51,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
         /// Constructs a new instance.
         /// </summary>
         /// <param name="options">The optional <see cref="EventProcessorOptions"/> to use when receiving events.</param>
-        public EventHubConfiguration(IConnectionStringProvider accountProvider, IOptions<EventProcessorOptions> options = null)
+        public EventHubConfiguration(IConfiguration configuration, IOptions<EventProcessorOptions> options = null)
         {
             _options = options?.Value;
             if (_options == null)
@@ -61,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
                 _options.PrefetchCount = _options.MaxBatchSize * 4;
             }
 
-            _defaultStorageString = accountProvider?.GetConnectionString("Storage"); // $$$ More robust way to get this?  IStorageAccountProvider is internal 
+            _defaultStorageString = configuration?.GetWebJobsConnectionString(ConnectionStringNames.Storage); 
         }
 
         /// <summary>

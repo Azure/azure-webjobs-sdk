@@ -16,9 +16,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
     public class PublicSurfaceTests
     {
         [Fact]
-        public void AssemblyReferences_InJobsAssembly()
+        public void WebJobs_Extensions_Storage_VerifyAssemblyReferences()
         {
-            // The DLL containing the binding attributes should be truly minimal and have no extra dependencies. 
             var names = TestHelpers.GetAssemblyReferences(typeof(QueueTriggerAttribute).Assembly)
                 .OrderBy(n => n);
 
@@ -26,13 +25,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
                 "Microsoft.Azure.WebJobs",
                 "Microsoft.Azure.WebJobs.Host",
+                "Microsoft.Extensions.Configuration.Abstractions",
                 "Microsoft.Extensions.DependencyInjection.Abstractions",
                 "Microsoft.Extensions.Logging.Abstractions",
                 "Microsoft.Extensions.Options",
                 "Microsoft.WindowsAzure.Storage",
                 "netstandard",
                 "Newtonsoft.Json",
-                "System.ComponentModel.Annotations",
+                "System.ComponentModel.Annotations"
             }.OrderBy(n => n);
 
             Assert.True(expectedReferences.SequenceEqual(names, StringComparer.Ordinal),
@@ -40,13 +40,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
-        public void WebJobsPublicSurface_LimitedToSpecificTypes()
+        public void WebJobs_Extensions_Storage_VerifyPublicSurfaceArea()
         {
             var assembly = typeof(QueueTriggerAttribute).Assembly;
 
             var expected = new[]
             {
-               "BlobAttribute",
+                "BlobAttribute",
                 "BlobNameValidationAttribute",
                 "BlobParameterDescriptor",
                 "BlobTriggerAttribute",

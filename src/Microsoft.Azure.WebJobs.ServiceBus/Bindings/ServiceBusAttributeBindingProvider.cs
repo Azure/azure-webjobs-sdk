@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
+using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 {
@@ -25,23 +26,31 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 
         private readonly INameResolver _nameResolver;
         private readonly ServiceBusOptions _options;
-        private readonly IConnectionStringProvider _connectionStringProvider;
+        private readonly IConfiguration _configuration;
         private readonly MessagingProvider _messagingProvider;
 
-        public ServiceBusAttributeBindingProvider(INameResolver nameResolver, ServiceBusOptions options, IConnectionStringProvider connectionStringProvider, MessagingProvider messagingProvider)
+        public ServiceBusAttributeBindingProvider(INameResolver nameResolver, ServiceBusOptions options, IConfiguration configuration, MessagingProvider messagingProvider)
         {
             if (nameResolver == null)
             {
-                throw new ArgumentNullException("nameResolver");
+                throw new ArgumentNullException(nameof(nameResolver));
+            }
+            if (configuration == null)
+            {
+                throw new ArgumentNullException(nameof(configuration));
             }
             if (options == null)
             {
-                throw new ArgumentNullException("config");
+                throw new ArgumentNullException(nameof(options));
+            }
+            if (messagingProvider == null)
+            {
+                throw new ArgumentNullException(nameof(messagingProvider));
             }
 
             _nameResolver = nameResolver;
             _options = options;
-            _connectionStringProvider = connectionStringProvider;
+            _configuration = configuration;
             _messagingProvider = messagingProvider;
         }
 
@@ -70,7 +79,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
                 throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Can't bind ServiceBus to type '{0}'.", parameter.ParameterType));
             }
 
-            ServiceBusAccount account = new ServiceBusAccount(_options, _connectionStringProvider, attribute);
+            ServiceBusAccount account = new ServiceBusAccount(_options, _configuration, attribute);
 
             IBinding binding = new ServiceBusBinding(parameter.Name, argumentBinding, account, _options, path, attribute, _messagingProvider);
             return Task.FromResult<IBinding>(binding);

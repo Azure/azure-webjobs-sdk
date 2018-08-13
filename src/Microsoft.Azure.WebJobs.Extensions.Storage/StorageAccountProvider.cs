@@ -1,16 +1,12 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage.Queue;
-using Microsoft.WindowsAzure.Storage.Table;
 using System;
-using System.Collections.Generic;
+using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Azure.WebJobs
-{    
+{
     /// <summary>
     /// Abstraction to provide storage accounts from the connection names. 
     /// This gets the storage account name via the binding attribute's <see cref="IConnectionProvider.Connection"/>
@@ -19,13 +15,11 @@ namespace Microsoft.Azure.WebJobs
     /// </summary>
     public class StorageAccountProvider
     {
-        private readonly IConnectionStringProvider _provider;
+        private readonly IConfiguration _configuration;
 
-        // $$$ This uses the IConnectionStringProvider  for backwards compat, but we really should 
-        // get rid of that and plumb it entirely through DI IConfiguration. 
-        public StorageAccountProvider(IConnectionStringProvider provider)
+        public StorageAccountProvider(IConfiguration configuration)
         {
-            _provider = provider;
+            _configuration = configuration;
         }
 
         public StorageAccount Get(string name, INameResolver resolver)
@@ -38,18 +32,18 @@ namespace Microsoft.Azure.WebJobs
         {
             if (string.IsNullOrWhiteSpace(name))
             {
-                name = "Storage"; // default
+                name = ConnectionStringNames.Storage; // default
             }
 
             // $$$ Where does validation happen? 
-            string cx = _provider.GetConnectionString(name);
-            if (cx == null)
+            string connectionString = _configuration.GetWebJobsConnectionString(name);
+            if (connectionString == null)
             {
                 // Not found
                 throw new InvalidOperationException($"Storage account '{name}' is not configured.");
             }
 
-            return StorageAccount.NewFromConnectionString(cx);
+            return StorageAccount.NewFromConnectionString(connectionString);
         }
 
         /// <summary>
