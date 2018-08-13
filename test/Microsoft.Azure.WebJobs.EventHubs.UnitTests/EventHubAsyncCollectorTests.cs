@@ -26,8 +26,8 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
         public EventData CreateEvent(byte[] body, string partitionKey)
         {
             var data = new EventData(body);
-            var sysProps = TestHelpers.New<SystemPropertiesCollection>();
-            TestHelpers.SetField(sysProps, "PartitionKey", partitionKey);
+            IDictionary<string, object> sysProps = TestHelpers.New<SystemPropertiesCollection>();
+            sysProps["x-opt-partition-key"] = partitionKey;
             TestHelpers.SetField(data, "SystemProperties", sysProps);
             return data;
         }

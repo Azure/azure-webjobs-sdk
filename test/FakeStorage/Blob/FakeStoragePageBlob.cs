@@ -618,12 +618,6 @@ namespace FakeStorage
             return base.UploadFromFileAsync(path, accessCondition, options, operationContext, cancellationToken);
         }
 
-        public override Task UploadFromFileAsync(string path, PremiumPageBlobTier? premiumBlobTier, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
-            // return base.UploadFromFileAsync(path, premiumBlobTier, accessCondition, options, operationContext, cancellationToken);
-        }
-
         public override Task UploadFromStreamAsync(Stream source)
         {
             return base.UploadFromStreamAsync(source);
