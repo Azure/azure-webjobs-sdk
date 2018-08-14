@@ -3,13 +3,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 
@@ -154,18 +152,25 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 }
             }
 
-            ApplyCustomScopeProperties(telemetry);
+            ApplyScopeProperties(telemetry);
 
             _telemetryClient.TrackMetric(telemetry);
         }
 
-        // Applies custom scope properties; does not apply 'system' used properties
-        private static void ApplyCustomScopeProperties(ISupportProperties telemetry)
+        // Applies scope properties; filters most system properties, which are used internally
+        private static void ApplyScopeProperties(ISupportProperties telemetry)
         {
-            var scopeProperties = DictionaryLoggerScope.GetMergedStateDictionary()
-                .Where(p => !SystemScopeKeys.Contains(p.Key, StringComparer.Ordinal));
+            var scopeProperties = DictionaryLoggerScope.GetMergedStateDictionary();
 
-            ApplyProperties(telemetry, scopeProperties, LogConstants.CustomPropertyPrefix);
+            var customScopeProperties = scopeProperties.Where(p => !SystemScopeKeys.Contains(p.Key, StringComparer.Ordinal));
+            ApplyProperties(telemetry, customScopeProperties, LogConstants.CustomPropertyPrefix);
+
+            // Set the invocation id, if there is one. Set it under the friendly key name.
+            string functionInvocationId = scopeProperties.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId);
+            if (!string.IsNullOrEmpty(functionInvocationId))
+            {
+                ApplyProperty(telemetry, LogConstants.InvocationIdKey, functionInvocationId);
+            }
         }
 
         private void LogException(LogLevel logLevel, IEnumerable<KeyValuePair<string, object>> values, Exception exception, string formattedMessage)
@@ -186,7 +191,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             }
 
             ApplyProperties(telemetry, values, LogConstants.CustomPropertyPrefix);
-            ApplyCustomScopeProperties(telemetry);
+            ApplyScopeProperties(telemetry);
             _telemetryClient.TrackException(telemetry);
         }
 
@@ -198,7 +203,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 Timestamp = DateTimeOffset.UtcNow
             };
             ApplyProperties(telemetry, values, LogConstants.CustomPropertyPrefix);
-            ApplyCustomScopeProperties(telemetry);
+            ApplyScopeProperties(telemetry);
             _telemetryClient.TrackTrace(telemetry);
         }
 
@@ -223,9 +228,37 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             }
         }
 
+        private static void ApplyProperty(ISupportProperties telemetry, string key, object value, string propertyPrefix = null)
+        {
+            // do not apply null values
+            if (value == null)
+            {
+                return;
+            }
+
+            string stringValue = null;
+
+            // Format dates
+            Type propertyType = value.GetType();
+            if (propertyType == typeof(DateTime))
+            {
+                stringValue = ((DateTime)value).ToUniversalTime().ToString(DateTimeFormatString);
+            }
+            else if (propertyType == typeof(DateTimeOffset))
+            {
+                stringValue = ((DateTimeOffset)value).UtcDateTime.ToString(DateTimeFormatString);
+            }
+            else
+            {
+                stringValue = value.ToString();
+            }
+
+            telemetry.Properties.Add($"{propertyPrefix}{key}", stringValue);
+        }
+
         private static void ApplyProperty(ISupportProperties telemetry, KeyValuePair<string, object> value, string propertyPrefix = null)
         {
-            ApplyProperties(telemetry, new[] { value }, propertyPrefix);
+            ApplyProperty(telemetry, value.Key, value.Value, propertyPrefix);
         }
 
         // Inserts properties into the telemetry's properties. Properly formats dates, removes nulls, applies prefix, etc.
@@ -233,30 +266,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         {
             foreach (var property in values)
             {
-                string stringValue = null;
-
-                // drop null properties
-                if (property.Value == null)
-                {
-                    continue;
-                }
-
-                // Format dates
-                Type propertyType = property.Value.GetType();
-                if (propertyType == typeof(DateTime))
-                {
-                    stringValue = ((DateTime)property.Value).ToUniversalTime().ToString(DateTimeFormatString);
-                }
-                else if (propertyType == typeof(DateTimeOffset))
-                {
-                    stringValue = ((DateTimeOffset)property.Value).UtcDateTime.ToString(DateTimeFormatString);
-                }
-                else
-                {
-                    stringValue = property.Value.ToString();
-                }
-
-                telemetry.Properties.Add($"{propertyPrefix}{property.Key}", stringValue);
+                ApplyProperty(telemetry, property.Key, property.Value, propertyPrefix);
             }
         }
 
