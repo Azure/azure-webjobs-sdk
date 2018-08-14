@@ -235,8 +235,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 }
                 Assert.Equal(expectedSeverityLevel, telemetry.SeverityLevel);
 
+                Assert.Equal(4, telemetry.Properties.Count);
                 Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
                 Assert.Equal(telemetry.Message, telemetry.Properties[LogConstants.CustomPropertyPrefix + LogConstants.OriginalFormatKey]);
+                Assert.Equal(scopeGuid.ToString(), telemetry.Properties[LogConstants.InvocationIdKey]);
+                Assert.Equal(telemetry.Message, telemetry.Properties[LogConstants.LogLevelKey]);
+
                 Assert.Equal(expectedRequestId, telemetry.Context.Operation.ParentId);
                 Assert.Equal(expectedOperationId, telemetry.Context.Operation.Id);
                 Assert.Equal(_functionShortName, telemetry.Context.Operation.Name);
@@ -280,17 +284,29 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 expectedOperationId = Activity.Current.RootId;
             }
 
+            void ValidateProperties(ISupportProperties telemetry)
+            {
+                Assert.Equal(scopeGuid.ToString(), telemetry.Properties[LogConstants.InvocationIdKey]);
+                Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
+                Assert.Equal(LogLevel.Error.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
+                Assert.Equal("Error with customer: {customer}.", telemetry.Properties[LogConstants.CustomPropertyPrefix + LogConstants.OriginalFormatKey]);
+                Assert.Equal("John Doe", telemetry.Properties[LogConstants.CustomPropertyPrefix + "customer"]);
+            }
+
             Assert.Equal(2, _channel.Telemetries.Count());
             var exceptionTelemetry = _channel.Telemetries.OfType<ExceptionTelemetry>().Single();
             var traceTelemetry = _channel.Telemetries.OfType<TraceTelemetry>().Single();
 
             Assert.Equal(SeverityLevel.Error, exceptionTelemetry.SeverityLevel);
 
-            Assert.Equal(_functionCategoryName, exceptionTelemetry.Properties[LogConstants.CategoryNameKey]);
-            Assert.Equal(LogLevel.Error.ToString(), exceptionTelemetry.Properties[LogConstants.LogLevelKey]);
-            Assert.Equal("Error with customer: {customer}.", exceptionTelemetry.Properties[LogConstants.CustomPropertyPrefix + LogConstants.OriginalFormatKey]);
+            // verify the properties for the telemetries
+            Assert.Equal(6, exceptionTelemetry.Properties.Count);
+            Assert.Equal(5, traceTelemetry.Properties.Count);
+            ValidateProperties(exceptionTelemetry);
+            ValidateProperties(traceTelemetry);
+            // We add the formatted message as a property for exceptions
             Assert.Equal("Error with customer: John Doe.", exceptionTelemetry.Properties[LogConstants.FormattedMessageKey]);
-            Assert.Equal("John Doe", exceptionTelemetry.Properties[LogConstants.CustomPropertyPrefix + "customer"]);
+
             Assert.Same(ex, exceptionTelemetry.Exception);
             Assert.Equal(expectedOperationId, exceptionTelemetry.Context.Operation.Id);
             Assert.Equal(expectedRequestId, exceptionTelemetry.Context.Operation.ParentId);
@@ -320,7 +336,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             var telemetry = _channel.Telemetries.Single() as MetricTelemetry;
 
-            Assert.Equal(3, telemetry.Properties.Count);
+            Assert.Equal(4, telemetry.Properties.Count);
+            Assert.Equal(scopeGuid.ToString(), telemetry.Properties[LogConstants.InvocationIdKey]);
             Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
 
@@ -393,7 +410,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             var telemetry = _channel.Telemetries.Single() as MetricTelemetry;
 
-            Assert.Equal(5, telemetry.Properties.Count);
+            Assert.Equal(6, telemetry.Properties.Count);
+            Assert.Equal(scopeGuid.ToString(), telemetry.Properties[LogConstants.InvocationIdKey]);
             Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
             Assert.Equal("abc", telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}MyCustomProp1"]);
@@ -440,7 +458,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             var telemetry = _channel.Telemetries.Single() as MetricTelemetry;
 
-            Assert.Equal(5, telemetry.Properties.Count);
+            Assert.Equal(6, telemetry.Properties.Count);
+            Assert.Equal(scopeGuid.ToString(), telemetry.Properties[LogConstants.InvocationIdKey]);
             Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
             Assert.Equal("abc", telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}MyCustomProp1"]);

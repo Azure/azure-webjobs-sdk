@@ -99,6 +99,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     .Single();
                 ValidateRequest(request, testName, true);
 
+                // invocation id is retrievable from the request
+                request.Properties.TryGetValue(LogConstants.InvocationIdKey, out string invocationId);
+
                 // Validate the traces. Order by message string as the requests may come in
                 // slightly out-of-order or on different threads
                 TraceTelemetry[] telemetries = _channel.Telemetries
@@ -109,15 +112,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string expectedFunctionCategory = LogCategories.CreateFunctionCategory(testName);
                 string expectedFunctionUserCategory = LogCategories.CreateFunctionUserCategory(testName);
 
-                ValidateTrace(telemetries[0], "Executed ", expectedFunctionCategory, testName);
-                ValidateTrace(telemetries[1], "Executing ", expectedFunctionCategory, testName, request.Context.Operation.Id, request.Id);
+                ValidateTrace(telemetries[0], "Executed ", expectedFunctionCategory, testName, invocationId);
+                ValidateTrace(telemetries[1], "Executing ", expectedFunctionCategory, testName, invocationId, request.Context.Operation.Id, request.Id);
                 ValidateTrace(telemetries[2], "Found the following functions:\r\n", LogCategories.Startup);
                 ValidateTrace(telemetries[3], "Job host started", LogCategories.Startup);
                 ValidateTrace(telemetries[4], "Job host stopped", LogCategories.Startup);
-                ValidateTrace(telemetries[5], "Logger", expectedFunctionUserCategory, testName, request.Context.Operation.Id, request.Id, hasCustomScope: true);
+                ValidateTrace(telemetries[5], "Logger", expectedFunctionUserCategory, testName, invocationId, request.Context.Operation.Id, request.Id, hasCustomScope: true);
                 ValidateTrace(telemetries[6], "Starting JobHost", "Microsoft.Azure.WebJobs.Hosting.JobHostService");
                 ValidateTrace(telemetries[7], "Stopping JobHost", "Microsoft.Azure.WebJobs.Hosting.JobHostService");
-                ValidateTrace(telemetries[8], "Trace", expectedFunctionUserCategory, testName, request.Context.Operation.Id, request.Id);
+                ValidateTrace(telemetries[8], "Trace", expectedFunctionUserCategory, testName, invocationId, request.Context.Operation.Id, request.Id);
 
                 // We should have 1 custom metric.
                 MetricTelemetry metric = _channel.Telemetries
@@ -147,6 +150,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     .Single();
                 ValidateRequest(request, testName, false);
 
+                // invocation id is retrievable from the request
+                request.Properties.TryGetValue(LogConstants.InvocationIdKey, out string invocationId);
+
                 // Validate the traces. Order by message string as the requests may come in
                 // slightly out-of-order or on different threads
                 TraceTelemetry[] telemetries = _channel.Telemetries
@@ -157,18 +163,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string expectedFunctionCategory = LogCategories.CreateFunctionCategory(testName);
                 string expectedFunctionUserCategory = LogCategories.CreateFunctionUserCategory(testName);
 
-                ValidateTrace(telemetries[0], "Error", expectedFunctionUserCategory, testName, request.Context.Operation.Id, request.Id,
-                    expectedLogLevel: LogLevel.Error);
-                ValidateTrace(telemetries[1], "Executed", expectedFunctionCategory, testName,
-                    expectedLogLevel: LogLevel.Error);
-                ValidateTrace(telemetries[2], "Executing", expectedFunctionCategory, testName, request.Context.Operation.Id, request.Id);
+                ValidateTrace(telemetries[0], "Error", expectedFunctionUserCategory, testName, invocationId, request.Context.Operation.Id, request.Id, expectedLogLevel: LogLevel.Error);
+                ValidateTrace(telemetries[1], "Executed", expectedFunctionCategory, testName, invocationId, expectedLogLevel: LogLevel.Error);
+                ValidateTrace(telemetries[2], "Executing", expectedFunctionCategory, testName, invocationId, request.Context.Operation.Id, request.Id);
                 ValidateTrace(telemetries[3], "Found the following functions:\r\n", LogCategories.Startup);
                 ValidateTrace(telemetries[4], "Job host started", LogCategories.Startup);
                 ValidateTrace(telemetries[5], "Job host stopped", LogCategories.Startup);
-                ValidateTrace(telemetries[6], "Logger", expectedFunctionUserCategory, testName, request.Context.Operation.Id, request.Id, hasCustomScope: true);
+                ValidateTrace(telemetries[6], "Logger", expectedFunctionUserCategory, testName, invocationId, request.Context.Operation.Id, request.Id, hasCustomScope: true);
                 ValidateTrace(telemetries[7], "Starting JobHost", "Microsoft.Azure.WebJobs.Hosting.JobHostService");
                 ValidateTrace(telemetries[8], "Stopping JobHost", "Microsoft.Azure.WebJobs.Hosting.JobHostService");
-                ValidateTrace(telemetries[9], "Trace", expectedFunctionUserCategory, testName, request.Context.Operation.Id, request.Id);
+                ValidateTrace(telemetries[9], "Trace", expectedFunctionUserCategory, testName, invocationId, request.Context.Operation.Id, request.Id);
 
                 // Validate the exception
                 ExceptionTelemetry[] exceptions = _channel.Telemetries
@@ -533,8 +537,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         private static void ValidateTrace(TraceTelemetry telemetry, string expectedMessageStartsWith, string expectedCategory,
-            string expectedOperationName = null, string expectedOperationId = null, string expectedParentId = null,
-            bool hasCustomScope = false, LogLevel expectedLogLevel = LogLevel.Information)
+            string expectedOperationName = null, string expectedInvocationId = null, string expectedOperationId = null,
+            string expectedParentId = null, bool hasCustomScope = false, LogLevel expectedLogLevel = LogLevel.Information)
         {
             Assert.StartsWith(expectedMessageStartsWith, telemetry.Message);
             Assert.Equal(GetSeverityLevel(expectedLogLevel), telemetry.SeverityLevel);
@@ -553,12 +557,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.Equal(expectedOperationName, telemetry.Context.Operation.Name);
                 Assert.Equal(expectedOperationId, telemetry.Context.Operation.Id);
                 Assert.Equal(expectedParentId, telemetry.Context.Operation.ParentId);
+
+                Assert.True(telemetry.Properties.TryGetValue(LogConstants.InvocationIdKey, out string id));
+                Assert.Equal(expectedInvocationId, id);
             }
             else
             {
                 Assert.Null(telemetry.Context.Operation.Name);
                 Assert.Null(telemetry.Context.Operation.Id);
                 Assert.Null(telemetry.Context.Operation.ParentId);
+                Assert.False(telemetry.Properties.TryGetValue(LogConstants.InvocationIdKey, out string unused));
             }
 
             ValidateSdkVersion(telemetry);
@@ -630,6 +638,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.Equal(operationName, telemetry.Context.Operation.Name);
             Assert.NotNull(telemetry.Duration);
             Assert.Equal(success, telemetry.Success);
+
+            Assert.NotNull(telemetry.Properties[LogConstants.InvocationIdKey]);
 
             Assert.Equal($"ApplicationInsightsEndToEndTests.{operationName}", telemetry.Properties[LogConstants.FullNameKey]);
             Assert.Equal("This function was programmatically called via the host APIs.", telemetry.Properties[LogConstants.TriggerReasonKey]);
