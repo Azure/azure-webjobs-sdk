@@ -40,11 +40,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private const string _customScopeKey = "MyCustomScopeKey";
         private const string _customScopeValue = "MyCustomScopeValue";
 
-        private const string _dateFormat = "HH':'mm':'ss'.'fffK";
+        private const string _dateFormat = "HH':'mm':'ss'.'fffZ";
 
         private IHost ConfigureHost(LogLevel minLevel = LogLevel.Information)
         {
-            var host = new HostBuilder()
+            IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost<ApplicationInsightsEndToEndTests>()
                 .ConfigureServices(services =>
                 {
@@ -60,7 +60,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 })
                 .ConfigureServices(services =>
                 {
-                    var quickPulse = services.Single(s => s.ImplementationType == typeof(QuickPulseTelemetryModule));
+                    ServiceDescriptor quickPulse = services.Single(s => s.ImplementationType == typeof(QuickPulseTelemetryModule));
                     services.Remove(quickPulse);
                     services.AddSingleton<ITelemetryModule, QuickPulseTelemetryModule>(s =>
                     {
@@ -70,7 +70,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         };
                     });
 
-                    var channel = services.Single(s => s.ServiceType == typeof(ITelemetryChannel));
+                    ServiceDescriptor channel = services.Single(s => s.ServiceType == typeof(ITelemetryChannel));
                     services.Remove(channel);
                     services.AddSingleton<ITelemetryChannel>(_channel);
                 })
@@ -87,7 +87,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             using (IHost host = ConfigureHost())
             {
                 await host.StartAsync();
-                var methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+                MethodInfo methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
                 await host.GetJobHost().CallAsync(methodInfo, new { input = "function input" });
                 await host.StopAsync();
 
@@ -138,7 +138,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             using (IHost host = ConfigureHost())
             {
                 await host.StartAsync();
-                var methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+                MethodInfo methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
                 await Assert.ThrowsAsync<FunctionInvocationException>(() => host.GetJobHost().CallAsync(methodInfo, new { input = "function input" }));
                 await host.StopAsync();
 
@@ -192,10 +192,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [InlineData(LogLevel.Warning, 2, 0)] // 2x warning trace per request
         public async Task QuickPulse_Works_EvenIfFiltered(LogLevel defaultLevel, int tracesPerRequest, int additionalTraces)
         {
-            using (var qpListener = new QuickPulseEventListener())
+            using (QuickPulseEventListener qpListener = new QuickPulseEventListener())
             using (IHost host = ConfigureHost(defaultLevel))
             {
-                var listener = new ApplicationInsightsTestListener();
+                ApplicationInsightsTestListener listener = new ApplicationInsightsTestListener();
                 int functionsCalled = 0;
                 bool keepRunning = true;
                 Task functionTask = null;
@@ -208,8 +208,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     {
                         await host.StartAsync();
 
-                        var methodInfo = GetType().GetMethod(nameof(TestApplicationInsightsWarning),
-                            BindingFlags.Public | BindingFlags.Static);
+                        await TestHelpers.Await(() => listener.IsReady);
+
+                        MethodInfo methodInfo = GetType().GetMethod(nameof(TestApplicationInsightsWarning), BindingFlags.Public | BindingFlags.Static);
 
                         // Start a task to make calls in a loop.
                         functionTask = Task.Run(async () =>
@@ -227,7 +228,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         await TestHelpers.Await(() =>
                         {
                             // Sum up all req/sec calls that we've received.
-                            var reqPerSec = listener.GetQuickPulseItems()
+                            IEnumerable<QuickPulseMetric> reqPerSec = listener.GetQuickPulseItems()
                                .Select(p => p.Metrics.Where(q => q.Name == @"\ApplicationInsights\Requests/Sec").Single());
                             sum = reqPerSec.Sum(p => p.Value);
 
@@ -237,8 +238,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         }, timeout: 5000,
                         userMessageCallback: () =>
                         {
-                            var items = listener.GetQuickPulseItems().OrderBy(i => i.Timestamp).Take(10);
-                            var s = items.Select(i => $"[{i.Timestamp.ToString(_dateFormat)}] {i.Metrics.Single(p => p.Name == @"\ApplicationInsights\Requests/Sec")}");
+                            IEnumerable<QuickPulsePayload> items = listener.GetQuickPulseItems().OrderBy(i => i.Timestamp).Take(10);
+                            IEnumerable<string> s = items.Select(i => $"[{i.Timestamp.ToString(_dateFormat)}] {i.Metrics.Single(p => p.Name == @"\ApplicationInsights\Requests/Sec")}");
                             return $"Actual QuickPulse sum: '{sum}'. DefaultLevel: '{defaultLevel}'.{Environment.NewLine}QuickPulse items ({items.Count()}): {string.Join(Environment.NewLine, s)}{Environment.NewLine}QuickPulse Logs:{qpListener.GetLog(20)}{Environment.NewLine}Logs: {host.GetTestLoggerProvider().GetLogString()}";
                         });
                     }
@@ -252,8 +253,22 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     listener.Dispose();
                 }
 
+                string failureString = string.Join(Environment.NewLine, _channel.Telemetries.Select(t =>
+                {
+                    string timestamp = $"[{t.Timestamp.ToString(_dateFormat)}] ";
+                    switch (t)
+                    {
+                        case TraceTelemetry trace:
+                            return timestamp + $"[Trace] {trace.Message}";
+                        case RequestTelemetry request:
+                            return timestamp + $"[Request] {request.Name}: {request.Success}";
+                        default:
+                            return timestamp + $"[{t.GetType().Name}]";
+                    }
+                }));
+
                 int expectedTelemetryItems = additionalTraces + (functionsCalled * tracesPerRequest);
-                Assert.Equal(expectedTelemetryItems, _channel.Telemetries.Count);
+                Assert.True(_channel.Telemetries.Count == expectedTelemetryItems, failureString);
             }
         }
 
@@ -264,7 +279,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             using (IHost host = ConfigureHost())
             {
                 await host.StartAsync();
-                var methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+                MethodInfo methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
                 await host.GetJobHost().CallAsync(methodInfo, null);
                 await host.StopAsync();
 
@@ -285,14 +300,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             string testName = nameof(TestApplicationInsightsInformation);
             using (IHost host = ConfigureHost())
             {
-                var telemetryClient = host.Services.GetService<TelemetryClient>();
+                TelemetryClient telemetryClient = host.Services.GetService<TelemetryClient>();
                 await host.StartAsync();
-                var methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+                MethodInfo methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
 
                 RequestTelemetry outerRequest = null;
 
                 // simulate auto tracked HTTP incoming call
-                using (var operation = telemetryClient.StartOperation<RequestTelemetry>("GET /"))
+                using (IOperationHolder<RequestTelemetry> operation = telemetryClient.StartOperation<RequestTelemetry>("GET /"))
                 {
                     outerRequest = operation.Telemetry;
                     outerRequest.Success = true;
@@ -365,7 +380,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [NoAutomaticTrigger]
         public static void TestApplicationInsightsExplicitCall(ILogger logger)
         {
-            var telemetryClient = new TelemetryClient(); // use TelemetryConfiguration.Active
+            TelemetryClient telemetryClient = new TelemetryClient(); // use TelemetryConfiguration.Active
             telemetryClient.TrackEvent("custom event");
         }
 
@@ -397,6 +412,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             private readonly HttpListener _applicationInsightsListener = new HttpListener();
             private Task _listenTask;
+            private int _posts;
 
             private readonly ConcurrentQueue<QuickPulsePayload> _quickPulseItems = new ConcurrentQueue<QuickPulsePayload>();
 
@@ -406,6 +422,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 return _quickPulseItems.ToList();
             }
+
+            // Make sure collection has started.
+            public bool IsReady => _posts >= 2;
 
             public void StartListening()
             {
@@ -451,8 +470,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             private void ProcessRequest(HttpListenerContext context)
             {
-                var request = context.Request;
-                var response = context.Response;
+                HttpListenerRequest request = context.Request;
+                HttpListenerResponse response = context.Response;
 
                 try
                 {
@@ -479,10 +498,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 if (request.Url.LocalPath == "/QuickPulseService.svc/post")
                 {
                     QuickPulsePayload[] quickPulse = JsonConvert.DeserializeObject<QuickPulsePayload[]>(result);
-                    foreach (var i in quickPulse)
+                    foreach (QuickPulsePayload i in quickPulse)
                     {
                         _quickPulseItems.Enqueue(i);
                     }
+                    _posts++;
                 }
             }
 
@@ -491,10 +511,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string result = null;
                 if (request.HasEntityBody)
                 {
-                    using (var requestInputStream = request.InputStream)
+                    using (Stream requestInputStream = request.InputStream)
                     {
-                        var encoding = request.ContentEncoding;
-                        using (var reader = new StreamReader(requestInputStream, encoding))
+                        Encoding encoding = request.ContentEncoding;
+                        using (StreamReader reader = new StreamReader(requestInputStream, encoding))
                         {
                             result = reader.ReadToEnd();
                         }
@@ -505,13 +525,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             private static string Decompress(string content)
             {
-                var zippedData = Encoding.Default.GetBytes(content);
-                using (var ms = new MemoryStream(zippedData))
+                byte[] zippedData = Encoding.Default.GetBytes(content);
+                using (MemoryStream ms = new MemoryStream(zippedData))
                 {
-                    using (var compressedzipStream = new GZipStream(ms, CompressionMode.Decompress))
+                    using (GZipStream compressedzipStream = new GZipStream(ms, CompressionMode.Decompress))
                     {
-                        var outputStream = new MemoryStream();
-                        var block = new byte[1024];
+                        MemoryStream outputStream = new MemoryStream();
+                        byte[] block = new byte[1024];
                         while (true)
                         {
                             int bytesRead = compressedzipStream.Read(block, 0, block.Length);
@@ -694,7 +714,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             protected override void OnEventWritten(EventWrittenEventArgs eventData)
             {
-                var trimmedData = eventData.Payload.ToList();
+                List<object> trimmedData = eventData.Payload.ToList();
                 trimmedData.RemoveAt(trimmedData.Count - 1);
 
                 string log = string.Format(eventData.Message, trimmedData.ToArray());
