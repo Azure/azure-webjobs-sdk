@@ -3,14 +3,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.Azure.WebJobs.Host.Bindings.Path;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Xunit;
-using Xunit.Extensions;
 using Newtonsoft.Json.Linq;
-using System.Globalization;
+using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Path
 {
@@ -45,7 +44,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Path
             Assert.Equal(expectedName, namedParams["name"]);
             Assert.Equal("txt", namedParams["extension"]);
         }
-        
+
         [Fact]
         public void CreateBindingData_IfExtensionLongest_WorksMultiple()
         {
@@ -109,7 +108,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Path
         {
             BindingTemplate template = BindingTemplate.FromString(@"{p1}-p2/{{2014}}/{d3}/folder/{name}.{ext}");
 
-            var parameters = new Dictionary<string, object> {{ "p1", "container" }, { "d3", "path/to" }, 
+            var parameters = new Dictionary<string, object> {{ "p1", "container" }, { "d3", "path/to" },
                 { "name", "file.1" }, { "ext", "txt" }};
 
             string resolvedText = template.Bind(parameters);
@@ -177,7 +176,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Path
             };
 
             BindingTemplate template = BindingTemplate.FromString(templateSource);
-            
+
             if (error != null)
             {
                 ExceptionAssert.ThrowsInvalidOperation(() => template.Bind(parameters),
@@ -200,7 +199,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Path
             };
 
             var parameters = new Dictionary<string, object> {
-                { "a", obj }                
+                { "a", obj }
             };
 
             var templateSource = "{a.p1}";
@@ -253,7 +252,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Path
                     b2 = 789
                 }}
             };
-                        
+
             string result = template.Bind(parameters1);
             Assert.Equal(@"container/first", result);
 
@@ -335,7 +334,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Path
             foreach (var format in new string[] { "N", "D", "B", "P", "X", "" })
             {
 
-                BindingTemplate template = BindingTemplate.FromString(@"{g:" + format + "}");       
+                BindingTemplate template = BindingTemplate.FromString(@"{g:" + format + "}");
 
                 string expected = g.ToString(format, CultureInfo.InvariantCulture);
                 string result = template.Bind(parameters);
@@ -360,7 +359,36 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Path
             string expected = dt.ToString(format, CultureInfo.InvariantCulture);
             string result = template.Bind(parameters);
 
-            Assert.Equal(expected, result);            
+            Assert.Equal(expected, result);
+        }
+
+        [Fact]
+        public void ResolveToken()
+        {
+            // Use same binding expression with different binding data inputs and it resolves dynamically.            
+            var parameters1 = new Dictionary<string, object> {
+                { "a", new {
+                    b = new {
+                        c = "first"
+                    }
+                }}
+            };
+
+            var parameters2 = new Dictionary<string, object> {
+                { "a", new {
+                    b = new {
+                        c = 123,
+                        d = 456
+                    },
+                    b2 = 789
+                }}
+            };
+
+            string result1 = BindingTemplate.ResolveToken("a.b.c", parameters1);
+            Assert.Equal("first", result1);
+
+            string result2 = BindingTemplate.ResolveToken("a.b.c", parameters2);
+            Assert.Equal("123", result2);
         }
     }
 }

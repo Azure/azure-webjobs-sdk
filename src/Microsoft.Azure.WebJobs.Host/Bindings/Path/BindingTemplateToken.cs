@@ -1,13 +1,11 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+
 using System;
 using System.Collections.Generic;
-using System.Dynamic;
 using System.Globalization;
-using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json.Linq;
@@ -22,9 +20,15 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
     /// </summary>
     internal abstract class BindingTemplateToken
     {
-        // If this is expression, get the prameter name 
+        // Returns the first part of the parameter name as specified in the token. A token of
+        // "a.b.c" will return "a" for this property.
         // If it's a literal, return null.
         public abstract string ParameterName { get; }
+
+        // Returns the token string as specified in the input string. A token of 
+        // "a.b.c" will return "a.b.c" for this property.
+        // If it's a literal, return null.
+        public abstract string TokenString { get; }
 
         // If this is a literal, return the value. Else, return null.
         public abstract string AsLiteral { get; }
@@ -77,7 +81,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
                 }
             }
 
-            return new ExpressionToken(parts, format, builtin);            
+            return new ExpressionToken(parts, format, builtin);
         }
 
         public abstract string Evaluate(IReadOnlyDictionary<string, object> bindingData);
@@ -118,15 +122,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
             }
 
             public override string AsLiteral => _value;
-            
-            public override string ParameterName
-            {
-                get
-                {
-                    return null;
-                }
-            }
-            
+
+            public override string ParameterName => null;
+
+            public override string TokenString => null;
+
             public override string Evaluate(IReadOnlyDictionary<string, object> bindingData)
             {
                 return _value;
@@ -158,14 +158,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
             }
 
             public override string AsLiteral => null;
-            
-            public override string ParameterName
-            {
-                get
-                {
-                    return this._expressionParts[0];
-                }
-            }
+
+            public override string ParameterName => _expressionParts[0];
+
+            public override string TokenString => string.Join(".", _expressionParts);
 
             protected override void BuildCapturePattern(StringBuilder builder)
             {
@@ -287,7 +283,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
                 {
                     return result;
                 }
-                
+
                 {
                     var prop = scope.GetProperty(member, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
                     if (prop == null)
@@ -302,6 +298,6 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
                     return prop.GetValue(o, null);
                 }
             }
-        }      
+        }
     }
 }

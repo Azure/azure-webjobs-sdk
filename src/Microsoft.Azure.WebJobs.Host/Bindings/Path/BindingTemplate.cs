@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
 using System.Text;
 
@@ -54,21 +53,35 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
         /// <summary>
         /// Gets the collection of parameter names this pattern applies to.
         /// </summary>
-        public IEnumerable<string> ParameterNames
-        {
-            get
-            {
-                return from p in Tokens
-                       let name = p.ParameterName
-                       where name != null
-                       select name;
-            }
-        }
+        public IEnumerable<string> ParameterNames => Tokens.Where(p => p.ParameterName != null).Select(p => p.ParameterName);
+
+        /// <summary>
+        /// Gets the collection of token strings in the pattern.
+        /// </summary>
+        public IEnumerable<string> TokenStrings => Tokens.Where(p => p.TokenString != null).Select(p => p.TokenString);
 
         /// <summary>
         /// True if this expression has parameters. 
         /// </summary>
         public bool HasParameters => ParameterNames.Any();
+
+        /// <summary>
+        /// A utility for resolving individual tokens against binding data.
+        /// </summary>
+        /// <param name="token">A token string to resolve from the binding data. For example, "a.b.c".</param>
+        /// <param name="bindingData">The binding data to resolve the parameter against.</param>
+        /// <returns>The resolved parameter.</returns>
+        public static string ResolveToken(string token, IReadOnlyDictionary<string, object> bindingData)
+        {
+            BindingTemplateToken templateToken = BindingTemplateParser.ParseTemplate($"{{{token}}}").SingleOrDefault();
+
+            if (templateToken == null)
+            {
+                throw new InvalidOperationException("Expected exactly one token in the input string.");
+            }
+
+            return templateToken.Evaluate(bindingData);
+        }
 
         /// <summary>
         /// A factory method to parse input template string and construct a binding template instance using
@@ -134,7 +147,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
                 {
                     adapter[kv.Key] = kv.Value;
                 }
-            }            
+            }
 
             return Bind(adapter);
         }
