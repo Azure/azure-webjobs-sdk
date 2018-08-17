@@ -87,16 +87,10 @@ namespace FakeStorage
 
         public static BlobResultSegment NewBlobResultSegment(
             BlobContinuationToken continuationToken,
-            IEnumerable<ICloudBlob> results
-            )
+            IEnumerable<ICloudBlob> results)
         {
-            // Ctor is private. 
             IEnumerable<IListBlobItem> l = results;
-
-            var ctor = typeof(BlobResultSegment).GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] {
-                typeof(IEnumerable<IListBlobItem>), typeof(BlobContinuationToken)
-            }, null);
-            var result = (BlobResultSegment)ctor.Invoke(new object[] { results, continuationToken });
+            var result = new BlobResultSegment(results, continuationToken );
             return result;
         }
 
