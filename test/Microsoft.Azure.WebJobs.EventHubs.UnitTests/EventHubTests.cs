@@ -3,8 +3,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.EventHubs.Processor;
 using Microsoft.Azure.WebJobs.Host;
@@ -69,11 +71,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
         public void GetBindingData_SingleDispatch_ReturnsExpectedValue()
         {
             var evt = new EventData(new byte[] { });
-            var sysProps = TestHelpers.New<SystemPropertiesCollection>();
-            TestHelpers.SetField(sysProps, "PartitionKey", "TestKey");
-            TestHelpers.SetField(sysProps, "SequenceNumber", 1);
-            TestHelpers.SetField(sysProps, "Offset", "offset");
-            TestHelpers.SetField(sysProps, "EnqueuedTimeUtc", DateTime.MinValue);
+            IDictionary<string, object> sysProps = GetSystemProperties();
 
             TestHelpers.SetField(evt, "SystemProperties", sysProps);
 
@@ -90,17 +88,32 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             Assert.Equal(evt.SystemProperties.SequenceNumber, bindingData["SequenceNumber"]);
             Assert.Equal(evt.SystemProperties.EnqueuedTimeUtc, bindingData["EnqueuedTimeUtc"]);
             Assert.Same(evt.Properties, bindingData["Properties"]);
-            var sysDict = bindingData["SystemProperties"] as IDictionary<string, object>;
-            Assert.NotNull(sysDict);
-            Assert.Equal(evt.SystemProperties.PartitionKey, sysDict["PartitionKey"]);
-            Assert.Equal(evt.SystemProperties.Offset, sysDict["Offset"]);
-            Assert.Equal(evt.SystemProperties.SequenceNumber, sysDict["SequenceNumber"]);
-            Assert.Equal(evt.SystemProperties.EnqueuedTimeUtc, sysDict["EnqueuedTimeUtc"]);
+            var bindingDataSysProps = bindingData["SystemProperties"] as IDictionary<string, object>;
+            Assert.NotNull(bindingDataSysProps);
+            Assert.True(CompareSystemProperties(bindingDataSysProps, sysProps));
+        }
+
+        private static IDictionary<string, object> GetSystemProperties(string partitionKey = "TestKey")
+        {
+            long testSequence = 4294967296;
+            IDictionary<string, object> sysProps = TestHelpers.New<SystemPropertiesCollection>();
+            sysProps["x-opt-partition-key"] = partitionKey;
+            sysProps["x-opt-offset"] = "TestOffset";
+            sysProps["x-opt-enqueued-time"] = DateTime.MinValue;
+            sysProps["x-opt-sequence-number"] = testSequence;
+            return sysProps;
+        }
+
+        private static bool CompareSystemProperties(IDictionary<string, object> actualProperties, IDictionary<string, object> expectedProperties)
+        {
+           return actualProperties.Keys.Count == expectedProperties.Keys.Count &&
+                   actualProperties.Keys.All(k => expectedProperties.ContainsKey(k) && object.Equals(actualProperties[k], expectedProperties[k]));
         }
 
         [Fact]
         public void GetBindingData_MultipleDispatch_ReturnsExpectedValue()
         {
+
             var events = new EventData[3]
             {
                 new EventData(Encoding.UTF8.GetBytes("Event 1")),
@@ -111,8 +124,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             var count = 0;
             foreach (var evt in events)
             {
-                var sysProps = TestHelpers.New<SystemPropertiesCollection>();
-                TestHelpers.SetField(sysProps, "PartitionKey", $"pk{count++}");
+                IDictionary<string, object> sysProps = GetSystemProperties($"pk{count++}");
                 TestHelpers.SetField(evt, "SystemProperties", sysProps);
             }
 
@@ -250,9 +262,9 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             var constructor = typeof(PartitionContext).GetConstructor(
                 BindingFlags.NonPublic | BindingFlags.Instance,
                 null,
-                new Type[] { typeof(EventProcessorHost), typeof(string), typeof(string), typeof(string) },
+                new Type[] { typeof(EventProcessorHost), typeof(string), typeof(string), typeof(string), typeof(CancellationToken) },
                 null);
-            return (PartitionContext)constructor.Invoke(new object[] { null, null, null, null });
+            return (PartitionContext)constructor.Invoke(new object[] { null, null, null, null, null });
         }
     }
 }
