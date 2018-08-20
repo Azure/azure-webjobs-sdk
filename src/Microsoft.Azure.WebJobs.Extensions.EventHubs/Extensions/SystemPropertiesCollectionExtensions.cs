@@ -11,7 +11,13 @@ namespace Microsoft.Azure.WebJobs.EventHubs
     {
         internal static IDictionary<string, object> ToDictionary(this SystemPropertiesCollection collection)
         {
-            return JObject.FromObject(collection).ToObject<IDictionary<string, object>>();
+            return new Dictionary<string, object>()
+            {
+                { "SequenceNumber", collection.SequenceNumber},
+                { "Offset", collection.Offset },
+                { "PartitionKey", collection.PartitionKey },
+                { "EnqueuedTimeUtc", collection.EnqueuedTimeUtc }
+            };
         }
     }
 }
