@@ -1175,7 +1175,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     // If a post-filter throws, capture that 
                     if (exception != null)
                     {
-                        throw exception;
+                        ExceptionDispatchInfo.Capture(exception).Throw();
                     }
                 }
             }
