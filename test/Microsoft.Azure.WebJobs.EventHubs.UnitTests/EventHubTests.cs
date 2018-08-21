@@ -88,9 +88,12 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             Assert.Equal(evt.SystemProperties.SequenceNumber, bindingData["SequenceNumber"]);
             Assert.Equal(evt.SystemProperties.EnqueuedTimeUtc, bindingData["EnqueuedTimeUtc"]);
             Assert.Same(evt.Properties, bindingData["Properties"]);
-            var bindingDataSysProps = bindingData["SystemProperties"] as IDictionary<string, object>;
+            IDictionary<string, object> bindingDataSysProps = bindingData["SystemProperties"] as Dictionary<string, object>;
             Assert.NotNull(bindingDataSysProps);
-            Assert.True(CompareSystemProperties(bindingDataSysProps, sysProps));
+            Assert.Equal(bindingDataSysProps["PartitionKey"], bindingData["PartitionKey"]);
+            Assert.Equal(bindingDataSysProps["Offset"], bindingData["Offset"]);
+            Assert.Equal(bindingDataSysProps["SequenceNumber"], bindingData["SequenceNumber"]);
+            Assert.Equal(bindingDataSysProps["EnqueuedTimeUtc"], bindingData["EnqueuedTimeUtc"]);
         }
 
         private static IDictionary<string, object> GetSystemProperties(string partitionKey = "TestKey")
@@ -102,12 +105,6 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             sysProps["x-opt-enqueued-time"] = DateTime.MinValue;
             sysProps["x-opt-sequence-number"] = testSequence;
             return sysProps;
-        }
-
-        private static bool CompareSystemProperties(IDictionary<string, object> actualProperties, IDictionary<string, object> expectedProperties)
-        {
-           return actualProperties.Keys.Count == expectedProperties.Keys.Count &&
-                   actualProperties.Keys.All(k => expectedProperties.ContainsKey(k) && object.Equals(actualProperties[k], expectedProperties[k]));
         }
 
         [Fact]
