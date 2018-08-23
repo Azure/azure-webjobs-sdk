@@ -44,7 +44,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 throw new ArgumentNullException("connectionString");
             }
 
-            return new MessageProcessor(GetOrAddMessageReceiver(entityPath, connectionString), _options.MessageOptions);
+            return new MessageProcessor(GetOrAddMessageReceiver(entityPath, connectionString), _options.MessageHandlerOptions);
         }
 
         /// <summary>

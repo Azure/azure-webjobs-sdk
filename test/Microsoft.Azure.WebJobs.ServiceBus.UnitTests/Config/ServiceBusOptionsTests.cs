@@ -12,12 +12,12 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
 {
-    public class ServiceBusConfigurationTests
+    public class ServiceBusOptionsTests
     {
         private readonly ILoggerFactory _loggerFactory;
         private readonly TestLoggerProvider _loggerProvider;
 
-        public ServiceBusConfigurationTests()
+        public ServiceBusOptionsTests()
         {
             _loggerFactory = new LoggerFactory();
             _loggerProvider = new TestLoggerProvider();
@@ -28,7 +28,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
         public void Constructor_SetsExpectedDefaults()
         {
             ServiceBusOptions config = new ServiceBusOptions();
-            Assert.Equal(16, config.MessageOptions.MaxConcurrentCalls);
+            Assert.Equal(16, config.MessageHandlerOptions.MaxConcurrentCalls);
             Assert.Equal(0, config.PrefetchCount);
         }
 

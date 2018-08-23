@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             // Our default options will delegate to our own exception
             // logger. Customers can override this completely by setting their
             // own MessageHandlerOptions instance.
-            MessageOptions = new MessageHandlerOptions(ExceptionReceivedHandler)
+            MessageHandlerOptions = new MessageHandlerOptions(ExceptionReceivedHandler)
             {
                 MaxConcurrentCalls = 16
             };
@@ -32,10 +32,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         public string ConnectionString { get; set; }
 
         /// <summary>
-        /// Gets or sets the default <see cref="MessageHandlerOptions"/> that will be used by
+        /// Gets or sets the default <see cref="Azure.ServiceBus.MessageHandlerOptions"/> that will be used by
         /// <see cref="MessageReceiver"/>s.
         /// </summary>
-        public MessageHandlerOptions MessageOptions { get; set; }
+        public MessageHandlerOptions MessageHandlerOptions { get; set; }
 
         /// <summary>
         /// Gets or sets the default PrefetchCount that will be used by <see cref="MessageReceiver"/>s.
