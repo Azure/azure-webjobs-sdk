@@ -18,14 +18,36 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.WindowsAzure.Storage.Queue;
-using Microsoft.WindowsAzure.Storage.Table;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.TestCommon
 {
     public static class TestHelpers
     {
+        /// <summary>
+        /// Helper that builds a test host to configure the options type specified.
+        /// </summary>
+        /// <typeparam name="TOptions">The options type to configure.</typeparam>
+        /// <param name="configure">Delegate used to configure the target extension.</param>
+        /// <param name="configValues">Set of test configuration values to apply.</param>
+        /// <returns></returns>
+        public static TOptions GetConfiguredOptions<TOptions>(Action<IWebJobsBuilder> configure, Dictionary<string, string> configValues) where TOptions : class, new()
+        {
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<TestProgram>(b =>
+                {
+                    configure(b);
+                })
+                .ConfigureAppConfiguration(cb =>
+                {
+                    cb.AddInMemoryCollection(configValues);
+                })
+                .Build();
+
+            TOptions options = host.Services.GetRequiredService<IOptions<TOptions>>().Value;
+            return options;
+        }
+
         // Test error if not reached within a timeout 
         public static Task<TResult> AwaitWithTimeout<TResult>(this TaskCompletionSource<TResult> taskSource)
         {
@@ -284,5 +306,9 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                 Assert.True(false, message);
             }
         }
+    }
+
+    public class TestProgram
+    {
     }
 }

@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Azure.EventHubs;
@@ -28,6 +29,31 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
 
             _loggerProvider = new TestLoggerProvider();
             _loggerFactory.AddProvider(_loggerProvider);
+        }
+
+        [Fact]
+        public void ConfigureOptions_AppliesValuesCorrectly()
+        {
+            string extensionPath = "AzureWebJobs:Extensions:EventHubs";
+            var values = new Dictionary<string, string>
+            {
+                { $"{extensionPath}:MaxBatchSize", "123" },
+                { $"{extensionPath}:ReceiveTimeout", "00:00:33" },
+                { $"{extensionPath}:EnableReceiverRuntimeMetric", "true" },
+                { $"{extensionPath}:PrefetchCount", "123" },
+                { $"{extensionPath}:InvokeProcessorAfterReceiveTimeout", "true" }
+            };
+
+            EventProcessorOptions options = TestHelpers.GetConfiguredOptions<EventProcessorOptions>(b =>
+            {
+                b.AddEventHubs();
+            }, values);
+
+            Assert.Equal(123, options.MaxBatchSize);
+            Assert.Equal(TimeSpan.FromSeconds(33), options.ReceiveTimeout);
+            Assert.Equal(true, options.EnableReceiverRuntimeMetric);
+            Assert.Equal(123, options.PrefetchCount);
+            Assert.Equal(true, options.InvokeProcessorAfterReceiveTimeout);
         }
 
         [Fact]

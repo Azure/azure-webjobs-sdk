@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Config;
@@ -14,10 +15,35 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
 {
-    public class ServiceBusJobHostConfigurationExtensionsTests
+    public class ServiceBusHostBuilderExtensionsTests
     {
         [Fact]
-        public void UseServiceBus_ThrowsArgumentNull_WhenServiceBusConfigIsNull()
+        public void ConfigureOptions_AppliesValuesCorrectly()
+        {
+            string extensionPath = "AzureWebJobs:Extensions:ServiceBus";
+            var values = new Dictionary<string, string>
+            {
+                { $"{extensionPath}:PrefetchCount", "123" },
+                { $"{extensionPath}:ConnectionStrings:Primary", "TestConnectionString" },
+                { $"{extensionPath}:MessageHandlerOptions:MaxConcurrentCalls", "123" },
+                { $"{extensionPath}:MessageHandlerOptions:AutoComplete", "false" },
+                { $"{extensionPath}:MessageHandlerOptions:MaxAutoRenewDuration", "00:00:15" }
+            };
+
+            ServiceBusOptions options = TestHelpers.GetConfiguredOptions<ServiceBusOptions>(b =>
+            {
+                b.AddServiceBus();
+            }, values);
+
+            Assert.Equal(123, options.PrefetchCount);
+            Assert.Equal("TestConnectionString", options.ConnectionString);
+            Assert.Equal(123, options.MessageHandlerOptions.MaxConcurrentCalls);
+            Assert.Equal(false, options.MessageHandlerOptions.AutoComplete);
+            Assert.Equal(TimeSpan.FromSeconds(15), options.MessageHandlerOptions.MaxAutoRenewDuration);
+        }
+
+        [Fact]
+        public void AddServiceBus_ThrowsArgumentNull_WhenServiceBusOptionsIsNull()
         {
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost(b =>
@@ -33,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
         }
 
         [Fact]
-        public void UseServiceBus_NoServiceBusConfiguration_PerformsExpectedRegistration()
+        public void AddServiceBus_NoServiceBusOptions_PerformsExpectedRegistration()
         {
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost(b =>
@@ -50,7 +76,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
         }
 
         [Fact]
-        public void UseServiceBus_ServiceBusConfigurationProvided_PerformsExpectedRegistration()
+        public void AddServiceBus_ServiceBusOptionsProvided_PerformsExpectedRegistration()
         {
             string fakeConnStr = "test service bus connection";
 

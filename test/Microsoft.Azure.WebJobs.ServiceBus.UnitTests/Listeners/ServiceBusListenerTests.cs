@@ -34,7 +34,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
 
             ServiceBusOptions config = new ServiceBusOptions
             {
-                MessageOptions = messageOptions
+                MessageHandlerOptions = messageOptions
             };
             _mockMessagingProvider = new Mock<MessagingProvider>(MockBehavior.Strict, new OptionsWrapper<ServiceBusOptions>(config));
 
