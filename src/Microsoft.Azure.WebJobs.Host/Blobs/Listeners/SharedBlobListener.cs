@@ -20,9 +20,9 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private bool _disposed;
 
         public SharedBlobListener(string hostId, IStorageAccount storageAccount,
-            IWebJobsExceptionHandler exceptionHandler)
+            IWebJobsExceptionHandler exceptionHandler, TraceWriter trace)
         {
-            _strategy = CreateStrategy(hostId, storageAccount);
+            _strategy = CreateStrategy(hostId, storageAccount, trace);
             // Start the first iteration immediately.
             _timer = new TaskSeriesTimer(_strategy, exceptionHandler, initialWait: Task.Delay(0));
         }
@@ -87,12 +87,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             }
         }
 
-        private static IBlobListenerStrategy CreateStrategy(string hostId, IStorageAccount account)
+        private static IBlobListenerStrategy CreateStrategy(string hostId, IStorageAccount account, TraceWriter trace)
         {
             if (!StorageClient.IsDevelopmentStorageAccount(account))
             {
                 IBlobScanInfoManager scanInfoManager = new StorageBlobScanInfoManager(hostId, account.CreateBlobClient());
-                return new ScanBlobScanLogHybridPollingStrategy(scanInfoManager);
+                return new ScanBlobScanLogHybridPollingStrategy(scanInfoManager, trace);
             }
             else
             {

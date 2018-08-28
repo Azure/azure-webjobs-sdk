@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,6 +24,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private readonly IDictionary<IStorageBlobContainer, ContainerScanInfo> _scanInfo;
         private readonly ConcurrentQueue<IStorageBlob> _blobsFoundFromScanOrNotification;
         private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly TraceWriter _trace;
+        private readonly Stopwatch _stopwatch;
         private IBlobScanInfoManager _blobScanInfoManager;
         // A budget is allocated representing the number of blobs to be listed in a polling 
         // interval, each container will get its share of _scanBlobLimitPerPoll/number of containers.
@@ -31,13 +34,15 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private PollLogsStrategy _pollLogStrategy;
         private bool _disposed;
 
-        public ScanBlobScanLogHybridPollingStrategy(IBlobScanInfoManager blobScanInfoManager) : base()
+        public ScanBlobScanLogHybridPollingStrategy(IBlobScanInfoManager blobScanInfoManager, TraceWriter trace = null) : base()
         {
             _blobScanInfoManager = blobScanInfoManager;
+            _trace = trace;
             _scanInfo = new Dictionary<IStorageBlobContainer, ContainerScanInfo>(new StorageBlobContainerComparer());
-            _pollLogStrategy = new PollLogsStrategy(performInitialScan: false);
+            _pollLogStrategy = new PollLogsStrategy(performInitialScan: false, trace: trace);
             _cancellationTokenSource = new CancellationTokenSource();
             _blobsFoundFromScanOrNotification = new ConcurrentQueue<IStorageBlob>();
+            _stopwatch = new Stopwatch();
         }
 
         public void Start()
@@ -87,7 +92,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             ThrowIfDisposed();
 
             Task logPollingTask = _pollLogStrategy.ExecuteAsync(cancellationToken);
-            List<IStorageBlob> failedNotifications = new List<IStorageBlob>();
+            ConcurrentBag<IStorageBlob> failedNotifications = new ConcurrentBag<IStorageBlob>(); // NotifyRegistrationAsync is concurrent
             List<Task> notifications = new List<Task>();
 
             // Drain the background queue of blob written notifications.
@@ -105,12 +110,17 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             }
             await Task.WhenAll(notifications);
 
-            List<Task> pollingTasks = new List<Task>();
-            pollingTasks.Add(logPollingTask);
-
+            _stopwatch.Restart();
+            // For each container, scan blobs
             foreach (KeyValuePair<IStorageBlobContainer, ContainerScanInfo> containerScanInfoPair in _scanInfo)
             {
-                pollingTasks.Add(PollAndNotify(containerScanInfoPair.Key, containerScanInfoPair.Value, cancellationToken, failedNotifications));
+                await PollAndNotifyAsync(containerScanInfoPair.Key, containerScanInfoPair.Value, cancellationToken, failedNotifications);
+            }
+            _stopwatch.Stop();
+            // performance trace
+            if (_trace != null)
+            {
+                _trace.Verbose($"scan {_scanInfo.Count} containers and enqueue finished in {_stopwatch.ElapsedMilliseconds}ms");
             }
 
             // Re-add any failed notifications for the next iteration.
@@ -119,23 +129,26 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 _blobsFoundFromScanOrNotification.Enqueue(failedNotification);
             }
 
-            await Task.WhenAll(pollingTasks);
+            await logPollingTask;
 
             // Run subsequent iterations at "_pollingInterval" second intervals.
             return new TaskSeriesCommandResult(wait: Task.Delay(PollingInterval));
         }
 
-        private async Task PollAndNotify(IStorageBlobContainer container, ContainerScanInfo containerScanInfo, CancellationToken cancellationToken, List<IStorageBlob> failedNotifications)
+        private async Task PollAndNotifyAsync(IStorageBlobContainer container, ContainerScanInfo containerScanInfo, CancellationToken cancellationToken, ConcurrentBag<IStorageBlob> failedNotifications)
         {
             cancellationToken.ThrowIfCancellationRequested();
             DateTime lastScan = containerScanInfo.LastSweepCycleLatestModified;
             IEnumerable<IStorageBlob> newBlobs = await PollNewBlobsAsync(container, containerScanInfo, cancellationToken);
+            List<Task> notifications = new List<Task>();
 
             foreach (IStorageBlob newBlob in newBlobs)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                await NotifyRegistrationsAsync(newBlob, failedNotifications, cancellationToken);
+                notifications.Add(NotifyRegistrationsAsync(newBlob, failedNotifications, cancellationToken));
             }
+
+            await Task.WhenAll(notifications);
 
             // if the 'LatestModified' has changed, update it in the manager
             if (containerScanInfo.LastSweepCycleLatestModified > lastScan)
@@ -259,7 +272,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             return newBlobs;
         }
 
-        private async Task NotifyRegistrationsAsync(IStorageBlob blob, ICollection<IStorageBlob> failedNotifications, CancellationToken cancellationToken)
+        // multithread
+        private async Task NotifyRegistrationsAsync(IStorageBlob blob, ConcurrentBag<IStorageBlob> failedNotifications, CancellationToken cancellationToken)
         {
             IStorageBlobContainer container = blob.Container;
             ContainerScanInfo containerScanInfo;
@@ -270,6 +284,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 return;
             }
 
+            bool success = true;
             foreach (ITriggerExecutor<IStorageBlob> registration in containerScanInfo.Registrations)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -277,9 +292,16 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 FunctionResult result = await registration.ExecuteAsync(blob, cancellationToken);
                 if (!result.Succeeded)
                 {
-                    // If notification failed, try again on the next iteration.
-                    failedNotifications.Add(blob);
+                    // failed for blob and one of its triggerFunction
+                    success = false;
                 }
+            }
+
+            if (!success)
+            {
+                // If notification failed, try again on the next iteration.
+                // which will try to enqueue for all registration of the single blob
+                failedNotifications.Add(blob);
             }
         }
     }
