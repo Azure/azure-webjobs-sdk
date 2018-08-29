@@ -39,12 +39,6 @@ foreach ($project in $projects)
 ### Sign package if build is not a PR
 $isPr = Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER
 # if (-not $isPr) {
-  Compress-Archive $outputDirectory\* $outputDirectory\tosign.zip
-
-  $ctx = New-AzureStorageContext $env:FILES_ACCOUNT_NAME $env:FILES_ACCOUNT_KEY
-  Set-AzureStorageBlobContent $outputDirectory\tosign.zip "webjobs" -Blob "$env:APPVEYOR_BUILD_VERSION.zip" -Context $ctx
-  $queue = Get-AzureStorageQueue "signing-jobs" -Context $ctx
-  $messageBody = "SignNupkgs;webjobs;$env:APPVEYOR_BUILD_VERSION.zip"
-  $message = New-Object -TypeName Microsoft.WindowsAzure.Storage.Queue.CloudQueueMessage -ArgumentList $messageBody
-  $queue.CloudQueue.AddMessage($message)
+  & ".\tools\RunSigningJob.ps1" 
+  if (-not $?) { exit 1 }
 # }

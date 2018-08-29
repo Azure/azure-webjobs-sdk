@@ -1,4 +1,5 @@
-# $isPr = Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER
+$isPr = Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER
+$directoryPath = Split-Path $MyInvocation.MyCommand.Path -Parent
 
 # if (-not $isPr -and $env:SkipAssemblySigning -ne "true") {
   $timeout = new-timespan -Minutes 5
@@ -23,15 +24,15 @@
     exit(1);
   }
 
-  Remove-Item "$PSScriptRoot/../buildoutput" -Recurse -Force
+  Remove-Item "$directoryPath/../buildoutput" -Recurse -Force
 
-  Mkdir "$PSScriptRoot/../buildoutput"
+  Mkdir "$directoryPath/../buildoutput"
 
-  Get-AzureStorageBlobContent "$env:APPVEYOR_BUILD_VERSION.zip" "webjobs-signed" -Destination "$PSScriptRoot/../buildoutput/signed.zip" -Context $ctx
+  Get-AzureStorageBlobContent "$env:APPVEYOR_BUILD_VERSION.zip" "webjobs-signed" -Destination "$directoryPath/../buildoutput/signed.zip" -Context $ctx
 
-  Expand-Archive "$PSScriptRoot/../buildoutput/signed.zip" "$PSScriptRoot/../buildoutput/signed"
+  Expand-Archive "$directoryPath/../buildoutput/signed.zip" "$directoryPath/../buildoutput/signed"
 
-  Get-ChildItem "$PSScriptRoot/../buildoutput/signed" | % {
+  Get-ChildItem "$directoryPath/../buildoutput/signed" | % {
     Push-AppveyorArtifact $_.FullName
   }
 # }
