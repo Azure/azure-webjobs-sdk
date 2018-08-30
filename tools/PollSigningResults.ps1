@@ -35,4 +35,5 @@ $directoryPath = Split-Path $MyInvocation.MyCommand.Path -Parent
   Get-ChildItem "$directoryPath/../buildoutput/signed" | % {
     Push-AppveyorArtifact $_.FullName
   }
+  if (-not $?) { exit 1 }
 # }
