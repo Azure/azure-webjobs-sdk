@@ -15,6 +15,6 @@ $directoryPath = Split-Path $MyInvocation.MyCommand.Path -Parent
   $queue = Get-AzureStorageQueue "signing-jobs" -Context $ctx
 
   $messageBody = "SignNupkgs;webjobs;$env:APPVEYOR_BUILD_VERSION.zip"
-  $message = New-Object -TypeName Microsoft.WindowsAzure.Storage.Queue.CloudQueueMessage -ArgumentList $messageBody
-  $queue.CloudQueue.AddMessage($message)
+  # $message = New-Object -TypeName Microsoft.WindowsAzure.Storage.Queue.CloudQueueMessage -ArgumentList $messageBody
+  $queue.CloudQueue.AddMessage($messageBody)
 # }
