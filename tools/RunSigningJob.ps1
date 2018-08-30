@@ -1,7 +1,7 @@
 $isPr = Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER
 $directoryPath = Split-Path $MyInvocation.MyCommand.Path -Parent
 
-if (-not $isPr) {
+# if (-not $isPr) {
   Compress-Archive $directoryPath\..\buildoutput\* $directoryPath\..\buildoutput\tosign.zip
 
   if ($env:SkipAssemblySigning -eq "true") {
@@ -17,4 +17,4 @@ if (-not $isPr) {
   $messageBody = "SignNupkgs;webjobs;$env:APPVEYOR_BUILD_VERSION.zip"
   $message = New-Object -TypeName Microsoft.WindowsAzure.Storage.Queue.CloudQueueMessage -ArgumentList $messageBody
   $queue.CloudQueue.AddMessage($message)
-}
+# }
