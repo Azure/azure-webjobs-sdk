@@ -5,6 +5,9 @@
     <IsPackable>false</IsPackable>
     <AssemblyName>Microsoft.Azure.WebJobs.Host.EndToEndTests</AssemblyName>
     <RootNamespace>Microsoft.Azure.WebJobs.Host.EndToEndTests</RootNamespace>
+    <SignAssembly>true</SignAssembly>
+    <DelaySign>true</DelaySign>
+    <AssemblyOriginatorKeyFile>..\..\build\PublicKey.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>

@@ -8,6 +8,9 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>Microsoft.Azure.WebJobs.Host.Storage</AssemblyName>
+    <SignAssembly>true</SignAssembly>
+    <DelaySign>true</DelaySign>
+    <AssemblyOriginatorKeyFile>..\..\build\PublicKey.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>  
   
   <ItemGroup>

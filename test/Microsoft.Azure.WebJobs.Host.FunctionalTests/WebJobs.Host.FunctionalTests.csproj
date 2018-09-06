@@ -5,6 +5,9 @@
     <IsPackable>false</IsPackable>
     <AssemblyName>Microsoft.Azure.WebJobs.Host.FunctionalTests</AssemblyName>
     <RootNamespace>Microsoft.Azure.WebJobs.Host.FunctionalTests</RootNamespace>
+    <SignAssembly>true</SignAssembly>
+    <DelaySign>true</DelaySign>
+    <AssemblyOriginatorKeyFile>..\..\build\PublicKey.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>
