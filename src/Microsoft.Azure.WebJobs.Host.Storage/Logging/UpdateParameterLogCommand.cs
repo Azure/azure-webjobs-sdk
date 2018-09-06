@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json;
 
-namespace Microsoft.Azure.WebJobs.Host.Loggers
+namespace WebJobs.Host.Storage.Logging
 {
     internal sealed class UpdateParameterLogCommand : IRecurrentCommand
     {

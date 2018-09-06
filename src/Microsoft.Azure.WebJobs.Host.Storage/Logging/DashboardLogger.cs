@@ -1,6 +1,10 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Threading;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Dispatch;
@@ -12,18 +16,12 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
-namespace WebJobs.Host.Storage.OldLogger
+namespace WebJobs.Host.Storage.Logging
 {
     // $$$ 
-    // Wires up V1 legacy logging 
-    class Legacy : ILegacyLogger
+    // Wires up V1 dashboard logging 
+    internal class DashboardLoggingSetup : IDashboardLoggingSetup
     {
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly ILoggerFactory _loggerFactory;
@@ -31,19 +29,19 @@ namespace WebJobs.Host.Storage.OldLogger
         private readonly IFunctionExecutor _functionExecutor;
         private readonly SharedQueueHandler _sharedQueueHandler;
         private readonly ILoadBalancerQueue _storageServices;
-        private readonly LegacyConfig _storageAccountProvider;
+        private readonly StorageAccountOptions _storageAccountOptions;
 
-        public Legacy(
-            LegacyConfig storageAccountProvider,
-                IWebJobsExceptionHandler exceptionHandler,
-                ILoggerFactory loggerFactory,
-                IFunctionInstanceLogger functionInstanceLogger,
-                IFunctionExecutor functionExecutor,
-                SharedQueueHandler sharedQueueHandler,
-                ILoadBalancerQueue storageServices
+        public DashboardLoggingSetup(
+            StorageAccountOptions storageAccountOptions,
+            IWebJobsExceptionHandler exceptionHandler,
+            ILoggerFactory loggerFactory,
+            IFunctionInstanceLogger functionInstanceLogger,
+            IFunctionExecutor functionExecutor,
+            SharedQueueHandler sharedQueueHandler,
+            ILoadBalancerQueue storageServices
             )
         {
-            _storageAccountProvider = storageAccountProvider;
+            _storageAccountOptions = storageAccountOptions;
             _exceptionHandler = exceptionHandler;
             _loggerFactory = loggerFactory;
             _functionInstanceLogger = functionInstanceLogger;
@@ -52,7 +50,7 @@ namespace WebJobs.Host.Storage.OldLogger
             _storageServices = storageServices;
         }
 
-        public bool Init(
+        public bool Setup(
             IFunctionIndex functions, 
             IListenerFactory functionsListenerFactory, 
             out IFunctionExecutor hostCallExecutor, 
@@ -67,7 +65,6 @@ namespace WebJobs.Host.Storage.OldLogger
             IListenerFactory sharedQueueListenerFactory = new HostMessageListenerFactory(_storageServices, sharedQueue,
                  _exceptionHandler, _loggerFactory, functions,
                 _functionInstanceLogger, _functionExecutor);
-
 
             Guid hostInstanceId = Guid.NewGuid();
             string instanceQueueName = HostQueueNames.GetHostQueueName(hostInstanceId.ToString("N"));
@@ -84,7 +81,7 @@ namespace WebJobs.Host.Storage.OldLogger
                 ExpirationInSeconds = (int)HeartbeatIntervals.ExpirationInterval.TotalSeconds
             };
 
-            var dashboardAccount = _storageAccountProvider.GetDashboardStorageAccount();
+            var dashboardAccount = _storageAccountOptions.GetDashboardStorageAccount();
 
             var blob = dashboardAccount.CreateCloudBlobClient()
                 .GetContainerReference(heartbeatDescriptor.SharedContainerName)

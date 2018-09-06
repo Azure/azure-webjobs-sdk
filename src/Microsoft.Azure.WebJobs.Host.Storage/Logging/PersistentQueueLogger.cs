@@ -4,9 +4,10 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 
-namespace Microsoft.Azure.WebJobs.Host.Loggers
+namespace WebJobs.Host.Storage.Logging
 {
     internal class PersistentQueueLogger : IHostInstanceLogger, IFunctionInstanceLogger
     {

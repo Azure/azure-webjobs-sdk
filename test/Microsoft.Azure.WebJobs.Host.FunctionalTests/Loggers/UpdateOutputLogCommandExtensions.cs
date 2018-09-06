@@ -3,7 +3,7 @@
 
 using System;
 using System.Threading;
-using Microsoft.Azure.WebJobs.Host.Loggers;
+using WebJobs.Host.Storage.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 {

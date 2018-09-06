@@ -37,11 +37,11 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
         private IAsyncCollector<QueueMessage> _sharedQueueWriter;
 
         public SharedQueueHandler(
-                           IHostIdProvider hostIdProvider,
-                           IWebJobsExceptionHandler exceptionHandler,
-                           ILoggerFactory loggerFactory,
-                           ISharedContextProvider sharedContextProvider,
-                           ILoadBalancerQueue storageServices
+                IHostIdProvider hostIdProvider,
+                IWebJobsExceptionHandler exceptionHandler,
+                ILoggerFactory loggerFactory,
+                ISharedContextProvider sharedContextProvider,
+                ILoadBalancerQueue storageServices
                 )
         {            
             _hostIdProvider = hostIdProvider;

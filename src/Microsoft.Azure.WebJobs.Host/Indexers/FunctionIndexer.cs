@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Bindings.Invoke;
 using Microsoft.Azure.WebJobs.Host.Dispatch;
@@ -31,7 +32,6 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly IJobActivator _activator;
         private readonly INameResolver _nameResolver;
         private readonly IFunctionExecutor _executor;
-        private readonly HashSet<Assembly> _jobAttributeAssemblies;
         private readonly SingletonManager _singletonManager;
         private readonly ILogger _logger;
         private readonly SharedQueueHandler _sharedQueue;
@@ -86,7 +86,6 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _activator = activator;
             _executor = executor;
             _singletonManager = singletonManager;
-            _jobAttributeAssemblies = GetJobAttributeAssemblies(extensions);
             _nameResolver = nameResolver;
             _logger = loggerFactory?.CreateLogger(LogCategories.Startup);
             _sharedQueue = sharedQueue;
@@ -120,7 +119,12 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
         }
 
-        public bool IsJobMethod(MethodInfo method)
+        public static IEnumerable<MethodInfo> GetJobMethods(Type type)
+        {
+            return type.GetMethods(PublicMethodFlags).Where(IsJobMethod);
+        }
+
+        public static bool IsJobMethod(MethodInfo method)
         {
             if (method.ContainsGenericParameters)
             {
@@ -150,21 +154,9 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             return false;
         }
 
-        private static HashSet<Assembly> GetJobAttributeAssemblies(IExtensionRegistry extensions)
+        private static bool HasJobAttribute(CustomAttributeData attributeData)
         {
-            // create a set containing our own core assemblies
-            HashSet<Assembly> assemblies = new HashSet<Assembly>();
-            assemblies.Add(typeof(FunctionNameAttribute).Assembly);
-
-            // add any extension assemblies
-            assemblies.UnionWith(extensions.GetExtensionAssemblies());
-
-            return assemblies;
-        }
-
-        private bool HasJobAttribute(CustomAttributeData attributeData)
-        {
-            return _jobAttributeAssemblies.Contains(attributeData.AttributeType.Assembly);
+            return attributeData.AttributeType.GetCustomAttribute<BindingAttribute>() != null;
         }
 
         public async Task IndexMethodAsync(MethodInfo method, IFunctionIndexCollector index, CancellationToken cancellationToken)

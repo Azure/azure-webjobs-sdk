@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
@@ -126,10 +127,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         {
             // Arrange
             Mock<IFunctionIndex> indexMock = new Mock<IFunctionIndex>();
-            FunctionIndexer product = CreateProductUnderTest();
 
             // Act
-            bool actual = product.IsJobMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithGenericParameter"));
+            bool actual = FunctionIndexer.IsJobMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithGenericParameter"));
 
             // Verify
             Assert.Equal(false, actual);
@@ -138,12 +138,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         [Fact]
         public void IsJobMethod_ReturnsFalse_IfMethodHasNoParameters()
         {
-            // Arrange
-            Mock<IFunctionIndex> indexMock = new Mock<IFunctionIndex>();
-            FunctionIndexer product = CreateProductUnderTest();
-
             // Act
-            bool actual = product.IsJobMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithNoParameters"));
+            bool actual = FunctionIndexer.IsJobMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithNoParameters"));
 
             // Verify
             Assert.Equal(false, actual);
@@ -152,12 +148,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         [Fact]
         public void IsJobMethod_ReturnsTrue_IfMethodHasJobAttribute()
         {
-            // Arrange
-            Mock<IFunctionIndex> indexMock = new Mock<IFunctionIndex>();
-            FunctionIndexer product = CreateProductUnderTest();
-
             // Act
-            bool actual = product.IsJobMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithJobAttribute"));
+            bool actual = FunctionIndexer.IsJobMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithJobAttribute"));
 
             // Verify
             Assert.Equal(true, actual);
@@ -166,12 +158,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         [Fact]
         public void IsJobMethod_ReturnsTrue_IfMethodHasJobAttributeButNoParameters()
         {
-            // Arrange
-            Mock<IFunctionIndex> indexMock = new Mock<IFunctionIndex>();
-            FunctionIndexer product = CreateProductUnderTest();
-
             // Act
-            bool actual = product.IsJobMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithJobAttributeButNoParameters"));
+            bool actual = FunctionIndexer.IsJobMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithJobAttributeButNoParameters"));
 
             // Verify
             Assert.Equal(true, actual);
@@ -180,12 +168,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         [Fact]
         public void IsJobMethod_ReturnsTrue_IfMethodHasJobParameterAttributes()
         {
-            // Arrange
-            Mock<IFunctionIndex> indexMock = new Mock<IFunctionIndex>();
-            FunctionIndexer product = CreateProductUnderTest();
-
             // Act
-            bool actual = product.IsJobMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithJobParameterAttributes"));
+            bool actual = FunctionIndexer.IsJobMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithJobParameterAttributes"));
 
             // Verify
             Assert.Equal(true, actual);
@@ -194,15 +178,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         [Fact]
         public void IsJobMethod_ReturnsTrue_IfMethodHasJobParameterAttributes_FromExtensionAssemblies()
         {
-            // Arrange
-            Mock<IFunctionIndex> indexMock = new Mock<IFunctionIndex>();
-            IExtensionRegistry extensions = new DefaultExtensionRegistry();
-            extensions.RegisterExtension<ITriggerBindingProvider>(new TestExtensionTriggerBindingProvider());
-            extensions.RegisterExtension<IBindingProvider>(new TestExtensionBindingProvider());
-            FunctionIndexer product = FunctionIndexerFactory.Create(extensionRegistry: extensions);
-
             // Act
-            bool actual = product.IsJobMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithExtensionJobParameterAttributes"));
+            bool actual = FunctionIndexer.IsJobMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithExtensionJobParameterAttributes"));
 
             // Verify
             Assert.Equal(true, actual);
@@ -211,12 +188,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         [Fact]
         public void IsJobMethod_ReturnsFalse_IfMethodHasNoSdkAttributes()
         {
-            // Arrange
-            Mock<IFunctionIndex> indexMock = new Mock<IFunctionIndex>();
-            FunctionIndexer product = CreateProductUnderTest();
-
             // Act
-            bool actual = product.IsJobMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithUnboundOutParameterAndNoJobAttribute"));
+            bool actual = FunctionIndexer.IsJobMethod(typeof(FunctionIndexerTests).GetMethod("MethodWithUnboundOutParameterAndNoJobAttribute"));
 
             // Verify
             Assert.Equal(false, actual);
@@ -239,6 +212,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         }
 
         [AttributeUsage(AttributeTargets.Parameter)]
+        [Binding]
         public class ExtensionTrigger : Attribute
         {
             private string _path;
@@ -255,6 +229,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         }
 
         [AttributeUsage(AttributeTargets.Parameter)]
+        [Binding]
         public class Extension : Attribute
         {
             private string _path;
@@ -327,7 +302,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             throw new NotImplementedException();
         }
 
-        public static void MethodWithExtensionJobParameterAttributes([ExtensionTrigger("path")] string input, [Extension("path")] TextWriter writer)
+        public static void MethodWithExtensionJobParameterAttributes([ExtensionTrigger("path")] string input, [@Extension("path")] TextWriter writer)
         {
             throw new NotImplementedException();
         }

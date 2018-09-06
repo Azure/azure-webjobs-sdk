@@ -12,7 +12,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
     public interface IWebHookProvider
     {
         /// <summary>
-        /// Http handler must be a stable URL, so don't use randomly generated data or GUIDs. 
+        /// Gets the WebHook URL for an extension.
         /// </summary>
         /// <param name="extension">An instance of the extension <see cref="IExtensionConfigProvider"/> to own the http handler.</param>
         /// <returns>A URL (without a query string). Caller may append a query string.</returns>

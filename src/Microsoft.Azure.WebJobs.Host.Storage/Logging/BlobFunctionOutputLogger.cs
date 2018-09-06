@@ -3,11 +3,14 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.WindowsAzure.Storage.Blob;
 
-namespace Microsoft.Azure.WebJobs.Host.Loggers
+namespace WebJobs.Host.Storage.Logging
 {
     internal class BlobFunctionOutputLogger : IFunctionOutputLogger
     {

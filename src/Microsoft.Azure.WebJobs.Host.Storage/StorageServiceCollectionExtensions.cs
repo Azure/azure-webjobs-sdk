@@ -1,22 +1,18 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using WebJobs.Host.Storage.Logging;
 
 namespace Microsoft.Extensions.Hosting
 {
     public static class StorageServiceCollectionExtensions
-    {
-        // WebJobs v1 Classic logging. Needed for dashboard.         
-        public static IServiceCollection AddWebJobsLogging(this IServiceCollection services)
+    {  
+        public static IServiceCollection AddDashboardLogging(this IServiceCollection services)
         {
-            // Logging related services (lots of them...)
             services.TryAddSingleton<LoggerProviderFactory>();
 
             services.TryAddSingleton<IFunctionOutputLoggerProvider>(p => p.GetRequiredService<LoggerProviderFactory>().GetLoggerProvider<IFunctionOutputLoggerProvider>());

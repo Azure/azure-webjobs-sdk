@@ -24,8 +24,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 "CloudBlobContainerDistributedLockManager",
                 "DistributedLockManagerContainerProvider",
                 "JobHostInternalStorageOptions",
-                "LegacyConfig",
-                "LegacyConfigSetup",
                 "RuntimeStorageWebJobsBuilderExtensions",
                 "StorageBaseDistributedLockManager",
                 "StorageServiceCollectionExtensions"

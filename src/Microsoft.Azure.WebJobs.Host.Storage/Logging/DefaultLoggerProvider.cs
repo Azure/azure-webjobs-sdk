@@ -1,15 +1,14 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
-namespace Microsoft.Azure.WebJobs.Host.Loggers
+namespace WebJobs.Host.Storage.Logging
 {
     internal class DefaultLoggerProvider : IHostInstanceLoggerProvider, IFunctionInstanceLoggerProvider, IFunctionOutputLoggerProvider
     {
@@ -18,11 +17,11 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
         private IFunctionInstanceLogger _functionInstanceLogger;
         private IFunctionOutputLogger _functionOutputLogger;
         private ILoggerFactory _loggerFactory;
-        private LegacyConfig _storageAccountProvider;
+        private StorageAccountOptions _storageAccountOptions;
 
-        public DefaultLoggerProvider(LegacyConfig storageAccountProvider, ILoggerFactory loggerFactory)
+        public DefaultLoggerProvider(StorageAccountOptions storageAccountOptions, ILoggerFactory loggerFactory)
         {
-            _storageAccountProvider = storageAccountProvider;
+            _storageAccountOptions = storageAccountOptions;
             _loggerFactory = loggerFactory;
         }
 
@@ -54,9 +53,9 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             IFunctionInstanceLogger functionLogger = new FunctionInstanceLogger(_loggerFactory);
 
 
-            if (_storageAccountProvider.Dashboard != null)
+            if (_storageAccountOptions.Dashboard != null)
             {
-                var dashboardAccount = _storageAccountProvider.GetDashboardStorageAccount();
+                var dashboardAccount = _storageAccountOptions.GetDashboardStorageAccount();
 
                 // Create logging against a live Azure account.
                 var dashboardBlobClient = dashboardAccount.CreateCloudBlobClient();

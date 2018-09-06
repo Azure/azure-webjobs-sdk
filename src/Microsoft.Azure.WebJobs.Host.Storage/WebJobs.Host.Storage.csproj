@@ -11,9 +11,9 @@
   </PropertyGroup>  
   
   <ItemGroup>
-    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\HeartbeatCommand.cs" Link="OldLogger\HeartbeatCommand.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\PersistentQueueReader.cs" Link="OldLogger\PersistentQueueReader.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\PersistentQueueWriter.cs" Link="OldLogger\PersistentQueueWriter.cs" />
+    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\HeartbeatCommand.cs" Link="Logging\HeartbeatCommand.cs" />
+    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\PersistentQueueReader.cs" Link="Logging\PersistentQueueReader.cs" />
+    <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\PersistentQueueWriter.cs" Link="Logging\PersistentQueueWriter.cs" />
   </ItemGroup>
 
   <ItemGroup>

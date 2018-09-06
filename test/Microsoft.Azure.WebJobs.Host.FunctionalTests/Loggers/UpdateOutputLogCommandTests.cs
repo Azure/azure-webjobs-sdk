@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Moq;
+using WebJobs.Host.Storage.Logging;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers

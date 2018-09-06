@@ -18,8 +18,7 @@ namespace SampleHost
                 .UseEnvironment("Development")
                 .ConfigureWebJobs(b =>
                 {
-                    b.UseHostId("ecad61-62cf-47f4-93b4-6efcded6")
-                    .AddWebJobsLogging() // Enables WebJobs v1 classic logging 
+                    b.AddDashboardLogging()
                     .AddAzureStorageCoreServices()
                     .AddAzureStorage()
                     .AddServiceBus()

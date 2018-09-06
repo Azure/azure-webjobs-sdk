@@ -9,16 +9,16 @@ namespace Microsoft.Azure.WebJobs
 {
 
     // $$$ Validate these?  And what are their capabilities? 
-    public class LegacyConfigSetup : IConfigureOptions<LegacyConfig>
+    internal class StorageAccountOptionsSetup : IConfigureOptions<StorageAccountOptions>
     {
         private readonly IConfiguration _configuration;
 
-        public LegacyConfigSetup(IConfiguration configuration)
+        public StorageAccountOptionsSetup(IConfiguration configuration)
         {
             _configuration = configuration;
         }
 
-        public void Configure(LegacyConfig options)
+        public void Configure(StorageAccountOptions options)
         {
             if (options.Dashboard == null)
             {
@@ -31,9 +31,7 @@ namespace Microsoft.Azure.WebJobs
         }
     }
 
-    // From config.
-    // Like JobHostInternalStorageOptionsSetup
-    public class LegacyConfig
+    internal class StorageAccountOptions
     {
         // Property names here must match existing names. 
         public string Dashboard { get; set; }

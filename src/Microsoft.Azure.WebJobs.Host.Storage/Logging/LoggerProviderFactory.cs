@@ -2,25 +2,27 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Microsoft.Azure.WebJobs.Host.Loggers
+namespace WebJobs.Host.Storage.Logging
 {
     internal sealed class LoggerProviderFactory
     {
         private readonly ILoggerFactory _loggerFactory;
         private readonly bool _hasFastTableHook;
         private readonly Lazy<object> _loggerProvider;
-        private readonly LegacyConfig _storageAccountProvider;
+        private readonly StorageAccountOptions _storageAccountOptions;
 
         public LoggerProviderFactory(
-            IOptions<LegacyConfig> storageAccountProvider,
+            IOptions<StorageAccountOptions> storageAccountOptions,
             ILoggerFactory loggerFactory,
             IEventCollectorFactory fastLoggerFactory = null)
         {
-            _storageAccountProvider = storageAccountProvider.Value;
+            _storageAccountOptions = storageAccountOptions.Value;
             _loggerFactory = loggerFactory;
             _hasFastTableHook = fastLoggerFactory != null;
 
@@ -30,14 +32,14 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
         private object CreateLoggerProvider()
         {
             // $$$ if this is null, we should have registered different DI components
-            bool noDashboardStorage = _storageAccountProvider.Dashboard == null; 
+            bool noDashboardStorage = _storageAccountOptions.Dashboard == null; 
             
             if (_hasFastTableHook && noDashboardStorage)
             {
                 return new FastTableLoggerProvider(_loggerFactory);
             }
 
-            return new DefaultLoggerProvider(_storageAccountProvider, _loggerFactory);
+            return new DefaultLoggerProvider(_storageAccountOptions, _loggerFactory);
         }
 
         public T GetLoggerProvider<T>() where T : class => _loggerProvider.Value as T;

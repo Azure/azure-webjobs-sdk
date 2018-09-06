@@ -5,7 +5,6 @@ using System;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Configuration;
-using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -19,9 +18,9 @@ namespace Microsoft.Extensions.Hosting
     {
         // WebJobs v1 Classic logging. Needed for dashboard.         
         // $$$ Update title? 
-        public static IWebJobsBuilder AddWebJobsLogging(this IWebJobsBuilder builder)
+        public static IWebJobsBuilder AddDashboardLogging(this IWebJobsBuilder builder)
         {
-            builder.Services.AddWebJobsLogging();
+            builder.Services.AddDashboardLogging();
 
             return builder;
         }
@@ -34,14 +33,10 @@ namespace Microsoft.Extensions.Hosting
             // Add runtime services that depend on storage.
             builder.Services.AddSingleton<IDistributedLockManager>(provider => Create(provider));
 
-            builder.Services.TryAddSingleton<IHostIdProvider, DynamicHostIdProvider>();
-
             // Used specifically for the CloudBlobContainerDistributedLockManager implementaiton 
             builder.Services.TryAddSingleton<DistributedLockManagerContainerProvider>();
 
-            builder.Services.TryAddEnumerable(
-                ServiceDescriptor.Transient<IConfigureOptions<LegacyConfig>, LegacyConfigSetup>());
-
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<StorageAccountOptions>, StorageAccountOptionsSetup>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, CoreWebJobsOptionsSetup<JobHostInternalStorageOptions>>());
 
             return builder;
@@ -51,7 +46,7 @@ namespace Microsoft.Extensions.Hosting
         private static IDistributedLockManager Create(IServiceProvider provider)
         {
             // $$$ get rid of LegacyConfig
-            var opts = provider.GetRequiredService<IOptions<LegacyConfig>>();
+            var opts = provider.GetRequiredService<IOptions<StorageAccountOptions>>();
 
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
             

@@ -34,12 +34,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost(b =>
                 {
-                    b.AddAzureStorage();
+                    b.UseHostId("testhost")
+                    .AddAzureStorage();
                 })
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<StorageAccountProvider>(new FakeStorageAccountProvider());
-
 
                     if (nameResolver != null)
                     {
@@ -65,18 +65,5 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             return new FunctionIndexer(triggerBindingProvider, bindingProvider, new DefaultJobActivator(), executor,
                 extensionRegistry, singletonManager, loggerFactory);
         }
-
-        /*
-        private static IStorageAccountProvider GetStorageAccountProvider(CloudStorageAccount account)
-        {
-            StorageClientFactory clientFactory = new StorageClientFactory();
-
-            IStorageAccount storageAccount = account != null ? new StorageAccount(account, clientFactory) : null;
-            IStorageAccountProvider storageAccountProvider = new SimpleStorageAccountProvider(clientFactory)
-            {
-                StorageAccount = account
-            };
-            return storageAccountProvider;
-        }*/
     }
 }

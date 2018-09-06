@@ -45,10 +45,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IFunctionOutputLogger _functionOutputLogger;
         private readonly IConverterManager _converterManager;
         private readonly IAsyncCollector<FunctionInstanceLogEntry> _eventCollector;
-        private readonly ILegacyLogger _legacyLogger;
+        private readonly IDashboardLoggingSetup _dashboardLoggingSetup;
 
         public JobHostContextFactory(
-            ILegacyLogger legacyLogger,
+            IDashboardLoggingSetup dashboardLoggingSetup,
             IFunctionExecutor functionExecutor,
             IFunctionIndexProvider functionIndexProvider,
             ITriggerBindingProvider triggerBindingProvider,
@@ -67,7 +67,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             IConverterManager converterManager,
             IAsyncCollector<FunctionInstanceLogEntry> eventCollector)
         {
-            _legacyLogger = legacyLogger;
+            _dashboardLoggingSetup = dashboardLoggingSetup;
             _functionExecutor = functionExecutor;
             _functionIndexProvider = functionIndexProvider;
             _triggerBindingProvider = triggerBindingProvider;
@@ -102,9 +102,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), _singletonManager, _activator, _nameResolver, _loggerFactory, _jobHostOptions.Value.AllowPartialHostStartup);
 
                 string hostId = await _hostIdProvider.GetHostIdAsync(cancellationToken);
-                bool enableLegacyLogger = _legacyLogger.Init(functions, functionsListenerFactory, out IFunctionExecutor hostCallExecutor,
+                bool dashboardLoggingEnabled = _dashboardLoggingSetup.Setup(functions, functionsListenerFactory, out IFunctionExecutor hostCallExecutor,
                     out IListener listener, out HostOutputMessage hostOutputMessage, hostId, shutdownToken);
-                if (enableLegacyLogger)
+                if (dashboardLoggingEnabled)
                 { 
                     // Publish this to Azure logging account so that a web dashboard can see it. 
                     await LogHostStartedAsync(functions, hostOutputMessage, _hostInstanceLogger, combinedCancellationToken);
