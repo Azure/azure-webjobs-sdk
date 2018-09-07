@@ -13,5 +13,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         public SamplingPercentageEstimatorSettings SamplingSettings { get; set; }
 
         public SnapshotCollectorConfiguration SnapshotConfiguration { get; set; }
+
+        public string QuickPulseAuthenticationApiKey { get; set; }
     }
 }
