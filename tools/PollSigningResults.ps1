@@ -1,7 +1,7 @@
 $isPr = Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER
 $directoryPath = Split-Path $MyInvocation.MyCommand.Path -Parent
 
-# if (-not $isPr -and $env:SkipAssemblySigning -ne "true") {
+if (-not $isPr -and $env:SkipAssemblySigning -ne "true") {
   $timeout = new-timespan -Minutes 5
   $sw = [diagnostics.stopwatch]::StartNew();
   $polling = $true;
@@ -36,4 +36,4 @@ $directoryPath = Split-Path $MyInvocation.MyCommand.Path -Parent
     Push-AppveyorArtifact $_.FullName
   }
   if (-not $?) { exit 1 }
-# }
+}
