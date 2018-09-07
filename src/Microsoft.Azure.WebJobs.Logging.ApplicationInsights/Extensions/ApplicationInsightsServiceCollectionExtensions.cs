@@ -85,9 +85,7 @@ namespace Microsoft.Extensions.DependencyInjection
 
                 SetupTelemetryConfiguration(
                     config,
-                    options.InstrumentationKey,
-                    options.SamplingSettings,
-                    options.SnapshotConfiguration,
+                    options,
                     channel,
                     provider.GetServices<ITelemetryInitializer>(),
                     provider.GetServices<ITelemetryModule>(),
@@ -143,22 +141,20 @@ namespace Microsoft.Extensions.DependencyInjection
 
         private static void SetupTelemetryConfiguration(
             TelemetryConfiguration configuration,
-            string instrumentationKey,
-            SamplingPercentageEstimatorSettings samplingSettings,
-            SnapshotCollectorConfiguration snapshotCollectorConfiguration,
+            ApplicationInsightsLoggerOptions options,
             ITelemetryChannel channel,
             IEnumerable<ITelemetryInitializer> telemetryInitializers,
             IEnumerable<ITelemetryModule> telemetryModules,
             IApplicationIdProvider applicationIdProvider,
             LoggerFilterOptions filterOptions)
         {
-            if (instrumentationKey != null)
+            if (options.InstrumentationKey != null)
             {
-                configuration.InstrumentationKey = instrumentationKey;
+                configuration.InstrumentationKey = options.InstrumentationKey;
 
                 // Because of https://github.com/Microsoft/ApplicationInsights-dotnet-server/issues/943
                 // we have to touch (and create) Active configuration before initializing telemetry modules 
-                TelemetryConfiguration.Active.InstrumentationKey = instrumentationKey;
+                TelemetryConfiguration.Active.InstrumentationKey = options.InstrumentationKey;
             }
 
             configuration.TelemetryChannel = channel;
@@ -176,6 +172,10 @@ namespace Microsoft.Extensions.DependencyInjection
                 if (module is QuickPulseTelemetryModule telemetryModule)
                 {
                     quickPulseModule = telemetryModule;
+                    if (options.QuickPulseAuthenticationApiKey != null)
+                    {
+                        quickPulseModule.AuthenticationApiKey = options.QuickPulseAuthenticationApiKey;
+                    }
                 }
 
                 module.Initialize(configuration);
@@ -190,15 +190,15 @@ namespace Microsoft.Extensions.DependencyInjection
                 })
                 .Use((next) => new FilteringTelemetryProcessor(filterOptions, next));
 
-            if (samplingSettings != null)
+            if (options.SamplingSettings != null)
             {
                 configuration.TelemetryProcessorChainBuilder.Use((next) =>
-                    new AdaptiveSamplingTelemetryProcessor(samplingSettings, null, next));
+                    new AdaptiveSamplingTelemetryProcessor(options.SamplingSettings, null, next));
             }
 
-            if (snapshotCollectorConfiguration != null)
+            if (options.SnapshotConfiguration != null)
             {
-                configuration.TelemetryProcessorChainBuilder.UseSnapshotCollector(snapshotCollectorConfiguration);
+                configuration.TelemetryProcessorChainBuilder.UseSnapshotCollector(options.SnapshotConfiguration);
             }
 
             configuration.TelemetryProcessorChainBuilder.Build();
