@@ -79,7 +79,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         internal static bool IsDisabled(MethodInfo method, INameResolver nameResolver, IJobActivator activator)
         {
             // First try to resolve disabled state by setting
-            string settingName = string.Format(CultureInfo.InvariantCulture, "AzureWebJobs.{0}.Disabled", method.Name);
+            string settingName = string.Format(CultureInfo.InvariantCulture, "AzureWebJobs.{0}.Disabled", Utility.GetFunctionName(method));
             if (ConfigurationUtility.IsSettingEnabled(settingName))
             {
                 return true;

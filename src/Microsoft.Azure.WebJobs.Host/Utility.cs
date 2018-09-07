@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using Microsoft.Azure.WebJobs.Description;
+using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Extensions.Configuration;
 
@@ -53,6 +54,12 @@ namespace Microsoft.Azure.WebJobs
             }
 
             return typeName;
+        }
+
+        internal static string GetFunctionName(MethodInfo methodInfo)
+        {
+            FunctionNameAttribute functionNameAttribute = TypeUtility.GetHierarchicalAttributeOrNull<FunctionNameAttribute>(methodInfo);
+            return (functionNameAttribute != null) ? functionNameAttribute.Name : methodInfo.Name;
         }
 
         private static string GetExtensionConfigurationSectionName<TExtension>() where TExtension : IExtensionConfigProvider
