@@ -7,7 +7,6 @@
     <RootNamespace>Microsoft.Azure.WebJobs.EventHubs</RootNamespace>
     <PackageId>Microsoft.Azure.WebJobs.Extensions.EventHubs</PackageId>
     <Description>Microsoft Azure WebJobs SDK EventHubs Extension</Description>
-    <SignAssembly>false</SignAssembly>
   </PropertyGroup>
 
   <ItemGroup>

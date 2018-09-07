@@ -18,6 +18,9 @@
     <PackageTags>Microsoft Azure WebJobs AzureFunctions</PackageTags>
     <CodeAnalysisRuleSet>..\..\src.ruleset</CodeAnalysisRuleSet>
     <UseSourceLink Condition="$(UseSourceLink) == '' And $(CI) != ''">true</UseSourceLink>
+    <SignAssembly>true</SignAssembly>
+    <DelaySign>true</DelaySign>
+    <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)PublicKey.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(UseSourceLink)' == 'true'">
     <SourceLink>$(BaseIntermediateOutputPath)source_link.json</SourceLink>
