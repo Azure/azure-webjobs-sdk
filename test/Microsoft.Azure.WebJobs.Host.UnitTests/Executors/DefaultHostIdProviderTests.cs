@@ -31,7 +31,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             // computed should remain static. If this test is failing
             // it likely means we've changed the ID computation algorithm
             // which would be a BREAKING CHANGE
-            string expected = "43f86080ae3050da38a314521eb5f1c2";
+            string expected = "89810a97b95cb5c71e5b7915bb172e5d";
 
             var id = await idProvider.GetHostIdAsync(CancellationToken.None);
             Assert.Equal(expected, id);
