@@ -7,9 +7,6 @@
     <Description>This package contains the runtime assemblies for Microsoft.Azure.WebJobs.Logging.ApplicationInsights. For more information, please visit http://go.microsoft.com/fwlink/?LinkID=320971</Description>
     <AssemblyName>Microsoft.Azure.WebJobs.Logging.ApplicationInsights</AssemblyName>
     <RootNamespace>Microsoft.Azure.WebJobs.Logging.ApplicationInsights</RootNamespace>
-    <SignAssembly>true</SignAssembly>
-    <DelaySign>true</DelaySign>
-    <AssemblyOriginatorKeyFile>..\..\build\PublicKey.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>

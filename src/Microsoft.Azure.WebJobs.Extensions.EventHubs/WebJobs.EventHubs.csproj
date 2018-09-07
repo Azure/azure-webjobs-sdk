@@ -7,9 +7,6 @@
     <RootNamespace>Microsoft.Azure.WebJobs.EventHubs</RootNamespace>
     <PackageId>Microsoft.Azure.WebJobs.Extensions.EventHubs</PackageId>
     <Description>Microsoft Azure WebJobs SDK EventHubs Extension</Description>
-    <SignAssembly>true</SignAssembly>
-    <DelaySign>true</DelaySign>
-    <AssemblyOriginatorKeyFile>..\..\build\PublicKey.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>
