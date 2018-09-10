@@ -111,6 +111,9 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         {
             MetricTelemetry telemetry = new MetricTelemetry();
 
+            // Always apply scope first to allow state to override.
+            ApplyScopeProperties(telemetry);
+
             foreach (var entry in values)
             {
                 if (entry.Value == null)
@@ -154,8 +157,6 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 }
             }
 
-            ApplyScopeProperties(telemetry);
-
             _telemetryClient.TrackMetric(telemetry);
         }
 
@@ -185,8 +186,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 LogTrace(logLevel, values, formattedMessage);
             }
 
-            ApplyProperties(telemetry, values, LogConstants.CustomPropertyPrefix);
-            ApplyScopeProperties(telemetry);
+            ApplyScopeAndStateProperties(telemetry, values);
+
             _telemetryClient.TrackException(telemetry);
         }
 
@@ -197,8 +198,9 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 SeverityLevel = GetSeverityLevel(logLevel),
                 Timestamp = DateTimeOffset.UtcNow
             };
-            ApplyProperties(telemetry, values, LogConstants.CustomPropertyPrefix);
-            ApplyScopeProperties(telemetry);
+
+            ApplyScopeAndStateProperties(telemetry, values);
+
             _telemetryClient.TrackTrace(telemetry);
         }
 
@@ -221,6 +223,13 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 default:
                     return null;
             }
+        }
+
+        // Makes sure these are done in the correct order. If there are duplicate keys, the last State property wins.
+        private static void ApplyScopeAndStateProperties(ISupportProperties telemetry, IEnumerable<KeyValuePair<string, object>> state)
+        {
+            ApplyScopeProperties(telemetry);
+            ApplyProperties(telemetry, state, LogConstants.CustomPropertyPrefix);
         }
 
         private static void ApplyProperty(ISupportProperties telemetry, string key, object value, string propertyPrefix = null)
@@ -248,7 +257,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 stringValue = value.ToString();
             }
 
-            telemetry.Properties.Add($"{propertyPrefix}{key}", stringValue);
+            telemetry.Properties[$"{propertyPrefix}{key}"] = stringValue;
         }
 
         private static void ApplyProperty(ISupportProperties telemetry, KeyValuePair<string, object> value, string propertyPrefix = null)
