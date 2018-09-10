@@ -570,6 +570,42 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal("Log message", exceptionTelemetry.Properties[LogConstants.FormattedMessageKey]);
         }
 
+        [Fact]
+        public void DuplicateProperties_LastStateWins()
+        {
+            var logger = CreateLogger(_functionCategoryName);
+
+            var scope = new List<KeyValuePair<string, object>>
+            {
+                new KeyValuePair<string, object>("Prop", "1"),
+                new KeyValuePair<string, object>("Prop", "2")
+            };
+
+            var state = new List<KeyValuePair<string, object>>
+            {
+                new KeyValuePair<string, object>("Prop", "3"),
+                new KeyValuePair<string, object>("Prop", "4")
+            };
+
+            // LogMetric only takes dictionary
+            var dict = new Dictionary<string, object>
+            {
+                { "Prop", "5" }
+            };
+
+            using (logger.BeginScope(scope))
+            {
+                logger.Log(LogLevel.Information, 0, state, null, (s, e) => string.Empty);
+                logger.LogMetric("Test", 0, dict);
+            }
+
+            var trace = _channel.Telemetries.OfType<TraceTelemetry>().Single();
+            Assert.Equal("4", trace.Properties[$"{LogConstants.CustomPropertyPrefix}Prop"]);
+
+            var metric = _channel.Telemetries.OfType<MetricTelemetry>().Single();
+            Assert.Equal("5", metric.Properties[$"{LogConstants.CustomPropertyPrefix}Prop"]);
+        }
+
         private static IEnumerable<string> GetInternalExceptionMessages(ExceptionTelemetry telemetry)
         {
             IList<string> internalMessages = new List<string>();
