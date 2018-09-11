@@ -10,6 +10,7 @@ namespace Microsoft.Azure.WebJobs.Host
     /// Base class for trace writers used by the <see cref="JobHost"/> for
     /// event tracing. See <see cref="JobHostConfiguration.Tracing"/> for details.
     /// </summary>
+    [Obsolete("Will be removed in an upcoming version. Use ILogger instead.")]
     public abstract class TraceWriter
     {
         /// <summary>

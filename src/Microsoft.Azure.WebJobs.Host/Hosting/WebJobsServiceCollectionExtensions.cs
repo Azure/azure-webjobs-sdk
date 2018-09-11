@@ -4,7 +4,7 @@
 using System;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
-using Microsoft.Azure.WebJobs.Host.Configuration;
+using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
@@ -56,7 +56,7 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IFunctionExecutor, FunctionExecutor>();
             services.TryAddSingleton<IJobHostContextFactory, JobHostContextFactory>();
 
-            services.TryAddSingleton<ILoadBalancerQueue, InMemoryLoadBalancerQueue>();
+            services.TryAddSingleton<IQueueFactory, InMemoryQueueFactory>();
 
             // Anybody can add IBindingProvider via DI. 
             // Consume the whole list via a CompositeBindingProvider
@@ -73,7 +73,7 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IFunctionOutputLogger, ConsoleFunctionOutputLogger>();
             services.TryAddSingleton<IFunctionInstanceLogger, FunctionInstanceLogger>();
             services.TryAddSingleton<IHostInstanceLogger, NullHostInstanceLogger>();
-            services.TryAddSingleton<IDistributedLockManager, InMemorySingletonManager>();
+            services.TryAddSingleton<IDistributedLockManager, InMemoryDistributedLockManager>();
 
             // $$$ Can we remove these completely? 
             services.TryAddSingleton<DefaultTriggerBindingFactory>();

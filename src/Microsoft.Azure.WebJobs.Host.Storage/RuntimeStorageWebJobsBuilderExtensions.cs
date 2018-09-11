@@ -4,7 +4,7 @@
 using System;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Azure.WebJobs.Host.Configuration;
+using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -64,7 +64,7 @@ namespace Microsoft.Extensions.Hosting
                 CloudStorageAccount account = config.GetStorageAccount();
                 if (account == null)
                 {
-                    return new InMemorySingletonManager();
+                    return new InMemoryDistributedLockManager();
                 }
 
                 var blobClient = account.CreateCloudBlobClient();

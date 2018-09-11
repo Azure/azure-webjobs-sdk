@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Microsoft.Azure.WebJobs.Hosting
 {
-    public interface IWebJobsStartupTypeDiscoverer
+    public interface IWebJobsStartupTypeLocator
     {
         Type[] GetStartupTypes();
     }

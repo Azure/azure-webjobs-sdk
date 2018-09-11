@@ -21,8 +21,8 @@ namespace Microsoft.Azure.WebJobs
     /// <description>Flags the function as an available job function.</description>
     /// </item>
     /// </list>
-    /// In both cases, functions marked with this attribute are never called automatically by JobHost (during
-    /// RunAndBlock). Instead, they must be invoked manually using the Call method.
+    /// In both cases, functions marked with this attribute are never called automatically by JobHost when running.
+    /// Instead, they must be invoked manually using the Call method.
     /// </remarks>
     [AttributeUsage(AttributeTargets.Method)]
     [Binding]

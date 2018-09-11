@@ -190,7 +190,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 IHost host = new HostBuilder()
                     .ConfigureWebJobs(b =>
                     {
-                        b.AddFastLogging(fastLogger);
+                        b.AddTableLogging(fastLogger);
                     })
                     .ConfigureTypeLocator(typeof(BasicTest))
                     .Build();
@@ -203,7 +203,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 var method = typeof(BasicTest).GetMethod("Method", BindingFlags.Public | BindingFlags.Static);
 
                 var lockManager = host.Services.GetRequiredService<IDistributedLockManager>();
-                Assert.IsType<InMemorySingletonManager>(lockManager);
+                Assert.IsType<InMemoryDistributedLockManager>(lockManager);
 
                 host.GetJobHost().Call(method, new { value = randomValue });
                 Assert.True(BasicTest.Called);

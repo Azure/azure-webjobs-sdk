@@ -21,10 +21,10 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         private readonly IFunctionIndexLookup _functionLookup;
         private readonly IFunctionInstanceLogger _functionInstanceLogger;
         private readonly IFunctionExecutor _executor;
-        private readonly ILoadBalancerQueue _storageServices;
+        private readonly IQueueFactory _queueFactory;
 
         public HostMessageListenerFactory(
-            ILoadBalancerQueue storageServices,
+            IQueueFactory queueFactory,
             string queueName,
             IWebJobsExceptionHandler exceptionHandler,
             ILoggerFactory loggerFactory,
@@ -33,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             IFunctionExecutor executor)
         {
             _queueName = queueName ?? throw new ArgumentNullException(nameof(queueName));
-            _storageServices = storageServices ?? throw new ArgumentNullException(nameof(storageServices));
+            _queueFactory = queueFactory ?? throw new ArgumentNullException(nameof(queueFactory));
             _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
             _functionLookup = functionLookup ?? throw new ArgumentNullException(nameof(functionLookup));
             _functionInstanceLogger = functionInstanceLogger ?? throw new ArgumentNullException(nameof(functionInstanceLogger));
@@ -47,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         {
             var triggerExecutor = new HostMessageExecutor(_executor, _functionLookup, _functionInstanceLogger);
 
-            IListener listener = _storageServices.CreateQueueListenr(_queueName, null, triggerExecutor.ExecuteAsync);
+            IListener listener = _queueFactory.CreateQueueListener(_queueName, null, triggerExecutor.ExecuteAsync);
     
             return Task.FromResult(listener);
         }

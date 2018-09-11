@@ -4,7 +4,7 @@
 using System;
 using Microsoft.Azure.WebJobs.Host.Executors;
 
-namespace Microsoft.Azure.WebJobs
+namespace Microsoft.Azure.WebJobs.Host.Config
 {
     /// <summary>
     /// Represents the configuration settings for a <see cref="JobHost"/>.

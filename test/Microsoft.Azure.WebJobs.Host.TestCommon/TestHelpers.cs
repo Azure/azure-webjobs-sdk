@@ -164,7 +164,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 
         public static IHostBuilder ConfigureDefaultTestHost<TProgram>(this IHostBuilder builder)
         {
-            return builder.ConfigureDefaultTestHost(o=> { }, typeof(TProgram))
+            return builder.ConfigureDefaultTestHost(o => { }, typeof(TProgram))
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<IJobHost, JobHost<TProgram>>();

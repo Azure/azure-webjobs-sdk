@@ -47,7 +47,6 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return bindingTemplate.Bind(bindingData);
         }
 
-        // $$$ expose 
         public static void ValidateContractCompatibility(IEnumerable<string> parameterNames, IReadOnlyDictionary<string, Type> bindingDataContract)
         {
             if (parameterNames != null && bindingDataContract != null)

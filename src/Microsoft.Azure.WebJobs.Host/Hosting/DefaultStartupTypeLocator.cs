@@ -9,18 +9,18 @@ using System.Reflection;
 namespace Microsoft.Azure.WebJobs.Hosting
 {
     /// <summary>
-    /// An implementation of an <see cref="IWebJobsStartupTypeDiscoverer"/> that locates startup types
+    /// An implementation of an <see cref="IWebJobsStartupTypeLocator"/> that locates startup types
     /// configured in the entry point assembly using the <see cref="WebJobsStartupAttribute"/>.
     /// </summary>
-    internal class DefaultStartupTypeDiscoverer : IWebJobsStartupTypeDiscoverer
+    internal class DefaultStartupTypeLocator : IWebJobsStartupTypeLocator
     {
         private readonly Assembly _entryAssembly;
 
-        public DefaultStartupTypeDiscoverer()
+        public DefaultStartupTypeLocator()
         {
         }
 
-        internal DefaultStartupTypeDiscoverer(Assembly entryAssembly)
+        internal DefaultStartupTypeLocator(Assembly entryAssembly)
         {
             _entryAssembly = entryAssembly;
         }

@@ -64,7 +64,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void WebJobs_VerifyPublicSurfaceArea()
         {
-            // The DLL containing the binding attributes should be truly minimal and have no extra dependencies. 
+            // The core WebJobs assembly should be truly minimal and have no extra dependencies. 
             var assembly = typeof(AutoResolveAttribute).Assembly;
 
             var expected = new[]
@@ -178,7 +178,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IFunctionInvocationFilter",
                 "IFunctionInvoker",
                 "IHostIdProvider",
-                "IHostSingletonManager",
+                "ISingletonManager",
                 "IJobActivator",
                 "IJobHost",
                 "IJobHostContextFactory",
@@ -186,11 +186,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IJobHostMetadataProviderFactory",
                 "IListener",
                 "IListenerFactory",
-                "ILoadBalancerQueue",
+                "IQueueFactory",
                 "IMessageHandler",
                 "INameResolver",
-                "InMemoryLoadBalancerQueue",
-                "InMemorySingletonManager",
                 "IOrderedValueBinder",
                 "IResolutionPolicy",
                 "ITriggerBinding",
@@ -209,9 +207,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IWebJobsExtensionBuilder",
                 "IWebJobsExtensionConfiguration`1",
                 "IWebJobsStartup",
-                "IWebJobsStartupTypeDiscoverer",
+                "IWebJobsStartupTypeLocator",
                 "JobHost",
-                "JobHostBuilder",
                 "JobHostContext",
                 "JobHostFunctionTimeoutOptions",
                 "JobHostOptions",

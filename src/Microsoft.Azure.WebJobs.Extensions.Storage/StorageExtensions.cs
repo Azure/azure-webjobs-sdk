@@ -72,13 +72,10 @@ namespace Microsoft.Azure.WebJobs
             return Retrieve<TElement>(partitionKey, rowKey);
         }
 
-        public static TableOperation Retrieve<TElement>(string partitionKey, string rowKey)
-    where TElement : ITableEntity, new()
+        public static TableOperation Retrieve<TElement>(string partitionKey, string rowKey) where TElement : ITableEntity, new()
         {
             TableOperation sdkOperation = TableOperation.Retrieve<TElement>(partitionKey, rowKey);
             return sdkOperation;
-            //var resolver = new TypeEntityResolver<TElement>(); $$$ Not used?
-            //return new StorageTableOperation(sdkOperation, partitionKey, rowKey, resolver);
         }
 
         public static Task<IList<TableResult>> ExecuteBatchAsync(this CloudTable sdk, TableBatchOperation batch,

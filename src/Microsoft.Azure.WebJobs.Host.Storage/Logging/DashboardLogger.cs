@@ -28,7 +28,7 @@ namespace WebJobs.Host.Storage.Logging
         private readonly IFunctionInstanceLogger _functionInstanceLogger;
         private readonly IFunctionExecutor _functionExecutor;
         private readonly SharedQueueHandler _sharedQueueHandler;
-        private readonly ILoadBalancerQueue _storageServices;
+        private readonly IQueueFactory _queueFactory;
         private readonly StorageAccountOptions _storageAccountOptions;
 
         public DashboardLoggingSetup(
@@ -38,7 +38,7 @@ namespace WebJobs.Host.Storage.Logging
             IFunctionInstanceLogger functionInstanceLogger,
             IFunctionExecutor functionExecutor,
             SharedQueueHandler sharedQueueHandler,
-            ILoadBalancerQueue storageServices
+            IQueueFactory queueFactory
             )
         {
             _storageAccountOptions = storageAccountOptions;
@@ -47,7 +47,7 @@ namespace WebJobs.Host.Storage.Logging
             _functionInstanceLogger = functionInstanceLogger;
             _functionExecutor = functionExecutor;
             _sharedQueueHandler = sharedQueueHandler;
-            _storageServices = storageServices;
+            _queueFactory = queueFactory;
         }
 
         public bool Setup(
@@ -62,14 +62,14 @@ namespace WebJobs.Host.Storage.Logging
             string sharedQueueName = HostQueueNames.GetHostQueueName(hostId);
             var sharedQueue = sharedQueueName;
 
-            IListenerFactory sharedQueueListenerFactory = new HostMessageListenerFactory(_storageServices, sharedQueue,
+            IListenerFactory sharedQueueListenerFactory = new HostMessageListenerFactory(_queueFactory, sharedQueue,
                  _exceptionHandler, _loggerFactory, functions,
                 _functionInstanceLogger, _functionExecutor);
 
             Guid hostInstanceId = Guid.NewGuid();
             string instanceQueueName = HostQueueNames.GetHostQueueName(hostInstanceId.ToString("N"));
             var instanceQueue = instanceQueueName;
-            IListenerFactory instanceQueueListenerFactory = new HostMessageListenerFactory(_storageServices, instanceQueue,
+            IListenerFactory instanceQueueListenerFactory = new HostMessageListenerFactory(_queueFactory, instanceQueue,
                 _exceptionHandler, _loggerFactory, functions,
                 _functionInstanceLogger, _functionExecutor);
 

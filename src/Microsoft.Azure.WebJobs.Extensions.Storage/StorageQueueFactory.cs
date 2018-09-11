@@ -19,8 +19,8 @@ using Newtonsoft.Json;
 
 namespace WebJobs.Extensions.Storage
 {
-    // $$$ This exposes Azure Storage implementations for runtime state objects. 
-    internal class StorageLoadBalancerQueue : ILoadBalancerQueue
+    // $$$ Review APIs
+    internal class StorageQueueFactory : IQueueFactory
     {
         private readonly QueuesOptions _queueOptions;
         private readonly ILoggerFactory _loggerFactory;
@@ -29,7 +29,7 @@ namespace WebJobs.Extensions.Storage
         private readonly StorageAccountProvider _storageAccountProvider;
         private readonly IQueueProcessorFactory _queueProcessorFactory;
 
-        public StorageLoadBalancerQueue(
+        public StorageQueueFactory(
             StorageAccountProvider storageAccountProvider,
                IOptions<QueuesOptions> queueOptions,
                IWebJobsExceptionHandler exceptionHandler,
@@ -45,17 +45,17 @@ namespace WebJobs.Extensions.Storage
             _queueProcessorFactory = queueProcessorFactory;
         }
         
-        public IAsyncCollector<T> GetQueueWriter<T>(string queue)
+        public IAsyncCollector<T> CreateQueueWriter<T>(string queue)
         {
             return new QueueWriter<T>(this, Convert(queue));
         }
 
         class QueueWriter<T> : IAsyncCollector<T>
         {
-            StorageLoadBalancerQueue _parent;
+            StorageQueueFactory _parent;
             CloudQueue _queue;
 
-            public QueueWriter(StorageLoadBalancerQueue parent, CloudQueue queue)
+            public QueueWriter(StorageQueueFactory parent, CloudQueue queue)
             {
                 this._parent = parent;
                 this._queue = queue;
@@ -82,12 +82,13 @@ namespace WebJobs.Extensions.Storage
 
         private CloudQueue Convert(string queueMoniker)
         {
-            var account = _storageAccountProvider.Get(ConnectionStringNames.Dashboard); // $$$
+            // $$$ Review
+            var account = _storageAccountProvider.Get(ConnectionStringNames.Dashboard);
             var queue = account.CreateCloudQueueClient().GetQueueReference(queueMoniker);
             return queue;
         }
 
-        public IListener CreateQueueListenr(
+        public IListener CreateQueueListener(
             string queue,
             string poisonQueue,
             Func<string, CancellationToken,  Task<FunctionResult>> callback
@@ -116,7 +117,7 @@ namespace WebJobs.Extensions.Storage
         }
 
         // $$$ cleanup
-        class Wrapper : ITriggerExecutor<CloudQueueMessage>
+        private class Wrapper : ITriggerExecutor<CloudQueueMessage>
         {
             public Func<string, CancellationToken, Task<FunctionResult>> _callback;
 

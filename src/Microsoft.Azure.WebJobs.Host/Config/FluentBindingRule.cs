@@ -112,7 +112,8 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             return this;
         }
 
-        // $$$ Needed for storage ext
+        // $$$ Only used by storage extension currently. Remove.
+        [Obsolete("Will be removed in a future version.")]
         public FluentBindingRule<TAttribute> SetPostResolveHook(Func<TAttribute, ParameterInfo, INameResolver, ParameterDescriptor> hook)
         {
             _hook = hook;

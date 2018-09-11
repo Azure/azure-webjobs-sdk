@@ -11,25 +11,23 @@ using Microsoft.Azure.WebJobs.Host.Listeners;
 namespace Microsoft.Azure.WebJobs
 {
     /// <summary>
-    /// Service for queues used to load balance across instances. 
-    /// Implementation determines the storage account. 
+    /// Factory for host queue services. 
     /// </summary>
     /// $$$ Review this new public surface area
-    public interface ILoadBalancerQueue
+    [Obsolete("Not ready for public consumption.")]
+    public interface IQueueFactory
     {
-        // Host may use queues internally for distributing work items. 
-        IAsyncCollector<T> GetQueueWriter<T>(string queueName);
+        IAsyncCollector<T> CreateQueueWriter<T>(string queueName);
 
-        IListener CreateQueueListenr(
-            string queue, // queue to listen on
-            string poisonQueue, // optional. Message enqueue here if callback fails
-            Func<string, CancellationToken, Task<FunctionResult>> callback
-            );
+        IListener CreateQueueListener(
+            string queueName,
+            string poisonQueueName,
+            Func<string, CancellationToken, Task<FunctionResult>> callback);
     }
 
-    public class InMemoryLoadBalancerQueue : ILoadBalancerQueue
+    internal class InMemoryQueueFactory : IQueueFactory
     {
-        public IListener CreateQueueListenr(string queue, string poisonQueue, Func<string, CancellationToken, Task<FunctionResult>> callback)
+        public IListener CreateQueueListener(string queue, string poisonQueue, Func<string, CancellationToken, Task<FunctionResult>> callback)
         {
             return new Listener
             {
@@ -64,7 +62,7 @@ namespace Microsoft.Azure.WebJobs
             }
         }
 
-        public IAsyncCollector<T> GetQueueWriter<T>(string queueName)
+        public IAsyncCollector<T> CreateQueueWriter<T>(string queueName)
         {
             return new Writer<T>
             {
@@ -75,7 +73,7 @@ namespace Microsoft.Azure.WebJobs
 
         class Listener : IListener
         {
-            internal InMemoryLoadBalancerQueue Parent;
+            internal InMemoryQueueFactory Parent;
             internal string Queue; // queue to listen on
             internal Func<string, CancellationToken, Task<FunctionResult>> Callback;
 
@@ -101,7 +99,7 @@ namespace Microsoft.Azure.WebJobs
         class Writer<T> : IAsyncCollector<T>
         {
             internal string _queue;
-            internal InMemoryLoadBalancerQueue _parent;
+            internal InMemoryQueueFactory _parent;
 
             public Task AddAsync(T item, CancellationToken cancellationToken = default(CancellationToken))
             {

@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    // $$$ Public since extensions may need per-host state
+    /// <summary>
+    /// Interface for providing a unique host identifier. 
+    /// </summary>
     public interface IHostIdProvider
     {
         Task<string> GetHostIdAsync(CancellationToken cancellationToken);

@@ -34,7 +34,7 @@ namespace Microsoft.Extensions.Hosting
             };
 
             // $$$ Move to Host.Storage? 
-            builder.Services.TryAddSingleton<ILoadBalancerQueue, StorageLoadBalancerQueue>();
+            builder.Services.TryAddSingleton<IQueueFactory, StorageQueueFactory>();
 
             builder.Services.TryAddSingleton<SharedQueueWatcher>();
 
