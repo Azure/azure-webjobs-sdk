@@ -50,7 +50,7 @@ test_script:
 
     $success = $success -and $?
 
-    dotnet test .\test\Microsoft.Azure.WebJobs.EventHubs.UnitTests\ -v q --no-build
+    dotnet test .\test\Microsoft.Azure.WebJobs.Extensions.EventHubs.UnitTests\ -v q --no-build
 
     $success = $success -and $?
     
@@ -58,7 +58,7 @@ test_script:
 
     $success = $success -and $?
     
-    dotnet test .\test\Microsoft.Azure.WebJobs.ServiceBus.UnitTests\ -v q --no-build
+    dotnet test .\test\Microsoft.Azure.WebJobs.Extensions.ServiceBus.UnitTests\ -v q --no-build
 
     $success = $success -and $?
 
