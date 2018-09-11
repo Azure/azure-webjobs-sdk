@@ -68,7 +68,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Configuration
             var config = new ConfigurationBuilder()
                 .AddInMemoryCollection(configValues);
 
-            var optionsConfig = new WebJobsExtensionOptionsConfiguration<TOptions>(config.Build(), extensionName, (s, o) => s.Bind(o));
+            var optionsConfig = new WebJobsExtensionOptionsConfiguration<TOptions>(config.Build(), extensionName, (s, p, o) => s.GetSection(p).Bind(o));
             var options = new TOptions();
 
             // Act

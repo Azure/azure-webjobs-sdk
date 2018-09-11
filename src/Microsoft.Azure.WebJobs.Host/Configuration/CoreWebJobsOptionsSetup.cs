@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host.Configuration
 
         public void Configure(TOptions options)
         {
-            IConfiguration rootSection = Utility.GetWebJobsConfigurationSection(_configuration);
+            IConfiguration rootSection = _configuration.GetWebJobsRootConfiguration();
 
             rootSection.Bind(options);
         }

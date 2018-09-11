@@ -15,10 +15,12 @@ namespace Microsoft.Extensions.Hosting
         public static IWebJobsBuilder AddServiceBus(this IWebJobsBuilder builder)
         {
             builder.AddExtension<ServiceBusExtensionConfigProvider>()
-                .ConfigureOptions<ServiceBusOptions>((config, options) =>
+                .ConfigureOptions<ServiceBusOptions>((config, path, options) =>
                 {
-                    config.Bind(options);
-                    options.ConnectionString = config.GetConnectionString("Primary");
+                    options.ConnectionString = config.GetConnectionString(Constants.DefaultConnectionStringName);
+
+                    IConfigurationSection section = config.GetSection(path);
+                    section.Bind(options);
                 });
 
             builder.Services.TryAddSingleton<MessagingProvider>();

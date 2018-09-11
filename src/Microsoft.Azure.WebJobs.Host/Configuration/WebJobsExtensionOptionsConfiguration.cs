@@ -11,9 +11,9 @@ namespace Microsoft.Azure.WebJobs.Host.Configuration
     {
         private readonly string _extensionName;
         private readonly IConfiguration _configuration;
-        private readonly Action<IConfigurationSection, TOptions> _configure;
+        private readonly Action<IConfiguration, string, TOptions> _configure;
 
-        public WebJobsExtensionOptionsConfiguration(IConfiguration configuration, string extensionName, Action<IConfigurationSection, TOptions> configure)
+        public WebJobsExtensionOptionsConfiguration(IConfiguration configuration, string extensionName, Action<IConfiguration, string, TOptions> configure)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _configure = configure ?? throw new ArgumentNullException(nameof(configure));
@@ -22,8 +22,8 @@ namespace Microsoft.Azure.WebJobs.Host.Configuration
 
         public void Configure(TOptions options)
         {
-            IConfigurationSection section = Utility.GetExtensionConfigurationSection(_configuration, _extensionName);
-            _configure(section, options);
+            var extensionPath = _configuration.GetWebJobsExtensionConfigurationSectionPath(_extensionName);
+            _configure(_configuration, extensionPath, options);
         }
     }
 }

@@ -7,6 +7,10 @@ namespace Microsoft.Extensions.Configuration
 {
     public static class IConfigurationExtensions
     {
+        private const string DefaultConfigurationRootSectionName = "AzureWebJobs";
+        private const string ConfigurationRootSectionKey = "AzureWebJobsConfigurationSection";
+        private const string ExtensionsSectionKey = "extensions";
+
         public static string GetWebJobsConnectionString(this IConfiguration configuration, string connectionStringName)
         {
             // first try prefixing
@@ -22,10 +26,49 @@ namespace Microsoft.Extensions.Configuration
             return connectionString;
         }
 
+        public static IConfiguration GetWebJobsRootConfiguration(this IConfiguration configuration)
+        {
+            string configPath = configuration.GetWebJobsRootConfigurationPath();
+
+            if (string.IsNullOrEmpty(configPath))
+            {
+                return configuration;
+            }
+
+            return configuration.GetSection(configPath);
+        }
+
+        public static IConfigurationSection GetWebJobsExtensionConfigurationSection(this IConfiguration configuration, string extensionName)
+        {
+            string configPath = configuration.GetWebJobsExtensionConfigurationSectionPath(extensionName);
+            return configuration.GetSection(configPath);
+        }
+
+        public static string GetWebJobsRootConfigurationPath(this IConfiguration configuration)
+        {
+            return configuration[ConfigurationRootSectionKey] ?? DefaultConfigurationRootSectionName;
+        }
+
+        public static string GetWebJobsExtensionConfigurationSectionPath(this IConfiguration configuration, string extensionName)
+        {
+            string configPath = configuration.GetWebJobsRootConfigurationPath();
+            configPath = string.IsNullOrEmpty(configPath) 
+                ? ExtensionsSectionKey
+                : ConfigurationPath.Combine(configPath, ExtensionsSectionKey);
+
+            if (extensionName != null)
+            {
+                configPath = ConfigurationPath.Combine(configPath, extensionName);
+            }
+
+            return configPath;
+        }
+
         public static string GetPrefixedConnectionStringName(string connectionStringName)
         {
             return Constants.WebJobsConfigurationSectionName + connectionStringName;
         }
+
         private static string FindConnectionString(IConfiguration configuration, string connectionName) =>
             configuration.GetConnectionString(connectionName) ?? configuration[connectionName];
     }

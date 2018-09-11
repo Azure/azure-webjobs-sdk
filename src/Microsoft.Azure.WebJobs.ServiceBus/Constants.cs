@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
-    internal static class Constants
+    public static class Constants
     {
         private static JsonSerializerSettings _serializerSettings = new JsonSerializerSettings
         {
@@ -23,5 +23,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 return _serializerSettings;
             }
         }
+
+        public const string DefaultConnectionStringName = "ServiceBus";
     }
 }

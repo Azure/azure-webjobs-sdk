@@ -51,9 +51,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 .AddEnvironmentVariables()
                 .Build();
 
-            var configSection = Utility.GetExtensionConfigurationSection(config, "ServiceBus");
-            _primaryConnectionString = configSection.GetConnectionString("Primary");
-            _secondaryConnectionString = configSection.GetConnectionString("Secondary");
+            _primaryConnectionString = config.GetConnectionString(ServiceBus.Constants.DefaultConnectionStringName);
+            _secondaryConnectionString = config.GetConnectionString("SecondaryServiceBus");
 
             _nameResolver = new RandomNameResolver();
 

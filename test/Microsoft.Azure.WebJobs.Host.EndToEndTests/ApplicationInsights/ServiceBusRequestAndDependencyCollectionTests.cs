@@ -38,8 +38,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 .AddEnvironmentVariables()
                 .Build();
 
-            var configSection = Utility.GetExtensionConfigurationSection(config, "ServiceBus");
-            _connectionString = configSection.GetConnectionString("Primary");
+            _connectionString = config.GetConnectionString(ServiceBus.Constants.DefaultConnectionStringName);
 
             var connStringBuilder = new ServiceBusConnectionStringBuilder(_connectionString);
             _endpoint = connStringBuilder.Endpoint;
