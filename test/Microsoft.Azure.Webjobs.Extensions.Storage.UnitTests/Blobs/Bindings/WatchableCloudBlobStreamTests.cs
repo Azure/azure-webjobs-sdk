@@ -8,11 +8,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Blobs.Bindings;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Moq;
 using Xunit;
-using Xunit.Extensions;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Bindings
 {
@@ -1602,97 +1600,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Bindings
             Assert.Same(expectedException, task.Exception.InnerException);
         }
 
-        //[Fact]
-        //public void CommitAsync_CancelToken_WhenNotCompletedSynchronously_DelegatesToCancel()
-        //{
-        //    // Arrange
-        //    Mock<CloudBlobStream> innerStreamMock = CreateMockInnerStream();
-        //    CancellableAsyncCompletionSource spy = new CancellableAsyncCompletionSource();
-        //    innerStreamMock.Setup(m => m.CommitAsync())
-        //        .SetupBeginCommit()
-        //        .ReturnsCompletingAsynchronously(spy);
-        //    innerStreamMock.SetupEndCommit();
-        //    CloudBlobStream innerStream = innerStreamMock.Object;
-        //    WatchableCloudBlobStream product = CreateProductUnderTest(innerStream);
-
-        //    using (CancellationTokenSource tokenSource = new CancellationTokenSource())
-        //    {
-        //        CancellationToken cancellationToken = tokenSource.Token;
-
-        //        Task task = product.CommitAsync(cancellationToken);
-        //        Assert.NotNull(task); // Guard
-
-        //        // Act
-        //        tokenSource.Cancel();
-
-        //        // Assert
-        //        Assert.True(spy.Canceled);
-
-        //        // Cleanup
-        //        spy.Complete();
-        //        task.GetAwaiter().GetResult();
-        //    }
-        //}
-
-        //[Fact]
-        //public void CommitAsync_CancelToken_AfterCompletion_DoesNotCallCancellableAsyncResultCancel()
-        //{
-        //    // Arrange
-        //    Mock<CloudBlobStream> innerStreamMock = CreateMockInnerStream();
-        //    CompletedCancellationSpy spy = new CompletedCancellationSpy();
-        //    innerStreamMock
-        //        .SetupBeginCommit()
-        //        .ReturnsCompletedSynchronously(spy);
-        //    innerStreamMock.SetupEndCommit();
-        //    CloudBlobStream innerStream = innerStreamMock.Object;
-        //    WatchableCloudBlobStream product = CreateProductUnderTest(innerStream);
-
-        //    using (CancellationTokenSource tokenSource = new CancellationTokenSource())
-        //    {
-        //        CancellationToken cancellationToken = tokenSource.Token;
-
-        //        Task task = product.CommitAsync(cancellationToken);
-        //        Assert.NotNull(task); // Guard
-
-        //        // Act
-        //        tokenSource.Cancel();
-
-        //        // Assert
-        //        Assert.False(spy.Canceled);
-        //        task.GetAwaiter().GetResult();
-        //    }
-        //}
-
-        //[Fact]
-        //public void CommitAsync_WhenNotCompletedSynchronously_CancelTokenDuringEndCommit_DoesNotCallAsyncResultCancel()
-        //{
-        //    // Arrange
-        //    using (CancellationTokenSource tokenSource = new CancellationTokenSource())
-        //    {
-        //        Mock<CloudBlobStream> innerStreamMock = CreateMockInnerStream();
-        //        CancellableAsyncCompletionSource spy = new CancellableAsyncCompletionSource();
-        //        innerStreamMock
-        //            .SetupBeginCommit()
-        //            .ReturnsCompletingAsynchronously(spy);
-        //        innerStreamMock
-        //            .SetupEndCommit()
-        //            .Callback(() => tokenSource.Cancel());
-        //        CloudBlobStream innerStream = innerStreamMock.Object;
-        //        WatchableCloudBlobStream product = CreateProductUnderTest(innerStream);
-        //        CancellationToken cancellationToken = tokenSource.Token;
-
-        //        Task task = product.CommitAsync(cancellationToken);
-        //        Assert.NotNull(task); // Guard
-
-        //        // Act
-        //        spy.Complete();
-
-        //        // Assert
-        //        Assert.False(spy.Canceled);
-        //        task.GetAwaiter().GetResult();
-        //    }
-        //}
-
         [Fact]
         public void CommitAsync_IfCommittedActionIsNotNull_CallsCommittedAction()
         {
@@ -1731,65 +1638,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Bindings
             // Act & Assert
             product.CommitAsync(CancellationToken.None).GetAwaiter().GetResult();
         }
-
-
-        //[Fact]
-        //public void CompleteAsync_WhenChanged_DelegatesToBeginEndCommit()
-        //{
-        //    // Arrange
-        //    Mock<CloudBlobStream> innerStreamMock = CreateMockInnerStream();
-        //    CompletedCancellationSpy spy = new CompletedCancellationSpy();
-        //    innerStreamMock.Setup(s => s.WriteByte(It.IsAny<byte>()));
-        //    innerStreamMock
-        //        .SetupBeginCommit()
-        //        .ReturnsCompletedSynchronously(spy)
-        //        .Verifiable();
-        //    innerStreamMock
-        //        .Setup(s => s.EndCommit(It.Is<IAsyncResult>((ar) => ar == spy.AsyncResult)))
-        //        .Verifiable();
-        //    CloudBlobStream innerStream = innerStreamMock.Object;
-        //    WatchableCloudBlobStream product = CreateProductUnderTest(innerStream);
-
-        //    product.WriteByte(0x00);
-
-        //    CancellationToken cancellationToken = CancellationToken.None;
-
-        //    // Act
-        //    Task task = product.CompleteAsync(cancellationToken);
-
-        //    // Assert
-        //    innerStreamMock.Verify();
-        //    Assert.NotNull(task);
-        //    Assert.Equal(TaskStatus.RanToCompletion, task.Status);
-        //}
-
-        //[Fact]
-        //public void CompleteAsync_WhenChangedAndCancellationIsRequested_CallsCancellableAsyncResultCancel()
-        //{
-        //    // Arrange
-        //    Mock<CloudBlobStream> innerStreamMock = CreateMockInnerStream();
-        //    CancellableAsyncCompletionSource spy = new CancellableAsyncCompletionSource();
-        //    innerStreamMock.Setup(s => s.WriteByte(It.IsAny<byte>()));
-        //    innerStreamMock
-        //        .SetupBeginCommit()
-        //        .ReturnsCompletingAsynchronously(spy);
-        //    innerStreamMock.SetupEndCommit();
-        //    CloudBlobStream innerStream = innerStreamMock.Object;
-        //    WatchableCloudBlobStream product = CreateProductUnderTest(innerStream);
-
-        //    product.WriteByte(0x00);
-
-        //    CancellationToken cancellationToken = new CancellationToken(canceled: true);
-        //    Task task = product.CompleteAsync(cancellationToken);
-
-        //    // Act
-        //    spy.Complete();
-
-        //    // Assert
-        //    Assert.True(spy.Canceled);
-        //    Assert.NotNull(task);
-        //    Assert.Equal(TaskStatus.RanToCompletion, task.Status);
-        //}
 
         [Fact]
         public void CompleteAsync_WhenChangedAndCommitted_DoesNotCommitAgainButStillReturnsTrue()

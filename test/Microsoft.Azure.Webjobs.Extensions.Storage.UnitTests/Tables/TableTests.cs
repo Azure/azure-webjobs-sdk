@@ -418,7 +418,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         private static StorageAccount CreateFakeStorageAccount()
         {
-            return new XFakeStorageAccount();
+            return new FakeStorageAccount();
         }
 
         private static void RunTrigger(StorageAccount account, Type programType)

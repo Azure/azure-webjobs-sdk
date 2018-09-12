@@ -8,13 +8,11 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Moq;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -22,38 +20,40 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
     public class JobHostOptionsTests
     {
-        // TODO: DI: Change to use IHostingEnvironment
-        //[Theory]
-        //[InlineData(null, false)]
-        //[InlineData("Blah", false)]
-        //[InlineData("Development", true)]
-        //[InlineData("development", true)]
-        //public void IsDevelopment_ReturnsCorrectValue(string settingValue, bool expected)
-        //{
-        //    using (EnvVarHolder.Set(Constants.EnvironmentSettingName, settingValue))
-        //    {
-        //        JobHostOptions config = new JobHostOptions();
-        //        Assert.Equal(config.IsDevelopment, expected);
-        //    }
-        //}
+        // TODO: DI: private readonly Change to private readonly use IHostingEnvironment
+        // TODO: Missing feature tracked by https://github.com/Azure/azure-webjobs-sdk/issues/1869
+        [Theory(Skip = "Development settings not being applied")]
+        [InlineData(null, false)]
+        [InlineData("Blah", false)]
+        [InlineData("Development", true)]
+        [InlineData("development", true)]
+        public void IsDevelopment_ReturnsCorrectValue(string settingValue, bool expected)
+        {
+            //using (EnvVarHolder.Set(Constants.EnvironmentSettingName, settingValue))
+            //{
+            //    JobHostOptions config = new JobHostOptions();
+            //    Assert.Equal(config.IsDevelopment, expected);
+            //}
+        }
 
-        //public void UseDevelopmentSettings_ConfiguresCorrectValues()
-        //{
-        //    using (EnvVarHolder.Set(Constants.EnvironmentSettingName, "Development"))
-        //    {
-        //        JobHostOptions config = new JobHostOptions();
-        //        Assert.False(config.UsingDevelopmentSettings);
+        [Fact(Skip = "Development settings not being applied")]
+        public void UseDevelopmentSettings_ConfiguresCorrectValues()
+        {
+            //using (EnvVarHolder.Set(Constants.EnvironmentSettingName, "Development"))
+            //{
+            //    JobHostOptions config = new JobHostOptions();
+            //    Assert.False(config.UsingDevelopmentSettings);
 
-        //        if (config.IsDevelopment)
-        //        {
-        //            config.UseDevelopmentSettings();
-        //        }
+            //    if (config.IsDevelopment)
+            //    {
+            //        config.UseDevelopmentSettings();
+            //    }
 
-        //        Assert.True(config.UsingDevelopmentSettings);
-        //        Assert.Equal(TimeSpan.FromSeconds(2), config.Queues.MaxPollingInterval);
-        //        Assert.Equal(TimeSpan.FromSeconds(15), config.Singleton.ListenerLockPeriod);
-        //    }
-        //}
+            //    Assert.True(config.UsingDevelopmentSettings);
+            //    Assert.Equal(TimeSpan.FromSeconds(2), config.Queues.MaxPollingInterval);
+            //    Assert.Equal(TimeSpan.FromSeconds(15), config.Singleton.ListenerLockPeriod);
+            //}
+        }
 
         private class FastLogger : IAsyncCollector<FunctionInstanceLogEntry>, IEventCollectorFactory
         {
@@ -194,7 +194,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                     })
                     .ConfigureTypeLocator(typeof(BasicTest))
                     .Build();
-                
+
                 var randomValue = Guid.NewGuid().ToString();
 
                 StringBuilder sbLoggingCallbacks = new StringBuilder();
@@ -233,7 +233,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 Assert.Equal(2, endMsg.Arguments.Count);
                 Assert.True(endMsg.Arguments.ContainsKey("log"));
                 Assert.Equal(randomValue, endMsg.Arguments["value"]);
-                                
+
                 Assert.Equal("val=" + randomValue, endMsg.LogOutput.Trim());
 
                 Assert.Same(FastLogger.FlushEntry, fastLogger.List[2]);

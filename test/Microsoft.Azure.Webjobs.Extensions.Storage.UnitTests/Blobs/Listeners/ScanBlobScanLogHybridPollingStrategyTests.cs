@@ -296,7 +296,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
 
         private static StorageAccount CreateFakeStorageAccount()
         {
-            return new XFakeStorageAccount();
+            return new FakeStorageAccount();
         }
 
         private void AssertLogPollStrategyUsed(IBlobListenerStrategy product, int containerCount)

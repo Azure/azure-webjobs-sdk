@@ -6,10 +6,13 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using FakeStorage;
+using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Newtonsoft.Json;
 using Xunit;
-using FakeStorage;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
@@ -68,7 +71,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         [Fact]
         public async Task QueueTrigger_IfBoundToStringAndMessageIsEmpty_Binds()
         {
-            await TestBindToString(String.Empty);
+            await TestBindToString(string.Empty);
         }
 
         private static async Task TestBindToString(string expectedContent)
@@ -497,19 +500,17 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 var account = CreateFakeStorageAccount();
                 await SetupAsync(account, expectedContents);
 
-                // Act
+                // Act            
                 RunTrigger<object>(account, typeof(MaxDequeueCountProgram),
                     (s) => MaxDequeueCountProgram.TaskSource = s,
                     new string[] { typeof(MaxDequeueCountProgram).FullName + ".PutInPoisonQueue" });
 
                 // Assert
-                var storageAccountProvider = new FakeStorageAccountProvider(account);
-
-                // These tests use the FakeQueueOptionsFactory, so compare dequeue count to that
-
-                // $$$ enable
-                //JobHostQueuesOptions options = new FakeQueuesOptionsFactory(storageAccountProvider).Create(string.Empty);
-                // Assert.Equal(options.MaxDequeueCount, MaxDequeueCountProgram.DequeueCount);
+                // These tests use the FakeQueuesOptionsSetup, so compare dequeue count to that
+                FakeQueuesOptionsSetup optionsSetup = new FakeQueuesOptionsSetup();
+                QueuesOptions options = new QueuesOptions();
+                optionsSetup.Configure(options);
+                Assert.Equal(options.MaxDequeueCount, MaxDequeueCountProgram.DequeueCount);
             }
             finally
             {
@@ -723,7 +724,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private static TResult CallQueueTrigger<TResult>(object message, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
-            var account = new XFakeStorageAccount();
+            var account = new FakeStorageAccount();
             var method = programType.GetMethod("Run");
             Assert.NotNull(method);
 
@@ -737,7 +738,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         private static StorageAccount CreateFakeStorageAccount()
         {
-            return new XFakeStorageAccount();
+            return new FakeStorageAccount();
         }
 
         private static async Task<CloudQueue> CreateQueue(StorageAccount account, string queueName)

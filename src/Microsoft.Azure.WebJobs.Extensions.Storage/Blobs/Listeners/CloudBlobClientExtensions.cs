@@ -27,8 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             do
             {
                 result = await client.ListBlobsSegmentedAsync(prefix, useFlatBlobListing, blobListingDetails,
-                    maxResults: null, currentToken: continuationToken, options: null, operationContext: null
-                    );
+                    maxResults: null, currentToken: continuationToken, options: null, operationContext: null);
 
                 if (result != null)
                 {
@@ -44,6 +43,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             while (result != null && continuationToken != null);
 
             return allResults;
-        }    
+        }
     }
 }

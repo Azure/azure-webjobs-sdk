@@ -21,7 +21,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // Arrange
             string expectedGuid = Guid.NewGuid().ToString();
             CloudQueueMessage expectedMessage = new CloudQueueMessage(expectedGuid);
-            var account = new XFakeStorageAccount();
+            var account = new FakeStorageAccount();
             await account.AddQueueMessageAsync(expectedMessage, QueueName);
 
             var prog = new InstanceProgram();
@@ -58,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // Arrange
             string expectedGuid = Guid.NewGuid().ToString();
             CloudQueueMessage expectedMessage = new CloudQueueMessage(expectedGuid);
-            var account = new XFakeStorageAccount();
+            var account = new FakeStorageAccount();
             await account.AddQueueMessageAsync(expectedMessage, QueueName);
 
             var prog = new InstanceAsyncProgram();
@@ -95,7 +95,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             // Arrange
             CloudQueueMessage expectedMessage = new CloudQueueMessage("ignore");
-            var account = new XFakeStorageAccount();
+            var account = new FakeStorageAccount();
             await account.AddQueueMessageAsync(expectedMessage, QueueName);
 
             IHost host = new HostBuilder()
@@ -141,7 +141,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             IJobActivator activator = activatorMock.Object;
 
             CloudQueueMessage message = new CloudQueueMessage("ignore");
-            var account = new XFakeStorageAccount();
+            var account = new FakeStorageAccount();
             await account.AddQueueMessageAsync(message, QueueName);
 
             IHost host = new HostBuilder()

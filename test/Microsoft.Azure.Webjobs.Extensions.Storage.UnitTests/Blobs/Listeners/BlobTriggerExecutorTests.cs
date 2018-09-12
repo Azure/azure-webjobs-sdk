@@ -368,11 +368,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             Assert.True(task.Result.Succeeded);
         }
 
-        private static XFakeStorageAccount CreateAccount()
+        private static FakeStorageAccount CreateAccount()
         {
             //StorageClientFactory clientFactory = new StorageClientFactory();
             //return new StorageAccount(CloudStorageAccount.DevelopmentStorageAccount, clientFactory);
-            return new XFakeStorageAccount();
+            return new FakeStorageAccount();
         }
 
         private static CloudBlockBlob CreateBlobReference()

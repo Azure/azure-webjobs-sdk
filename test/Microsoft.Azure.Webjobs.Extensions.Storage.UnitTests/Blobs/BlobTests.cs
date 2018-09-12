@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task Blob_IfBoundToCloudBlockBlob_BindsAndCreatesContainerButNotBlob()
         {
             // Act
-            var account = new XFakeStorageAccount();
+            var account = new FakeStorageAccount();
 
             var prog = new BindToCloudBlockBlobProgram();
             IHost host = new HostBuilder()
@@ -73,7 +73,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         private static StorageAccount CreateFakeStorageAccount()
         {
-            return new XFakeStorageAccount();         
+            return new FakeStorageAccount();         
         }        
 
         private static CloudQueue CreateQueue(StorageAccount account, string queueName)
