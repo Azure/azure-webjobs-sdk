@@ -178,7 +178,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IFunctionInvocationFilter",
                 "IFunctionInvoker",
                 "IHostIdProvider",
-                "ISingletonManager",
+                "IHostSingletonManager",
                 "IJobActivator",
                 "IJobHost",
                 "IJobHostContextFactory",
