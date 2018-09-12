@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
@@ -95,12 +96,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 .Build();
 
             TestHelpers.AssertIndexingError(
-                () => host.GetJobHost<BadFunction>().Call("Valid"),
+                () => host.GetJobHost<BadFunction>().CallAsync("Valid").GetAwaiter().GetResult(),
                 "BadFunction.Bad", TestAttribute.ErrorMessage);
         }
 
         [Fact]
-        public void TestValidatorSucceeds()
+        public async Task TestValidatorSucceeds()
         {
             var nr = new FakeNameResolver().Add("k1", "v1");
 
@@ -108,7 +109,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 .ConfigureDefaultTestHost<GoodFunction>(b => { b.AddExtension<FakeExtClient>(); }, nr)
                 .Build();
 
-            host.GetJobHost<GoodFunction>().Call("Good", new { k2 = "xxxx" });
+            await host.GetJobHost<GoodFunction>().CallAsync("Good", new { k2 = "xxxx" });
         }
 
         // Register [Test]  with 2 rules and a local validator. 
@@ -158,7 +159,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         }
 
         [Fact]
-        public void TestLocalValidatorSkipped()
+        public async Task TestLocalValidatorSkipped()
         {
             // Local validator only run if we use the given rule. 
             var nr = new FakeNameResolver().Add("k1", "v1");
@@ -170,7 +171,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 }, nameResolver: nr)
                 .Build();
 
-            host.GetJobHost<LocalFunction1>().Call("NoValidation", new { k2 = "xxxx" }); // Succeeds since validate doesn't run on this rule             
+            await host.GetJobHost<LocalFunction1>().CallAsync("NoValidation", new { k2 = "xxxx" }); // Succeeds since validate doesn't run on this rule             
         }
 
         [Fact]
@@ -187,7 +188,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 .Build();
 
             TestHelpers.AssertIndexingError(
-                () => host.GetJobHost<LocalFunction2>().Call("WithValidation"),
+                () => host.GetJobHost<LocalFunction2>().CallAsync("WithValidation").GetAwaiter().GetResult(),
                 "LocalFunction2.WithValidation", TestAttribute.ErrorMessage);
         }
     }

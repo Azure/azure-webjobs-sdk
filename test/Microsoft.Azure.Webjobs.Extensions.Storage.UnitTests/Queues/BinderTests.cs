@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await queue.AddMessageAsync(message);
 
             // Act
-            Exception exception = RunTriggerFailure<string>(account, typeof(BindToQueueTriggerViaIBinderProgram),
+            Exception exception = await RunTriggerFailureAsync<string>(account, typeof(BindToQueueTriggerViaIBinderProgram),
                 (s) => BindToQueueTriggerViaIBinderProgram.TaskSource = s);
 
             // Assert
@@ -43,10 +43,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             return queue;
         }
 
-        private static Exception RunTriggerFailure<TResult>(StorageAccount account, Type programType,
+        private static async Task<Exception> RunTriggerFailureAsync<TResult>(StorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
-            return FunctionalTest.RunTriggerFailure<TResult>(account, programType, setTaskSource);
+            return await FunctionalTest.RunTriggerFailureAsync<TResult>(account, programType, setTaskSource);
         }
 
         private class BindToQueueTriggerViaIBinderProgram

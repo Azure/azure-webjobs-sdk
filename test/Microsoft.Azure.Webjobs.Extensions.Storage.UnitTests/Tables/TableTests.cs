@@ -39,7 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                     })
                     .Build();
 
-                host.GetJobHost<TProgram>().AssertIndexingError(methodName, expectedErrorMessage);
+                host.GetJobHost<TProgram>().AssertIndexingError(methodName, expectedErrorMessage).GetAwaiter().GetResult();
             }
 
             // Verify we catch various indexing failures.             
@@ -73,7 +73,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
              })
              .Build();
 
-            host.GetJobHost<BindToSingleOutProgram>().Call(nameof(BindToSingleOutProgram.Run));
+            await host.GetJobHost<BindToSingleOutProgram>().CallAsync(nameof(BindToSingleOutProgram.Run));
 
             var account = host.GetStorageAccount();
             await AssertStringPropertyAsync(account, "Property", "1234");
@@ -103,7 +103,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 })
                 .Build();
 
-            host.GetJobHost<BindToICollectorITableEntityResolvedTableProgram>().Call("Run", new { t1 = "ZZ" });
+            await host.GetJobHost<BindToICollectorITableEntityResolvedTableProgram>().CallAsync("Run", new { t1 = "ZZ" });
 
             var account = host.GetStorageAccount();
             await AssertStringPropertyAsync(account, "Property", "123", "TaZZ");
@@ -120,7 +120,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void Table_IfBoundToCustomTableBindingExtension_BindsCorrectly()
+        public async Task Table_IfBoundToCustomTableBindingExtension_BindsCorrectly()
         {
             // Arrange
             var ext = new TableConverterExtensionConfigProvider();
@@ -133,7 +133,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 })
             .Build();
 
-            host.GetJobHost<CustomTableBindingExtensionProgram>().Call("Run"); // Act
+            await host.GetJobHost<CustomTableBindingExtensionProgram>().CallAsync("Run"); // Act
 
             // Assert
             Assert.Equal(TableName, CustomTableBinding<Poco>.Table.Name);
@@ -161,7 +161,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await triggerQueue.AddMessageAsync(new CloudQueueMessage("ignore"));
 
             // Act
-            CloudTable result = RunTrigger<CloudTable>(account, typeof(BindToCloudTableProgram),
+            CloudTable result = await RunTriggerAsync<CloudTable>(account, typeof(BindToCloudTableProgram),
                 (s) => BindToCloudTableProgram.TaskSource = s);
 
             // Assert
@@ -182,7 +182,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await triggerQueue.AddMessageAsync(new CloudQueueMessage(expectedValue));
 
             // Act
-            RunTrigger(account, typeof(BindToICollectorJObjectProgram));
+            await RunTriggerAsync(account, typeof(BindToICollectorJObjectProgram));
 
             // Assert
             CloudTableClient client = account.CreateCloudTableClient();
@@ -211,7 +211,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 })
                 .Build();
 
-            host.GetJobHost<BindToICollectorJObjectProgramKeysInAttr>().Call("Run");
+            await host.GetJobHost<BindToICollectorJObjectProgramKeysInAttr>().CallAsync("Run");
 
             // Assert
             var account = host.GetStorageAccount();
@@ -228,7 +228,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await triggerQueue.AddMessageAsync(new CloudQueueMessage(expectedValue));
 
             // Act
-            RunTrigger(account, typeof(BindToICollectorITableEntityProgram));
+            await RunTriggerAsync(account, typeof(BindToICollectorITableEntityProgram));
 
             // Assert
             await AssertStringPropertyAsync(account, PropertyName, expectedValue);
@@ -244,7 +244,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await triggerQueue.AddMessageAsync(new CloudQueueMessage(expectedValue));
 
             // Act
-            RunTrigger(account, typeof(BindToICollectorPocoProgram));
+            await RunTriggerAsync(account, typeof(BindToICollectorPocoProgram));
 
             // Assert
             await AssertStringPropertyAsync(account, PropertyName, expectedValue);
@@ -286,7 +286,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await triggerQueue.AddMessageAsync(new CloudQueueMessage(JsonConvert.SerializeObject(expected)));
 
             // Act
-            RunTrigger(account, typeof(BindToICollectorPocoWithAllTypesProgram));
+            await RunTriggerAsync(account, typeof(BindToICollectorPocoWithAllTypesProgram));
 
             // Assert
             CloudTableClient client = account.CreateCloudTableClient();
@@ -421,15 +421,15 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             return new FakeStorageAccount();
         }
 
-        private static void RunTrigger(StorageAccount account, Type programType)
+        private static async Task RunTriggerAsync(StorageAccount account, Type programType)
         {
-            FunctionalTest.RunTrigger(account, programType);
+            await FunctionalTest.RunTriggerAsync(account, programType);
         }
 
-        private static TResult RunTrigger<TResult>(StorageAccount account, Type programType,
+        private static async Task<TResult> RunTriggerAsync<TResult>(StorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
-            return FunctionalTest.RunTrigger<TResult>(account, programType, setTaskSource);
+            return await FunctionalTest.RunTriggerAsync<TResult>(account, programType, setTaskSource);
         }
 
         private class BindToCloudTableProgram

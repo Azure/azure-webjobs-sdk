@@ -256,7 +256,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 var lockManager = host.Services.GetRequiredService<IDistributedLockManager>();
                 Assert.IsType<InMemoryDistributedLockManager>(lockManager);
 
-                host.GetJobHost().Call(method, new { value = randomValue });
+                await host.GetJobHost().CallAsync(method, new { value = randomValue });
                 Assert.True(BasicTest.Called);
 
                 Assert.Equal(2, fastLogger.List.Count); // We should be batching, so flush not called yet.

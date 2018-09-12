@@ -37,7 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             table.Insert(new DynamicTableEntity(PartitionKey, RowKey, etag: null, properties: properties));
 
             // Act
-            DynamicTableEntity result = RunTrigger<DynamicTableEntity>(account, typeof(BindToDynamicTableEntityProgram),
+            DynamicTableEntity result = await RunTriggerAsync<DynamicTableEntity>(account, typeof(BindToDynamicTableEntityProgram),
                 (s) => BindToDynamicTableEntityProgram.TaskSource = s);
 
             // Assert
@@ -69,7 +69,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             table.Insert(new DynamicTableEntity(PartitionKey, RowKey, etag: null, properties: properties));
 
             // Act
-            Poco result = RunTrigger<Poco>(account, typeof(BindToPocoProgram),
+            Poco result = await RunTriggerAsync<Poco>(account, typeof(BindToPocoProgram),
                 (s) => BindToPocoProgram.TaskSource = s);
 
             // Assert
@@ -95,7 +95,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             table.Insert(new DynamicTableEntity(PartitionKey, RowKey, etag: null, properties: originalProperties));
 
             // Act
-            RunTrigger(account, typeof(UpdatePocoProgram));
+            await RunTriggerAsync(account, typeof(UpdatePocoProgram));
 
             // Assert
             DynamicTableEntity entity = table.Retrieve<DynamicTableEntity>(PartitionKey, RowKey);
@@ -126,7 +126,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             table.Insert(new DynamicTableEntity(PartitionKey, RowKey, etag: null, properties: properties));
 
             // Act
-            PocoWithByteArrayValue result = RunTrigger<PocoWithByteArrayValue>(account,
+            PocoWithByteArrayValue result = await RunTriggerAsync<PocoWithByteArrayValue>(account,
                 typeof(BindToPocoWithByteArrayValueProgram), (s) => BindToPocoWithByteArrayValueProgram.TaskSource = s);
 
             // Assert
@@ -152,7 +152,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             table.Insert(new DynamicTableEntity(PartitionKey, RowKey, etag: null, properties: originalProperties));
 
             // Act
-            RunTrigger(account, typeof(UpdatePocoWithByteArrayValueProgram));
+            await RunTriggerAsync(account, typeof(UpdatePocoWithByteArrayValueProgram));
 
             // Assert
             DynamicTableEntity entity = table.Retrieve<DynamicTableEntity>(PartitionKey, RowKey);
@@ -178,7 +178,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             table.Insert(new DynamicTableEntity(PartitionKey, RowKey));
 
             // Act
-            Exception exception = RunTriggerFailure(account, typeof(UpdatePocoPartitionKeyProgram));
+            Exception exception = await RunTriggerFailureAsync(account, typeof(UpdatePocoPartitionKeyProgram));
 
             // Assert
             Assert.NotNull(exception);
@@ -203,7 +203,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             table.Insert(new DynamicTableEntity(PartitionKey, RowKey));
 
             // Act
-            Exception exception = RunTriggerFailure(account, typeof(UpdatePocoRowKeyProgram));
+            Exception exception = await RunTriggerFailureAsync(account, typeof(UpdatePocoRowKeyProgram));
 
             // Assert
             Assert.NotNull(exception);
@@ -240,7 +240,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             table.Insert(new DynamicTableEntity(partitionKey, rowKey, etag: null, properties: originalProperties));
 
             // Act
-            RunTrigger(account, typeof(BindUsingRouteParametersProgram));
+            await RunTriggerAsync(account, typeof(BindUsingRouteParametersProgram));
 
             // Assert
             DynamicTableEntity entity = table.Retrieve<DynamicTableEntity>(partitionKey, rowKey);
@@ -260,20 +260,20 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             return new FakeStorageAccount();
         }
 
-        private static void RunTrigger(StorageAccount account, Type programType)
+        private static async Task RunTriggerAsync(StorageAccount account, Type programType)
         {
-            FunctionalTest.RunTrigger(account, programType);
+            await FunctionalTest.RunTriggerAsync(account, programType);
         }
 
-        private static TResult RunTrigger<TResult>(StorageAccount account, Type programType,
+        private static async Task<TResult> RunTriggerAsync<TResult>(StorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
-            return FunctionalTest.RunTrigger<TResult>(account, programType, setTaskSource);
+            return await FunctionalTest.RunTriggerAsync<TResult>(account, programType, setTaskSource);
         }
 
-        private static Exception RunTriggerFailure(StorageAccount account, Type programType)
+        private static async Task<Exception> RunTriggerFailureAsync(StorageAccount account, Type programType)
         {
-            return FunctionalTest.RunTriggerFailure<bool>(account, programType, (tcs) => {/* do nothing */});
+            return await FunctionalTest.RunTriggerFailureAsync<bool>(account, programType, (tcs) => {/* do nothing */});
         }
 
         private class BindToDynamicTableEntityProgram

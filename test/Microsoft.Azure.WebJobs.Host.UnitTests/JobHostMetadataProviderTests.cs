@@ -24,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
     public class JobHostMetadataProviderTests
     {
         [Fact]
-        public void Test()
+        public async Task Test()
         {          
             var ext = new TestExtension();
 
@@ -38,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.Equal(1, ext._counter);
 
             // Callable            
-            host.GetJobHost<MyProg>().Call("Test");
+            await host.GetJobHost<MyProg>().CallAsync("Test");
             Assert.Equal(1, ext._counter);
 
             // Fact that we registered a Widget converter is enough to add the assembly 

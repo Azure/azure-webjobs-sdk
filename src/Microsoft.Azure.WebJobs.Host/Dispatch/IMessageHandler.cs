@@ -14,8 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
     /// Defines the contract for executing a triggered function using a dispatch queue.
     /// <see cref="ListenerFactoryContext.GetDispatchQueue(IMessageHandler)"/>
     /// </summary>
-    [Obsolete("Not ready for public consumption.")]
-    public interface IMessageHandler
+    internal interface IMessageHandler
     {
         /// <summary>
         /// Try to invoke the triggered function using the values specified.

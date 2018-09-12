@@ -244,14 +244,14 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             return host.Services.GetService<IJobHost>() as JobHost<TProgram>;
         }
 
-        public static void Call<T>(this JobHost host, string methodName, object arguments)
+        public static async Task CallAsync<T>(this JobHost host, string methodName, object arguments)
         {
-            host.Call(typeof(T).GetMethod(methodName), arguments);
+            await host.CallAsync(typeof(T).GetMethod(methodName), arguments);
         }
 
-        public static void Call<T>(this JobHost host, string methodName)
+        public static async Task CallAsync<T>(this JobHost host, string methodName)
         {
-            host.Call(typeof(T).GetMethod(methodName));
+            await host.CallAsync(typeof(T).GetMethod(methodName));
         }
         
         public static TOptions GetOptions<TOptions>(this IHost host) where TOptions : class, new()

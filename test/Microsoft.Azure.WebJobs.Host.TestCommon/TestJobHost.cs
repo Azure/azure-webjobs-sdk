@@ -24,24 +24,14 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             _jobActivator = jobActivator;
         }
 
-        public void Call(string methodName)
+        public async Task CallAsync(string methodName, object arguments = null)
         {
-            base.Call(typeof(TProgram).GetMethod(methodName));
+            await base.CallAsync(methodName, arguments);
         }
 
-        public void Call(string methodName, object arguments)
+        public async Task CallAsync(string methodName, IDictionary<string, object> arguments)
         {
-            base.Call(typeof(TProgram).GetMethod(methodName), arguments);
-        }
-
-        public void Call(string methodName, IDictionary<string, object> arguments)
-        {
-            base.Call(typeof(TProgram).GetMethod(methodName), arguments);
-        }
-
-        public Task CallAsync(string methodName, object arguments)
-        {
-            return base.CallAsync(typeof(TProgram).GetMethod(methodName), arguments);
+            await base.CallAsync(typeof(TProgram).GetMethod(methodName), arguments);
         }
 
         // Start listeners and run until the Task source is set. 
@@ -60,7 +50,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             // Act
             using (this)
             {
-                this.Start();
+                await this.StartAsync();
                 // Assert
                 result = await TestHelpers.AwaitWithTimeout(taskSource);
             }
@@ -68,12 +58,12 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
         }
 
         // Helper for quickly testing indexing errors 
-        public void AssertIndexingError(string methodName, string expectedErrorMessage)
+        public async Task AssertIndexingError(string methodName, string expectedErrorMessage)
         {
             try
             {
                 // Indexing is lazy, so must actually try a call first. 
-                this.Call(methodName);
+                await this.CallAsync(methodName);
             }
             catch (FunctionIndexingException e)
             {

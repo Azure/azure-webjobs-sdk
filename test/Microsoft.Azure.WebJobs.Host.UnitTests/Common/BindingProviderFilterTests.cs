@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
@@ -55,12 +56,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 }, nameResolver: nr)
                 .Build();
 
-            TestHelpers.AssertIndexingError(() => host.GetJobHost<Program>().Call("Func"), "Program.Func", FakeExtClient.IndexErrorMsg);
+            TestHelpers.AssertIndexingError(() => host.GetJobHost<Program>().CallAsync("Func").GetAwaiter().GetResult(), "Program.Func", FakeExtClient.IndexErrorMsg);
         }
 
         // Filter takes the not-null branch
         [Fact]
-        public void TestSuccessNotNull()
+        public async Task TestSuccessNotNull()
         {
             var prog = new Program();
             var jobActivator = new FakeActivator();
@@ -75,7 +76,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 }, nr, jobActivator)
                 .Build();
 
-            host.GetJobHost<Program>().Call(nameof(Program.Func));
+            await host.GetJobHost<Program>().CallAsync(nameof(Program.Func));
 
             // Skipped first rule, applied second 
             Assert.Equal(prog._value, "something");
@@ -83,7 +84,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
 
         // Filter takes the Null branch
         [Fact]
-        public void TestSuccessNull()
+        public async Task TestSuccessNull()
         {
             var prog = new Program();
             var jobActivator = new FakeActivator();
@@ -98,7 +99,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 }, nr, jobActivator)
                 .Build();
 
-            host.GetJobHost<Program>().Call(nameof(Program.FuncNull));
+            await host.GetJobHost<Program>().CallAsync(nameof(Program.FuncNull));
 
             // Skipped first rule, applied second 
             Assert.Equal(prog._value, "xxx");

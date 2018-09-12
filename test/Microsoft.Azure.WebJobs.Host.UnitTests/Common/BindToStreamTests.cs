@@ -26,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         // Each of the TestConfigs below implement this. 
         interface ITest<TConfig>
         {
-            void Test(JobHost<TConfig> host);
+            Task Test(JobHost<TConfig> host);
         }
 
         [Binding]
@@ -72,9 +72,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                     BindToStream(this, FileAccess.ReadWrite);
             }
 
-            public void Test(JobHost<ConfigNullOutParam> host)
+            public async Task Test(JobHost<ConfigNullOutParam> host)
             {
-                host.Call("WriteString");
+                await host.CallAsync("WriteString");
                 // Convert was never called 
             }
 
@@ -110,9 +110,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                     BindToStream(this, FileAccess.ReadWrite);
             }
 
-            public void Test(JobHost<ConfigAutoResolve> host)
+            public async Task Test(JobHost<ConfigAutoResolve> host)
             {
-                host.Call("Read", new { x = 456 });
+                await host.CallAsync("Read", new { x = 456 });
                 // Convert was never called 
 
                 Assert.Equal("456-123", _log);
@@ -174,12 +174,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                  });
             }
 
-            public void Test(JobHost<ConfigCustom> host)
+            public async Task Test(JobHost<ConfigCustom> host)
             {
-                host.Call("Read");
+                await host.CallAsync("Read");
                 Assert.Equal(_log, ReadTag);
 
-                host.Call("Write");
+                await host.CallAsync("Write");
 
                 var content = _writeStream.ToArray(); // safe to call even after Dispose()
                 var str = Encoding.UTF8.GetString(content);
@@ -234,18 +234,18 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                     BindToStream(this, FileAccess.ReadWrite);
             }
 
-            public void Test(JobHost<ConfigNotExist> host)
+            public async Task Test(JobHost<ConfigNotExist> host)
             {
-                host.Call("Read1");
+                await host.CallAsync("Read1");
                 Assert.Null(_log);
 
-                host.Call("Read2");
+                await host.CallAsync("Read2");
                 Assert.Null(_log);
 
-                host.Call("Read3");
+                await host.CallAsync("Read3");
                 Assert.Null(_log);
 
-                host.Call("Read4");
+                await host.CallAsync("Read4");
                 Assert.Null(_log);
             }
 
@@ -300,7 +300,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                     BindToStream(this, FileAccess.ReadWrite);
             }
 
-            public void Test(JobHost<ConfigStream> host)
+            public async Task Test(JobHost<ConfigStream> host)
             {
                 foreach (var funcName in new string[]
                 {
@@ -308,13 +308,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 })
                 {
                     _log = null;
-                    host.Call(funcName, new { k = 1 });
+                    await host.CallAsync(funcName, new { k = 1 });
                     Assert.Equal("Hello", _log);
                 }
 
                 // Test writes. Verify the stream content. 
                 foreach (var funcName in new string[]
-               {
+                {
                     "WriteStream",
                     "WriteStream2",
                    "WriteTextWriter1",
@@ -325,7 +325,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 })
                 {
                     _writeStream = null;
-                    host.Call(funcName, new { k = funcName });
+                    await host.CallAsync(funcName, new { k = funcName });
 
                     var content = _writeStream.ToArray(); // safe to call even after Dispose()
                     var str = Encoding.UTF8.GetString(content);

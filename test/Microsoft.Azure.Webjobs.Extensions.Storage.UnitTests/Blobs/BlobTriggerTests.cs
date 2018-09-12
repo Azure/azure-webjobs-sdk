@@ -29,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await blob.UploadTextAsync("ignore");
 
             // Act
-            ICloudBlob result = RunTrigger<ICloudBlob>(account, typeof(BindToCloudBlobProgram),
+            ICloudBlob result = await RunTriggerAsync<ICloudBlob>(account, typeof(BindToCloudBlobProgram),
                 (s) => BindToCloudBlobProgram.TaskSource = s);
 
             // Assert
@@ -47,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void BlobTrigger_Binding_Metadata()
+        public async Task BlobTrigger_Binding_Metadata()
         {
             var app = new BindToCloudBlob2Program();
             var activator = new FakeActivator(app);
@@ -70,7 +70,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var blob = container.GetBlockBlobReference(BlobName);
             blob.Metadata["m1"] = "v1";
 
-            host.GetJobHost().Call(typeof(BindToCloudBlob2Program).GetMethod(nameof(BindToCloudBlob2Program.Run)), new { blob });
+            await host.GetJobHost().CallAsync(typeof(BindToCloudBlob2Program).GetMethod(nameof(BindToCloudBlob2Program.Run)), new { blob });
 
             Assert.True(app.Success);
         }
@@ -106,16 +106,16 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             return account;
         }
 
-        private static TResult RunTrigger<TResult>(StorageAccount account, Type programType,
+        private static async Task<TResult> RunTriggerAsync<TResult>(StorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
-            return FunctionalTest.RunTrigger<TResult>(account, programType, setTaskSource);
+            return await FunctionalTest.RunTriggerAsync<TResult>(account, programType, setTaskSource);
         }
 
-        private static TResult RunTrigger<TResult>(StorageAccount account, Type programType,
+        private static async Task<TResult> RunTriggerAsync<TResult>(StorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource, IEnumerable<string> ignoreFailureFunctions)
         {
-            return FunctionalTest.RunTrigger<TResult>(account, programType, setTaskSource, ignoreFailureFunctions);
+            return await FunctionalTest.RunTriggerAsync<TResult>(account, programType, setTaskSource, ignoreFailureFunctions);
         }
     }
 }

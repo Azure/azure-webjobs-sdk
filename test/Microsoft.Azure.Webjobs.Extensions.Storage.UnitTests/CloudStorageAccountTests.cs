@@ -27,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
     public class CloudStorageAccountTests
     {
         [Fact]
-        public void CloudStorageAccount_CanCall()
+        public async Task CloudStorageAccount_CanCall()
         {
             // Arrange
             CloudStorageAccount realAccount = CloudStorageAccount.DevelopmentStorageAccount;
@@ -36,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             // Act
             var t = typeof(CloudStorageAccountProgram);
-            var result = FunctionalTest.Call<CloudStorageAccount>(
+            var result = await FunctionalTest.CallAsync<CloudStorageAccount>(
                 account, 
                 t, 
                 t.GetMethod(nameof(CloudStorageAccountProgram.BindToCloudStorageAccount)), 

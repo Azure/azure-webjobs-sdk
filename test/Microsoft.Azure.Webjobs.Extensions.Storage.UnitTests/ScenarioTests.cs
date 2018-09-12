@@ -28,7 +28,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await inputBlob.UploadTextAsync("15");
 
             // Act
-            RunTrigger<object>(account, typeof(BlobTriggerToQueueTriggerToBlobProgram),
+            await RunTriggerAsync<object>(account, typeof(BlobTriggerToQueueTriggerToBlobProgram),
                 (s) => BlobTriggerToQueueTriggerToBlobProgram.TaskSource = s);
 
             // Assert
@@ -55,10 +55,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             return account;
         }
 
-        private static TResult RunTrigger<TResult>(StorageAccount account, Type programType,
+        private static async Task<TResult> RunTriggerAsync<TResult>(StorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
-            return FunctionalTest.RunTrigger<TResult>(account, programType, setTaskSource);
+            return await FunctionalTest.RunTriggerAsync<TResult>(account, programType, setTaskSource);
         }
 
         private class BlobTriggerToQueueTriggerToBlobProgram

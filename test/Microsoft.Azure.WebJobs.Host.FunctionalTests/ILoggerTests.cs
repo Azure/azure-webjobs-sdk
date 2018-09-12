@@ -21,7 +21,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
     public class ILoggerTests
     {
         [Fact]
-        public void ILogger_Succeeds()
+        public async Task ILogger_Succeeds()
         {
             string functionName = nameof(ILoggerFunctions.ILogger);
             IHost host = ConfigureHostBuilder().Build();
@@ -30,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             using (host)
             {
                 var method = typeof(ILoggerFunctions).GetMethod(functionName);
-                host.GetJobHost().Call(method);
+                await host.GetJobHost().CallAsync(method);
             }
 
             // Six loggers are the startup, singleton, results, function and function.user
@@ -54,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void TraceWriter_ForwardsTo_ILogger()
+        public async Task TraceWriter_ForwardsTo_ILogger()
         {
             string functionName = nameof(ILoggerFunctions.TraceWriterWithILoggerFactory);
 
@@ -64,7 +64,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             using (host)
             {
                 var method = typeof(ILoggerFunctions).GetMethod(functionName);
-                host.GetJobHost().Call(method);
+                await host.GetJobHost().CallAsync(method);
             }
 
             // Five loggers are the startup, singleton, results, function and function.user
@@ -100,6 +100,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                     }
                 })
                 .Returns(Task.CompletedTask);
+
             mockAggregator
                 .Setup(a => a.FlushAsync(It.IsAny<CancellationToken>()))
                 .Callback<CancellationToken>(t => flushCalls++)
@@ -132,7 +133,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
                 for (int i = 0; i < N; i++)
                 {
-                    host.GetJobHost().Call(method);
+                    await host.GetJobHost().CallAsync(method);
                 }
 
                 await host.StopAsync();
@@ -170,7 +171,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 host.Start();
 
                 var method = typeof(ILoggerFunctions).GetMethod(nameof(ILoggerFunctions.TraceWriterWithILoggerFactory));
-                host.GetJobHost().Call(method);
+                await host.GetJobHost().CallAsync(method);
 
                 await host.StopAsync();
             }

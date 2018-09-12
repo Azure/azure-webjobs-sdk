@@ -64,7 +64,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
 
         [Fact]
-        public void TestObjectArray()
+        public async Task TestObjectArray()
         {
             var client = new FakeQueueTypedClient();
             var nr = new FakeNameResolver();
@@ -78,7 +78,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 .ConfigureServices(s => s.AddSingleton<INameResolver>(nr))
                 .Build();
 
-            host.GetJobHost().Call(typeof(Functions).GetMethod(nameof(Functions.ObjectArray)));
+            await host.GetJobHost().CallAsync(typeof(Functions).GetMethod(nameof(Functions.ObjectArray)));
 
             Assert.Equal(2, client._items.Count);
             Assert_IsSpecialData("1", client._items[0]);
@@ -87,7 +87,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
-        public void Test()
+        public async Task Test()
         {
             var client = new FakeQueueTypedClient();
             var nr = new FakeNameResolver();
@@ -100,7 +100,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 .ConfigureServices(s => s.AddSingleton<INameResolver>(nr))
                 .Build();
 
-            host.GetJobHost().Call(typeof(Functions).GetMethod(nameof(Functions.T1)));
+            await host.GetJobHost().CallAsync(typeof(Functions).GetMethod(nameof(Functions.T1)));
 
             Assert.Equal(6, client._items.Count);
 

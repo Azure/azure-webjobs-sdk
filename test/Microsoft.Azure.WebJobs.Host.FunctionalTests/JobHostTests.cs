@@ -82,7 +82,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             using (host)
             {
-                host.Start();
+                var tIgnore = host.StartAsync();
 
                 // Act & Assert
                 var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => host.StartAsync());
@@ -98,8 +98,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             using (host)
             {
-                host.Start();
-                host.Stop();
+                await host.StartAsync();
+                await host.StopAsync();
 
                 // Act & Assert
                 var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => host.StartAsync());
@@ -147,7 +147,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             using (host)
             {
-                host.Start();
+                await host.StartAsync();
 
                 // Replace (and cleanup) the exsiting runner to hook StopAsync.
                 IListener oldListener = host.Listener;
@@ -172,14 +172,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
-        public void StopAsync_WhenStarted_DoesNotThrow()
+        public async Task StopAsync_WhenStarted_DoesNotThrow()
         {
             // Arrange
             var host = new HostBuilder().ConfigureDefaultTestHost().Build().GetJobHost();
 
             using (host)
             {
-                host.Start();
+                await host.StartAsync();
 
                 // Act & Assert
                 host.StopAsync().GetAwaiter().GetResult();
@@ -187,18 +187,18 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
-        public void StopAsync_WhenStopped_DoesNotThrow()
+        public async Task StopAsync_WhenStopped_DoesNotThrow()
         {
             // Arrange
             var host = new HostBuilder().ConfigureDefaultTestHost().Build().GetJobHost();
 
             using (host)
             {
-                host.Start();
-                host.Stop();
+                await host.StartAsync();
+                await host.StopAsync();
 
                 // Act & Assert
-                host.StopAsync().GetAwaiter().GetResult();
+                await host.StopAsync();
             }
         }
 
@@ -249,14 +249,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
-        public void StopAsync_WhenWaiting_ReturnsIncompleteTask()
+        public async Task StopAsync_WhenWaiting_ReturnsIncompleteTask()
         {
             // Arrange
             var host = new HostBuilder().ConfigureDefaultTestHost().Build().GetJobHost();
 
             using (host)
             {
-                host.Start();
+                await host.StartAsync();
 
                 // Replace (and cleanup) the existing listener to hook StopAsync.
                 IListener oldListener = host.Listener;
@@ -281,14 +281,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
-        public void StopAsync_WhenAlreadyStopping_ReturnsSameTask()
+        public async Task StopAsync_WhenAlreadyStopping_ReturnsSameTask()
         {
             // Arrange
             var host = new HostBuilder().ConfigureDefaultTestHost().Build().GetJobHost();
 
             using (host)
             {
-                host.Start();
+                await host.StartAsync();
 
                 // Replace (and cleanup) the existing listener to hook StopAsync.
                 IListener oldRunner = host.Listener;
@@ -315,33 +315,33 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
-        public void SimpleInvoke_WithDictionary()
+        public async Task CallAsync_WithDictionary()
+        {
+            var host = JobHostFactory.Create<ProgramSimple>(null);
+
+            var value = "abc";
+            ProgramSimple._value = null;
+            await host.CallAsync("Test", new Dictionary<string, object> { { "value", value } });
+
+            // Ensure test method was invoked properly.
+            Assert.Equal(value, ProgramSimple._value);
+        }
+
+        [Fact]
+        public async Task CallAsync_WithObject()
         {
             var host = JobHostFactory.Create<ProgramSimple>(null);
 
             var x = "abc";
             ProgramSimple._value = null;
-            host.Call("Test", new Dictionary<string, object> { { "value", x } });
+            await host.CallAsync("Test", new { value = x });
 
             // Ensure test method was invoked properly.
             Assert.Equal(x, ProgramSimple._value);
         }
 
         [Fact]
-        public void SimpleInvoke_WithObject()
-        {
-            var host = JobHostFactory.Create<ProgramSimple>(null);
-
-            var x = "abc";
-            ProgramSimple._value = null;
-            host.Call("Test", new { value = x });
-
-            // Ensure test method was invoked properly.
-            Assert.Equal(x, ProgramSimple._value);
-        }
-
-        [Fact]
-        public void CallAsyncWithCancellationToken_PassesCancellationTokenToMethod()
+        public void CallAsync_WithCancellationToken_PassesCancellationTokenToMethod()
         {
             // Arrange
             ProgramWithCancellationToken.Cleanup();
@@ -360,7 +360,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
-        public void Call_WhenMethodThrows_PreservesStackTrace()
+        public async Task CallAsync_WhenMethodThrows_PreservesStackTrace()
         {
             try
             {
@@ -374,8 +374,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 MethodInfo methodInfo = typeof(ThrowingProgram).GetMethod("Throw");
 
                 // Act & Assert
-                FunctionInvocationException exception = Assert.Throws<FunctionInvocationException>(
-                    () => host.Call(methodInfo));
+                FunctionInvocationException exception = await Assert.ThrowsAsync<FunctionInvocationException>(
+                    () => host.CallAsync(methodInfo));
                 Assert.Same(exception.InnerException, expectedException);
                 Assert.NotNull(exception.InnerException.StackTrace);
                 Assert.True(exception.InnerException.StackTrace.StartsWith(expectedStackTrace));
@@ -387,7 +387,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
-        public void BlobTrigger_ProvidesBlobTriggerBindingData()
+        public async Task BlobTrigger_ProvidesBlobTriggerBindingData()
         {
             try
             {
@@ -412,7 +412,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                     ICloudBlob blob = container.GetBlockBlobReference(blobName);
 
                     // Act
-                    host.Call(methodInfo, new { blob = blob });
+                    await host.CallAsync(methodInfo, new { blob = blob });
 
                     // Assert
                     Assert.Equal(expectedPath, BlobTriggerBindingDataProgram.BlobTrigger);
@@ -425,7 +425,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
-        public void QueueTrigger_ProvidesQueueTriggerBindingData()
+        public async Task QueueTrigger_ProvidesQueueTriggerBindingData()
         {
             try
             {
@@ -444,7 +444,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                     string expectedMessage = "a";
 
                     // Act
-                    host.Call(methodInfo, new { message = expectedMessage });
+                    await host.CallAsync(methodInfo, new { message = expectedMessage });
 
                     // Assert
                     Assert.Equal(expectedMessage, QueueTriggerBindingDataProgram.QueueTrigger);
@@ -457,7 +457,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
-        public void QueueTrigger_WithTextualByteArrayMessage_ProvidesQueueTriggerBindingData()
+        public async Task QueueTrigger_WithTextualByteArrayMessage_ProvidesQueueTriggerBindingData()
         {
             try
             {
@@ -478,7 +478,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                     Assert.Equal(expectedMessage, message.AsString); // Guard
 
                     // Act
-                    host.Call(methodInfo, new { message });
+                    await host.CallAsync(methodInfo, new { message });
 
                     // Assert
                     Assert.Equal(expectedMessage, QueueTriggerBindingDataProgram.QueueTrigger);
@@ -491,7 +491,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
-        public void QueueTrigger_WithNonTextualByteArrayMessageUsingQueueTriggerBindingData_Throws()
+        public async Task QueueTrigger_WithNonTextualByteArrayMessageUsingQueueTriggerBindingData_Throws()
         {
             try
             {
@@ -511,8 +511,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                     CloudQueueMessage message = CloudQueueMessage.CreateCloudQueueMessageFromByteArray(contents);
 
                     // Act & Assert
-                    FunctionInvocationException exception = Assert.Throws<FunctionInvocationException>(
-                        () => host.Call(methodInfo, new { message = message }));
+                    FunctionInvocationException exception = await Assert.ThrowsAsync<FunctionInvocationException>(
+                        () => host.CallAsync(methodInfo, new { message = message }));
                     // This exeption shape/message could be better, but it's meets a minimum acceptibility threshold.
                     Assert.Equal("Exception binding parameter 'queueTrigger'", exception.InnerException.Message);
                     Exception innerException = exception.InnerException.InnerException;
@@ -527,7 +527,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
-        public void QueueTrigger_WithNonTextualByteArrayMessageNotUsingQueueTriggerBindingData_DoesNotThrow()
+        public async Task QueueTrigger_WithNonTextualByteArrayMessageNotUsingQueueTriggerBindingData_DoesNotThrow()
         {
             try
             {
@@ -547,7 +547,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                     CloudQueueMessage message = CloudQueueMessage.CreateCloudQueueMessageFromByteArray(expectedBytes);
 
                     // Act
-                    host.Call(methodInfo, new { message = message });
+                    await host.CallAsync(methodInfo, new { message = message });
 
                     // Assert
                     Assert.Equal(QueueTriggerBindingDataProgram.Bytes, expectedBytes);

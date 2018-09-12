@@ -317,7 +317,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [Fact]
-        public void FunctionFailures_LogsExpectedMessage()
+        public async Task FunctionFailures_LogsExpectedMessage()
         {
             IHost host = _hostBuilder.Build();
             JobHost jobHost = host.GetJobHost();
@@ -325,7 +325,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             MethodInfo methodInfo = GetType().GetMethod(nameof(AlwaysFailJob));
             try
             {
-                jobHost.Call(methodInfo);
+                await jobHost.CallAsync(methodInfo);
             }
             catch { }
 
@@ -361,7 +361,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 { "input", "Test Value" }
             };
-            jobHost.Call(methodInfo, arguments);
+            await jobHost.CallAsync(methodInfo, arguments);
 
             // We expect 3 separate blobs to have been written
             var blobs = (await container.ListBlobsSegmentedAsync(null)).Results.Cast<CloudBlockBlob>().ToArray();

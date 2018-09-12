@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
     public class ReturnValueTests
     {
         [Fact]
-        public void ImplicitReturn()
+        public async Task ImplicitReturn()
         {
             var ext = new MyExtension();
 
@@ -31,12 +31,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                 })
                 .Build();
 
-            host.GetJobHost<TestProg>().Call("ImplicitReturn", new { trigger = "trigger" });
+            await host.GetJobHost<TestProg>().CallAsync("ImplicitReturn", new { trigger = "trigger" });
             ext.AssertFromBeta("triggerbeta");
         }
 
         [Fact]
-        public void ImplicitTaskReturn()
+        public async Task ImplicitTaskReturn()
         {
             var ext = new MyExtension();
 
@@ -47,12 +47,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                 })
                 .Build();
 
-            host.GetJobHost<TestProg>().Call("ImplicitTaskReturn", new { trigger = "trigger" });
+            await host.GetJobHost<TestProg>().CallAsync("ImplicitTaskReturn", new { trigger = "trigger" });
             ext.AssertFromBeta("triggerbeta");
         }
 
         [Fact]
-        public void ExplicitReturn()
+        public async Task ExplicitReturn()
         {
             var ext = new MyExtension();
 
@@ -63,12 +63,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                 })
                 .Build();
 
-            host.GetJobHost<TestProg>().Call("ExplicitReturn");
+            await host.GetJobHost<TestProg>().CallAsync("ExplicitReturn");
             ext.AssertFromAlpha("alpha");
         }
 
         [Fact]
-        public void ExplicitTaskReturn()
+        public async Task ExplicitTaskReturn()
         {
             var ext = new MyExtension();
 
@@ -79,12 +79,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                 })
                 .Build();
 
-            host.GetJobHost<TestProg>().Call("ExplicitTaskReturn");
+            await host.GetJobHost<TestProg>().CallAsync("ExplicitTaskReturn");
             ext.AssertFromAlpha("alpha");
         }
 
         [Fact]
-        public void ExplicitReturnWins()
+        public async Task ExplicitReturnWins()
         {
             var ext = new MyExtension();
 
@@ -95,12 +95,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                 })
                 .Build();
 
-            host.GetJobHost<TestProg>().Call("ExplicitReturnWins", new { trigger = "trigger" });
+            await host.GetJobHost<TestProg>().CallAsync("ExplicitReturnWins", new { trigger = "trigger" });
             ext.AssertFromAlpha("triggeralpha");
         }
 
         [Fact]
-        public void TestIndexError()
+        public async Task TestIndexError()
         {
             var ext = new MyExtension();
 
@@ -111,7 +111,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                 })
                 .Build();
 
-            TestHelpers.AssertIndexingError(() => host.GetJobHost<TestProgErrors>().Call("Error"), "TestProgErrors.Error",
+            TestHelpers.AssertIndexingError(() => host.GetJobHost<TestProgErrors>().CallAsync("Error").GetAwaiter().GetResult(), "TestProgErrors.Error",
                 "Functions must return Task or void, have a binding attribute for the return value, or be triggered by a binding that natively supports return values.");
         }
 
