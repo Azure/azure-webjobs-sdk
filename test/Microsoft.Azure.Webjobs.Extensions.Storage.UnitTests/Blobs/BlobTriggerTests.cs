@@ -98,7 +98,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         private static StorageAccount CreateFakeStorageAccount()
         {
-            var account = new XFakeStorageAccount();
+            var account = new FakeStorageAccount();
 
             // make sure our system containers are present
             var container = CreateContainer(account, "azure-webjobs-hosts");

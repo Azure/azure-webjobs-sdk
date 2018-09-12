@@ -1315,7 +1315,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         private static StorageAccount CreateFakeStorageAccount()
         {
-            return new XFakeStorageAccount();
+            return new FakeStorageAccount();
         }
 
         private static ITableEntity CreateTableEntity(string partitionKey, string rowKey, string propertyName,

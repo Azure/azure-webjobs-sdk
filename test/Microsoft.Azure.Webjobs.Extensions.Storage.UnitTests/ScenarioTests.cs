@@ -4,9 +4,9 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.WindowsAzure.Storage.Blob;
 using Xunit;
 
-#if false // $$$ Enable
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
     public class ScenarioTests
@@ -19,43 +19,43 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private const string QueueName = "queue";
 
         [Fact]
-        public void BlobTriggerToQueueTriggerToBlob_WritesFinalBlob()
+        public async Task BlobTriggerToQueueTriggerToBlob_WritesFinalBlob()
         {
             // Arrange
-            IStorageAccount account = CreateFakeStorageAccount();
-            IStorageBlobContainer container = CreateContainer(account, ContainerName);
-            IStorageBlockBlob inputBlob = container.GetBlockBlobReference(BlobName);
-            inputBlob.UploadText("15");
+            StorageAccount account = await CreateFakeStorageAccountAsync();
+            CloudBlobContainer container = await CreateContainerAsync(account, ContainerName);
+            CloudBlockBlob inputBlob = container.GetBlockBlobReference(BlobName);
+            await inputBlob.UploadTextAsync("15");
 
             // Act
             RunTrigger<object>(account, typeof(BlobTriggerToQueueTriggerToBlobProgram),
                 (s) => BlobTriggerToQueueTriggerToBlobProgram.TaskSource = s);
 
             // Assert
-            IStorageBlockBlob outputBlob = container.GetBlockBlobReference(OutputBlobName);
+            CloudBlockBlob outputBlob = container.GetBlockBlobReference(OutputBlobName);
             string content = outputBlob.DownloadText();
             Assert.Equal("16", content);
         }
 
-        private static IStorageBlobContainer CreateContainer(IStorageAccount account, string containerName)
+        private static async Task<CloudBlobContainer> CreateContainerAsync(StorageAccount account, string containerName)
         {
-            IStorageBlobClient client = account.CreateBlobClient();
-            IStorageBlobContainer container = client.GetContainerReference(containerName);
-            container.CreateIfNotExists();
+            CloudBlobClient client = account.CreateCloudBlobClient();
+            CloudBlobContainer container = client.GetContainerReference(containerName);
+            await container.CreateIfNotExistsAsync();
             return container;
         }
 
-        private static IStorageAccount CreateFakeStorageAccount()
+        private static async Task<StorageAccount> CreateFakeStorageAccountAsync()
         {
             var account = new FakeStorageAccount();
 
             // make sure our system containers are present
-            var container = CreateContainer(account, "azure-webjobs-hosts");
+            var container = await CreateContainerAsync(account, "azure-webjobs-hosts");
 
             return account;
         }
 
-        private static TResult RunTrigger<TResult>(IStorageAccount account, Type programType,
+        private static TResult RunTrigger<TResult>(StorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
             return FunctionalTest.RunTrigger<TResult>(account, programType, setTaskSource);
@@ -70,7 +70,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             public static void StepOne([BlobTrigger(BlobPath)] TextReader input, [Queue(QueueName)] out Payload output)
             {
                 string content = input.ReadToEnd();
-                int value = Int32.Parse(content);
+                int value = int.Parse(content);
                 output = new Payload
                 {
                     Value = value + 1,
@@ -83,7 +83,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             {
                 Assert.Equal(input.Value, value);
                 output.Write(value);
-                committed = String.Empty;
+                committed = string.Empty;
             }
 
             public static void StepThree([QueueTrigger(CommittedQueueName)] string ignore)
@@ -100,4 +100,3 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
     }
 }
-#endif

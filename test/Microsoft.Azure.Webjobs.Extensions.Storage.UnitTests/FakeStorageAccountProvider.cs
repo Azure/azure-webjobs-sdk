@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs
         }
     }
 
-    public class XFakeStorageAccount : StorageAccount
+    public class FakeStorageAccount : StorageAccount
     {
         private FakeStorage.FakeAccount _account2 = new FakeStorage.FakeAccount();
 
@@ -46,7 +46,7 @@ namespace Microsoft.Azure.WebJobs
     }
 
     // Helpeful test extensions 
-    public static class XFakeStorageAccountExtensions
+    public static class FakeStorageAccountExtensions
     {
         public static async Task AddQueueMessageAsync(this StorageAccount account, CloudQueueMessage message, string queueName)
         {

@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             string storageAccountName = Guid.NewGuid().ToString();
             string containerName = Guid.NewGuid().ToString();
 
-            var account = new XFakeStorageAccount();
+            var account = new FakeStorageAccount();
             var client = account.CreateCloudBlobClient();
 
             // by default there is no table in this client
@@ -38,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             string storageAccountName = Guid.NewGuid().ToString();
             string containerName = Guid.NewGuid().ToString();
 
-            var account = new XFakeStorageAccount();
+            var account = new FakeStorageAccount();
             var client = account.CreateCloudBlobClient();
             var container = client.GetContainerReference(HostContainerNames.Hosts);
             await container.CreateIfNotExistsAsync();
@@ -57,7 +57,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             string storageAccountName = "account=" + Guid.NewGuid().ToString();
             string containerName = "container-" + Guid.NewGuid().ToString();
 
-            var account = new XFakeStorageAccount();
+            var account = new FakeStorageAccount();
             var client = account.CreateCloudBlobClient();
             var container = client.GetContainerReference(HostContainerNames.Hosts);
             await container.CreateIfNotExistsAsync();
@@ -79,7 +79,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             string storageAccountName = Guid.NewGuid().ToString();
             string containerName = Guid.NewGuid().ToString();
 
-            var account = new XFakeStorageAccount();
+            var account = new FakeStorageAccount();
             var client = account.CreateCloudBlobClient();
             var container = client.GetContainerReference(HostContainerNames.Hosts);
             await container.CreateIfNotExistsAsync();
@@ -104,7 +104,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             string storageAccountName = Guid.NewGuid().ToString();
             string containerName = Guid.NewGuid().ToString();
 
-            var account = new XFakeStorageAccount();
+            var account = new FakeStorageAccount();
             var client = account.CreateCloudBlobClient();
             var container = client.GetContainerReference(HostContainerNames.Hosts);
             await container.CreateIfNotExistsAsync();

@@ -85,12 +85,26 @@ namespace FakeStorage
             return props;
         }
 
+        public static BlobProperties SetLeaseState(this BlobProperties props, LeaseState state)
+        {
+            props.SetInternalProperty(nameof(BlobProperties.LeaseState), state);
+
+            return props;
+        }
+
+        public static BlobProperties SetLeaseStatus(this BlobProperties props, LeaseStatus status)
+        {
+            props.SetInternalProperty(nameof(BlobProperties.LeaseStatus), status);
+
+            return props;
+        }
+
         public static BlobResultSegment NewBlobResultSegment(
             BlobContinuationToken continuationToken,
             IEnumerable<ICloudBlob> results)
         {
             IEnumerable<IListBlobItem> l = results;
-            var result = new BlobResultSegment(results, continuationToken );
+            var result = new BlobResultSegment(results, continuationToken);
             return result;
         }
 
@@ -131,7 +145,7 @@ namespace FakeStorage
         }
     }
 
-    static class MoreStorageExtensions
+    internal static class MoreStorageExtensions
     {
         public static string DownloadText(this ICloudBlob blob)
         {

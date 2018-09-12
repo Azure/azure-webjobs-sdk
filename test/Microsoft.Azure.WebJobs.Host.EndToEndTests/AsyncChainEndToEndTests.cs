@@ -19,7 +19,6 @@ using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -152,23 +151,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
-        /* $$$ 
         [Fact]
         public async Task AsyncChainEndToEnd_CustomFactories()
         {
             using (_functionCompletedEvent = new ManualResetEvent(initialState: false))
             {
                 CustomQueueProcessorFactory queueProcessorFactory = new CustomQueueProcessorFactory();
-                CustomStorageClientFactory storageClientFactory = new CustomStorageClientFactory();
 
                 _hostBuilder.ConfigureServices(services =>
                 {
-                    services.Configure<JobHostQueuesOptions>(o =>
-                    {
-                        o.QueueProcessorFactory = queueProcessorFactory;
-                    });
-
-                    services.AddSingleton<StorageClientFactory>(storageClientFactory);
+                    services.AddSingleton<IQueueProcessorFactory>(queueProcessorFactory);
                 });
 
                 await AsyncChainEndToEndInternal(_hostBuilder);
@@ -179,7 +171,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.True(queueProcessorFactory.CustomQueueProcessors.Sum(p => p.CompleteProcessingCount) >= 2);
             }
         }
-        */
 
         [Fact]
         public async Task LoggerLogging()
@@ -626,7 +617,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             using (IHost host = hostBuilder.Build())
             {
                 JobHost jobHost = host.GetJobHost();
-                
+
                 await host.StartAsync();
 
                 IHostIdProvider idProvider = host.Services.GetService<IHostIdProvider>();

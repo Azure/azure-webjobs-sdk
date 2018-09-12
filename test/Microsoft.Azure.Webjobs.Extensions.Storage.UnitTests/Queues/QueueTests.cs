@@ -8,11 +8,9 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage.Queue;
-using Moq;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -294,57 +292,55 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
         }
 
-#if false // $$$ enable 
         // Nice failure when no storage account is set
-        [Fact]
+        [Fact(Skip = "Re-enable when StorageAccountParser returns")]
         public void Fails_When_No_Storage_is_set()
         {
             // TODO: We shouldn't have to do this, but our default parser
             //       does not allow for null Storage/Dashboard.
-            var mockParser = new Mock<IStorageAccountParser>();
-            mockParser
-                .Setup(p => p.ParseAccount(null, It.IsAny<string>()))
-                .Returns<string>(null);
+            //var mockParser = new Mock<IStorageAccountParser>();
+            //mockParser
+            //    .Setup(p => p.ParseAccount(null, It.IsAny<string>()))
+            //    .Returns<string>(null);
 
-            // no storage account!
-            IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<ProgramSimple>()
-                .ConfigureServices(services =>
-                {
-                    services.AddSingleton<IStorageAccountParser>(mockParser.Object);
-                })
-                .ConfigureAppConfiguration(config =>
-                {
-                    config.AddInMemoryCollection(new Dictionary<string, string>
-                    {
-                        { "AzureWebJobsStorge", null },
-                        { "AzureWebJobsDashboard", null }
-                    });
-                })
-                .Build();
+            //// no storage account!
+            //IHost host = new HostBuilder()
+            //    .ConfigureDefaultTestHost<ProgramSimple>()
+            //    .ConfigureServices(services =>
+            //    {
+            //        services.AddSingleton<IStorageAccountParser>(mockParser.Object);
+            //    })
+            //    .ConfigureAppConfiguration(config =>
+            //    {
+            //        config.AddInMemoryCollection(new Dictionary<string, string>
+            //        {
+            //            { "AzureWebJobsStorge", null },
+            //            { "AzureWebJobsDashboard", null }
+            //        });
+            //    })
+            //    .Build();
 
-            string message = StorageAccountParser.FormatParseAccountErrorMessage(StorageAccountParseResult.MissingOrEmptyConnectionStringError, "Storage");
-            TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<ProgramSimple>("Func"), "ProgramSimple.Func", message);
+            //string message = StorageAccountParser.FormatParseAccountErrorMessage(StorageAccountParseResult.MissingOrEmptyConnectionStringError, "Storage");
+            //TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<ProgramSimple>("Func"), "ProgramSimple.Func", message);
         }
 
-        [Fact]
+        [Fact(Skip = "Re-enable when StorageAccountParser returns")]
         public void Sanitizes_Exception_If_Connection_String()
         {
-            // people accidentally use their connection string; we want to make sure we sanitize it
-            IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<ProgramSimple2>()
-                .Build();
+            //// people accidentally use their connection string; we want to make sure we sanitize it
+            //IHost host = new HostBuilder()
+            //    .ConfigureDefaultTestHost<ProgramSimple2>()
+            //    .Build();
 
-            string message = StorageAccountParser.FormatParseAccountErrorMessage(StorageAccountParseResult.MissingOrEmptyConnectionStringError, ProgramSimple2.ConnectionString);
+            //string message = StorageAccountParser.FormatParseAccountErrorMessage(StorageAccountParseResult.MissingOrEmptyConnectionStringError, ProgramSimple2.ConnectionString);
 
-            TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<ProgramSimple2>(nameof(ProgramSimple2.Func2)),
-                "ProgramSimple2.Func2", message);
+            //TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<ProgramSimple2>(nameof(ProgramSimple2.Func2)),
+            //    "ProgramSimple2.Func2", message);
 
-            Assert.DoesNotContain(ProgramSimple2.ConnectionString, message);
-            Assert.DoesNotContain("AzureWebJobs", message); // prefix should not be added
-            Assert.Contains("[Hidden Credential]", message);
+            //Assert.DoesNotContain(ProgramSimple2.ConnectionString, message);
+            //Assert.DoesNotContain("AzureWebJobs", message); // prefix should not be added
+            //Assert.Contains("[Hidden Credential]", message);
         }
-#endif 
 
         public class ProgramBadContract
         {
@@ -471,7 +467,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         private static StorageAccount CreateFakeStorageAccount()
         {
-            return new XFakeStorageAccount();
+            return new FakeStorageAccount();
         }
 
         private static async Task<CloudQueue> CreateQueue(CloudQueueClient client, string queueName)

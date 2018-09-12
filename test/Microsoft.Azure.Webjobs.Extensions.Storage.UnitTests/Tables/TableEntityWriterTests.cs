@@ -13,7 +13,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Tables
         public void FlushAfterAdd_PersistsEntity()
         {
             // Arrange
-            var account = new XFakeStorageAccount();
+            var account = new FakeStorageAccount();
             var client = account.CreateCloudTableClient();
             var table = client.GetTableReference("Table");
 
