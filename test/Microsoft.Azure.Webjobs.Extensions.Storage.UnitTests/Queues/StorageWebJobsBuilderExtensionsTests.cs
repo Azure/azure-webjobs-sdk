@@ -14,6 +14,31 @@ namespace Microsoft.Azure.WebJobs.Extensions.Storage.UnitTests.Queues
     public class StorageWebJobsBuilderExtensionsTests
     {
         [Fact]
+        public void ConfigureOptions_AppliesValuesCorrectly_Singleton()
+        {
+            string path = "AzureWebJobs:Singleton";
+            var values = new Dictionary<string, string>
+            {
+                { $"{path}:LockPeriod", "00:00:22" },
+                { $"{path}:ListenerLockPeriod", "00:00:22" },
+                { $"{path}:LockAcquisitionTimeout", "00:00:22" },
+                { $"{path}:LockAcquisitionPollingInterval", "00:00:22" },
+                { $"{path}:ListenerLockRecoveryPollingInterval", "00:00:22" }
+            };
+
+            SingletonOptions options = TestHelpers.GetConfiguredOptions<SingletonOptions>(b =>
+            {
+                b.AddAzureStorage();
+            }, values);
+
+            Assert.Equal(TimeSpan.FromSeconds(22), options.LockPeriod);
+            Assert.Equal(TimeSpan.FromSeconds(22), options.ListenerLockPeriod);
+            Assert.Equal(TimeSpan.FromSeconds(22), options.LockAcquisitionTimeout);
+            Assert.Equal(TimeSpan.FromSeconds(22), options.ListenerLockRecoveryPollingInterval);
+            Assert.Equal(TimeSpan.FromSeconds(22), options.ListenerLockRecoveryPollingInterval);
+        }
+
+        [Fact]
         public void ConfigureOptions_AppliesValuesCorrectly_Queues()
         {
             string extensionPath = "AzureWebJobs:Extensions:Queues";

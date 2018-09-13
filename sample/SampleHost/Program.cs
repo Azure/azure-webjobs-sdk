@@ -6,7 +6,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Azure.WebJobs;
 
 namespace SampleHost
 {
@@ -18,8 +17,7 @@ namespace SampleHost
                 .UseEnvironment("Development")
                 .ConfigureWebJobs(b =>
                 {
-                    b.AddDashboardLogging()
-                    .AddAzureStorageCoreServices()
+                    b.AddAzureStorageCoreServices()
                     .AddAzureStorage()
                     .AddServiceBus()
                     .AddEventHubs();

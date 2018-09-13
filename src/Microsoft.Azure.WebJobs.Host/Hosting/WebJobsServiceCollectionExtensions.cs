@@ -13,10 +13,11 @@ using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs
 {
@@ -25,6 +26,7 @@ namespace Microsoft.Azure.WebJobs
     /// </summary>
     public static class WebJobsServiceCollectionExtensions
     {
+        private const string SingletonConfigSectionName = "Singleton";
 
         /// <summary>
         /// Adds the WebJobs services to the provided <see cref="IServiceCollection"/>.
@@ -96,6 +98,20 @@ namespace Microsoft.Azure.WebJobs
 
             // Configuration
             services.AddSingleton(typeof(IWebJobsExtensionConfiguration<>), typeof(WebJobsExtensionConfiguration<>));
+
+            services.AddOptions<SingletonOptions>()
+                .Configure<IHostingEnvironment>((options, env) =>
+                {
+                    if (env.IsDevelopment())
+                    {
+                        options.ListenerLockPeriod = TimeSpan.FromSeconds(15);
+                    }
+                })
+                .Configure<IConfiguration>((options, config) =>
+                {
+                    var section = config.GetWebJobsRootConfiguration().GetSection(SingletonConfigSectionName);
+                    section.Bind(options);
+                });
 
             var builder = new WebJobsBuilder(services);
             builder.AddBuiltInBindings();

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Storage.Blobs.Triggers;
 using Microsoft.Azure.WebJobs.Host;
@@ -16,6 +17,7 @@ using Microsoft.Azure.WebJobs.Host.Queues.Triggers;
 using Microsoft.Azure.WebJobs.Host.Tables.Config;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using WebJobs.Extensions.Storage;
 
@@ -61,6 +63,15 @@ namespace Microsoft.Extensions.Hosting
                 .BindOptions<QueuesOptions>();
 
             builder.Services.TryAddSingleton<IQueueProcessorFactory, DefaultQueueProcessorFactory>();
+
+            builder.Services.AddOptions<QueuesOptions>()
+                .Configure<IHostingEnvironment>((options, env) =>
+                {
+                    if (env.IsDevelopment())
+                    {
+                        options.MaxPollingInterval = TimeSpan.FromSeconds(2);
+                    }
+                });
 
             builder.AddExtension<BlobsExtensionConfigProvider>()
                 .BindOptions<BlobsOptions>();

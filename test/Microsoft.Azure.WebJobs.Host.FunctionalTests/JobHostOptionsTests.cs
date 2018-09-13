@@ -13,6 +13,7 @@ using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -20,39 +21,89 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
     public class JobHostOptionsTests
     {
-        // TODO: DI: private readonly Change to private readonly use IHostingEnvironment
-        // TODO: Missing feature tracked by https://github.com/Azure/azure-webjobs-sdk/issues/1869
-        [Theory(Skip = "Development settings not being applied")]
-        [InlineData(null, false)]
-        [InlineData("Blah", false)]
-        [InlineData("Development", true)]
-        [InlineData("development", true)]
-        public void IsDevelopment_ReturnsCorrectValue(string settingValue, bool expected)
+        [Fact]
+        public void UseEnvironment_Development_DefaultsOptionsCorrectly()
         {
-            //using (EnvVarHolder.Set(Constants.EnvironmentSettingName, settingValue))
-            //{
-            //    JobHostOptions config = new JobHostOptions();
-            //    Assert.Equal(config.IsDevelopment, expected);
-            //}
+            var hostBuilder = new HostBuilder()
+                .UseEnvironment("Development")
+                .ConfigureDefaultTestHost(b =>
+                {
+                    b.AddAzureStorage()
+                    .AddAzureStorageCoreServices();
+                });
+
+            IHost host = hostBuilder.Build();
+            var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
+
+            var hostingEnvironment = host.Services.GetService<IHostingEnvironment>();
+            Assert.True(hostingEnvironment.IsDevelopment());
+
+            var queuesOptions = host.Services.GetService<IOptions<QueuesOptions>>();
+            Assert.Equal(TimeSpan.FromSeconds(2), queuesOptions.Value.MaxPollingInterval);
+
+            var singletonOptions = host.Services.GetService< IOptions<SingletonOptions>>();
+            Assert.Equal(TimeSpan.FromSeconds(15), singletonOptions.Value.ListenerLockPeriod);
         }
 
-        [Fact(Skip = "Development settings not being applied")]
-        public void UseDevelopmentSettings_ConfiguresCorrectValues()
+        [Fact]
+        public void UseEnvironment_Production_DoesNotDefaultsOptions()
         {
-            //using (EnvVarHolder.Set(Constants.EnvironmentSettingName, "Development"))
-            //{
-            //    JobHostOptions config = new JobHostOptions();
-            //    Assert.False(config.UsingDevelopmentSettings);
+            var hostBuilder = new HostBuilder()
+                .UseEnvironment("Production")
+                .ConfigureDefaultTestHost(b =>
+                {
+                    b.AddAzureStorage()
+                    .AddAzureStorageCoreServices();
+                });
 
-            //    if (config.IsDevelopment)
-            //    {
-            //        config.UseDevelopmentSettings();
-            //    }
+            IHost host = hostBuilder.Build();
+            var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
 
-            //    Assert.True(config.UsingDevelopmentSettings);
-            //    Assert.Equal(TimeSpan.FromSeconds(2), config.Queues.MaxPollingInterval);
-            //    Assert.Equal(TimeSpan.FromSeconds(15), config.Singleton.ListenerLockPeriod);
-            //}
+            var hostingEnvironment = host.Services.GetService<IHostingEnvironment>();
+            Assert.False(hostingEnvironment.IsDevelopment());
+            Assert.True(hostingEnvironment.IsProduction());
+
+            var queuesOptions = host.Services.GetService<IOptions<QueuesOptions>>();
+            Assert.Equal(TimeSpan.FromMinutes(1), queuesOptions.Value.MaxPollingInterval);
+
+            var singletonOptions = host.Services.GetService<IOptions<SingletonOptions>>();
+            Assert.Equal(TimeSpan.FromSeconds(60), singletonOptions.Value.ListenerLockPeriod);
+        }
+
+        [Fact]
+        public void UseEnvironment_Development_UserConfigTakesPrecedence()
+        {
+            var hostBuilder = new HostBuilder()
+                .UseEnvironment("Development")
+                .ConfigureDefaultTestHost(b =>
+                {
+                    b.AddAzureStorage()
+                    .AddAzureStorageCoreServices();
+                })
+                .ConfigureServices(services =>
+                {
+                    services.Configure<QueuesOptions>(options =>
+                    {
+                        options.MaxPollingInterval = TimeSpan.FromSeconds(22);
+                    });
+
+                    services.Configure<SingletonOptions>(options =>
+                    {
+                        options.ListenerLockPeriod = TimeSpan.FromSeconds(22);
+                    });
+                });
+
+            IHost host = hostBuilder.Build();
+            var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
+
+            var hostingEnvironment = host.Services.GetService<IHostingEnvironment>();
+            Assert.True(hostingEnvironment.IsDevelopment());
+
+            var queuesOptions = host.Services.GetService<IOptions<QueuesOptions>>();
+            Assert.Equal(TimeSpan.FromSeconds(22), queuesOptions.Value.MaxPollingInterval);
+
+            var singletonOptions = host.Services.GetService<IOptions<SingletonOptions>>();
+            Assert.Equal(TimeSpan.FromSeconds(22), singletonOptions.Value.ListenerLockPeriod);
         }
 
         private class FastLogger : IAsyncCollector<FunctionInstanceLogEntry>, IEventCollectorFactory
