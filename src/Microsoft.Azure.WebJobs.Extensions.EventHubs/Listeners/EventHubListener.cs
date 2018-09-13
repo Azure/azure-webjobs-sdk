@@ -19,18 +19,16 @@ namespace Microsoft.Azure.WebJobs.EventHubs
         private readonly ITriggeredFunctionExecutor _executor;
         private readonly EventProcessorHost _eventProcessorHost;
         private readonly bool _singleDispatch;
-        private readonly EventProcessorOptions _options;
-        private readonly EventHubConfiguration _config;
+        private readonly EventHubOptions _options;
         private readonly ILogger _logger;
         private bool _started;
 
-        public EventHubListener(ITriggeredFunctionExecutor executor, EventProcessorHost eventProcessorHost, bool singleDispatch, EventHubConfiguration config, ILogger logger)
+        public EventHubListener(ITriggeredFunctionExecutor executor, EventProcessorHost eventProcessorHost, bool singleDispatch, EventHubOptions options, ILogger logger)
         {
             _executor = executor;
             _eventProcessorHost = eventProcessorHost;
             _singleDispatch = singleDispatch;
-            _options = config.GetOptions();
-            _config = config;
+            _options = options;
             _logger = logger;
         }
 
@@ -45,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            await _eventProcessorHost.RegisterEventProcessorFactoryAsync(this, _options);
+            await _eventProcessorHost.RegisterEventProcessorFactoryAsync(this, _options.EventProcessorOptions);
             _started = true;
         }
 
@@ -60,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
 
         IEventProcessor IEventProcessorFactory.CreateEventProcessor(PartitionContext context)
         {
-            return new EventProcessor(_config, _executor, _logger, _singleDispatch);
+            return new EventProcessor(_options, _executor, _logger, _singleDispatch);
         }
 
         /// <summary>
@@ -84,12 +82,12 @@ namespace Microsoft.Azure.WebJobs.EventHubs
             private int _batchCounter = 0;
             private bool _disposed = false;
 
-            public EventProcessor(EventHubConfiguration config, ITriggeredFunctionExecutor executor, ILogger logger, bool singleDispatch, ICheckpointer checkpointer = null)
+            public EventProcessor(EventHubOptions options, ITriggeredFunctionExecutor executor, ILogger logger, bool singleDispatch, ICheckpointer checkpointer = null)
             {
                 _checkpointer = checkpointer ?? this;
                 _executor = executor;
                 _singleDispatch = singleDispatch;
-                _batchCheckpointFrequency = config.BatchCheckpointFrequency;
+                _batchCheckpointFrequency = options.BatchCheckpointFrequency;
                 _logger = logger;
             }
 

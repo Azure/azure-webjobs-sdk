@@ -17,6 +17,7 @@ namespace Microsoft.Azure.WebJobs.Description
         /// from a function.
         /// </summary>
         /// $$$ Review this
+        [Obsolete("Will be redesigned in a future release.")]
         public bool TriggerHandlesReturnValue { get; set; }
     }
 }

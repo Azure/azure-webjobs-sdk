@@ -13,11 +13,7 @@ using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.EventHubs
 {
-    /// <summary>
-    /// Provide configuration for event hubs. 
-    /// This is primarily mapping names to underlying EventHub listener and receiver objects from the EventHubs SDK. 
-    /// </summary>
-    public class EventHubConfiguration
+    public class EventHubOptions
     {
         // Event Hub Names are case-insensitive.
         // The same path can have multiple connection strings with different permissions (sending and receiving), 
@@ -29,39 +25,16 @@ namespace Microsoft.Azure.WebJobs.EventHubs
         private readonly Dictionary<string, ReceiverCreds> _receiverCreds = new Dictionary<string, ReceiverCreds>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, EventProcessorHost> _explicitlyProvidedHosts = new Dictionary<string, EventProcessorHost>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly EventProcessorOptions _options;
-        private string _defaultStorageString;
-        private int _batchCheckpointFrequency = 1;
-
         /// <summary>
         /// Name of the blob container that the EventHostProcessor instances uses to coordinate load balancing listening on an event hub. 
         /// Each event hub gets its own blob prefix within the container. 
         /// </summary>
         public const string LeaseContainerName = "azure-webjobs-eventhub";
+        private int _batchCheckpointFrequency = 1;
 
-        /// <summary>
-        /// default constructor. Callers can reference this without having any assembly references to eventhub assemblies. 
-        /// </summary>
-        public EventHubConfiguration()
-            : this(null, null)
+        public EventHubOptions()
         {
-        }
-
-        /// <summary>
-        /// Constructs a new instance.
-        /// </summary>
-        /// <param name="options">The optional <see cref="EventProcessorOptions"/> to use when receiving events.</param>
-        public EventHubConfiguration(IConfiguration configuration, IOptions<EventProcessorOptions> options = null)
-        {
-            _options = options?.Value;
-            if (_options == null)
-            {
-                _options = EventProcessorOptions.DefaultOptions;
-                _options.MaxBatchSize = 64;
-                _options.PrefetchCount = _options.MaxBatchSize * 4;
-            }
-
-            _defaultStorageString = configuration?.GetWebJobsConnectionString(ConnectionStringNames.Storage); 
+            EventProcessorOptions = EventProcessorOptions.DefaultOptions;
         }
 
         /// <summary>
@@ -83,6 +56,8 @@ namespace Microsoft.Azure.WebJobs.EventHubs
                 _batchCheckpointFrequency = value;
             }
         }
+
+        public EventProcessorOptions EventProcessorOptions { get; }
 
         /// <summary>
         /// Add an existing client for sending messages to an event hub.  Infer the eventHub name from client.path
@@ -236,7 +211,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
         }
 
         // Lookup a listener for receiving events given the name provided in the [EventHubTrigger] attribute. 
-        internal EventProcessorHost GetEventProcessorHost(string eventHubName, string consumerGroup)
+        internal EventProcessorHost GetEventProcessorHost(IConfiguration config, string eventHubName, string consumerGroup)
         {
             ReceiverCreds creds;
             if (this._receiverCreds.TryGetValue(eventHubName, out creds))
@@ -251,7 +226,8 @@ namespace Microsoft.Azure.WebJobs.EventHubs
                 var storageConnectionString = creds.StorageConnectionString;
                 if (storageConnectionString == null)
                 {
-                    storageConnectionString = _defaultStorageString;
+                    string defaultStorageString = config.GetWebJobsConnectionString(ConnectionStringNames.Storage);
+                    storageConnectionString = defaultStorageString;
                 }
 
                 // If the connection string provides a hub name, that takes precedence. 
@@ -264,7 +240,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
                     sb.EntityPath = null; // need to remove to use with EventProcessorHost
                 }
 
-                var @namespace = GetServiceBusNamespace(sb);
+                var @namespace = GetEventHubNamespace(sb);
                 var blobPrefix = GetBlobPrefix(actualPath, @namespace);
 
                 // Use blob prefix support available in EPH starting in 2.2.6 
@@ -340,7 +316,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
             return sb.ToString();
         }
 
-        private static string GetServiceBusNamespace(EventHubsConnectionStringBuilder connectionString)
+        private static string GetEventHubNamespace(EventHubsConnectionStringBuilder connectionString)
         {
             // EventHubs only have 1 endpoint. 
             var url = connectionString.Endpoint;
@@ -374,9 +350,6 @@ namespace Microsoft.Azure.WebJobs.EventHubs
             string key = EscapeBlobPath(serviceBusNamespace) + "/" + EscapeBlobPath(eventHubName) + "/";
             return key;
         }
-
-        // Get the eventhub options, used by the EventHub SDK for listening on event. 
-        internal EventProcessorOptions GetOptions() => _options;
 
         // Hold credentials for a given eventHub name. 
         // Multiple consumer groups (and multiple listeners) on the same hub can share the same credentials. 

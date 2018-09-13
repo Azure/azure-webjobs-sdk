@@ -12,6 +12,7 @@ using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.EventHubs
@@ -19,15 +20,17 @@ namespace Microsoft.Azure.WebJobs.EventHubs
     [Extension("EventHubs", configurationSection: "EventHubs")]
     internal class EventHubExtensionConfigProvider : IExtensionConfigProvider
     {
-        private readonly EventHubConfiguration _options;
+        public IConfiguration _config;
+        private readonly IOptions<EventHubOptions> _options;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IConverterManager _converterManager;
         private readonly INameResolver _nameResolver;
         private readonly IWebJobsExtensionConfiguration<EventHubExtensionConfigProvider> _configuration;
 
-        public EventHubExtensionConfigProvider(EventHubConfiguration options, ILoggerFactory loggerFactory,
+        public EventHubExtensionConfigProvider(IConfiguration config, IOptions<EventHubOptions> options, ILoggerFactory loggerFactory,
             IConverterManager converterManager, INameResolver nameResolver, IWebJobsExtensionConfiguration<EventHubExtensionConfigProvider> configuration)
         {
+            _config = config;
             _options = options;
             _loggerFactory = loggerFactory;
             _converterManager = converterManager;
@@ -49,8 +52,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
                 throw new ArgumentNullException(nameof(context));
             }
 
-            EventProcessorOptions options = _options.GetOptions();
-            options.SetExceptionHandler(ExceptionReceivedHandler);
+            _options.Value.EventProcessorOptions.SetExceptionHandler(ExceptionReceivedHandler);
 
             // apply at config level (batchCheckpointFrequency)
             // TODO: Revisit this... All configurable options should move to a proper Options type.
@@ -64,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
                 .AddOpenConverter<OpenType.Poco, EventData>(ConvertPocoToEventData);
 
             // register our trigger binding provider
-            var triggerBindingProvider = new EventHubTriggerAttributeBindingProvider(_nameResolver, _converterManager, _options, _loggerFactory);
+            var triggerBindingProvider = new EventHubTriggerAttributeBindingProvider(_config, _nameResolver, _converterManager, _options, _loggerFactory);
             context.AddBindingRule<EventHubTriggerAttribute>()
                 .BindToTrigger(triggerBindingProvider);
 
@@ -122,7 +124,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
 
         private IAsyncCollector<EventData> BuildFromAttribute(EventHubAttribute attribute)
         {
-            EventHubClient client = _options.GetEventHubClient(attribute.EventHubName, attribute.Connection);
+            EventHubClient client = _options.Value.GetEventHubClient(attribute.EventHubName, attribute.Connection);
             return new EventHubAsyncCollector(client);
         }
 

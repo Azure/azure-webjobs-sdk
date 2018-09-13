@@ -25,7 +25,7 @@ namespace Microsoft.Extensions.Hosting
 {
     public static class StorageWebJobsBuilderExtensions
     {
-        public static IWebJobsBuilder AddAzureStorage(this IWebJobsBuilder builder)
+        public static IWebJobsBuilder AddAzureStorage(this IWebJobsBuilder builder, Action<QueuesOptions> configureQueues = null, Action<BlobsOptions> configureBlobs = null)
         {
             // add webjobs to user agent for all storage calls
             OperationContext.GlobalSendingRequest += (sender, e) =>
@@ -61,6 +61,10 @@ namespace Microsoft.Extensions.Hosting
 
             builder.AddExtension<QueuesExtensionConfigProvider>()
                 .BindOptions<QueuesOptions>();
+            if (configureQueues != null)
+            {
+                builder.Services.Configure<QueuesOptions>(configureQueues);
+            }
 
             builder.Services.TryAddSingleton<IQueueProcessorFactory, DefaultQueueProcessorFactory>();
 
@@ -75,6 +79,10 @@ namespace Microsoft.Extensions.Hosting
 
             builder.AddExtension<BlobsExtensionConfigProvider>()
                 .BindOptions<BlobsOptions>();
+            if (configureBlobs != null)
+            {
+                builder.Services.Configure<BlobsOptions>(configureBlobs);
+            }
 
             return builder;
         }
