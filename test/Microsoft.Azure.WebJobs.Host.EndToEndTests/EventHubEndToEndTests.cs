@@ -7,12 +7,10 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
-using Microsoft.Azure.WebJobs.EventHubs;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Xunit;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
@@ -44,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 return EventHubTestJobs.Result != null;
             });
 
-            Assert.Equal(id, (object)EventHubTestJobs.Result);
+            Assert.Equal(id, EventHubTestJobs.Result);
         }
 
         [Fact]
@@ -136,7 +134,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             public TestFixture()
             {
-                string connection = Environment.GetEnvironmentVariable("AzureWebJobsTestHubConnection");
+                var config = new ConfigurationBuilder()
+                    .AddEnvironmentVariables()
+                    .AddTestSettings()
+                    .Build();
+
+                string connection = config.GetConnectionStringOrSetting("AzureWebJobsTestHubConnection");
                 Assert.True(!string.IsNullOrEmpty(connection), "Required test connection string is missing.");
 
                 var host = new HostBuilder()

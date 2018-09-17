@@ -74,6 +74,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "BinderExtensions",
                 "BindingAttribute",
                 "ConnectionProviderAttribute",
+                "ConnectionStringAttribute",
                 "DisableAttribute",
                 "ExtensionAttribute",
                 "FunctionNameAttribute",

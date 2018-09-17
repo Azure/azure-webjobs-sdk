@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Azure.WebJobs.Host.Config
 {
@@ -22,6 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
     public class FluentBindingRule<TAttribute> : FluentConverterRules<TAttribute, FluentBindingRule<TAttribute>>
         where TAttribute : Attribute
     {
+        private readonly IConfiguration _configuration;
         private readonly INameResolver _nameResolver;
         private readonly IConverterManager _converterManager;
         private readonly IExtensionRegistry _extensionRegistry;
@@ -34,8 +36,9 @@ namespace Microsoft.Azure.WebJobs.Host.Config
 
         private Action<TAttribute, Type> _validator;
 
-        internal FluentBindingRule(INameResolver nameResolver, IConverterManager converterManager, IExtensionRegistry extensionRegistry)
+        internal FluentBindingRule(IConfiguration configuration, INameResolver nameResolver, IConverterManager converterManager, IExtensionRegistry extensionRegistry)
         {
+            _configuration = configuration;
             _nameResolver = nameResolver;
             _converterManager = converterManager;
             _extensionRegistry = extensionRegistry;
@@ -205,7 +208,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         // Common worker for BindToInput rules. 
         private FluentBinder BindToInput<TType>(PatternMatcher pm)
         {
-            var rule = new BindToInputBindingProvider<TAttribute, TType>(_nameResolver, _converterManager, pm);
+            var rule = new BindToInputBindingProvider<TAttribute, TType>(_configuration, _nameResolver, _converterManager, pm);
             return Bind(rule);
         }
 
@@ -255,7 +258,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         private void BindToStream(PatternMatcher patternMatcher, FileAccess fileAccess)
         {
             // This will throw immediately if it can't match an ATtribute-->Stream converter. 
-            var rule = new BindToStreamBindingProvider<TAttribute>(patternMatcher, fileAccess, _nameResolver, _converterManager);
+            var rule = new BindToStreamBindingProvider<TAttribute>(patternMatcher, fileAccess, _configuration, _nameResolver, _converterManager);
             Bind(rule);
         }
 
@@ -284,7 +287,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         {
             var ot = OpenType.FromType<TType>();
             var nameResolver = _nameResolver;
-            var binder = new ItemBindingProvider<TAttribute>(nameResolver, builder, ot);
+            var binder = new ItemBindingProvider<TAttribute>(_configuration, nameResolver, builder, ot);
             return Bind(binder);
         }
 
@@ -307,6 +310,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             if (this._filterDescription.Count > 0)
             {
                 binder = new FilteringBindingProvider<TAttribute>(
+                    _configuration,
                     this._nameResolver,
                     binder,
                     FilterNode.And(this._filterDescription));
@@ -314,7 +318,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
                 this._filterDescription.Clear();
             }
 
-            var opts = new FluentBinder(this._nameResolver, binder);
+            var opts = new FluentBinder(_configuration, _nameResolver, binder);
             _binders.Add(opts);
             return opts;
         }
@@ -376,7 +380,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
 
         private void BindToCollector<TMessage>(PatternMatcher pm)
         {
-            var rule = new AsyncCollectorBindingProvider<TAttribute, TMessage>(_nameResolver, _converterManager, pm);
+            var rule = new AsyncCollectorBindingProvider<TAttribute, TMessage>(_configuration, _nameResolver, _converterManager, pm);
             Bind(rule);
         }
 
@@ -436,7 +440,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         private IBindingProvider CreateBinding()
         {
             IBindingProvider[] bindings = _binders.Select(x => x.Binder).ToArray();
-            var all = new GenericCompositeBindingProvider<TAttribute>(_validator, this._nameResolver, bindings);
+            var all = new GenericCompositeBindingProvider<TAttribute>(_validator, _configuration, this._nameResolver, bindings);
             return all;
         }
 
@@ -465,10 +469,12 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         // These apply after the binder has matched.
         public class FluentBinder
         {
+            private readonly IConfiguration _configuration;
             private readonly INameResolver _nameResolver;
 
-            internal FluentBinder(INameResolver nameResolver, IBindingProvider binder)
+            internal FluentBinder(IConfiguration configuration, INameResolver nameResolver, IBindingProvider binder)
             {
+                _configuration = configuration;
                 this._nameResolver = nameResolver;
                 this.Binder = binder;
             }
@@ -481,7 +487,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             public void AddValidator(Action<TAttribute, Type> validator)
             {
                 var inner = this.Binder;
-                var binder = new ValidatingWrapperBindingProvider<TAttribute>(validator, _nameResolver, inner);
+                var binder = new ValidatingWrapperBindingProvider<TAttribute>(validator, _configuration, _nameResolver, inner);
                 this.Binder = binder;
             }
 

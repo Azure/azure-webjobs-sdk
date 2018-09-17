@@ -23,6 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
     public class ServiceBusEndToEndTests : IDisposable
     {
+        private const string SecondaryConnectionStringKey = "ServiceBusSecondary";
         private const string Prefix = "core-test-";
         private const string FirstQueueName = Prefix + "queue1";
         private const string SecondQueueName = Prefix + "queue2";
@@ -41,18 +42,19 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private static string _resultMessage1;
         private static string _resultMessage2;
 
-        private RandomNameResolver _nameResolver;
-        private string _primaryConnectionString;
-        private string _secondaryConnectionString;
+        private readonly RandomNameResolver _nameResolver;
+        private readonly string _primaryConnectionString;
+        private readonly string _secondaryConnectionString;
 
         public ServiceBusEndToEndTests()
         {
             var config = new ConfigurationBuilder()
                 .AddEnvironmentVariables()
+                .AddTestSettings()
                 .Build();
 
             _primaryConnectionString = config.GetConnectionString(ServiceBus.Constants.DefaultConnectionStringName);
-            _secondaryConnectionString = config.GetConnectionString("SecondaryServiceBus");
+            _secondaryConnectionString = config.GetConnectionString(SecondaryConnectionStringKey);
 
             _nameResolver = new RandomNameResolver();
 
@@ -357,7 +359,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // Demonstrate triggering on a queue in one account, and writing to a topic
             // in the primary subscription
             public static void MultipleAccounts(
-                [ServiceBusTrigger(FirstQueueName, Connection = "ServiceBusSecondary")] string input,
+                [ServiceBusTrigger(FirstQueueName, Connection = SecondaryConnectionStringKey)] string input,
                 [ServiceBus(TopicName)] out string output)
             {
                 output = input;
@@ -433,7 +435,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 }
             }
 
-            Task ExceptionReceivedHandler(ExceptionReceivedEventArgs eventArgs)
+            private Task ExceptionReceivedHandler(ExceptionReceivedEventArgs eventArgs)
             {
                 return Task.CompletedTask;
             }

@@ -5,6 +5,7 @@ using System;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -14,18 +15,21 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     internal class ItemBindingProvider<TAttribute> : IBindingProvider
         where TAttribute : Attribute
     {
+        private readonly IConfiguration _configuration;
         private readonly INameResolver _nameResolver;
         private readonly Func<TAttribute, Type, Task<IValueBinder>> _builder;
         private readonly OpenType _filter; // Filter to only apply to types that match this open type. 
 
         public ItemBindingProvider(
-                    INameResolver nameResolver,
-                    Func<TAttribute, Type, Task<IValueBinder>> builder,
-                    OpenType filter)
+            IConfiguration configuration,
+            INameResolver nameResolver,
+            Func<TAttribute, Type, Task<IValueBinder>> builder,
+            OpenType filter)
         {
-            this._nameResolver = nameResolver;
-            this._builder = builder;
-            this._filter = filter;
+            _configuration = configuration;
+            _nameResolver = nameResolver;
+            _builder = builder;
+            _filter = filter;
         }
 
         public Task<IBinding> TryCreateAsync(BindingProviderContext context)
@@ -49,8 +53,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return Task.FromResult<IBinding>(null);
             }
 
-
-            var cloner = new AttributeCloner<TAttribute>(attributeSource, context.BindingDataContract, _nameResolver);
+            var cloner = new AttributeCloner<TAttribute>(attributeSource, context.BindingDataContract, _configuration, _nameResolver);
 
             IBinding binding = new Binding(cloner, _builder, parameter);
             return Task.FromResult(binding);
@@ -67,8 +70,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     ParameterInfo parameter)
                 : base(cloner, parameter)
             {
-                this._builder = builder;
-                this._parameter = parameter;
+                _builder = builder;
+                _parameter = parameter;
             }
 
             protected override async Task<IValueProvider> BuildAsync(TAttribute attrResolved, ValueBindingContext context)

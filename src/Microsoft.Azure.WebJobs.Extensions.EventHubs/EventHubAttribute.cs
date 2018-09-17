@@ -11,7 +11,7 @@ namespace Microsoft.Azure.WebJobs
     /// </summary>
     [AttributeUsage(AttributeTargets.Parameter | AttributeTargets.ReturnValue)]
     [Binding]
-    public sealed class EventHubAttribute : Attribute, IConnectionProvider
+    public sealed class EventHubAttribute : Attribute
     {
         /// <summary>
         /// Initialize a new instance of the <see cref="EventHubAttribute"/>
@@ -19,7 +19,7 @@ namespace Microsoft.Azure.WebJobs
         /// <param name="eventHubName">Name of the event hub as resolved against the <see cref="EventHubConfiguration"/> </param>
         public EventHubAttribute(string eventHubName)
         {
-            this.EventHubName = eventHubName;
+            EventHubName = eventHubName;
         }
 
         /// <summary>
@@ -29,9 +29,9 @@ namespace Microsoft.Azure.WebJobs
         public string EventHubName { get; private set; }
 
         /// <summary>
-        /// Gets or sets the optional app setting name that contains the Event Hub connection string. If missing, tries to use a registered event hub sender.
+        /// Gets or sets the optional connection string name that contains the Event Hub connection string. If missing, tries to use a registered event hub sender.
         /// </summary>
-        [AppSetting]
+        [ConnectionString]
         public string Connection { get; set; }
-    }    
+    }
 }
