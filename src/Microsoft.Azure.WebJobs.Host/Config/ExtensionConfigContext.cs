@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Azure.WebJobs.Description;
+using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Azure.WebJobs.Host.Config
 {
@@ -20,13 +21,15 @@ namespace Microsoft.Azure.WebJobs.Host.Config
 
         // Map of tyepof(TAttribute) --> FluentBindingRule<TAttribute>
         private readonly Dictionary<Type, object> _rules = new Dictionary<Type, object>();
+        private readonly IConfiguration _configuration;
         private readonly IConverterManager _converterManager;
         private readonly IWebHookProvider _webHookProvider;
         private readonly IExtensionRegistry _extensionRegistry;
         private readonly INameResolver _nameResolver;
 
-        public ExtensionConfigContext(INameResolver nameResolver, IConverterManager converterManager, IWebHookProvider webHookProvider, IExtensionRegistry extensionRegistry)
+        public ExtensionConfigContext(IConfiguration configuration, INameResolver nameResolver, IConverterManager converterManager, IWebHookProvider webHookProvider, IExtensionRegistry extensionRegistry)
         {
+            _configuration = configuration;
             _converterManager = converterManager;
             _webHookProvider = webHookProvider;
             _extensionRegistry = extensionRegistry;
@@ -60,7 +63,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             if (!this._rules.TryGetValue(typeof(TAttribute), out object temp))
             {
                 // Create and register
-                rule = new FluentBindingRule<TAttribute>(_nameResolver, _converterManager, _extensionRegistry);
+                rule = new FluentBindingRule<TAttribute>(_configuration, _nameResolver, _converterManager, _extensionRegistry);
                 this._rules[typeof(TAttribute)] = rule;
 
                 _updates.Add(rule.ApplyRules);

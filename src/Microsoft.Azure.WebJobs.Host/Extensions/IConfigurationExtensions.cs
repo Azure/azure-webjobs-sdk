@@ -15,12 +15,12 @@ namespace Microsoft.Extensions.Configuration
         {
             // first try prefixing
             string prefixedConnectionStringName = GetPrefixedConnectionStringName(connectionStringName);
-            string connectionString = FindConnectionString(configuration, prefixedConnectionStringName);
+            string connectionString = GetConnectionStringOrSetting(configuration, prefixedConnectionStringName);
 
             if (string.IsNullOrEmpty(connectionString))
             {
                 // next try a direct unprefixed lookup
-                connectionString = FindConnectionString(configuration, connectionStringName);
+                connectionString = GetConnectionStringOrSetting(configuration, connectionStringName);
             }
 
             return connectionString;
@@ -52,7 +52,7 @@ namespace Microsoft.Extensions.Configuration
         public static string GetWebJobsExtensionConfigurationSectionPath(this IConfiguration configuration, string extensionName)
         {
             string configPath = configuration.GetWebJobsRootConfigurationPath();
-            configPath = string.IsNullOrEmpty(configPath) 
+            configPath = string.IsNullOrEmpty(configPath)
                 ? ExtensionsSectionKey
                 : ConfigurationPath.Combine(configPath, ExtensionsSectionKey);
 
@@ -69,7 +69,13 @@ namespace Microsoft.Extensions.Configuration
             return Constants.WebJobsConfigurationSectionName + connectionStringName;
         }
 
-        private static string FindConnectionString(IConfiguration configuration, string connectionName) =>
+        /// <summary>
+        /// Looks for a connection string by first checking the ConfigurationStrings section, and then the root.
+        /// </summary>
+        /// <param name="configuration">The configuration.</param>
+        /// <param name="connectionName">The connection string key.</param>
+        /// <returns></returns>
+        public static string GetConnectionStringOrSetting(this IConfiguration configuration, string connectionName) =>
             configuration.GetConnectionString(connectionName) ?? configuration[connectionName];
     }
 }

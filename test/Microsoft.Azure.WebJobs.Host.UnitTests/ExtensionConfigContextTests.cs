@@ -6,18 +6,21 @@ using System.IO;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
     public class ExtensionConfigContextTests
     {
+        private static readonly IConfiguration _config = new ConfigurationBuilder().Build();
+
         [Fact]
         public void BasicRules()
         {
             ConverterManager cm = new ConverterManager();
             INameResolver nr = new FakeNameResolver();
-            var ctx = new ExtensionConfigContext(nr, cm, null, null);
+            var ctx = new ExtensionConfigContext(_config, nr, cm, null, null);
 
             // Simulates extension initialization scope.
             {
@@ -51,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void Converters()
         {
             ConverterManager cm = new ConverterManager();
-            var ctx = new ExtensionConfigContext(null, cm, null, null);
+            var ctx = new ExtensionConfigContext(_config, null, cm, null, null);
 
             // Simulates extension initialization scope.
             {
@@ -76,7 +79,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void Error_IfMissingBindingAttribute()
         {
-            var ctx = new ExtensionConfigContext(null, null, null, null);
+            var ctx = new ExtensionConfigContext(_config, null, null, null, null);
 
             // 'Attribute' 
             Assert.Throws<InvalidOperationException>(() => ctx.AddBindingRule<Attribute>());
@@ -85,7 +88,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void CallingAddBindingRule_Multiple_Times()
         {
-            var ctx = new ExtensionConfigContext(null, null, null, null);
+            var ctx = new ExtensionConfigContext(_config, null, null, null, null);
 
             // First time is fine
             var rule1 = ctx.AddBindingRule<TestAttribute>();
@@ -99,7 +102,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void ErrorOnDanglingWhen()
         {
-            var ctx = new ExtensionConfigContext(null, null, null, null);
+            var ctx = new ExtensionConfigContext(_config, null, null, null, null);
 
             // Simulates extension initialization scope.
             {

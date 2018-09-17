@@ -9,6 +9,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
@@ -18,18 +19,21 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     internal class AsyncCollectorBindingProvider<TAttribute, TType> : FluentBindingProvider<TAttribute>, IBindingProvider, IBindingRuleProvider
         where TAttribute : Attribute
     {
+        private readonly IConfiguration _configuration;
         private readonly INameResolver _nameResolver;
         private readonly IConverterManager _converterManager;
         private readonly PatternMatcher _patternMatcher;
 
         public AsyncCollectorBindingProvider(
-           INameResolver nameResolver,
-           IConverterManager converterManager,
-           PatternMatcher patternMatcher)
+            IConfiguration configuration,
+            INameResolver nameResolver,
+            IConverterManager converterManager,
+            PatternMatcher patternMatcher)
         {
-            this._nameResolver = nameResolver;
-            this._converterManager = converterManager;
-            this._patternMatcher = patternMatcher;
+            _configuration = configuration;
+            _nameResolver = nameResolver;
+            _converterManager = converterManager;
+            _patternMatcher = patternMatcher;
         }
 
         // Describe different flavors of IAsyncCollector<T> bindings. 
@@ -320,7 +324,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     };
                 }
 
-                var cloner = new AttributeCloner<TAttribute>(attributeSource, context.BindingDataContract, parent._nameResolver);
+                var cloner = new AttributeCloner<TAttribute>(attributeSource, context.BindingDataContract, parent._configuration, parent._nameResolver);
                 return new ExactBinding<TMessage>(cloner, param, mode, buildFromAttribute, converter);
             }
 

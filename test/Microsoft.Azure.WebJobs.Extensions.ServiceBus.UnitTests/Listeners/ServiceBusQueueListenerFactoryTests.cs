@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.ServiceBus.Listeners;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
@@ -20,7 +21,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
         {
             var configuration = new ConfigurationBuilder()
                 .AddEnvironmentVariables()
+                .AddTestSettings()
                 .Build();
+
             var config = new ServiceBusOptions
             {
                 ConnectionString = configuration.GetWebJobsConnectionString("ServiceBus")

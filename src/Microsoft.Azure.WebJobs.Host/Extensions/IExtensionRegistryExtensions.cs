@@ -8,6 +8,7 @@ using System.Reflection;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
@@ -54,7 +55,8 @@ namespace Microsoft.Azure.WebJobs.Host
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public static void RegisterBindingRules<TAttribute>(
             this IExtensionRegistry registry, 
-            Action<TAttribute, Type> validator, 
+            Action<TAttribute, Type> validator,
+            IConfiguration configuration,
             INameResolver nameResolver, 
             params IBindingProvider[] bindingProviders)
             where TAttribute : Attribute
@@ -64,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.Host
                 throw new ArgumentNullException("registry");
             }
 
-            var all = new GenericCompositeBindingProvider<TAttribute>(validator, nameResolver, bindingProviders);
+            var all = new GenericCompositeBindingProvider<TAttribute>(validator, configuration, nameResolver, bindingProviders);
             registry.RegisterExtension<IBindingProvider>(all);
         }
 

@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -26,14 +27,17 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         private readonly IConverterManager _converterManager;
 
         private readonly FuncAsyncConverter<TAttribute, Stream> _builder;
+        private readonly IConfiguration _configuration;
 
         public BindToStreamBindingProvider(
             PatternMatcher patternMatcher,
             FileAccess access,
+            IConfiguration configuration,
             INameResolver nameResolver,
             IConverterManager converterManager)
         {
             _builder = patternMatcher.TryGetConverterFunc<TAttribute, Stream>();
+            _configuration = configuration;
             _nameResolver = nameResolver;
             _converterManager = converterManager;
             _access = access;
@@ -297,6 +301,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                 IConverterManager cm = parent._converterManager;
                 INameResolver nm = parent._nameResolver;
+                IConfiguration config = parent._configuration;
 
                 object converterParam = null;
                 {
@@ -374,7 +379,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     return null;
                 }
 
-                var cloner = new AttributeCloner<TAttribute>(attributeSource, context.BindingDataContract, nm);
+                var cloner = new AttributeCloner<TAttribute>(attributeSource, context.BindingDataContract, config, nm);
 
                 ParameterDescriptor param;
                 if (parent.BuildParameterDescriptor != null)

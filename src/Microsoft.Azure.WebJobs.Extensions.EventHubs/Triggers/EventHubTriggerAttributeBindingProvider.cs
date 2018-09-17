@@ -4,14 +4,14 @@
 using System;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Triggers;
-using Microsoft.Azure.EventHubs;
-using Microsoft.Extensions.Logging;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.EventHubs
@@ -61,9 +61,10 @@ namespace Microsoft.Azure.WebJobs.EventHubs
 
             if (!string.IsNullOrWhiteSpace(attribute.Connection))
             {
-                _options.Value.AddReceiver(resolvedEventHubName, _nameResolver.Resolve(attribute.Connection));
+                var connectionString = _config.GetConnectionStringOrSetting(attribute.Connection);
+                _options.Value.AddReceiver(resolvedEventHubName, connectionString);
             }
-            
+
             var eventHostListener = _options.Value.GetEventProcessorHost(_config, resolvedEventHubName, resolvedConsumerGroup);
 
             Func<ListenerFactoryContext, bool, Task<IListener>> createListener =
@@ -74,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
              };
 
             ITriggerBinding binding = BindingFactory.GetTriggerBinding(new EventHubTriggerBindingStrategy(), parameter, _converterManager, createListener);
-            return Task.FromResult<ITriggerBinding>(binding);         
+            return Task.FromResult<ITriggerBinding>(binding);
         }
     } // end class
 }

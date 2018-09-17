@@ -36,9 +36,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
         {
             var config = new ConfigurationBuilder()
                 .AddEnvironmentVariables()
+                .AddTestSettings()
                 .Build();
 
-            _connectionString = config.GetConnectionString(ServiceBus.Constants.DefaultConnectionStringName);
+            _connectionString = config.GetConnectionStringOrSetting(ServiceBus.Constants.DefaultConnectionStringName);
 
             var connStringBuilder = new ServiceBusConnectionStringBuilder(_connectionString);
             _endpoint = connStringBuilder.Endpoint;
@@ -51,7 +52,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             {
                 await host.StartAsync();
                 await host.GetJobHost()
-                    .CallAsync(typeof(ServiceBusRequestAndDependencyCollectionTests).GetMethod(nameof(ServiceBusOut)), new {input = "message"});
+                    .CallAsync(typeof(ServiceBusRequestAndDependencyCollectionTests).GetMethod(nameof(ServiceBusOut)), new { input = "message" });
 
                 _functionWaitHandle.WaitOne();
                 await Task.Delay(1000);
