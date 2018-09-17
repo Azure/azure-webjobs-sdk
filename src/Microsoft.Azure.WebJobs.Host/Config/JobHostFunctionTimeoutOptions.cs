@@ -5,7 +5,7 @@ using System;
 using System.Globalization;
 using System.Threading;
 
-namespace Microsoft.Azure.WebJobs.Host.Config
+namespace Microsoft.Azure.WebJobs.Host
 {
     /// <summary>
     /// Configuration options for controlling function execution timeout behavior.

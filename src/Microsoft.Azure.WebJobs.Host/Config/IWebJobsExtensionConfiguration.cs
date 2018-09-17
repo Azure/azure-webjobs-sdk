@@ -7,7 +7,7 @@ using System.Text;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Extensions.Configuration;
 
-namespace Microsoft.Azure.WebJobs.Host.Config
+namespace Microsoft.Azure.WebJobs.Host.Configuration
 {
     public interface IWebJobsExtensionConfiguration<T> where T : IExtensionConfigProvider
     {

@@ -28,7 +28,7 @@ namespace WebJobs.Host.Storage.Logging
         private readonly IFunctionInstanceLogger _functionInstanceLogger;
         private readonly IFunctionExecutor _functionExecutor;
         private readonly SharedQueueHandler _sharedQueueHandler;
-        private readonly IQueueFactory _queueFactory;
+        private readonly ILoadBalancerQueue _queueFactory;
         private readonly StorageAccountOptions _storageAccountOptions;
 
         public DashboardLoggingSetup(
@@ -38,7 +38,7 @@ namespace WebJobs.Host.Storage.Logging
             IFunctionInstanceLogger functionInstanceLogger,
             IFunctionExecutor functionExecutor,
             SharedQueueHandler sharedQueueHandler,
-            IQueueFactory queueFactory
+            ILoadBalancerQueue queueFactory
             )
         {
             _storageAccountOptions = storageAccountOptions;

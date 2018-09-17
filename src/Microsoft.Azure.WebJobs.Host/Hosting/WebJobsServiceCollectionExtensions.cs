@@ -5,6 +5,7 @@ using System;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.Configuration;
 using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
@@ -58,7 +59,7 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IFunctionExecutor, FunctionExecutor>();
             services.TryAddSingleton<IJobHostContextFactory, JobHostContextFactory>();
 
-            services.TryAddSingleton<IQueueFactory, InMemoryQueueFactory>();
+            services.TryAddSingleton<ILoadBalancerQueue, InMemoryLoadBalancerQueue>();
 
             // Anybody can add IBindingProvider via DI. 
             // Consume the whole list via a CompositeBindingProvider
