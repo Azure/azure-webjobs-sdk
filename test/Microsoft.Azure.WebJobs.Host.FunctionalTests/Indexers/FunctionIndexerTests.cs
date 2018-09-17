@@ -16,6 +16,7 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.Logging;
+using Microsoft.WindowsAzure.Storage;
 using Moq;
 using Xunit;
 
@@ -118,7 +119,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             // Validate Logger
             var logger = loggerProvider.CreatedLoggers.Single(l => l.Category == Logging.LogCategories.Startup);
             var loggerWarning = logger.GetLogMessages().Single();
-            Assert.Equal(LogLevel.Warning, loggerWarning.Level);
+            Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Warning, loggerWarning.Level);
             Assert.Equal(expectedMessage, loggerWarning.FormattedMessage);
         }
 
@@ -343,14 +344,21 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         {
         }
 
-        private class TestIndexCollector : IFunctionIndexCollector
+        [Fact]
+        public async Task FSharpTasks_AreCorrectlyIndexed()
         {
-            public List<FunctionDescriptor> Functions = new List<FunctionDescriptor>();
+            // Arrange
+            MethodInfo method = typeof(FSharpFunctions.TestFunction).GetMethod("TaskTest",
+                BindingFlags.Static | BindingFlags.Public);
+            Assert.NotNull(method); // Guard
 
-            public void Add(IFunctionDefinition function, FunctionDescriptor descriptor, MethodInfo method)
-            {
-                Functions.Add(descriptor);
-            }
+            FunctionIndexer indexer = FunctionIndexerFactory.Create(CloudStorageAccount.DevelopmentStorageAccount);
+            var indexCollector = new TestIndexCollector();
+
+            // Act & Assert
+            await indexer.IndexMethodAsyncCore(method, indexCollector, CancellationToken.None);
+
+            Assert.Contains(indexCollector.Functions, d => string.Equals(d.ShortName, "TestFunction.TaskTest"));
         }
     }
 }

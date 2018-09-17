@@ -228,7 +228,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             ReturnParameterInfo returnParameter = null;
             bool triggerHasReturnBinding = false;
 
-            if (TypeUtility.TryGetReturnType(method, out Type methodReturnType))
+            if (TypeUtility.TryGetReturnType(method, out Type methodReturnType) && !IsUnitType(methodReturnType))
             {
                 if (bindingDataContract != null && bindingDataContract.TryGetValue(ReturnParamName, out Type triggerReturnType))
                 {
@@ -350,6 +350,13 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             index.Add(functionDefinition, functionDescriptor, method);
         }
 
+        /// <summary>
+        /// Verifies if the provided type is the F# Unit type by performing a type name comparison.
+        /// </summary>
+        /// <param name="type">The type to be checked.</param>
+        /// <returns>True if the type name matches the F# unit type; otherwise, false.</returns>
+        private bool IsUnitType(Type type) => string.Equals(type?.FullName, "Microsoft.FSharp.Core.Unit", StringComparison.Ordinal);
+        
         private FunctionDefinition CreateTriggeredFunctionDefinition<TTriggerValue>(
             ITriggerBinding triggerBinding, string parameterName, FunctionDescriptor descriptor,
             IReadOnlyDictionary<string, IBinding> nonTriggerBindings, IFunctionInvoker invoker)
