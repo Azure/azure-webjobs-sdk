@@ -11,6 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host
     /// <summary>
     /// Base context class for <see cref="IFunctionExceptionFilter.OnExceptionAsync(FunctionExceptionContext, System.Threading.CancellationToken)"/>.
     /// </summary>
+    [Obsolete("Filters is in preview and there may be breaking changes in this area.")]
     public class FunctionExceptionContext : FunctionFilterContext
     {
         /// <summary>

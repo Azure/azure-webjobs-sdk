@@ -10,6 +10,7 @@ namespace Microsoft.Azure.WebJobs.Host
     /// <summary>
     /// Base context class for all function filter context objects.
     /// </summary>
+    [Obsolete("Filters is in preview and there may be breaking changes in this area.")]
     public abstract class FunctionFilterContext
     {
         /// <summary>
