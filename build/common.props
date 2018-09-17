@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <DebugType>embedded</DebugType>
-    <Version>3.0.0-rc1$(VersionSuffix)</Version>
+    <Version>3.0.0$(VersionSuffix)</Version>
     <LatestCommit Condition="$(LatestCommit) == ''">$(CommitHash)</LatestCommit>
     <CommitHash Condition="$(CommitHash) == ''">N/A</CommitHash>
     <InformationalVersion>$(Version) Commit hash: $(CommitHash)</InformationalVersion>
