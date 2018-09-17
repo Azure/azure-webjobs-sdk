@@ -20,7 +20,7 @@ using Newtonsoft.Json;
 namespace WebJobs.Extensions.Storage
 {
     // $$$ Review APIs
-    internal class StorageQueueFactory : IQueueFactory
+    internal class StorageLoadBalancerQueue : ILoadBalancerQueue
     {
         private readonly QueuesOptions _queueOptions;
         private readonly ILoggerFactory _loggerFactory;
@@ -29,7 +29,7 @@ namespace WebJobs.Extensions.Storage
         private readonly StorageAccountProvider _storageAccountProvider;
         private readonly IQueueProcessorFactory _queueProcessorFactory;
 
-        public StorageQueueFactory(
+        public StorageLoadBalancerQueue(
             StorageAccountProvider storageAccountProvider,
                IOptions<QueuesOptions> queueOptions,
                IWebJobsExceptionHandler exceptionHandler,
@@ -45,17 +45,17 @@ namespace WebJobs.Extensions.Storage
             _queueProcessorFactory = queueProcessorFactory;
         }
         
-        public IAsyncCollector<T> CreateQueueWriter<T>(string queue)
+        public IAsyncCollector<T> GetQueueWriter<T>(string queue)
         {
             return new QueueWriter<T>(this, Convert(queue));
         }
 
         class QueueWriter<T> : IAsyncCollector<T>
         {
-            StorageQueueFactory _parent;
+            StorageLoadBalancerQueue _parent;
             CloudQueue _queue;
 
-            public QueueWriter(StorageQueueFactory parent, CloudQueue queue)
+            public QueueWriter(StorageLoadBalancerQueue parent, CloudQueue queue)
             {
                 this._parent = parent;
                 this._queue = queue;
@@ -88,7 +88,7 @@ namespace WebJobs.Extensions.Storage
             return queue;
         }
 
-        public IListener CreateQueueListener(
+        public IListener CreateQueueListenr(
             string queue,
             string poisonQueue,
             Func<string, CancellationToken,  Task<FunctionResult>> callback

@@ -15,19 +15,19 @@ namespace Microsoft.Azure.WebJobs
     /// </summary>
     /// $$$ Review this new public surface area
     [Obsolete("Not ready for public consumption.")]
-    public interface IQueueFactory
+    public interface ILoadBalancerQueue
     {
-        IAsyncCollector<T> CreateQueueWriter<T>(string queueName);
+        IAsyncCollector<T> GetQueueWriter<T>(string queueName);
 
-        IListener CreateQueueListener(
+        IListener CreateQueueListenr(
             string queueName,
             string poisonQueueName,
             Func<string, CancellationToken, Task<FunctionResult>> callback);
     }
 
-    internal class InMemoryQueueFactory : IQueueFactory
+    internal class InMemoryLoadBalancerQueue : ILoadBalancerQueue
     {
-        public IListener CreateQueueListener(string queue, string poisonQueue, Func<string, CancellationToken, Task<FunctionResult>> callback)
+        public IListener CreateQueueListenr(string queue, string poisonQueue, Func<string, CancellationToken, Task<FunctionResult>> callback)
         {
             return new Listener
             {
@@ -62,7 +62,7 @@ namespace Microsoft.Azure.WebJobs
             }
         }
 
-        public IAsyncCollector<T> CreateQueueWriter<T>(string queueName)
+        public IAsyncCollector<T> GetQueueWriter<T>(string queueName)
         {
             return new Writer<T>
             {
@@ -73,7 +73,7 @@ namespace Microsoft.Azure.WebJobs
 
         class Listener : IListener
         {
-            internal InMemoryQueueFactory Parent;
+            internal InMemoryLoadBalancerQueue Parent;
             internal string Queue; // queue to listen on
             internal Func<string, CancellationToken, Task<FunctionResult>> Callback;
 
@@ -99,7 +99,7 @@ namespace Microsoft.Azure.WebJobs
         class Writer<T> : IAsyncCollector<T>
         {
             internal string _queue;
-            internal InMemoryQueueFactory _parent;
+            internal InMemoryLoadBalancerQueue _parent;
 
             public Task AddAsync(T item, CancellationToken cancellationToken = default(CancellationToken))
             {

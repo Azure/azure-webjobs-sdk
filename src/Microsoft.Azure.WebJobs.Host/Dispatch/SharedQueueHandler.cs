@@ -28,7 +28,7 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ISharedContextProvider _sharedContextProvider;
-        private readonly IQueueFactory _queueFactory;
+        private readonly ILoadBalancerQueue _queueFactory;
 
         private Exception _initializationEx; // delay initialization error until consumer showed up
         private SharedQueueExecutor _triggerExecutor;
@@ -41,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
                 IWebJobsExceptionHandler exceptionHandler,
                 ILoggerFactory loggerFactory,
                 ISharedContextProvider sharedContextProvider,
-                IQueueFactory queueFactory
+                ILoadBalancerQueue queueFactory
                 )
         {            
             _hostIdProvider = hostIdProvider;
@@ -107,9 +107,9 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
                 var sharedPoisonQueue = HostQueueNames.GetHostSharedPoisonQueueName(hostId);
 
                 // queueWatcher will update queueListener's polling interval when queueWriter performes an enqueue operation
-                _sharedQueueWriter = _queueFactory.CreateQueueWriter<QueueMessage>(sharedQueue);
+                _sharedQueueWriter = _queueFactory.GetQueueWriter<QueueMessage>(sharedQueue);
                                 
-                _sharedQueuelistener = _queueFactory.CreateQueueListener(sharedQueue, sharedPoisonQueue, _triggerExecutor.ExecuteAsync);
+                _sharedQueuelistener = _queueFactory.CreateQueueListenr(sharedQueue, sharedPoisonQueue, _triggerExecutor.ExecuteAsync);
             }
             catch (Exception ex)
             {

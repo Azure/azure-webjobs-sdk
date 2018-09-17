@@ -186,7 +186,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IJobHostMetadataProviderFactory",
                 "IListener",
                 "IListenerFactory",
-                "IQueueFactory",
+                "ILoadBalancerQueue",
                 "INameResolver",
                 "IOrderedValueBinder",
                 "IResolutionPolicy",
