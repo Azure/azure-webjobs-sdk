@@ -1,7 +1,9 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -38,6 +40,12 @@ namespace SampleHost
                     {
                         b.AddApplicationInsights(o => o.InstrumentationKey = appInsightsKey);
                     }
+                })
+                .ConfigureServices(services =>
+                {
+                    // add some sample services to demonstrate job class DI
+                    services.AddSingleton<ISampleServiceA, SampleServiceA>();
+                    services.AddSingleton<ISampleServiceB, SampleServiceB>();
                 })
                 .UseConsoleLifetime();
 

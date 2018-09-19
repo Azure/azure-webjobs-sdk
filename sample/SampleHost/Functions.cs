@@ -1,11 +1,9 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using SampleHost.Filters;
@@ -14,16 +12,26 @@ using SampleHost.Models;
 namespace SampleHost
 {
     [ErrorHandler]
-    public static class Functions
+    public class Functions
     {
+        private readonly ISampleServiceA _sampleServiceA;
+        private readonly ISampleServiceB _sampleServiceB;
+
+        public Functions(ISampleServiceA sampleServiceA, ISampleServiceB sampleServiceB)
+        {
+            _sampleServiceA = sampleServiceA;
+            _sampleServiceB = sampleServiceB;
+        }
+
         [Singleton]
-        public static void BlobTrigger(
+        public void BlobTrigger(
             [BlobTrigger("test")] string blob, ILogger logger)
         {
+            _sampleServiceB.DoIt();
             logger.LogInformation("Processed blob: " + blob);
         }
 
-        public static void BlobPoisonBlobHandler(
+        public void BlobPoisonBlobHandler(
             [QueueTrigger("webjobs-blobtrigger-poison")] JObject blobInfo, ILogger logger)
         {
             string container = (string)blobInfo["ContainerName"];
@@ -33,13 +41,14 @@ namespace SampleHost
         }
 
         [WorkItemValidator]
-        public static void ProcessWorkItem(
+        public void ProcessWorkItem(
             [QueueTrigger("test")] WorkItem workItem, ILogger logger)
         {
+            _sampleServiceA.DoIt();
             logger.LogInformation($"Processed work item {workItem.ID}");
         }
 
-        public static async Task ProcessWorkItem_ServiceBus(
+        public async Task ProcessWorkItem_ServiceBus(
             [ServiceBusTrigger("test-items")] WorkItem item,
             string messageId,
             int deliveryCount,
@@ -52,7 +61,7 @@ namespace SampleHost
             log.LogInformation($"Message complete (Id={messageId})");
         }
 
-        public static void ProcessEvents([EventHubTrigger("testhub2", Connection = "TestEventHubConnection")] EventData[] events,
+        public void ProcessEvents([EventHubTrigger("testhub2", Connection = "TestEventHubConnection")] EventData[] events,
             ILogger log)
         {
             foreach (var evt in events)

@@ -62,7 +62,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             IFunctionExecutor executor = host.Services.GetService<IFunctionExecutor>();
 
             // TODO: This should be using DI internally and not be so complicated to construct
-            return new FunctionIndexer(triggerBindingProvider, bindingProvider, new DefaultJobActivator(), executor,
+            return new FunctionIndexer(triggerBindingProvider, bindingProvider, activator, executor,
                 extensionRegistry, singletonManager, loggerFactory);
         }
     }

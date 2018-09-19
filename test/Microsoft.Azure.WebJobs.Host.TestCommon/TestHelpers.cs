@@ -24,6 +24,16 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 {
     public static class TestHelpers
     {
+        public static IServiceCollection AddSingletonIfNotNull<T>(this IServiceCollection services, T instance) where T : class
+        {
+            if (instance != null)
+            {
+                services.AddSingleton<T>(instance);
+            }
+
+            return services;
+        }
+
         /// <summary>
         /// Helper that builds a test host to configure the options type specified.
         /// </summary>
