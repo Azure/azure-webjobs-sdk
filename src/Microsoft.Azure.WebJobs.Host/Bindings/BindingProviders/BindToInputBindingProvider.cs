@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Properties;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
@@ -171,7 +172,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     if (converter == null)
                     {
                         var targetType = typeof(TType);
-                        context.BindingErrors.Add(String.Format(Constants.BindingAssemblyConflictMessage, targetType.AssemblyQualifiedName, userType.AssemblyQualifiedName));
+                        context.BindingErrors.Add(String.Format(Resource.BindingAssemblyConflictMessage, targetType.AssemblyQualifiedName, userType.AssemblyQualifiedName));
                         return null;
                     }
 

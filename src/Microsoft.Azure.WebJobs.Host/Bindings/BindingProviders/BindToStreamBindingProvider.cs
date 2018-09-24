@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Azure.WebJobs.Host.Properties;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -367,7 +368,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                         {
                             // This rule can't bind. 
                             // Let another try. 
-                            context.BindingErrors.Add(String.Format(Constants.BindingAssemblyConflictMessage, typeof(Stream).AssemblyQualifiedName, typeof(TUserType).AssemblyQualifiedName));
+                            context.BindingErrors.Add(String.Format(Resource.BindingAssemblyConflictMessage, typeof(Stream).AssemblyQualifiedName, typeof(TUserType).AssemblyQualifiedName));
                             return null;
                         }
                     }

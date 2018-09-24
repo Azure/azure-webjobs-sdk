@@ -206,7 +206,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
             catch (InvalidOperationException e)
             {
-                Assert.Equal(string.Format(CultureInfo.CurrentCulture, Constants.UnableToResolveBindingParameterFormat, "name"), e.Message);
+                string expectedError = "Unable to resolve binding parameter 'name'. Binding expressions must map to either a value provided by the trigger or a property of the value the trigger is bound to, or must be a system binding expression (e.g. sys.randguid, sys.utcnow, etc.).";
+                Assert.Equal(expectedError, e.Message);
             }
         }
 

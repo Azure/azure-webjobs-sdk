@@ -11,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host
     /// <summary>
     /// Defines a trace event that can be written to a <see cref="TraceWriter"/>.
     /// </summary>
-    [Obsolete("Will be removed in an upcoming version. Use ILogger instead.")]
+    [Obsolete("Will be removed in an upcoming version. Use Microsoft.Extensions.Logging.ILogger instead.")]
     public class TraceEvent
     {
         private IDictionary<string, object> _properties;

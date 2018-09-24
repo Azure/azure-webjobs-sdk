@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Microsoft.Azure.WebJobs.Host.Bindings.Path;
+using Microsoft.Azure.WebJobs.Host.Properties;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -64,7 +65,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                     if (!bindingDataContract.ContainsKey(parameterName))
                     {
-                        throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Constants.UnableToResolveBindingParameterFormat, parameterName));
+                        throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UnableToResolveBindingParameterFormat, parameterName));
                     }
                 }
             }

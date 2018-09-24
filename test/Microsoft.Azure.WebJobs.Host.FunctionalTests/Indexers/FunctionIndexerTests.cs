@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Indexers;
+using Microsoft.Azure.WebJobs.Host.Properties;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Triggers;
@@ -40,8 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                     CancellationToken.None).GetAwaiter().GetResult());
             InvalidOperationException innerException = exception.InnerException as InvalidOperationException;
             Assert.NotNull(innerException);
-            Assert.Equal(string.Format("Cannot bind parameter 'parsed' to type Foo&. Make sure the parameter Type is supported by the binding. {0}",
-                Constants.ExtensionInitializationMessage), innerException.Message);
+            Assert.Equal($"Cannot bind parameter 'parsed' to type Foo&. Make sure the parameter Type is supported by the binding. {Resource.ExtensionInitializationMessage}", innerException.Message);
         }
 
         [Theory]

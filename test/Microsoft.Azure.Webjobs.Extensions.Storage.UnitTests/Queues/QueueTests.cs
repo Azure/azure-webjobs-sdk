@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Properties;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -361,9 +362,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 })
                 .Build();
 
+            string expectedError = "Unable to resolve binding parameter 'xyz'. Binding expressions must map to either a value provided by the trigger or a property of the value the trigger is bound to, or must be a system binding expression (e.g. sys.randguid, sys.utcnow, etc.).";
             TestHelpers.AssertIndexingError(() => host.GetJobHost().CallAsync<ProgramBadContract>("Func").GetAwaiter().GetResult(),
                 "ProgramBadContract.Func",
-                string.Format(CultureInfo.CurrentCulture, Constants.UnableToResolveBindingParameterFormat, "xyz"));
+                expectedError);
         }
 
         public class ProgramCantBindToObject
