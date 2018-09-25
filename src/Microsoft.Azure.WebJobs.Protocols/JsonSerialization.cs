@@ -85,6 +85,20 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
             return jsonWriter;
         }
 
+        internal static bool TryLoadJObject(JsonTextReader jsonReader, out JObject parsed)
+        {
+            try
+            {
+                parsed = JObject.Load(jsonReader);
+                return true;
+            }
+            catch
+            {
+                parsed = null;
+                return false;
+            }
+        }
+
         internal static JObject ParseJObject(string json)
         {
             if (json == null)
@@ -99,14 +113,17 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
                 using (JsonTextReader jsonReader = CreateJsonTextReader(stringReader))
                 {
                     stringReader = null;
-                    JObject parsed = JObject.Load(jsonReader);
+                    JObject parsed = null;
+                    bool wasParsed = TryLoadJObject(jsonReader, out parsed);
 
-                    // Behave as similarly to JObject.Parse as possible (except for the settings used).
-                    if (jsonReader.Read() && jsonReader.TokenType != JsonToken.Comment)
+                    if (wasParsed)
                     {
-                        throw new JsonReaderException("Invalid content found after JSON object.");
+                        // Behave as similarly to JObject.Parse as possible (except for the settings used).
+                        if (jsonReader.Read() && jsonReader.TokenType != JsonToken.Comment)
+                        {
+                            throw new JsonReaderException("Invalid content found after JSON object.");
+                        }
                     }
-
                     return parsed;
                 }
             }
