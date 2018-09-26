@@ -74,7 +74,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
             set
             {
-                if (value <= 0)
+                if (value < 0)
                 {
                     throw new ArgumentOutOfRangeException("value");
                 }
