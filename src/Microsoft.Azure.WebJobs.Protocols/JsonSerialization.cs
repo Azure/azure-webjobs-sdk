@@ -85,6 +85,17 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
             return jsonWriter;
         }
 
+        public static bool IsValidJObjectInput(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+            {
+                return false;
+            }
+
+            input = input.Trim();
+            return (input.StartsWith("{", StringComparison.OrdinalIgnoreCase) && input.EndsWith("}", StringComparison.OrdinalIgnoreCase));
+        }
+
         internal static JObject ParseJObject(string json)
         {
             if (json == null)
@@ -92,14 +103,39 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
                 throw new ArgumentNullException("json");
             }
 
-            var parsed = JsonConvert.DeserializeObject(json, JsonSerializerSettings);
-
-            if (parsed.GetType() == typeof(JObject))
+            StringReader stringReader = null;
+            try
             {
-                return (JObject)parsed;
-            }
+                stringReader = new StringReader(json);
+                using (JsonTextReader jsonReader = CreateJsonTextReader(stringReader))
+                {
+                    stringReader = null;
+                    JObject parsed = null;
+                    if (IsValidJObjectInput(json))
+                    {
+                        parsed = JObject.Load(jsonReader);
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                    
+                    // Behave as similarly to JObject.Parse as possible (except for the settings used).
+                    if (jsonReader.Read() && jsonReader.TokenType != JsonToken.Comment)
+                    {
+                        throw new JsonReaderException("Invalid content found after JSON object.");
+                    }
 
-            return null;
+                    return parsed;
+                }
+            }
+            finally
+            {
+                if (stringReader != null)
+                {
+                    stringReader.Dispose();
+                }
+            }
         }
     }
 }

@@ -12,7 +12,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Protocols
     public class JsonSerializationTests
     {
         [Fact]
-        public void Invalid_JObject_Parse_Returns_Null()
+        public void Integer_Parse_Returns_Null()
         {
             string invalidObjJson = "1";
 
@@ -22,9 +22,39 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Protocols
         }
 
         [Fact]
-        public void Valid_JObject_Parse_Returns_JObject()
+        public void Array_Parse_Returns_Null()
+        {
+            string invalidObjJson = "[1]";
+
+            var parsed = JsonSerialization.ParseJObject(invalidObjJson);
+
+            Assert.Equal(null, parsed);
+        }
+
+        [Fact]
+        public void String_Parse_Returns_Null()
+        {
+            string invalidObjJson = "hello";
+
+            var parsed = JsonSerialization.ParseJObject(invalidObjJson);
+
+            Assert.Equal(null, parsed);
+        }
+
+        [Fact]
+        public void Valid_Single_JObject_Parse_Returns_JObject()
         {
             string validObjJson = "{ num : 1 }";
+
+            var parsed = JsonSerialization.ParseJObject(validObjJson);
+
+            Assert.Equal(parsed.GetType(), typeof(JObject));
+        }
+
+        [Fact]
+        public void Valid_Multilevel_JObject_Parse_Returns_JObject()
+        {
+            string validObjJson = "{ num : 1 , embeddedNum : { num : 1 } }";
 
             var parsed = JsonSerialization.ParseJObject(validObjJson);
 
@@ -40,11 +70,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Protocols
         }
 
         [Fact]
-        public void Invalid_Json_Parse_Throws_JsonReaderException()
+        public void Invalid_Json_Returns_Null()
         {
             string invalidJson = "{ num : 1 } extra stuff";
 
-            Assert.Throws<JsonReaderException>(() => JsonSerialization.ParseJObject(invalidJson));
+            var parsed = JsonSerialization.ParseJObject(invalidJson);
+
+            Assert.Equal(null, parsed);
         }
     }
 }
