@@ -59,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
                 return null;
             }
 
-            if (json == null | !json.ContainsKey(ParentGuidFieldName) || json[ParentGuidFieldName].Type != JTokenType.String)
+            if (json == null || !json.ContainsKey(ParentGuidFieldName) || json[ParentGuidFieldName].Type != JTokenType.String)
             {
                 return null;
             }
