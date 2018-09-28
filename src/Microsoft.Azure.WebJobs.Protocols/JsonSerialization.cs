@@ -85,7 +85,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
             return jsonWriter;
         }
 
-        public static bool IsValidJObjectInput(string input)
+        public static bool IsJsonObject(string input)
         {
             if (string.IsNullOrEmpty(input))
             {
@@ -111,7 +111,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
                 {
                     stringReader = null;
                     JObject parsed = null;
-                    if (IsValidJObjectInput(json))
+                    if (IsJsonObject(json))
                     {
                         parsed = JObject.Load(jsonReader);
                     }
