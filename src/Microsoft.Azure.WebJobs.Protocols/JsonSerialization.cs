@@ -85,6 +85,17 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
             return jsonWriter;
         }
 
+        public static bool IsJsonObject(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+            {
+                return false;
+            }
+
+            input = input.Trim();
+            return (input.StartsWith("{", StringComparison.OrdinalIgnoreCase) && input.EndsWith("}", StringComparison.OrdinalIgnoreCase));
+        }
+
         internal static JObject ParseJObject(string json)
         {
             if (json == null)
@@ -99,8 +110,16 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
                 using (JsonTextReader jsonReader = CreateJsonTextReader(stringReader))
                 {
                     stringReader = null;
-                    JObject parsed = JObject.Load(jsonReader);
-
+                    JObject parsed = null;
+                    if (IsJsonObject(json))
+                    {
+                        parsed = JObject.Load(jsonReader);
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                    
                     // Behave as similarly to JObject.Parse as possible (except for the settings used).
                     if (jsonReader.Read() && jsonReader.TokenType != JsonToken.Comment)
                     {
