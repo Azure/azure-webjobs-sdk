@@ -115,6 +115,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "Microsoft.Azure.WebJobs.Host.EndToEndTests.AsyncChainEndToEndTests.AlwaysFailJob",
                     "Microsoft.Azure.WebJobs.Host.EndToEndTests.AsyncChainEndToEndTests.DisabledJob",
                     "Microsoft.Azure.WebJobs.Host.EndToEndTests.AsyncChainEndToEndTests.TimeoutJob",
+                    "Microsoft.Azure.WebJobs.Host.EndToEndTests.AsyncChainEndToEndTests.TimeoutJob_NoAttribute",
                     "Microsoft.Azure.WebJobs.Host.EndToEndTests.AsyncChainEndToEndTests.TimeoutJob_Throw",
                     "Microsoft.Azure.WebJobs.Host.EndToEndTests.AsyncChainEndToEndTests.TimeoutJob_Throw_NoToken",
                     "Microsoft.Azure.WebJobs.Host.EndToEndTests.AsyncChainEndToEndTests.BlobToBlobAsync",
@@ -424,6 +425,30 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.Empty(exceptionHandler.UnhandledExceptionInfos);
         }
 
+        [Fact]
+        public async Task Timeout_UsingOptions()
+        {
+            _hostBuilder.ConfigureServices(services =>
+            {
+                services.Configure<JobHostFunctionTimeoutOptions>(o =>
+                {
+                    o.Timeout = TimeSpan.FromSeconds(1);
+                    o.TimeoutWhileDebugging = true;
+                    o.ThrowOnTimeout = true;
+                });
+
+                services.AddSingleton<IWebJobsExceptionHandlerFactory, CapturingExceptionHandlerFactory>();
+            });
+
+            IHost host = _hostBuilder.Build();
+            await RunTimeoutTest(host, typeof(FunctionTimeoutException), nameof(TimeoutJob_NoAttribute));
+
+            var exceptionHandler = host.Services.GetService<IWebJobsExceptionHandler>() as CapturingExceptionHandler;
+            var exception = exceptionHandler.TimeoutExceptionInfos.Single().SourceException;
+            Assert.IsType<FunctionTimeoutException>(exception);
+            Assert.Empty(exceptionHandler.UnhandledExceptionInfos);
+        }
+
         private async Task RunTimeoutTest(IHost host, Type expectedExceptionType, string functionName)
         {
             JobHost jobHost = host.GetJobHost();
@@ -539,6 +564,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await Task.Delay(_timeoutJobDelay);
             log.Info("Completed");
         }
+
+        [NoAutomaticTrigger]
+        public static async Task TimeoutJob_NoAttribute(CancellationToken cancellationToken, TraceWriter log)
+        {
+            log.Info("Started");
+            await Task.Delay(_timeoutJobDelay, cancellationToken);
+            log.Info("Completed");
+        }
+
 
         public static async Task QueueToQueueAsync(
             [QueueTrigger(Queue1Name)] string message,
@@ -831,7 +865,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 }
 
                 var actual = _state.Count;
-                string msg = failureMessage ?? "Actual function invocations:" + Environment.NewLine + string.Join(Environment.NewLine, this.LogEntries.Select(l => l.FunctionName));
+                string msg = failureMessage ?? "Actual function invocations:" + Environment.NewLine + string.Join(Environment.NewLine, LogEntries.Select(l => l.FunctionName));
                 Assert.True(actual == expected, $"Expected '{expected}'. Actual '{actual}'.{Environment.NewLine}{msg}");
             }
         }

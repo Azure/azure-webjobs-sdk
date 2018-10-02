@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Globalization;
 using System.Threading;
 
 namespace Microsoft.Azure.WebJobs.Host
@@ -13,9 +12,9 @@ namespace Microsoft.Azure.WebJobs.Host
     public class JobHostFunctionTimeoutOptions
     {
         /// <summary>
-        /// Gets the timeout value.
+        /// Gets or sets the timeout value. The default value is <see cref="TimeSpan.Zero"/>, which indicates no timeout.
         /// </summary>
-        public TimeSpan Timeout { get; set; }
+        public TimeSpan Timeout { get; set; } = TimeSpan.Zero;
 
         /// <summary>
         /// Gets or sets a value indicating whether function invocations will timeout when
@@ -24,12 +23,12 @@ namespace Microsoft.Azure.WebJobs.Host
         public bool TimeoutWhileDebugging { get; set; }
 
         /// <summary>
-        /// When true, an exception is thrown when a function timeout expires.
+        /// Gets or sets a value indicating whether an exception is thrown when a function timeout expires.
         /// </summary>
         public bool ThrowOnTimeout { get; set; }
 
         /// <summary>
-        /// The amount of time to wait between canceling the timeout <see cref="CancellationToken"/> and throwing
+        /// Gets or sets the amount of time to wait between canceling the timeout <see cref="CancellationToken"/> and throwing
         /// a FunctionTimeoutException. This gives functions time to perform any graceful shutdown. 
         /// Only applies if <see cref="ThrowOnTimeout"/> is true.
         /// </summary>
@@ -37,11 +36,11 @@ namespace Microsoft.Azure.WebJobs.Host
 
         internal TimeoutAttribute ToAttribute()
         {
-            return new TimeoutAttribute(this.Timeout.ToString())
+            return new TimeoutAttribute(Timeout.ToString())
             {
-                TimeoutWhileDebugging = this.TimeoutWhileDebugging,
-                ThrowOnTimeout = this.ThrowOnTimeout,
-                GracePeriod = this.GracePeriod,
+                TimeoutWhileDebugging = TimeoutWhileDebugging,
+                ThrowOnTimeout = ThrowOnTimeout,
+                GracePeriod = GracePeriod,
             };
         }
     }
