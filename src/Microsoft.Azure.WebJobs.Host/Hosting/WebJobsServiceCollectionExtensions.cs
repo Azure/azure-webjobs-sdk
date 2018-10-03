@@ -73,7 +73,7 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IJobHostMetadataProvider>(p => p.GetService<IJobHostMetadataProviderFactory>().Create());
             services.TryAddSingleton<IHostIdProvider, DefaultHostIdProvider>();
             services.TryAddSingleton<IDashboardLoggingSetup, NullDashboardLoggingSetup>(); 
-            services.TryAddSingleton<IFunctionOutputLogger, ConsoleFunctionOutputLogger>();
+            services.TryAddSingleton<IFunctionOutputLogger, NullFunctionOutputLogger>();
             services.TryAddSingleton<IFunctionInstanceLogger, FunctionInstanceLogger>();
             services.TryAddSingleton<IHostInstanceLogger, NullHostInstanceLogger>();
             services.TryAddSingleton<IDistributedLockManager, InMemoryDistributedLockManager>();
