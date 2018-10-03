@@ -7,12 +7,11 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 
 namespace Microsoft.Azure.WebJobs.Host.Loggers
 {
-    internal class ConsoleFunctionOutputLogger : IFunctionOutputLogger
+    internal class NullFunctionOutputLogger : IFunctionOutputLogger
     {
-        public Task<IFunctionOutputDefinition> CreateAsync(IFunctionInstance instance,
-            CancellationToken cancellationToken)
+        public Task<IFunctionOutputDefinition> CreateAsync(IFunctionInstance instance, CancellationToken cancellationToken)
         {
-            IFunctionOutputDefinition outputDefinition = new ConsoleFunctionOutputDefinition();
+            IFunctionOutputDefinition outputDefinition = new NullFunctionOutputDefinition();
             return Task.FromResult(outputDefinition);
         }
     }
