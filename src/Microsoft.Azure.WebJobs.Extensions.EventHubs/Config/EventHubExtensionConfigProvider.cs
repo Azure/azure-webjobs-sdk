@@ -54,9 +54,6 @@ namespace Microsoft.Azure.WebJobs.EventHubs
             }
 
             _options.Value.EventProcessorOptions.SetExceptionHandler(ExceptionReceivedHandler);
-
-            // apply at config level (batchCheckpointFrequency)
-            // TODO: Revisit this... All configurable options should move to a proper Options type.
             _configuration.ConfigurationSection.Bind(_options);
 
             context
