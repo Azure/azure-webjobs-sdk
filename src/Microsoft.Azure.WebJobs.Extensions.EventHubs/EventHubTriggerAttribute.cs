@@ -11,7 +11,7 @@ namespace Microsoft.Azure.WebJobs
     /// </summary>
     [AttributeUsage(AttributeTargets.Parameter)]
     [Binding]
-    public sealed class EventHubTriggerAttribute : Attribute, IConnectionProvider
+    public sealed class EventHubTriggerAttribute : Attribute
     {
         /// <summary>
         /// Create an instance of this attribute.
@@ -19,7 +19,7 @@ namespace Microsoft.Azure.WebJobs
         /// <param name="eventHubName">Event hub to listen on for messages. </param>
         public EventHubTriggerAttribute(string eventHubName)
         {
-            this.EventHubName = eventHubName;
+            EventHubName = eventHubName;
         }
 
         /// <summary>
@@ -35,7 +35,6 @@ namespace Microsoft.Azure.WebJobs
         /// <summary>
         /// Gets or sets the optional app setting name that contains the Event Hub connection string. If missing, tries to use a registered event hub receiver.
         /// </summary>
-        [AppSetting]
         public string Connection { get; set; }
     }
 }

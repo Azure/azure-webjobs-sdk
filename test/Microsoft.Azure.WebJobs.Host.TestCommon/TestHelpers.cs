@@ -24,6 +24,16 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 {
     public static class TestHelpers
     {
+        public static IServiceCollection AddSingletonIfNotNull<T>(this IServiceCollection services, T instance) where T : class
+        {
+            if (instance != null)
+            {
+                services.AddSingleton<T>(instance);
+            }
+
+            return services;
+        }
+
         /// <summary>
         /// Helper that builds a test host to configure the options type specified.
         /// </summary>
@@ -112,7 +122,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             return (T)constructor.Invoke(null);
         }
 
-    
+
 
         // Test that we get an indexing error (FunctionIndexingException)  
         // functionName - the function name that has the indexing error. 
@@ -140,14 +150,18 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
         public static IHostBuilder ConfigureDefaultTestHost(this IHostBuilder builder, Action<IWebJobsBuilder> configureWebJobs, params Type[] types)
         {
             return builder.ConfigureWebJobs(configureWebJobs)
-                  .ConfigureServices(services =>
-                 {
-                     services.AddSingleton<ITypeLocator>(new FakeTypeLocator(types));
+                .ConfigureAppConfiguration(c =>
+                {
+                    c.AddTestSettings();
+                })
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<ITypeLocator>(new FakeTypeLocator(types));
 
-                     // Register this to fail a test if a background exception is thrown
-                     services.AddSingleton<IWebJobsExceptionHandlerFactory, TestExceptionHandlerFactory>();
-                 })
-                 .ConfigureTestLogger();
+                    // Register this to fail a test if a background exception is thrown
+                    services.AddSingleton<IWebJobsExceptionHandlerFactory, TestExceptionHandlerFactory>();
+                })
+                .ConfigureTestLogger();
         }
 
         public static IHostBuilder ConfigureDefaultTestHost<TProgram>(this IHostBuilder builder,
@@ -164,7 +178,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 
         public static IHostBuilder ConfigureDefaultTestHost<TProgram>(this IHostBuilder builder)
         {
-            return builder.ConfigureDefaultTestHost(o=> { }, typeof(TProgram))
+            return builder.ConfigureDefaultTestHost(o => { }, typeof(TProgram))
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<IJobHost, JobHost<TProgram>>();
@@ -244,16 +258,16 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             return host.Services.GetService<IJobHost>() as JobHost<TProgram>;
         }
 
-        public static void Call<T>(this JobHost host, string methodName, object arguments)
+        public static async Task CallAsync<T>(this JobHost host, string methodName, object arguments)
         {
-            host.Call(typeof(T).GetMethod(methodName), arguments);
+            await host.CallAsync(typeof(T).GetMethod(methodName), arguments);
         }
 
-        public static void Call<T>(this JobHost host, string methodName)
+        public static async Task CallAsync<T>(this JobHost host, string methodName)
         {
-            host.Call(typeof(T).GetMethod(methodName));
+            await host.CallAsync(typeof(T).GetMethod(methodName));
         }
-        
+
         public static TOptions GetOptions<TOptions>(this IHost host) where TOptions : class, new()
         {
             return host.Services.GetService<IOptions<TOptions>>().Value;
@@ -288,7 +302,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 
             if (newlyIntroducedPublicTypes.Length > 0)
             {
-                string message = String.Format("Found {0} unexpected public type{1}: \r\n{2}",
+                string message = string.Format("Found {0} unexpected public type{1}: \r\n{2}",
                     newlyIntroducedPublicTypes.Length,
                     newlyIntroducedPublicTypes.Length == 1 ? "" : "s",
                     string.Join("\r\n", newlyIntroducedPublicTypes));
@@ -299,12 +313,28 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 
             if (missingPublicTypes.Length > 0)
             {
-                string message = String.Format("missing {0} public type{1}: \r\n{2}",
+                string message = string.Format("missing {0} public type{1}: \r\n{2}",
                     missingPublicTypes.Length,
                     missingPublicTypes.Length == 1 ? "" : "s",
                     string.Join("\r\n", missingPublicTypes));
                 Assert.True(false, message);
             }
+        }
+
+        public static IDictionary<string, string> CreateInMemoryCollection()
+        {
+            return new Dictionary<string, string>();
+        }
+
+        public static IDictionary<string, string> AddSetting(this IDictionary<string, string> dict, string name, string value)
+        {
+            dict.Add(name, value);
+            return dict;
+        }
+
+        public static IConfiguration BuildConfiguration(this IDictionary<string, string> dict)
+        {
+            return new ConfigurationBuilder().AddInMemoryCollection(dict).Build();
         }
     }
 

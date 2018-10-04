@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Threading;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,7 +11,8 @@ using WebJobs.Host.Storage.Logging;
 namespace Microsoft.Extensions.Hosting
 {
     public static class StorageServiceCollectionExtensions
-    {  
+    {
+        [Obsolete("Dashboard is being deprecated. Use AppInsights.")]
         public static IServiceCollection AddDashboardLogging(this IServiceCollection services)
         {
             services.TryAddSingleton<LoggerProviderFactory>();

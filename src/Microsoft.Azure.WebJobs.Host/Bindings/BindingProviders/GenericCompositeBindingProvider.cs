@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -20,12 +21,15 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         private readonly IEnumerable<IBindingProvider> _providers;
 
         private readonly Action<TAttribute, Type> _validator;
+        private readonly IConfiguration _configuration;
         private readonly INameResolver _nameResolver;
 
-        public GenericCompositeBindingProvider(Action<TAttribute, Type> validator, INameResolver nameResolver, params IBindingProvider[] providers)
+        public GenericCompositeBindingProvider(Action<TAttribute, Type> validator, IConfiguration configuration,
+            INameResolver nameResolver, params IBindingProvider[] providers)
         {
             _providers = providers;
             _validator = validator;
+            _configuration = configuration;
             _nameResolver = nameResolver;
         }
 
@@ -47,7 +51,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 // Expected this will throw on errors. 
                 Type parameterType = context.Parameter.ParameterType;
-                var cloner = new AttributeCloner<TAttribute>(attr, context.BindingDataContract, _nameResolver);
+                var cloner = new AttributeCloner<TAttribute>(attr, context.BindingDataContract, _configuration, _nameResolver);
                 var attrNameResolved = cloner.GetNameResolvedAttribute();
                 _validator(attrNameResolved, parameterType);
             }

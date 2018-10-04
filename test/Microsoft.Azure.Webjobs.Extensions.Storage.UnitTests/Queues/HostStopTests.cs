@@ -1,117 +1,91 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.WindowsAzure.Storage.Queue;
 using Xunit;
 
-#if false // $$$ enable  - testing Host.STop(); Should this be in  core tests? 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
     public class HostStopTests
     {
         private const string QueueName = "input";
+        private static readonly TaskCompletionSource<object> _functionStarted = new TaskCompletionSource<object>();
+        private static readonly TaskCompletionSource<object> _stopHostCalled = new TaskCompletionSource<object>();
+        private static readonly TaskCompletionSource<bool> _testTaskSource = new TaskCompletionSource<bool>();
 
         [Fact]
-        public void Stop_TriggersCancellationToken()
+        public async Task Stop_TriggersCancellationToken()
         {
-            // Arrange
-            IStorageAccount account = CreateFakeStorageAccount();
-            IStorageQueue queue = CreateQueue(account, QueueName);
-            IStorageQueueMessage message = queue.CreateMessage("ignore");
-            queue.AddMessage(message);
+            StorageAccount account = new FakeStorageAccount();
+            CloudQueue queue = await CreateQueueAsync(account, QueueName);
+            CloudQueueMessage message = new CloudQueueMessage("ignore");
+            await queue.AddMessageAsync(message);
 
-            // Act
-            Task stopTask = null;
-            bool result = RunTrigger<bool>(account, typeof(CallbackCancellationTokenProgram),
-                (s) => CallbackCancellationTokenProgram.TaskSource = s,
-                (t) => CallbackCancellationTokenProgram.Start = t, (h) => stopTask = h.StopAsync());
+            var host = new HostBuilder()
+                .ConfigureDefaultTestHost<CallbackCancellationTokenProgram>(c =>
+                {
+                    c.AddAzureStorage();
+                    c.Services.AddSingleton<StorageAccountProvider>(_ => new FakeStorageAccountProvider(account));
+                })
+                .Build();
 
-            // Assert
-            Assert.True(result);
-            stopTask.WaitUntilCompleted(3 * 1000);
-            Assert.Equal(TaskStatus.RanToCompletion, stopTask.Status);
+            using (host)
+            {
+                int secondsToWait = 5;
+
+                // Start and wait for the function to be invoked.
+                await host.StartAsync();
+                bool completed = _functionStarted.Task.WaitUntilCompleted(secondsToWait * 1000);
+                Assert.True(completed, $"Function did not start in {secondsToWait} seconds.");
+
+                // Stop the host and let the function know it can continue.
+                Task stopTask = host.StopAsync();
+                _stopHostCalled.TrySetResult(null);
+
+                completed = _testTaskSource.Task.WaitUntilCompleted(secondsToWait * 1000);
+                Assert.True(completed, $"Host did not shut down in {secondsToWait} seconds.");
+
+                // Give a nicer test failure message for faulted tasks.
+                if (_testTaskSource.Task.Status == TaskStatus.Faulted)
+                {
+                    await _testTaskSource.Task;
+                }
+
+                Assert.Equal(TaskStatus.RanToCompletion, _testTaskSource.Task.Status);
+
+                stopTask.WaitUntilCompleted(3 * 1000);
+                Assert.Equal(TaskStatus.RanToCompletion, stopTask.Status);
+            }
         }
 
-        private static IStorageAccount CreateFakeStorageAccount()
+        private static async Task<CloudQueue> CreateQueueAsync(StorageAccount account, string queueName)
         {
-            return new FakeStorageAccount();
-        }
-
-        private static IStorageQueue CreateQueue(IStorageAccount account, string queueName)
-        {
-            IStorageQueueClient client = account.CreateQueueClient();
-            IStorageQueue queue = client.GetQueueReference(queueName);
-            queue.CreateIfNotExists();
+            CloudQueueClient client = account.CreateCloudQueueClient();
+            CloudQueue queue = client.GetQueueReference(queueName);
+            await queue.CreateIfNotExistsAsync();
             return queue;
-        }
-
-        // Stops running the host as soon as the program marks the task as completed.
-        private static TResult RunTrigger<TResult>(IStorageAccount account, Type programType,
-            Action<TaskCompletionSource<TResult>> setTaskSource, Action<Task> setStartTask, Action<JobHost> callback)
-        {
-            TaskCompletionSource<object> startTaskSource = new TaskCompletionSource<object>();
-            setStartTask.Invoke(startTaskSource.Task);
-
-            // Arrange
-            try
-            {
-                TaskCompletionSource<TResult> taskSource = new TaskCompletionSource<TResult>();
-                var serviceProvider = FunctionalTest.CreateConfigurationForManualCompletion<TResult>(
-                    account, programType, taskSource);
-                Task<TResult> task = taskSource.Task;
-                setTaskSource.Invoke(taskSource);
-
-                try
-                {
-                    // Arrange
-                    JobHost host = serviceProvider.GetJobHost();
-                    host.Start();
-                    callback.Invoke(host);
-                    startTaskSource.TrySetResult(null);
-                    int secondsToWait = 5;
-
-                    // Act
-                    bool completed = task.WaitUntilCompleted(secondsToWait * 1000);
-
-                    // Assert
-                    Assert.True(completed, $"Host did not shut down in {secondsToWait} seconds.");
-
-                    // Give a nicer test failure message for faulted tasks.
-                    if (task.Status == TaskStatus.Faulted)
-                    {
-                        task.GetAwaiter().GetResult();
-                    }
-
-                    Assert.Equal(TaskStatus.RanToCompletion, task.Status);
-                    return task.Result;
-                }
-                finally
-                {
-                    setTaskSource.Invoke(null);
-                }
-            }
-            finally
-            {
-                setStartTask.Invoke(null);
-            }
-        }
+        }        
 
         private class CallbackCancellationTokenProgram
         {
-            public static Task Start { get; set; }
-            public static TaskCompletionSource<bool> TaskSource { get; set; }
-
             public static void CallbackCancellationToken([QueueTrigger(QueueName)] string ignore,
                 CancellationToken cancellationToken)
             {
-                bool started = Start.WaitUntilCompleted(3 * 1000);
+                // Signal that we've entered the function.
+                _functionStarted.TrySetResult(null);
+
+                // Wait to continue until the StopHost has been called.
+                bool started = _stopHostCalled.Task.WaitUntilCompleted(3 * 1000);
                 Assert.True(started); // Guard
-                TaskSource.TrySetResult(cancellationToken.IsCancellationRequested);
+
+                // Signal the test is complete with the actual value.
+                _testTaskSource.TrySetResult(cancellationToken.IsCancellationRequested);
             }
         }
     }
 }
-#endif 

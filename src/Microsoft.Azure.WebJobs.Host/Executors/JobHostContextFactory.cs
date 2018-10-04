@@ -15,8 +15,8 @@ using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Loggers;
+using Microsoft.Azure.WebJobs.Host.Properties;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.Logging;
@@ -122,16 +122,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                 if (_jobHostOptions.Value.UsingDevelopmentSettings)
                 {
-                    string msg = "Development settings applied";
-                    startupLogger?.LogDebug(msg);
+                    startupLogger?.LogDebug("Development settings applied");
                 }
 
                 if (descriptorsCount == 0)
                 {
-                    string msg = string.Format("No job functions found. Try making your job classes and methods public. {0}",
-                        Constants.ExtensionInitializationMessage);
-
-                    startupLogger?.LogWarning(msg);
+                    startupLogger?.LogWarning($"No job functions found. Try making your job classes and methods public. {Resource.ExtensionInitializationMessage}");
                 }
                 else
                 {

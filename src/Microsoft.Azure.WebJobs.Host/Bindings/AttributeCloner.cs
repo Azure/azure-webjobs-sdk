@@ -6,9 +6,9 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings.Path;
+using Microsoft.Extensions.Configuration;
 using BindingData = System.Collections.Generic.IReadOnlyDictionary<string, object>;
 using BindingDataContract = System.Collections.Generic.IReadOnlyDictionary<string, System.Type>;
 // Func to transform Attribute,BindingData into value for cloned attribute property/constructor arg
@@ -18,9 +18,7 @@ using BindingDataResolver = System.Func<System.Attribute, System.Collections.Gen
 using Validator = System.Action<object>;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
-{    
-   
-
+{
     // Clone an attribute and resolve it.
     // This can be tricky since some read-only properties are set via the constructor.
     // This assumes that the property name matches the constructor argument name.
@@ -42,12 +40,16 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         private readonly Dictionary<PropertyInfo, AutoResolveAttribute> _autoResolves = new Dictionary<PropertyInfo, AutoResolveAttribute>();
 
         private static readonly BindingFlags Flags = BindingFlags.Instance | BindingFlags.Public;
+        private readonly IConfiguration _configuration;
 
         internal AttributeCloner(
             TAttribute source,
             BindingDataContract bindingDataContract,
+            IConfiguration configuration,
             INameResolver nameResolver = null)
         {
+            _configuration = configuration;
+
             nameResolver = nameResolver ?? new EmptyNameResolver();
             _source = source;
 
@@ -70,7 +72,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 throw new InvalidOperationException("Can't figure out which ctor to call.");
             }
-           
+
             _matchedCtor = ctorAndParams.ctor;
 
             // Get appropriate binding data resolver (appsetting, autoresolve, or originalValue) for each constructor parameter
@@ -94,11 +96,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         {
             // Do the attribute lookups once upfront, and then cache them (via func closures) for subsequent runtime usage. 
             object originalValue = propInfo.GetValue(_source);
+            ConnectionStringAttribute connStrAttr = propInfo.GetCustomAttribute<ConnectionStringAttribute>();
             AppSettingAttribute appSettingAttr = propInfo.GetCustomAttribute<AppSettingAttribute>();
             AutoResolveAttribute autoResolveAttr = propInfo.GetCustomAttribute<AutoResolveAttribute>();
             Validator validator = GetValidatorFunc(propInfo, appSettingAttr != null);
 
-            if (appSettingAttr == null && autoResolveAttr == null)
+            if (appSettingAttr == null && autoResolveAttr == null && connStrAttr == null)
             {
                 validator(originalValue);
 
@@ -106,27 +109,35 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return (newAttr, bindingData) => originalValue;
             }
 
-            if (appSettingAttr != null && autoResolveAttr != null)
+            int attrCount = new Attribute[] { connStrAttr, appSettingAttr, autoResolveAttr }.Count(a => a != null);
+            if (attrCount > 1)
             {
-                throw new InvalidOperationException($"Property '{propInfo.Name}' cannot be annotated with both AppSetting and AutoResolve.");
+                throw new InvalidOperationException($"Property '{propInfo.Name}' can only be annotated with one of the types {nameof(AppSettingAttribute)}, {nameof(AutoResolveAttribute)}, and {nameof(ConnectionStringAttribute)}.");
             }
 
             // attributes only work on string properties. 
             if (propInfo.PropertyType != typeof(string))
             {
-                throw new InvalidOperationException($"AutoResolve or AppSetting property '{propInfo.Name}' must be of type string.");
+                throw new InvalidOperationException($"{nameof(ConnectionStringAttribute)}, {nameof(AutoResolveAttribute)}, or {nameof(AppSettingAttribute)} property '{propInfo.Name}' must be of type string.");
             }
+
             var str = (string)originalValue;
 
-            // first try to resolve with app setting
+            // first try to resolve with connection string
+            if (connStrAttr != null)
+            {
+                return GetConfigurationResolver(str, connStrAttr.Default, propInfo, validator, s => _configuration.GetConnectionStringOrSetting(s));
+            }
+
+            // then app setting
             if (appSettingAttr != null)
             {
-                return GetAppSettingResolver(str, appSettingAttr, nameResolver, propInfo, validator);
+                return GetConfigurationResolver(str, appSettingAttr.Default, propInfo, validator, s => _configuration[s]);
             }
 
             // Must have an [AutoResolve]
             // try to resolve with auto resolve ({...}, %...%)
-            return GetAutoResolveResolver(str, autoResolveAttr, nameResolver, propInfo, contract, validator);            
+            return GetAutoResolveResolver(str, autoResolveAttr, nameResolver, propInfo, contract, validator);
         }
 
         // Apply AutoResolve attribute 
@@ -151,21 +162,25 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
         }
 
-        // Apply AppSetting attribute. 
-        internal static BindingDataResolver GetAppSettingResolver(string originalValue, AppSettingAttribute attr, INameResolver nameResolver, PropertyInfo propInfo, Validator validator)
+        // Both ConnectionString and AppSetting have the same behavior, but perform the lookup differently.
+        internal static BindingDataResolver GetConfigurationResolver(string propertyValue, string defaultValue, PropertyInfo propInfo, Validator validator, Func<string, string> resolveValue)
         {
-            string appSettingName = originalValue ?? attr.Default;
-            string resolvedValue = string.IsNullOrEmpty(appSettingName) ?
-                originalValue : nameResolver.Resolve(appSettingName);
+            string configurationKey = propertyValue ?? defaultValue;
+            string resolvedValue = null;
+
+            if (!string.IsNullOrEmpty(configurationKey))
+            {
+                resolvedValue = resolveValue(configurationKey);
+            }
 
             // If a value is non-null and cannot be found, we throw to match the behavior
             // when %% values are not found in ResolveWholeString below.
-            if (resolvedValue == null && originalValue != null)
+            if (resolvedValue == null && propertyValue != null)
             {
                 // It's important that we only log the attribute property name, not the actual value to ensure
                 // that in cases where users accidentally use a secret key *value* rather than indirect setting name
                 // that value doesn't get written to logs.
-                throw new InvalidOperationException($"Unable to resolve app setting for property '{propInfo.DeclaringType.Name}.{propInfo.Name}'. Make sure the app setting exists and has a valid value.");
+                throw new InvalidOperationException($"Unable to resolve the value for property '{propInfo.DeclaringType.Name}.{propInfo.Name}'. Make sure the setting exists and has a valid value.");
             }
 
             // validate after the %% is substituted. 
@@ -364,7 +379,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         internal static IResolutionPolicy GetPolicy(Type formatterType, PropertyInfo propInfo)
-        { 
+        {
             if (formatterType != null)
             {
                 if (!typeof(IResolutionPolicy).IsAssignableFrom(formatterType))

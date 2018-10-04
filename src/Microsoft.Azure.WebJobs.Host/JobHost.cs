@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
@@ -79,12 +80,6 @@ namespace Microsoft.Azure.WebJobs
         }
 
         /// <summary>Starts the host.</summary>
-        public void Start()
-        {
-            Task.Run(() => StartAsync()).GetAwaiter().GetResult();
-        }
-
-        /// <summary>Starts the host.</summary>
         /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
         /// <returns>A <see cref="Task"/> that will start the host.</returns>
         public Task StartAsync(CancellationToken cancellationToken = default(CancellationToken))
@@ -111,12 +106,6 @@ namespace Microsoft.Azure.WebJobs
             _logger?.LogInformation(msg);
 
             _state = StateStarted;
-        }
-
-        /// <summary>Stops the host.</summary>
-        public void Stop()
-        {
-            Task.Run(() => StopAsync()).GetAwaiter().GetResult();
         }
 
         /// <summary>Stops the host.</summary>
@@ -156,45 +145,6 @@ namespace Microsoft.Azure.WebJobs
             _logger?.LogInformation(msg);
         }
 
-        /// <summary>Runs the host and blocks the current thread while the host remains running.</summary>
-        public void RunAndBlock()
-        {
-            Start();
-
-            // Wait for someone to begin stopping (_shutdownWatcher, Stop, or Dispose).
-            _stoppingTokenSource.Token.WaitHandle.WaitOne();
-
-            // Don't return until all executing functions have completed.
-            Stop();
-        }
-
-        /// <summary>Calls a job method.</summary>
-        /// <param name="method">The job method to call.</param>
-        public void Call(MethodInfo method)
-        {
-            Task.Run(() => CallAsync(method)).GetAwaiter().GetResult();
-        }
-
-        /// <summary>Calls a job method.</summary>
-        /// <param name="method">The job method to call.</param>
-        /// <param name="arguments">
-        /// An object with public properties representing argument names and values to bind to parameters in the job
-        /// method. In addition to parameter values, these may also include binding data values.
-        /// </param>
-        public void Call(MethodInfo method, object arguments)
-        {
-            Task.Run(() => CallAsync(method, arguments)).GetAwaiter().GetResult();
-        }
-
-        /// <summary>Calls a job method.</summary>
-        /// <param name="method">The job method to call.</param>
-        /// <param name="arguments">The argument names and values to bind to parameters in the job method.
-        /// In addition to parameter values, these may also include binding data values. </param>
-        public void Call(MethodInfo method, IDictionary<string, object> arguments)
-        {
-            Task.Run(() => CallAsync(method, arguments)).GetAwaiter().GetResult();
-        }
-
         /// <summary>Calls a job method.</summary>
         /// <param name="method">The job method to call.</param>
         /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
@@ -213,8 +163,23 @@ namespace Microsoft.Azure.WebJobs
         /// </param>
         /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
         /// <returns>A <see cref="Task"/> that will call the job method.</returns>
-        public Task CallAsync(MethodInfo method, object arguments,
-            CancellationToken cancellationToken = default(CancellationToken))
+        public Task CallAsync(MethodInfo method, object arguments, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            ThrowIfDisposed();
+
+            IDictionary<string, object> argumentsDictionary = ObjectDictionaryConverter.AsDictionary(arguments);
+            return CallAsync(method, argumentsDictionary, cancellationToken);
+        }
+
+        /// <summary>Calls a job method.</summary>
+        /// <param name="method">The job method to call.</param>
+        /// <param name="arguments">
+        /// An object with public properties representing argument names and values to bind to parameters in the job
+        /// method. In addition to parameter values, these may also include binding data values. 
+        /// </param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>A <see cref="Task"/> that will call the job method.</returns>
+        public Task CallAsync(string method, object arguments, CancellationToken cancellationToken = default(CancellationToken))
         {
             ThrowIfDisposed();
 
@@ -227,8 +192,7 @@ namespace Microsoft.Azure.WebJobs
         /// <param name="arguments">The argument names and values to bind to parameters in the job method. In addition to parameter values, these may also include binding data values. </param>
         /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
         /// <returns>A <see cref="Task"/> that will call the job method.</returns>
-        public Task CallAsync(MethodInfo method, IDictionary<string, object> arguments,
-            CancellationToken cancellationToken = default(CancellationToken))
+        public Task CallAsync(MethodInfo method, IDictionary<string, object> arguments, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (method == null)
             {
@@ -245,8 +209,7 @@ namespace Microsoft.Azure.WebJobs
         /// <param name="arguments">The argument names and values to bind to parameters in the job method. In addition to parameter values, these may also include binding data values. </param>
         /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
         /// <returns>A <see cref="Task"/> that will call the job method.</returns>
-        public async Task CallAsync(string name, IDictionary<string, object> arguments = null,
-            CancellationToken cancellationToken = default(CancellationToken))
+        public async Task CallAsync(string name, IDictionary<string, object> arguments = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (name == null)
             {
@@ -269,8 +232,7 @@ namespace Microsoft.Azure.WebJobs
             }
         }
 
-        private async Task CallAsyncCore(MethodInfo method, IDictionary<string, object> arguments,
-            CancellationToken cancellationToken)
+        private async Task CallAsyncCore(MethodInfo method, IDictionary<string, object> arguments, CancellationToken cancellationToken)
         {
             await EnsureHostInitializedAsync(cancellationToken);
 

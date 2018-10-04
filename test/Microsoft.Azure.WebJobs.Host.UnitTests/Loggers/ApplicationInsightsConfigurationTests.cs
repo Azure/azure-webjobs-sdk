@@ -109,6 +109,26 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         }
 
         [Fact]
+        public void DependencyInjectionConfiguration_ConfiguresQuickPulseAuthApiKey()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsights(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                        o.QuickPulseAuthenticationApiKey = "some auth key";
+                    });
+                })
+                .Build())
+            {
+                var modules = host.Services.GetServices<ITelemetryModule>().ToList();
+                var quickPulseTelemetryModule = modules.OfType<QuickPulseTelemetryModule>().Single();
+                Assert.Equal("some auth key", quickPulseTelemetryModule.AuthenticationApiKey);
+            }
+        }
+
+        [Fact]
         public void DependencyInjectionConfiguration_NoFilterConfiguresSampling()
         {
             var samplingSettings = new SamplingPercentageEstimatorSettings { MaxTelemetryItemsPerSecond = 1 };

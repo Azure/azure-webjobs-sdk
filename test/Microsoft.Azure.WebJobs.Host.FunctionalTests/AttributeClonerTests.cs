@@ -14,12 +14,14 @@ using Xunit;
 using Microsoft.Azure.WebJobs.Description;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
     // Test Attribute Cloner with Storage attributes. 
     public class AttributeClonerTests
     {
+        private static readonly IConfiguration _config = new ConfigurationBuilder().Build();
         private static IReadOnlyDictionary<string, Type> emptyContract = new Dictionary<string, Type>();
 
         // Helper to easily generate a fixed binding contract.
@@ -62,7 +64,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 new BlobAttribute("container/{name}", FileAccess.Write)
             })
             {
-                var cloner = new AttributeCloner<BlobAttribute>(attr, GetBindingContract("name"));
+                var cloner = new AttributeCloner<BlobAttribute>(attr, GetBindingContract("name"), _config);
                 BlobAttribute attr2 = cloner.ResolveFromInvokeString("c/n");
 
                 Assert.Equal("c/n", attr2.BlobPath);
@@ -81,7 +83,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             };
             var ctx = GetCtx(values);
 
-            var cloner = new AttributeCloner<BlobAttribute>(a1, GetBindingContract("name"));
+            var cloner = new AttributeCloner<BlobAttribute>(a1, GetBindingContract("name"), _config);
             var attr2 = cloner.ResolveFromBindingData(ctx);
 
             Assert.Equal("container/green.txt", attr2.BlobPath);
@@ -100,7 +102,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             };
             var ctx = GetCtx(values);
 
-            var cloner = new AttributeCloner<BlobAttribute>(a1, GetBindingContract("name"));
+            var cloner = new AttributeCloner<BlobAttribute>(a1, GetBindingContract("name"), _config);
             var attr2 = cloner.ResolveFromBindingData(ctx);
 
             Assert.Equal("container/green.txt", attr2.BlobPath);

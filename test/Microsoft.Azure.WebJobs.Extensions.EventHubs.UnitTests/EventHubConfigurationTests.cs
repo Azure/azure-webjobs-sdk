@@ -14,6 +14,7 @@ using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
@@ -37,23 +38,25 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             string extensionPath = "AzureWebJobs:Extensions:EventHubs";
             var values = new Dictionary<string, string>
             {
-                { $"{extensionPath}:MaxBatchSize", "123" },
-                { $"{extensionPath}:ReceiveTimeout", "00:00:33" },
-                { $"{extensionPath}:EnableReceiverRuntimeMetric", "true" },
-                { $"{extensionPath}:PrefetchCount", "123" },
-                { $"{extensionPath}:InvokeProcessorAfterReceiveTimeout", "true" }
+                { $"{extensionPath}:EventProcessorOptions:MaxBatchSize", "123" },
+                { $"{extensionPath}:EventProcessorOptions:ReceiveTimeout", "00:00:33" },
+                { $"{extensionPath}:EventProcessorOptions:EnableReceiverRuntimeMetric", "true" },
+                { $"{extensionPath}:EventProcessorOptions:PrefetchCount", "123" },
+                { $"{extensionPath}:EventProcessorOptions:InvokeProcessorAfterReceiveTimeout", "true" },
+                { $"{extensionPath}:BatchCheckpointFrequency", "5" }
             };
 
-            EventProcessorOptions options = TestHelpers.GetConfiguredOptions<EventProcessorOptions>(b =>
+            EventHubOptions options = TestHelpers.GetConfiguredOptions<EventHubOptions>(b =>
             {
                 b.AddEventHubs();
             }, values);
 
-            Assert.Equal(123, options.MaxBatchSize);
-            Assert.Equal(TimeSpan.FromSeconds(33), options.ReceiveTimeout);
-            Assert.Equal(true, options.EnableReceiverRuntimeMetric);
-            Assert.Equal(123, options.PrefetchCount);
-            Assert.Equal(true, options.InvokeProcessorAfterReceiveTimeout);
+            Assert.Equal(123, options.EventProcessorOptions.MaxBatchSize);
+            Assert.Equal(TimeSpan.FromSeconds(33), options.EventProcessorOptions.ReceiveTimeout);
+            Assert.Equal(true, options.EventProcessorOptions.EnableReceiverRuntimeMetric);
+            Assert.Equal(123, options.EventProcessorOptions.PrefetchCount);
+            Assert.Equal(true, options.EventProcessorOptions.InvokeProcessorAfterReceiveTimeout);
+            Assert.Equal(5, options.BatchCheckpointFrequency);
         }
 
         [Fact]
@@ -78,8 +81,8 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             Assert.NotNull(triggerBindingProvider);
 
             // ensure the EventProcessorOptions ExceptionReceived event is wired up
-            var eventHubConfiguration = host.Services.GetService<EventHubConfiguration>();
-            var eventProcessorOptions = eventHubConfiguration.GetOptions();
+            var options = host.Services.GetService<IOptions<EventHubOptions>>().Value;
+            var eventProcessorOptions = options.EventProcessorOptions;
             var ex = new EventHubsException(false, "Kaboom!");
             var ctor = typeof(ExceptionReceivedEventArgs).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance).Single();
             var args = (ExceptionReceivedEventArgs)ctor.Invoke(new object[] { "TestHostName", "TestPartitionId", ex, "TestAction" });

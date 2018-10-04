@@ -75,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             var builder = new HostBuilder()
                 .ConfigureWebJobs(webJobsBuilder =>
                 {
-                    webJobsBuilder.UseExternalStartup(new DefaultStartupTypeDiscoverer(GetType().Assembly));
+                    webJobsBuilder.UseExternalStartup(new DefaultStartupTypeLocator(GetType().Assembly));
                 });
 
             IHost host = builder.Build();

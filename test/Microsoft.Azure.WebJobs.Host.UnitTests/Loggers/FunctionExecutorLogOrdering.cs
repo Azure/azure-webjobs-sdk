@@ -30,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
         // Test that instrumentation points are emitted in the right order.
         [Fact]
-        public void TestSuccess()
+        public async Task TestSuccess()
         {
             var logger = new MyLogger();
 
@@ -45,13 +45,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 })
                 .Build();
 
-            host.GetJobHost<MyProg>().Call("test");
+            await host.GetJobHost<MyProg>().CallAsync("test");
 
             Assert.Equal(PreBindLog + ParamLog + PostBindLog + BodyLog + CompletedLog, logger._log.ToString());
         }
 
         [Fact]
-        public void TestWithFailParam()
+        public async Task TestWithFailParam()
         {
             var logger = new MyLogger();
 
@@ -66,13 +66,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
              })
              .Build();
 
-            Assert.Throws<FunctionInvocationException>(() => host.GetJobHost<MyProg>().Call("testFailParam"));
+            await Assert.ThrowsAsync<FunctionInvocationException>(() => host.GetJobHost<MyProg>().CallAsync("testFailParam"));
 
             Assert.Equal(PreBindLog + ParamFailLog + PostBindLog + CompletedFailLog, logger._log.ToString());
         }
 
         [Fact]
-        public void TestWithFailBody()
+        public async Task TestWithFailBody()
         {
             var logger = new MyLogger();
 
@@ -87,7 +87,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 })
                 .Build();
 
-            Assert.Throws<FunctionInvocationException>(() => host.GetJobHost<MyProg>().Call("testFailBody"));
+            await Assert.ThrowsAsync<FunctionInvocationException>(() => host.GetJobHost<MyProg>().CallAsync("testFailBody"));
 
             Assert.Equal(PreBindLog + ParamLog + PostBindLog + BodyFailLog + CompletedFailLog, logger._log.ToString());
         }

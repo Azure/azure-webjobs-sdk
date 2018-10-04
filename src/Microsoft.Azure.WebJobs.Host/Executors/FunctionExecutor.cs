@@ -42,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             [LogConstants.LogLevelKey] = LogLevel.Information
         };
 
-        private IFunctionOutputLogger _functionOutputLogger;
+        private readonly IFunctionOutputLogger _functionOutputLogger;
         private HostOutputMessage _hostOutputMessage;
 
         public FunctionExecutor(
@@ -130,7 +130,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     await NotifyCompleteAsync(instanceLogEntry, functionCompletedMessage.Arguments, exceptionInfo);
                     _resultsLogger?.LogFunctionResult(instanceLogEntry);
                 }
-                
+
                 if (functionCompletedMessage != null)
                 {
                     await _functionInstanceLogger.LogFunctionCompletedAsync(functionCompletedMessage, logCompletedCancellationToken);
@@ -300,11 +300,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 if (outputLog != null)
                 {
-                    ((IDisposable)outputLog).Dispose();
+                    outputLog.Dispose();
                 }
                 if (updateOutputLogTimer != null)
                 {
-                    ((IDisposable)updateOutputLogTimer).Dispose();
+                    updateOutputLogTimer.Dispose();
                 }
             }
         }
@@ -317,43 +317,38 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         internal static System.Timers.Timer StartFunctionTimeout(IFunctionInstance instance, TimeoutAttribute attribute,
             CancellationTokenSource cancellationTokenSource, ILogger logger)
         {
-            if (attribute == null)
+            if (attribute == null || attribute.Timeout <= TimeSpan.Zero)
             {
                 return null;
             }
 
-            TimeSpan? timeout = attribute.Timeout;
+            TimeSpan timeout = attribute.Timeout;
 
-            if (timeout != null)
+            bool usingCancellationToken = instance.FunctionDescriptor.HasCancellationToken;
+            if (!usingCancellationToken && !attribute.ThrowOnTimeout)
             {
-                bool usingCancellationToken = instance.FunctionDescriptor.HasCancellationToken;
-                if (!usingCancellationToken && !attribute.ThrowOnTimeout)
-                {
-                    // function doesn't bind to the CancellationToken and we will not throw if it fires,
-                    // so no point in setting up the cancellation timer
-                    return null;
-                }
-
-                // Create a Timer that will cancel the token source when it fires. We're using our
-                // own Timer (rather than CancellationToken.CancelAfter) so we can write a log entry
-                // before cancellation occurs.
-                var timer = new System.Timers.Timer(timeout.Value.TotalMilliseconds)
-                {
-                    AutoReset = false
-                };
-
-                timer.Elapsed += (o, e) =>
-                {
-                    OnFunctionTimeout(timer, instance.FunctionDescriptor, instance.Id, timeout.Value, attribute.TimeoutWhileDebugging, logger, cancellationTokenSource,
-                        () => Debugger.IsAttached);
-                };
-
-                timer.Start();
-
-                return timer;
+                // function doesn't bind to the CancellationToken and we will not throw if it fires,
+                // so no point in setting up the cancellation timer
+                return null;
             }
 
-            return null;
+            // Create a Timer that will cancel the token source when it fires. We're using our
+            // own Timer (rather than CancellationToken.CancelAfter) so we can write a log entry
+            // before cancellation occurs.
+            var timer = new System.Timers.Timer(timeout.TotalMilliseconds)
+            {
+                AutoReset = false
+            };
+
+            timer.Elapsed += (o, e) =>
+            {
+                OnFunctionTimeout(timer, instance.FunctionDescriptor, instance.Id, timeout, attribute.TimeoutWhileDebugging, logger, cancellationTokenSource,
+                    () => Debugger.IsAttached);
+            };
+
+            timer.Start();
+
+            return timer;
         }
 
         internal static void OnFunctionTimeout(System.Timers.Timer timer, FunctionDescriptor method, Guid instanceId, TimeSpan timeout, bool timeoutWhileDebugging,
@@ -456,7 +451,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 if (updateParameterLogTimer != null)
                 {
-                    ((IDisposable)updateParameterLogTimer).Dispose();
+                    updateParameterLogTimer.Dispose();
                 }
 
                 parameterHelper.FlushParameterWatchers();
@@ -780,7 +775,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             private IReadOnlyList<string> _parameterNames;
 
             // state bag passed to all function filters
-            private IDictionary<string, object> _filterContextProperties = new Dictionary<string, object>();
+            private readonly IDictionary<string, object> _filterContextProperties = new Dictionary<string, object>();
 
             // the return value of the function
             private object _returnValue;
@@ -800,7 +795,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
 
                 _functionInstance = functionInstance;
-                this._parameterNames = functionInstance.Invoker.ParameterNames;
+                _parameterNames = functionInstance.Invoker.ParameterNames;
             }
 
             // Phsyical objects to pass to the underlying method Info. These will get updated for out-parameters. 
@@ -817,7 +812,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             public void Initialize()
             {
-                this.JobInstance = _functionInstance.Invoker.CreateInstance();
+                JobInstance = _functionInstance.Invoker.CreateInstance();
             }
 
             // Convert the parameters and their names to a dictionary
@@ -843,7 +838,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
                 Dictionary<string, IWatcher> watches = new Dictionary<string, IWatcher>();
 
-                foreach (KeyValuePair<string, IValueProvider> item in this._parameters)
+                foreach (KeyValuePair<string, IValueProvider> item in _parameters)
                 {
                     IWatchable watchable = item.Value as IWatchable;
                     if (watchable != null)
@@ -886,7 +881,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // run the binding source to create a set of IValueProviders for this instance. 
             public async Task BindAsync(IBindingSource bindingSource, ValueBindingContext context)
             {
-                this._parameters = await bindingSource.BindAsync(context);
+                _parameters = await bindingSource.BindAsync(context);
             }
 
             public IDictionary<string, string> CreateInvokeStringArguments()
@@ -935,7 +930,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     delayedBindingException = new DelayedException(new AggregateException(bindingExceptions));
                 }
 
-                this.InvokeParameters = reflectionParameters;
+                InvokeParameters = reflectionParameters;
                 return delayedBindingException;
             }
 
@@ -943,9 +938,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // Null if not found. 
             public async Task<SingletonLock> GetSingletonLockAsync()
             {
-                IValueProvider singletonValueProvider = null;
                 SingletonLock singleton = null;
-                if (_parameters.TryGetValue(SingletonValueProvider.SingletonParameterName, out singletonValueProvider))
+                if (_parameters.TryGetValue(SingletonValueProvider.SingletonParameterName, out IValueProvider singletonValueProvider))
                 {
                     singleton = (SingletonLock)(await singletonValueProvider.GetValueAsync());
                 }
@@ -959,16 +953,16 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // occurred by the time messages are enqueued.
             public async Task ProcessOutputParameters(CancellationToken cancellationToken)
             {
-                string[] parameterNamesInBindOrder = this.SortParameterNamesInStepOrder();
+                string[] parameterNamesInBindOrder = SortParameterNamesInStepOrder();
                 foreach (string name in parameterNamesInBindOrder)
                 {
-                    IValueProvider provider = this._parameters[name];
+                    IValueProvider provider = _parameters[name];
                     IValueBinder binder = provider as IValueBinder;
 
                     if (binder != null)
                     {
                         bool isReturn = name == FunctionIndexer.ReturnParamName;
-                        object argument = isReturn ? this._returnValue : this.InvokeParameters[this.GetParameterIndex(name)];
+                        object argument = isReturn ? _returnValue : InvokeParameters[GetParameterIndex(name)];
 
                         try
                         {
@@ -981,7 +975,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         }
                         catch (Exception exception)
                         {
-                            string message = String.Format(CultureInfo.InvariantCulture,
+                            string message = string.Format(CultureInfo.InvariantCulture,
                                 "Error while handling parameter {0} after function returned:", name);
                             throw new InvalidOperationException(message, exception);
                         }
@@ -1181,7 +1175,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     // If a post-filter throws, capture that 
                     if (exception != null)
                     {
-                        throw exception;
+                        ExceptionDispatchInfo.Capture(exception).Throw();
                     }
                 }
             }

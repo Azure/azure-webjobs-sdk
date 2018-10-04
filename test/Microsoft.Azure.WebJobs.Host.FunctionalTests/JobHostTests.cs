@@ -14,9 +14,9 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -25,10 +25,10 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
-    // TODO: Are these meant to be tests?
     public class JobHostTests
     {
         // Checks that we write the marker file when we call the host
+        [Fact]
         public void TestSdkMarkerIsWrittenWhenInAzureWebSites()
         {
             // Arrange
@@ -39,7 +39,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             File.Delete(path);
 
-            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
+            var host = new HostBuilder().ConfigureDefaultTestHost().Build();
+
+            using (host)
             {
                 try
                 {
@@ -59,70 +61,93 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
-        public void StartAsync_WhenNotStarted_DoesNotThrow()
+        [Fact]
+        public async Task StartAsync_WhenNotStarted_DoesNotThrow()
         {
             // Arrange
-            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
+            var host = new HostBuilder().ConfigureDefaultTestHost().Build().GetJobHost();
+
+            using (host)
             {
                 // Act & Assert
-                host.StartAsync().GetAwaiter().GetResult();
+                await host.StartAsync();
             }
         }
 
-        public void StartAsync_WhenStarted_Throws()
+        [Fact]
+        public async Task StartAsync_WhenStarted_Throws()
         {
             // Arrange
-            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
+            var host = new HostBuilder().ConfigureDefaultTestHost().Build().GetJobHost();
+
+            using (host)
             {
-                host.Start();
+                var tIgnore = host.StartAsync();
 
                 // Act & Assert
-                ExceptionAssert.ThrowsInvalidOperation(() => host.StartAsync(), "Start has already been called.");
+                var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => host.StartAsync());
+                Assert.Equal("Start has already been called.", exception.Message);
             }
         }
 
-        public void StartAsync_WhenStopped_Throws()
+        [Fact]
+        public async Task StartAsync_WhenStopped_Throws()
         {
             // Arrange
-            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
+            var host = new HostBuilder().ConfigureDefaultTestHost().Build().GetJobHost();
+
+            using (host)
             {
-                host.Start();
-                host.Stop();
+                await host.StartAsync();
+                await host.StopAsync();
 
                 // Act & Assert
-                ExceptionAssert.ThrowsInvalidOperation(() => host.StartAsync(), "Start has already been called.");
+                var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => host.StartAsync());
+                Assert.Equal("Start has already been called.", exception.Message);
             }
         }
 
-        
-        public void StartAsync_WhenStarting_Throws()
+        [Fact]
+        public async Task StartAsync_WhenStarting_Throws()
         {
             // Arrange
-            // TaskCompletionSource<IStorageAccount> getAccountTaskSource = new TaskCompletionSource<IStorageAccount>();
-            //JobHostOptions configuration = CreateConfiguration(new LambdaStorageAccountProvider(
-            //        (i1, i2) => getAccountTaskSource.Task));
+            // Create a way to block StartAsync.
+            TaskCompletionSource<JobHostContext> createTaskSource = new TaskCompletionSource<JobHostContext>();
+            var provider = new LambdaJobHostContextFactory((a, b) => createTaskSource.Task);
 
-            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
+            var host = new HostBuilder()
+                .ConfigureDefaultTestHost()
+                .ConfigureServices(s =>
+                {
+                    s.AddSingleton<IJobHostContextFactory>(_ => provider);
+                })
+                .Build()
+                .GetJobHost();
+
+            using (host)
             {
                 Task starting = host.StartAsync();
                 Assert.False(starting.IsCompleted); // Guard
 
                 // Act & Assert
-                ExceptionAssert.ThrowsInvalidOperation(() => host.StartAsync(), "Start has already been called.");
+                var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => host.StartAsync());
+                Assert.Equal("Start has already been called.", exception.Message);
 
                 // Cleanup
-                // getAccountTaskSource.SetResult(null);
-                starting.GetAwaiter().GetResult();
+                createTaskSource.SetResult(new JobHostContext(null, null, new Mock<IListener>().Object, null, null));
+                await starting;
             }
         }
-        
 
-        public void StartAsync_WhenStopping_Throws()
+        [Fact]
+        public async Task StartAsync_WhenStopping_Throws()
         {
             // Arrange
-            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
+            var host = new HostBuilder().ConfigureDefaultTestHost().Build().GetJobHost();
+
+            using (host)
             {
-                host.Start();
+                await host.StartAsync();
 
                 // Replace (and cleanup) the exsiting runner to hook StopAsync.
                 IListener oldListener = host.Listener;
@@ -137,7 +162,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 Task stopping = host.StopAsync();
 
                 // Act & Assert
-                ExceptionAssert.ThrowsInvalidOperation(() => host.StartAsync(), "Start has already been called.");
+                var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => host.StartAsync());
+                Assert.Equal("Start has already been called.", exception.Message);
 
                 // Cleanup
                 stopTaskSource.SetResult(null);
@@ -145,68 +171,92 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
-        public void StopAsync_WhenStarted_DoesNotThrow()
+        [Fact]
+        public async Task StopAsync_WhenStarted_DoesNotThrow()
         {
             // Arrange
-            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
+            var host = new HostBuilder().ConfigureDefaultTestHost().Build().GetJobHost();
+
+            using (host)
             {
-                host.Start();
+                await host.StartAsync();
 
                 // Act & Assert
                 host.StopAsync().GetAwaiter().GetResult();
             }
         }
 
-        public void StopAsync_WhenStopped_DoesNotThrow()
+        [Fact]
+        public async Task StopAsync_WhenStopped_DoesNotThrow()
         {
             // Arrange
-            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
+            var host = new HostBuilder().ConfigureDefaultTestHost().Build().GetJobHost();
+
+            using (host)
             {
-                host.Start();
-                host.Stop();
+                await host.StartAsync();
+                await host.StopAsync();
 
                 // Act & Assert
-                host.StopAsync().GetAwaiter().GetResult();
+                await host.StopAsync();
             }
         }
 
-        public void StopAsync_WhenNotStarted_Throws()
+        [Fact]
+        public async Task StopAsync_WhenNotStarted_Throws()
         {
             // Arrange
-            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
+            var host = new HostBuilder().ConfigureDefaultTestHost().Build().GetJobHost();
+
+            using (host)
             {
                 // Act & Assert
-                ExceptionAssert.ThrowsInvalidOperation(() => host.StopAsync(), "The host has not yet started.");
+                var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => host.StopAsync());
+                Assert.Equal("The host has not yet started.", exception.Message);
             }
         }
 
-        public void StopAsync_WhenStarting_Throws()
+        [Fact]
+        public async Task StopAsync_WhenStarting_Throws()
         {
             // Arrange
-            // TaskCompletionSource<IStorageAccount> getAccountTaskSource = new TaskCompletionSource<IStorageAccount>();
-            JobHostOptions configuration = null; // CreateConfiguration(new LambdaStorageAccountProvider(
-            //        (i1, i2) => getAccountTaskSource.Task));
+            // Create a way to block StartAsync.
+            TaskCompletionSource<JobHostContext> createTaskSource = new TaskCompletionSource<JobHostContext>();
+            var provider = new LambdaJobHostContextFactory((a, b) => createTaskSource.Task);
 
-            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(configuration), new Mock<IJobHostContextFactory>().Object))
+            var host = new HostBuilder()
+                .ConfigureDefaultTestHost()
+                .ConfigureServices(s =>
+                {
+                    s.AddSingleton<IJobHostContextFactory>(_ => provider);
+                })
+                .Build()
+                .GetJobHost();
+
+            using (host)
             {
                 Task starting = host.StartAsync();
                 Assert.False(starting.IsCompleted); // Guard
 
                 // Act & Assert
-                ExceptionAssert.ThrowsInvalidOperation(() => host.StopAsync(), "The host has not yet started.");
+                var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => host.StopAsync());
+                Assert.Equal("The host has not yet started.", exception.Message);
 
                 // Cleanup
-                // getAccountTaskSource.SetResult(null);
+                createTaskSource.SetResult(new JobHostContext(null, null, new Mock<IListener>().Object, null, null));
                 starting.GetAwaiter().GetResult();
             }
         }
 
-        public void StopAsync_WhenWaiting_ReturnsIncompleteTask()
+        [Fact]
+        public async Task StopAsync_WhenWaiting_ReturnsIncompleteTask()
         {
             // Arrange
-            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(new JobHostOptions()), new Mock<IJobHostContextFactory>().Object))
+            var host = new HostBuilder().ConfigureDefaultTestHost().Build().GetJobHost();
+
+            using (host)
             {
-                host.Start();
+                await host.StartAsync();
 
                 // Replace (and cleanup) the existing listener to hook StopAsync.
                 IListener oldListener = host.Listener;
@@ -230,13 +280,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
-        public void StopAsync_WhenAlreadyStopping_ReturnsSameTask()
+        [Fact]
+        public async Task StopAsync_WhenAlreadyStopping_ReturnsSameTask()
         {
             // Arrange
-            JobHostOptions configuration = null;
-            using (JobHost host = new JobHost(new OptionsWrapper<JobHostOptions>(configuration), new Mock<IJobHostContextFactory>().Object))
+            var host = new HostBuilder().ConfigureDefaultTestHost().Build().GetJobHost();
+
+            using (host)
             {
-                host.Start();
+                await host.StartAsync();
 
                 // Replace (and cleanup) the existing listener to hook StopAsync.
                 IListener oldRunner = host.Listener;
@@ -262,31 +314,34 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
-        public void SimpleInvoke_WithDictionary()
+        [Fact]
+        public async Task CallAsync_WithDictionary()
+        {
+            var host = JobHostFactory.Create<ProgramSimple>(null);
+
+            var value = "abc";
+            ProgramSimple._value = null;
+            await host.CallAsync("Test", new Dictionary<string, object> { { "value", value } });
+
+            // Ensure test method was invoked properly.
+            Assert.Equal(value, ProgramSimple._value);
+        }
+
+        [Fact]
+        public async Task CallAsync_WithObject()
         {
             var host = JobHostFactory.Create<ProgramSimple>(null);
 
             var x = "abc";
             ProgramSimple._value = null;
-            host.Call("Test", new Dictionary<string, object> { { "value", x } });
+            await host.CallAsync("Test", new { value = x });
 
             // Ensure test method was invoked properly.
             Assert.Equal(x, ProgramSimple._value);
         }
 
-        public void SimpleInvoke_WithObject()
-        {
-            var host = JobHostFactory.Create<ProgramSimple>(null);
-
-            var x = "abc";
-            ProgramSimple._value = null;
-            host.Call("Test", new { value = x });
-
-            // Ensure test method was invoked properly.
-            Assert.Equal(x, ProgramSimple._value);
-        }
-
-        public void CallAsyncWithCancellationToken_PassesCancellationTokenToMethod()
+        [Fact]
+        public void CallAsync_WithCancellationToken_PassesCancellationTokenToMethod()
         {
             // Arrange
             ProgramWithCancellationToken.Cleanup();
@@ -304,7 +359,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
-        public void Call_WhenMethodThrows_PreservesStackTrace()
+        [Fact]
+        public async Task CallAsync_WhenMethodThrows_PreservesStackTrace()
         {
             try
             {
@@ -318,8 +374,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 MethodInfo methodInfo = typeof(ThrowingProgram).GetMethod("Throw");
 
                 // Act & Assert
-                FunctionInvocationException exception = Assert.Throws<FunctionInvocationException>(
-                    () => host.Call(methodInfo));
+                FunctionInvocationException exception = await Assert.ThrowsAsync<FunctionInvocationException>(
+                    () => host.CallAsync(methodInfo));
                 Assert.Same(exception.InnerException, expectedException);
                 Assert.NotNull(exception.InnerException.StackTrace);
                 Assert.True(exception.InnerException.StackTrace.StartsWith(expectedStackTrace));
@@ -330,25 +386,37 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
-        public void BlobTrigger_ProvidesBlobTriggerBindingData()
+        [Fact]
+        public async Task BlobTrigger_ProvidesBlobTriggerBindingData()
         {
             try
             {
                 // Arrange
-                CloudStorageAccount account = CloudStorageAccount.DevelopmentStorageAccount;
-                var host = JobHostFactory.Create<BlobTriggerBindingDataProgram>(account);
-                MethodInfo methodInfo = typeof(BlobTriggerBindingDataProgram).GetMethod("OnBlob");
-                string containerName = "a";
-                string blobName = "b";
-                string expectedPath = containerName + "/" + blobName;
-                CloudBlobContainer container = account.CreateCloudBlobClient().GetContainerReference(containerName);
-                ICloudBlob blob = container.GetBlockBlobReference(blobName);
+                var host = new HostBuilder()
+                    .ConfigureDefaultTestHost<BlobTriggerBindingDataProgram>(c =>
+                    {
+                        c.AddAzureStorage();
+                    })
+                    .Build()
+                    .GetJobHost();
 
-                // Act
-                host.Call(methodInfo, new { blob = blob });
+                using (host)
+                {
+                    CloudStorageAccount account = CloudStorageAccount.DevelopmentStorageAccount;
 
-                // Assert
-                Assert.Equal(expectedPath, BlobTriggerBindingDataProgram.BlobTrigger);
+                    MethodInfo methodInfo = typeof(BlobTriggerBindingDataProgram).GetMethod(nameof(BlobTriggerBindingDataProgram.OnBlob));
+                    string containerName = "a";
+                    string blobName = "b";
+                    string expectedPath = containerName + "/" + blobName;
+                    CloudBlobContainer container = account.CreateCloudBlobClient().GetContainerReference(containerName);
+                    ICloudBlob blob = container.GetBlockBlobReference(blobName);
+
+                    // Act
+                    await host.CallAsync(methodInfo, new { blob = blob });
+
+                    // Assert
+                    Assert.Equal(expectedPath, BlobTriggerBindingDataProgram.BlobTrigger);
+                }
             }
             finally
             {
@@ -356,21 +424,31 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
-        public void QueueTrigger_ProvidesQueueTriggerBindingData()
+        [Fact]
+        public async Task QueueTrigger_ProvidesQueueTriggerBindingData()
         {
             try
             {
                 // Arrange
-                var host = JobHostFactory.Create<QueueTriggerBindingDataProgram>(
-                    CloudStorageAccount.DevelopmentStorageAccount);
-                MethodInfo methodInfo = typeof(QueueTriggerBindingDataProgram).GetMethod("OnQueue");
-                string expectedMessage = "a";
+                var host = new HostBuilder()
+                    .ConfigureDefaultTestHost<QueueTriggerBindingDataProgram>(c =>
+                    {
+                        c.AddAzureStorage();
+                    })
+                    .Build()
+                    .GetJobHost();
 
-                // Act
-                host.Call(methodInfo, new { message = expectedMessage });
+                using (host)
+                {
+                    MethodInfo methodInfo = typeof(QueueTriggerBindingDataProgram).GetMethod(nameof(QueueTriggerBindingDataProgram.OnQueue));
+                    string expectedMessage = "a";
 
-                // Assert
-                Assert.Equal(expectedMessage, QueueTriggerBindingDataProgram.QueueTrigger);
+                    // Act
+                    await host.CallAsync(methodInfo, new { message = expectedMessage });
+
+                    // Assert
+                    Assert.Equal(expectedMessage, QueueTriggerBindingDataProgram.QueueTrigger);
+                }
             }
             finally
             {
@@ -378,23 +456,33 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
-        public void QueueTrigger_WithTextualByteArrayMessage_ProvidesQueueTriggerBindingData()
+        [Fact]
+        public async Task QueueTrigger_WithTextualByteArrayMessage_ProvidesQueueTriggerBindingData()
         {
             try
             {
                 // Arrange
-                var host = JobHostFactory.Create<QueueTriggerBindingDataProgram>(
-                    CloudStorageAccount.DevelopmentStorageAccount);
-                MethodInfo methodInfo = typeof(QueueTriggerBindingDataProgram).GetMethod("OnQueue");
-                string expectedMessage = "abc";
-                CloudQueueMessage message = new CloudQueueMessage(expectedMessage);
-                Assert.Equal(expectedMessage, message.AsString); // Guard
+                var host = new HostBuilder()
+                    .ConfigureDefaultTestHost<QueueTriggerBindingDataProgram>(c =>
+                    {
+                        c.AddAzureStorage();
+                    })
+                    .Build()
+                    .GetJobHost();
 
-                // Act
-                host.Call(methodInfo, new { message = message });
+                using (host)
+                {
+                    MethodInfo methodInfo = typeof(QueueTriggerBindingDataProgram).GetMethod(nameof(QueueTriggerBindingDataProgram.OnQueue));
+                    string expectedMessage = "abc";
+                    CloudQueueMessage message = new CloudQueueMessage(expectedMessage);
+                    Assert.Equal(expectedMessage, message.AsString); // Guard
 
-                // Assert
-                Assert.Equal(expectedMessage, QueueTriggerBindingDataProgram.QueueTrigger);
+                    // Act
+                    await host.CallAsync(methodInfo, new { message });
+
+                    // Assert
+                    Assert.Equal(expectedMessage, QueueTriggerBindingDataProgram.QueueTrigger);
+                }
             }
             finally
             {
@@ -402,25 +490,35 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
-        public void QueueTrigger_WithNonTextualByteArrayMessageUsingQueueTriggerBindingData_Throws()
+        [Fact]
+        public async Task QueueTrigger_WithNonTextualByteArrayMessageUsingQueueTriggerBindingData_Throws()
         {
             try
             {
                 // Arrange
-                var host = JobHostFactory.Create<QueueTriggerBindingDataProgram>(
-                    CloudStorageAccount.DevelopmentStorageAccount);
-                MethodInfo methodInfo = typeof(QueueTriggerBindingDataProgram).GetMethod("OnQueue");
-                byte[] contents = new byte[] { 0x00, 0xFF }; // Not valid UTF-8
-                CloudQueueMessage message = CloudQueueMessage.CreateCloudQueueMessageFromByteArray(contents);
+                var host = new HostBuilder()
+                    .ConfigureDefaultTestHost<QueueTriggerBindingDataProgram>(c =>
+                    {
+                        c.AddAzureStorage();
+                    })
+                    .Build()
+                    .GetJobHost();
 
-                // Act & Assert
-                FunctionInvocationException exception = Assert.Throws<FunctionInvocationException>(
-                    () => host.Call(methodInfo, new { message = message }));
-                // This exeption shape/message could be better, but it's meets a minimum acceptibility threshold.
-                Assert.Equal("Exception binding parameter 'queueTrigger'", exception.InnerException.Message);
-                Exception innerException = exception.InnerException.InnerException;
-                Assert.IsType<InvalidOperationException>(innerException);
-                Assert.Equal("Binding data does not contain expected value 'queueTrigger'.", innerException.Message);
+                using (host)
+                {
+                    MethodInfo methodInfo = typeof(QueueTriggerBindingDataProgram).GetMethod(nameof(QueueTriggerBindingDataProgram.OnQueue));
+                    byte[] contents = new byte[] { 0x00, 0xFF }; // Not valid UTF-8
+                    CloudQueueMessage message = CloudQueueMessage.CreateCloudQueueMessageFromByteArray(contents);
+
+                    // Act & Assert
+                    FunctionInvocationException exception = await Assert.ThrowsAsync<FunctionInvocationException>(
+                        () => host.CallAsync(methodInfo, new { message = message }));
+                    // This exeption shape/message could be better, but it's meets a minimum acceptibility threshold.
+                    Assert.Equal("Exception binding parameter 'queueTrigger'", exception.InnerException.Message);
+                    Exception innerException = exception.InnerException.InnerException;
+                    Assert.IsType<InvalidOperationException>(innerException);
+                    Assert.Equal("Binding data does not contain expected value 'queueTrigger'.", innerException.Message);
+                }
             }
             finally
             {
@@ -428,22 +526,32 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
-        public void QueueTrigger_WithNonTextualByteArrayMessageNotUsingQueueTriggerBindingData_DoesNotThrow()
+        [Fact]
+        public async Task QueueTrigger_WithNonTextualByteArrayMessageNotUsingQueueTriggerBindingData_DoesNotThrow()
         {
             try
             {
                 // Arrange
-                var host = JobHostFactory.Create<QueueTriggerBindingDataProgram>(
-                    CloudStorageAccount.DevelopmentStorageAccount);
-                MethodInfo methodInfo = typeof(QueueTriggerBindingDataProgram).GetMethod("ProcessQueueAsBytes");
-                byte[] expectedBytes = new byte[] { 0x00, 0xFF }; // Not valid UTF-8
-                CloudQueueMessage message = CloudQueueMessage.CreateCloudQueueMessageFromByteArray(expectedBytes);
+                var host = new HostBuilder()
+                    .ConfigureDefaultTestHost<QueueTriggerBindingDataProgram>(c =>
+                    {
+                        c.AddAzureStorage();
+                    })
+                    .Build()
+                    .GetJobHost();
 
-                // Act
-                host.Call(methodInfo, new { message = message });
+                using (host)
+                {
+                    MethodInfo methodInfo = typeof(QueueTriggerBindingDataProgram).GetMethod(nameof(QueueTriggerBindingDataProgram.ProcessQueueAsBytes));
+                    byte[] expectedBytes = new byte[] { 0x00, 0xFF }; // Not valid UTF-8
+                    CloudQueueMessage message = CloudQueueMessage.CreateCloudQueueMessageFromByteArray(expectedBytes);
 
-                // Assert
-                Assert.Equal(QueueTriggerBindingDataProgram.Bytes, expectedBytes);
+                    // Act
+                    await host.CallAsync(methodInfo, new { message = message });
+
+                    // Assert
+                    Assert.Equal(QueueTriggerBindingDataProgram.Bytes, expectedBytes);
+                }
             }
             finally
             {
@@ -484,7 +592,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
                 // verify that the binding error was logged
                 Assert.Equal(5, errorLogger.GetLogMessages().Count);
-                
+
                 // Skip validating the initial 'Starting JobHost' message.
 
                 LogMessage logMessage = errorLogger.GetLogMessages()[1];
@@ -531,28 +639,20 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
-        /* $$$
-        private class LambdaStorageAccountProvider : IStorageAccountProvider
+        private class LambdaJobHostContextFactory : IJobHostContextFactory
         {
-            private readonly Func<string, CancellationToken, Task<IStorageAccount>> _getAccountAsync;
+            private readonly Func<CancellationToken, CancellationToken, Task<JobHostContext>> _create;
 
-            public LambdaStorageAccountProvider(Func<string, CancellationToken, Task<IStorageAccount>> getAccountAsync)
+            public LambdaJobHostContextFactory(Func<CancellationToken, CancellationToken, Task<JobHostContext>> create)
             {
-                _getAccountAsync = getAccountAsync;
+                _create = create;
             }
 
-            public string StorageConnectionString => throw new NotImplementedException();
-
-            public string DashboardConnectionString => throw new NotImplementedException();
-
-            public string InternalSasStorage => throw new NotImplementedException();
-
-            public Task<IStorageAccount> TryGetAccountAsync(string connectionStringName,
-                CancellationToken cancellationToken)
+            public Task<JobHostContext> Create(CancellationToken shutdownToken, CancellationToken cancellationToken)
             {
-                return _getAccountAsync.Invoke(connectionStringName, cancellationToken);
+                return _create.Invoke(shutdownToken, cancellationToken);
             }
-        }*/ 
+        }
 
         private class ProgramWithCancellationToken
         {

@@ -8,13 +8,12 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Moq;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -22,38 +21,90 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
     public class JobHostOptionsTests
     {
-        // TODO: DI: Change to use IHostingEnvironment
-        //[Theory]
-        //[InlineData(null, false)]
-        //[InlineData("Blah", false)]
-        //[InlineData("Development", true)]
-        //[InlineData("development", true)]
-        //public void IsDevelopment_ReturnsCorrectValue(string settingValue, bool expected)
-        //{
-        //    using (EnvVarHolder.Set(Constants.EnvironmentSettingName, settingValue))
-        //    {
-        //        JobHostOptions config = new JobHostOptions();
-        //        Assert.Equal(config.IsDevelopment, expected);
-        //    }
-        //}
+        [Fact]
+        public void UseEnvironment_Development_DefaultsOptionsCorrectly()
+        {
+            var hostBuilder = new HostBuilder()
+                .UseEnvironment("Development")
+                .ConfigureDefaultTestHost(b =>
+                {
+                    b.AddAzureStorage()
+                    .AddAzureStorageCoreServices();
+                });
 
-        //public void UseDevelopmentSettings_ConfiguresCorrectValues()
-        //{
-        //    using (EnvVarHolder.Set(Constants.EnvironmentSettingName, "Development"))
-        //    {
-        //        JobHostOptions config = new JobHostOptions();
-        //        Assert.False(config.UsingDevelopmentSettings);
+            IHost host = hostBuilder.Build();
+            var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
 
-        //        if (config.IsDevelopment)
-        //        {
-        //            config.UseDevelopmentSettings();
-        //        }
+            var hostingEnvironment = host.Services.GetService<IHostingEnvironment>();
+            Assert.True(hostingEnvironment.IsDevelopment());
 
-        //        Assert.True(config.UsingDevelopmentSettings);
-        //        Assert.Equal(TimeSpan.FromSeconds(2), config.Queues.MaxPollingInterval);
-        //        Assert.Equal(TimeSpan.FromSeconds(15), config.Singleton.ListenerLockPeriod);
-        //    }
-        //}
+            var queuesOptions = host.Services.GetService<IOptions<QueuesOptions>>();
+            Assert.Equal(TimeSpan.FromSeconds(2), queuesOptions.Value.MaxPollingInterval);
+
+            var singletonOptions = host.Services.GetService< IOptions<SingletonOptions>>();
+            Assert.Equal(TimeSpan.FromSeconds(15), singletonOptions.Value.ListenerLockPeriod);
+        }
+
+        [Fact]
+        public void UseEnvironment_Production_DoesNotDefaultsOptions()
+        {
+            var hostBuilder = new HostBuilder()
+                .UseEnvironment("Production")
+                .ConfigureDefaultTestHost(b =>
+                {
+                    b.AddAzureStorage()
+                    .AddAzureStorageCoreServices();
+                });
+
+            IHost host = hostBuilder.Build();
+            var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
+
+            var hostingEnvironment = host.Services.GetService<IHostingEnvironment>();
+            Assert.False(hostingEnvironment.IsDevelopment());
+            Assert.True(hostingEnvironment.IsProduction());
+
+            var queuesOptions = host.Services.GetService<IOptions<QueuesOptions>>();
+            Assert.Equal(TimeSpan.FromMinutes(1), queuesOptions.Value.MaxPollingInterval);
+
+            var singletonOptions = host.Services.GetService<IOptions<SingletonOptions>>();
+            Assert.Equal(TimeSpan.FromSeconds(60), singletonOptions.Value.ListenerLockPeriod);
+        }
+
+        [Fact]
+        public void UseEnvironment_Development_UserConfigTakesPrecedence()
+        {
+            var hostBuilder = new HostBuilder()
+                .UseEnvironment("Development")
+                .ConfigureDefaultTestHost(b =>
+                {
+                    b.AddAzureStorage()
+                    .AddAzureStorageCoreServices();
+                })
+                .ConfigureServices(services =>
+                {
+                    services.Configure<QueuesOptions>(options =>
+                    {
+                        options.MaxPollingInterval = TimeSpan.FromSeconds(22);
+                    });
+
+                    services.Configure<SingletonOptions>(options =>
+                    {
+                        options.ListenerLockPeriod = TimeSpan.FromSeconds(22);
+                    });
+                });
+
+            IHost host = hostBuilder.Build();
+            var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
+
+            var hostingEnvironment = host.Services.GetService<IHostingEnvironment>();
+            Assert.True(hostingEnvironment.IsDevelopment());
+
+            var queuesOptions = host.Services.GetService<IOptions<QueuesOptions>>();
+            Assert.Equal(TimeSpan.FromSeconds(22), queuesOptions.Value.MaxPollingInterval);
+
+            var singletonOptions = host.Services.GetService<IOptions<SingletonOptions>>();
+            Assert.Equal(TimeSpan.FromSeconds(22), singletonOptions.Value.ListenerLockPeriod);
+        }
 
         private class FastLogger : IAsyncCollector<FunctionInstanceLogEntry>, IEventCollectorFactory
         {
@@ -190,11 +241,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 IHost host = new HostBuilder()
                     .ConfigureWebJobs(b =>
                     {
-                        b.AddFastLogging(fastLogger);
+                        b.AddTableLogging(fastLogger);
                     })
                     .ConfigureTypeLocator(typeof(BasicTest))
                     .Build();
-                
+
                 var randomValue = Guid.NewGuid().ToString();
 
                 StringBuilder sbLoggingCallbacks = new StringBuilder();
@@ -203,9 +254,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 var method = typeof(BasicTest).GetMethod("Method", BindingFlags.Public | BindingFlags.Static);
 
                 var lockManager = host.Services.GetRequiredService<IDistributedLockManager>();
-                Assert.IsType<InMemorySingletonManager>(lockManager);
+                Assert.IsType<InMemoryDistributedLockManager>(lockManager);
 
-                host.GetJobHost().Call(method, new { value = randomValue });
+                await host.GetJobHost().CallAsync(method, new { value = randomValue });
                 Assert.True(BasicTest.Called);
 
                 Assert.Equal(2, fastLogger.List.Count); // We should be batching, so flush not called yet.
@@ -233,7 +284,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 Assert.Equal(2, endMsg.Arguments.Count);
                 Assert.True(endMsg.Arguments.ContainsKey("log"));
                 Assert.Equal(randomValue, endMsg.Arguments["value"]);
-                                
+
                 Assert.Equal("val=" + randomValue, endMsg.LogOutput.Trim());
 
                 Assert.Same(FastLogger.FlushEntry, fastLogger.List[2]);

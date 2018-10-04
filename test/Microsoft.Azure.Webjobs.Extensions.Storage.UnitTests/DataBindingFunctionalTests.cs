@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Data
     public class DataBindingFunctionalTests
     {
         [Fact]
-        public void BindStringableParameter_CanInvoke()
+        public async Task BindStringableParameter_CanInvoke()
         {
             // Arrange
             var builder = new HostBuilder()
@@ -44,7 +44,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Data
             try
             {
                 // Act
-                host.Call(method, new { message = message });
+                await host.CallAsync(method, new { message = message });
 
                 // Assert
                 Assert.Equal(expectedGuidValue, TestFunctions.Result);

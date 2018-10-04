@@ -27,6 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "Microsoft.Azure.WebJobs.Host",
                 "Microsoft.Extensions.Configuration.Abstractions",
                 "Microsoft.Extensions.DependencyInjection.Abstractions",
+                "Microsoft.Extensions.Hosting.Abstractions",
                 "Microsoft.Extensions.Logging.Abstractions",
                 "Microsoft.Extensions.Options",
                 "Microsoft.WindowsAzure.Storage",

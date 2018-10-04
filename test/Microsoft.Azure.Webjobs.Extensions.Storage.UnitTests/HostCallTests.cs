@@ -60,7 +60,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             CloudBlockBlob blob = container.GetBlockBlobReference(BlobName);
 
             // Act
-            Call(account, typeof(MissingBlobProgram), methodName, typeof(CustomBlobConverterExtensionConfigProvider));
+            await CallAsync(account, typeof(MissingBlobProgram), methodName, typeof(CustomBlobConverterExtensionConfigProvider));
 
             // Assert
             Assert.False(await blob.ExistsAsync());
@@ -82,7 +82,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             CloudBlockBlob blob = container.GetBlockBlobReference(BlobName);
 
             // Act
-            Call(account, typeof(MissingBlobProgram), methodName, typeof(CustomBlobConverterExtensionConfigProvider));
+            await CallAsync(account, typeof(MissingBlobProgram), methodName, typeof(CustomBlobConverterExtensionConfigProvider));
 
             // Assert
             Assert.True(await blob.ExistsAsync());
@@ -107,7 +107,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             };
 
             // Act
-            Call(account, typeof(BlobProgram), "UnboundParameter", arguments);
+            await CallAsync(account, typeof(BlobProgram), "UnboundParameter", arguments);
 
             CloudBlockBlob outputBlob = container.GetBlockBlobReference("note.csv");
             string content = outputBlob.DownloadText();
@@ -132,7 +132,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await inputBlob.UploadTextAsync("ignore");
 
             // Act
-            Call(account, typeof(BlobProgram), "BindToCloudBlockBlob");
+            await CallAsync(account, typeof(BlobProgram), "BindToCloudBlockBlob");
         }
 
         [Fact]
@@ -146,7 +146,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await container.CreateIfNotExistsAsync();
             await inputBlob.UploadTextAsync("0,1,2");
 
-            Call(account, typeof(BlobProgram), "BindToString");
+            await CallAsync(account, typeof(BlobProgram), "BindToString");
         }
 
         [Fact]
@@ -162,7 +162,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await inputBlob.UploadTextAsync(expectedContent);
 
             // Act
-            Call(account, typeof(BlobProgram), "CopyViaString");
+            await CallAsync(account, typeof(BlobProgram), "CopyViaString");
 
             // Assert
             CloudBlockBlob outputBlob = container.GetBlockBlobReference(OutputBlobName);
@@ -189,7 +189,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             };
 
             // Act
-            Call(account, typeof(BlobProgram), "CopyViaTextReaderTextWriter", arguments);
+            await CallAsync(account, typeof(BlobProgram), "CopyViaTextReaderTextWriter", arguments);
 
             // Assert
             CloudBlockBlob outputBlob = container.GetBlockBlobReference(OutputBlobName);
@@ -215,7 +215,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             };
 
             // Act
-            ICloudBlob result = Call<ICloudBlob>(account, typeof(BlobTriggerBindToICloudBlobProgram), "Call", arguments,
+            ICloudBlob result = await CallAsync<ICloudBlob>(account, typeof(BlobTriggerBindToICloudBlobProgram), "Call", arguments,
                 (s) => BlobTriggerBindToICloudBlobProgram.TaskSource = s);
 
             // Assert
@@ -241,7 +241,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             };
 
             // Act
-            ICloudBlob result = Call<ICloudBlob>(account, typeof(BlobTriggerBindToICloudBlobProgram), "Call", arguments,
+            ICloudBlob result = await CallAsync<ICloudBlob>(account, typeof(BlobTriggerBindToICloudBlobProgram), "Call", arguments,
                 (s) => BlobTriggerBindToICloudBlobProgram.TaskSource = s);
 
             // Assert
@@ -250,13 +250,13 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void BlobTrigger_IfBoundToICloudBlobAndTriggerArgumentIsMissing_CallThrows()
+        public async Task BlobTrigger_IfBoundToICloudBlobAndTriggerArgumentIsMissing_CallThrows()
         {
             // Arrange
             StorageAccount account = CreateFakeStorageAccount();
 
             // Act
-            Exception exception = CallFailure(account, typeof(BlobTriggerBindToICloudBlobProgram), "Call");
+            Exception exception = await CallFailureAsync(account, typeof(BlobTriggerBindToICloudBlobProgram), "Call");
 
             // Assert
             Assert.IsType<InvalidOperationException>(exception);
@@ -281,7 +281,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             };
 
             // Act
-            CloudBlockBlob result = Call<CloudBlockBlob>(account, typeof(BlobTriggerBindToCloudBlockBlobProgram),
+            CloudBlockBlob result = await CallAsync<CloudBlockBlob>(account, typeof(BlobTriggerBindToCloudBlockBlobProgram),
                 "Call", arguments, (s) => BlobTriggerBindToCloudBlockBlobProgram.TaskSource = s);
 
             // Assert
@@ -289,13 +289,13 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void BlobTrigger_IfBoundToCloudBLockBlobAndTriggerArgumentIsMissing_CallThrows()
+        public async Task BlobTrigger_IfBoundToCloudBLockBlobAndTriggerArgumentIsMissing_CallThrows()
         {
             // Arrange
             StorageAccount account = CreateFakeStorageAccount();
 
             // Act
-            Exception exception = CallFailure(account, typeof(BlobTriggerBindToCloudBlockBlobProgram), "Call");
+            Exception exception = await CallFailureAsync(account, typeof(BlobTriggerBindToCloudBlockBlobProgram), "Call");
 
             // Assert
             Assert.IsType<InvalidOperationException>(exception);
@@ -330,7 +330,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             };
 
             // Act
-            CloudPageBlob result = Call<CloudPageBlob>(account, typeof(BlobTriggerBindToCloudPageBlobProgram), "Call",
+            CloudPageBlob result = await CallAsync<CloudPageBlob>(account, typeof(BlobTriggerBindToCloudPageBlobProgram), "Call",
                 arguments, (s) => BlobTriggerBindToCloudPageBlobProgram.TaskSource = s);
 
             // Assert
@@ -338,13 +338,13 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void BlobTrigger_IfBoundToCloudPageBlobAndTriggerArgumentIsMissing_CallThrows()
+        public async Task BlobTrigger_IfBoundToCloudPageBlobAndTriggerArgumentIsMissing_CallThrows()
         {
             // Arrange
             var account = CreateFakeStorageAccount();
 
             // Act
-            Exception exception = CallFailure(account, typeof(BlobTriggerBindToCloudPageBlobProgram), "Call");
+            Exception exception = await CallFailureAsync(account, typeof(BlobTriggerBindToCloudPageBlobProgram), "Call");
 
             // Assert
             Assert.IsType<InvalidOperationException>(exception);
@@ -379,7 +379,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             };
 
             // Act
-            CloudAppendBlob result = Call<CloudAppendBlob>(account, typeof(BlobTriggerBindToCloudAppendBlobProgram), "Call",
+            CloudAppendBlob result = await CallAsync<CloudAppendBlob>(account, typeof(BlobTriggerBindToCloudAppendBlobProgram), "Call",
                 arguments, (s) => BlobTriggerBindToCloudAppendBlobProgram.TaskSource = s);
 
             // Assert
@@ -387,13 +387,13 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void BlobTrigger_IfBoundToCloudAppendBlobAndTriggerArgumentIsMissing_CallThrows()
+        public async Task BlobTrigger_IfBoundToCloudAppendBlobAndTriggerArgumentIsMissing_CallThrows()
         {
             // Arrange
             var account = CreateFakeStorageAccount();
 
             // Act
-            Exception exception = CallFailure(account, typeof(BlobTriggerBindToCloudAppendBlobProgram), "Call");
+            Exception exception = await CallFailureAsync(account, typeof(BlobTriggerBindToCloudAppendBlobProgram), "Call");
 
             // Assert
             Assert.IsType<InvalidOperationException>(exception);
@@ -411,7 +411,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void Int32Argument_CanCallViaStringParse()
+        public async Task Int32Argument_CanCallViaStringParse()
         {
             // Arrange
             var account = CreateFakeStorageAccount();
@@ -421,7 +421,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             };
 
             // Act
-            int result = Call<int>(account, typeof(UnboundInt32Program), "Call", arguments,
+            int result = await CallAsync<int>(account, typeof(UnboundInt32Program), "Call", arguments,
                 (s) => UnboundInt32Program.TaskSource = s);
 
             Assert.Equal(15, result);
@@ -439,12 +439,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void Queue_IfBoundToOutPoco_CanCall()
+        public async Task Queue_IfBoundToOutPoco_CanCall()
         {
             var account = CreateFakeStorageAccount();
 
             // Act
-            Call(account, typeof(QueueProgram), "BindToOutPoco");
+            await CallAsync(account, typeof(QueueProgram), "BindToOutPoco");
 
             // Assert
             var queue = account.CreateCloudQueueClient().GetQueueReference(OutputQueueName);
@@ -469,7 +469,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var account = CreateFakeStorageAccount();
 
             // Act
-            Call(account, typeof(QueueProgram), "BindToIAsyncCollectorByteArray");
+            await CallAsync(account, typeof(QueueProgram), "BindToIAsyncCollectorByteArray");
 
             // Assert
             var queue = account.CreateCloudQueueClient().GetQueueReference(OutputQueueName);
@@ -489,7 +489,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var account = CreateFakeStorageAccount();
 
             // Act
-            Call(account, typeof(QueueProgram), "BindToICollectorByteArray");
+            await CallAsync(account, typeof(QueueProgram), "BindToICollectorByteArray");
 
             // Assert
             CloudQueue queue = account.CreateCloudQueueClient().GetQueueReference(OutputQueueName);
@@ -504,14 +504,14 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void Queue_IfBoundToIAsyncCollectorInt_NotSupported()
+        public async Task Queue_IfBoundToIAsyncCollectorInt_NotSupported()
         {
             StorageAccount account = CreateFakeStorageAccount();
 
             // Act
-            FunctionIndexingException ex = Assert.Throws<FunctionIndexingException>(() =>
+            FunctionIndexingException ex = await Assert.ThrowsAsync<FunctionIndexingException>(() =>
             {
-                Call(account, typeof(QueueNotSupportedProgram), "BindToICollectorInt");
+                return CallAsync(account, typeof(QueueNotSupportedProgram), "BindToICollectorInt");
             });
 
             // Assert
@@ -523,7 +523,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             StorageAccount account = CreateFakeStorageAccount();
 
             // Act
-            Call(account, typeof(QueueProgram), methodName);
+            await CallAsync(account, typeof(QueueProgram), methodName);
 
             // Assert
             CloudQueue queue = account.CreateCloudQueueClient().GetQueueReference(OutputQueueName);
@@ -540,23 +540,23 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void Queue_IfBoundToIAsyncCollector_AddEnqueuesImmediately()
+        public async Task Queue_IfBoundToIAsyncCollector_AddEnqueuesImmediately()
         {
             // Arrange
             StorageAccount account = CreateFakeStorageAccount();
 
             // Act
-            Call(account, typeof(QueueProgram), "BindToIAsyncCollectorEnqueuesImmediately");
+            await CallAsync(account, typeof(QueueProgram), "BindToIAsyncCollectorEnqueuesImmediately");
         }
 
         [Fact]
-        public void Queue_IfBoundToCloudQueue_CanCall()
+        public async Task Queue_IfBoundToCloudQueue_CanCall()
         {
             // Arrange
             StorageAccount account = CreateFakeStorageAccount();
 
             // Act
-            CloudQueue result = Call<CloudQueue>(account, typeof(BindToCloudQueueProgram), "BindToCloudQueue",
+            CloudQueue result = await CallAsync<CloudQueue>(account, typeof(BindToCloudQueueProgram), "BindToCloudQueue",
                 (s) => BindToCloudQueueProgram.TaskSource = s);
 
             // Assert
@@ -571,7 +571,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             StorageAccount account = CreateFakeStorageAccount();
 
             // Act
-            CloudQueue result = Call<CloudQueue>(account, typeof(BindToCloudQueueProgram), "BindToCloudQueue",
+            CloudQueue result = await CallAsync<CloudQueue>(account, typeof(BindToCloudQueueProgram), "BindToCloudQueue",
                 (s) => BindToCloudQueueProgram.TaskSource = s);
 
             // Assert
@@ -601,7 +601,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             StorageAccount account = CreateFakeStorageAccount();
 
             // Act
-            Call(account, typeof(MissingQueueProgram), methodName);
+            await CallAsync(account, typeof(MissingQueueProgram), methodName);
 
             // Assert
             CloudQueue queue = account.CreateCloudQueueClient().GetQueueReference(OutputQueueName);
@@ -616,7 +616,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             StorageAccount account = CreateFakeStorageAccount();
 
             // Act
-            Call(account, typeof(MissingQueueProgram), "FuncWithOutT");
+            await CallAsync(account, typeof(MissingQueueProgram), "FuncWithOutT");
 
             // Assert
             CloudQueue queue = account.CreateCloudQueueClient().GetQueueReference(OutputQueueName);
@@ -631,7 +631,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             StorageAccount account = CreateFakeStorageAccount();
 
             // Act
-            Call(account, typeof(MissingQueueProgram), "FuncWithOutT");
+            await CallAsync(account, typeof(MissingQueueProgram), "FuncWithOutT");
 
             // Assert
             CloudQueue queue = account.CreateCloudQueueClient().GetQueueReference(OutputQueueName);
@@ -650,7 +650,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             StorageAccount account = CreateFakeStorageAccount();
 
             // Act
-            Call(account, typeof(MissingQueueProgram), methodName);
+            await CallAsync(account, typeof(MissingQueueProgram), methodName);
 
             // Assert
             CloudQueue queue = account.CreateCloudQueueClient().GetQueueReference(OutputQueueName);
@@ -658,13 +658,13 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void Binder_IfBindingBlobToTextWriter_CanCall()
+        public async Task Binder_IfBindingBlobToTextWriter_CanCall()
         {
             // Arrange
             StorageAccount account = CreateFakeStorageAccount();
 
             // Act
-            Call(account, typeof(BindToBinderBlobTextWriterProgram), "Call");
+            await CallAsync(account, typeof(BindToBinderBlobTextWriterProgram), "Call");
 
             // Assert
             var container = account.CreateCloudBlobClient().GetContainerReference(ContainerName);
@@ -758,7 +758,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             };
 
             // Act
-            Call(account, typeof(CopyBlobViaPocoProgram), "CopyViaPoco", arguments, typeof(CustomBlobConverterExtensionConfigProvider));
+            await CallAsync(account, typeof(CopyBlobViaPocoProgram), "CopyViaPoco", arguments, typeof(CustomBlobConverterExtensionConfigProvider));
 
             // Assert
             CloudBlockBlob outputBlob = container.GetBlockBlobReference(OutputBlobName);
@@ -794,7 +794,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             CloudTable table = client.GetTableReference(TableName);
 
             // Act
-            Call(account, typeof(MissingTableProgram), methodName);
+            await CallAsync(account, typeof(MissingTableProgram), methodName);
 
             // Assert
             Assert.False(await table.ExistsAsync());
@@ -807,7 +807,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             StorageAccount account = CreateFakeStorageAccount();
 
             // Act
-            CloudTable result = Call<CloudTable>(account, typeof(BindToCloudTableProgram), "BindToCloudTable",
+            CloudTable result = await CallAsync<CloudTable>(account, typeof(BindToCloudTableProgram), "BindToCloudTable",
                 (s) => BindToCloudTableProgram.TaskSource = s);
 
             // Assert
@@ -827,9 +827,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void Table_IfBoundToICollectorITableEntity_CanCall()
+        public async Task Table_IfBoundToICollectorITableEntity_CanCall()
         {
-            TestTableBoundToCollectorCanCall(typeof(BindTableToICollectorITableEntity));
+            await TestTableBoundToCollectorCanCallAsync(typeof(BindTableToICollectorITableEntity));
         }
 
         private class BindTableToICollectorITableEntity
@@ -841,9 +841,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void Table_IfBoundToICollectorDynamicTableEntity_CanCall()
+        public async Task Table_IfBoundToICollectorDynamicTableEntity_CanCall()
         {
-            TestTableBoundToCollectorCanCall(typeof(BindTableToICollectorDynamicTableEntity));
+            await TestTableBoundToCollectorCanCallAsync(typeof(BindTableToICollectorDynamicTableEntity));
         }
 
         private class BindTableToICollectorDynamicTableEntity
@@ -855,9 +855,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void Table_IfBoundToICollectorSdkTableEntity_CanCall()
+        public async Task Table_IfBoundToICollectorSdkTableEntity_CanCall()
         {
-            TestTableBoundToCollectorCanCall(typeof(BindTableToICollectorSdkTableEntity));
+            await TestTableBoundToCollectorCanCallAsync(typeof(BindTableToICollectorSdkTableEntity));
         }
 
         private class BindTableToICollectorSdkTableEntity
@@ -869,9 +869,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void Table_IfBoundToIAsyncCollectorITableEntity_CanCall()
+        public async Task Table_IfBoundToIAsyncCollectorITableEntity_CanCall()
         {
-            TestTableBoundToCollectorCanCall(typeof(BindTableToIAsyncCollectorITableEntity));
+            await TestTableBoundToCollectorCanCallAsync(typeof(BindTableToIAsyncCollectorITableEntity));
         }
 
         private class BindTableToIAsyncCollectorITableEntity
@@ -883,9 +883,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void Table_IfBoundToIAsyncCollectorDynamicTableEntity_CanCall()
+        public async Task Table_IfBoundToIAsyncCollectorDynamicTableEntity_CanCall()
         {
-            TestTableBoundToCollectorCanCall(typeof(BindTableToIAsyncCollectorDynamicTableEntity));
+            await TestTableBoundToCollectorCanCallAsync(typeof(BindTableToIAsyncCollectorDynamicTableEntity));
         }
 
         private class BindTableToIAsyncCollectorDynamicTableEntity
@@ -897,9 +897,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void Table_IfBoundToIAsyncCollectorSdkTableEntity_CanCall()
+        public async Task Table_IfBoundToIAsyncCollectorSdkTableEntity_CanCall()
         {
-            TestTableBoundToCollectorCanCall(typeof(BindTableToIAsyncCollectorSdkTableEntity));
+            await TestTableBoundToCollectorCanCallAsync(typeof(BindTableToIAsyncCollectorSdkTableEntity));
         }
 
         private class BindTableToIAsyncCollectorSdkTableEntity
@@ -910,13 +910,13 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
         }
 
-        private static void TestTableBoundToCollectorCanCall(Type programType)
+        private static async Task TestTableBoundToCollectorCanCallAsync(Type programType)
         {
             // Arrange
             StorageAccount account = CreateFakeStorageAccount();
 
             // Act
-            Call(account, programType, "Call");
+            await CallAsync(account, programType, "Call");
 
             // Assert
             CloudTableClient client = account.CreateCloudTableClient();
@@ -996,16 +996,16 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             // Act
             Type type = typeof(BindTableEntityToJArrayProgram);
-            host.GetJobHost().Call(type.GetMethod(nameof(BindTableEntityToJArrayProgram.CallTakeFilter)));
+            await host.GetJobHost().CallAsync(type.GetMethod(nameof(BindTableEntityToJArrayProgram.CallTakeFilter)));
             Assert.Equal("x1;x3;", instance._result);
 
-            host.GetJobHost().Call(type.GetMethod(nameof(BindTableEntityToJArrayProgram.CallFilter)));
+            await host.GetJobHost().CallAsync(type.GetMethod(nameof(BindTableEntityToJArrayProgram.CallFilter)));
             Assert.Equal("x1;x3;x4;", instance._result);
 
-            host.GetJobHost().Call(type.GetMethod(nameof(BindTableEntityToJArrayProgram.CallTake)));
+            await host.GetJobHost().CallAsync(type.GetMethod(nameof(BindTableEntityToJArrayProgram.CallTake)));
             Assert.Equal("x1;x2;x3;", instance._result);
 
-            host.GetJobHost().Call(type.GetMethod(nameof(BindTableEntityToJArrayProgram.Call)));
+            await host.GetJobHost().CallAsync(type.GetMethod(nameof(BindTableEntityToJArrayProgram.Call)));
             Assert.Equal("x1;x2;x3;x4;", instance._result);
         }
 
@@ -1071,7 +1071,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             var prog = host.GetJobHost<BindTableEntityToJObjectProgram>();
 
-            prog.Call("Call", new
+            await prog.CallAsync("Call", new
             {
                 table = TableName, // Test resolution 
                 pk1 = PartitionKey,
@@ -1103,7 +1103,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             table.Insert(CreateTableEntity(PartitionKey, RowKey, "Value", "Foo"));
 
             // Act
-            Call(account, typeof(BindTableEntityToSdkTableEntityProgram), "Call");
+            await CallAsync(account, typeof(BindTableEntityToSdkTableEntityProgram), "Call");
 
             // Assert
             SdkTableEntity entity = table.Retrieve<SdkTableEntity>(PartitionKey, RowKey);
@@ -1137,7 +1137,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }));
 
             // Act
-            Call(account, typeof(BindTableEntityToPocoTableEntityProgram), "Call");
+            await CallAsync(account, typeof(BindTableEntityToPocoTableEntityProgram), "Call");
 
             // Assert
             DynamicTableEntity entity = table.Retrieve<DynamicTableEntity>(PartitionKey, RowKey);
@@ -1258,7 +1258,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             table.Insert(CreateTableEntity(PartitionKey, RowKey, "Value", "Foo"));
 
             // Act & Assert
-            Exception exception = CallFailure(account, programType, "Call");
+            Exception exception = await CallFailureAsync(account, programType, "Call");
             AssertInvocationETagFailure(parameterName, exception);
 
             SdkTableEntity entity = table.Retrieve<SdkTableEntity>(PartitionKey, RowKey);
@@ -1282,40 +1282,38 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Assert.True(invalidOperationException.Message.StartsWith("Entity PK='PK',RK='RK' does not match eTag"));
         }
 
-        private static void Call(StorageAccount account, Type programType, string methodName, params Type[] customExtensions)
+        private static async Task CallAsync(StorageAccount account, Type programType, string methodName, params Type[] customExtensions)
         {
-            FunctionalTest.Call(account, programType, programType.GetMethod(methodName), null, customExtensions);
+            await FunctionalTest.CallAsync(account, programType, programType.GetMethod(methodName), null, customExtensions);
         }
 
-        private static void Call(StorageAccount account, Type programType, string methodName,
+        private static async Task CallAsync(StorageAccount account, Type programType, string methodName,
             IDictionary<string, object> arguments, params Type[] customExtensions)
         {
-            FunctionalTest.Call(account, programType, programType.GetMethod(methodName), arguments, customExtensions);
+            await FunctionalTest.CallAsync(account, programType, programType.GetMethod(methodName), arguments, customExtensions);
         }
 
-        private static TResult Call<TResult>(StorageAccount account, Type programType, string methodName,
+        private static async Task<TResult> CallAsync<TResult>(StorageAccount account, Type programType, string methodName,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
             IDictionary<string, object> arguments = null;
-            return FunctionalTest.Call<TResult>(account, programType, programType.GetMethod(methodName), arguments,
-                setTaskSource);
+            return await FunctionalTest.CallAsync<TResult>(account, programType, programType.GetMethod(methodName), arguments, setTaskSource);
         }
 
-        private static TResult Call<TResult>(StorageAccount account, Type programType, string methodName,
+        private static async Task<TResult> CallAsync<TResult>(StorageAccount account, Type programType, string methodName,
             IDictionary<string, object> arguments, Action<TaskCompletionSource<TResult>> setTaskSource)
         {
-            return FunctionalTest.Call<TResult>(account, programType, programType.GetMethod(methodName), arguments,
-                setTaskSource);
+            return await FunctionalTest.CallAsync<TResult>(account, programType, programType.GetMethod(methodName), arguments, setTaskSource);
         }
 
-        private static Exception CallFailure(StorageAccount account, Type programType, string methodName)
+        private static async Task<Exception> CallFailureAsync(StorageAccount account, Type programType, string methodName)
         {
-            return FunctionalTest.CallFailure(account, programType, programType.GetMethod(methodName), null);
+            return await FunctionalTest.CallFailureAsync(account, programType, programType.GetMethod(methodName), null);
         }
 
         private static StorageAccount CreateFakeStorageAccount()
         {
-            return new XFakeStorageAccount();
+            return new FakeStorageAccount();
         }
 
         private static ITableEntity CreateTableEntity(string partitionKey, string rowKey, string propertyName,

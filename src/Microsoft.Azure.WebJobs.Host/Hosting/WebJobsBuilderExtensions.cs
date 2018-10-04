@@ -77,13 +77,13 @@ namespace Microsoft.Azure.WebJobs
         /// <summary>
         /// Enables use of external configuration providers, allowing them to inject services and update
         /// configuration during the host initialization process.
-        /// Type discovery is performed using the <see cref="DefaultStartupTypeDiscoverer"/>.
+        /// Type discovery is performed using the <see cref="DefaultStartupTypeLocator"/>.
         /// </summary>
         /// <param name="builder">The <see cref="IWebJobsBuilder"/> instance to configure.</param>
         /// <returns>The updated <see cref="IHostBuilder"/> instance.</returns>
         public static IWebJobsBuilder UseExternalStartup(this IWebJobsBuilder builder)
         {
-            return builder.UseExternalStartup(new DefaultStartupTypeDiscoverer());
+            return builder.UseExternalStartup(new DefaultStartupTypeLocator());
         }
 
         /// <summary>
@@ -91,12 +91,12 @@ namespace Microsoft.Azure.WebJobs
         /// configuration during the host initialization process.
         /// </summary>
         /// <param name="builder">The <see cref="IWebJobsBuilder"/> instance to configure.</param>
-        /// <param name="typeDiscoverer">An implementation of <see cref="IWebJobsStartupTypeDiscoverer"/> that provides a list of types that 
+        /// <param name="startupTypeLocator">An implementation of <see cref="IWebJobsStartupTypeLocator"/> that provides a list of types that 
         /// should be used in the startup process.</param>
         /// <returns>The updated <see cref="IHostBuilder"/> instance.</returns>
-        public static IWebJobsBuilder UseExternalStartup(this IWebJobsBuilder builder, IWebJobsStartupTypeDiscoverer typeDiscoverer)
+        public static IWebJobsBuilder UseExternalStartup(this IWebJobsBuilder builder, IWebJobsStartupTypeLocator startupTypeLocator)
         {
-            Type[] types = typeDiscoverer.GetStartupTypes();
+            Type[] types = startupTypeLocator.GetStartupTypes();
 
             foreach (var type in types)
             {
@@ -106,23 +106,23 @@ namespace Microsoft.Azure.WebJobs
             return builder;
         }
 
-        // This is an alternative to AddWebJobsLogging
-        public static IWebJobsBuilder AddFastLogging(this IWebJobsBuilder builder, IEventCollectorFactory fastLogger)
+        // This is an alternative to AddDashboardLogging
+        public static IWebJobsBuilder AddTableLogging(this IWebJobsBuilder builder, IEventCollectorFactory eventCollectorFactory)
         {
             if (builder == null)
             {
                 throw new ArgumentNullException(nameof(builder));
             }
 
-            if (fastLogger == null)
+            if (eventCollectorFactory == null)
             {
-                throw new ArgumentNullException(nameof(fastLogger));
+                throw new ArgumentNullException(nameof(eventCollectorFactory));
             }
 
             builder.Services.AddSingleton<IFunctionOutputLoggerProvider, FastTableLoggerProvider>();
             builder.Services.AddSingleton<IFunctionOutputLogger, FastTableLoggerProvider>();
 
-            builder.Services.AddSingleton(fastLogger);
+            builder.Services.AddSingleton(eventCollectorFactory);
             return builder;
         }
 

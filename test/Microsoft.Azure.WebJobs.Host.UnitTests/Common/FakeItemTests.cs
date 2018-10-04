@@ -45,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
-        public void Test()
+        public async Task Test()
         {
             var client = new FakeItemClient();
             client._dict["ModifyInPlace"] = new Item
@@ -61,22 +61,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 .Build();
 
             // With out parameter 
-            {
-                client._dict["SetToNull"] = new Item(); // should get ovewritten with null
-
-                host.GetJobHost().Call(typeof(Functions).GetMethod(nameof(Functions.SetToNull)));
-
-                var item = (Item)client._dict["SetToNull"];
-                Assert.Equal(null, item);
-            }
+            client._dict["SetToNull"] = new Item(); // should get ovewritten with null
+            await host.GetJobHost().CallAsync(typeof(Functions).GetMethod(nameof(Functions.SetToNull)));
+            var item = (Item)client._dict["SetToNull"];
+            Assert.Equal(null, item);
 
             // Modifying in-place
-            {
-                host.GetJobHost().Call(typeof(Functions).GetMethod(nameof(Functions.ModifyInPlace)));
-
-                var item = (Item)client._dict["ModifyInPlace"];
-                Assert.Equal(124, item.Value);
-            }
+            await host.GetJobHost().CallAsync(typeof(Functions).GetMethod(nameof(Functions.ModifyInPlace)));
+            item = (Item)client._dict["ModifyInPlace"];
+            Assert.Equal(124, item.Value);
         }
     }
 

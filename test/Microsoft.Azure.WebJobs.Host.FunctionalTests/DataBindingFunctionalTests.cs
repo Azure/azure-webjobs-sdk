@@ -52,17 +52,17 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Data
         }
 
         [Fact]
-        public void ParameterBindings_WithNullableParameters_CanInvoke()
+        public async Task ParameterBindings_WithNullableParameters_CanInvoke()
         {
             // Arrange
             using (var host = JobHostFactory.Create<TestFunctions>())
             {
                 MethodInfo method = typeof(TestFunctions).GetMethod("ParameterBindings");
                 TestFunctions.Result = null;
-                host.Call(method, new { a = 123, b = default(int?), c = "Testing" });
+                await host.CallAsync(method, new { a = 123, b = default(int?), c = "Testing" });
                 Assert.Equal("123Testing", TestFunctions.Result);
 
-                host.Call(method, new { a = 123, b = default(int?), c = (string)null });
+                await host.CallAsync(method, new { a = 123, b = default(int?), c = (string)null });
                 Assert.Equal("123", TestFunctions.Result);
             }
         }

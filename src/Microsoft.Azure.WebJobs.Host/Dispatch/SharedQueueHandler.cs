@@ -28,12 +28,12 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ISharedContextProvider _sharedContextProvider;
-        private readonly ILoadBalancerQueue _storageServices;
+        private readonly ILoadBalancerQueue _queueFactory;
 
         private Exception _initializationEx; // delay initialization error until consumer showed up
         private SharedQueueExecutor _triggerExecutor;
         private State _state;
-        private IListener _sharedQueuelistener; // QueueListener
+        private IListener _sharedQueuelistener;
         private IAsyncCollector<QueueMessage> _sharedQueueWriter;
 
         public SharedQueueHandler(
@@ -41,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
                 IWebJobsExceptionHandler exceptionHandler,
                 ILoggerFactory loggerFactory,
                 ISharedContextProvider sharedContextProvider,
-                ILoadBalancerQueue storageServices
+                ILoadBalancerQueue queueFactory
                 )
         {            
             _hostIdProvider = hostIdProvider;
@@ -49,7 +49,7 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
             _loggerFactory = loggerFactory;
             _sharedContextProvider = sharedContextProvider;
             _state = State.Created;
-            _storageServices = storageServices;
+            _queueFactory = queueFactory;
         }
 
         // this is used to prevent illegal call sequence
@@ -107,9 +107,9 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
                 var sharedPoisonQueue = HostQueueNames.GetHostSharedPoisonQueueName(hostId);
 
                 // queueWatcher will update queueListener's polling interval when queueWriter performes an enqueue operation
-                _sharedQueueWriter = _storageServices.GetQueueWriter<QueueMessage>(sharedQueue);
+                _sharedQueueWriter = _queueFactory.GetQueueWriter<QueueMessage>(sharedQueue);
                                 
-                _sharedQueuelistener = _storageServices.CreateQueueListenr(sharedQueue, sharedPoisonQueue, _triggerExecutor.ExecuteAsync);
+                _sharedQueuelistener = _queueFactory.CreateQueueListenr(sharedQueue, sharedPoisonQueue, _triggerExecutor.ExecuteAsync);
             }
             catch (Exception ex)
             {

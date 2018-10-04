@@ -12,6 +12,7 @@ using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -20,8 +21,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
 {
     public class HostListenerFactoryTests
     {
+        private readonly IJobActivator _jobActivator;
+
         public HostListenerFactoryTests()
         {
+            var hostBuilder = new HostBuilder();
+            var host = hostBuilder.Build();
+            var serviceProvider = (IServiceProvider)host.Services.GetService(typeof(IServiceProvider));
+            _jobActivator = new DefaultJobActivator(serviceProvider);
+
             DisableProvider_Static.Method = null;
             DisableProvider_Instance.Method = null;
         }
@@ -52,13 +60,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             // create a bunch of function definitions that are disabled
             List<FunctionDefinition> functions = new List<FunctionDefinition>();
             var method = jobType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Static);
-            FunctionDescriptor descriptor = FunctionIndexer.FromMethod(method, new DefaultJobActivator());
+            FunctionDescriptor descriptor = FunctionIndexer.FromMethod(method, _jobActivator);
             FunctionDefinition definition = new FunctionDefinition(descriptor, mockInstanceFactory.Object, mockListenerFactory.Object);
             functions.Add(definition);
 
             // Create the composite listener - this will fail if any of the
             // function definitions indicate that they are not disabled
-            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, new DefaultJobActivator(), null, loggerFactory);
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory);
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 
             string expectedMessage = $"Function '{descriptor.ShortName}' is disabled";
@@ -77,12 +85,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
         {
             Assert.Null(DisableProvider_Static.Method);
             MethodInfo method = typeof(Functions1).GetMethod("DisabledAtMethodLevel_CustomType_Static", BindingFlags.Public | BindingFlags.Static);
-            HostListenerFactory.IsDisabledByProvider(typeof(DisableProvider_Static), method, new DefaultJobActivator());
+            HostListenerFactory.IsDisabledByProvider(typeof(DisableProvider_Static), method, _jobActivator);
             Assert.Same(method, DisableProvider_Static.Method);
 
             Assert.Null(DisableProvider_Instance.Method);
             method = typeof(Functions1).GetMethod("DisabledAtMethodLevel_CustomType_Static", BindingFlags.Public | BindingFlags.Static);
-            HostListenerFactory.IsDisabledByProvider(typeof(DisableProvider_Instance), method, new DefaultJobActivator());
+            HostListenerFactory.IsDisabledByProvider(typeof(DisableProvider_Instance), method, _jobActivator);
             Assert.Same(method, DisableProvider_Static.Method);
         }
 
@@ -94,7 +102,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             MethodInfo method = typeof(Functions1).GetMethod("DisabledAtMethodLevel_CustomType_Static", BindingFlags.Public | BindingFlags.Static);
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
             {
-                HostListenerFactory.IsDisabledByProvider(providerType, method, new DefaultJobActivator());
+                HostListenerFactory.IsDisabledByProvider(providerType, method, _jobActivator);
             });
             Assert.Equal(string.Format("Type '{0}' must declare a method 'IsDisabled' returning bool and taking a single parameter of Type MethodInfo.", providerType.Name), ex.Message);
         }

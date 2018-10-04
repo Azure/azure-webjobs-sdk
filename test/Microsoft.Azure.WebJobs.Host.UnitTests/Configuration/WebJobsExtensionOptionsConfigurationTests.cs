@@ -1,11 +1,9 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host.Configuration;
-using Microsoft.Extensions.Configuration;
-using System;
 using System.Collections.Generic;
-using System.Text;
+using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Configuration
@@ -68,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Configuration
             var config = new ConfigurationBuilder()
                 .AddInMemoryCollection(configValues);
 
-            var optionsConfig = new WebJobsExtensionOptionsConfiguration<TOptions>(config.Build(), extensionName, (s, o) => s.Bind(o));
+            var optionsConfig = new WebJobsExtensionOptionsConfiguration<TOptions>(config.Build(), extensionName, (s, p, o) => s.GetSection(p).Bind(o));
             var options = new TOptions();
 
             // Act

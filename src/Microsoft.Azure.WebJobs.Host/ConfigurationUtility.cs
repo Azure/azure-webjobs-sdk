@@ -2,12 +2,11 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Linq;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Configuration.EnvironmentVariables;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
+    [Obsolete("Use IConfiguration directly")]
     internal static class ConfigurationUtility
     {
         private static Func<IConfiguration> _configurationFactory = BuildConfiguration;

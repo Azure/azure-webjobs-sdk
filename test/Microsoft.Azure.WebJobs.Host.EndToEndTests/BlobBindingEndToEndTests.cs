@@ -12,7 +12,6 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json;
@@ -355,7 +354,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [NoAutomaticTrigger]
-        public async static Task CloudBlobDirectoryBinding(
+        public static async Task CloudBlobDirectoryBinding(
             [Blob(HierarchicalBlobContainerName + "/sub")] CloudBlobDirectory directory)
         {
             var directoryItems = await directory.ListBlobsSegmentedAsync(null);
@@ -392,7 +391,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [NoAutomaticTrigger]
-        public async static Task IEnumerableCloudBlockBlobBinding_WithPrefixFilter(
+        public static async Task IEnumerableCloudBlockBlobBinding_WithPrefixFilter(
             [Blob(ContainerName + "/blo")] IEnumerable<CloudBlockBlob> blobs)
         {
             foreach (var blob in blobs)
@@ -411,7 +410,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [NoAutomaticTrigger]
-        public async static Task IEnumerableCloudBlockBlobBinding_WithPrefixFilter_HierarchicalBlobs(
+        public static async Task IEnumerableCloudBlockBlobBinding_WithPrefixFilter_HierarchicalBlobs(
             [Blob(HierarchicalBlobContainerName + "/sub/bl")] IEnumerable<CloudBlockBlob> blobs)
         {
             foreach (var blob in blobs)
@@ -426,7 +425,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         // sub directries, blobs within those sub directories are returned. Users can bind
         // to CloudBlobDirectory if they want to operate on directories.
         [NoAutomaticTrigger]
-        public async static Task IEnumerableCloudBlockBlobBinding_WithPrefixFilter_HierarchicalBlobs_UsesFlatBlobListing(
+        public static async Task IEnumerableCloudBlockBlobBinding_WithPrefixFilter_HierarchicalBlobs_UsesFlatBlobListing(
             [Blob(HierarchicalBlobContainerName + "/sub")] IEnumerable<CloudBlockBlob> blobs)
         {
             foreach (var blob in blobs)
@@ -438,7 +437,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [NoAutomaticTrigger]
-        public async static Task IEnumerableCloudBlockBlobBinding_WithModelBinding(
+        public static async Task IEnumerableCloudBlockBlobBinding_WithModelBinding(
             [QueueTrigger("testqueue")] TestPoco poco,
             [Blob("{A}/{B}ob")] IEnumerable<CloudBlockBlob> blobs)
         {
@@ -451,7 +450,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [NoAutomaticTrigger]
-        public async static Task IEnumerableCloudPageBlobBinding(
+        public static async Task IEnumerableCloudPageBlobBinding(
             [Blob(PageBlobContainerName)] IEnumerable<CloudPageBlob> blobs)
         {
             foreach (var blob in blobs)
@@ -465,7 +464,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [NoAutomaticTrigger]
-        public async static Task IEnumerableCloudAppendBlobBinding(
+        public static async Task IEnumerableCloudAppendBlobBinding(
             [Blob(AppendBlobContainerName)] IEnumerable<CloudAppendBlob> blobs)
         {
             foreach (var blob in blobs)
@@ -827,7 +826,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await Host.StopAsync();
 
                 // $$$ reenalbe this 
-                // VerifyLockState("WebJobs.Internal.Blobs.Listener", LeaseState.Available, LeaseStatus.Unlocked).Wait();
+                VerifyLockState("WebJobs.Internal.Blobs.Listener", LeaseState.Available, LeaseStatus.Unlocked).Wait();
 
                 CloudBlobClient blobClient = StorageAccount.CreateCloudBlobClient();
                 foreach (var testContainer in (await blobClient.ListContainersSegmentedAsync(TestArtifactPrefix, null)).Results)

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,6 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host
     /// Defines a filter that will be called as part of the function invocation pipeline
     /// immediately before and after the job function is invoked.
     /// </summary>
+    [Obsolete("Filters is in preview and there may be breaking changes in this area.")]
     public interface IFunctionInvocationFilter : IFunctionFilter
     {
         /// <summary>

@@ -14,7 +14,6 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
 {
-#if false // $$$ Is this just testing the test?
     public class StorageBlobContainerExtensionsTests
     {
         [Theory]
@@ -22,15 +21,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
         [InlineData(30000)]
         public async Task ListBlobsAsync_FollowsContinuationTokensToEnd(int blobCount)
         {
-            Mock<IStorageBlobContainer> mockContainer = new Mock<IStorageBlobContainer>(MockBehavior.Strict);
+            Mock<CloudBlobContainer> mockContainer = new Mock<CloudBlobContainer>(MockBehavior.Strict, new Uri("https://fakeaddress"));
 
             int maxResults = 5000;
-            List<IStorageListBlobItem> blobs = GetMockBlobs(blobCount);
+            List<IListBlobItem> blobs = GetMockBlobs(blobCount);
             int numPages = (int)Math.Ceiling(((decimal)blobCount / maxResults));
 
             // create the test data pages with continuation tokens
-            List<IStorageBlobResultSegment> blobSegments = new List<IStorageBlobResultSegment>();
-            IStorageBlobResultSegment initialSegement = null;
+            List<BlobResultSegment> blobSegments = new List<BlobResultSegment>();
+            BlobResultSegment initialSegement = null;
             for (int i = 0; i < numPages; i++)
             {
                 BlobContinuationToken continuationToken = null;
@@ -43,23 +42,23 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
                     };
                 }
 
-                Mock<IStorageBlobResultSegment> mockSegment = new Mock<IStorageBlobResultSegment>(MockBehavior.Strict);
-                mockSegment.SetupGet(p => p.Results).Returns(blobs.Skip(i * maxResults).Take(maxResults).ToArray());
-                mockSegment.SetupGet(p => p.ContinuationToken).Returns(continuationToken);
+                BlobResultSegment segment = new BlobResultSegment(
+                    blobs.Skip(i * maxResults).Take(maxResults).ToArray(),
+                    continuationToken);
 
                 if (i == 0)
                 {
-                    initialSegement = mockSegment.Object;
+                    initialSegement = segment;
                 }
                 else
                 {
-                    blobSegments.Add(mockSegment.Object);
+                    blobSegments.Add(segment);
                 }
             }
 
             // Mock the List function to return the correct blob page
             HashSet<BlobContinuationToken> seenTokens = new HashSet<BlobContinuationToken>();
-            IStorageBlobResultSegment resultSegment = null;
+            BlobResultSegment resultSegment = null;
             mockContainer.Setup(p => p.ListBlobsSegmentedAsync(null, true, BlobListingDetails.None, null, It.IsAny<BlobContinuationToken>(), null, null, CancellationToken.None))
                 .Callback<string, bool, BlobListingDetails, int?, BlobContinuationToken, BlobRequestOptions, OperationContext, CancellationToken>(
                     (prefix, useFlatBlobListing, blobListingDetails, maxResultsValue, currentToken, options, operationContext, cancellationToken) =>
@@ -81,18 +80,25 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
                     })
                 .Returns(() => { return Task.FromResult(resultSegment); });
 
-            IEnumerable<IStorageListBlobItem> results = await mockContainer.Object.ListBlobsAsync(null, true, CancellationToken.None);
+            IEnumerable<IListBlobItem> results = await mockContainer.Object.ListBlobsAsync(null, true, CancellationToken.None);
 
             Assert.Equal(blobCount, results.Count());
         }
 
-        private class FakeBlobItem : IStorageListBlobItem
+        private class FakeBlobItem : IListBlobItem
         {
+            public Uri Uri => throw new NotImplementedException();
+
+            public StorageUri StorageUri => throw new NotImplementedException();
+
+            public CloudBlobDirectory Parent => throw new NotImplementedException();
+
+            public CloudBlobContainer Container => throw new NotImplementedException();
         }
 
-        private List<IStorageListBlobItem> GetMockBlobs(int count)
+        private List<IListBlobItem> GetMockBlobs(int count)
         {
-            List<IStorageListBlobItem> blobs = new List<IStorageListBlobItem>();
+            List<IListBlobItem> blobs = new List<IListBlobItem>();
             for (int i = 0; i < count; i++)
             {
                 blobs.Add(new FakeBlobItem());
@@ -100,5 +106,4 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             return blobs;
         }
     }
-#endif
 }

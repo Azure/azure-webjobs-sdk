@@ -14,6 +14,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings.Invoke;
 using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Azure.WebJobs.Host.Properties;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.Logging;
@@ -269,8 +270,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                     if (triggerBinding != null && !hasNoAutomaticTriggerAttribute)
                     {
                         throw new InvalidOperationException(
-                            string.Format(Constants.UnableToBindParameterFormat,
-                            parameter.Name, parameter.ParameterType.Name, Constants.ExtensionInitializationMessage));
+                            string.Format(Resource.UnableToBindParameterFormat,
+                            parameter.Name, parameter.ParameterType.Name, Resource.ExtensionInitializationMessage));
                     }
                     else
                     {
@@ -282,8 +283,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                             // exception when we can't bind it. Instead, save this exception for later once we determine
                             // whether or not it is an SDK function.
                             invalidInvokeBindingException = new InvalidOperationException(
-                                string.Format(Constants.UnableToBindParameterFormat,
-                                parameter.Name, parameter.ParameterType.Name, Constants.ExtensionInitializationMessage));
+                                string.Format(Resource.UnableToBindParameterFormat,
+                                parameter.Name, parameter.ParameterType.Name, Resource.ExtensionInitializationMessage));
                         }
                     }
                 }

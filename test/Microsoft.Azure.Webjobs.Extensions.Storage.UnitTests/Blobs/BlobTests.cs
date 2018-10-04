@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public async Task Blob_IfBoundToCloudBlockBlob_BindsAndCreatesContainerButNotBlob()
         {
             // Act
-            var account = new XFakeStorageAccount();
+            var account = new FakeStorageAccount();
 
             var prog = new BindToCloudBlockBlobProgram();
             IHost host = new HostBuilder()
@@ -60,7 +60,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await triggerQueue.AddMessageAsync(new CloudQueueMessage(expectedContent));
 
             // Act
-            RunTrigger(account, typeof(BindToTextWriterProgram));
+            await RunTrigger(account, typeof(BindToTextWriterProgram));
 
             // Assert
             CloudBlobContainer container = GetContainerReference(account, ContainerName);
@@ -73,7 +73,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         private static StorageAccount CreateFakeStorageAccount()
         {
-            return new XFakeStorageAccount();         
+            return new FakeStorageAccount();         
         }        
 
         private static CloudQueue CreateQueue(StorageAccount account, string queueName)
@@ -90,15 +90,15 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             return client.GetContainerReference(ContainerName);
         }
 
-        private static void RunTrigger(StorageAccount account, Type programType)
+        private static async Task RunTrigger(StorageAccount account, Type programType)
         {
-            FunctionalTest.RunTrigger(account, programType);
+            await FunctionalTest.RunTriggerAsync(account, programType);
         }
 
-        private static TResult RunTrigger<TResult>(StorageAccount account, Type programType,
+        private static async Task<TResult> RunTrigger<TResult>(StorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
-            return FunctionalTest.RunTrigger<TResult>(account, programType, setTaskSource);
+            return await FunctionalTest.RunTriggerAsync<TResult>(account, programType, setTaskSource);
         }
 
         private class BindToCloudBlockBlobProgram

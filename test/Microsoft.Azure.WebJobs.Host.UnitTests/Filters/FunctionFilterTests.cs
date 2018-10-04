@@ -264,13 +264,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         // Verify that all filters share the same instance of the property bag. 
         // Verify the filters can access the arguments. 
         [Fact]
-        public void TestPropertyBag()
+        public async Task TestPropertyBag()
         {
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost<MyProg6>()
                 .Build();
 
-            host.GetJobHost<MyProg6>().Call(nameof(MyProg6.Foo), new { myarg = MyProg6.ArgValue });
+            await host.GetJobHost<MyProg6>().CallAsync(nameof(MyProg6.Foo), new { myarg = MyProg6.ArgValue });
 
             Assert.Equal("[Pre-Instance][Pre-M1][Post-M1][Post-Instance]", MyProg6._sb.ToString());
         }

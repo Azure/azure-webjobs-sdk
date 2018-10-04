@@ -4,6 +4,7 @@
 using System;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
+using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Configuration;
 using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Executors;
@@ -13,10 +14,11 @@ using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs
 {
@@ -25,6 +27,7 @@ namespace Microsoft.Azure.WebJobs
     /// </summary>
     public static class WebJobsServiceCollectionExtensions
     {
+        private const string SingletonConfigSectionName = "Singleton";
 
         /// <summary>
         /// Adds the WebJobs services to the provided <see cref="IServiceCollection"/>.
@@ -70,10 +73,10 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IJobHostMetadataProvider>(p => p.GetService<IJobHostMetadataProviderFactory>().Create());
             services.TryAddSingleton<IHostIdProvider, DefaultHostIdProvider>();
             services.TryAddSingleton<IDashboardLoggingSetup, NullDashboardLoggingSetup>(); 
-            services.TryAddSingleton<IFunctionOutputLogger, ConsoleFunctionOutputLogger>();
+            services.TryAddSingleton<IFunctionOutputLogger, NullFunctionOutputLogger>();
             services.TryAddSingleton<IFunctionInstanceLogger, FunctionInstanceLogger>();
             services.TryAddSingleton<IHostInstanceLogger, NullHostInstanceLogger>();
-            services.TryAddSingleton<IDistributedLockManager, InMemorySingletonManager>();
+            services.TryAddSingleton<IDistributedLockManager, InMemoryDistributedLockManager>();
 
             // $$$ Can we remove these completely? 
             services.TryAddSingleton<DefaultTriggerBindingFactory>();
@@ -96,6 +99,20 @@ namespace Microsoft.Azure.WebJobs
 
             // Configuration
             services.AddSingleton(typeof(IWebJobsExtensionConfiguration<>), typeof(WebJobsExtensionConfiguration<>));
+
+            services.AddOptions<SingletonOptions>()
+                .Configure<IHostingEnvironment>((options, env) =>
+                {
+                    if (env.IsDevelopment())
+                    {
+                        options.ListenerLockPeriod = TimeSpan.FromSeconds(15);
+                    }
+                })
+                .Configure<IConfiguration>((options, config) =>
+                {
+                    var section = config.GetWebJobsRootConfiguration().GetSection(SingletonConfigSectionName);
+                    section.Bind(options);
+                });
 
             var builder = new WebJobsBuilder(services);
             builder.AddBuiltInBindings();

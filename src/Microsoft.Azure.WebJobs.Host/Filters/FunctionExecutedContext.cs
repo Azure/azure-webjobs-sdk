@@ -11,6 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host
     /// <summary>
     /// Context class for <see cref="IFunctionInvocationFilter.OnExecutedAsync(FunctionExecutedContext, System.Threading.CancellationToken)"/>>.
     /// </summary>
+    [Obsolete("Filters is in preview and there may be breaking changes in this area.")]
     public class FunctionExecutedContext : FunctionInvocationContext
     {
         /// <summary>

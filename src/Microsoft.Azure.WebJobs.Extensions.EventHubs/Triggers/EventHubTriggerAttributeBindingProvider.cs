@@ -4,13 +4,15 @@
 using System;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Triggers;
-using Microsoft.Azure.EventHubs;
-using Microsoft.Extensions.Logging;
 using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.EventHubs
 {
@@ -18,18 +20,21 @@ namespace Microsoft.Azure.WebJobs.EventHubs
     {
         private readonly INameResolver _nameResolver;
         private readonly ILogger _logger;
-        private readonly EventHubConfiguration _eventHubConfig;
+        private readonly IConfiguration _config;
+        private readonly IOptions<EventHubOptions> _options;
         private readonly IConverterManager _converterManager;
 
         public EventHubTriggerAttributeBindingProvider(
+            IConfiguration configuration,
             INameResolver nameResolver,
             IConverterManager converterManager,
-            EventHubConfiguration eventHubConfig,
+            IOptions<EventHubOptions> options,
             ILoggerFactory loggerFactory)
         {
+            _config = configuration;
             _nameResolver = nameResolver;
             _converterManager = converterManager;
-            _eventHubConfig = eventHubConfig;
+            _options = options;
             _logger = loggerFactory?.CreateLogger(LogCategories.CreateTriggerCategory("EventHub"));
         }
 
@@ -56,20 +61,21 @@ namespace Microsoft.Azure.WebJobs.EventHubs
 
             if (!string.IsNullOrWhiteSpace(attribute.Connection))
             {
-                _eventHubConfig.AddReceiver(resolvedEventHubName, _nameResolver.Resolve(attribute.Connection));
+                var connectionString = _config.GetConnectionStringOrSetting(attribute.Connection);
+                _options.Value.AddReceiver(resolvedEventHubName, connectionString);
             }
-            
-            var eventHostListener = _eventHubConfig.GetEventProcessorHost(resolvedEventHubName, resolvedConsumerGroup);
+
+            var eventHostListener = _options.Value.GetEventProcessorHost(_config, resolvedEventHubName, resolvedConsumerGroup);
 
             Func<ListenerFactoryContext, bool, Task<IListener>> createListener =
              (factoryContext, singleDispatch) =>
              {
-                 IListener listener = new EventHubListener(factoryContext.Executor, eventHostListener, singleDispatch, _eventHubConfig, _logger);
+                 IListener listener = new EventHubListener(factoryContext.Executor, eventHostListener, singleDispatch, _options.Value, _logger);
                  return Task.FromResult(listener);
              };
 
             ITriggerBinding binding = BindingFactory.GetTriggerBinding(new EventHubTriggerBindingStrategy(), parameter, _converterManager, createListener);
-            return Task.FromResult<ITriggerBinding>(binding);         
+            return Task.FromResult<ITriggerBinding>(binding);
         }
     } // end class
 }

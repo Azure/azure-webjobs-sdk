@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using Microsoft.Azure.WebJobs.Host.Converters;
 using Microsoft.Azure.WebJobs.Host.Tables;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.WindowsAzure.Storage.Table;
@@ -1311,13 +1310,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Tables
                 get { return null; }
                 set { }
             }
-        }
-
-        //private class PocoWithPartitionKeyAndOtherProperty
-        //{
-        //    public string PartitionKey { get; set; }
-
-        //    public int? OtherProperty { get; set; }
-        //}
+        }       
     }
 }

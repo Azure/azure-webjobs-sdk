@@ -14,6 +14,7 @@ using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Xunit;
 using static Microsoft.Azure.EventHubs.EventData;
 
@@ -173,11 +174,11 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
         [InlineData("path2", "Endpoint=sb://test89123-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey;EntityPath=path2")]
         public void EntityPathInConnectionString(string expectedPathName, string connectionString)
         {
-            EventHubConfiguration config = new EventHubConfiguration();
+            EventHubOptions options = new EventHubOptions();
 
             // Test sender
-            config.AddSender("k1", connectionString);
-            var client = config.GetEventHubClient("k1", null);
+            options.AddSender("k1", connectionString);
+            var client = options.GetEventHubClient("k1", null);
             Assert.Equal(expectedPathName, client.EventHubName);
         }
 
@@ -187,8 +188,8 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
         [InlineData("path2", "Endpoint=sb://test89123-ns-x.servicebus.windows.net/;SharedAccessKeyName=ReceiveRule;SharedAccessKey=secretkey;EntityPath=path2")]
         public void GetEventHubClient_AddsConnection(string expectedPathName, string connectionString)
         {
-            EventHubConfiguration config = new EventHubConfiguration();
-            var client = config.GetEventHubClient("k1", connectionString);
+            EventHubOptions options = new EventHubOptions();
+            var client = options.GetEventHubClient("k1", connectionString);
             Assert.Equal(expectedPathName, client.EventHubName);
         }
 
@@ -200,7 +201,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
         [InlineData("A:", "Cd", "cd/a:3A/")]
         public void EventHubBlobPrefix(string eventHubName, string serviceBusNamespace, string expected)
         {
-            string actual = EventHubConfiguration.GetBlobPrefix(eventHubName, serviceBusNamespace);
+            string actual = EventHubOptions.GetBlobPrefix(eventHubName, serviceBusNamespace);
             Assert.Equal(expected, actual);
         }
 
@@ -210,9 +211,9 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
         [InlineData(200)]
         public void EventHubBatchCheckpointFrequency(int num)
         {
-            var config = new EventHubConfiguration();
-            config.BatchCheckpointFrequency = num;
-            Assert.Equal(num, config.BatchCheckpointFrequency);
+            var options = new EventHubOptions();
+            options.BatchCheckpointFrequency = num;
+            Assert.Equal(num, options.BatchCheckpointFrequency);
         }
 
         [Theory]
@@ -220,8 +221,8 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
         [InlineData(0)]
         public void EventHubBatchCheckpointFrequency_Throws(int num)
         {
-            var config = new EventHubConfiguration();
-            Assert.Throws<InvalidOperationException>(() => config.BatchCheckpointFrequency = num);
+            var options = new EventHubOptions();
+            Assert.Throws<InvalidOperationException>(() => options.BatchCheckpointFrequency = num);
         }
 
         [Fact]
@@ -237,8 +238,8 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
                 {
                     c.AddInMemoryCollection(new Dictionary<string, string>
                     {
-                        { "AzureWebJobs:extensions:EventHubs:MaxBatchSize", "100" },
-                        { "AzureWebJobs:extensions:EventHubs:PrefetchCount", "200" },
+                        { "AzureWebJobs:extensions:EventHubs:EventProcessorOptions:MaxBatchSize", "100" },
+                        { "AzureWebJobs:extensions:EventHubs:EventProcessorOptions:PrefetchCount", "200" },
                         { "AzureWebJobs:extensions:EventHubs:BatchCheckpointFrequency", "5" },
                     });
                 })
@@ -246,12 +247,12 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
 
             // Force the ExtensionRegistryFactory to run, which will initialize the EventHubConfiguration.
             var extensionRegistry = host.Services.GetService<IExtensionRegistry>();
-            var eventHubConfig = host.Services.GetService<EventHubConfiguration>();
+            var options = host.Services.GetService<IOptions<EventHubOptions>>().Value;
 
-            var options = eventHubConfig.GetOptions();
-            Assert.Equal(100, options.MaxBatchSize);
-            Assert.Equal(200, options.PrefetchCount);
-            Assert.Equal(5, eventHubConfig.BatchCheckpointFrequency);
+            var eventProcessorOptions = options.EventProcessorOptions;
+            Assert.Equal(100, eventProcessorOptions.MaxBatchSize);
+            Assert.Equal(200, eventProcessorOptions.PrefetchCount);
+            Assert.Equal(5, options.BatchCheckpointFrequency);
         }
 
         internal static PartitionContext GetPartitionContext()

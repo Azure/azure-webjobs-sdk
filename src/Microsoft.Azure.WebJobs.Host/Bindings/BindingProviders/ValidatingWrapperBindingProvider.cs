@@ -4,6 +4,7 @@
 using System;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -14,12 +15,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     {
         private readonly Action<TAttribute, Type> _validator;
         private readonly IBindingProvider _inner;
+        private readonly IConfiguration _configuration;
         private readonly INameResolver _nameResolver;
 
-        public ValidatingWrapperBindingProvider(Action<TAttribute, Type> validator, INameResolver nameResolver, IBindingProvider inner)
+        public ValidatingWrapperBindingProvider(Action<TAttribute, Type> validator, IConfiguration configuration, INameResolver nameResolver, IBindingProvider inner)
         {
             _validator = validator;
             _inner = inner;
+            _configuration = configuration;
             _nameResolver = nameResolver;
         }
 
@@ -39,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 Type parameterType = context.Parameter.ParameterType;
                 var attr = context.Parameter.GetCustomAttribute<TAttribute>();
 
-                var cloner = new AttributeCloner<TAttribute>(attr, context.BindingDataContract, _nameResolver);
+                var cloner = new AttributeCloner<TAttribute>(attr, context.BindingDataContract, _configuration, _nameResolver);
                 var attrNameResolved = cloner.GetNameResolvedAttribute();
                 _validator(attrNameResolved, parameterType);
             }

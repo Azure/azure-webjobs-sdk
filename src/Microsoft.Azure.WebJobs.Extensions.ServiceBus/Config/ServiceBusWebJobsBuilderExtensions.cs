@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.Azure.WebJobs.ServiceBus.Config;
@@ -14,11 +15,37 @@ namespace Microsoft.Extensions.Hosting
     {
         public static IWebJobsBuilder AddServiceBus(this IWebJobsBuilder builder)
         {
+            if (builder == null)
+            {
+                throw new ArgumentNullException(nameof(builder));
+            }
+
+            builder.AddServiceBus(p => { });
+
+            return builder;
+        }
+
+        public static IWebJobsBuilder AddServiceBus(this IWebJobsBuilder builder, Action<ServiceBusOptions> configure)
+        {
+            if (builder == null)
+            {
+                throw new ArgumentNullException(nameof(builder));
+            }
+
+            if (configure == null)
+            {
+                throw new ArgumentNullException(nameof(configure));
+            }
+
             builder.AddExtension<ServiceBusExtensionConfigProvider>()
-                .ConfigureOptions<ServiceBusOptions>((config, options) =>
+                .ConfigureOptions<ServiceBusOptions>((config, path, options) =>
                 {
-                    config.Bind(options);
-                    options.ConnectionString = config.GetConnectionString("Primary");
+                    options.ConnectionString = config.GetConnectionString(Constants.DefaultConnectionStringName);
+
+                    IConfigurationSection section = config.GetSection(path);
+                    section.Bind(options);
+
+                    configure(options);
                 });
 
             builder.Services.TryAddSingleton<MessagingProvider>();

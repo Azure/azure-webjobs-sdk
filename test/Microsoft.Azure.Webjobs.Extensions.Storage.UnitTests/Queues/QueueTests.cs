@@ -7,12 +7,11 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Properties;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage.Queue;
-using Moq;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -44,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 })
                 .Build();
 
-            host.GetJobHost().Call<GenericProgram<ICollector<string>>>("Func");
+            await host.GetJobHost().CallAsync<GenericProgram<ICollector<string>>>("Func");
 
             // Now peek at messages. 
             var queue = account.CreateCloudQueueClient().GetQueueReference(QueueName);
@@ -78,7 +77,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             string errorMessage = GetErrorMessageForBadQueueName(ProgramWithStaticBadName.BadQueueName, "name");
 
-            TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<ProgramWithStaticBadName>("Func"), "ProgramWithStaticBadName.Func", errorMessage);
+            TestHelpers.AssertIndexingError(() => host.GetJobHost().CallAsync<ProgramWithStaticBadName>("Func").GetAwaiter().GetResult(), "ProgramWithStaticBadName.Func", errorMessage);
         }
 
         private static string GetErrorMessageForBadQueueName(string value, string parameterName)
@@ -100,7 +99,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void Catch_Bad_Name_At_Runtime()
+        public async Task Catch_Bad_Name_At_Runtime()
         {
             var nameResolver = new FakeNameResolver().Add("key", "1");
             IHost host = new HostBuilder()
@@ -114,11 +113,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                })
                .Build();
 
-            host.GetJobHost().Call<ProgramWithVariableQueueName>("Func", new { x = "1" }); // succeeds with valid char
+            await host.GetJobHost().CallAsync<ProgramWithVariableQueueName>("Func", new { x = "1" }); // succeeds with valid char
 
             try
             {
-                host.GetJobHost().Call<ProgramWithVariableQueueName>("Func", new { x = "*" }); // produces an error pattern. 
+                await host.GetJobHost().CallAsync<ProgramWithVariableQueueName>("Func", new { x = "*" }); // produces an error pattern. 
                 Assert.False(true, "should have failed");
             }
             catch (FunctionInvocationException e)
@@ -132,7 +131,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         // The presence of { } defers validation until runtime. Even if there are illegal chars known at index time! 
         [Fact]
-        public void Catch_Bad_Name_At_Runtime_With_Illegal_Static_Chars()
+        public async Task Catch_Bad_Name_At_Runtime_With_Illegal_Static_Chars()
         {
             var nameResolver = new FakeNameResolver().Add("key", "$"); // Illegal
 
@@ -148,7 +147,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 .Build();
             try
             {
-                host.GetJobHost().Call<ProgramWithVariableQueueName>("Func", new { x = "1" }); // produces an error pattern. 
+                await host.GetJobHost().CallAsync<ProgramWithVariableQueueName>("Func", new { x = "1" }); // produces an error pattern. 
                 Assert.False(true, "should have failed");
             }
             catch (FunctionInvocationException e) // Not an index exception!
@@ -192,7 +191,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 .Build();
 
             var trigger = new ProgramWithTriggerAndBindingData.Poco { xyz = "abc" };
-            host.GetJobHost().Call<ProgramWithTriggerAndBindingData>("Func", new
+            await host.GetJobHost().CallAsync<ProgramWithTriggerAndBindingData>("Func", new
             {
                 triggers = new CloudQueueMessage(JsonConvert.SerializeObject(trigger))
             });
@@ -261,7 +260,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 }
             };
 
-            host.GetJobHost().Call<ProgramWithTriggerAndCompoundBindingData>("Func", new
+            await host.GetJobHost().CallAsync<ProgramWithTriggerAndCompoundBindingData>("Func", new
             {
                 triggers = new CloudQueueMessage(JsonConvert.SerializeObject(trigger))
             });
@@ -294,57 +293,55 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
         }
 
-#if false // $$$ enable 
         // Nice failure when no storage account is set
-        [Fact]
+        [Fact(Skip = "Re-enable when StorageAccountParser returns")]
         public void Fails_When_No_Storage_is_set()
         {
             // TODO: We shouldn't have to do this, but our default parser
             //       does not allow for null Storage/Dashboard.
-            var mockParser = new Mock<IStorageAccountParser>();
-            mockParser
-                .Setup(p => p.ParseAccount(null, It.IsAny<string>()))
-                .Returns<string>(null);
+            //var mockParser = new Mock<IStorageAccountParser>();
+            //mockParser
+            //    .Setup(p => p.ParseAccount(null, It.IsAny<string>()))
+            //    .Returns<string>(null);
 
-            // no storage account!
-            IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<ProgramSimple>()
-                .ConfigureServices(services =>
-                {
-                    services.AddSingleton<IStorageAccountParser>(mockParser.Object);
-                })
-                .ConfigureAppConfiguration(config =>
-                {
-                    config.AddInMemoryCollection(new Dictionary<string, string>
-                    {
-                        { "AzureWebJobsStorge", null },
-                        { "AzureWebJobsDashboard", null }
-                    });
-                })
-                .Build();
+            //// no storage account!
+            //IHost host = new HostBuilder()
+            //    .ConfigureDefaultTestHost<ProgramSimple>()
+            //    .ConfigureServices(services =>
+            //    {
+            //        services.AddSingleton<IStorageAccountParser>(mockParser.Object);
+            //    })
+            //    .ConfigureAppConfiguration(config =>
+            //    {
+            //        config.AddInMemoryCollection(new Dictionary<string, string>
+            //        {
+            //            { "AzureWebJobsStorge", null },
+            //            { "AzureWebJobsDashboard", null }
+            //        });
+            //    })
+            //    .Build();
 
-            string message = StorageAccountParser.FormatParseAccountErrorMessage(StorageAccountParseResult.MissingOrEmptyConnectionStringError, "Storage");
-            TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<ProgramSimple>("Func"), "ProgramSimple.Func", message);
+            //string message = StorageAccountParser.FormatParseAccountErrorMessage(StorageAccountParseResult.MissingOrEmptyConnectionStringError, "Storage");
+            //TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<ProgramSimple>("Func"), "ProgramSimple.Func", message);
         }
 
-        [Fact]
+        [Fact(Skip = "Re-enable when StorageAccountParser returns")]
         public void Sanitizes_Exception_If_Connection_String()
         {
-            // people accidentally use their connection string; we want to make sure we sanitize it
-            IHost host = new HostBuilder()
-                .ConfigureDefaultTestHost<ProgramSimple2>()
-                .Build();
+            //// people accidentally use their connection string; we want to make sure we sanitize it
+            //IHost host = new HostBuilder()
+            //    .ConfigureDefaultTestHost<ProgramSimple2>()
+            //    .Build();
 
-            string message = StorageAccountParser.FormatParseAccountErrorMessage(StorageAccountParseResult.MissingOrEmptyConnectionStringError, ProgramSimple2.ConnectionString);
+            //string message = StorageAccountParser.FormatParseAccountErrorMessage(StorageAccountParseResult.MissingOrEmptyConnectionStringError, ProgramSimple2.ConnectionString);
 
-            TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<ProgramSimple2>(nameof(ProgramSimple2.Func2)),
-                "ProgramSimple2.Func2", message);
+            //TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<ProgramSimple2>(nameof(ProgramSimple2.Func2)),
+            //    "ProgramSimple2.Func2", message);
 
-            Assert.DoesNotContain(ProgramSimple2.ConnectionString, message);
-            Assert.DoesNotContain("AzureWebJobs", message); // prefix should not be added
-            Assert.Contains("[Hidden Credential]", message);
+            //Assert.DoesNotContain(ProgramSimple2.ConnectionString, message);
+            //Assert.DoesNotContain("AzureWebJobs", message); // prefix should not be added
+            //Assert.Contains("[Hidden Credential]", message);
         }
-#endif 
 
         public class ProgramBadContract
         {
@@ -365,9 +362,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 })
                 .Build();
 
-            TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<ProgramBadContract>("Func"),
+            string expectedError = "Unable to resolve binding parameter 'xyz'. Binding expressions must map to either a value provided by the trigger or a property of the value the trigger is bound to, or must be a system binding expression (e.g. sys.randguid, sys.utcnow, etc.).";
+            TestHelpers.AssertIndexingError(() => host.GetJobHost().CallAsync<ProgramBadContract>("Func").GetAwaiter().GetResult(),
                 "ProgramBadContract.Func",
-                string.Format(CultureInfo.CurrentCulture, Constants.UnableToResolveBindingParameterFormat, "xyz"));
+                expectedError);
         }
 
         public class ProgramCantBindToObject
@@ -389,7 +387,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 })
                 .Build();
 
-            TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<ProgramCantBindToObject>("Func"),
+            TestHelpers.AssertIndexingError(() => host.GetJobHost().CallAsync<ProgramCantBindToObject>("Func").GetAwaiter().GetResult(),
                 "ProgramCantBindToObject.Func",
                 "Object element types are not supported.");
         }
@@ -421,7 +419,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 })
                 .Build();
 
-            TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<GenericProgram<T>>("Func"),
+            TestHelpers.AssertIndexingError(() => host.GetJobHost().CallAsync<GenericProgram<T>>("Func").GetAwaiter().GetResult(),
                 "GenericProgram`1.Func",
                 "Can't bind Queue to type '" + typeName + "'.");
         }
@@ -436,7 +434,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await triggerQueue.AddMessageAsync(new CloudQueueMessage("ignore"));
 
             // Act
-            CloudQueue result = RunTrigger<CloudQueue>(account, typeof(BindToCloudQueueProgram),
+            CloudQueue result = await RunTriggerAsync<CloudQueue>(account, typeof(BindToCloudQueueProgram),
                 (s) => BindToCloudQueueProgram.TaskSource = s);
 
             // Assert
@@ -457,7 +455,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await triggerQueue.AddMessageAsync(new CloudQueueMessage(expectedContent));
 
             // Act
-            RunTrigger<object>(account, typeof(BindToICollectorCloudQueueMessageProgram),
+            await RunTriggerAsync<object>(account, typeof(BindToICollectorCloudQueueMessageProgram),
                 (s) => BindToICollectorCloudQueueMessageProgram.TaskSource = s);
 
             // Assert
@@ -471,7 +469,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         private static StorageAccount CreateFakeStorageAccount()
         {
-            return new XFakeStorageAccount();
+            return new FakeStorageAccount();
         }
 
         private static async Task<CloudQueue> CreateQueue(CloudQueueClient client, string queueName)
@@ -481,10 +479,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             return queue;
         }
 
-        private static TResult RunTrigger<TResult>(StorageAccount account, Type programType,
+        private static async Task<TResult> RunTriggerAsync<TResult>(StorageAccount account, Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource)
         {
-            return FunctionalTest.RunTrigger<TResult>(account, programType, setTaskSource);
+            return await FunctionalTest.RunTriggerAsync<TResult>(account, programType, setTaskSource);
         }
 
         private class BindToCloudQueueProgram

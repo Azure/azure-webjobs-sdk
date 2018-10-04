@@ -5,10 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
@@ -18,7 +19,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
     {
         // $$$ Reconcile with TestJobHost.
 
-        internal static TResult RunTrigger<TResult>(
+        internal static async Task<TResult> RunTriggerAsync<TResult>(
             StorageAccount account,
             Type programType,
             Action<TaskCompletionSource<TResult>> setTaskSource,
@@ -34,6 +35,8 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                   builder.AddAzureStorage()
                       .UseStorage(account)
                       .ConfigureCatchFailures(src, signalOnFirst, ignoreFailureFunctions);
+
+                  builder.Services.AddSingleton<IConfigureOptions<QueuesOptions>, FakeQueuesOptionsSetup>();
               }, programType)
               .Build();
 
@@ -42,11 +45,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 using (var jobHost = host.GetJobHost())
                 {
                     // start listeners. One of them will set the completition task
-                    jobHost.Start();
+                    await jobHost.StartAsync();
 
                     var result = src.Task.AwaitWithTimeout(); // blocks
 
-                    jobHost.Stop();
+                    await jobHost.StopAsync();
 
                     return result;
                 }
@@ -71,10 +74,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         // Runs the first triggered function and then returns. 
         // Expected that this instance provided some side-effect (ie, wrote to storage)
         // that the caller can monitor.
-        internal static void RunTrigger(StorageAccount account, Type programType)
+        internal static async Task RunTriggerAsync(StorageAccount account, Type programType)
         {
             TaskCompletionSource<bool> src = new TaskCompletionSource<bool>();
-            RunTrigger<bool>(
+            await RunTriggerAsync<bool>(
                 account,
                 programType,
                 (x) => x = src,
@@ -86,11 +89,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             throw new NotImplementedException();
         }
 
-        internal static Exception RunTriggerFailure<TResult>(StorageAccount account, Type programType, Action<TaskCompletionSource<TResult>> setTaskSource)
+        internal static async Task<Exception> RunTriggerFailureAsync<TResult>(StorageAccount account, Type programType, Action<TaskCompletionSource<TResult>> setTaskSource)
         {
             try
             {
-                RunTrigger<TResult>(account, programType, setTaskSource);
+                await RunTriggerAsync<TResult>(account, programType, setTaskSource);
             }
             catch (Exception e)
             {
@@ -101,7 +104,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         // Call the method, and expect a failure. Return the exception. 
-        internal static Exception CallFailure(StorageAccount account, Type programType, MethodInfo methodInfo, object arguments)
+        internal static async Task<Exception> CallFailureAsync(StorageAccount account, Type programType, MethodInfo methodInfo, object arguments)
         {
             var host = new HostBuilder()
                 .ConfigureDefaultTestHost(b =>
@@ -115,7 +118,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             try
             {
-                jobHost.Call(methodInfo, arguments);
+                await jobHost.CallAsync(methodInfo, arguments);
             }
             catch (Exception e)
             {
@@ -125,7 +128,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             return null;
         }
 
-        internal static void Call(StorageAccount account, Type programType, MethodInfo methodInfo, object arguments, params Type[] customExtensions)
+        internal static async Task CallAsync(StorageAccount account, Type programType, MethodInfo methodInfo, object arguments, params Type[] customExtensions)
         {
             var host = new HostBuilder()
                 .ConfigureDefaultTestHost(b =>
@@ -141,10 +144,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 .Build();
 
             var jobHost = host.GetJobHost();
-            jobHost.Call(methodInfo, arguments);
+            await jobHost.CallAsync(methodInfo, arguments);
         }
 
-        internal static TResult Call<TResult>(StorageAccount account, Type programType, MethodInfo methodInfo, IDictionary<string, object> arguments, Action<TaskCompletionSource<TResult>> setTaskSource)
+        internal static async Task<TResult> CallAsync<TResult>(StorageAccount account, Type programType, MethodInfo methodInfo, IDictionary<string, object> arguments, Action<TaskCompletionSource<TResult>> setTaskSource)
         {
             TaskCompletionSource<TResult> src = new TaskCompletionSource<TResult>();
             setTaskSource(src);
@@ -158,7 +161,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
               .Build();
 
             var jobHost = host.GetJobHost();
-            jobHost.Call(methodInfo, arguments);
+            await jobHost.CallAsync(methodInfo, arguments);
 
             return src.Task.Result;
         }

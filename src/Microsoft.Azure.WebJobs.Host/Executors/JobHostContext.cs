@@ -9,8 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    // JobHostContext are the fields that a JobHost needs to operate at runtime. 
-    // This is created from a JobHostConfiguration. 
+    // $$$ Can this be made internal?
     public sealed class JobHostContext : IDisposable
     {
         private readonly IFunctionIndexLookup _functionLookup;

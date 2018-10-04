@@ -71,7 +71,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         {
             FunctionIndex index = new FunctionIndex();
             IBindingProvider bindingProvider = _bindingProviderFactory;
-            FunctionIndexer indexer = new FunctionIndexer(_triggerBindingProvider, bindingProvider, _activator, _executor, _extensions, _singletonManager, _loggerFactory, null, _sharedQueue, allowPartialHostStartup: _allowPartialHostStartup);
+            FunctionIndexer indexer = new FunctionIndexer(_triggerBindingProvider, bindingProvider, _activator, _executor, _extensions, _singletonManager, _loggerFactory, null, _sharedQueue, _defaultTimeout, _allowPartialHostStartup);
             IReadOnlyList<Type> types = _typeLocator.GetTypes();
 
             foreach (Type type in types)

@@ -70,7 +70,7 @@ namespace WebJobs.Host.Storage.Logging
                 // No auxillary logging. Logging interfaces are nops or in-memory.
                 _hostInstanceLogger = new NullHostInstanceLogger();
                 _functionInstanceLogger = functionLogger;
-                _functionOutputLogger = new ConsoleFunctionOutputLogger();
+                _functionOutputLogger = new NullFunctionOutputLogger();
             }
 
             _loggersSet = true;

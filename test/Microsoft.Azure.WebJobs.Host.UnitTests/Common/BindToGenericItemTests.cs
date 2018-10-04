@@ -24,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
         // Each of the TestConfigs below implement this. 
         interface ITest<TConfig>
         {
-            void Test(JobHost<TConfig> host);
+            Task Test(JobHost<TConfig> host);
         }
 
         // Simple case. 
@@ -44,9 +44,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 rule.BindToInput<AlphaType>(typeof(AlphaBuilder));
             }
 
-            public void Test(JobHost<ConfigConcreteTypeNoConverter> host)
+            public async Task Test(JobHost<ConfigConcreteTypeNoConverter> host)
             {
-                host.Call("Func", new { k = 1 });
+                await host.CallAsync("Func", new { k = 1 });
                 Assert.Equal("AlphaBuilder(1)", _log);
             }
 
@@ -70,15 +70,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
 
         public class ConfigTestDefaultToMethodName : BindingPathAttribute.Extension, ITest<ConfigTestDefaultToMethodName>
         {
-            public void Test(JobHost<ConfigTestDefaultToMethodName> host)
+            public async Task Test(JobHost<ConfigTestDefaultToMethodName> host)
             {
-                host.Call("Func", new { k = 1 });
+                await host.CallAsync("Func", new { k = 1 });
                 Assert.NotNull(_log);
 
-                host.Call("Func2", new { k = 1 });
+                await host.CallAsync("Func2", new { k = 1 });
                 Assert.Equal("Func2", _log);
 
-                host.Call("FuncRename", new { k = 1 });
+                await host.CallAsync("FuncRename", new { k = 1 });
                 Assert.Equal("newname", _log);
             }
 
@@ -134,12 +134,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 rule.BindToInput<OpenType>(typeof(GeneralBuilder<>));
             }
 
-            public void Test(JobHost<ConfigOpenTypeNoConverters> host)
+            public async Task Test(JobHost<ConfigOpenTypeNoConverters> host)
             {
-                host.Call("Func1", new { k = 1 });
+                await host.CallAsync("Func1", new { k = 1 });
                 Assert.Equal("GeneralBuilder_AlphaType(1)", _log);
 
-                host.Call("Func2", new { k = 2 });
+                await host.CallAsync("Func2", new { k = 2 });
                 Assert.Equal("GeneralBuilder_BetaType(2)", _log);
             }
 
@@ -175,12 +175,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 context.AddBindingRule<Test6Attribute>().BindToInput<AlphaType>(typeof(GeneralBuilder<>));
             }
 
-            public void Test(JobHost<ConfigWithConverters> host)
+            public async Task Test(JobHost<ConfigWithConverters> host)
             {
-                host.Call("Func1", new { k = 1 });
+                await host.CallAsync("Func1", new { k = 1 });
                 Assert.Equal("GeneralBuilder_AlphaType(1)", _log);
 
-                host.Call("Func2", new { k = 2 });
+                await host.CallAsync("Func2", new { k = 2 });
                 Assert.Equal("A2B(GeneralBuilder_AlphaType(2))", _log);
             }
 
@@ -216,12 +216,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 rule.BindToInput<BetaType>(typeof(BetaBuilder));
             }
 
-            public void Test(JobHost<ConfigMultipleRules> host)
+            public async Task Test(JobHost<ConfigMultipleRules> host)
             {
-                host.Call("Func", new { k = 1 });
+                await host.CallAsync("Func", new { k = 1 });
                 Assert.Equal("AlphaBuilder(1)", _log);
 
-                host.Call("Func2", new { k = 1 });
+                await host.CallAsync("Func2", new { k = 1 });
                 Assert.Equal("BetaBuilder(1)", _log);
             }
 
@@ -257,14 +257,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 rule.BindToInput<AlphaType>(typeof(GeneralBuilder<>));
             }
 
-            public void Test(JobHost<ConfigExplicitObjectConverter> host)
+            public async Task Test(JobHost<ConfigExplicitObjectConverter> host)
             {
                 // normal case
-                host.Call("Func", new { k = 1 });
+                await host.CallAsync("Func", new { k = 1 });
                 Assert.Equal("GeneralBuilder_AlphaType(1)", _log);
 
                 // use 1st rule with explicit converter
-                host.Call("FuncObject", new { k = 1 });
+                await host.CallAsync("FuncObject", new { k = 1 });
                 Assert.Equal("Alpha2Obj(GeneralBuilder_AlphaType(1))", _log);
             }
 
@@ -305,18 +305,18 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 rule.BindToInput<object>(this); // 2nd rule
             }
 
-            public void Test(JobHost<ConfigObjectInheritence> host)
+            public async Task Test(JobHost<ConfigObjectInheritence> host)
             {
                 // 1st rule
-                host.Call("FuncDerived", new { k = 1 });
+                await host.CallAsync("FuncDerived", new { k = 1 });
                 Assert.Equal("GeneralBuilder_AlphaDerivedType(1)", _log);
 
                 // 1st rule + implicit converter
-                host.Call("Func", new { k = 1 });
+                await host.CallAsync("Func", new { k = 1 });
                 Assert.Equal("GeneralBuilder_AlphaDerivedType(1)", _log);
 
                 // 2nd rule, object isn't matched in an inheritence converter
-                host.Call("FuncObject", new { k = 1 });
+                await host.CallAsync("FuncObject", new { k = 1 });
                 Assert.Equal("[obj!]", _log);
             }
 
@@ -415,11 +415,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 rule.BindToCollector<AlphaType>(this);
             }
 
-            public void Test(JobHost<ConfigCollector<TParam>> host)
+            public async Task Test(JobHost<ConfigCollector<TParam>> host)
             {
                 // tells you we made 2 AddAysnc calls, and invoked the converter on each item. 
                 _log = "";
-                host.Call("Func2", new { k = 1 });
+                await host.CallAsync("Func2", new { k = 1 });
 
                 if (typeof(TParam) == typeof(NonArrayOpenType))
                 {
@@ -434,7 +434,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
 
                 // 2 calls, but no converters
                 _log = "";
-                host.Call("Func", new { k = 1 });
+                await host.CallAsync("Func", new { k = 1 });
                 Assert.Equal("Collector(v1);Collector(v2);", _log);
             }
 
@@ -480,9 +480,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 rule.BindToInput<OpenType>(typeof(AlphaBuilder));
             }
 
-            public void Test(JobHost<ConfigError1> host)
+            public async Task Test(JobHost<ConfigError1> host)
             {
-                host.AssertIndexingError("Func", $"No Convert method on type {nameof(AlphaBuilder)} to convert from {nameof(Test6Attribute)} to {nameof(BetaType)}");
+                await host.AssertIndexingError("Func", $"No Convert method on type {nameof(AlphaBuilder)} to convert from {nameof(Test6Attribute)} to {nameof(BetaType)}");
             }
 
             // Fail to bind because: 
@@ -510,9 +510,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 rule.BindToInput<AlphaType>(typeof(AlphaBuilder));
             }
 
-            public void Test(JobHost<ConfigErrorSearch> host)
+            public async Task Test(JobHost<ConfigErrorSearch> host)
             {
-                host.AssertIndexingError("Func", $"Can't bind Test6 to type 'System.String'.");
+                await host.AssertIndexingError("Func", $"Can't bind Test6 to type 'System.String'.");
             }
 
             // Fail to bind because: 
