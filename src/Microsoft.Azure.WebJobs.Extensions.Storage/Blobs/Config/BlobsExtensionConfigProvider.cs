@@ -27,10 +27,10 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         private readonly BlobTriggerAttributeBindingProvider _triggerBinder;
         private StorageAccountProvider _accountProvider;
         private IContextGetter<IBlobWrittenWatcher> _blobWrittenWatcherGetter;
-        private INameResolver _nameResolver;
+        private readonly INameResolver _nameResolver;
         private IConverterManager _converterManager;
-        
-        public BlobsExtensionConfigProvider(StorageAccountProvider accountProvider, 
+
+        public BlobsExtensionConfigProvider(StorageAccountProvider accountProvider,
             BlobTriggerAttributeBindingProvider triggerBinder,
             IContextGetter<IBlobWrittenWatcher> contextAccessor,
             INameResolver nameResolver,
@@ -134,7 +134,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         #region CloudBlob rules 
 
         // Produce a write only stream.
-        async Task<CloudBlobStream> ConvertToCloudBlobStreamAsync(
+        private async Task<CloudBlobStream> ConvertToCloudBlobStreamAsync(
            BlobAttribute blobAttribute, ValueBindingContext context)
         {
             var stream = await CreateStreamAsync(blobAttribute, context);
@@ -146,12 +146,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             var blob = await GetBlobAsync(blobAttribute, cancellationToken, typeof(T));
             return (T)(blob);
         }
-        
+
         #endregion
-        
+
         #region Support for binding to Multiple blobs 
         // Open type matching types that can bind to an IEnumerable<T> blob collection. 
-        class BlobCollectionType : OpenType
+        private class BlobCollectionType : OpenType
         {
             private static readonly Type[] _types = new Type[]
             {
@@ -173,7 +173,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
         // Converter to produce an IEnumerable<T> for binding to multiple blobs. 
         // T must have been matched by MultiBlobType        
-        class BlobCollectionConverter<T> : IAsyncConverter<MultiBlobContext, IEnumerable<T>>
+        private class BlobCollectionConverter<T> : IAsyncConverter<MultiBlobContext, IEnumerable<T>>
         {
             private readonly FuncAsyncConverter<ICloudBlob, T> _converter;
 
@@ -237,7 +237,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             return new MultiBlobContext
             {
                 Prefix = path.BlobName,
-                Container = await this.GetContainerAsync(attr, cancellationToken)
+                Container = await GetContainerAsync(attr, cancellationToken)
             };
         }
         #endregion
@@ -316,7 +316,9 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
             var container = client.GetContainerReference(boundPath.ContainerName);
 
-            if (blobAttribute.Access != FileAccess.Read)
+            // Call ExistsAsync before attempting to create. This reduces the number of 
+            // 40x calls that App Insights may be tracking automatically
+            if (blobAttribute.Access != FileAccess.Read && !await container.ExistsAsync())
             {
                 await container.CreateIfNotExistsAsync(cancellationToken);
             }
@@ -329,13 +331,13 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         private ParameterDescriptor ToBlobDescr(BlobAttribute attr, ParameterInfo parameter, INameResolver nameResolver)
         {
             // Resolve the connection string to get an account name. 
-            var client = Task.Run(() => this.GetClientAsync(attr, CancellationToken.None)).GetAwaiter().GetResult();
+            var client = Task.Run(() => GetClientAsync(attr, CancellationToken.None)).GetAwaiter().GetResult();
             var accountName = client.Credentials.AccountName;
 
             var resolved = nameResolver.ResolveWholeString(attr.BlobPath);
 
             string containerName = resolved;
-            string blobName= null;
+            string blobName = null;
             int split = resolved.IndexOf('/');
             if (split > 0)
             {

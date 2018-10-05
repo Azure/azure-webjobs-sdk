@@ -183,6 +183,7 @@ namespace Microsoft.Extensions.DependencyInjection
 
             QuickPulseTelemetryProcessor quickPulseProcessor = null;
             configuration.TelemetryProcessorChainBuilder
+                .Use((next) => new OperationFilteringTelemetryProcessor(next))
                 .Use((next) =>
                 {
                     quickPulseProcessor = new QuickPulseTelemetryProcessor(next);
