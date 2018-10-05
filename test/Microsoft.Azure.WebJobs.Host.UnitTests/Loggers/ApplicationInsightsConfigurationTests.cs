@@ -72,9 +72,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Assert.NotNull(providers[0]);
 
                 // Verify Processors
-                Assert.Equal(3, config.TelemetryProcessors.Count);
-                Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[0]);
-                Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[1]);
+                Assert.Equal(4, config.TelemetryProcessors.Count);
+                Assert.IsType<OperationFilteringTelemetryProcessor>(config.TelemetryProcessors[0]);
+                Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[1]);
+                Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[2]);
                 Assert.Empty(config.TelemetryProcessors.OfType<AdaptiveSamplingTelemetryProcessor>());
 
                 // Verify ApplicationIdProvider
@@ -99,12 +100,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 .Build())
             {
                 var config = host.Services.GetService<TelemetryConfiguration>();
-                Assert.Equal(4, config.TelemetryProcessors.Count);
-                Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[0]);
-                Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[1]);
-                Assert.IsType<AdaptiveSamplingTelemetryProcessor>(config.TelemetryProcessors[2]);
+                Assert.Equal(5, config.TelemetryProcessors.Count);
+                Assert.IsType<OperationFilteringTelemetryProcessor>(config.TelemetryProcessors[0]);
+                Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[1]);
+                Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[2]);
+                Assert.IsType<AdaptiveSamplingTelemetryProcessor>(config.TelemetryProcessors[3]);
 
-                Assert.Equal(samplingSettings.MaxTelemetryItemsPerSecond, ((AdaptiveSamplingTelemetryProcessor)config.TelemetryProcessors[2]).MaxTelemetryItemsPerSecond);
+                Assert.Equal(samplingSettings.MaxTelemetryItemsPerSecond, ((AdaptiveSamplingTelemetryProcessor)config.TelemetryProcessors[3]).MaxTelemetryItemsPerSecond);
             }
         }
 
@@ -143,12 +145,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 }).Build())
             {
                 var config = host.Services.GetService<TelemetryConfiguration>();
-                Assert.Equal(4, config.TelemetryProcessors.Count);
-                Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[0]);
-                Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[1]);
-                Assert.IsType<AdaptiveSamplingTelemetryProcessor>(config.TelemetryProcessors[2]);
+                Assert.Equal(5, config.TelemetryProcessors.Count);
+                Assert.IsType<OperationFilteringTelemetryProcessor>(config.TelemetryProcessors[0]);
+                Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[1]);
+                Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[2]);
+                Assert.IsType<AdaptiveSamplingTelemetryProcessor>(config.TelemetryProcessors[3]);
 
-                Assert.Equal(samplingSettings.MaxTelemetryItemsPerSecond, ((AdaptiveSamplingTelemetryProcessor)config.TelemetryProcessors[2]).MaxTelemetryItemsPerSecond);
+                Assert.Equal(samplingSettings.MaxTelemetryItemsPerSecond, ((AdaptiveSamplingTelemetryProcessor)config.TelemetryProcessors[3]).MaxTelemetryItemsPerSecond);
             }
         }
 
@@ -167,10 +170,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 }).Build())
             {
                 var config = host.Services.GetService<TelemetryConfiguration>();
-                Assert.Equal(4, config.TelemetryProcessors.Count);
-                Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[0]);
-                Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[1]);
-                Assert.IsType<SnapshotCollectorTelemetryProcessor>(config.TelemetryProcessors[2]);
+                Assert.Equal(5, config.TelemetryProcessors.Count);
+                Assert.IsType<OperationFilteringTelemetryProcessor>(config.TelemetryProcessors[0]);
+                Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[1]);
+                Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[2]);
+                Assert.IsType<SnapshotCollectorTelemetryProcessor>(config.TelemetryProcessors[3]);
             }
         }
 
