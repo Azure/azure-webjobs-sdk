@@ -36,7 +36,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         [Theory(Skip = "Missing StorageAccountParser")]
         [InlineData("Dashboard")]
         [InlineData("Storage")]
+#pragma warning disable xUnit1026 // Theory methods should use all of their parameters
         public void GetAccountAsync_WhenReadFromConfig_ReturnsParsedAccount(string connectionStringName)
+#pragma warning restore xUnit1026 // Theory methods should use all of their parameters
         {
             //string connectionString = "valid-ignore";
             //IStorageAccount parsedAccount = Mock.Of<IStorageAccount>();
@@ -75,7 +77,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         [Theory(Skip = "Missing StorageAccountParser")]
         [InlineData("Dashboard")]
         [InlineData("Storage")]
+#pragma warning disable xUnit1026 // Theory methods should use all of their parameters
         public void GetAccountAsync_WhenInvalidConfig_PropagatesParserException(string connectionStringName)
+#pragma warning restore xUnit1026 // Theory methods should use all of their parameters
         {
             //string connectionString = "invalid-ignore";
             //Exception expectedException = new InvalidOperationException();
@@ -98,7 +102,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         [Theory(Skip = "Missing StorageAccountParser")]
         [InlineData("Dashboard")]
         [InlineData("Storage")]
+#pragma warning disable xUnit1026 // Theory methods should use all of their parameters
         public void GetAccountAsync_WhenInvalidCredentials_PropagatesValidatorException(string connectionStringName)
+#pragma warning restore xUnit1026 // Theory methods should use all of their parameters
         {
             //string connectionString = "invalid-ignore";
             //IStorageAccount parsedAccount = Mock.Of<IStorageAccount>();
@@ -167,7 +173,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         }
 
         [Fact(Skip = "Missing StorageAccountParser")]
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public async Task GetAccountAsync_WhenStorageOverriddenWithNull_Succeeds()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             //DefaultStorageAccountProvider provider = CreateProductUnderTest();
             //provider.StorageConnectionString = null;
@@ -177,7 +185,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         }
 
         [Fact(Skip = "Missing StorageAccountParser")]
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public async Task GetAccountAsync_WhenNoStorage_Succeeds()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             //DefaultStorageAccountProvider provider = CreateProductUnderTest();
             //provider.DashboardConnectionString = null;
@@ -191,7 +201,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         }
 
         [Fact(Skip = "Missing StorageAccountParser")]
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public async Task GetAccountAsync_WhenWebJobsStorageAccountNotGeneral_Throws()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             //string connectionString = "valid-ignore";
             //var connStringMock = new Mock<IConnectionStringProvider>();
@@ -211,7 +223,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         }
 
         [Fact(Skip = "Missing StorageAccountParser")]
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public async Task GetAccountAsync_WhenWebJobsDashboardAccountNotGeneral_Throws()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             //    string connectionString = "valid-ignore";
             //    var connStringMock = new Mock<IConnectionStringProvider>();
@@ -231,7 +245,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         }
 
         [Fact(Skip = "Missing StorageAccountParser")]
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public async Task GetStorageAccountAsyncTest()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             //string cxEmpty = "";
             //var accountDefault = new Mock<IStorageAccount>().Object;
@@ -251,7 +267,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         }
 
         [Fact(Skip = "Missing StorageAccountParser")]
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public async Task GetAccountAsync_CachesAccounts()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             //var services = CreateServices();
             //var accountMock = new Mock<IStorageAccount>();

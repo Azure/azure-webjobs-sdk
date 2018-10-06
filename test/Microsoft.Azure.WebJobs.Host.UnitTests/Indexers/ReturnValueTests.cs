@@ -100,7 +100,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         }
 
         [Fact]
-        public async Task TestIndexError()
+        public void TestIndexError()
         {
             var ext = new MyExtension();
 

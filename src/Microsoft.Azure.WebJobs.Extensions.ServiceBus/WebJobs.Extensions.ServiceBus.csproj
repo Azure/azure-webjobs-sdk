@@ -8,6 +8,18 @@
     <AssemblyName>Microsoft.Azure.WebJobs.ServiceBus</AssemblyName>
     <PackageId>Microsoft.Azure.WebJobs.Extensions.ServiceBus</PackageId>
     <RootNamespace>Microsoft.Azure.WebJobs.ServiceBus</RootNamespace>
+  </PropertyGroup>  
+  
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+  </PropertyGroup>  
+  
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
   </PropertyGroup>
 
   <ItemGroup>

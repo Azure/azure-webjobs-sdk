@@ -6,10 +6,6 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs
 {
-    /// <summary>
-    /// Defines an asynchronous collector (an insert-only collection).
-    /// </summary>
-    /// <typeparam name="T">The type of items to collect.</typeparam>
     public interface IAsyncCollector<in T>
     {
         /// <summary>

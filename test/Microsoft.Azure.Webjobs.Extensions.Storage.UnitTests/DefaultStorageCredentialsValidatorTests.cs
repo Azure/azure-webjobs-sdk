@@ -20,7 +20,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         [Theory(Skip = "Missing StorageCredentialsValidator")]
         [InlineData("UseDevelopmentStorage=true")]
         [InlineData("UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://myProxyUri")]
+#pragma warning disable xUnit1026 // Theory methods should use all of their parameters
         public void StorageAccount_IsDevStoreAccount_StorageEmulatorRunning(string connectionString)
+#pragma warning restore xUnit1026 // Theory methods should use all of their parameters
         {
             //var validator = new DefaultStorageCredentialsValidator();
 

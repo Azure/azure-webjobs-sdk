@@ -21,14 +21,14 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private const string HostId = "functionalTestHost";
 
         // provide default mock
-        private readonly Mock<IHostIdProvider> _hostIdMock;
-        private readonly Mock<IWebJobsExceptionHandler> _exceptionMock;
+        //private readonly Mock<IHostIdProvider> _hostIdMock;
+        //private readonly Mock<IWebJobsExceptionHandler> _exceptionMock;
         //private Mock<IContextSetter<IMessageEnqueuedWatcher>> _messageEnqueueSetterMock;
         //private Mock<IStorageAccountProvider> _accountProviderMock;
 
         //private readonly JobHostQueuesOptions _queueConfiguration;
-        private readonly ISharedContextProvider _sharedContextProvider;
-        private SharedQueueHandler _sharedQueue;
+        //private readonly ISharedContextProvider _sharedContextProvider;
+        //private SharedQueueHandler _sharedQueue;
 
         private readonly TestLoggerProvider _loggerProvider = new TestLoggerProvider();
 
@@ -67,7 +67,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact(Skip = "Fix DispatchQueue")]
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public async Task InMemoryDispatchQueueHandlerTest()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             //string error = "no storage account found";
             //_accountProviderMock.Setup(m => m.TryGetAccountAsync(ConnectionStringNames.Storage, It.IsAny<CancellationToken>())).
@@ -112,8 +114,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact(Skip = "Fix DispatchQueue")]
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public async Task QueueInitializationTest()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
+            /*
             // first initialization should be fine
             await _sharedQueue.InitializeAsync(CancellationToken.None);
 
@@ -122,10 +127,13 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                             () => _sharedQueue.InitializeAsync(CancellationToken.None));
             Assert.Equal($"Expected state to be \"Created\" but actualy state is \"Initialized\", this is probably because methods are not called in correct order",
                             exception.Message);
+            */
         }
 
         [Fact(Skip = "Fix DispatchQueue")]
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public async Task HotPathNotificationTest()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             //await _sharedQueue.InitializeAsync(CancellationToken.None);
 
@@ -168,8 +176,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact(Skip = "Fix DispatchQueue")]
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public async Task DequeueBehaviorTests()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
+            /*
             await _sharedQueue.InitializeAsync(CancellationToken.None);
 
             var testCases = new List<TestCase>();
@@ -211,6 +222,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Assert.Equal(a.TotalEnqueues, a.CallCount);
             Assert.Equal(b.TotalEnqueues, b.CallCount);
             Assert.Equal(0, c.CallCount);
+            */
         }
 
         private class TestCase
@@ -222,6 +234,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         private Task RunDummyEnqueueAsync(List<TestCase> testCases)
         {
+            /*
             var enqueues = new List<Task>();
             int index = 0;
             foreach (var testcase in testCases)
@@ -241,6 +254,8 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 index++;
             }
             return Task.WhenAll(enqueues);
+            */
+            return Task.CompletedTask;
         }
     }
 }

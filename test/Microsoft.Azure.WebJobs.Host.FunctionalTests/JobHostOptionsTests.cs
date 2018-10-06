@@ -41,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var queuesOptions = host.Services.GetService<IOptions<QueuesOptions>>();
             Assert.Equal(TimeSpan.FromSeconds(2), queuesOptions.Value.MaxPollingInterval);
 
-            var singletonOptions = host.Services.GetService< IOptions<SingletonOptions>>();
+            var singletonOptions = host.Services.GetService<IOptions<SingletonOptions>>();
             Assert.Equal(TimeSpan.FromSeconds(15), singletonOptions.Value.ListenerLockPeriod);
         }
 

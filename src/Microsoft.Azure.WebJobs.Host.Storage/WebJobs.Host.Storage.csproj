@@ -10,6 +10,18 @@
     <AssemblyName>Microsoft.Azure.WebJobs.Host.Storage</AssemblyName>
   </PropertyGroup>  
   
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+  </PropertyGroup>  
+  
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+  </PropertyGroup>  
+  
   <ItemGroup>
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\HeartbeatCommand.cs" Link="Logging\HeartbeatCommand.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\PersistentQueueReader.cs" Link="Logging\PersistentQueueReader.cs" />
