@@ -52,9 +52,17 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.Equal(LogLevel.Information.ToString(), request.Properties[LogConstants.LogLevelKey]);
             Assert.NotNull(request.Name);
             Assert.NotNull(request.Id);
-            Assert.Equal(operationId, request.Context.Operation.Id);
+
+            if (operationId != null)
+            {
+                Assert.Equal(operationId, request.Context.Operation.Id);
+            }
+
+            if (parentId != null)
+            {
+                Assert.Equal(parentId, request.Context.Operation.ParentId);
+            }
             Assert.Equal(operationName, request.Context.Operation.Name);
-            Assert.Equal(parentId, request.Context.Operation.ParentId);
             Assert.True(request.Properties.ContainsKey(LogConstants.InvocationIdKey));
             Assert.True(request.Properties.ContainsKey(LogConstants.TriggerReasonKey));
         }

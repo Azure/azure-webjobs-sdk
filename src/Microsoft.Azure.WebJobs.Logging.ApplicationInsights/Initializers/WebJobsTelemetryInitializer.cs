@@ -95,13 +95,18 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                                 request.Context.Operation.Name = tag.Value;
                                 request.Name = tag.Value;
                                 break;
-                            case LogConstants.DurationKey:
-                                request.Properties[LogConstants.FunctionExecutionTimeKey] = tag.Value;
-                                break;
                             default:
                                 request.Properties[tag.Key] = tag.Value;
                                 break;
                         }
+                    }
+                }
+                else // workaround for https://github.com/Microsoft/ApplicationInsights-dotnet-server/issues/1038
+                {
+                    if (request.Properties.TryGetValue(LogConstants.NameKey, out var functionName))
+                    {
+                        request.Context.Operation.Name = functionName;
+                        request.Name = functionName;
                     }
                 }
             }
