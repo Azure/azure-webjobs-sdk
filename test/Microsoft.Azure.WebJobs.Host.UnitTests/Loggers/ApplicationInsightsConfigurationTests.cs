@@ -191,10 +191,48 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 }).Build())
             {
                 // Verify Initializers
-                Assert.Equal(1, TelemetryConfiguration.Active.TelemetryInitializers.Count);
+                Assert.Equal(2, TelemetryConfiguration.Active.TelemetryInitializers.Count);
 
                 // These will throw if there are not exactly one
                 Assert.Single(TelemetryConfiguration.Active.TelemetryInitializers.OfType<OperationCorrelationTelemetryInitializer>());
+                Assert.Single(TelemetryConfiguration.Active.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>());
+
+                // ikey should still be set
+                Assert.Equal("some key", TelemetryConfiguration.Active.InstrumentationKey);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_ConfiguresActiveOnlyOnce()
+        {
+            using (var _ = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsights(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                    });
+                }).Build())
+            {
+            }
+
+            // TelemteryConfiguration.Active is a static singleton
+            // so it persist after host is disposed
+            using (var host2 = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsights(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                    });
+                }).Build())
+            {
+                // Verify Initializers
+                Assert.Equal(2, TelemetryConfiguration.Active.TelemetryInitializers.Count);
+
+                // These will throw if there are not exactly one
+                Assert.Single(TelemetryConfiguration.Active.TelemetryInitializers.OfType<OperationCorrelationTelemetryInitializer>());
+                Assert.Single(TelemetryConfiguration.Active.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>());
 
                 // ikey should still be set
                 Assert.Equal("some key", TelemetryConfiguration.Active.InstrumentationKey);
