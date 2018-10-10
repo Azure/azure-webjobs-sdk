@@ -375,7 +375,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                         case LogConstants.DurationKey:
                             if (prop.Value is TimeSpan duration)
                             {
-                                currentActivity.AddTag(prop.Key, duration.TotalMilliseconds.ToString(CultureInfo.InvariantCulture));
+                                currentActivity.AddTag(LogConstants.FunctionExecutionTimeKey, duration.TotalMilliseconds.ToString(CultureInfo.InvariantCulture));
                             }
                             break;
                         default:

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights.DataContracts;
@@ -76,6 +77,33 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
             ValidateServiceBusDependency(sbOutDependency, _endpoint, _queueName, "Send", nameof(ServiceBusOut), operationId, manualCallRequest.Id);
             ValidateServiceBusRequest(sbTriggerRequest, _endpoint, _queueName, nameof(ServiceBusTrigger), operationId, sbOutDependency.Id);
+        }
+
+        [Fact]
+        public async Task ServiceBusRequestWithoutParent()
+        {
+            var sender = new MessageSender(_connectionString, _queueName);
+            await sender.SendAsync(new Message { Body = Encoding.UTF8.GetBytes("message"), ContentType = "text/plain" });
+
+            using (var host = ConfigureHost())
+            {
+                await host.StartAsync();
+
+                _functionWaitHandle.WaitOne();
+                await Task.Delay(1000);
+
+                await host.StopAsync();
+            }
+
+            List<RequestTelemetry> requests = _channel.Telemetries.OfType<RequestTelemetry>().ToList();
+            List<DependencyTelemetry> dependencies = _channel.Telemetries.OfType<DependencyTelemetry>().ToList();
+
+            Assert.Single(requests);
+            Assert.Empty(dependencies);
+
+            Assert.NotNull(requests.Single().Context.Operation.Id);
+
+            ValidateServiceBusRequest(requests.Single(), _endpoint, _queueName, nameof(ServiceBusTrigger), null, null);
         }
 
         [NoAutomaticTrigger]
@@ -163,11 +191,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
         private async Task<int> CleanUpEntity()
         {
             var messageReceiver = new MessageReceiver(_connectionString, _queueName, ReceiveMode.ReceiveAndDelete);
-            Message message;
             int count = 0;
             do
             {
-                message = await messageReceiver.ReceiveAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
+                var message = await messageReceiver.ReceiveAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
                 if (message != null)
                 {
                     count++;
