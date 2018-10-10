@@ -14,7 +14,6 @@ using Microsoft.ApplicationInsights.Extensibility.Implementation.ApplicationId;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
 using Microsoft.ApplicationInsights.SnapshotCollector;
 using Microsoft.ApplicationInsights.WindowsServer;
-using Microsoft.ApplicationInsights.WindowsServer.Channel.Implementation;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
@@ -82,6 +81,18 @@ namespace Microsoft.Extensions.DependencyInjection
                 TelemetryConfiguration config = TelemetryConfiguration.CreateDefault();
 
                 IApplicationIdProvider appIdProvider = provider.GetService<IApplicationIdProvider>();
+
+                // Because of https://github.com/Microsoft/ApplicationInsights-dotnet-server/issues/943
+                // we have to touch (and create) Active configuration before initializing telemetry modules
+                // Active configuration is used to report AppInsights heartbeats
+                // role environment telemetry initializer is needed to correlate heartbeats to particular host
+                if (!string.IsNullOrEmpty(options.InstrumentationKey) &&
+                    string.IsNullOrEmpty(TelemetryConfiguration.Active.InstrumentationKey))
+                {
+                    TelemetryConfiguration.Active.InstrumentationKey = options.InstrumentationKey;
+                    TelemetryConfiguration.Active.TelemetryInitializers.Add(
+                        new WebJobsRoleEnvironmentTelemetryInitializer());
+                }
 
                 SetupTelemetryConfiguration(
                     config,
@@ -151,10 +162,6 @@ namespace Microsoft.Extensions.DependencyInjection
             if (options.InstrumentationKey != null)
             {
                 configuration.InstrumentationKey = options.InstrumentationKey;
-
-                // Because of https://github.com/Microsoft/ApplicationInsights-dotnet-server/issues/943
-                // we have to touch (and create) Active configuration before initializing telemetry modules 
-                TelemetryConfiguration.Active.InstrumentationKey = options.InstrumentationKey;
             }
 
             configuration.TelemetryChannel = channel;
