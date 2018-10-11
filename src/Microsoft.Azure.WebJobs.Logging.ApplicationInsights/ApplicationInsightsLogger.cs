@@ -36,6 +36,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 LogConstants.LogLevelKey,
                 LogConstants.EventIdKey,
                 LogConstants.OriginalFormatKey,
+                LogConstants.MetricNameKey,
                 ScopeKeys.Event,
                 ScopeKeys.FunctionInvocationId,
                 ScopeKeys.FunctionName,
@@ -125,7 +126,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 // next entry if found.
                 switch (entry.Key)
                 {
-                    case LogConstants.NameKey:
+                    case LogConstants.MetricNameKey:
                         telemetry.Name = entry.Value.ToString();
                         continue;
                     case LogConstants.MetricValueKey:

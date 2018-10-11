@@ -113,7 +113,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                     request.Id);
             }
 
-
             // PUT conatiner, HEAD blob, PUT lease, PUT content
             // since there could be failures and retries, we should expect more
             Assert.True(outDependencies.Count <= 4);
@@ -324,7 +323,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 Assert.Equal(blobName, dependency.Properties["Blob"]);
             }
 
-            TelemetryValidationHelpers.ValidateHttpDependency(dependency, operationName, operationId, requestId, LogCategories.Bindings);
+            TelemetryValidationHelpers.ValidateHttpDependency(
+                dependency, 
+                operationName, 
+                operationId, 
+                requestId, 
+                LogCategories.Bindings);
         }
 
 
@@ -338,7 +342,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.Equal("Azure queue", dependency.Type);
             Assert.True(dependency.Name.EndsWith(queueName));
 
-            TelemetryValidationHelpers.ValidateHttpDependency(dependency, operationName, operationId, requestId, LogCategories.Bindings);
+            TelemetryValidationHelpers.ValidateHttpDependency(
+                dependency, 
+                operationName, 
+                operationId, 
+                requestId, 
+                LogCategories.Bindings);
         }
 
         public IHost ConfigureHost(LogLevel logLevel)

@@ -26,7 +26,7 @@ namespace Microsoft.Extensions.Logging
         {
             IDictionary<string, object> state = properties == null ? new Dictionary<string, object>() : new Dictionary<string, object>(properties);
 
-            state[LogConstants.NameKey] = name;
+            state[LogConstants.MetricNameKey] = name;
             state[LogConstants.MetricValueKey] = value;
 
             IDictionary<string, object> payload = new ReadOnlyDictionary<string, object>(state);

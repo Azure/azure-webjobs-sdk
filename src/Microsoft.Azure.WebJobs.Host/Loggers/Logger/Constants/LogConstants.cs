@@ -140,6 +140,11 @@ namespace Microsoft.Azure.WebJobs.Logging
         public const int MetricEventId = 1;
 
         /// <summary>
+        /// Gets the name of the key used to store a metric name.
+        /// </summary>
+        public const string MetricNameKey = "MetricName";
+
+        /// <summary>
         /// Gets the name of the key used to store a metric sum.
         /// </summary>
         public const string MetricValueKey = "Value";

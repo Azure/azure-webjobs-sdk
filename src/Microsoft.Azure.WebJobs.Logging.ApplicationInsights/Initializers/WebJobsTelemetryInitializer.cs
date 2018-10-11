@@ -17,7 +17,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         private const string ComputerNameKey = "COMPUTERNAME";
         private const string WebSiteInstanceIdKey = "WEBSITE_INSTANCE_ID";
 
-        private static readonly string _roleInstanceName = GetRoleInstanceName();
+        private static readonly string _instanceId = GetSiteInstanceId();
 
         public void Initialize(ITelemetry telemetry)
         {
@@ -25,8 +25,6 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             {
                 return;
             }
-
-            telemetry.Context.Cloud.RoleInstance = _roleInstanceName;
 
             RequestTelemetry request = telemetry as RequestTelemetry;
 
@@ -55,11 +53,14 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 telemetryProps[LogConstants.InvocationIdKey] = invocationId;
             }
 
+            string functionName = scopeProps.GetValueOrDefault<string>(ScopeKeys.FunctionName);
+
             // this could be telemetry tracked in scope of function call - then we should apply the logger scope
             // or RequestTelemetry tracked by the WebJobs SDK or AppInsight SDK - then we should apply Activity.Tags
             if (request == null && scopeProps.Any())
             {
-                telemetry.Context.Operation.Name = scopeProps.GetValueOrDefault<string>(ScopeKeys.FunctionName);
+                telemetry.Context.Operation.Name = functionName;
+                telemetry.Context.Cloud.RoleInstance = functionName ?? _instanceId;
 
                 // Apply Category and LogLevel to all telemetry
                 string category = scopeProps.GetValueOrDefault<string>(LogConstants.CategoryNameKey);
@@ -92,8 +93,11 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                         switch (tag.Key)
                         {
                             case LogConstants.NameKey:
-                                request.Context.Operation.Name = tag.Value;
                                 request.Name = tag.Value;
+                                request.Context.Operation.Name = tag.Value;
+                                request.Context.Cloud.RoleInstance = tag.Value;
+                                break;
+                            case LogConstants.FullNameKey:
                                 break;
                             default:
                                 request.Properties[tag.Key] = tag.Value;
@@ -103,24 +107,25 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 }
                 else // workaround for https://github.com/Microsoft/ApplicationInsights-dotnet-server/issues/1038
                 {
-                    if (request.Properties.TryGetValue(LogConstants.NameKey, out var functionName))
+                    if (functionName != null || request.Properties.TryGetValue(LogConstants.NameKey, out functionName))
                     {
-                        request.Context.Operation.Name = functionName;
                         request.Name = functionName;
+                        request.Context.Operation.Name = functionName;
+                        request.Context.Cloud.RoleInstance = functionName;
                     }
                 }
             }
         }
 
-        private static string GetRoleInstanceName()
+        private static string GetSiteInstanceId()
         {
-            string instanceName = Environment.GetEnvironmentVariable(WebSiteInstanceIdKey);
-            if (string.IsNullOrEmpty(instanceName))
+            string instanceId = Environment.GetEnvironmentVariable(WebSiteInstanceIdKey);
+            if (string.IsNullOrEmpty(instanceId))
             {
-                instanceName = Environment.GetEnvironmentVariable(ComputerNameKey);
+                instanceId = Environment.GetEnvironmentVariable(ComputerNameKey);
             }
 
-            return instanceName;
+            return instanceId;
         }
     }
 }

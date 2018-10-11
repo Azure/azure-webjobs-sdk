@@ -75,8 +75,21 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             string operationId = manualCallRequest.Context.Operation.Id;
             Assert.Equal(operationId, sbTriggerRequest.Context.Operation.Id);
 
-            ValidateServiceBusDependency(sbOutDependency, _endpoint, _queueName, "Send", nameof(ServiceBusOut), operationId, manualCallRequest.Id);
-            ValidateServiceBusRequest(sbTriggerRequest, _endpoint, _queueName, nameof(ServiceBusTrigger), operationId, sbOutDependency.Id);
+            ValidateServiceBusDependency(
+                sbOutDependency,
+                _endpoint, 
+                _queueName, 
+                "Send", 
+                nameof(ServiceBusOut),
+                operationId, 
+                manualCallRequest.Id);
+            ValidateServiceBusRequest(
+                sbTriggerRequest, 
+                _endpoint, 
+                _queueName, 
+                nameof(ServiceBusTrigger), 
+                operationId,
+                sbOutDependency.Id);
         }
 
         [Fact]
@@ -103,7 +116,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
             Assert.NotNull(requests.Single().Context.Operation.Id);
 
-            ValidateServiceBusRequest(requests.Single(), _endpoint, _queueName, nameof(ServiceBusTrigger), null, null);
+            ValidateServiceBusRequest(
+                requests.Single(),
+                _endpoint,
+                _queueName,
+                nameof(ServiceBusTrigger),
+                null,
+                null);
         }
 
         [NoAutomaticTrigger]
@@ -139,7 +158,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.True(double.TryParse(request.Properties[LogConstants.FunctionExecutionTimeKey], out double functionDuration));
             Assert.True(request.Duration.TotalMilliseconds >= functionDuration);
 
-            TelemetryValidationHelpers.ValidateRequest(request, operationName, operationId, parentId, LogCategories.Results);
+            TelemetryValidationHelpers.ValidateRequest(
+                request, 
+                operationName, 
+                operationId, 
+                parentId, 
+                LogCategories.Results);
         }
 
         private void ValidateServiceBusDependency(
@@ -156,7 +180,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.Equal(name, dependency.Name);
             Assert.True(dependency.Success);
             Assert.Null(dependency.Data);
-            TelemetryValidationHelpers.ValidateDependency(dependency, operationName, operationId, parentId, LogCategories.Bindings);
+            TelemetryValidationHelpers.ValidateDependency(
+                dependency,
+                operationName,
+                operationId,
+                parentId,
+                LogCategories.Bindings);
         }
 
         public IHost ConfigureHost()

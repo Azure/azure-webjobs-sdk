@@ -37,6 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.NotNull(dependency.Id);
             Assert.Equal(operationId, dependency.Context.Operation.Id);
             Assert.Equal(operationName, dependency.Context.Operation.Name);
+            Assert.Equal(operationName, dependency.Context.Cloud.RoleInstance);
             Assert.Equal(parentId, dependency.Context.Operation.ParentId);
             Assert.True(dependency.Properties.ContainsKey(LogConstants.InvocationIdKey));
         }
@@ -65,6 +66,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.Equal(operationName, request.Context.Operation.Name);
             Assert.True(request.Properties.ContainsKey(LogConstants.InvocationIdKey));
             Assert.True(request.Properties.ContainsKey(LogConstants.TriggerReasonKey));
+
+            Assert.Equal(operationName, request.Context.Cloud.RoleInstance);
         }
     }
 }
