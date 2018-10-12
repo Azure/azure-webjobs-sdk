@@ -97,8 +97,6 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                                 request.Context.Operation.Name = tag.Value;
                                 request.Context.Cloud.RoleInstance = tag.Value;
                                 break;
-                            case LogConstants.FullNameKey:
-                                break;
                             default:
                                 request.Properties[tag.Key] = tag.Value;
                                 break;
