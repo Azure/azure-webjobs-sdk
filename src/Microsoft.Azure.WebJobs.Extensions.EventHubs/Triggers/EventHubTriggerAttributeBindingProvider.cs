@@ -75,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
              };
 
             ITriggerBinding binding = BindingFactory.GetTriggerBinding(new EventHubTriggerBindingStrategy(), parameter, _converterManager, createListener);
-            return Task.FromResult(binding);
+            return Task.FromResult<ITriggerBinding>(binding);
         }
     } // end class
 }
