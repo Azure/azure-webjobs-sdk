@@ -17,12 +17,12 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
         {
             if (converter == null)
             {
-                throw new ArgumentNullException("converter");
+                throw new ArgumentNullException(nameof(converter));
             }
 
             if (propertySetter == null)
             {
-                throw new ArgumentNullException("propertySetter");
+                throw new ArgumentNullException(nameof(propertySetter));
             }
 
             _converter = converter;

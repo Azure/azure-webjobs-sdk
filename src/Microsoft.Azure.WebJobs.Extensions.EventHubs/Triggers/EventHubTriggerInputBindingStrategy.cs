@@ -29,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
         {
             if (value == null)
             {
-                throw new ArgumentNullException("value");
+                throw new ArgumentNullException(nameof(value));
             }
             return value.GetSingleEventData();
         }
@@ -38,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
         {
             if (value == null)
             {
-                throw new ArgumentNullException("value");
+                throw new ArgumentNullException(nameof(value));
             }
             return value.Events;
         }
@@ -71,7 +71,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
         {
             if (value == null)
             {
-                throw new ArgumentNullException("value");
+                throw new ArgumentNullException(nameof(value));
             }
 
             var bindingData = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);

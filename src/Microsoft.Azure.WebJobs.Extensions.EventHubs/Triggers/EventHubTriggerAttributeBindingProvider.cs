@@ -43,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
         {
             if (context == null)
             {
-                throw new ArgumentNullException("context");
+                throw new ArgumentNullException(nameof(context));
             }
 
             ParameterInfo parameter = context.Parameter;
@@ -75,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
              };
 
             ITriggerBinding binding = BindingFactory.GetTriggerBinding(new EventHubTriggerBindingStrategy(), parameter, _converterManager, createListener);
-            return Task.FromResult<ITriggerBinding>(binding);
+            return Task.FromResult(binding);
         }
     } // end class
 }

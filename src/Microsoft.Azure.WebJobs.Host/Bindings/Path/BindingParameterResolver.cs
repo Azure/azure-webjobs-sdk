@@ -42,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
         {
             if (string.IsNullOrEmpty(value))
             {
-                throw new ArgumentNullException("value");
+                throw new ArgumentNullException(nameof(value));
             }
 
             resolver = _resolvers.FirstOrDefault(p => value.StartsWith(p.Name, StringComparison.OrdinalIgnoreCase));
@@ -55,12 +55,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Path
         {
             if (string.IsNullOrEmpty(value))
             {
-                throw new ArgumentNullException("value");
+                throw new ArgumentNullException(nameof(value));
             }
 
             if (!value.StartsWith(Name, StringComparison.OrdinalIgnoreCase))
             {
-                throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, "The value specified is not a '{0}' binding parameter.", Name), "value");
+                throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, "The value specified is not a '{0}' binding parameter.", Name), nameof(value));
             }
 
             if (value.Length > Name.Length && value[Name.Length] == ':')

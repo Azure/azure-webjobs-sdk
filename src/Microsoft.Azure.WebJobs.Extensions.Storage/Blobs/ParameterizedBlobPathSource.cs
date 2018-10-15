@@ -49,13 +49,13 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
             }
 
             // Containers must match
-            if (!String.Equals(ContainerNamePattern, actualBlobPath.ContainerName, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(ContainerNamePattern, actualBlobPath.ContainerName, StringComparison.OrdinalIgnoreCase))
             {
                 return null;
             }
 
             // Pattern is container only
-            if (String.IsNullOrEmpty(BlobNamePattern))
+            if (string.IsNullOrEmpty(BlobNamePattern))
             {
                 return new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
             }

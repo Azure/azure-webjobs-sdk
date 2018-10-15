@@ -14,7 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.StorageAccount
 
         public CloudStorageAccountBindingProvider(StorageAccountProvider accountProvider)
         {
-            _accountProvider = accountProvider ?? throw new ArgumentNullException("accountProvider");
+            _accountProvider = accountProvider ?? throw new ArgumentNullException(nameof(accountProvider));
         }
 
         public Task<IBinding> TryCreateAsync(BindingProviderContext context)

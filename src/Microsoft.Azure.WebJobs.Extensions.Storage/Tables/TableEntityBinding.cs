@@ -66,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tables
         {
             if (context == null)
             {
-                throw new ArgumentNullException("context");
+                throw new ArgumentNullException(nameof(context));
             }
 
             TableEntityPath boundPath = _path.Bind(context.BindingData);

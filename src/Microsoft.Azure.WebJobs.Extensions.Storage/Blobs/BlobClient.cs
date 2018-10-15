@@ -32,7 +32,7 @@ namespace Microsoft.Azure.WebJobs
         {
             if (containerName == null)
             {
-                throw new ArgumentNullException("containerName");
+                throw new ArgumentNullException(nameof(containerName));
             }
 
             if (!IsValidContainerName(containerName))

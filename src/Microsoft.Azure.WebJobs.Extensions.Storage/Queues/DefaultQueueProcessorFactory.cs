@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
         {
             if (context == null)
             {
-                throw new ArgumentNullException("context");
+                throw new ArgumentNullException(nameof(context));
             }
             return new QueueProcessor(context);
         }

@@ -22,7 +22,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
             bool hasBlobName = slashIndex != -1;
 
             string containerNamePattern = pattern;
-            string blobNamePattern = String.Empty;
+            string blobNamePattern = string.Empty;
             if (hasBlobName)
             {
                 containerNamePattern = pattern.Substring(0, slashIndex);

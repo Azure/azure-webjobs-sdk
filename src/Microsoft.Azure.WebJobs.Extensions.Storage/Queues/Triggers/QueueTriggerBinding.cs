@@ -118,7 +118,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
         {
             if (context == null)
             {
-                throw new ArgumentNullException("context");
+                throw new ArgumentNullException(nameof(context));
             }
 
             var factory = new QueueListenerFactory(_queue, _queueOptions, _exceptionHandler,

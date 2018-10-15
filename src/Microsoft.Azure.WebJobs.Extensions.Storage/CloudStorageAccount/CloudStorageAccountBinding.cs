@@ -57,7 +57,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.StorageAccount
         {
             if (context == null)
             {
-                throw new ArgumentNullException("context");
+                throw new ArgumentNullException(nameof(context));
             }
             return BindAccountAsync(_account, context.ValueContext);
         }

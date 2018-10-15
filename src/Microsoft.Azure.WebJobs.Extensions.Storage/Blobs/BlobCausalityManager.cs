@@ -27,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
         {
             if (metadata == null)
             {
-                throw new ArgumentNullException("metadata");
+                throw new ArgumentNullException(nameof(metadata));
             }
 
             Debug.Assert(!Guid.Equals(Guid.Empty, function));

@@ -34,7 +34,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
         {
             if (context == null)
             {
-                throw new ArgumentNullException("context");
+                throw new ArgumentNullException(nameof(context));
             }
 
             _queue = context.Queue;
@@ -92,9 +92,10 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
             if (message.DequeueCount > MaxDequeueCount)
             {
                 await HandlePoisonMessageAsync(message, cancellationToken);
-                return await Task.FromResult<bool>(false);
+                return false;
             }
-            return await Task.FromResult<bool>(true);
+
+            return true;
         }
 
         /// <summary>

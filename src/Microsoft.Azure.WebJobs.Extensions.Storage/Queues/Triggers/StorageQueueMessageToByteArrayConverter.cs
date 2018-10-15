@@ -12,7 +12,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
         {
             if (input == null)
             {
-                throw new ArgumentNullException("input");
+                throw new ArgumentNullException(nameof(input));
             }
 
             return input.AsBytes;

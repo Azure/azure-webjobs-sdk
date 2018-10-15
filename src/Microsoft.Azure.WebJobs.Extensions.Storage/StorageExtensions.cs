@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs
         {
             if (path == null)
             {
-                throw new ArgumentNullException("path");
+                throw new ArgumentNullException(nameof(path));
             }
 
             BindingTemplateExtensions.ValidateContractCompatibility(path.ParameterNames, bindingDataContract);
@@ -36,7 +36,7 @@ namespace Microsoft.Azure.WebJobs
         {
             if (blob == null)
             {
-                throw new ArgumentNullException("blob");
+                throw new ArgumentNullException(nameof(blob));
             }
 
             return new BlobPath(blob.Container.Name, blob.Name);
