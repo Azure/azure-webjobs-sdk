@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Linq;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
 using Xunit;
@@ -18,13 +19,19 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             // Verify Initializers
             Assert.Equal(3, config.TelemetryInitializers.Count);
-            // These will throw if there are not exactly one
-            config.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>().Single();
-            config.TelemetryInitializers.OfType<WebJobsTelemetryInitializer>().Single();
-            config.TelemetryInitializers.OfType<WebJobsSanitizingInitializer>().Single();
+
+            Assert.Single(config.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>());
+            Assert.Single(config.TelemetryInitializers.OfType<WebJobsTelemetryInitializer>());
+            Assert.Single(config.TelemetryInitializers.OfType<WebJobsSanitizingInitializer>());
 
             // Verify Channel
             Assert.IsType<ServerTelemetryChannel>(config.TelemetryChannel);
+
+            // Verify Active
+            Assert.Equal(config.InstrumentationKey, TelemetryConfiguration.Active.InstrumentationKey);
+
+            Assert.Single(TelemetryConfiguration.Active.TelemetryInitializers
+                .OfType<WebJobsRoleEnvironmentTelemetryInitializer>());
         }
     }
 }

@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
+using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
 using Microsoft.ApplicationInsights.WindowsServer.Channel.Implementation;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
@@ -516,10 +517,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private static void ValidateSdkVersion(ITelemetry telemetry)
         {
-            PropertyInfo propInfo = typeof(TelemetryContext).GetProperty("Tags", BindingFlags.NonPublic | BindingFlags.Instance);
-            IDictionary<string, string> tags = propInfo.GetValue(telemetry.Context) as IDictionary<string, string>;
-
-            Assert.StartsWith("webjobs: ", tags["ai.internal.sdkVersion"]);
+            Assert.StartsWith("webjobs: ", telemetry.Context.GetInternalContext().SdkVersion);
         }
 
         private class QuickPulsePayload

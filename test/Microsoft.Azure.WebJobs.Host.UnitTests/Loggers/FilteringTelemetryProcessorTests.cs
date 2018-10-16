@@ -138,6 +138,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
         private class TestTelemetry : ISupportProperties, ITelemetry
         {
+            public ITelemetry DeepClone()
+            {
+                throw new NotImplementedException();
+            }
+
             public DateTimeOffset Timestamp { get; set; }
 
             public TelemetryContext Context { get; } = null;

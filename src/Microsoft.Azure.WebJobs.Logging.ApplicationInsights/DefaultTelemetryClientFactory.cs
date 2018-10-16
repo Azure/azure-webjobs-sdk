@@ -9,6 +9,7 @@ using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
+using Microsoft.ApplicationInsights.WindowsServer;
 using Microsoft.ApplicationInsights.WindowsServer.Channel.Implementation;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
 using Microsoft.Extensions.Logging;
@@ -25,6 +26,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
         private QuickPulseTelemetryModule _quickPulseModule;
         private PerformanceCollectorModule _perfModule;
+        private AppServicesHeartbeatTelemetryModule _heartbeatsModule;
+
         private TelemetryConfiguration _config;
         private bool _disposed;
         private Func<string, LogLevel, bool> _filter;
@@ -104,6 +107,20 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             _perfModule = new PerformanceCollectorModule();
             _perfModule.Initialize(config);
 
+            // setup heartbeats 
+            if (string.IsNullOrEmpty(TelemetryConfiguration.Active.InstrumentationKey))
+            {
+                // Because of https://github.com/Microsoft/ApplicationInsights-dotnet-server/issues/943
+                // we have to touch (and create) Active configuration before initializing telemetry modules 
+                TelemetryConfiguration.Active.InstrumentationKey = _instrumentationKey;
+                
+                // and add role environment initializer
+                TelemetryConfiguration.Active.TelemetryInitializers.Add(new WebJobsRoleEnvironmentTelemetryInitializer());
+            }
+
+            _heartbeatsModule = new AppServicesHeartbeatTelemetryModule();
+            _heartbeatsModule.Initialize(config);
+
             // Configure the TelemetryChannel
             ITelemetryChannel channel = CreateTelemetryChannel();
 
@@ -171,6 +188,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
                 _perfModule?.Dispose();
                 _quickPulseModule?.Dispose();
+                _heartbeatsModule?.Dispose();
 
                 _disposed = true;
             }
