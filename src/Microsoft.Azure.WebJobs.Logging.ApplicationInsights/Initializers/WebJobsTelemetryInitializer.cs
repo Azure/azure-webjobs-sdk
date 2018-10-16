@@ -8,6 +8,7 @@ using System.Linq;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
@@ -18,6 +19,12 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         private const string WebSiteInstanceIdKey = "WEBSITE_INSTANCE_ID";
 
         private static readonly string _roleInstanceName = GetRoleInstanceName();
+        private readonly string sdkVersion;
+
+        public WebJobsTelemetryInitializer(ISdkVersionProvider versionProvider)
+        {
+            sdkVersion = versionProvider?.GetSdkVersion();
+        }
 
         public void Initialize(ITelemetry telemetry)
         {
@@ -83,21 +90,22 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             // we may track traces/dependencies after function scope ends - we don't want to update those
             else if (request != null)
             {
+                request.Context.GetInternalContext().SdkVersion = sdkVersion;
                 Activity currentActivity = Activity.Current;
                 if (currentActivity != null) // should never be null, but we don't want to throw anyway
                 {
                     // tags is a list, we'll enumerate it
                     foreach (var tag in currentActivity.Tags)
                     {
-                        switch (tag.Key)
+                        if (tag.Key == LogConstants.NameKey)
                         {
-                            case LogConstants.NameKey:
-                                request.Context.Operation.Name = tag.Value;
-                                request.Name = tag.Value;
-                                break;
-                            default:
-                                request.Properties[tag.Key] = tag.Value;
-                                break;
+                            request.Context.Operation.Name = tag.Value;
+                            request.Name = tag.Value;
+                        }
+                        // ignore internal ai tags, but add custom properties
+                        else if (!tag.Key.StartsWith("w3c_") && !tag.Key.StartsWith("ai_"))
+                        {
+                            request.Properties[tag.Key] = tag.Value;
                         }
                     }
                 }

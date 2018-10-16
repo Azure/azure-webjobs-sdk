@@ -8,21 +8,22 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
-
     [ProviderAlias(Alias)]
     public class ApplicationInsightsLoggerProvider : ILoggerProvider
     {
         internal const string Alias = "ApplicationInsights";
 
         private readonly TelemetryClient _client;
+        private readonly ApplicationInsightsLoggerOptions _loggerOptions;
         private bool _disposed;
 
-        public ApplicationInsightsLoggerProvider(TelemetryClient client)
+        public ApplicationInsightsLoggerProvider(TelemetryClient client, ApplicationInsightsLoggerOptions loggerOptions)
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));
+            _loggerOptions = loggerOptions ?? throw new ArgumentNullException(nameof(loggerOptions));
         }
 
-        public ILogger CreateLogger(string categoryName) => new ApplicationInsightsLogger(_client, categoryName);
+        public ILogger CreateLogger(string categoryName) => new ApplicationInsightsLogger(_client, categoryName, _loggerOptions);
 
         public void Dispose()
         {
