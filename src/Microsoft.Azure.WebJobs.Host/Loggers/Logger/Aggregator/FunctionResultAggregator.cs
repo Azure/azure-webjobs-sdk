@@ -25,6 +25,7 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         private Timer _windowTimer;
         private IDisposable[] _disposables;
+        private bool _disposed = false;
 
         public FunctionResultAggregator(int batchSize, TimeSpan batchTimeout, ILoggerFactory loggerFactory)
         {
@@ -129,19 +130,24 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         public void Dispose()
         {
-            if (_disposables != null)
+            if (!_disposed)
             {
-                foreach (var d in _disposables)
+                if (_disposables != null)
                 {
-                    d.Dispose();
+                    foreach (var d in _disposables)
+                    {
+                        d.Dispose();
+                    }
+                    _disposables = null;
                 }
-                _disposables = null;
-            }
 
-            if (_windowTimer != null)
-            {
-                _windowTimer.Dispose();
-                _windowTimer = null;
+                if (_windowTimer != null)
+                {
+                    _windowTimer.Dispose();
+                    _windowTimer = null;
+                }
+
+                _disposed = true;
             }
         }
     }

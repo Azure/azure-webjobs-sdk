@@ -257,6 +257,7 @@
     <Compile Include="Blobs\CompletedAsyncResult.cs" />
     <Compile Include="Blobs\WatchableReadStreamTests.cs" />
     <Compile Include="Common\BindingPathAttribute.cs" />
+    <Compile Include="Executors\CompositeFunctionEventCollectorTests.cs" />
     <Compile Include="Filters\FunctionFilterTests.cs" />
     <Compile Include="Executors\TriggeredFunctionExecutorTests.cs" />
     <Compile Include="ExtensionConfigContextTests.cs" />

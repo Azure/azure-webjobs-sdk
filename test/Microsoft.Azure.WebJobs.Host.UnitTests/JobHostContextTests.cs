@@ -6,6 +6,7 @@ using System.Diagnostics;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -24,11 +25,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var mockListener = new Mock<IListener>(MockBehavior.Strict);
             var traceWriter = new TestTraceWriter(TraceLevel.Verbose);
             var mockLoggerFactory = new Mock<ILoggerFactory>(MockBehavior.Strict);
+            var mockDisposable = new Mock<IDisposable>(MockBehavior.Strict);
+            var disposableAggregator = mockDisposable.As<IAsyncCollector<FunctionInstanceLogEntry>>();
 
             mockListener.Setup(p => p.Dispose());
             mockLoggerFactory.Setup(p => p.Dispose());
+            mockDisposable.Setup(p => p.Dispose());
 
-            var context = new JobHostContext(mockLookup.Object, mockExecutor.Object, mockListener.Object, traceWriter, null, loggerFactory: mockLoggerFactory.Object);
+            var context = new JobHostContext(mockLookup.Object, mockExecutor.Object, mockListener.Object, traceWriter,
+                 disposableAggregator.Object, mockLoggerFactory.Object);
 
             Assert.Same(traceWriter, context.Trace);
 
@@ -43,6 +48,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             context.Dispose();
 
             mockListener.Verify(p => p.Dispose(), Times.Once);
+            mockDisposable.Verify(p => p.Dispose(), Times.Once);
 
             // we're temporarily removing the disposal call until this issue is resolved:
             // https://github.com/Azure/azure-webjobs-sdk-script/issues/1690

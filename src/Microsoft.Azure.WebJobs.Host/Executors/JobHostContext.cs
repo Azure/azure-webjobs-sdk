@@ -96,6 +96,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             if (!_disposed)
             {
                 _listener.Dispose();
+                (_functionEventCollector as IDisposable)?.Dispose();
 
                 _disposed = true;
             }
