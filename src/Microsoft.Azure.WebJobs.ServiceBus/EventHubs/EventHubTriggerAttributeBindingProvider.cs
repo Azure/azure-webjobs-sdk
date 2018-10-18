@@ -16,16 +16,19 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     {
         private readonly INameResolver _nameResolver;
         private readonly EventHubConfiguration _eventHubConfig;
+        private readonly MessagingExceptionHandler _exceptionHandler;
         private readonly IConverterManager _converterManager;
 
         public EventHubTriggerAttributeBindingProvider(
             INameResolver nameResolver,
             IConverterManager converterManager,
-            EventHubConfiguration eventHubConfig)
+            EventHubConfiguration eventHubConfig,
+            MessagingExceptionHandler exceptionHandler)
         {
             _nameResolver = nameResolver;
             _converterManager = converterManager;
             _eventHubConfig = eventHubConfig;
+            _exceptionHandler = exceptionHandler;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
@@ -44,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 return Task.FromResult<ITriggerBinding>(null);
             }
 
-            string resolvedEventHubName = _nameResolver.ResolveWholeString(attribute.EventHubName);            
+            string resolvedEventHubName = _nameResolver.ResolveWholeString(attribute.EventHubName);
             string resolvedConsumerGroup = _nameResolver.ResolveWholeString(attribute.ConsumerGroup ?? EventHubConsumerGroup.DefaultGroupName);
 
             EventProcessorHost eventProcessorHost;
@@ -64,12 +67,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             Func<ListenerFactoryContext, bool, Task<IListener>> createListener =
              (factoryContext, singleDispatch) =>
              {
-                 IListener listener = new EventHubListener(factoryContext.Executor, eventProcessorHost, singleDispatch, _eventHubConfig);
+                 IListener listener = new EventHubListener(factoryContext.Executor, eventProcessorHost, singleDispatch, _eventHubConfig, _exceptionHandler);
                  return Task.FromResult(listener);
              };
 
             ITriggerBinding binding = BindingFactory.GetTriggerBinding(new EventHubTriggerBindingStrategy(), parameter, _converterManager, createListener);
-            return Task.FromResult<ITriggerBinding>(binding);         
+            return Task.FromResult<ITriggerBinding>(binding);
         }
     } // end class
 }

@@ -445,12 +445,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 .AddConverter<EventData, byte[]>(ConvertEventData2Bytes);
 
             // register the background exception handler
-            MessagingExceptionHandler.Subscribe(_options, context.Trace, context.Config.LoggerFactory);
+            var exceptionHandler = MessagingExceptionHandler.Subscribe(_options, context.Trace, context.Config.LoggerFactory);
 
             // register our trigger binding provider
             INameResolver nameResolver = context.Config.NameResolver;
             IConverterManager cm = context.Config.GetService<IConverterManager>();
-            var triggerBindingProvider = new EventHubTriggerAttributeBindingProvider(nameResolver, cm, this);
+            var triggerBindingProvider = new EventHubTriggerAttributeBindingProvider(nameResolver, cm, this, exceptionHandler);
             context.AddBindingRule<EventHubTriggerAttribute>()
                 .BindToTrigger(triggerBindingProvider);
 

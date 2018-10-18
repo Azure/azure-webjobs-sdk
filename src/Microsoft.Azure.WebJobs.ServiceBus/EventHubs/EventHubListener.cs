@@ -19,20 +19,23 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         private readonly bool _singleDispatch;
         private readonly EventProcessorOptions _options;
         private readonly EventHubConfiguration _config;
+        private readonly MessagingExceptionHandler _exceptionHandler;
         private bool _started;
 
-        public EventHubListener(ITriggeredFunctionExecutor executor, EventProcessorHost eventProcessorHost, bool singleDispatch, EventHubConfiguration config)
+        public EventHubListener(ITriggeredFunctionExecutor executor, EventProcessorHost eventProcessorHost, bool singleDispatch,
+            EventHubConfiguration config, MessagingExceptionHandler exceptionHandler)
         {
             _executor = executor;
             _eventProcessorHost = eventProcessorHost;
             _singleDispatch = singleDispatch;
             _options = config.GetOptions();
             _config = config;
+            _exceptionHandler = exceptionHandler;
         }
 
         void IListener.Cancel()
         {
-            this.StopAsync(CancellationToken.None).Wait();
+            StopAsync(CancellationToken.None).Wait();
         }
 
         void IDisposable.Dispose()
@@ -51,9 +54,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             {
                 await _eventProcessorHost.UnregisterEventProcessorAsync();
             }
+
+            _exceptionHandler.Unsubscribe();
+
             _started = false;
         }
-         
+
         IEventProcessor IEventProcessorFactory.CreateEventProcessor(PartitionContext context)
         {
             return new EventProcessor(_config, new Checkpointer(), _executor, _singleDispatch);
@@ -122,7 +128,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                         {
                             break;
                         }
- 
+
                         var input = new TriggeredFunctionData
                         {
                             TriggerValue = triggerInput.GetSingleEventTriggerInput(i)
