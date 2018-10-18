@@ -4,17 +4,15 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
     internal class DefaultExtensionRegistry : IExtensionRegistry
     {
-        private ConcurrentDictionary<Type, ConcurrentBag<object>> _registry = new ConcurrentDictionary<Type, ConcurrentBag<object>>();
-
-        public DefaultExtensionRegistry()
-        {
-        }
+        private readonly object _lock = new object();
+        private ConcurrentDictionary<Type, ICollection<object>> _registry = new ConcurrentDictionary<Type, ICollection<object>>();
 
         public void RegisterExtension(Type type, object instance)
         {
@@ -31,8 +29,11 @@ namespace Microsoft.Azure.WebJobs.Host
                 throw new ArgumentOutOfRangeException("instance");
             }
 
-            ConcurrentBag<object> instances = _registry.GetOrAdd(type, (t) => new ConcurrentBag<object>());
-            instances.Add(instance);
+            ICollection<object> instances = _registry.GetOrAdd(type, (t) => new Collection<object>());
+            lock (_lock)
+            {
+                instances.Add(instance);
+            }
         }
 
         public IEnumerable<object> GetExtensions(Type type)
@@ -42,10 +43,12 @@ namespace Microsoft.Azure.WebJobs.Host
                 throw new ArgumentNullException("type");
             }
 
-            ConcurrentBag<object> instances = null;
-            if (_registry.TryGetValue(type, out instances))
+            if (_registry.TryGetValue(type, out ICollection<object> instances))
             {
-                return instances;
+                lock (_lock)
+                {
+                    return instances.ToArray();
+                }
             }
 
             return Enumerable.Empty<object>();
