@@ -277,39 +277,44 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         private void LogFunctionResultAggregate(IEnumerable<KeyValuePair<string, object>> values)
         {
             // Metric names will be created like "{FunctionName} {MetricName}"
-            IDictionary<string, double> metrics = new Dictionary<string, double>();
-            string functionName = LoggingConstants.Unknown;
+            var metrics = new Dictionary<string, double>();
+            var functionName = LoggingConstants.Unknown;
 
             // build up the collection of metrics to send
-            foreach (KeyValuePair<string, object> value in values)
+            foreach (var keyValuePair in values)
             {
-                switch (value.Key)
+                switch (keyValuePair.Key)
                 {
                     case LogConstants.NameKey:
-                        functionName = value.Value.ToString();
+                        functionName = keyValuePair.Value.ToString();
                         break;
                     case LogConstants.TimestampKey:
                     case LogConstants.OriginalFormatKey:
-                        // Timestamp is created automatically
-                        // We won't use the format string here
+                        // Timestamp and OriginalFormatKey are not metrics
                         break;
                     default:
-                        if (value.Value is TimeSpan)
+                        double? doubleValue = null;
+                        switch (keyValuePair.Value)
                         {
-                            // if it's a TimeSpan, log the milliseconds
-                            metrics.Add(value.Key, ((TimeSpan)value.Value).TotalMilliseconds);
+                            case TimeSpan ts:
+                                doubleValue = ts.TotalMilliseconds;
+                                break;
+                            case int i:
+                                doubleValue = Convert.ToDouble(i);
+                                break;
+                            case double d:
+                                doubleValue = d;
+                                break;
                         }
-                        else if (value.Value is double || value.Value is int)
+                        if (doubleValue != null)
                         {
-                            metrics.Add(value.Key, Convert.ToDouble(value.Value));
+                            metrics.Add(keyValuePair.Key, doubleValue.GetValueOrDefault());
                         }
-
-                        // do nothing otherwise
                         break;
                 }
             }
 
-            foreach (KeyValuePair<string, double> metric in metrics)
+            foreach (var metric in metrics)
             {
                 _telemetryClient.TrackMetric($"{functionName} {metric.Key}", metric.Value);
             }
