@@ -22,7 +22,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
 
         public Task<string> LogFunctionStartedAsync(FunctionStartedMessage message, CancellationToken cancellationToken)
         {
-            string traceMessage = string.Format(CultureInfo.InvariantCulture, "Executing '{0}' (Reason='{1}', Id={2})", message.Function.ShortName, message.FormatReason(), message.FunctionInstanceId);
+            string traceMessage = string.Format(CultureInfo.InvariantCulture, "Executing '{0}' (Reason='{1}', Id={2}, MessageId={3})", message.Function.ShortName, message.FormatReason(), message.FunctionInstanceId, message.MessageId);
             Log(LogLevel.Information, message.Function, message.FunctionInstanceId, traceMessage);
 
             return Task.FromResult<string>(null);
@@ -32,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
         {
             if (message.Succeeded)
             {
-                string traceMessage = string.Format(CultureInfo.InvariantCulture, "Executed '{0}' (Succeeded, Id={1})", message.Function.ShortName, message.FunctionInstanceId);
+                string traceMessage = string.Format(CultureInfo.InvariantCulture, "Executed '{0}' (Succeeded, Id={1}, MessageId={2})", message.Function.ShortName, message.FunctionInstanceId, message.MessageId);
                 Log(LogLevel.Information, message.Function, message.FunctionInstanceId, traceMessage);
             }
             else

@@ -24,7 +24,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             TriggeredFunctionData input = new TriggeredFunctionData
             {
                 ParentId = parentId,
-                TriggerValue = value
+                TriggerValue = value,
+                MessageId = value.MessageId
             };
             return await _innerExecutor.TryExecuteAsync(input, cancellationToken);
         }

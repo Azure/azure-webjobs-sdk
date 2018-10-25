@@ -22,6 +22,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         public object TriggerValue { get; set; }
 
         /// <summary>
+        /// The ID for the message being processed. Not applicable for all trigger types.
+        /// </summary>
+        public string MessageId { get; set; }
+
+        /// <summary>
         /// Optional handler function for processing the invocation.
         /// </summary>
         [Obsolete("Not ready for public consumption.")]
