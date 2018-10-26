@@ -136,7 +136,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
                         if (size > MaxByteSize)
                         {
                             // Single event is too large to add.
-                            string msg = string.Format("Event is too large. Event is approximately {0}b and max size is {1}b", size, MaxByteSize);
+                            string msg = $"Event is too large. Event is approximately {size}b and max size is {MaxByteSize}b";
                             throw new InvalidOperationException(msg);
                         }
 

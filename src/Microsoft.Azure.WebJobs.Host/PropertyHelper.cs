@@ -10,7 +10,7 @@ using System.Reflection;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
-    // Original code here: https://github.com/aspnet/Common/blob/dev/src/Microsoft.Extensions.PropertyHelper.Sources/PropertyHelper.cs
+    // Original code here: https://github.com/aspnet/Extensions/blob/master/shared/Microsoft.Extensions.PropertyHelper.Sources/PropertyHelper.cs
     internal class PropertyHelper
     {
         private static readonly MethodInfo CallPropertyGetterOpenGenericMethod =
@@ -111,8 +111,8 @@ namespace Microsoft.Azure.WebJobs.Host
         /// Creates and caches fast property helpers that expose getters for every public get property on the
         /// underlying type.
         /// </summary>
-        /// <param name="instance">the instance to extract property accessors for.</param>
-        /// <returns>a cached array of all public property getters from the underlying type of target instance.
+        /// <param name="instance">The instance to extract property accessors for.</param>
+        /// <returns>A cached array of all public property getters from the underlying type of target instance.
         /// </returns>
         public static PropertyHelper[] GetProperties(object instance)
         {
@@ -123,8 +123,8 @@ namespace Microsoft.Azure.WebJobs.Host
         /// Creates and caches fast property helpers that expose getters for every public get property on the
         /// specified type.
         /// </summary>
-        /// <param name="type">the type to extract property accessors for.</param>
-        /// <returns>a cached array of all public property getters from the type of target instance.
+        /// <param name="type">The type to extract property accessors for.</param>
+        /// <returns>A cached array of all public property getters from the type of target instance.
         /// </returns>
         public static PropertyHelper[] GetProperties(Type type)
         {
@@ -173,7 +173,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// Creates a single fast property getter. The result is not cached.
         /// </summary>
         /// <param name="propertyInfo">propertyInfo to extract the getter for.</param>
-        /// <returns>a fast getter.</returns>
+        /// <returns>A fast getter.</returns>
         /// <remarks>
         /// This method is more memory efficient than a dynamically compiled lambda, and about the
         /// same speed.
@@ -192,7 +192,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// Creates a single fast property getter which is safe for a null input object. The result is not cached.
         /// </summary>
         /// <param name="propertyInfo">propertyInfo to extract the getter for.</param>
-        /// <returns>a fast getter.</returns>
+        /// <returns>A fast getter.</returns>
         /// <remarks>
         /// This method is more memory efficient than a dynamically compiled lambda, and about the
         /// same speed.
