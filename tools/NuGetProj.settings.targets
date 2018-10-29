@@ -3,7 +3,7 @@
   <PropertyGroup>
     <WebJobsRootPath>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\'))</WebJobsRootPath>
     <WebJobsToolsPath>$(MSBuildThisFileDirectory)</WebJobsToolsPath>
-    <WebJobsPackageEULA>http://www.microsoft.com/web/webpi/eula/aspnetcomponent_rtw_enu.htm</WebJobsPackageEULA>
+    <WebJobsPackageEULA>https://go.microsoft.com/fwlink/?linkid=2028464</WebJobsPackageEULA>
     <Version>2.3.0</Version>
     <PrereleaseTag>-beta1</PrereleaseTag>
     
