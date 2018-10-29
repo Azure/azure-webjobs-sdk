@@ -39,7 +39,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 },
                 ReasonDetails = "TestReason",
                 HostInstanceId = Guid.NewGuid(),
-                FunctionInstanceId = Guid.NewGuid()
+                FunctionInstanceId = Guid.NewGuid(),
+                MessageId = Guid.NewGuid().ToString()
             };
 
             await _instanceLogger.LogFunctionStartedAsync(message, CancellationToken.None);
@@ -51,7 +52,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(expectedCategory, logMessage.Category);
 
             Assert.Null(logMessage.State);
-            Assert.Equal($"Executing 'Function.TestJob' (Reason='TestReason', Id={message.FunctionInstanceId})", logMessage.FormattedMessage);
+            Assert.Equal($"Executing 'Function.TestJob' (Reason='TestReason', Id={message.FunctionInstanceId}, MessageId={message.MessageId})", 
+                logMessage.FormattedMessage);
         }
 
         [Fact]
@@ -66,7 +68,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             {
                 Function = descriptor,
                 FunctionInstanceId = Guid.NewGuid(),
-                HostInstanceId = Guid.NewGuid()
+                HostInstanceId = Guid.NewGuid(),
+                MessageId = Guid.NewGuid().ToString()
             };
 
             Exception ex = new Exception("Kaboom!");
@@ -75,7 +78,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Function = descriptor,
                 Failure = new FunctionFailure { Exception = ex },
                 FunctionInstanceId = new Guid("8d71c9e3-e809-4cfb-bb78-48ae25c7d26d"),
-                HostInstanceId = Guid.NewGuid()
+                HostInstanceId = Guid.NewGuid(),
+                MessageId = Guid.NewGuid().ToString()
             };
 
             await _instanceLogger.LogFunctionCompletedAsync(successMessage, CancellationToken.None);
@@ -90,13 +94,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             LogMessage logMessage = logMessages[0];
             Assert.Equal(LogLevel.Information, logMessage.Level);
             Assert.Equal(expectedCategory, logMessage.Category);
-            Assert.Equal($"Executed 'Function.TestJob' (Succeeded, Id={successMessage.FunctionInstanceId})", logMessage.FormattedMessage);
+            Assert.Equal($"Executed 'Function.TestJob' (Succeeded, Id={successMessage.FunctionInstanceId}, MessageId={successMessage.MessageId})", 
+                logMessage.FormattedMessage);
             Assert.Null(logMessage.State);
 
             logMessage = logMessages[1];
             Assert.Equal(LogLevel.Error, logMessage.Level);
             Assert.Equal(expectedCategory, logMessage.Category);
-            Assert.Equal($"Executed 'Function.TestJob' (Failed, Id={failureMessage.FunctionInstanceId})", logMessage.FormattedMessage);
+            Assert.Equal($"Executed 'Function.TestJob' (Failed, Id={failureMessage.FunctionInstanceId}, MessageId={failureMessage.MessageId})", logMessage.FormattedMessage);
             Assert.Same(ex, logMessage.Exception);
             Assert.Null(logMessage.State);
         }

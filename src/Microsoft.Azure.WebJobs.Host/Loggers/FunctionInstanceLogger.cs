@@ -37,7 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             }
             else
             {
-                string traceMessage = string.Format(CultureInfo.InvariantCulture, "Executed '{0}' (Failed, Id={1})", message.Function.ShortName, message.FunctionInstanceId);
+                string traceMessage = string.Format(CultureInfo.InvariantCulture, "Executed '{0}' (Failed, Id={1}, MessageId={2})", message.Function.ShortName, message.FunctionInstanceId, message.MessageId);
                 Log(LogLevel.Error, message.Function, message.FunctionInstanceId, traceMessage, message.Failure.Exception);
             }
 
