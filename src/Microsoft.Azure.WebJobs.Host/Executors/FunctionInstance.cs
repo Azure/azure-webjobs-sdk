@@ -9,18 +9,18 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     internal class FunctionInstance : IFunctionInstance
     {
         private readonly Guid _id;
-        private readonly string _messageId;
+        private readonly string _triggerDetails;
         private readonly Guid? _parentId;
         private readonly ExecutionReason _reason;
         private readonly IBindingSource _bindingSource;
         private readonly IFunctionInvoker _invoker;
         private readonly FunctionDescriptor _functionDescriptor;
 
-        public FunctionInstance(Guid id, string messageId, Guid? parentId, ExecutionReason reason, IBindingSource bindingSource,
+        public FunctionInstance(Guid id, string triggerDetails, Guid? parentId, ExecutionReason reason, IBindingSource bindingSource,
             IFunctionInvoker invoker, FunctionDescriptor functionDescriptor)
         {
             _id = id;
-            _messageId = messageId;
+            _triggerDetails = triggerDetails;
             _parentId = parentId;
             _reason = reason;
             _bindingSource = bindingSource;
@@ -33,9 +33,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             get { return _id; }
         }
 
-        public string MessageId
+        public string TriggerDetails
         {
-            get { return _messageId; }
+            get { return _triggerDetails; }
         }
 
         public Guid? ParentId

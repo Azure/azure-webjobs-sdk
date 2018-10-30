@@ -25,9 +25,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             {
                 ParentId = parentId,
                 TriggerValue = value,
-                MessageId = value.MessageId
+                TriggerDetails = TriggerDetails(value)
             };
             return await _innerExecutor.TryExecuteAsync(input, cancellationToken);
+        }
+
+        private string TriggerDetails(Message value)
+        {
+            return $"MessageId: {value.MessageId}, TimeToLive: {value.TimeToLive}, ScheduleEnqueueTime: {value.ScheduledEnqueueTimeUtc}";
         }
     }
 }

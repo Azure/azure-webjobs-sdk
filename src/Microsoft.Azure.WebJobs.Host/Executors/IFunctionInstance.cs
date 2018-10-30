@@ -9,7 +9,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     public interface IFunctionInstance
     {
         Guid Id { get; }
-        string MessageId { get; }
+        string TriggerDetails { get; }
         Guid? ParentId { get; }
 
         ExecutionReason Reason { get; }

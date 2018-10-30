@@ -26,9 +26,14 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             {
                 ParentId = parentId,
                 TriggerValue = value, 
-                MessageId = value.Id
+                TriggerDetails = TriggerDetails(value)
             };
             return await _innerExecutor.TryExecuteAsync(input, cancellationToken);
+        }
+
+        private string TriggerDetails(CloudQueueMessage value)
+        {
+            return $"MessageId: {value.Id}, DequeueCount: {value.DequeueCount}, InsertionTime: {value.InsertionTime}";
         }
     }
 }

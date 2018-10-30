@@ -22,9 +22,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         public object TriggerValue { get; set; }
 
         /// <summary>
-        /// The ID for the message being processed. Not applicable for all trigger types.
+        /// Details of the trigger (e.g. Message ID, insertion time, deque count etc.)
         /// </summary>
-        public string MessageId { get; set; }
+        public string TriggerDetails { get; set; }
 
         /// <summary>
         /// Optional handler function for processing the invocation.

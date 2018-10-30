@@ -40,20 +40,30 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 ReasonDetails = "TestReason",
                 HostInstanceId = Guid.NewGuid(),
                 FunctionInstanceId = Guid.NewGuid(),
-                MessageId = Guid.NewGuid().ToString()
+                TriggerDetails = $"MessageId: {Guid.NewGuid()}, DequeueCount: 1, InsertionTime: {DateTime.Now}"
             };
 
             await _instanceLogger.LogFunctionStartedAsync(message, CancellationToken.None);
 
             string expectedCategory = LogCategories.CreateFunctionCategory("TestJob");
 
-            LogMessage logMessage = _provider.GetAllLogMessages().Single();
-            Assert.Equal(LogLevel.Information, logMessage.Level);
-            Assert.Equal(expectedCategory, logMessage.Category);
+            LogMessage[] logMessages = _provider.GetAllLogMessages().ToArray();
 
-            Assert.Null(logMessage.State);
-            Assert.Equal($"Executing 'Function.TestJob' (Reason='TestReason', Id={message.FunctionInstanceId}, MessageId={message.MessageId})", 
-                logMessage.FormattedMessage);
+            Assert.Equal(2, logMessages.Length);
+
+            LogMessage invocationLogMessage = logMessages[0];
+            Assert.Equal(LogLevel.Information, invocationLogMessage.Level);
+            Assert.Equal(expectedCategory, invocationLogMessage.Category);
+            Assert.Null(invocationLogMessage.State);
+            Assert.Equal($"Executing 'Function.TestJob' (Reason='TestReason', Id={message.FunctionInstanceId})", 
+                invocationLogMessage.FormattedMessage);
+
+            LogMessage triggerDetailsLogMessage = logMessages[1];
+            Assert.Equal(LogLevel.Information, triggerDetailsLogMessage.Level);
+            Assert.Equal(expectedCategory, triggerDetailsLogMessage.Category);
+            Assert.Null(triggerDetailsLogMessage.State);
+            Assert.Equal($"Trigger Details: {message.TriggerDetails}",
+                triggerDetailsLogMessage.FormattedMessage);
         }
 
         [Fact]
@@ -69,7 +79,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Function = descriptor,
                 FunctionInstanceId = Guid.NewGuid(),
                 HostInstanceId = Guid.NewGuid(),
-                MessageId = Guid.NewGuid().ToString()
+                TriggerDetails = Guid.NewGuid().ToString()
             };
 
             Exception ex = new Exception("Kaboom!");
@@ -78,8 +88,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Function = descriptor,
                 Failure = new FunctionFailure { Exception = ex },
                 FunctionInstanceId = new Guid("8d71c9e3-e809-4cfb-bb78-48ae25c7d26d"),
-                HostInstanceId = Guid.NewGuid(),
-                MessageId = Guid.NewGuid().ToString()
+                HostInstanceId = Guid.NewGuid()
             };
 
             await _instanceLogger.LogFunctionCompletedAsync(successMessage, CancellationToken.None);
@@ -94,14 +103,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             LogMessage logMessage = logMessages[0];
             Assert.Equal(LogLevel.Information, logMessage.Level);
             Assert.Equal(expectedCategory, logMessage.Category);
-            Assert.Equal($"Executed 'Function.TestJob' (Succeeded, Id={successMessage.FunctionInstanceId}, MessageId={successMessage.MessageId})", 
+            Assert.Equal($"Executed 'Function.TestJob' (Succeeded, Id={successMessage.FunctionInstanceId})", 
                 logMessage.FormattedMessage);
             Assert.Null(logMessage.State);
 
             logMessage = logMessages[1];
             Assert.Equal(LogLevel.Error, logMessage.Level);
             Assert.Equal(expectedCategory, logMessage.Category);
-            Assert.Equal($"Executed 'Function.TestJob' (Failed, Id={failureMessage.FunctionInstanceId}, MessageId={failureMessage.MessageId})", logMessage.FormattedMessage);
+            Assert.Equal($"Executed 'Function.TestJob' (Failed, Id={failureMessage.FunctionInstanceId})", logMessage.FormattedMessage);
             Assert.Same(ex, logMessage.Exception);
             Assert.Null(logMessage.State);
         }

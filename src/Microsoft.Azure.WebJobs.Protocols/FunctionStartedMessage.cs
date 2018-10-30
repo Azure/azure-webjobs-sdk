@@ -40,8 +40,8 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
         /// <summary>Gets or sets the ID of the ancestor function instance.</summary>
         public Guid? ParentId { get; set; }
 
-        /// <summary>Gets or sets the ID of the message being processed</summary>
-        public string MessageId { get; set; }
+        /// <summary>Gets or sets the details of the trigger</summary>
+        public string TriggerDetails { get; set; }
 
         /// <summary>Gets or sets the reason the function executed.</summary>
         public ExecutionReason Reason { get; set; }

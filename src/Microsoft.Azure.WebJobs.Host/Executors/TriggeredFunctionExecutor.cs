@@ -36,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 TriggerValue = (TTriggerValue)input.TriggerValue,
                 ParentId = input.ParentId, 
-                MessageId = input.MessageId
+                TriggerDetails = input.TriggerDetails
             };
 
             if (input.InvokeHandler != null)
