@@ -4,7 +4,7 @@
     <WebJobsRootPath>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\'))</WebJobsRootPath>
     <WebJobsToolsPath>$(MSBuildThisFileDirectory)</WebJobsToolsPath>
     <WebJobsPackageEULA>https://go.microsoft.com/fwlink/?linkid=2028464</WebJobsPackageEULA>
-    <Version>2.3.0</Version>
+    <Version>2.3.1</Version>
     <PrereleaseTag></PrereleaseTag>
     
     <!-- $(PackageSuffix), typically something like '-12345', is passed in as a build property. -->
