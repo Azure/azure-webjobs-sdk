@@ -40,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 ReasonDetails = "TestReason",
                 HostInstanceId = Guid.NewGuid(),
                 FunctionInstanceId = Guid.NewGuid(),
-                TriggerDetails = $"MessageId: {Guid.NewGuid()}, DequeueCount: 1, InsertionTime: {DateTime.Now}"
+                TriggerDetails = $"{{ MessageId: {Guid.NewGuid()}, DequeueCount: 1, InsertionTime: {DateTime.Now} }}"
             };
 
             await _instanceLogger.LogFunctionStartedAsync(message, CancellationToken.None);

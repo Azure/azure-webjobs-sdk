@@ -25,14 +25,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             {
                 ParentId = parentId,
                 TriggerValue = value,
-                TriggerDetails = TriggerDetails(value)
+                TriggerDetails = FormatTriggerDetails(value)
             };
             return await _innerExecutor.TryExecuteAsync(input, cancellationToken);
         }
 
-        private string TriggerDetails(Message value)
+        private string FormatTriggerDetails(Message value)
         {
-            return $"MessageId: {value.MessageId}, TimeToLive: {value.TimeToLive}, ScheduleEnqueueTime: {value.ScheduledEnqueueTimeUtc}";
+            return $"MessageId: {value.MessageId}, " +
+                $"DeliveryCount: {value.SystemProperties.DeliveryCount}, " +
+                $"EnqueuedTime: {value.SystemProperties.EnqueuedTimeUtc}";
         }
     }
 }

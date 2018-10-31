@@ -22,7 +22,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         public object TriggerValue { get; set; }
 
         /// <summary>
-        /// Details of the trigger (e.g. Message ID, insertion time, deque count etc.)
+        /// Details of the trigger (e.g. Message ID, insertion time, dequeue count etc.)
         /// </summary>
         public string TriggerDetails { get; set; }
 
