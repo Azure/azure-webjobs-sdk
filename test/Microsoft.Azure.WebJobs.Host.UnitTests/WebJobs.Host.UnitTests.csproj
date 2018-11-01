@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\build\common.props" />
   <PropertyGroup>
+    <!-- This project needs a static version number for the HostId checks, which are based on the version -->
+    <Version>3.0.0$(VersionSuffix)</Version>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <IsPackable>false</IsPackable>
     <AssemblyName>Microsoft.Azure.WebJobs.Host.UnitTests</AssemblyName>
