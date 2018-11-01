@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.ApplicationInsights.W3C;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
@@ -87,8 +88,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             string expectedOperationId, expectedRequestId;
             using (logger.BeginFunctionScope(CreateFunctionInstance(_invocationId), _hostInstanceId))
             {
-                expectedRequestId = Activity.Current.Id;
-                expectedOperationId = Activity.Current.RootId;
+                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
+                expectedOperationId = Activity.Current.GetTraceId();
 
                 // sleep briefly to provide a non-zero Duration
                 await Task.Delay(100);
@@ -122,8 +123,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             string expectedOperationId, expectedRequestId;
             using (logger.BeginFunctionScope(CreateFunctionInstance(_invocationId), _hostInstanceId))
             {
-                expectedRequestId = Activity.Current.Id;
-                expectedOperationId = Activity.Current.RootId;
+                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
+                expectedOperationId = Activity.Current.GetTraceId();
 
                 logger.LogFunctionResult(result);
             }
@@ -213,8 +214,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 logger.LogTrace("Trace");
                 logger.LogWarning("Warning");
 
-                expectedRequestId = Activity.Current.Id;
-                expectedOperationId = Activity.Current.RootId;
+                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
+                expectedOperationId = Activity.Current.GetTraceId();
             }
 
             Assert.Equal(6, _channel.Telemetries.Count);
@@ -280,8 +281,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             {
                 logger.LogError(0, ex, "Error with customer: {customer}.", "John Doe");
 
-                expectedRequestId = Activity.Current.Id;
-                expectedOperationId = Activity.Current.RootId;
+                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
+                expectedOperationId = Activity.Current.GetTraceId();
             }
 
             void ValidateProperties(ISupportProperties telemetry)
@@ -330,8 +331,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             {
                 logger.LogMetric("CustomMetric", 44.9);
 
-                expectedRequestId = Activity.Current.Id;
-                expectedOperationId = Activity.Current.RootId;
+                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
+                expectedOperationId = Activity.Current.GetTraceId();
             }
 
             var telemetry = _channel.Telemetries.Single() as MetricTelemetry;
@@ -393,8 +394,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             string expectedOperationId, expectedRequestId;
             using (logger.BeginFunctionScope(CreateFunctionInstance(scopeGuid), _hostInstanceId))
             {
-                expectedRequestId = Activity.Current.Id;
-                expectedOperationId = Activity.Current.RootId;
+                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
+                expectedOperationId = Activity.Current.GetTraceId();
 
                 var props = new Dictionary<string, object>
                 {
@@ -452,8 +453,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 };
                 logger.LogMetric("CustomMetric", 1.1, props);
 
-                expectedRequestId = Activity.Current.Id;
-                expectedOperationId = Activity.Current.RootId;
+                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
+                expectedOperationId = Activity.Current.GetTraceId();
             }
 
             var telemetry = _channel.Telemetries.Single() as MetricTelemetry;
@@ -727,7 +728,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
         private ILogger CreateLogger(string category)
         {
-            return new ApplicationInsightsLogger(_client, category);
+            return new ApplicationInsightsLogger(_client, category, new ApplicationInsightsLoggerOptions());
         }
 
         private static void ValidateScope(IDictionary<string, object> expected)
