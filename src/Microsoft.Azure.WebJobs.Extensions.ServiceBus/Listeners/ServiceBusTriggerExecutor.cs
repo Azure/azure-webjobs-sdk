@@ -33,8 +33,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         private string FormatTriggerDetails(Message value)
         {
             return $"MessageId: {value.MessageId}, " +
-                $"DeliveryCount: {value.SystemProperties.DeliveryCount}, " +
-                $"EnqueuedTime: {value.SystemProperties.EnqueuedTimeUtc}";
+            $"DeliveryCount: {value.SystemProperties.DeliveryCount}, " +
+            $"EnqueuedTime: {value.SystemProperties.EnqueuedTimeUtc}, " +
+            $"LockedUntil: {value.SystemProperties.LockedUntilUtc}";
         }
     }
 }

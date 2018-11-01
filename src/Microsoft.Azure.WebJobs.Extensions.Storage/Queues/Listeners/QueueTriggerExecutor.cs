@@ -34,8 +34,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         private string FormatTriggerDetails(CloudQueueMessage value)
         {
             return $"MessageId: {value.Id}, " +
-                $"DequeueCount: {value.DequeueCount}, " +
-                $"InsertionTime: {value.InsertionTime}";
+            $"DequeueCount: {value.DequeueCount}, " +
+            $"InsertionTime: {value.InsertionTime}";
         }
     }
 }

@@ -274,7 +274,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string[] triggerDetailsConsoleOutput = consoleOutputLines
                     .Where(m => m.StartsWith(TriggerDetailsMessageStart)).ToArray();
 
-                string expectedPattern = "Trigger Details: MessageId: (.*), DeliveryCount: [0-9]+, EnqueuedTime: (.*)";
+                string expectedPattern = "Trigger Details: MessageId: (.*), DeliveryCount: [0-9]+, EnqueuedTime: (.*), LockedUntil: (.*)";
 
                 foreach (string msg in triggerDetailsConsoleOutput)
                 {
