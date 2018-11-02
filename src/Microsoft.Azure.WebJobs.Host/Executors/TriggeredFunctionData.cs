@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
@@ -24,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         /// <summary>
         /// Details of the trigger (e.g. Message ID, insertion time, dequeue count etc.)
         /// </summary>
-        public string TriggerDetails { get; set; }
+        public Dictionary<string, string> TriggerDetails { get; set; }
 
         /// <summary>
         /// Optional handler function for processing the invocation.

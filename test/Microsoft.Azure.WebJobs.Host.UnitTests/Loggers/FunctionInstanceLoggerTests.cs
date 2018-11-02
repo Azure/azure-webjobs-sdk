@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,6 +31,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         [Fact]
         public async Task LogFunctionStarted_CallsLogger()
         {
+            Dictionary<string, string> triggerDetails = new Dictionary<string, string>()
+            {
+                { "MessageId", Guid.NewGuid().ToString() },
+                { "DequeueCount", "1" },
+                { "InsertionTime", DateTime.Now.ToString() }
+            };
             FunctionStartedMessage message = new FunctionStartedMessage
             {
                 Function = new FunctionDescriptor
@@ -40,8 +47,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 ReasonDetails = "TestReason",
                 HostInstanceId = Guid.NewGuid(),
                 FunctionInstanceId = Guid.NewGuid(),
-                TriggerDetails = $"MessageId: {Guid.NewGuid()}, DequeueCount: 1, InsertionTime: {DateTime.Now}"
+                TriggerDetails = triggerDetails
             };
+
+            string expectedMessage = $"MessageId: {triggerDetails["MessageId"]}, " +
+                $"DequeueCount: {triggerDetails["DequeueCount"]}, " +
+                $"InsertionTime: {triggerDetails["InsertionTime"]}";
 
             await _instanceLogger.LogFunctionStartedAsync(message, CancellationToken.None);
 
@@ -61,8 +72,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             LogMessage triggerDetailsLogMessage = logMessages[1];
             Assert.Equal(LogLevel.Information, triggerDetailsLogMessage.Level);
             Assert.Equal(expectedCategory, triggerDetailsLogMessage.Category);
-            Assert.Null(triggerDetailsLogMessage.State);
-            Assert.Equal($"Trigger Details: {message.TriggerDetails}",
+            Assert.NotNull(triggerDetailsLogMessage.State);
+            Assert.Equal($"Trigger Details: {expectedMessage}",
                 triggerDetailsLogMessage.FormattedMessage);
         }
 
@@ -78,8 +89,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             {
                 Function = descriptor,
                 FunctionInstanceId = Guid.NewGuid(),
-                HostInstanceId = Guid.NewGuid(),
-                TriggerDetails = Guid.NewGuid().ToString()
+                HostInstanceId = Guid.NewGuid()
             };
 
             Exception ex = new Exception("Kaboom!");

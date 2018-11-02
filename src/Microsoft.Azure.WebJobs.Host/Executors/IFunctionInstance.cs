@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
@@ -9,7 +10,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     public interface IFunctionInstance
     {
         Guid Id { get; }
-        string TriggerDetails { get; }
+
+        Dictionary<string, string> TriggerDetails { get; }
+
         Guid? ParentId { get; }
 
         ExecutionReason Reason { get; }

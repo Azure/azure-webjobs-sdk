@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
@@ -31,11 +32,14 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             return await _innerExecutor.TryExecuteAsync(input, cancellationToken);
         }
 
-        private string FormatTriggerDetails(CloudQueueMessage value)
+        private Dictionary<string, string> FormatTriggerDetails(CloudQueueMessage value)
         {
-            return $"MessageId: {value.Id}, " +
-            $"DequeueCount: {value.DequeueCount}, " +
-            $"InsertionTime: {value.InsertionTime}";
+            return new Dictionary<string, string>()
+            {
+                { "MessageId", value.Id.ToString() },
+                { "DequeueCount", value.DequeueCount.ToString() },
+                { "InsertionTime", value.InsertionTime.ToString() }
+            };
         }
     }
 }

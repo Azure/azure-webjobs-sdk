@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.ServiceBus;
+using System.Collections.Generic;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
 {
@@ -30,12 +31,15 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             return await _innerExecutor.TryExecuteAsync(input, cancellationToken);
         }
 
-        private string FormatTriggerDetails(Message value)
+        private Dictionary<string, string> FormatTriggerDetails(Message value)
         {
-            return $"MessageId: {value.MessageId}, " +
-            $"DeliveryCount: {value.SystemProperties.DeliveryCount}, " +
-            $"EnqueuedTime: {value.SystemProperties.EnqueuedTimeUtc}, " +
-            $"LockedUntil: {value.SystemProperties.LockedUntilUtc}";
+            return new Dictionary<string, string>()
+            {
+                { "MessageId", value.MessageId },
+                { "DeliveryCount", value.SystemProperties.DeliveryCount.ToString() },
+                { "EnqueuedTime", value.SystemProperties.EnqueuedTimeUtc.ToString() },
+                { "LockedUntil", value.SystemProperties.LockedUntilUtc.ToString() }
+            };
         }
     }
 }
