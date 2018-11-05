@@ -11,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     {
         Guid Id { get; }
 
-        Dictionary<string, string> TriggerDetails { get; }
+        IDictionary<string, string> TriggerDetails { get; }
 
         Guid? ParentId { get; }
 

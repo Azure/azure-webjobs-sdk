@@ -25,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         /// <summary>
         /// Details of the trigger (e.g. Message ID, insertion time, dequeue count etc.)
         /// </summary>
-        public Dictionary<string, string> TriggerDetails { get; set; }
+        public IDictionary<string, string> TriggerDetails { get; set; }
 
         /// <summary>
         /// Optional handler function for processing the invocation.
