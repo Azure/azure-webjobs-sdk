@@ -88,7 +88,7 @@ namespace WebJobs.Host.Storage.Logging
                 // Not fatal if we can't update parameter status. 
                 // But at least log what happened for diagnostics in case it's an infrastructure bug.
                 string msg = "---- Parameter status update failed ----";
-                _logger?.LogError(0, e, msg);
+                _logger?.LogWarning(0, e, msg);
                 return false;
             }
         }
