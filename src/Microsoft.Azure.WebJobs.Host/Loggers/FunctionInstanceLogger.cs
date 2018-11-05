@@ -37,7 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
         {
             var templateKeys = message.TriggerDetails.Select(entry => $"{entry.Key}: {{{entry.Key}}}");
             string messageTemplate = "Trigger Details: " + string.Join(", ", templateKeys);
-            string[] templateValues = message.TriggerDetails.Select(entry => $"{entry.Value}").ToArray();
+            string[] templateValues = message.TriggerDetails.Values.ToArray();
             Log(LogLevel.Information, message.Function, messageTemplate, templateValues);
         }
 

@@ -26,12 +26,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             {
                 ParentId = parentId,
                 TriggerValue = value,
-                TriggerDetails = FormatTriggerDetails(value)
+                TriggerDetails = PopulateTriggerDetails(value)
             };
             return await _innerExecutor.TryExecuteAsync(input, cancellationToken);
         }
 
-        private Dictionary<string, string> FormatTriggerDetails(Message value)
+        private Dictionary<string, string> PopulateTriggerDetails(Message value)
         {
             return new Dictionary<string, string>()
             {

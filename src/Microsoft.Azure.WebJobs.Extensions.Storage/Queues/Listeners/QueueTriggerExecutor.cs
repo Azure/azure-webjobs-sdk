@@ -27,12 +27,12 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             {
                 ParentId = parentId,
                 TriggerValue = value, 
-                TriggerDetails = FormatTriggerDetails(value)
+                TriggerDetails = PopulateTriggerDetails(value)
             };
             return await _innerExecutor.TryExecuteAsync(input, cancellationToken);
         }
 
-        private Dictionary<string, string> FormatTriggerDetails(CloudQueueMessage value)
+        private Dictionary<string, string> PopulateTriggerDetails(CloudQueueMessage value)
         {
             return new Dictionary<string, string>()
             {
