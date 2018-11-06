@@ -5,7 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using Microsoft.Azure.WebJobs.Host.Executors;
+using System.Linq;
+using System.Runtime.ExceptionServices;
+using System.Threading;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Moq;
 using Xunit;
@@ -21,6 +23,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public CompositeTraceWriterTests()
         {
             _mockTextWriter = new Mock<TextWriter>(MockBehavior.Strict);
+            _mockTextWriter.Setup(m => m.FormatProvider)
+                .Returns(new Mock<IFormatProvider>(MockBehavior.Strict).Object);
+
             _mockTraceWriter = new Mock<TraceWriter>(MockBehavior.Strict, TraceLevel.Warning);
             _traceWriter = new CompositeTraceWriter(_mockTraceWriter.Object, _mockTextWriter.Object);
         }
@@ -97,6 +102,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             _mockTextWriter.VerifyAll();
             _mockTraceWriter.VerifyAll();
         }
+
         [Fact]
         public void Constructor_CreatesCopyOfCollection()
         {
@@ -119,6 +125,52 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.Equal(2, t2.GetTraces().Count);
             Assert.Equal(2, textWriter.ToString().Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries).Length);
             Assert.Equal(0, t3.GetTraces().Count);
+        }
+
+        [Fact]
+        public void TextWriter_IsSynchronized()
+        {
+            var textWriter = new StreamWriter(new MemoryStream());
+            var traceWriter = new CompositeTraceWriter(Enumerable.Empty<TraceWriter>(), textWriter);
+
+            ExceptionDispatchInfo exception = null;
+
+            List<Thread> threads = new List<Thread>();
+            for (int i = 0; i < 5; i++)
+            {
+                var t = new Thread(() =>
+                {
+                    for (int j = 0; j < 1000; j++)
+                    {
+                        try
+                        {
+                            traceWriter.Info($"{i};{j}");
+                        }
+                        catch (Exception ex)
+                        {
+                            exception = ExceptionDispatchInfo.Capture(ex);
+                            throw;
+                        }
+                    }
+                });
+
+                threads.Add(t);
+            }
+
+            foreach (var t in threads)
+            {
+                t.Start();
+            }
+
+            foreach (var t in threads)
+            {
+                t.Join();
+            }
+
+            if (exception != null)
+            {
+                exception.Throw();
+            }
         }
     }
 }

@@ -25,7 +25,10 @@ namespace Microsoft.Azure.WebJobs.Host
             var traceWritersCopy = traceWriters?.ToList() ?? new List<TraceWriter>();
             _innerTraceWriters = traceWritersCopy.AsReadOnly();
 
-            _innerTextWriter = textWriter;
+            if (textWriter != null)
+            {
+                _innerTextWriter = TextWriter.Synchronized(textWriter);
+            }
         }
 
         public CompositeTraceWriter(TraceWriter traceWriter, TextWriter textWriter, TraceLevel traceLevel = TraceLevel.Verbose)
