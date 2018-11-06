@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.ServiceBus;
+using System.Collections.Generic;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
 {
@@ -24,9 +25,21 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             TriggeredFunctionData input = new TriggeredFunctionData
             {
                 ParentId = parentId,
-                TriggerValue = value
+                TriggerValue = value,
+                TriggerDetails = PopulateTriggerDetails(value)
             };
             return await _innerExecutor.TryExecuteAsync(input, cancellationToken);
+        }
+
+        private Dictionary<string, string> PopulateTriggerDetails(Message value)
+        {
+            return new Dictionary<string, string>()
+            {
+                { "MessageId", value.MessageId },
+                { "DeliveryCount", value.SystemProperties.DeliveryCount.ToString() },
+                { "EnqueuedTime", value.SystemProperties.EnqueuedTimeUtc.ToString() },
+                { "LockedUntil", value.SystemProperties.LockedUntilUtc.ToString() }
+            };
         }
     }
 }

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.ServiceBus;
@@ -32,6 +33,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private const string TopicName = Prefix + "topic1";
         private const string TopicSubscriptionName1 = "sub1";
         private const string TopicSubscriptionName2 = "sub2";
+
+        private const string TriggerDetailsMessageStart = "Trigger Details:";
 
         private const int SBTimeout = 60 * 1000;
 
@@ -214,7 +217,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 _topicSubscriptionCalled2.WaitOne(SBTimeout);
 
                 // ensure all logs have had a chance to flush
-                await Task.Delay(3000);
+                await Task.Delay(4000);
 
                 // Wait for the host to terminate
                 await host.StopAsync();
@@ -222,9 +225,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.Equal("E2E-SBQueue2SBQueue-SBQueue2SBTopic-topic-1", _resultMessage1);
                 Assert.Equal("E2E-SBQueue2SBQueue-SBQueue2SBTopic-topic-2", _resultMessage2);
 
+                IEnumerable<LogMessage> logMessages = host.GetTestLoggerProvider()
+                    .GetAllLogMessages();
+
                 // filter out anything from the custom processor for easier validation.
-                IEnumerable<LogMessage> consoleOutput = host.GetTestLoggerProvider()
-                    .GetAllLogMessages()
+                IEnumerable<LogMessage> consoleOutput = logMessages
                     .Where(m => m.Category != CustomMessagingProvider.CustomMessagingCategory);
 
                 Assert.DoesNotContain(consoleOutput, p => p.Level == LogLevel.Error);
@@ -247,12 +252,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "Job host started",
                     $"Executing '{jobContainerType.Name}.SBQueue2SBQueue' (Reason='New ServiceBus message detected on '{FirstQueueName}'.', Id=",
                     $"Executed '{jobContainerType.Name}.SBQueue2SBQueue' (Succeeded, Id=",
+                    $"Trigger Details:",
                     $"Executing '{jobContainerType.Name}.SBQueue2SBTopic' (Reason='New ServiceBus message detected on '{SecondQueueName}'.', Id=",
                     $"Executed '{jobContainerType.Name}.SBQueue2SBTopic' (Succeeded, Id=",
+                    $"Trigger Details:",
                     $"Executing '{jobContainerType.Name}.SBTopicListener1' (Reason='New ServiceBus message detected on '{EntityNameHelper.FormatSubscriptionPath(TopicName, TopicSubscriptionName1)}'.', Id=",
                     $"Executed '{jobContainerType.Name}.SBTopicListener1' (Succeeded, Id=",
+                    $"Trigger Details:",
                     $"Executing '{jobContainerType.Name}.SBTopicListener2' (Reason='New ServiceBus message detected on '{EntityNameHelper.FormatSubscriptionPath(TopicName, TopicSubscriptionName2)}'.', Id=",
                     $"Executed '{jobContainerType.Name}.SBTopicListener2' (Succeeded, Id=",
+                    $"Trigger Details:",
                     "Job host stopped",
                     "Starting JobHost",
                     "Stopping JobHost"
@@ -260,6 +269,17 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 Action<string>[] inspectors = expectedOutputLines.Select<string, Action<string>>(p => (string m) => m.StartsWith(p)).ToArray();
                 Assert.Collection(consoleOutputLines, inspectors);
+
+                // Verify that trigger details are properly formatted
+                string[] triggerDetailsConsoleOutput = consoleOutputLines
+                    .Where(m => m.StartsWith(TriggerDetailsMessageStart)).ToArray();
+
+                string expectedPattern = "Trigger Details: MessageId: (.*), DeliveryCount: [0-9]+, EnqueuedTime: (.*), LockedUntil: (.*)";
+
+                foreach (string msg in triggerDetailsConsoleOutput)
+                {
+                    Assert.True(Regex.IsMatch(msg, expectedPattern), $"Expected trace event {expectedPattern} not found.");
+                }
             }
         }
 

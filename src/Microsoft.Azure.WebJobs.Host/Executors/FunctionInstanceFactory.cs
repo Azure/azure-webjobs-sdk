@@ -24,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         public IFunctionInstance Create(FunctionInstanceFactoryContext context)
         {
             IBindingSource bindingSource = new BindingSource(_binding, context.Parameters);
-            return new FunctionInstance(context.Id, context.ParentId, context.ExecutionReason, bindingSource, _invoker, _descriptor);
+            return new FunctionInstance(context.Id, context.TriggerDetails, context.ParentId, context.ExecutionReason, bindingSource, _invoker, _descriptor);
         }
     }
 }

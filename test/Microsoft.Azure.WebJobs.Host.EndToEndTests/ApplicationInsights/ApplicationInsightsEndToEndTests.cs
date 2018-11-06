@@ -212,7 +212,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 int functionsCalled = 0;
                 bool keepRunning = true;
                 Task functionTask = null;
-
+                
                 try
                 {
                     listener.StartListening();
@@ -271,6 +271,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     string timestamp = $"[{t.Timestamp.ToString(_dateFormat)}] ";
                     switch (t)
                     {
+                        case DependencyTelemetry dependency:
+                            return timestamp + $"[Dependency] {dependency.Name}; {dependency.Target}; {dependency.Data}";
                         case TraceTelemetry trace:
                             return timestamp + $"[Trace] {trace.Message}";
                         case RequestTelemetry request:

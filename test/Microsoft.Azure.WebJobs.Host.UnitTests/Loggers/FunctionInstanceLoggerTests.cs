@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,6 +31,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         [Fact]
         public async Task LogFunctionStarted_CallsLogger()
         {
+            Dictionary<string, string> triggerDetails = new Dictionary<string, string>()
+            {
+                { "MessageId", Guid.NewGuid().ToString() },
+                { "DequeueCount", "1" },
+                { "InsertionTime", DateTime.Now.ToString() }
+            };
             FunctionStartedMessage message = new FunctionStartedMessage
             {
                 Function = new FunctionDescriptor
@@ -39,19 +46,35 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 },
                 ReasonDetails = "TestReason",
                 HostInstanceId = Guid.NewGuid(),
-                FunctionInstanceId = Guid.NewGuid()
+                FunctionInstanceId = Guid.NewGuid(),
+                TriggerDetails = triggerDetails
             };
+
+            string expectedMessage = $"MessageId: {triggerDetails["MessageId"]}, " +
+                $"DequeueCount: {triggerDetails["DequeueCount"]}, " +
+                $"InsertionTime: {triggerDetails["InsertionTime"]}";
 
             await _instanceLogger.LogFunctionStartedAsync(message, CancellationToken.None);
 
             string expectedCategory = LogCategories.CreateFunctionCategory("TestJob");
 
-            LogMessage logMessage = _provider.GetAllLogMessages().Single();
-            Assert.Equal(LogLevel.Information, logMessage.Level);
-            Assert.Equal(expectedCategory, logMessage.Category);
+            LogMessage[] logMessages = _provider.GetAllLogMessages().ToArray();
 
-            Assert.Null(logMessage.State);
-            Assert.Equal($"Executing 'Function.TestJob' (Reason='TestReason', Id={message.FunctionInstanceId})", logMessage.FormattedMessage);
+            Assert.Equal(2, logMessages.Length);
+
+            LogMessage invocationLogMessage = logMessages[0];
+            Assert.Equal(LogLevel.Information, invocationLogMessage.Level);
+            Assert.Equal(expectedCategory, invocationLogMessage.Category);
+            Assert.Null(invocationLogMessage.State);
+            Assert.Equal($"Executing 'Function.TestJob' (Reason='TestReason', Id={message.FunctionInstanceId})", 
+                invocationLogMessage.FormattedMessage);
+
+            LogMessage triggerDetailsLogMessage = logMessages[1];
+            Assert.Equal(LogLevel.Information, triggerDetailsLogMessage.Level);
+            Assert.Equal(expectedCategory, triggerDetailsLogMessage.Category);
+            Assert.NotNull(triggerDetailsLogMessage.State);
+            Assert.Equal($"Trigger Details: {expectedMessage}",
+                triggerDetailsLogMessage.FormattedMessage);
         }
 
         [Fact]
@@ -90,7 +113,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             LogMessage logMessage = logMessages[0];
             Assert.Equal(LogLevel.Information, logMessage.Level);
             Assert.Equal(expectedCategory, logMessage.Category);
-            Assert.Equal($"Executed 'Function.TestJob' (Succeeded, Id={successMessage.FunctionInstanceId})", logMessage.FormattedMessage);
+            Assert.Equal($"Executed 'Function.TestJob' (Succeeded, Id={successMessage.FunctionInstanceId})", 
+                logMessage.FormattedMessage);
             Assert.Null(logMessage.State);
 
             logMessage = logMessages[1];

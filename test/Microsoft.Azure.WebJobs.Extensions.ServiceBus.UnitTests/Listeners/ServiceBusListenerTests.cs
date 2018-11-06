@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.ServiceBus;
@@ -52,6 +53,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
         public async Task ProcessMessageAsync_Success()
         {
             var message = new CustomMessage();
+            var systemProperties = new Message.SystemPropertiesCollection();
+            typeof(Message.SystemPropertiesCollection).GetProperty("SequenceNumber").SetValue(systemProperties, 1);
+            typeof(Message.SystemPropertiesCollection).GetProperty("DeliveryCount").SetValue(systemProperties, 55);
+            typeof(Message.SystemPropertiesCollection).GetProperty("EnqueuedTimeUtc").SetValue(systemProperties, DateTime.Now);
+            typeof(Message.SystemPropertiesCollection).GetProperty("LockedUntilUtc").SetValue(systemProperties, DateTime.Now);
+            typeof(Message).GetProperty("SystemProperties").SetValue(message, systemProperties);
+
             message.MessageId = Guid.NewGuid().ToString();
             CancellationToken cancellationToken = new CancellationToken();
             _mockMessageProcessor.Setup(p => p.BeginProcessingMessageAsync(message, cancellationToken)).ReturnsAsync(true);

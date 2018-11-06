@@ -2,7 +2,9 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Protocols;
@@ -24,8 +26,25 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
         {
             string traceMessage = string.Format(CultureInfo.InvariantCulture, "Executing '{0}' (Reason='{1}', Id={2})", message.Function.ShortName, message.FormatReason(), message.FunctionInstanceId);
             Log(LogLevel.Information, message.Function, message.FunctionInstanceId, traceMessage);
-
+            if (message.TriggerDetails != null && message.TriggerDetails.Count != 0)
+            {
+                LogTemplatizedTriggerDetails(message);
+            }
             return Task.FromResult<string>(null);
+        }
+
+        private void LogTemplatizedTriggerDetails(FunctionStartedMessage message)
+        {
+            var templateKeys = message.TriggerDetails.Select(entry => $"{entry.Key}: {{{entry.Key}}}");
+            string messageTemplate = "Trigger Details: " + string.Join(", ", templateKeys);
+            string[] templateValues = message.TriggerDetails.Values.ToArray();
+            Log(LogLevel.Information, message.Function, messageTemplate, templateValues);
+        }
+
+        private void Log(LogLevel level, FunctionDescriptor descriptor, string message, params object[] args)
+        {
+            ILogger logger = _loggerFactory?.CreateLogger(LogCategories.CreateFunctionCategory(descriptor.LogName));
+            logger?.Log(level, 0, message, args);
         }
 
         public Task LogFunctionCompletedAsync(FunctionCompletedMessage message, CancellationToken cancellationToken)
