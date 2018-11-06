@@ -20,6 +20,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public ConsoleTraceWriterTests()
         {
             _mockTextWriter = new Mock<TextWriter>(MockBehavior.Strict);
+            _mockTextWriter.Setup(m => m.FormatProvider)
+                .Returns(new Mock<IFormatProvider>(MockBehavior.Strict).Object);
+
             _mockTraceWriter = new Mock<TraceWriter>(MockBehavior.Strict, TraceLevel.Info);
             _mockTraceWriter2 = new Mock<TraceWriter>(MockBehavior.Strict, TraceLevel.Error);
             _traceConfig = new JobHostTraceConfiguration
