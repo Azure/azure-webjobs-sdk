@@ -212,7 +212,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 int functionsCalled = 0;
                 bool keepRunning = true;
                 Task functionTask = null;
-                
+
                 try
                 {
                     listener.StartListening();
@@ -266,24 +266,28 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     listener.Dispose();
                 }
 
-                string failureString = string.Join(Environment.NewLine, _channel.Telemetries.Select(t =>
+                string GetFailureString()
                 {
-                    string timestamp = $"[{t.Timestamp.ToString(_dateFormat)}] ";
-                    switch (t)
-                    {
-                        case DependencyTelemetry dependency:
-                            return timestamp + $"[Dependency] {dependency.Name}; {dependency.Target}; {dependency.Data}";
-                        case TraceTelemetry trace:
-                            return timestamp + $"[Trace] {trace.Message}";
-                        case RequestTelemetry request:
-                            return timestamp + $"[Request] {request.Name}: {request.Success}";
-                        default:
-                            return timestamp + $"[{t.GetType().Name}]";
-                    }
-                }));
+                    return string.Join(Environment.NewLine, _channel.Telemetries.OrderBy(p => p.Timestamp).Select(t =>
+                      {
+                          string timestamp = $"[{t.Timestamp.ToString(_dateFormat)}] ";
+                          switch (t)
+                          {
+                              case DependencyTelemetry dependency:
+                                  return timestamp + $"[Dependency] {dependency.Name}; {dependency.Target}; {dependency.Data}";
+                              case TraceTelemetry trace:
+                                  return timestamp + $"[Trace] {trace.Message}";
+                              case RequestTelemetry request:
+                                  return timestamp + $"[Request] {request.Name}: {request.Success}";
+                              default:
+                                  return timestamp + $"[{t.GetType().Name}]";
+                          }
+                      }));
+                }
 
                 int expectedTelemetryItems = additionalTraces + (functionsCalled * tracesPerRequest);
-                Assert.True(_channel.Telemetries.Count == expectedTelemetryItems, failureString);
+                Assert.True(_channel.Telemetries.Count == expectedTelemetryItems,
+                    $"Expected: {expectedTelemetryItems}; Actual: {_channel.Telemetries.Count}{Environment.NewLine}{GetFailureString()}");
             }
         }
 
@@ -335,7 +339,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 // There must be only one reported by the AppInsights request collector
                 RequestTelemetry[] requestTelemetries = _channel.Telemetries.OfType<RequestTelemetry>().ToArray();
                 Assert.Single(requestTelemetries);
-                
+
                 RequestTelemetry functionRequest = requestTelemetries.Single();
                 Assert.Same(outerRequest, functionRequest);
 
@@ -719,7 +723,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.Equal($"ApplicationInsightsEndToEndTests.{operationName}", telemetry.Properties[LogConstants.FullNameKey]);
             Assert.Equal("This function was programmatically called via the host APIs.", telemetry.Properties[LogConstants.TriggerReasonKey]);
 
-            TelemetryValidationHelpers.ValidateRequest(telemetry, operationName, operationId, parentId, LogCategories.Results, success? LogLevel.Information : LogLevel.Error);
+            TelemetryValidationHelpers.ValidateRequest(telemetry, operationName, operationId, parentId, LogCategories.Results, success ? LogLevel.Information : LogLevel.Error);
         }
 
         private static void ValidateSdkVersion(ITelemetry telemetry)
