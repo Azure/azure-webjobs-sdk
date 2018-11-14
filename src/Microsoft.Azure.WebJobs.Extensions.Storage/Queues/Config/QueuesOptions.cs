@@ -4,7 +4,6 @@
 using System;
 using System.Globalization;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
-using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
@@ -87,7 +86,6 @@ namespace Microsoft.Azure.WebJobs.Host
         /// Gets or sets the longest period of time to wait before checking for a message to arrive when a queue remains
         /// empty.
         /// </summary>
-        [JsonConverter(typeof(MillisecondTimeSpanConverter))]
         public TimeSpan MaxPollingInterval
         {
             get { return _maxPollingInterval; }
@@ -148,48 +146,6 @@ namespace Microsoft.Azure.WebJobs.Host
             set
             {
                 _visibilityTimeout = value;
-            }
-        }
-
-        /// <summary>
-        /// Converter used to allow a TimeSpan property to be specified either
-        /// as a TimeSpan string or as milliseconds.
-        /// </summary>
-        private class MillisecondTimeSpanConverter : JsonConverter
-        {
-            public override bool CanConvert(Type objectType)
-            {
-                return objectType == typeof(string) || objectType == typeof(int);
-            }
-
-            public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-            {
-                if (reader == null)
-                {
-                    throw new ArgumentNullException(nameof(reader));
-                }
-
-                if (reader.TokenType == JsonToken.String)
-                {
-                    return TimeSpan.Parse((string)reader.Value);
-                }
-                else if (reader.TokenType == JsonToken.Integer)
-                {
-                    return TimeSpan.FromMilliseconds(Convert.ToInt32(reader.Value));
-                }
-                else
-                {
-                    return existingValue;
-                }
-            }
-
-            public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
-            {
-                if (serializer == null)
-                {
-                    throw new ArgumentNullException(nameof(serializer));
-                }
-                serializer.Serialize(writer, value);
             }
         }
     }

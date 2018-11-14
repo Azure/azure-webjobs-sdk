@@ -62,19 +62,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             var jo = new JObject
             {
-                { "MaxPollingInterval", 5000 }
+                { "MaxPollingInterval", "00:00:05" }
             };
             var options = jo.ToObject<QueuesOptions>();
             Assert.Equal(TimeSpan.FromMilliseconds(5000), options.MaxPollingInterval);
-            string json = JsonConvert.SerializeObject(options);
-
-            jo = new JObject
-            {
-                { "MaxPollingInterval", "00:00:05" }
-            };
-            options = jo.ToObject<QueuesOptions>();
-            Assert.Equal(TimeSpan.FromMilliseconds(5000), options.MaxPollingInterval);
-            json = JsonConvert.SerializeObject(options);
         }
     }
 }
