@@ -33,6 +33,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             telemetry.Properties.Add("6", AssemblyLoadError);
             telemetry.Properties.Add("7", TestStrigWithAllowedTokenAndSecretToken);
 
+            // Run it through twice to ensure idempotency
+            initializer.Initialize(telemetry);
             initializer.Initialize(telemetry);
 
             Assert.Equal(telemetry.Properties["1"], SecretReplacement);
@@ -56,6 +58,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             var telemetry = new TraceTelemetry(StorageString);
 
+            // Run it through twice to ensure idempotency
+            initializer.Initialize(telemetry);
             initializer.Initialize(telemetry);
 
             // Just test a simple scenario; the SanitizerTests validate others

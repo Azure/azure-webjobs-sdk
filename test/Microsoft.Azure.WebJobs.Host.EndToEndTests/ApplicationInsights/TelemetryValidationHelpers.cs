@@ -48,7 +48,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             string operationId,
             string parentId,
             string category,
-            LogLevel logLevel = LogLevel.Information)
+            LogLevel logLevel = LogLevel.Information,
+            bool success = true,
+            string statusCode = "0",
+            string httpMethod = null)
+
         {
             Assert.Equal(category, request.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(logLevel.ToString(), request.Properties[LogConstants.LogLevelKey]);
@@ -68,6 +72,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.True(request.Properties.ContainsKey(LogConstants.InvocationIdKey));
             Assert.True(request.Properties.ContainsKey(LogConstants.TriggerReasonKey));
             Assert.StartsWith("webjobs:", request.Context.GetInternalContext().SdkVersion);
+
+            Assert.Equal(success, request.Success);
+            Assert.Equal(statusCode, request.ResponseCode);
+
+            Assert.DoesNotContain(request.Properties, p => p.Key == LogConstants.SucceededKey);
+
+            if (httpMethod != null)
+            {
+                Assert.Equal(httpMethod, request.Properties[LogConstants.HttpMethodKey]);
+            }
+            else
+            {
+                Assert.DoesNotContain(request.Properties, p => p.Key == LogConstants.HttpMethodKey);
+            }
         }
     }
 }

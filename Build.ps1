@@ -32,13 +32,13 @@ foreach ($project in $projects)
   {
     $cmd += "--version-suffix", "-$packageSuffix"
   }
-  
+  WRITE-HOST "dotnet $cmd"
   & dotnet $cmd  
 }
 
 ### Sign package if build is not a PR
 $isPr = Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER
-if (-not $isPr) {
+if (-not $isPr -and -not $isLocal) {
   & ".\tools\RunSigningJob.ps1" 
   if (-not $?) { exit 1 }
 }
