@@ -9,7 +9,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -20,12 +19,6 @@ using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
-using Microsoft.AspNetCore;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,7 +29,7 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
-    public class ApplicationInsightsEndToEndTests : IDisposable, IClassFixture<ApplicationInsightsEndToEndTests.CustomTestWebHostFactory>
+    public class ApplicationInsightsEndToEndTests : IDisposable
     {
         private const string _mockApplicationInsightsUrl = "http://localhost:4005/v2/track/";
         private const string _mockQuickPulseUrl = "http://localhost:4005/QuickPulseService.svc/";
@@ -48,15 +41,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private const string _customScopeValue = "MyCustomScopeValue";
 
         private const string _dateFormat = "HH':'mm':'ss'.'fffZ";
-        private const int _expectedResponseCode = 204;
-        private static readonly Uri _expectedUrl = new Uri("http://localhost/some/path");
-
-        private readonly CustomTestWebHostFactory _factory;
-
-        public ApplicationInsightsEndToEndTests(CustomTestWebHostFactory factory)
-        {
-            _factory = factory;
-        }
 
         private IHost ConfigureHost(LogLevel minLevel = LogLevel.Information)
         {
@@ -339,49 +323,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 RequestTelemetry functionRequest = requestTelemetries.Single();
                 Assert.Same(outerRequest, functionRequest);
 
-                Assert.True(double.TryParse(functionRequest.Properties[LogConstants.FunctionExecutionTimeKey], out double functionDuration));
-                Assert.True(functionRequest.Duration.TotalMilliseconds >= functionDuration);
-
                 ValidateRequest(functionRequest, testName, true);
-            }
-        }
-
-        [Fact]
-        public async Task ApplicationInsights_HttpRequestTracking()
-        {
-            var client = _factory.CreateClient();
-
-            string testName = nameof(TestApplicationInsightsInformation);
-            using (IHost host = ConfigureHost())
-            {
-                Startup.Host = host;
-                await host.StartAsync();
-
-                var request = new HttpRequestMessage(HttpMethod.Get, "/some/path");
-                request.Headers.Add("traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01");
-
-                await client.SendAsync(request);
-
-                await host.StopAsync();
-
-                // Validate the request
-                // There must be only one reported by the AppInsights request collector
-                RequestTelemetry[] requestTelemetries = _channel.Telemetries.OfType<RequestTelemetry>().ToArray();
-                Assert.Single(requestTelemetries);
-
-                RequestTelemetry functionRequest = requestTelemetries.Single();
-
-                Assert.True(double.TryParse(functionRequest.Properties[LogConstants.FunctionExecutionTimeKey], out double functionDuration));
-                Assert.True(functionRequest.Duration.TotalMilliseconds >= functionDuration);
-                ValidateRequest(
-                    functionRequest,
-                    testName,
-                    true,
-                    "4bf92f3577b34da6a3ce929d0e0e4736",
-                    "|4bf92f3577b34da6a3ce929d0e0e4736.00f067aa0ba902b7.");
-
-                Assert.Equal(_expectedUrl, functionRequest.Url);
-                Assert.Equal(_expectedResponseCode.ToString(), functionRequest.ResponseCode);
             }
         }
 
@@ -707,7 +649,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             ValidateSdkVersion(telemetry);
         }
 
-        private static void ValidateRequest(RequestTelemetry telemetry, string operationName, bool success, string operationId = null, string parentId = null)
+        private static void ValidateRequest(RequestTelemetry telemetry, string operationName, bool success)
         {
             Assert.NotNull(telemetry.Context.Operation.Id);
             Assert.Equal(operationName, telemetry.Context.Operation.Name);
@@ -719,7 +661,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.Equal($"ApplicationInsightsEndToEndTests.{operationName}", telemetry.Properties[LogConstants.FullNameKey]);
             Assert.Equal("This function was programmatically called via the host APIs.", telemetry.Properties[LogConstants.TriggerReasonKey]);
 
-            TelemetryValidationHelpers.ValidateRequest(telemetry, operationName, operationId, parentId, LogCategories.Results, success? LogLevel.Information : LogLevel.Error);
+            ValidateSdkVersion(telemetry);
         }
 
         private static void ValidateSdkVersion(ITelemetry telemetry)
@@ -793,42 +735,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         public void Dispose()
         {
             _channel?.Dispose();
-        }
-
-
-        public class Startup
-        {
-            internal static IHost Host;
-
-            public void ConfigureServices(IServiceCollection services)
-            {
-            }
-
-            public void Configure(IApplicationBuilder app, AspNetCore.Hosting.IHostingEnvironment env)
-            {
-                app.Run(async (context) =>
-                {
-                    MethodInfo methodInfo = typeof(ApplicationInsightsEndToEndTests).GetMethod(nameof(TestApplicationInsightsInformation), BindingFlags.Public | BindingFlags.Static);
-                    await Host.GetJobHost().CallAsync(methodInfo, new { input = "input" });
-                    context.Response.StatusCode = _expectedResponseCode;
-                    await context.Response.WriteAsync("Hello World!");
-                });
-            }
-        }
-
-        public class CustomTestWebHostFactory : WebApplicationFactory<ApplicationInsightsEndToEndTests.Startup>
-        {
-            protected override IWebHostBuilder CreateWebHostBuilder()
-            {
-                return WebHost.CreateDefaultBuilder()
-                    .UseStartup<ApplicationInsightsEndToEndTests.Startup>();
-            }
-
-            protected override void ConfigureWebHost(IWebHostBuilder builder)
-            {
-                builder.UseContentRoot(".");
-                base.ConfigureWebHost(builder);
-            }
         }
     }
 }

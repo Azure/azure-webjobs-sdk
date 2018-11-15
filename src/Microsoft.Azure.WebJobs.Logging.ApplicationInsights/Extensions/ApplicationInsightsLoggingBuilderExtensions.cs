@@ -38,7 +38,7 @@ namespace Microsoft.Extensions.Logging
             {
                 // We want all logs to flow through the logger so they show up in QuickPulse.
                 // To do that, we'll hide all registered rules inside of this one. They will be re-populated
-                // and used by the FilteringTelemetryProcessor further down the pipeline.
+                // and used by the FilteringTelemetryProcessor futher down the pipeline.
                 string fullTypeName = typeof(ApplicationInsightsLoggerProvider).FullName;
                 IList<LoggerFilterRule> matchingRules = o.Rules.Where(r =>
                 {

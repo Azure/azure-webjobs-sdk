@@ -29,6 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
         private const string _mockApplicationInsightsKey = "some_key";
         private readonly string _endpoint;
         private readonly string _connectionString;
+        private RandomNameResolver _resolver;
         private readonly TestTelemetryChannel _channel = new TestTelemetryChannel();
         private static readonly AutoResetEvent _functionWaitHandle = new AutoResetEvent(false);
 
@@ -66,27 +67,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.Equal(2, requests.Count);
             Assert.Single(dependencies);
 
-            Assert.Single(requests.Where(r => r.Name == nameof(ServiceBusTrigger)));
-            var sbTriggerRequest = requests.Single(r => r.Name == nameof(ServiceBusTrigger));
+            Assert.Single(requests.Where(r => r.Context.Operation.ParentId == dependencies.Single().Id));
+            var sbTriggerRequest = requests.Single(r => r.Context.Operation.ParentId == dependencies.Single().Id);
             var manualCallRequest = requests.Single(r => r.Name == nameof(ServiceBusOut));
             var sbOutDependency = dependencies.Single();
 
-            string manualOperationId = manualCallRequest.Context.Operation.Id;
-            string triggerOperationId = sbTriggerRequest.Context.Operation.Id;
+            string operationId = manualCallRequest.Context.Operation.Id;
+            Assert.Equal(operationId, sbTriggerRequest.Context.Operation.Id);
 
-            // currently ApplicationInsights supports 2 parallel correlation schemes:
-            // legacy and W3C, they both appear in telemetry. UX handles all differences in operation Ids. 
-            // This will be resolved in next .NET SDK on Activity level
-            string dependencyLegacyId = sbOutDependency.Properties.Single(p => p.Key == "ai_legacyRequestId").Value;
-            string triggerCallLegacyRootId = sbTriggerRequest.Properties.Single(p => p.Key == "ai_legacyRootId").Value;
-            string manualCallLegacyRootId = manualCallRequest.Properties.Single(p => p.Key == "ai_legacyRootId").Value;
-
-            Assert.Equal(sbTriggerRequest.Context.Operation.ParentId, dependencyLegacyId);
-            Assert.Equal(manualOperationId, sbOutDependency.Context.Operation.Id);
-            Assert.Equal(manualCallLegacyRootId, triggerCallLegacyRootId);
-
-            ValidateServiceBusDependency(sbOutDependency, _endpoint, _queueName, "Send", nameof(ServiceBusOut), manualOperationId, manualCallRequest.Id);
-            ValidateServiceBusRequest(sbTriggerRequest, _endpoint, _queueName, nameof(ServiceBusTrigger), triggerOperationId, dependencyLegacyId);
+            ValidateServiceBusDependency(sbOutDependency, _endpoint, _queueName, "Send", nameof(ServiceBusOut), operationId, manualCallRequest.Id);
+            ValidateServiceBusRequest(sbTriggerRequest, _endpoint, _queueName, nameof(ServiceBusTrigger), operationId, sbOutDependency.Id);
         }
 
         [Fact]
@@ -171,6 +161,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
         public IHost ConfigureHost()
         {
+            _resolver = new RandomNameResolver();
+
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost<ServiceBusRequestAndDependencyCollectionTests>(b =>
                 {
