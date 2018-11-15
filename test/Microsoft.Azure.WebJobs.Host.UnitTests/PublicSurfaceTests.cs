@@ -256,8 +256,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
                 "ApplicationInsightsLoggerOptions",
                 "ApplicationInsightsLoggerProvider",
-                "ApplicationInsightsLoggingBuilderExtensions",
-                "ISdkVersionProvider"
+                "ApplicationInsightsLoggingBuilderExtensions"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);

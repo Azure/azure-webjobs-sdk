@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using Microsoft.ApplicationInsights.DataContracts;
-using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -47,11 +46,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             string operationName,
             string operationId,
             string parentId,
-            string category,
-            LogLevel logLevel = LogLevel.Information)
+            string category)
         {
             Assert.Equal(category, request.Properties[LogConstants.CategoryNameKey]);
-            Assert.Equal(logLevel.ToString(), request.Properties[LogConstants.LogLevelKey]);
+            Assert.Equal(LogLevel.Information.ToString(), request.Properties[LogConstants.LogLevelKey]);
             Assert.NotNull(request.Name);
             Assert.NotNull(request.Id);
 
@@ -67,7 +65,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.Equal(operationName, request.Context.Operation.Name);
             Assert.True(request.Properties.ContainsKey(LogConstants.InvocationIdKey));
             Assert.True(request.Properties.ContainsKey(LogConstants.TriggerReasonKey));
-            Assert.StartsWith("webjobs:", request.Context.GetInternalContext().SdkVersion);
         }
     }
 }
