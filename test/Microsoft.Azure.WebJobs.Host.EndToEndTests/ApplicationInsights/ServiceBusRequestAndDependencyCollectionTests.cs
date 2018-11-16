@@ -29,7 +29,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
         private const string _mockApplicationInsightsKey = "some_key";
         private readonly string _endpoint;
         private readonly string _connectionString;
-        private RandomNameResolver _resolver;
         private readonly TestTelemetryChannel _channel = new TestTelemetryChannel();
         private static readonly AutoResetEvent _functionWaitHandle = new AutoResetEvent(false);
 
@@ -46,16 +45,19 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             _endpoint = connStringBuilder.Endpoint;
         }
 
-        [Fact]
-        public async Task ServiceBusDepenedenciesAndRequestAreTracked()
+        [Theory]
+        [InlineData("message", true)]
+        [InlineData("throw", false)]
+        public async Task ServiceBusDepenedenciesAndRequestAreTracked(string message, bool success)
         {
             using (var host = ConfigureHost())
             {
                 await host.StartAsync();
-                await host.GetJobHost()
-                    .CallAsync(typeof(ServiceBusRequestAndDependencyCollectionTests).GetMethod(nameof(ServiceBusOut)), new { input = "message" });
 
+                await host.GetJobHost()
+                    .CallAsync(typeof(ServiceBusRequestAndDependencyCollectionTests).GetMethod(nameof(ServiceBusOut)), new { input = message });
                 _functionWaitHandle.WaitOne();
+
                 await Task.Delay(1000);
 
                 await host.StopAsync();
@@ -65,18 +67,25 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             List<DependencyTelemetry> dependencies = _channel.Telemetries.OfType<DependencyTelemetry>().ToList();
 
             Assert.Equal(2, requests.Count);
-            Assert.Single(dependencies);
 
-            Assert.Single(requests.Where(r => r.Context.Operation.ParentId == dependencies.Single().Id));
-            var sbTriggerRequest = requests.Single(r => r.Context.Operation.ParentId == dependencies.Single().Id);
+            // One dependency for the 'Send' from ServiceBusOut
+            // One dependency for the 'Complete' call in ServiceBusTrigger
+            Assert.Equal(2, dependencies.Count);
+            var sbOutDependency = dependencies.Single(d => d.Name == "Send");
+            Assert.Single(dependencies, d => d.Name == "Complete");
+
+            var sbTriggerRequest = requests.Single(r => r.Name == nameof(ServiceBusTrigger));
             var manualCallRequest = requests.Single(r => r.Name == nameof(ServiceBusOut));
-            var sbOutDependency = dependencies.Single();
 
             string operationId = manualCallRequest.Context.Operation.Id;
             Assert.Equal(operationId, sbTriggerRequest.Context.Operation.Id);
 
             ValidateServiceBusDependency(sbOutDependency, _endpoint, _queueName, "Send", nameof(ServiceBusOut), operationId, manualCallRequest.Id);
-            ValidateServiceBusRequest(sbTriggerRequest, _endpoint, _queueName, nameof(ServiceBusTrigger), operationId, sbOutDependency.Id);
+            ValidateServiceBusRequest(sbTriggerRequest, success, _endpoint, _queueName, nameof(ServiceBusTrigger), operationId, sbOutDependency.Id);
+
+            // Make sure that the trigger traces are correlated
+            var traces = _channel.Telemetries.OfType<TraceTelemetry>().Where(t => t.Context.Operation.Id == operationId);
+            Assert.Equal(success ? 5 : 7, traces.Count());
         }
 
         [Fact]
@@ -99,11 +108,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             List<DependencyTelemetry> dependencies = _channel.Telemetries.OfType<DependencyTelemetry>().ToList();
 
             Assert.Single(requests);
-            Assert.Empty(dependencies);
 
-            Assert.NotNull(requests.Single().Context.Operation.Id);
+            // The call to Complete the message registers as a dependency
+            Assert.Single(dependencies);
+            Assert.Equal("Complete", dependencies.Single().Name);
 
-            ValidateServiceBusRequest(requests.Single(), _endpoint, _queueName, nameof(ServiceBusTrigger), null, null);
+            var request = requests.Single();
+
+            Assert.NotNull(request.Context.Operation.Id);
+
+            ValidateServiceBusRequest(request, true, _endpoint, _queueName, nameof(ServiceBusTrigger), null, null);
+
+            // Make sure that the trigger traces are correlated
+            var traces = _channel.Telemetries.OfType<TraceTelemetry>().Where(t => t.Context.Operation.Id == request.Context.Operation.Id);
+            Assert.Equal(4, traces.Count());
         }
 
         [NoAutomaticTrigger]
@@ -115,16 +133,31 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             message = input;
         }
 
-        public static void ServiceBusTrigger(
+        public static async Task ServiceBusTrigger(
             [ServiceBusTrigger(_queueName)] string message,
+            MessageReceiver messageReceiver,
+            string lockToken,
             TextWriter logger)
         {
-            logger.WriteLine($"C# script processed queue message: '{message}'");
-            _functionWaitHandle.Set();
+            try
+            {
+                logger.WriteLine($"C# script processed queue message: '{message}'");
+
+                if (message == "throw")
+                {
+                    throw new InvalidOperationException("boom!");
+                }
+            }
+            finally
+            {
+                await messageReceiver.CompleteAsync(lockToken);
+                _functionWaitHandle.Set();
+            }
         }
 
         private void ValidateServiceBusRequest(
             RequestTelemetry request,
+            bool success,
             string endpoint,
             string queueName,
             string operationName,
@@ -139,7 +172,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.True(double.TryParse(request.Properties[LogConstants.FunctionExecutionTimeKey], out double functionDuration));
             Assert.True(request.Duration.TotalMilliseconds >= functionDuration);
 
-            TelemetryValidationHelpers.ValidateRequest(request, operationName, operationId, parentId, LogCategories.Results);
+            Assert.DoesNotContain(request.Properties, p => p.Key == LogConstants.HttpMethodKey);
+
+            TelemetryValidationHelpers.ValidateRequest(request, operationName, operationId, parentId, LogCategories.Results,
+                success ? LogLevel.Information : LogLevel.Error, success);
         }
 
         private void ValidateServiceBusDependency(
@@ -161,13 +197,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
         public IHost ConfigureHost()
         {
-            _resolver = new RandomNameResolver();
-
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost<ServiceBusRequestAndDependencyCollectionTests>(b =>
                 {
                     b.AddAzureStorage();
-                    b.AddServiceBus();
+                    b.AddServiceBus(o =>
+                    {
+                        // We'll complete these ourselves as we don't
+                        // want failures constantly retrying.
+                        o.MessageHandlerOptions.AutoComplete = false;
+                    });
                 })
                 .ConfigureLogging(b =>
                 {

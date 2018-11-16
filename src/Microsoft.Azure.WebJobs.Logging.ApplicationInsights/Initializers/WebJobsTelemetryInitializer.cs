@@ -8,6 +8,7 @@ using System.Linq;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
@@ -18,6 +19,17 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         private const string WebSiteInstanceIdKey = "WEBSITE_INSTANCE_ID";
 
         private static readonly string _roleInstanceName = GetRoleInstanceName();
+        private readonly string _sdkVersion;
+
+        public WebJobsTelemetryInitializer(ISdkVersionProvider versionProvider)
+        {
+            if (versionProvider == null)
+            {
+                throw new ArgumentNullException(nameof(versionProvider));
+            }
+
+            _sdkVersion = versionProvider.GetSdkVersion();
+        }
 
         public void Initialize(ITelemetry telemetry)
         {
@@ -83,30 +95,25 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             // we may track traces/dependencies after function scope ends - we don't want to update those
             else if (request != null)
             {
+                UpdateRequestProperties(request);
+
                 Activity currentActivity = Activity.Current;
-                if (currentActivity != null) // should never be null, but we don't want to throw anyway
+                if (currentActivity != null)
                 {
-                    // tags is a list, we'll enumerate it
                     foreach (var tag in currentActivity.Tags)
                     {
-                        switch (tag.Key)
+                        // Apply well-known tags and custom properties                        
+                        if (!TryApplyProperty(request, tag))
                         {
-                            case LogConstants.NameKey:
-                                request.Context.Operation.Name = tag.Value;
-                                request.Name = tag.Value;
-                                break;
-                            default:
-                                request.Properties[tag.Key] = tag.Value;
-                                break;
+                            request.Properties[tag.Key] = tag.Value;
                         }
                     }
                 }
                 else // workaround for https://github.com/Microsoft/ApplicationInsights-dotnet-server/issues/1038
                 {
-                    if (request.Properties.TryGetValue(LogConstants.NameKey, out var functionName))
+                    foreach (var property in request.Properties)
                     {
-                        request.Context.Operation.Name = functionName;
-                        request.Name = functionName;
+                        TryApplyProperty(request, property);
                     }
                 }
             }
@@ -121,6 +128,53 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             }
 
             return instanceName;
+        }
+
+        /// <summary>
+        /// Changes properties of the RequestTelemetry to match what Functions expects.
+        /// </summary>
+        /// <param name="request">The RequestTelemetry to update.</param>
+        private void UpdateRequestProperties(RequestTelemetry request)
+        {
+            request.Context.GetInternalContext().SdkVersion = _sdkVersion;
+
+            // If the code hasn't been set, it's not an HttpRequest (could be auto-tracked SB, etc).
+            // So we'll initialize it to 0
+            if (string.IsNullOrEmpty(request.ResponseCode))
+            {
+                request.ResponseCode = "0";
+            }
+        }
+
+        /// <summary>
+        /// Tries to apply well-known properties from a KeyValuePair onto the RequestTelemetry.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <param name="property">The property.</param>
+        /// <returns>True if the property was applied. Otherwise, false.</returns>
+        private bool TryApplyProperty(RequestTelemetry request, KeyValuePair<string, string> property)
+        {
+            bool wasPropertySet = false;
+
+            if (property.Key == LogConstants.NameKey)
+            {
+                request.Context.Operation.Name = property.Value;
+                request.Name = property.Value;
+                wasPropertySet = true;
+            }
+            else if (property.Key == LogConstants.SucceededKey &&
+                bool.TryParse(property.Value, out bool success))
+            {
+                // no matter what App Insights says about the response, we always
+                // want to use the function's result for Succeeeded
+                request.Success = success;
+                wasPropertySet = true;
+
+                // Remove the Succeeded property as it's duplicated
+                request.Properties.Remove(LogConstants.SucceededKey);
+            }
+
+            return wasPropertySet;
         }
     }
 }

@@ -196,7 +196,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 int functionsCalled = 0;
                 bool keepRunning = true;
                 Task functionTask = null;
-                
+
                 try
                 {
                     listener.StartListening();
@@ -267,7 +267,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 }));
 
                 int expectedTelemetryItems = additionalTraces + (functionsCalled * tracesPerRequest);
-                Assert.True(_channel.Telemetries.Count == expectedTelemetryItems, failureString);
+
+                // Filter out the odd auto-tracked request that we occassionally see from AppVeyor. 
+                // From here: https://github.com/xunit/xunit/blob/9d10262a3694bb099ddd783d735aba2a7aac759d/src/xunit.runner.reporters/AppVeyorClient.cs#L21
+                var actualTelemetries = _channel.Telemetries
+                    .Where(p => !(p is DependencyTelemetry d && d.Name == "POST /api/tests/batch"))
+                    .ToArray();
+                Assert.True(actualTelemetries.Length == expectedTelemetryItems,
+                   $"Expected: {expectedTelemetryItems}; Actual: {actualTelemetries.Length}{Environment.NewLine}{failureString}");
             }
         }
 
@@ -319,7 +326,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 // There must be only one reported by the AppInsights request collector
                 RequestTelemetry[] requestTelemetries = _channel.Telemetries.OfType<RequestTelemetry>().ToArray();
                 Assert.Single(requestTelemetries);
-                
+
                 RequestTelemetry functionRequest = requestTelemetries.Single();
                 Assert.Same(outerRequest, functionRequest);
 

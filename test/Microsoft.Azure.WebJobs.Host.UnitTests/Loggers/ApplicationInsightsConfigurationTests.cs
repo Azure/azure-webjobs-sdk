@@ -49,6 +49,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Assert.Single(config.TelemetryInitializers.OfType<WebJobsTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<WebJobsSanitizingInitializer>());
 
+                var sdkVersionProvider = host.Services.GetServices<ISdkVersionProvider>().ToList();
+                Assert.Single(sdkVersionProvider);
+                Assert.Single(sdkVersionProvider.OfType<WebJobsSdkVersionProvider>());
+
                 // Verify Channel
                 Assert.IsType<ServerTelemetryChannel>(config.TelemetryChannel);
 
