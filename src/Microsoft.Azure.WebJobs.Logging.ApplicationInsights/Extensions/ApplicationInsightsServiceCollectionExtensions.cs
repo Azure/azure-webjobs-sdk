@@ -18,6 +18,7 @@ using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Configuration;
 using Microsoft.Extensions.Options;
@@ -38,6 +39,8 @@ namespace Microsoft.Extensions.DependencyInjection
 
         public static IServiceCollection AddApplicationInsights(this IServiceCollection services)
         {
+            services.TryAddSingleton<ISdkVersionProvider, WebJobsSdkVersionProvider>();
+
             // Bind to the configuration section registered with 
             services.AddOptions<ApplicationInsightsLoggerOptions>()
                 .Configure<ILoggerProviderConfiguration<ApplicationInsightsLoggerProvider>>((options, config) =>
@@ -111,8 +114,8 @@ namespace Microsoft.Extensions.DependencyInjection
                 TelemetryConfiguration configuration = provider.GetService<TelemetryConfiguration>();
                 TelemetryClient client = new TelemetryClient(configuration);
 
-                string assemblyVersion = GetAssemblyFileVersion(typeof(JobHost).Assembly);
-                client.Context.GetInternalContext().SdkVersion = $"webjobs: {assemblyVersion}";
+                ISdkVersionProvider versionProvider = provider.GetService<ISdkVersionProvider>();
+                client.Context.GetInternalContext().SdkVersion = versionProvider?.GetSdkVersion();
 
                 return client;
             });

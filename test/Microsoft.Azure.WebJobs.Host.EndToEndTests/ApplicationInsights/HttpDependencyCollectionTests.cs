@@ -154,7 +154,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
             Assert.Equal("Http", dependency.Type);
             Assert.Equal("www.microsoft.com", dependency.Target);
-            Assert.Equal("https://www.microsoft.com/", dependency.Data);
+            Assert.Contains("https://www.microsoft.com", dependency.Data);
             Assert.Equal("GET /", dependency.Name);
         }
 
