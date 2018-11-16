@@ -2,7 +2,7 @@
   <Import Project="..\..\build\common.props" />
 
   <PropertyGroup>
-    <Version>3.0.2$(VersionSuffix)</Version>
+    <Version>$(ExtensionsEventHubsVersion)</Version>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>Microsoft.Azure.WebJobs.EventHubs</AssemblyName>
     <RootNamespace>Microsoft.Azure.WebJobs.EventHubs</RootNamespace>

@@ -4,7 +4,7 @@
   <Import Project="..\..\build\common.props" />  
   
   <PropertyGroup>
-    <Version>3.0.2$(VersionSuffix)</Version>
+    <Version>$(ExtensionsServiceBusVersion)</Version>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>Microsoft.Azure.WebJobs.ServiceBus</AssemblyName>
     <PackageId>Microsoft.Azure.WebJobs.Extensions.ServiceBus</PackageId>
