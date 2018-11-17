@@ -2,6 +2,8 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
@@ -11,6 +13,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     /// </summary>
     public class TriggeredFunctionData
     {
+        private IDictionary<string, string> _triggerDetails;
+
         /// <summary>
         /// The parent ID for the triggered function invocation.
         /// </summary>
@@ -20,6 +24,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         /// The trigger value for a specific triggered function invocation.
         /// </summary>
         public object TriggerValue { get; set; }
+
+        /// <summary>
+        /// Details of the trigger (e.g. Message ID, insertion time, dequeue count etc.)
+        /// </summary>
+        [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public IDictionary<string, string> TriggerDetails { get => _triggerDetails; set => _triggerDetails = value; }
 
         /// <summary>
         /// Optional handler function for processing the invocation.

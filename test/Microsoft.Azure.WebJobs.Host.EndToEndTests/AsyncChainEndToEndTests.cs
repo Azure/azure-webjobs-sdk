@@ -10,6 +10,7 @@ using System.Net;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
@@ -41,6 +42,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private const string Queue1Name = TestArtifactsPrefix + "q1%rnd%";
         private const string Queue2Name = TestArtifactsPrefix + "q2%rnd%";
         private const string TestQueueName = TestArtifactsPrefix + "q3%rnd%";
+
+        private const string TriggerDetailsMessageStart = "Trigger Details:";
 
         private static CloudStorageAccount _storageAccount;
 
@@ -121,8 +124,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "Function 'AsyncChainEndToEndTests.DisabledJob' is disabled",
                     "Job host started",
                     "Executing 'AsyncChainEndToEndTests.WriteStartDataMessageToQueue' (Reason='This function was programmatically called via the host APIs.', Id=",
+                    $"Trigger Details:",
                     "Executed 'AsyncChainEndToEndTests.WriteStartDataMessageToQueue' (Succeeded, Id=",
                     string.Format("Executing 'AsyncChainEndToEndTests.QueueToQueueAsync' (Reason='New queue message detected on '{0}'.', Id=", firstQueueName),
+                    $"Trigger Details:",
                     "Executed 'AsyncChainEndToEndTests.QueueToQueueAsync' (Succeeded, Id=",
                     string.Format("Executing 'AsyncChainEndToEndTests.QueueToBlobAsync' (Reason='New queue message detected on '{0}'.', Id=", secondQueueName),
                     "Executed 'AsyncChainEndToEndTests.QueueToBlobAsync' (Succeeded, Id=",
@@ -147,12 +152,23 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 // Validate Logger output
                 var allLogs = _loggerProvider.CreatedLoggers.SelectMany(l => l.GetLogMessages().SelectMany(m => m.FormattedMessage.Trim().Split(new string[] { Environment.NewLine }, StringSplitOptions.None))).OrderBy(p => p).ToArray();
-                // Logger doesn't log the 'Executing' messages
-                var loggerExpected = expectedOutputLines.Where(l => !l.StartsWith("Executing '")).ToArray();
+                // Logger doesn't log the 'Executing' or 'Trigger Details' messages
+                var loggerExpected = expectedOutputLines.Where(l => !l.StartsWith("Executing '") && !l.StartsWith("Trigger Details")).ToArray();
 
                 for (int i = 0; i < loggerExpected.Length; i++)
                 {
                     Assert.StartsWith(loggerExpected[i], allLogs[i]);
+                }
+
+                // Verify that trigger details are properly formatted
+                string[] triggerDetailsLoggerOutput = consoleOutputLines
+                    .Where(m => m.StartsWith(TriggerDetailsMessageStart)).ToArray();
+
+                string expectedPattern = "Trigger Details: MessageId: (.*), DequeueCount: [0-9]+, InsertionTime: (.*)";
+
+                foreach (string msg in triggerDetailsLoggerOutput)
+                {
+                    Assert.True(Regex.IsMatch(msg, expectedPattern), $"Expected trace event {expectedPattern} not found.");
                 }
             }
         }

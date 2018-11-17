@@ -4,6 +4,7 @@
 using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Protocols;
@@ -27,7 +28,18 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
         {
             string traceMessage = string.Format(CultureInfo.InvariantCulture, "Executing '{0}' (Reason='{1}', Id={2})", message.Function.ShortName, message.FormatReason(), message.FunctionInstanceId);
             Trace(TraceLevel.Info, message.HostInstanceId, message.Function, message.FunctionInstanceId, traceMessage, TraceSource.Execution);
+            if (message.TriggerDetails != null && message.TriggerDetails.Count != 0)
+            {
+                LogTriggerDetails(message);
+            }
             return Task.FromResult<string>(null);
+        }
+
+        private void LogTriggerDetails(FunctionStartedMessage message)
+        {
+            var keyValuePairs = message.TriggerDetails.Select(entry => $"{entry.Key}: {entry.Value}");
+            string triggerDetailsMessage = "Trigger Details: " + string.Join(", ", keyValuePairs);
+            Trace(TraceLevel.Info, message.HostInstanceId, message.Function, message.FunctionInstanceId, triggerDetailsMessage, TraceSource.Execution);
         }
 
         public Task LogFunctionCompletedAsync(FunctionCompletedMessage message, CancellationToken cancellationToken)

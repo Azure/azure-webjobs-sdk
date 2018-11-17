@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Microsoft.Azure.WebJobs.Host.Executors;
@@ -17,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public void Works()
         {
             var descriptor = new FunctionDescriptor();
-            var instance = new FunctionInstance(Guid.NewGuid(), null, ExecutionReason.AutomaticTrigger, null, null, descriptor);
+            var instance = new FunctionInstance(Guid.NewGuid(), new Dictionary<string, string>(), null, ExecutionReason.AutomaticTrigger, null, null, descriptor);
             var writer = new TestTraceWriter(TraceLevel.Info);
             var functionTraceLevel = TraceLevel.Info;
             var hostInstanceId = Guid.NewGuid();
