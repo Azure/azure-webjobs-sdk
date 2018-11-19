@@ -1,7 +1,9 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Diagnostics;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host;
@@ -51,6 +53,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
         public async Task ProcessMessageAsync_Success()
         {
             BrokeredMessage message = new BrokeredMessage();
+            typeof(BrokeredMessage).GetProperty("SequenceNumber").SetValue(message, 1);
+            typeof(BrokeredMessage).GetProperty("LockedUntilUtc").SetValue(message, DateTime.Now);
+            typeof(BrokeredMessage).GetProperty("LockToken").SetValue(message, Guid.NewGuid());
+            
             CancellationToken cancellationToken = new CancellationToken();
             _mockMessageProcessor.Setup(p => p.BeginProcessingMessageAsync(message, cancellationToken)).ReturnsAsync(true);
 
