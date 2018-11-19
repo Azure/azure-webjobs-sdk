@@ -360,9 +360,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 var message = traceEvent.Message;
                 var startedOrEndedMessage = message.StartsWith("Executing ") || message.StartsWith("Executed ");
+                var triggerDetailsMessage = message.StartsWith(TriggerDetailsMessageStart);
                 var userMessage = message.Contains("User TextWriter") || message.Contains("User TraceWriter");
 
-                if (startedOrEndedMessage || userMessage)
+                if (startedOrEndedMessage || userMessage || triggerDetailsMessage)
                 {
                     Assert.Equal(4, traceEvent.Properties.Count);
 
@@ -614,7 +615,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                     // expect normal logs to be written (TraceLevel override is ignored)
                     var traces = trace.GetTraces();
-                    Assert.Equal(9, traces.Count);
+                    Assert.Equal(10, traces.Count);
 
                     string output = string.Join("\r\n", traces.Select(p => p.Message));
                     Assert.Contains("Executing 'AsyncChainEndToEndTests.QueueTrigger_TraceLevelOverride' (Reason='New queue message detected", output);
