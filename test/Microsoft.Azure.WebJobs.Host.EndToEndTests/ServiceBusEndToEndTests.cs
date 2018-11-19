@@ -334,7 +334,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     string.Format("{0}.SBTopicListener1", jobContainerType.FullName),
                     string.Format("{0}.SBTopicListener2", jobContainerType.FullName),
                     string.Format("{0}.ServiceBusBinderTest", jobContainerType.FullName),
-                    "ServicePointManager.DefaultConnectionLimit",
                     "Job host started",
                     string.Format("Executing '{0}.SBQueue2SBQueue' (Reason='New ServiceBus message detected on '{1}'.', Id=", jobContainerType.Name, startQueueName),
                     string.Format("Executed '{0}.SBQueue2SBQueue' (Succeeded, Id=", jobContainerType.Name),
