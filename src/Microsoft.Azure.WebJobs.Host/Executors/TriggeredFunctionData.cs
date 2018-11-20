@@ -28,8 +28,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         /// <summary>
         /// Details of the trigger (e.g. Message ID, insertion time, dequeue count etc.)
         /// </summary>
-        [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public IDictionary<string, string> TriggerDetails { get => _triggerDetails; set => _triggerDetails = value; }
+        public IDictionary<string, string> TriggerDetails { get; set; }
 
         /// <summary>
         /// Optional handler function for processing the invocation.
