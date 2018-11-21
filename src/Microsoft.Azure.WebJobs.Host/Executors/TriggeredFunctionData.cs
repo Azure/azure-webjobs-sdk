@@ -13,8 +13,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     /// </summary>
     public class TriggeredFunctionData
     {
-        private IDictionary<string, string> _triggerDetails;
-
         /// <summary>
         /// The parent ID for the triggered function invocation.
         /// </summary>
