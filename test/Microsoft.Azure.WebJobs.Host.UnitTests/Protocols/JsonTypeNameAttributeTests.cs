@@ -3,6 +3,7 @@
 
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Protocols

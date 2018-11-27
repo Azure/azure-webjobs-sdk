@@ -14,6 +14,7 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -99,7 +100,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await Task.WhenAll(tasks);
 
             // verify that only 2 listeners were started (one for each of the singleton functions)
-            await TestHelpers.Await(() =>
+            await TestUtils.Await(() =>
             {
                 return TestTriggerAttributeBindingProvider.TestTriggerBinding.TestTriggerListener.StartCount == 3;
             });
@@ -184,7 +185,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
 
             // wait for all the messages to be processed by the job
-            await TestHelpers.Await(() =>
+            await TestUtils.Await(() =>
             {
                 return (TestJobs.Queue2MessageCount == numMessages &&
                        TestJobs.JobInvocations.Select(p => p.Value).Sum() == numMessages) || TestJobs.FailureDetected;

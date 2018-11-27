@@ -4,7 +4,7 @@
 using Microsoft.Azure.WebJobs.Host;
 using System;
 
-namespace Microsoft.Azure.WebJobs
+namespace Microsoft.Azure.WebJobs.Host.TestHelpers
 {
     // Test helper for setting & resetting an env variable. 
     public class EnvVarHolder

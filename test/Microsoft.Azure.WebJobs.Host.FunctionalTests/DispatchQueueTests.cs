@@ -9,6 +9,7 @@ using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Moq;
 using Newtonsoft.Json.Linq;
@@ -168,7 +169,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             //await Task.WhenAll(enqueue);
             //// wait for dequeue
-            //await TestHelpers.Await(() => calls >= max, 1000, 200);
+            //await TestUtils.Await(() => calls >= max, 1000, 200);
             //await _sharedQueue.StopQueueAsync(CancellationToken.None);
 
             //Assert.Equal(max, notifies);
@@ -216,7 +217,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await _sharedQueue.StartQueueAsync(CancellationToken.None);
 
             // wait for dequeue
-            await TestHelpers.Await(() => a.CallCount >= a.TotalEnqueues && b.CallCount >= b.TotalEnqueues, 1000, 200);
+            await TestUtils.Await(() => a.CallCount >= a.TotalEnqueues && b.CallCount >= b.TotalEnqueues, 1000, 200);
             await _sharedQueue.StopQueueAsync(CancellationToken.None);
 
             Assert.Equal(a.TotalEnqueues, a.CallCount);

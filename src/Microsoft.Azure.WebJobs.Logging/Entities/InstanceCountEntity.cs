@@ -21,13 +21,11 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
         // when many functions are quickly run within a single time tick. 
         static int _salt;
 
-        ///
         public InstanceCountEntity()
         {
         }
 
         // from rowKey
-        ///
         public long GetTicks()
         {
             var time = TableScheme.Get1stTerm(this.RowKey);
@@ -35,7 +33,6 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
             return ticks;
         }
 
-        ///
         public long GetEndTicks()
         {
             var startTicks = GetTicks();
@@ -44,13 +41,11 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
             return endTicks;
         }
 
-        /// 
         public long GetDurationInTicks()
         {
             return TimeSpan.FromMilliseconds(DurationMilliseconds).Ticks;
         }
 
-        ///
         public InstanceCountEntity(long ticks, string containerName)
         {
             int salt = Interlocked.Increment(ref _salt);
@@ -59,7 +54,6 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
             this.RowKey = string.Format(CultureInfo.InvariantCulture, RowKeyFormat, ticks, containerName, salt);
         }
 
-        ///
         public static TableQuery<InstanceCountEntity> GetQuery(DateTime startTime, DateTime endTime)
         {
             if (startTime > endTime)

@@ -12,6 +12,7 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
@@ -119,8 +120,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             _singletonConfig = new SingletonOptions();
 
             // use reflection to bypass the normal validations (so tests can run fast)
-            TestHelpers.SetField(_singletonConfig, "_lockAcquisitionPollingInterval", TimeSpan.FromMilliseconds(25));
-            TestHelpers.SetField(_singletonConfig, "_lockPeriod", TimeSpan.FromMilliseconds(500));
+            TestUtils.SetField(_singletonConfig, "_lockAcquisitionPollingInterval", TimeSpan.FromMilliseconds(25));
+            TestUtils.SetField(_singletonConfig, "_lockPeriod", TimeSpan.FromMilliseconds(500));
             _singletonConfig.LockAcquisitionTimeout = TimeSpan.FromMilliseconds(200);
 
             _nameResolver = new TestNameResolver();

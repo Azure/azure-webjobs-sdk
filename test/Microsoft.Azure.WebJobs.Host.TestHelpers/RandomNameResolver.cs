@@ -3,7 +3,7 @@
 
 using System;
 
-namespace Microsoft.Azure.WebJobs.Host.TestCommon
+namespace Microsoft.Azure.WebJobs.Host.TestHelpers
 {
     public class RandomNameResolver : INameResolver
     {

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Azure.WebJobs.Host.Bindings.Path;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Path

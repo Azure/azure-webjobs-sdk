@@ -11,6 +11,7 @@ using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.EventHubs.Processor;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -74,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             var evt = new EventData(new byte[] { });
             IDictionary<string, object> sysProps = GetSystemProperties();
 
-            TestHelpers.SetField(evt, "SystemProperties", sysProps);
+            TestUtils.SetField(evt, "SystemProperties", sysProps);
 
             var input = EventHubTriggerInput.New(evt);
             input.PartitionContext = GetPartitionContext();
@@ -100,7 +101,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
         private static IDictionary<string, object> GetSystemProperties(string partitionKey = "TestKey")
         {
             long testSequence = 4294967296;
-            IDictionary<string, object> sysProps = TestHelpers.New<SystemPropertiesCollection>();
+            IDictionary<string, object> sysProps = TestUtils.New<SystemPropertiesCollection>();
             sysProps["x-opt-partition-key"] = partitionKey;
             sysProps["x-opt-offset"] = "TestOffset";
             sysProps["x-opt-enqueued-time"] = DateTime.MinValue;
@@ -123,7 +124,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             foreach (var evt in events)
             {
                 IDictionary<string, object> sysProps = GetSystemProperties($"pk{count++}");
-                TestHelpers.SetField(evt, "SystemProperties", sysProps);
+                TestUtils.SetField(evt, "SystemProperties", sysProps);
             }
 
             var input = new EventHubTriggerInput

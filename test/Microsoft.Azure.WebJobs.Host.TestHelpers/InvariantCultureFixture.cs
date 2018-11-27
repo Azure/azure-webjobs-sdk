@@ -5,7 +5,7 @@ using System;
 using System.Globalization;
 using System.Threading;
 
-namespace Microsoft.Azure.WebJobs.Host.TestCommon
+namespace Microsoft.Azure.WebJobs.Host.TestHelpers
 {
     public class InvariantCultureFixture : IDisposable
     {

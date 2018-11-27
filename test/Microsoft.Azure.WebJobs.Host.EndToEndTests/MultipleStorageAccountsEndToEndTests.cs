@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -41,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             CloudBlockBlob resultBlob = null;
 
-            await TestHelpers.Await(async () =>
+            await TestUtils.Await(async () =>
             {
                 resultBlob = (CloudBlockBlob)(await _fixture.OutputContainer2.ListBlobsSegmentedAsync("blob1", null)).Results.SingleOrDefault();
                 return resultBlob != null;
@@ -57,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             CloudBlockBlob resultBlob = null;
 
-            await TestHelpers.Await(async () =>
+            await TestUtils.Await(async () =>
             {
                 resultBlob = (CloudBlockBlob)(await _fixture.OutputContainer1.ListBlobsSegmentedAsync(null)).Results.SingleOrDefault();
                 return resultBlob != null;
@@ -73,7 +74,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             CloudQueueMessage resultMessage = null;
 
-            await TestHelpers.Await(async () =>
+            await TestUtils.Await(async () =>
             {
                 resultMessage = await _fixture.OutputQueue2.GetMessageAsync();
                 return resultMessage != null;
@@ -97,7 +98,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await _fixture.JobHost.CallAsync(method, new { input = jObject.ToString() });
 
             var blobReference = await _fixture.OutputContainer2.GetBlobReferenceFromServerAsync(name);
-            await TestHelpers.Await(() => blobReference.ExistsAsync());
+            await TestUtils.Await(() => blobReference.ExistsAsync());
 
             string data;
             using (var memoryStream = new MemoryStream())
@@ -117,7 +118,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             CloudQueueMessage resultMessage = null;
 
-            await TestHelpers.Await(async () =>
+            await TestUtils.Await(async () =>
             {
                 resultMessage = await _fixture.OutputQueue1.GetMessageAsync();
                 return resultMessage != null;
@@ -133,7 +134,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             TestTableEntity entity1 = null;
             TestTableEntity entity2 = null;
-            await TestHelpers.Await(async () =>
+            await TestUtils.Await(async () =>
             {
                 TableResult result = await _fixture.OutputTable1.ExecuteAsync(TableOperation.Retrieve<TestTableEntity>("test", "test"));
                 if (result != null)

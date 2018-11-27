@@ -8,7 +8,7 @@ using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Hosting;
 using Xunit;
 
-namespace Microsoft.Azure.WebJobs.Host.TestCommon
+namespace Microsoft.Azure.WebJobs.Host.TestHelpers
 {
     public class TestExceptionHandlerFactory : IWebJobsExceptionHandlerFactory
     {

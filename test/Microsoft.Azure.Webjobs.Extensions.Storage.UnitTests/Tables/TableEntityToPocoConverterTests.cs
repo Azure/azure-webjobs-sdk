@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.Azure.WebJobs.Host.Converters;
 using Microsoft.Azure.WebJobs.Host.Tables;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Microsoft.WindowsAzure.Storage.Table;
 using Xunit;
 

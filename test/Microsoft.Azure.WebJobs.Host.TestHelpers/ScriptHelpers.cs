@@ -11,7 +11,7 @@ using System.Threading;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace Microsoft.Azure.WebJobs.Host.TestCommon
+namespace Microsoft.Azure.WebJobs.Host.TestHelpers
 {
     // Helpers for testing some Script Scenarios 
     public static class ScriptHelpers

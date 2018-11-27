@@ -5,6 +5,7 @@ using System;
 using System.Linq;
 using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.ServiceBus.Config;
 using Microsoft.Extensions.Logging;

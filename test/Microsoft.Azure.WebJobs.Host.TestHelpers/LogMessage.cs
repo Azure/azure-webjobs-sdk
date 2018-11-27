@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.Azure.WebJobs.Host.TestCommon
+namespace Microsoft.Azure.WebJobs.Host.TestHelpers
 {
     public class LogMessage
     {

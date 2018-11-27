@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Microsoft.Azure.WebJobs.Logging.Internal;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
@@ -756,11 +757,11 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
             };
 
             await writer.AddAsync(item1);
-            await TestHelpers.Await(() => caughtExceptions.Count == 1, timeout: 5000, pollingInterval: 100, userMessageCallback: () => $"Expected caughtExceptions == 1; Actual: {caughtExceptions.Count}");
+            await TestUtils.Await(() => caughtExceptions.Count == 1, timeout: 5000, pollingInterval: 100, userMessageCallback: () => $"Expected caughtExceptions == 1; Actual: {caughtExceptions.Count}");
 
             // Without fixes to the error handling in the background flusher task, this second condition would never be met because no further flushes would occur after the first exception.
             await writer.AddAsync(item2);
-            await TestHelpers.Await(() => caughtExceptions.Count == 2, timeout: 5000, pollingInterval: 100, userMessageCallback: () => $"Expected caughtExceptions == 2; Actual: {caughtExceptions.Count}");
+            await TestUtils.Await(() => caughtExceptions.Count == 2, timeout: 5000, pollingInterval: 100, userMessageCallback: () => $"Expected caughtExceptions == 2; Actual: {caughtExceptions.Count}");
 
             Assert.Same(exToThrow1, caughtExceptions[0]);
             Assert.Same(exToThrow2, caughtExceptions[1]);

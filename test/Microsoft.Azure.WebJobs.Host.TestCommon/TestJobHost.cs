@@ -52,7 +52,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             {
                 await this.StartAsync();
                 // Assert
-                result = await TestHelpers.AwaitWithTimeout(taskSource);
+                result = await TestUtils.AwaitWithTimeout(taskSource);
             }
             return result;
         }

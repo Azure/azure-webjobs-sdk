@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Xunit;
 
 using static Microsoft.Azure.EventHubs.EventData;
@@ -26,9 +27,9 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
         public EventData CreateEvent(byte[] body, string partitionKey)
         {
             var data = new EventData(body);
-            IDictionary<string, object> sysProps = TestHelpers.New<SystemPropertiesCollection>();
+            IDictionary<string, object> sysProps = TestUtils.New<SystemPropertiesCollection>();
             sysProps["x-opt-partition-key"] = partitionKey;
-            TestHelpers.SetField(data, "SystemProperties", sysProps);
+            TestUtils.SetField(data, "SystemProperties", sysProps);
             return data;
         }
 

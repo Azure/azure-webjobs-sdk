@@ -11,6 +11,7 @@ using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Bindings.Path;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 
@@ -310,7 +311,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             var nameResolver = new FakeNameResolver();
 
-            var config = TestHelpers.CreateInMemoryCollection()
+            var config = TestUtils.CreateInMemoryCollection()
                 .AddSetting("appsetting", "ABC")
                 .AddSetting("connectionStrings:default", "fromConnStr")
                 .BuildConfiguration();
@@ -335,7 +336,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             Attr2 a2 = new Attr2(string.Empty, string.Empty) { ResolvedSetting = "appsetting" };
             var nameResolver = new FakeNameResolver();
-            var config = TestHelpers.CreateInMemoryCollection()
+            var config = TestUtils.CreateInMemoryCollection()
                 .AddSetting("appsetting", "ABC")
                 .AddSetting("default", "default")
                 .BuildConfiguration();
@@ -352,7 +353,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Attr3 a3 = new Attr3() { Required = "req", Default = "env" };
             var nameResolver = new FakeNameResolver();
 
-            var config = TestHelpers.CreateInMemoryCollection()
+            var config = TestUtils.CreateInMemoryCollection()
                 .AddSetting("env", "envval")
                 .AddSetting("req", "reqval")
                 .BuildConfiguration();
@@ -369,7 +370,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Attr3 a3 = new Attr3() { Required = "req" };
             var nameResolver = new FakeNameResolver();
 
-            var config = TestHelpers.CreateInMemoryCollection()
+            var config = TestUtils.CreateInMemoryCollection()
                 .AddSetting("default", "defaultval")
                 .AddSetting("req", "reqval")
                 .BuildConfiguration();
@@ -409,7 +410,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var nameResolver = new FakeNameResolver()
                 .Add("y", "Setting");
 
-            var config = TestHelpers.CreateInMemoryCollection()
+            var config = TestUtils.CreateInMemoryCollection()
                 .AddSetting(name, "AppSetting")
                 .BuildConfiguration();
 
@@ -474,7 +475,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 ConnectionNameResolver = "%nameResolver%"
             };
 
-            var config = TestHelpers.CreateInMemoryCollection()
+            var config = TestUtils.CreateInMemoryCollection()
                 .AddSetting("key", "unused")
                 .AddSetting("rootKey", "rootValue")
                 .AddSetting("connectionStrings:key", "connectionStringsValue")

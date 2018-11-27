@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Xunit;
@@ -37,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             EventHubTestJobs.EventId = id;
             await Fixture.Host.CallAsync(method, new { input = id });
 
-            await TestHelpers.Await(() =>
+            await TestUtils.Await(() =>
             {
                 return EventHubTestJobs.Result != null;
             });
@@ -56,7 +57,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             int numEvents = 5;
             await Fixture.Host.CallAsync(method, new { numEvents = numEvents, input = id });
 
-            await TestHelpers.Await(() =>
+            await TestUtils.Await(() =>
             {
                 return EventHubTestJobs.Result != null;
             });

@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -189,7 +190,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 host.Start();
 
                 // wait for the poison message to be handled
-                await TestHelpers.Await(() =>
+                await TestUtils.Await(() =>
                 {
                     return prog._poisonBlobMessages.Contains(blobName);
                 });

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -56,7 +57,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             await listener.StartAsync(ct);
 
             string[] logs = null;
-            await TestHelpers.Await(() =>
+            await TestUtils.Await(() =>
             {
                 logs = _loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage).ToArray();
                 return logs.Last() == "Listener successfully started for function 'testfunc' after 3 retries.";
@@ -129,7 +130,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
 
             // wait until we're sure the retry task is running
             string[] logs = null;
-            await TestHelpers.Await(() =>
+            await TestUtils.Await(() =>
             {
                 logs = _loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage).ToArray();
                 return logs.Any(p => p.Contains("Retrying to start listener"));
@@ -183,7 +184,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
 
             await listener.StartAsync(ct);
 
-            await TestHelpers.Await(() =>
+            await TestUtils.Await(() =>
             {
                 return Task.FromResult(stopCalled);
             }, timeout: 4000, userMessageCallback: () => "Listener not stopped.");

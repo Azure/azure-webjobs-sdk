@@ -4,6 +4,7 @@
 using System;
 using System.Linq;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
@@ -18,7 +19,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void WebJobs_Extensions_Storage_VerifyAssemblyReferences()
         {
-            var names = TestHelpers.GetAssemblyReferences(typeof(QueueTriggerAttribute).Assembly)
+            var names = TestUtils.GetAssemblyReferences(typeof(QueueTriggerAttribute).Assembly)
                 .OrderBy(n => n);
 
             var expectedReferences = new string[]
@@ -71,7 +72,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "AzureStorageWebJobsStartup"
             };
 
-            TestHelpers.AssertPublicTypes(expected, assembly);
+            TestUtils.AssertPublicTypes(expected, assembly);
         }
     }
 }

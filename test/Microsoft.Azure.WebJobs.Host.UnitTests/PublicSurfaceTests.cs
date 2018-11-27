@@ -3,6 +3,7 @@
 
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
 using Xunit;
@@ -19,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void WebJobs_Host_VerifyAssemblyReferences()
         {
-            var names = TestHelpers.GetAssemblyReferences(typeof(JobHost).Assembly);
+            var names = TestUtils.GetAssemblyReferences(typeof(JobHost).Assembly);
 
             foreach (var name in names)
             {
@@ -58,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "Segment`1"
             };
 
-            TestHelpers.AssertPublicTypes(expected, assembly);
+            TestUtils.AssertPublicTypes(expected, assembly);
         }
 
         [Fact]
@@ -91,7 +92,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "TimeoutAttribute"
             };
 
-            TestHelpers.AssertPublicTypes(expected, assembly);
+            TestUtils.AssertPublicTypes(expected, assembly);
         }
 
         [Fact]
@@ -246,7 +247,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IConfigurationExtensions"
             };
 
-            TestHelpers.AssertPublicTypes(expected, assembly);
+            TestUtils.AssertPublicTypes(expected, assembly);
         }
 
         [Fact]
@@ -262,7 +263,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "ISdkVersionProvider"
             };
 
-            TestHelpers.AssertPublicTypes(expected, assembly);
+            TestUtils.AssertPublicTypes(expected, assembly);
         }
     }
 }

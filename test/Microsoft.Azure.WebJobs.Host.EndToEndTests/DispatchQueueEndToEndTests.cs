@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -88,7 +89,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 _stopwatch.Restart();
 
                 int twoFuncCount = DispatchQueueTestConfig.BatchSize * 2;
-                await TestHelpers.Await(() => _funcInvocation.TotalAdd() >= twoFuncCount || _funcInvocation.HasDuplicate(),
+                await TestUtils.Await(() => _funcInvocation.TotalAdd() >= twoFuncCount || _funcInvocation.HasDuplicate(),
                                         7000, 1000);
 
                 // make sure each function is triggered once and only once
@@ -122,7 +123,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 // this test takes long since it does at least 5 dequeue on the poison message
                 // count retries caused by failures and poison queue function process
                 int funcWithExceptionCount = DispatchQueueTestConfig.BatchSize + _host.GetOptions<QueuesOptions>().MaxDequeueCount;
-                await TestHelpers.Await(() => _funcInvocation.TotalAdd() >= funcWithExceptionCount, 10000, 1000);
+                await TestUtils.Await(() => _funcInvocation.TotalAdd() >= funcWithExceptionCount, 10000, 1000);
 
                 Assert.Equal(funcWithExceptionCount, _funcInvocation.TotalAdd());
                 Assert.True(_funcInvocation.HasDuplicate());

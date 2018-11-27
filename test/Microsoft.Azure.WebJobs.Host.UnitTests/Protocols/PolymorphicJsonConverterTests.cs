@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;

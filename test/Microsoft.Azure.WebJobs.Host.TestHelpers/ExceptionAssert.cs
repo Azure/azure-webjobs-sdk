@@ -3,8 +3,9 @@
 
 using System;
 using Xunit;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 
-namespace Microsoft.Azure.WebJobs.Host.TestCommon
+namespace Microsoft.Azure.WebJobs.Host.TestHelpers
 {
     public static class ExceptionAssert
     {

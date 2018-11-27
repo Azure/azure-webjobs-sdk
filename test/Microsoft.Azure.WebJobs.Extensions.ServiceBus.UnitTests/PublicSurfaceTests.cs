@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
@@ -27,7 +28,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "ServiceBusWebJobsStartup"
             };
 
-            TestHelpers.AssertPublicTypes(expected, assembly);
+            TestUtils.AssertPublicTypes(expected, assembly);
         }
     }
 }

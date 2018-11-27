@@ -20,6 +20,7 @@ using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -217,7 +218,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     {
                         await host.StartAsync();
 
-                        await TestHelpers.Await(() => listener.IsReady);
+                        await TestUtils.Await(() => listener.IsReady);
 
                         MethodInfo methodInfo = GetType().GetMethod(nameof(TestApplicationInsightsWarning), BindingFlags.Public | BindingFlags.Static);
 
@@ -234,7 +235,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                         // Wait until we're seeing telemetry come through the QuickPulse service
                         double? sum = null;
-                        await TestHelpers.Await(() =>
+                        await TestUtils.Await(() =>
                         {
                             // Sum up all req/sec calls that we've received.
                             IEnumerable<QuickPulseMetric> reqPerSec = listener.GetQuickPulseItems()

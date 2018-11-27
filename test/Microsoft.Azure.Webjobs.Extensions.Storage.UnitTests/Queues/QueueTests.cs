@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Properties;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -77,7 +78,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             string errorMessage = GetErrorMessageForBadQueueName(ProgramWithStaticBadName.BadQueueName, "name");
 
-            TestHelpers.AssertIndexingError(() => host.GetJobHost().CallAsync<ProgramWithStaticBadName>("Func").GetAwaiter().GetResult(), "ProgramWithStaticBadName.Func", errorMessage);
+            TestUtils.AssertIndexingError(() => host.GetJobHost().CallAsync<ProgramWithStaticBadName>("Func").GetAwaiter().GetResult(), "ProgramWithStaticBadName.Func", errorMessage);
         }
 
         private static string GetErrorMessageForBadQueueName(string value, string parameterName)
@@ -322,7 +323,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             //    .Build();
 
             //string message = StorageAccountParser.FormatParseAccountErrorMessage(StorageAccountParseResult.MissingOrEmptyConnectionStringError, "Storage");
-            //TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<ProgramSimple>("Func"), "ProgramSimple.Func", message);
+            //TestUtils.AssertIndexingError(() => host.GetJobHost().Call<ProgramSimple>("Func"), "ProgramSimple.Func", message);
         }
 
         [Fact(Skip = "Re-enable when StorageAccountParser returns")]
@@ -335,7 +336,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             //string message = StorageAccountParser.FormatParseAccountErrorMessage(StorageAccountParseResult.MissingOrEmptyConnectionStringError, ProgramSimple2.ConnectionString);
 
-            //TestHelpers.AssertIndexingError(() => host.GetJobHost().Call<ProgramSimple2>(nameof(ProgramSimple2.Func2)),
+            //TestUtils.AssertIndexingError(() => host.GetJobHost().Call<ProgramSimple2>(nameof(ProgramSimple2.Func2)),
             //    "ProgramSimple2.Func2", message);
 
             //Assert.DoesNotContain(ProgramSimple2.ConnectionString, message);
@@ -363,7 +364,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 .Build();
 
             string expectedError = "Unable to resolve binding parameter 'xyz'. Binding expressions must map to either a value provided by the trigger or a property of the value the trigger is bound to, or must be a system binding expression (e.g. sys.randguid, sys.utcnow, etc.).";
-            TestHelpers.AssertIndexingError(() => host.GetJobHost().CallAsync<ProgramBadContract>("Func").GetAwaiter().GetResult(),
+            TestUtils.AssertIndexingError(() => host.GetJobHost().CallAsync<ProgramBadContract>("Func").GetAwaiter().GetResult(),
                 "ProgramBadContract.Func",
                 expectedError);
         }
@@ -387,7 +388,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 })
                 .Build();
 
-            TestHelpers.AssertIndexingError(() => host.GetJobHost().CallAsync<ProgramCantBindToObject>("Func").GetAwaiter().GetResult(),
+            TestUtils.AssertIndexingError(() => host.GetJobHost().CallAsync<ProgramCantBindToObject>("Func").GetAwaiter().GetResult(),
                 "ProgramCantBindToObject.Func",
                 "Object element types are not supported.");
         }
@@ -419,7 +420,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 })
                 .Build();
 
-            TestHelpers.AssertIndexingError(() => host.GetJobHost().CallAsync<GenericProgram<T>>("Func").GetAwaiter().GetResult(),
+            TestUtils.AssertIndexingError(() => host.GetJobHost().CallAsync<GenericProgram<T>>("Func").GetAwaiter().GetResult(),
                 "GenericProgram`1.Func",
                 "Can't bind Queue to type '" + typeName + "'.");
         }

@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -330,7 +331,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 .Build();
 
             host.Start();
-            TestHelpers.WaitOne(func1._stopEvent);
+            TestUtils.WaitOne(func1._stopEvent);
             host.StopAsync().GetAwaiter().GetResult();
 
             // Add any items sent using [FakeQueue(Prefix=...)]

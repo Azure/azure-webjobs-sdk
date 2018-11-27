@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Moq;
 using Xunit;
 

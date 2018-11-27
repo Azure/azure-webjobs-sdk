@@ -4,7 +4,7 @@
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage.Queue;
 
-namespace Microsoft.Azure.WebJobs.Host.TestCommon.AzureSdk
+namespace Microsoft.Azure.WebJobs.Host.TestHelpers.AzureSdk
 {
     public static class CloudQueueClientExtensions
     {

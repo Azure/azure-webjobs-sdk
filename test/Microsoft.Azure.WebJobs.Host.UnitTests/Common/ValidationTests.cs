@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Microsoft.Extensions.Hosting;
 using Xunit;
 
@@ -95,7 +96,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 .ConfigureDefaultTestHost<BadFunction>(b => { b.AddExtension<FakeExtClient>(); }, nr)
                 .Build();
 
-            TestHelpers.AssertIndexingError(
+            TestUtils.AssertIndexingError(
                 () => host.GetJobHost<BadFunction>().CallAsync("Valid").GetAwaiter().GetResult(),
                 "BadFunction.Bad", TestAttribute.ErrorMessage);
         }
@@ -187,7 +188,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 }, nr)
                 .Build();
 
-            TestHelpers.AssertIndexingError(
+            TestUtils.AssertIndexingError(
                 () => host.GetJobHost<LocalFunction2>().CallAsync("WithValidation").GetAwaiter().GetResult(),
                 "LocalFunction2.WithValidation", TestAttribute.ErrorMessage);
         }

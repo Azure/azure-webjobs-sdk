@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Microsoft.Extensions.Hosting;
 using Xunit;
 
@@ -56,7 +57,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 }, nameResolver: nr)
                 .Build();
 
-            TestHelpers.AssertIndexingError(() => host.GetJobHost<Program>().CallAsync("Func").GetAwaiter().GetResult(), "Program.Func", FakeExtClient.IndexErrorMsg);
+            TestUtils.AssertIndexingError(() => host.GetJobHost<Program>().CallAsync("Func").GetAwaiter().GetResult(), "Program.Func", FakeExtClient.IndexErrorMsg);
         }
 
         // Filter takes the not-null branch

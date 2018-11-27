@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.Azure.WebJobs.Host.Bindings.Path;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Xunit;
 using Xunit.Extensions;
 using Newtonsoft.Json.Linq;

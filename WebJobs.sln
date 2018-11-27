@@ -59,6 +59,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TestProjects", "TestProject
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FSharpFunctions", "test\TestProjects\FSharpFunctions\FSharpFunctions.fsproj", "{11702A4B-8402-4082-BE38-4F0C2CBBF61D}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.Host.TestHelpers", "test\Microsoft.Azure.WebJobs.Host.TestHelpers\WebJobs.Host.TestHelpers.csproj", "{17645E2B-D41C-4FFA-8F61-1C9D67245A5A}"
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		src\Microsoft.Azure.WebJobs.Shared.Storage\Microsoft.Azure.WebJobs.Shared.Storage.projitems*{6bed7f8a-a199-4d9d-85d1-6856ee3292c6}*SharedItemsImports = 13
@@ -146,6 +148,10 @@ Global
 		{11702A4B-8402-4082-BE38-4F0C2CBBF61D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{11702A4B-8402-4082-BE38-4F0C2CBBF61D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{11702A4B-8402-4082-BE38-4F0C2CBBF61D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17645E2B-D41C-4FFA-8F61-1C9D67245A5A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17645E2B-D41C-4FFA-8F61-1C9D67245A5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17645E2B-D41C-4FFA-8F61-1C9D67245A5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17645E2B-D41C-4FFA-8F61-1C9D67245A5A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -163,6 +169,7 @@ Global
 		{337B79EB-A3CB-4CE0-A7F2-DD5E638AC882} = {639967B0-0544-4C52-94AC-9A3D25E33256}
 		{C5E1A8E8-711F-4377-A8BD-7DB58E6C580D} = {639967B0-0544-4C52-94AC-9A3D25E33256}
 		{11702A4B-8402-4082-BE38-4F0C2CBBF61D} = {C5E1A8E8-711F-4377-A8BD-7DB58E6C580D}
+		{17645E2B-D41C-4FFA-8F61-1C9D67245A5A} = {639967B0-0544-4C52-94AC-9A3D25E33256}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {371BFA14-0980-4A43-A18A-CA1C1A9CB784}

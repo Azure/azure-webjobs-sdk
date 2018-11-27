@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.TestHelpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage;
@@ -267,7 +268,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await jobHost.CallAsync(methodInfo, arguments);
 
             // wait for test results to appear
-            await TestHelpers.Await(() => testResult != null);
+            await TestUtils.Await(() => testResult != null);
 
             JArray results = (JArray)testResult;
             Assert.Single(results);
@@ -276,7 +277,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             json = JsonConvert.SerializeObject(input);
             arguments = new { person = json };
             await jobHost.CallAsync(methodInfo, arguments);
-            await TestHelpers.Await(() => testResult != null);
+            await TestUtils.Await(() => testResult != null);
             results = (JArray)testResult;
             Assert.Single(results);
             Assert.Equal("Bill", (string)results[0]["Name"]);
@@ -379,7 +380,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await queue.AddMessageAsync(message);
 
             CloudQueueMessage poisonMessage = null;
-            await TestHelpers.Await(async () =>
+            await TestUtils.Await(async () =>
             {
                 bool done = false;
                 if (await poisonQueue.ExistsAsync())
