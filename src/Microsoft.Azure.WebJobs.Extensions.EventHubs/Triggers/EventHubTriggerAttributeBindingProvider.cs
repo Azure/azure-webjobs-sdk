@@ -61,6 +61,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
 
             if (!string.IsNullOrWhiteSpace(attribute.Connection))
             {
+                attribute.Connection = _nameResolver.ResolveWholeString(attribute.Connection);
                 var connectionString = _config.GetConnectionStringOrSetting(attribute.Connection);
                 _options.Value.AddReceiver(resolvedEventHubName, connectionString);
             }

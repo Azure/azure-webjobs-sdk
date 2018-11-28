@@ -74,6 +74,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
                 throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Can't bind ServiceBusTrigger to type '{0}'.", parameter.ParameterType));
             }
 
+            attribute.Connection = Resolve(attribute.Connection);
             ServiceBusAccount account = new ServiceBusAccount(_options, _configuration, attribute);
 
             ITriggerBinding binding;
