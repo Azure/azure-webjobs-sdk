@@ -5,7 +5,7 @@
     <ExtensionsEventHubsVersion>3.0.2$(VersionSuffix)</ExtensionsEventHubsVersion>
     <ExtensionsServiceBusVersion>3.0.3$(VersionSuffix)</ExtensionsServiceBusVersion>
     <ExtensionsStorageVersion>3.0.3$(VersionSuffix)</ExtensionsStorageVersion>
-    <TestHelpersVersion>3.0.2$(VersionSuffix)</TestHelpersVersion>
+    <TestHelpersVersion>1.0.0$(VersionSuffix)</TestHelpersVersion>
     
     <TargetFramework>netstandard2.0</TargetFramework>
     <DebugType>embedded</DebugType>      
