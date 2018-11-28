@@ -65,6 +65,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
                 throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Can't bind ServiceBus to type '{0}'.", parameter.ParameterType));
             }
 
+            attribute.Connection = Resolve(attribute.Connection);
             ServiceBusAccount account = new ServiceBusAccount
             {
                 MessagingFactory = _config.MessagingProvider.CreateMessagingFactory(queueOrTopicName, attribute.Connection),

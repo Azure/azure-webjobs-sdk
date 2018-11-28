@@ -54,6 +54,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
             if (!string.IsNullOrWhiteSpace(attribute.Connection))
             {
+                attribute.Connection = _nameResolver.ResolveWholeString(attribute.Connection);
                 string resolvedConnectionString = _nameResolver.Resolve(attribute.Connection);
                 _eventHubConfig.AddReceiver(resolvedEventHubName, resolvedConnectionString);
 
