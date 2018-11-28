@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
@@ -9,16 +10,18 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     internal class FunctionInstance : IFunctionInstance
     {
         private readonly Guid _id;
+        private readonly IDictionary<string, string> _triggerDetails;
         private readonly Guid? _parentId;
         private readonly ExecutionReason _reason;
         private readonly IBindingSource _bindingSource;
         private readonly IFunctionInvoker _invoker;
         private readonly FunctionDescriptor _functionDescriptor;
 
-        public FunctionInstance(Guid id, Guid? parentId, ExecutionReason reason, IBindingSource bindingSource,
+        public FunctionInstance(Guid id, IDictionary<string, string> triggerDetails, Guid? parentId, ExecutionReason reason, IBindingSource bindingSource,
             IFunctionInvoker invoker, FunctionDescriptor functionDescriptor)
         {
             _id = id;
+            _triggerDetails = triggerDetails;
             _parentId = parentId;
             _reason = reason;
             _bindingSource = bindingSource;
@@ -29,6 +32,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         public Guid Id
         {
             get { return _id; }
+        }
+
+        public IDictionary<string, string> TriggerDetails
+        {
+            get { return _triggerDetails; }
         }
 
         public Guid? ParentId

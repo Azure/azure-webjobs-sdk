@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Listeners;
@@ -27,6 +28,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private const string BinderQueueName = QueueNamePrefix + "binder";
 
         private const string TopicName = PrefixForAll + "topic";
+
+        private const string TriggerDetailsMessageStart = "Trigger Details:";
 
         private static EventWaitHandle _topicSubscriptionCalled1;
         private static EventWaitHandle _topicSubscriptionCalled2;
@@ -330,15 +333,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     string.Format("{0}.SBQueue2SBTopic", jobContainerType.FullName),
                     string.Format("{0}.SBTopicListener1", jobContainerType.FullName),
                     string.Format("{0}.SBTopicListener2", jobContainerType.FullName),
+                    string.Format("{0}.ServiceBusBinderTest", jobContainerType.FullName),
                     "Job host started",
                     string.Format("Executing '{0}.SBQueue2SBQueue' (Reason='New ServiceBus message detected on '{1}'.', Id=", jobContainerType.Name, startQueueName),
                     string.Format("Executed '{0}.SBQueue2SBQueue' (Succeeded, Id=", jobContainerType.Name),
+                    "Trigger Details:",
                     string.Format("Executing '{0}.SBQueue2SBTopic' (Reason='New ServiceBus message detected on '{1}'.', Id=", jobContainerType.Name, secondQueueName),
                     string.Format("Executed '{0}.SBQueue2SBTopic' (Succeeded, Id=", jobContainerType.Name),
+                    "Trigger Details:",
                     string.Format("Executing '{0}.SBTopicListener1' (Reason='New ServiceBus message detected on '{1}'.', Id=", jobContainerType.Name, firstTopicName),
                     string.Format("Executed '{0}.SBTopicListener1' (Succeeded, Id=", jobContainerType.Name),
+                    "Trigger Details:",
                     string.Format("Executing '{0}.SBTopicListener2' (Reason='New ServiceBus message detected on '{1}'.', Id=", jobContainerType.Name, secondTopicName),
                     string.Format("Executed '{0}.SBTopicListener2' (Succeeded, Id=", jobContainerType.Name),
+                    "Trigger Details:",
                     "Job host stopped"
                 }.OrderBy(p => p).ToArray();
 
@@ -349,6 +357,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     {
                         Assert.StartsWith(expectedOutputLines[i], consoleOutputLines[i]);
                     }
+                }
+
+                // Verify that trigger details are properly formatted
+                string[] triggerDetailsConsoleOutput = consoleOutputLines
+                    .Where(m => m.StartsWith(TriggerDetailsMessageStart)).ToArray();
+                string expectedPattern = "Trigger Details: MessageId: (.*), DeliveryCount: [0-9]+, EnqueuedTime: (.*), LockedUntil: (.*)";
+                foreach (string msg in triggerDetailsConsoleOutput)
+                {
+                    Assert.True(Regex.IsMatch(msg, expectedPattern), $"Expected trace event {expectedPattern} not found.");
                 }
             }
         }

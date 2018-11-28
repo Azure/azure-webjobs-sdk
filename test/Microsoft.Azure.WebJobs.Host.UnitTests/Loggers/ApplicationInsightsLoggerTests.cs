@@ -64,7 +64,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 ShortName = _functionShortName
             };
 
-            _functionInstance = new FunctionInstance(_invocationId, null, ExecutionReason.AutomaticTrigger, null, null, descriptor);
+            _functionInstance = new FunctionInstance(_invocationId, new Dictionary<string, string>(), null, ExecutionReason.AutomaticTrigger, null, null, descriptor);
         }
 
         [Fact]
@@ -719,7 +719,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             var method = GetType().GetMethod(nameof(TestFunction), BindingFlags.NonPublic | BindingFlags.Static);
             var descriptor = FunctionIndexer.FromMethod(method);
 
-            return new FunctionInstance(id, null, new ExecutionReason(), null, null, descriptor);
+            return new FunctionInstance(id, new Dictionary<string, string>(), null, new ExecutionReason(), null, null, descriptor);
         }
 
         private static IDictionary<string, object> CreateScopeDictionary(string invocationId, string functionName)

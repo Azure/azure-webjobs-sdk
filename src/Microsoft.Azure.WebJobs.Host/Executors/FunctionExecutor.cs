@@ -678,6 +678,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 FunctionInstanceId = instance.Id,
                 Function = instance.FunctionDescriptor,
                 ParentId = instance.ParentId,
+                TriggerDetails = instance.TriggerDetails,
                 Reason = instance.Reason,
                 StartTime = DateTimeOffset.UtcNow
             };
@@ -707,6 +708,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 Function = startedMessage.Function,
                 Arguments = startedMessage.Arguments,
                 ParentId = startedMessage.ParentId,
+                TriggerDetails = startedMessage.TriggerDetails,
                 Reason = startedMessage.Reason,
                 ReasonDetails = startedMessage.FormatReason(),
                 StartTime = startedMessage.StartTime,

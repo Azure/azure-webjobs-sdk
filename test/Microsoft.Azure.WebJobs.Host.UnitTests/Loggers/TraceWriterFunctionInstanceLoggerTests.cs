@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,6 +27,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         [Fact]
         public async Task LogFunctionStartedAsync_CallsTraceWriter()
         {
+            Dictionary<string, string> triggerDetails = new Dictionary<string, string>()
+            {
+                { "MessageId", Guid.NewGuid().ToString() },
+                { "DequeueCount", "1" },
+                { "InsertionTime", DateTime.Now.ToString() }
+            };
+
             FunctionStartedMessage message = new FunctionStartedMessage
             {
                 Function = new FunctionDescriptor
@@ -34,12 +42,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 },
                 ReasonDetails = "TestReason",
                 HostInstanceId = Guid.NewGuid(),
-                FunctionInstanceId = Guid.NewGuid()
+                FunctionInstanceId = Guid.NewGuid(),
+                TriggerDetails = triggerDetails
             };
 
             await _logger.LogFunctionStartedAsync(message, CancellationToken.None);
 
-            Assert.Equal(1, _traceWriter.GetTraces().Count);
+            Assert.Equal(2, _traceWriter.GetTraces().Count);
             TraceEvent traceEvent = _traceWriter.GetTraces()[0];
             Assert.Equal(TraceLevel.Info, traceEvent.Level);
             Assert.Equal(Host.TraceSource.Execution, traceEvent.Source);
@@ -49,6 +58,19 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(message.FunctionInstanceId, traceEvent.Properties["MS_FunctionInvocationId"]);
             Assert.Same(message.Function, traceEvent.Properties["MS_FunctionDescriptor"]);
             Assert.Equal((string)traceEvent.Properties["MS_FunctionName"], message.Function.LogName);
+
+            TraceEvent triggerDetailsTraceEvent = _traceWriter.GetTraces()[1];
+            Assert.Equal(TraceLevel.Info, triggerDetailsTraceEvent.Level);
+            Assert.Equal(Host.TraceSource.Execution, triggerDetailsTraceEvent.Source);
+            string expectedMessage = $"Trigger Details: MessageId: {triggerDetails["MessageId"]}, " +
+                $"DequeueCount: {triggerDetails["DequeueCount"]}, " +
+                $"InsertionTime: {triggerDetails["InsertionTime"]}";
+            Assert.Equal(expectedMessage, triggerDetailsTraceEvent.Message);
+            Assert.Equal(4, triggerDetailsTraceEvent.Properties.Count);
+            Assert.Equal(message.HostInstanceId, triggerDetailsTraceEvent.Properties["MS_HostInstanceId"]);
+            Assert.Equal(message.FunctionInstanceId, triggerDetailsTraceEvent.Properties["MS_FunctionInvocationId"]);
+            Assert.Same(message.Function, triggerDetailsTraceEvent.Properties["MS_FunctionDescriptor"]);
+            Assert.Equal((string)triggerDetailsTraceEvent.Properties["MS_FunctionName"], message.Function.LogName);
         }
 
         [Fact]

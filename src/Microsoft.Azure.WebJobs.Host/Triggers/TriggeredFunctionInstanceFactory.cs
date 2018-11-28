@@ -33,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             IBindingSource bindingSource = new TriggerBindingSource<TTriggerValue>(_binding, context.TriggerValue);
             var invoker = CreateInvoker(context);
 
-            return new FunctionInstance(Guid.NewGuid(), context.ParentId, ExecutionReason.AutomaticTrigger, bindingSource, invoker, _descriptor);
+            return new FunctionInstance(Guid.NewGuid(), context.TriggerDetails, context.ParentId, ExecutionReason.AutomaticTrigger, bindingSource, invoker, _descriptor);
         }
 
         public IFunctionInstance Create(FunctionInstanceFactoryContext context)
@@ -41,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             IBindingSource bindingSource = new BindingSource(_binding, context.Parameters);
             var invoker = CreateInvoker(context);
 
-            return new FunctionInstance(context.Id, context.ParentId, context.ExecutionReason, bindingSource, invoker, _descriptor);
+            return new FunctionInstance(context.Id, context.TriggerDetails, context.ParentId, context.ExecutionReason, bindingSource, invoker, _descriptor);
         }
 
         private IFunctionInvoker CreateInvoker(FunctionInstanceFactoryContext context)

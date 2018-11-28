@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
@@ -24,9 +25,21 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             TriggeredFunctionData input = new TriggeredFunctionData
             {
                 ParentId = parentId,
-                TriggerValue = value
+                TriggerValue = value,
+                TriggerDetails = PopulateTriggerDetails(value)
             };
             return await _innerExecutor.TryExecuteAsync(input, cancellationToken);
+        }
+
+        private static Dictionary<string, string> PopulateTriggerDetails(BrokeredMessage value)
+        {
+            return new Dictionary<string, string>()
+            {
+                { "MessageId", value.MessageId },
+                { "DeliveryCount", value.DeliveryCount.ToString() },
+                { "EnqueuedTime", value.EnqueuedTimeUtc.ToString() },
+                { "LockedUntil", value.LockedUntilUtc.ToString() }
+            };
         }
     }
 }
