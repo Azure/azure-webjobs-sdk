@@ -32,6 +32,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         public string ConnectionString { get; set; }
 
         /// <summary>
+        /// Enables use of managed service identity
+        /// </summary>
+        public bool UseManagedServiceIdentity { get; set; }
+
+        /// <summary>
+        /// Endpoint setting in case managed service identity is used
+        /// </summary>
+        public string Endpoint { get; set; }
+
+        /// <summary>
         /// Gets or sets the default <see cref="Azure.ServiceBus.MessageHandlerOptions"/> that will be used by
         /// <see cref="MessageReceiver"/>s.
         /// </summary>

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 {
@@ -80,9 +81,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
             }
 
             attribute.Connection = Resolve(attribute.Connection);
-            ServiceBusAccount account = new ServiceBusAccount(_options, _configuration, attribute);
+            MessagingProvider messagingProvider = new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(_options), _configuration, attribute);
 
-            IBinding binding = new ServiceBusBinding(parameter.Name, argumentBinding, account, _options, path, attribute, _messagingProvider);
+            IBinding binding = new ServiceBusBinding(parameter.Name, argumentBinding, messagingProvider, _options, path, attribute);
             return Task.FromResult<IBinding>(binding);
         }
 

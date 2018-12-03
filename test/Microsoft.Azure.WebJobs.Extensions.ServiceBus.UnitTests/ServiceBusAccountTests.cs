@@ -3,10 +3,12 @@
 
 using System;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
 {
+    //TODO: vavenbak Change test name
     public class ServiceBusAccountTests
     {
         private readonly IConfiguration _configuration;
@@ -27,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
                 ConnectionString = defaultConnection
             };
             var attribute = new ServiceBusTriggerAttribute("entity-name");
-            var account = new ServiceBusAccount(options, _configuration, attribute);
+            var account = new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(options), _configuration, attribute);
 
             Assert.True(defaultConnection == account.ConnectionString);
         }
@@ -41,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
             {
-                var account = new ServiceBusAccount(config, _configuration, attribute);
+                var account = new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(config), _configuration, attribute);
                 var cs = account.ConnectionString;
             });
             Assert.Equal("Microsoft Azure WebJobs SDK ServiceBus connection string 'MissingConnection' is missing or empty.", ex.Message);
@@ -50,7 +52,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
             config.ConnectionString = null;
             ex = Assert.Throws<InvalidOperationException>(() =>
             {
-                var account = new ServiceBusAccount(config, _configuration, attribute);
+                var account = new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(config), _configuration, attribute);
                 var cs = account.ConnectionString;
             });
             Assert.Equal("Microsoft Azure WebJobs SDK ServiceBus connection string 'AzureWebJobsServiceBus' is missing or empty.", ex.Message);

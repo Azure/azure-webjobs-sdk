@@ -3,110 +3,142 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Globalization;
 using Microsoft.Azure.ServiceBus.Core;
+using Microsoft.Azure.ServiceBus.Primitives;
+using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
-    /// <summary>
-    /// This class provides factory methods for the creation of instances
-    /// used for ServiceBus message processing.
-    /// </summary>
     public class MessagingProvider
     {
         private readonly ServiceBusOptions _options;
+        private readonly IConnectionProvider _connectionProvider;
+        private readonly IConfiguration _configuration;
+        private string _connectionString;
+
         private readonly ConcurrentDictionary<string, MessageReceiver> _messageReceiverCache = new ConcurrentDictionary<string, MessageReceiver>();
         private readonly ConcurrentDictionary<string, MessageSender> _messageSenderCache = new ConcurrentDictionary<string, MessageSender>();
 
-        /// <summary>
-        /// Constructs a new instance.
-        /// </summary>
-        /// <param name="serviceBusOptions">The <see cref="ServiceBusOptions"/>.</param>
-        public MessagingProvider(IOptions<ServiceBusOptions> serviceBusOptions)
+        public MessagingProvider(IOptions<ServiceBusOptions> options, IConfiguration configuration, IConnectionProvider connectionProvider = null)
         {
-            _options = serviceBusOptions?.Value ?? throw new ArgumentNullException(nameof(serviceBusOptions));
+            _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+            _configuration = configuration;
+            _connectionProvider = connectionProvider;
         }
+
+        public MessagingProvider(IOptions<ServiceBusOptions> options)
+        {
+            _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+        }
+
+
+        public MessageProcessor GetMessageProcessor(string entityPath)
+        {
+            return new MessageProcessor(GetMessageReceiver(entityPath), _options.MessageHandlerOptions);
+        }
+
 
         /// <summary>
         /// Creates a <see cref="MessageProcessor"/> for the specified ServiceBus entity.
         /// </summary>
         /// <param name="entityPath">The ServiceBus entity to create a <see cref="MessageProcessor"/> for.</param>
-        /// <param name="connectionString">The ServiceBus connection string.</param>
         /// <returns>The <see cref="MessageProcessor"/>.</returns>
-        public virtual MessageProcessor CreateMessageProcessor(string entityPath, string connectionString)
+        public virtual MessageProcessor CreateMessageProcessor(string entityPath)
         {
             if (string.IsNullOrEmpty(entityPath))
             {
-                throw new ArgumentNullException("entityPath");
+                throw new ArgumentNullException(nameof(entityPath));
             }
-            if (string.IsNullOrEmpty(connectionString))
-            {
-                throw new ArgumentNullException("connectionString");
-            }
-
-            return new MessageProcessor(GetOrAddMessageReceiver(entityPath, connectionString), _options.MessageHandlerOptions);
+            return new MessageProcessor(GetMessageReceiver(entityPath), _options.MessageHandlerOptions);
         }
 
-        /// <summary>
-        /// Creates a <see cref="MessageReceiver"/> for the specified ServiceBus entity.
-        /// </summary>
-        /// <remarks>
-        /// You can override this method to customize the <see cref="MessageReceiver"/>.
-        /// </remarks>
-        /// <param name="entityPath">The ServiceBus entity to create a <see cref="MessageReceiver"/> for.</param>
-        /// <param name="connectionString">The ServiceBus connection string.</param>
-        /// <returns></returns>
-        public virtual MessageReceiver CreateMessageReceiver(string entityPath, string connectionString)
+        public MessageReceiver GetMessageReceiver(string entityPath)
         {
-            if (string.IsNullOrEmpty(entityPath))
+            string cacheKey;
+            if (_options.UseManagedServiceIdentity)
             {
-                throw new ArgumentNullException("entityPath");
-            }
-            if (string.IsNullOrEmpty(connectionString))
-            {
-                throw new ArgumentNullException("connectionString");
-            }
+                cacheKey = $"{entityPath}-{_options.Endpoint}";
+                var tokenProvider = TokenProvider.CreateManagedServiceIdentityTokenProvider();
 
-            return GetOrAddMessageReceiver(entityPath, connectionString);
-        }
-
-        /// <summary>
-        /// Creates a <see cref="MessageSender"/> for the specified ServiceBus entity.
-        /// </summary>
-        /// <remarks>
-        /// You can override this method to customize the <see cref="MessageSender"/>.
-        /// </remarks>
-        /// <param name="entityPath">The ServiceBus entity to create a <see cref="MessageSender"/> for.</param>
-        /// <param name="connectionString">The ServiceBus connection string.</param>
-        /// <returns></returns>
-        public virtual MessageSender CreateMessageSender(string entityPath, string connectionString)
-        {
-            if (string.IsNullOrEmpty(entityPath))
-            {
-                throw new ArgumentNullException("entityPath");
-            }
-            if (string.IsNullOrEmpty(connectionString))
-            {
-                throw new ArgumentNullException("connectionString");
+                return _messageReceiverCache.GetOrAdd(cacheKey,
+                    new MessageReceiver(_options.Endpoint, entityPath, tokenProvider));
             }
 
-            return GetOrAddMessageSender(entityPath, connectionString);
-        }
-
-        private MessageReceiver GetOrAddMessageReceiver(string entityPath, string connectionString)
-        {
-            string cacheKey = $"{entityPath}-{connectionString}";
+            cacheKey = $"{entityPath}-{ConnectionString}";
             return _messageReceiverCache.GetOrAdd(cacheKey,
-                new MessageReceiver(connectionString, entityPath)
+                new MessageReceiver(ConnectionString, entityPath)
                 {
                     PrefetchCount = _options.PrefetchCount
                 });
         }
 
-        private MessageSender GetOrAddMessageSender(string entityPath, string connectionString)
+        public MessageSender CreateMessageSender(string entityPath)
         {
-            string cacheKey = $"{entityPath}-{connectionString}";
-            return _messageSenderCache.GetOrAdd(cacheKey, new MessageSender(connectionString, entityPath));
+            string cacheKey;
+            if (_options.UseManagedServiceIdentity)
+            {
+                cacheKey = $"{entityPath}-{_options.Endpoint}";
+                var tokenProvider = TokenProvider.CreateManagedServiceIdentityTokenProvider();
+                return _messageSenderCache.GetOrAdd(cacheKey,
+                    new MessageSender(_options.Endpoint, entityPath, tokenProvider));
+            }
+            else
+            {
+                cacheKey = $"{entityPath}-{ConnectionString}";
+                return _messageSenderCache.GetOrAdd(cacheKey, new MessageSender(_options.ConnectionString, entityPath));
+            }
+        }
+
+
+        public MessageReceiver CreateMessageReceiver(string entityPath)
+        {
+            string cacheKey;
+            if (_options.UseManagedServiceIdentity)
+            {
+                cacheKey = $"{entityPath}-{_options.Endpoint}";
+                var tokenProvider = TokenProvider.CreateManagedServiceIdentityTokenProvider();
+                return _messageReceiverCache.GetOrAdd(cacheKey,
+                    new MessageReceiver(_options.Endpoint, entityPath, tokenProvider)
+                    {
+                        PrefetchCount = _options.PrefetchCount
+                    });
+            }
+            else
+            {
+                cacheKey = $"{entityPath}-{ConnectionString}";
+                return _messageReceiverCache.GetOrAdd(cacheKey, new MessageReceiver(_options.ConnectionString, entityPath)
+                {
+                    PrefetchCount = _options.PrefetchCount
+                });
+            }
+        }
+
+        public virtual string ConnectionString
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_connectionString))
+                {
+                    _connectionString = _options.ConnectionString;
+                    if (_connectionProvider != null && !string.IsNullOrEmpty(_connectionProvider.Connection))
+                    {
+                        _connectionString = _configuration.GetWebJobsConnectionString(_connectionProvider.Connection);
+                    }
+
+                    if (string.IsNullOrEmpty(_connectionString))
+                    {
+                        var defaultConnectionName = "AzureWebJobsServiceBus";
+                        throw new InvalidOperationException(
+                            string.Format(CultureInfo.InvariantCulture, "Microsoft Azure WebJobs SDK ServiceBus connection string '{0}' is missing or empty.",
+                            Sanitizer.Sanitize(_connectionProvider.Connection) ?? defaultConnectionName));
+                    }
+                }
+
+                return _connectionString;
+            }
         }
     }
 }

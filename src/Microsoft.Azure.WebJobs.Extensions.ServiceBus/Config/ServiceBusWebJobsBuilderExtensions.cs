@@ -48,7 +48,7 @@ namespace Microsoft.Extensions.Hosting
                     configure(options);
                 });
 
-            builder.Services.TryAddSingleton<MessagingProvider>();
+            
 
             return builder;
         }

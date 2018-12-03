@@ -10,6 +10,7 @@ using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Converters;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
 {
@@ -75,16 +76,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             }
 
             attribute.Connection = Resolve(attribute.Connection);
-            ServiceBusAccount account = new ServiceBusAccount(_options, _configuration, attribute);
+            MessagingProvider messagingProvider = new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(_options), _configuration, attribute);
 
             ITriggerBinding binding;
             if (queueName != null)
             {
-                binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, _options, _messagingProvider, queueName);
+                binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, messagingProvider, _options, queueName);
             }
             else
             {
-                binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, _options, _messagingProvider, topicName, subscriptionName);
+                binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, messagingProvider, _options, topicName, subscriptionName);
             }
 
             return Task.FromResult<ITriggerBinding>(binding);

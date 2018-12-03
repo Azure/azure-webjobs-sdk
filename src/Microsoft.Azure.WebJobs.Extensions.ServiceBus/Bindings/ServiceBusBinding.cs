@@ -15,21 +15,20 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
     {
         private readonly string _parameterName;
         private readonly IArgumentBinding<ServiceBusEntity> _argumentBinding;
-        private readonly ServiceBusAccount _account;
+        private readonly MessagingProvider _messagingProvider;
         private readonly IBindableServiceBusPath _path;
         private readonly IAsyncObjectToTypeConverter<ServiceBusEntity> _converter;
         private readonly EntityType _entityType;
-        private readonly MessagingProvider _messagingProvider;
         
-        public ServiceBusBinding(string parameterName, IArgumentBinding<ServiceBusEntity> argumentBinding, ServiceBusAccount account, ServiceBusOptions config, IBindableServiceBusPath path, ServiceBusAttribute attr, MessagingProvider messagingProvider)
+        
+        public ServiceBusBinding(string parameterName, IArgumentBinding<ServiceBusEntity> argumentBinding, MessagingProvider messagingProvider, ServiceBusOptions config, IBindableServiceBusPath path, ServiceBusAttribute attr)
         {
             _parameterName = parameterName;
             _argumentBinding = argumentBinding;
-            _account = account;
             _path = path;
             _entityType = attr.EntityType;
             _messagingProvider = messagingProvider;
-            _converter = new OutputConverter<string>(new StringToServiceBusEntityConverter(account, _path, _entityType, _messagingProvider));
+            _converter = new OutputConverter<string>(new StringToServiceBusEntityConverter(messagingProvider, _path, _entityType));
         }
 
         public bool FromAttribute
@@ -42,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
             context.CancellationToken.ThrowIfCancellationRequested();
 
             string boundQueueName = _path.Bind(context.BindingData);
-            var messageSender = _messagingProvider.CreateMessageSender(boundQueueName, _account.ConnectionString);
+            var messageSender = _messagingProvider.CreateMessageSender(boundQueueName);
 
             var entity = new ServiceBusEntity
             {

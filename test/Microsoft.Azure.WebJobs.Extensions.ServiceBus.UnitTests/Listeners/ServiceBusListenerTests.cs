@@ -35,18 +35,18 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
 
             ServiceBusOptions config = new ServiceBusOptions
             {
+                ConnectionString = _testConnection,
                 MessageHandlerOptions = messageOptions
             };
             _mockMessagingProvider = new Mock<MessagingProvider>(MockBehavior.Strict, new OptionsWrapper<ServiceBusOptions>(config));
-
-            _mockMessagingProvider.Setup(p => p.CreateMessageProcessor(_entityPath, _testConnection))
+            
+            _mockMessagingProvider.Setup(p => p.CreateMessageProcessor(_entityPath))
                 .Returns(_mockMessageProcessor.Object);
+            _mockMessagingProvider.Setup(a => a.ConnectionString).Returns(_testConnection);
 
             ServiceBusTriggerExecutor triggerExecutor = new ServiceBusTriggerExecutor(_mockExecutor.Object);
-            var mockServiceBusAccount = new Mock<ServiceBusAccount>(MockBehavior.Strict);
-            mockServiceBusAccount.Setup(a => a.ConnectionString).Returns(_testConnection);
 
-            _listener = new ServiceBusListener(_entityPath, triggerExecutor, config, mockServiceBusAccount.Object, _mockMessagingProvider.Object);
+            _listener = new ServiceBusListener(_entityPath, triggerExecutor, _mockMessagingProvider.Object);
         }
 
         [Fact]

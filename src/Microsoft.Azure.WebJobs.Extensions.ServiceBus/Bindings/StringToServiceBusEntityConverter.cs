@@ -10,14 +10,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 {
     internal class StringToServiceBusEntityConverter : IAsyncConverter<string, ServiceBusEntity>
     {
-        private readonly ServiceBusAccount _account;
+        private readonly MessagingProvider _messagingProvider;
         private readonly IBindableServiceBusPath _defaultPath;
         private readonly EntityType _entityType;
-        private readonly MessagingProvider _messagingProvider;
 
-        public StringToServiceBusEntityConverter(ServiceBusAccount account, IBindableServiceBusPath defaultPath, EntityType entityType, MessagingProvider messagingProvider)
+        public StringToServiceBusEntityConverter(MessagingProvider messagingProvider, IBindableServiceBusPath defaultPath, EntityType entityType)
         {
-            _account = account;
             _defaultPath = defaultPath;
             _entityType = entityType;
             _messagingProvider = messagingProvider;
@@ -38,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            var messageSender = _messagingProvider.CreateMessageSender(queueOrTopicName, _account.ConnectionString);
+            var messageSender = _messagingProvider.CreateMessageSender(queueOrTopicName);
 
             var entity = new ServiceBusEntity
             {

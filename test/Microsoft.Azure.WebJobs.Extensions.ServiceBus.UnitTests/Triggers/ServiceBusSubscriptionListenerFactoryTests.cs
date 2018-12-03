@@ -28,12 +28,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
             {
                 ConnectionString = configuration.GetWebJobsConnectionString("ServiceBus")
             };
-
-            var messagingProvider = new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(config));
-
-            var account = new ServiceBusAccount(config, configuration);
+            
+            var messagingProvider = new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(config), configuration);
             Mock<ITriggeredFunctionExecutor> mockExecutor = new Mock<ITriggeredFunctionExecutor>(MockBehavior.Strict);
-            ServiceBusSubscriptionListenerFactory factory = new ServiceBusSubscriptionListenerFactory(account, "testtopic", "testsubscription", mockExecutor.Object, config, messagingProvider);
+            ServiceBusSubscriptionListenerFactory factory = new ServiceBusSubscriptionListenerFactory(messagingProvider, "testtopic", "testsubscription", mockExecutor.Object, config);
 
             IListener listener = await factory.CreateAsync(CancellationToken.None);
             Assert.NotNull(listener);

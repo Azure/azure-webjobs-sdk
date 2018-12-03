@@ -17,14 +17,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
                 ConnectionString = defaultConnection
             };
             var provider = new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(config));
-            var receiver = provider.CreateMessageReceiver("entityPath", defaultConnection);
+            var receiver = provider.CreateMessageReceiver("entityPath");
             Assert.Equal("entityPath", receiver.Path);
 
-            var receiver2 = provider.CreateMessageReceiver("entityPath", defaultConnection);
+            var receiver2 = provider.CreateMessageReceiver("entityPath");
             Assert.Same(receiver, receiver2);
 
             config.PrefetchCount = 100;
-            receiver = provider.CreateMessageReceiver("entityPath1", defaultConnection);
+            receiver = provider.CreateMessageReceiver("entityPath1");
             Assert.Equal(100, receiver.PrefetchCount);
         }
 
@@ -37,10 +37,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
                 ConnectionString = defaultConnection
             };
             var provider = new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(config));
-            var sender = provider.CreateMessageSender("entityPath", defaultConnection);
+            var sender = provider.CreateMessageSender("entityPath");
             Assert.Equal("entityPath", sender.Path);
 
-            var sender2 = provider.CreateMessageSender("entityPath", defaultConnection);
+            var sender2 = provider.CreateMessageSender("entityPath");
             Assert.Same(sender, sender2);
         }
     }

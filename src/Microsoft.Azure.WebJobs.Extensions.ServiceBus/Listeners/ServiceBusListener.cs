@@ -14,25 +14,23 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
 {
     internal sealed class ServiceBusListener : IListener
     {
-        private readonly MessagingProvider _messagingProvider;
         private readonly string _entityPath;
         private readonly ServiceBusTriggerExecutor _triggerExecutor;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly MessageProcessor _messageProcessor;
-        private readonly ServiceBusAccount _serviceBusAccount;
+        private readonly MessagingProvider _messagingProvider;
 
         private MessageReceiver _receiver;
         private bool _disposed;
         private bool _started;
 
-        public ServiceBusListener(string entityPath, ServiceBusTriggerExecutor triggerExecutor, ServiceBusOptions config, ServiceBusAccount serviceBusAccount, MessagingProvider messagingProvider)
+        public ServiceBusListener(string entityPath, ServiceBusTriggerExecutor triggerExecutor, MessagingProvider messagingProvider)
         {
             _entityPath = entityPath;
             _triggerExecutor = triggerExecutor;
             _cancellationTokenSource = new CancellationTokenSource();
             _messagingProvider = messagingProvider;
-            _serviceBusAccount = serviceBusAccount;
-            _messageProcessor = messagingProvider.CreateMessageProcessor(entityPath, _serviceBusAccount.ConnectionString);
+            _messageProcessor = messagingProvider.CreateMessageProcessor(entityPath);
         }
 
         internal MessageReceiver Receiver => _receiver;
@@ -46,7 +44,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
                 throw new InvalidOperationException("The listener has already been started.");
             }
 
-            _receiver = _messagingProvider.CreateMessageReceiver(_entityPath, _serviceBusAccount.ConnectionString);
+            _receiver = _messagingProvider.GetMessageReceiver(_entityPath);
             _receiver.RegisterMessageHandler(ProcessMessageAsync, _messageProcessor.MessageOptions);
             _started = true;
 

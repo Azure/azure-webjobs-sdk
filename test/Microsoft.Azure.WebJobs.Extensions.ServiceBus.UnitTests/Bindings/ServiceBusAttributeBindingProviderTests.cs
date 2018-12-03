@@ -28,7 +28,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
                 .Build();
             Mock<INameResolver> mockResolver = new Mock<INameResolver>(MockBehavior.Strict);
             ServiceBusOptions config = new ServiceBusOptions();
-            _provider = new ServiceBusAttributeBindingProvider(mockResolver.Object, config, _configuration, new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(config)));
+            _provider = new ServiceBusAttributeBindingProvider(mockResolver.Object, config, _configuration, new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(config), _configuration));
         }
 
         [Fact]

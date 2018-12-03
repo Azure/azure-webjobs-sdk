@@ -419,18 +419,18 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 _logger = loggerFactory?.CreateLogger(CustomMessagingCategory);
             }
 
-            public override MessageProcessor CreateMessageProcessor(string entityPath, string connectionName = null)
-            {
-                var options = new MessageHandlerOptions(ExceptionReceivedHandler)
-                {
-                    MaxConcurrentCalls = 3,
-                    MaxAutoRenewDuration = TimeSpan.FromMinutes(1)
-                };
+            //public override MessageProcessor CreateMessageProcessor(string entityPath, string connectionName = null)
+            //{
+            //    var options = new MessageHandlerOptions(ExceptionReceivedHandler)
+            //    {
+            //        MaxConcurrentCalls = 3,
+            //        MaxAutoRenewDuration = TimeSpan.FromMinutes(1)
+            //    };
 
-                var messageReceiver = new MessageReceiver(_options.ConnectionString, entityPath);
+            //    var messageReceiver = new MessageReceiver(_options.ConnectionString, entityPath);
 
-                return new CustomMessageProcessor(messageReceiver, options, _logger);
-            }
+            //    return new CustomMessageProcessor(messageReceiver, options, _logger);
+            //}
 
             private class CustomMessageProcessor : MessageProcessor
             {
