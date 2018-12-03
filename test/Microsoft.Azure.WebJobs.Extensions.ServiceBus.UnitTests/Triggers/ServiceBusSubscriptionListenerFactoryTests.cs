@@ -36,5 +36,27 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
             IListener listener = await factory.CreateAsync(CancellationToken.None);
             Assert.NotNull(listener);
         }
+
+        [Fact]
+        public async Task CreateAsyncWithMSI_Success()
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddEnvironmentVariables()
+                .AddTestSettings()
+                .Build();
+
+            var config = new ServiceBusOptions
+            {
+                UseManagedServiceIdentity = true,
+                Endpoint = "sb://bedrockorderinglicensinggeneventa1.servicebus.windows.net"
+            };
+
+            var messagingProvider = new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(config), configuration);
+            Mock<ITriggeredFunctionExecutor> mockExecutor = new Mock<ITriggeredFunctionExecutor>(MockBehavior.Strict);
+            ServiceBusSubscriptionListenerFactory factory = new ServiceBusSubscriptionListenerFactory(messagingProvider, "testtopic", "testsubscription", mockExecutor.Object, config);
+
+            IListener listener = await factory.CreateAsync(CancellationToken.None);
+            Assert.NotNull(listener);
+        }
     }
 }

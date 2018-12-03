@@ -18,13 +18,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         private readonly IConnectionProvider _connectionProvider;
         private readonly IConfiguration _configuration;
         private string _connectionString;
+        private readonly TokenProvider _tokenProvider;
 
         private readonly ConcurrentDictionary<string, MessageReceiver> _messageReceiverCache = new ConcurrentDictionary<string, MessageReceiver>();
         private readonly ConcurrentDictionary<string, MessageSender> _messageSenderCache = new ConcurrentDictionary<string, MessageSender>();
 
-        public MessagingProvider(IOptions<ServiceBusOptions> options, IConfiguration configuration, IConnectionProvider connectionProvider = null)
+        
+        public MessagingProvider(IOptions<ServiceBusOptions> options, IConfiguration configuration, IConnectionProvider connectionProvider = null) : this(options)
         {
-            _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
             _configuration = configuration;
             _connectionProvider = connectionProvider;
         }
@@ -32,12 +33,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         public MessagingProvider(IOptions<ServiceBusOptions> options)
         {
             _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
-        }
-
-
-        public MessageProcessor GetMessageProcessor(string entityPath)
-        {
-            return new MessageProcessor(GetMessageReceiver(entityPath), _options.MessageHandlerOptions);
+            if (_options.UseManagedServiceIdentity && string.IsNullOrEmpty(_options.Endpoint))
+            {
+                throw new ArgumentNullException(nameof(_options.Endpoint));
+            }
+            _tokenProvider = _options.ServiceBusTokenProvider ?? TokenProvider.CreateManagedServiceIdentityTokenProvider();
         }
 
 
@@ -55,16 +55,19 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             return new MessageProcessor(GetMessageReceiver(entityPath), _options.MessageHandlerOptions);
         }
 
+        /// <summary>
+        /// Creates a <see cref="MessageReceiver"/>.
+        /// </summary>
+        /// <param name="entityPath">The ServiceBus entity to create a <see cref="MessageReceiver"/> for.</param>
+        /// <returns>The <see cref="MessageReceiver"/>.</returns>
         public MessageReceiver GetMessageReceiver(string entityPath)
         {
             string cacheKey;
             if (_options.UseManagedServiceIdentity)
             {
                 cacheKey = $"{entityPath}-{_options.Endpoint}";
-                var tokenProvider = TokenProvider.CreateManagedServiceIdentityTokenProvider();
-
                 return _messageReceiverCache.GetOrAdd(cacheKey,
-                    new MessageReceiver(_options.Endpoint, entityPath, tokenProvider));
+                    new MessageReceiver(_options.Endpoint, entityPath, _tokenProvider));
             }
 
             cacheKey = $"{entityPath}-{ConnectionString}";
@@ -75,45 +78,48 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 });
         }
 
+        /// <summary>
+        /// Creates a <see cref="MessageSender"/>.
+        /// </summary>
+        /// <param name="entityPath">The ServiceBus entity to create a <see cref="MessageSender"/> for.</param>
+        /// <returns>The <see cref="MessageSender"/>.</returns>
         public MessageSender CreateMessageSender(string entityPath)
         {
             string cacheKey;
             if (_options.UseManagedServiceIdentity)
             {
                 cacheKey = $"{entityPath}-{_options.Endpoint}";
-                var tokenProvider = TokenProvider.CreateManagedServiceIdentityTokenProvider();
                 return _messageSenderCache.GetOrAdd(cacheKey,
-                    new MessageSender(_options.Endpoint, entityPath, tokenProvider));
+                    new MessageSender(_options.Endpoint, entityPath, _tokenProvider));
             }
-            else
-            {
-                cacheKey = $"{entityPath}-{ConnectionString}";
-                return _messageSenderCache.GetOrAdd(cacheKey, new MessageSender(_options.ConnectionString, entityPath));
-            }
+
+            cacheKey = $"{entityPath}-{ConnectionString}";
+            return _messageSenderCache.GetOrAdd(cacheKey, new MessageSender(_options.ConnectionString, entityPath));
         }
 
-
+        /// <summary>
+        /// Creates a <see cref="MessageReceiver"/>.
+        /// </summary>
+        /// <param name="entityPath">The ServiceBus entity to create a <see cref="MessageReceiver"/> for.</param>
+        /// <returns>The <see cref="MessageReceiver"/>.</returns>
         public MessageReceiver CreateMessageReceiver(string entityPath)
         {
             string cacheKey;
             if (_options.UseManagedServiceIdentity)
             {
                 cacheKey = $"{entityPath}-{_options.Endpoint}";
-                var tokenProvider = TokenProvider.CreateManagedServiceIdentityTokenProvider();
                 return _messageReceiverCache.GetOrAdd(cacheKey,
-                    new MessageReceiver(_options.Endpoint, entityPath, tokenProvider)
+                    new MessageReceiver(_options.Endpoint, entityPath, _tokenProvider)
                     {
                         PrefetchCount = _options.PrefetchCount
                     });
             }
-            else
+
+            cacheKey = $"{entityPath}-{ConnectionString}";
+            return _messageReceiverCache.GetOrAdd(cacheKey, new MessageReceiver(_options.ConnectionString, entityPath)
             {
-                cacheKey = $"{entityPath}-{ConnectionString}";
-                return _messageReceiverCache.GetOrAdd(cacheKey, new MessageReceiver(_options.ConnectionString, entityPath)
-                {
-                    PrefetchCount = _options.PrefetchCount
-                });
-            }
+                PrefetchCount = _options.PrefetchCount
+            });
         }
 
         public virtual string ConnectionString

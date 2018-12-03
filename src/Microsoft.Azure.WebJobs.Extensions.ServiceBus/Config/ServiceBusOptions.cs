@@ -4,6 +4,7 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.Azure.ServiceBus;
+using Microsoft.Azure.ServiceBus.Primitives;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
@@ -35,6 +36,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// Enables use of managed service identity
         /// </summary>
         public bool UseManagedServiceIdentity { get; set; }
+
+        /// <summary>
+        /// Token provider that will be used with MSI
+        /// <see cref="TokenProvider"/>
+        /// </summary>
+        public TokenProvider ServiceBusTokenProvider { get; set; }
 
         /// <summary>
         /// Endpoint setting in case managed service identity is used
