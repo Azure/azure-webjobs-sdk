@@ -3,6 +3,9 @@
 
 using System;
 using System.Threading;
+using Microsoft.Azure.WebJobs.Hosting;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
@@ -11,7 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host
     /// The configuration needs to cooperate with the SDK's registered <see cref="IDistributedLockManager"/>. 
     /// For example, this configuration determines the refresh frequently for calls on <see cref="IDistributedLockManager.RenewAsync(IDistributedLock, CancellationToken)"/>. 
     /// </summary>
-    public sealed class SingletonOptions
+    public sealed class SingletonOptions : IOptionsFormatter
     {
         // These are the min/max values supported by Azure Storage
         private static readonly TimeSpan MinimumLeasePeriod = TimeSpan.FromSeconds(15);
@@ -93,7 +96,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// when waiting to acquire a lock. The system will retry on this interval
         /// until the <see cref="LockAcquisitionTimeout"/> is exceeded.
         /// </summary>
-        public TimeSpan LockAcquisitionPollingInterval 
+        public TimeSpan LockAcquisitionPollingInterval
         {
             get
             {
@@ -144,6 +147,20 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 throw new ArgumentOutOfRangeException("value");
             }
+        }
+
+        public string Format()
+        {
+            JObject options = new JObject
+            {
+                { nameof(LockPeriod), LockPeriod },
+                { nameof(ListenerLockPeriod), ListenerLockPeriod },
+                { nameof(LockAcquisitionTimeout), LockAcquisitionTimeout },
+                { nameof(LockAcquisitionPollingInterval), LockAcquisitionPollingInterval },
+                { nameof(ListenerLockRecoveryPollingInterval), ListenerLockRecoveryPollingInterval }
+            };
+
+            return options.ToString(Formatting.Indented);
         }
     }
 }

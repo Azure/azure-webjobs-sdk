@@ -4,13 +4,16 @@
 using System;
 using System.Globalization;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
+using Microsoft.Azure.WebJobs.Hosting;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
     /// <summary>
     /// Represents configuration for <see cref="QueueTriggerAttribute"/>.
     /// </summary>
-    public class QueuesOptions
+    public class QueuesOptions : IOptionsFormatter
     {
         private const int DefaultMaxDequeueCount = 5;
         private const int DefaultBatchSize = 16;
@@ -61,14 +64,14 @@ namespace Microsoft.Azure.WebJobs.Host
         /// </summary>
         public int NewBatchThreshold
         {
-            get 
-            { 
+            get
+            {
                 if (_newBatchThreshold == -1)
                 {
                     // if this hasn't been set explicitly, default it
                     return _batchSize / 2;
                 }
-                return _newBatchThreshold; 
+                return _newBatchThreshold;
             }
 
             set
@@ -81,7 +84,7 @@ namespace Microsoft.Azure.WebJobs.Host
                 _newBatchThreshold = value;
             }
         }
-         
+
         /// <summary>
         /// Gets or sets the longest period of time to wait before checking for a message to arrive when a queue remains
         /// empty.
@@ -147,6 +150,20 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 _visibilityTimeout = value;
             }
+        }
+
+        public string Format()
+        {
+            JObject options = new JObject
+            {
+                { nameof(BatchSize), BatchSize },
+                { nameof(NewBatchThreshold), NewBatchThreshold },
+                { nameof(MaxPollingInterval), MaxPollingInterval },
+                { nameof(MaxDequeueCount), MaxDequeueCount },
+                { nameof(VisibilityTimeout), VisibilityTimeout }
+            };
+
+            return options.ToString(Formatting.Indented);
         }
     }
 }

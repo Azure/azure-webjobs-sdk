@@ -8,12 +8,14 @@ using System.Globalization;
 using System.Text;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.EventHubs.Processor;
+using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.EventHubs
 {
-    public class EventHubOptions
+    public class EventHubOptions : IOptionsFormatter
     {
         // Event Hub Names are case-insensitive.
         // The same path can have multiple connection strings with different permissions (sending and receiving), 
@@ -349,6 +351,30 @@ namespace Microsoft.Azure.WebJobs.EventHubs
 
             string key = EscapeBlobPath(serviceBusNamespace) + "/" + EscapeBlobPath(eventHubName) + "/";
             return key;
+        }
+
+        public string Format()
+        {
+            JObject eventProcessorOptions = null;
+            if (EventProcessorOptions != null)
+            {
+                eventProcessorOptions = new JObject
+                {
+                    { nameof(EventProcessorOptions.EnableReceiverRuntimeMetric), EventProcessorOptions.EnableReceiverRuntimeMetric },
+                    { nameof(EventProcessorOptions.InvokeProcessorAfterReceiveTimeout), EventProcessorOptions.InvokeProcessorAfterReceiveTimeout },
+                    { nameof(EventProcessorOptions.MaxBatchSize), EventProcessorOptions.MaxBatchSize },
+                    { nameof(EventProcessorOptions.PrefetchCount), EventProcessorOptions.PrefetchCount },
+                    { nameof(EventProcessorOptions.ReceiveTimeout), EventProcessorOptions.ReceiveTimeout }
+                };
+            }
+
+            JObject options = new JObject
+            {
+                { nameof(BatchCheckpointFrequency), BatchCheckpointFrequency },
+                { nameof(EventProcessorOptions), eventProcessorOptions }
+            };
+
+            return options.ToString(Formatting.Indented);
         }
 
         // Hold credentials for a given eventHub name. 

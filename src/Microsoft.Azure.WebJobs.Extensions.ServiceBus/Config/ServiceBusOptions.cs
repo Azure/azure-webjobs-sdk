@@ -4,13 +4,16 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.Azure.ServiceBus;
+using Microsoft.Azure.WebJobs.Hosting;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
     /// <summary>
     /// Configuration options for the ServiceBus extension.
     /// </summary>
-    public class ServiceBusOptions
+    public class ServiceBusOptions : IOptionsFormatter
     {
         /// <summary>
         /// Constructs a new instance.
@@ -43,6 +46,29 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         public int PrefetchCount { get; set; }
 
         internal Action<ExceptionReceivedEventArgs> ExceptionHandler { get; set; }
+
+        public string Format()
+        {
+            JObject messageHandlerOptions = null;
+            if (MessageHandlerOptions != null)
+            {
+                messageHandlerOptions = new JObject
+                {
+                    { nameof(MessageHandlerOptions.AutoComplete), MessageHandlerOptions.AutoComplete },
+                    { nameof(MessageHandlerOptions.MaxAutoRenewDuration), MessageHandlerOptions.MaxAutoRenewDuration },
+                    { nameof(MessageHandlerOptions.MaxConcurrentCalls), MessageHandlerOptions.MaxConcurrentCalls }
+                };
+            }
+
+            // Do not include ConnectionString in loggable options.
+            JObject options = new JObject
+            {
+                { nameof(PrefetchCount), PrefetchCount },
+                { nameof(MessageHandlerOptions), messageHandlerOptions }
+            };
+
+            return options.ToString(Formatting.Indented);
+        }
 
         private Task ExceptionReceivedHandler(ExceptionReceivedEventArgs args)
         {

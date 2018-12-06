@@ -2,14 +2,17 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Logging
 {
     /// <summary>
     /// Configuration options for function result aggregation.
     /// </summary>
-    public class FunctionResultAggregatorOptions
+    public class FunctionResultAggregatorOptions : IOptionsFormatter
     {
         private int _batchSize;
         private TimeSpan _flushTimeout;
@@ -71,6 +74,18 @@ namespace Microsoft.Azure.WebJobs.Logging
 
                 _flushTimeout = value;
             }
+        }
+
+        public string Format()
+        {
+            JObject options = new JObject
+            {
+                { nameof(BatchSize), BatchSize },
+                { nameof(FlushTimeout), FlushTimeout },
+                { nameof(IsEnabled), IsEnabled }
+            };
+
+            return options.ToString(Formatting.Indented);
         }
     }
 }
