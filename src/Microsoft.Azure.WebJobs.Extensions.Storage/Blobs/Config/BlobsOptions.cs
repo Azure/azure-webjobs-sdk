@@ -1,12 +1,16 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using Microsoft.Azure.WebJobs.Hosting;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+
 namespace Microsoft.Azure.WebJobs.Host
 {
     /// <summary>
     /// Represents configuration for <see cref="BlobTriggerAttribute"/>.
     /// </summary>
-    public class BlobsOptions
+    public class BlobsOptions : IOptionsFormatter
     {
         /// <summary>
         /// Constructs a new instance.
@@ -25,5 +29,15 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <see cref="StorageAccountAttribute"/>. The default is false.
         /// </summary>
         public bool CentralizedPoisonQueue { get; set; }
+
+        public string Format()
+        {
+            JObject options = new JObject
+            {
+                { nameof(CentralizedPoisonQueue), CentralizedPoisonQueue }
+            };
+
+            return options.ToString(Formatting.Indented);
+        }
     }
 }
