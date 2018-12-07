@@ -188,6 +188,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IListenerFactory",
                 "ILoadBalancerQueue",
                 "INameResolver",
+                "IOptionsFormatter",
+                "IOptionsFormatter`1",
                 "IOrderedValueBinder",
                 "IResolutionPolicy",
                 "ITriggerBinding",

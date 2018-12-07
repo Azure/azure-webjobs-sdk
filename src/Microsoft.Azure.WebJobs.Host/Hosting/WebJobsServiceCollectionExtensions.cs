@@ -13,11 +13,13 @@ using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs
@@ -72,7 +74,7 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IJobHostMetadataProviderFactory, JobHostMetadataProviderFactory>();
             services.TryAddSingleton<IJobHostMetadataProvider>(p => p.GetService<IJobHostMetadataProviderFactory>().Create());
             services.TryAddSingleton<IHostIdProvider, DefaultHostIdProvider>();
-            services.TryAddSingleton<IDashboardLoggingSetup, NullDashboardLoggingSetup>(); 
+            services.TryAddSingleton<IDashboardLoggingSetup, NullDashboardLoggingSetup>();
             services.TryAddSingleton<IFunctionOutputLogger, NullFunctionOutputLogger>();
             services.TryAddSingleton<IFunctionInstanceLogger, FunctionInstanceLogger>();
             services.TryAddSingleton<IHostInstanceLogger, NullHostInstanceLogger>();
@@ -99,6 +101,12 @@ namespace Microsoft.Azure.WebJobs
 
             // Configuration
             services.AddSingleton(typeof(IWebJobsExtensionConfiguration<>), typeof(WebJobsExtensionConfiguration<>));
+
+            // Options logging
+            services.AddTransient(typeof(IOptionsFactory<>), typeof(WebJobsOptionsFactory<>));
+            services.AddSingleton<IOptionsLoggingSource, OptionsLoggingSource>();
+            services.AddSingleton<IHostedService, OptionsLoggingService>();
+            services.AddSingleton<IOptionsFormatter<LoggerFilterOptions>, LoggerFilterOptionsFormatter>();
 
             services.AddOptions<SingletonOptions>()
                 .Configure<IHostingEnvironment>((options, env) =>
