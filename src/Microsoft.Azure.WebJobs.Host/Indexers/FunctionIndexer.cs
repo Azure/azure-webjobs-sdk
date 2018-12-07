@@ -113,7 +113,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
                     // If recoverable, continue to the rest of the methods.
                     // The method in error simply won't be running in the JobHost.
-                    string msg = $"Function '{method.GetShortName()}' failed indexing and will be disabled.";
+                    string msg = $"Function '{Utility.GetFunctionName(method)}' failed indexing and will be disabled.";
                     _logger?.LogWarning(msg);
                     continue;
                 }
@@ -172,7 +172,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
             catch (Exception exception)
             {
-                throw new FunctionIndexingException(method.GetShortName(), exception);
+                throw new FunctionIndexingException(Utility.GetFunctionName(method), exception);
             }
         }
 
@@ -310,7 +310,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
             if (TypeUtility.IsAsyncVoid(method))
             {
-                string msg = $"Function '{method.Name}' is async but does not return a Task. Your function may not run correctly.";
+                string msg = $"Function '{Utility.GetFunctionName(method)}' is async but does not return a Task. Your function may not run correctly.";
                 _logger?.LogWarning(msg);
             }
 
