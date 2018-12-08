@@ -89,11 +89,17 @@ namespace Microsoft.Extensions.DependencyInjection
                 // we have to touch (and create) Active configuration before initializing telemetry modules
                 // Active configuration is used to report AppInsights heartbeats
                 // role environment telemetry initializer is needed to correlate heartbeats to particular host
+
+                var activeConfig = TelemetryConfiguration.Active;
                 if (!string.IsNullOrEmpty(options.InstrumentationKey) &&
-                    string.IsNullOrEmpty(TelemetryConfiguration.Active.InstrumentationKey))
+                    string.IsNullOrEmpty(activeConfig.InstrumentationKey))
                 {
-                    TelemetryConfiguration.Active.InstrumentationKey = options.InstrumentationKey;
-                    TelemetryConfiguration.Active.TelemetryInitializers.Add(
+                    activeConfig.InstrumentationKey = options.InstrumentationKey;
+                }
+
+                if (!activeConfig.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>().Any())
+                {
+                    activeConfig.TelemetryInitializers.Add(
                         new WebJobsRoleEnvironmentTelemetryInitializer());
                 }
 
