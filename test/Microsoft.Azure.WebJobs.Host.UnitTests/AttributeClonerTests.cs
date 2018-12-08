@@ -455,6 +455,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             [ConnectionString(Default = "nested:path:defaultKey")]
             public string ConnectionWithNestedDefaultPath { get; set; }
 
+            [ConnectionString]
+            public string ConnectionNameResolver { get; set; }
+
             [AppSetting(Default = "defaultSetting")]
             public string AppSettingWithDefault { get; set; }
         }
@@ -467,7 +470,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 Connection = "key",
                 ConnectionAtRoot = "rootKey",
                 ConnectionWithNestedPath = "nested:path:key",
-                ConnectionOverrideDefault = "overridden"
+                ConnectionOverrideDefault = "overridden",
+                ConnectionNameResolver = "%nameResolver%"
             };
 
             var config = TestHelpers.CreateInMemoryCollection()
@@ -479,9 +483,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 .AddSetting("connectionStrings:overridden", "connectionStringsOverriddenValue")
                 .AddSetting("connectionStrings:defaultSetting", "fromConnStr")
                 .AddSetting("defaultSetting", "fromRoot")
+                .AddSetting("connectionStrings:resolved", "fromNameResolver")
                 .BuildConfiguration();
 
             var nameResolver = new FakeNameResolver();
+            nameResolver.Add("nameResolver", "connectionStrings:resolved");
             var cloner = new AttributeCloner<ConnectionStrings>(attr, emptyContract, config, nameResolver);
             var cloned = cloner.GetNameResolvedAttribute();
 
@@ -492,6 +498,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.Equal("nestedPathDefaultValue", cloned.ConnectionWithNestedDefaultPath);
             Assert.Equal("fromConnStr", cloned.ConnectionWithDefault);
             Assert.Equal("fromRoot", cloned.AppSettingWithDefault);
+            Assert.Equal("fromNameResolver", cloned.ConnectionNameResolver);
         }
 
         [Fact]
