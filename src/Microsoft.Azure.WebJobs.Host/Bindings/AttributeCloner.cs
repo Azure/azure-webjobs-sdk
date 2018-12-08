@@ -126,7 +126,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             // first try to resolve with connection string
             if (connStrAttr != null)
             {
-                return GetConfigurationResolver(str, connStrAttr.Default, propInfo, validator, s => _configuration.GetConnectionStringOrSetting(s));
+                return GetConfigurationResolver(str, connStrAttr.Default, propInfo, validator, s => _configuration.GetConnectionStringOrSetting(nameResolver.ResolveWholeString(s)));
             }
 
             // then app setting
