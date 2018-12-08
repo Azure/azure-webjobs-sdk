@@ -27,6 +27,21 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 {
     public class ApplicationInsightsConfigurationTests
     {
+        public ApplicationInsightsConfigurationTests()
+        {
+            TelemetryConfiguration.Active.InstrumentationKey = "";
+
+            var initializers = new List<ITelemetryInitializer>(TelemetryConfiguration.Active.TelemetryInitializers);
+
+            foreach (var i in initializers)
+            {
+                if (!(i is OperationCorrelationTelemetryInitializer))
+                {
+                    TelemetryConfiguration.Active.TelemetryInitializers.Remove(i);
+                }
+            }
+        }
+
         [Fact]
         public void DependencyInjectionConfiguration_Configures()
         {
@@ -206,6 +221,27 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             }
         }
 
+        [Fact]
+        public void DependencyInjectionConfiguration_ConfiguresActiveEvenIfIKeySetUp()
+        {
+            TelemetryConfiguration.Active.InstrumentationKey = "some other ikey";
+            using (new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsights(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                    });
+                }).Build())
+            {
+                // Verify Initializers
+                Assert.Equal(2, TelemetryConfiguration.Active.TelemetryInitializers.Count);
+
+                // These will throw if there are not exactly one
+                Assert.Single(TelemetryConfiguration.Active.TelemetryInitializers.OfType<OperationCorrelationTelemetryInitializer>());
+                Assert.Single(TelemetryConfiguration.Active.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>());
+            }
+        }
         [Fact]
         public void DependencyInjectionConfiguration_ConfiguresActiveOnlyOnce()
         {
