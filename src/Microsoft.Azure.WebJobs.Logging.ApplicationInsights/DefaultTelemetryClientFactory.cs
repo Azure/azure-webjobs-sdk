@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Linq;
 using System.Reflection;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
@@ -107,16 +108,24 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             _perfModule = new PerformanceCollectorModule();
             _perfModule.Initialize(config);
 
+            var activeConfig = TelemetryConfiguration.Active;
+
             // setup heartbeats 
-            if (string.IsNullOrEmpty(TelemetryConfiguration.Active.InstrumentationKey))
+            if (string.IsNullOrEmpty(activeConfig.InstrumentationKey))
             {
                 // Because of https://github.com/Microsoft/ApplicationInsights-dotnet-server/issues/943
                 // we have to touch (and create) Active configuration before initializing telemetry modules 
-                TelemetryConfiguration.Active.InstrumentationKey = _instrumentationKey;
+                activeConfig.InstrumentationKey = _instrumentationKey;
                 
-                // and add role environment initializer
-                TelemetryConfiguration.Active.TelemetryInitializers.Add(new WebJobsRoleEnvironmentTelemetryInitializer());
             }
+
+            // and add role environment initializer
+            if (!activeConfig.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>().Any())
+            {
+                activeConfig.TelemetryInitializers.Add(
+                    new WebJobsRoleEnvironmentTelemetryInitializer());
+            }
+
 
             _heartbeatsModule = new AppServicesHeartbeatTelemetryModule();
             _heartbeatsModule.Initialize(config);
