@@ -114,7 +114,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             // Act & Assert
             await product.IndexMethodAsync(typeof(FunctionIndexerTests).GetMethod("ReturnAsyncVoid"), index, CancellationToken.None);
 
-            string expectedMessage = "Function 'ReturnAsyncVoid' is async but does not return a Task. Your function may not run correctly.";
+            string expectedMessage = "Function 'FunctionIndexerTests.ReturnAsyncVoid' is async but does not return a Task. Your function may not run correctly.";
 
             // Validate Logger
             var logger = loggerProvider.CreatedLoggers.Single(l => l.Category == Logging.LogCategories.Startup);

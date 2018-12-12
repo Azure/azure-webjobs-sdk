@@ -2,10 +2,12 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Globalization;
 using System.Reflection;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Azure.WebJobs
@@ -33,6 +35,12 @@ namespace Microsoft.Azure.WebJobs
         {
             FunctionNameAttribute functionNameAttribute = TypeUtility.GetHierarchicalAttributeOrNull<FunctionNameAttribute>(methodInfo);
             return (functionNameAttribute != null) ? functionNameAttribute.Name : methodInfo.Name;
+        }
+
+        internal static string GetFunctionShortName(MethodInfo methodInfo)
+        {
+            FunctionNameAttribute functionNameAttribute = TypeUtility.GetHierarchicalAttributeOrNull<FunctionNameAttribute>(methodInfo);
+            return (functionNameAttribute != null) ? functionNameAttribute.Name : methodInfo.GetShortName();
         }
 
         private static string GetExtensionConfigurationSectionName<TExtension>() where TExtension : IExtensionConfigProvider
