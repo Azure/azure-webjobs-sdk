@@ -113,7 +113,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
                     // If recoverable, continue to the rest of the methods.
                     // The method in error simply won't be running in the JobHost.
-                    string msg = $"Function '{method.GetShortName()}' failed indexing and will be disabled.";
+                    string msg = $"Function '{Utility.GetFunctionShortName(method)}' failed indexing and will be disabled.";
                     _logger?.LogWarning(msg);
                     continue;
                 }
@@ -172,7 +172,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
             catch (Exception exception)
             {
-                throw new FunctionIndexingException(method.GetShortName(), exception);
+                throw new FunctionIndexingException(Utility.GetFunctionShortName(method), exception);
             }
         }
 
@@ -209,7 +209,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             if (triggerBinding != null)
             {
                 bindingDataContract = triggerBinding.BindingDataContract;
-                
+
                 // See if a regular binding can handle it. 
                 IBinding binding = await _bindingProvider.TryCreateAsync(new BindingProviderContext(triggerParameter, bindingDataContract, cancellationToken));
                 if (binding != null)
@@ -310,7 +310,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
             if (TypeUtility.IsAsyncVoid(method))
             {
-                string msg = $"Function '{method.Name}' is async but does not return a Task. Your function may not run correctly.";
+                string msg = $"Function '{Utility.GetFunctionShortName(method)}' is async but does not return a Task. Your function may not run correctly.";
                 _logger?.LogWarning(msg);
             }
 
@@ -356,7 +356,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         /// <param name="type">The type to be checked.</param>
         /// <returns>True if the type name matches the F# unit type; otherwise, false.</returns>
         private bool IsUnitType(Type type) => string.Equals(type?.FullName, "Microsoft.FSharp.Core.Unit", StringComparison.Ordinal);
-        
+
         private FunctionDefinition CreateTriggeredFunctionDefinition<TTriggerValue>(
             ITriggerBinding triggerBinding, string parameterName, FunctionDescriptor descriptor,
             IReadOnlyDictionary<string, IBinding> nonTriggerBindings, IFunctionInvoker invoker)

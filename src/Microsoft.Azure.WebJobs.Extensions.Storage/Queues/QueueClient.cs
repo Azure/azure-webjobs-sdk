@@ -76,7 +76,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
                 if (Char.IsLetterOrDigit(ch) == false && ch != '-')
                 {
                     errorMessage =
-                        "A queue name can contain only letters, numbers, and and dash(-) characters - \"" + name + "\"";
+                        "A queue name can contain only letters, numbers, and dash(-) characters - \"" + name + "\"";
                     return false;
                 }
                 if (ch == '-' && previousCharacter == '-')
