@@ -125,15 +125,15 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     logCompletedCancellationToken = cancellationToken;
                 }
 
+                if (functionCompletedMessage != null)
+                {
+                    await _functionInstanceLogger.LogFunctionCompletedAsync(functionCompletedMessage, logCompletedCancellationToken);
+                }
+
                 if (instanceLogEntry != null)
                 {
                     await NotifyCompleteAsync(instanceLogEntry, functionCompletedMessage.Arguments, exceptionInfo);
                     _resultsLogger?.LogFunctionResult(instanceLogEntry);
-                }
-
-                if (functionCompletedMessage != null)
-                {
-                    await _functionInstanceLogger.LogFunctionCompletedAsync(functionCompletedMessage, logCompletedCancellationToken);
                 }
 
                 if (loggedStartedEvent)
