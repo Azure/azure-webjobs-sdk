@@ -85,7 +85,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
             // Make sure that the trigger traces are correlated
             var traces = _channel.Telemetries.OfType<TraceTelemetry>().Where(t => t.Context.Operation.Id == operationId);
-            Assert.Equal(success ? 5 : 7, traces.Count());
+            Assert.Equal(success ? 6 : 8, traces.Count());
         }
 
         [Fact]
