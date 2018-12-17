@@ -80,10 +80,14 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     telemetryProps[LogConstants.CategoryNameKey] = category;
                 }
 
-                LogLevel? logLevel = scopeProps.GetValueOrDefault<LogLevel?>(LogConstants.LogLevelKey);
-                if (logLevel != null)
+                // only set loglevel for filtering on trace telemetry
+                if (telemetry is TraceTelemetry)
                 {
-                    telemetryProps[LogConstants.LogLevelKey] = logLevel.Value.ToString();
+                    LogLevel? logLevel = scopeProps.GetValueOrDefault<LogLevel?>(LogConstants.LogLevelKey);
+                    if (logLevel != null)
+                    {
+                        telemetryProps[LogConstants.LogLevelKey] = logLevel.Value.ToString();
+                    }
                 }
 
                 int? eventId = scopeProps.GetValueOrDefault<int?>(LogConstants.EventIdKey);
