@@ -80,7 +80,9 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         {
             // First try to resolve disabled state by setting
             string settingName = string.Format(CultureInfo.InvariantCulture, "AzureWebJobs.{0}.Disabled", Utility.GetFunctionName(method));
-            if (ConfigurationUtility.IsSettingEnabled(settingName))
+            // Linux does not support dots in env variable name. So we replace dots with underscores.
+            string settingNameLinux = string.Format(CultureInfo.InvariantCulture, "AzureWebJobs_{0}_Disabled", Utility.GetFunctionName(method));
+            if (ConfigurationUtility.IsSettingEnabled(settingName) || ConfigurationUtility.IsSettingEnabled(settingNameLinux))
             {
                 return true;
             }
