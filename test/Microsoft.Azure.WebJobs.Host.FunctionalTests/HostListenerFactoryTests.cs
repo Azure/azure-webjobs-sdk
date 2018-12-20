@@ -43,6 +43,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
         [InlineData(typeof(Functions1), "DisabledByEnvironmentSetting")]
         [InlineData(typeof(Functions1), "DisabledByAppSetting_Method")]
         [InlineData(typeof(Functions1), "DisabledByAppSetting_FunctionNameAttributeTest")]
+        [InlineData(typeof(Functions1), "DisabledByAppSetting_Method_Linux")]
+        [InlineData(typeof(Functions1), "DisabledByAppSetting_FunctionNameAttributeTest_Linux")]
         [InlineData(typeof(Functions2), "DisabledAtClassLevel")]
         public async Task CreateAsync_SkipsDisabledFunctions(Type jobType, string methodName)
         {
@@ -180,8 +182,20 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             {
             }
 
+
+            public static void DisabledByAppSetting_Method_Linux(
+                [QueueTrigger("test")] string message)
+            {
+            }
+
             [FunctionName("DisabledByAppSetting_FunctionNameAttribute")]
             public static void DisabledByAppSetting_FunctionNameAttributeTest(
+                [QueueTrigger("test")] string message)
+            {
+            }
+
+            [FunctionName("DisabledByAppSetting_FunctionNameAttribute")]
+            public static void DisabledByAppSetting_FunctionNameAttributeTest_Linux(
                 [QueueTrigger("test")] string message)
             {
             }
