@@ -10,6 +10,7 @@ using Microsoft.ApplicationInsights.DependencyCollector;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.Implementation.ApplicationId;
+using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
 using Microsoft.ApplicationInsights.SnapshotCollector;
 using Microsoft.ApplicationInsights.WindowsServer;
@@ -74,9 +75,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 var modules = host.Services.GetServices<ITelemetryModule>().ToList();
 
                 // Verify Modules
-                Assert.Equal(3, modules.Count);
+                Assert.Equal(4, modules.Count);
                 Assert.Single(modules.OfType<DependencyTrackingTelemetryModule>());
                 Assert.Single(modules.OfType<QuickPulseTelemetryModule>());
+                Assert.Single(modules.OfType<PerformanceCollectorModule>());
                 Assert.Single(modules.OfType<AppServicesHeartbeatTelemetryModule>());
                 Assert.Same(config.TelemetryChannel, host.Services.GetServices<ITelemetryChannel>().Single());
                 // Verify client
@@ -126,6 +128,25 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Assert.IsType<AdaptiveSamplingTelemetryProcessor>(config.TelemetryProcessors[3]);
 
                 Assert.Equal(samplingSettings.MaxTelemetryItemsPerSecond, ((AdaptiveSamplingTelemetryProcessor)config.TelemetryProcessors[3]).MaxTelemetryItemsPerSecond);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_DisablesPerformanceCounters()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsights(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                        o.EnablePerformanceCountersCollection = false;
+                    });
+                })
+                .Build())
+            {
+                var modules = host.Services.GetServices<ITelemetryModule>();
+                Assert.True(modules.Count(m => m is PerformanceCollectorModule) == 0);
             }
         }
 
