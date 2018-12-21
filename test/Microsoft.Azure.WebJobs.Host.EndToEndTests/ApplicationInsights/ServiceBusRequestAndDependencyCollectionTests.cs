@@ -191,7 +191,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.Equal("Azure Service Bus", dependency.Type);
             Assert.Equal(name, dependency.Name);
             Assert.True(dependency.Success);
-            Assert.Null(dependency.Data);
+            Assert.True(string.IsNullOrEmpty(dependency.Data));
             TelemetryValidationHelpers.ValidateDependency(dependency, operationName, operationId, parentId, LogCategories.Bindings);
         }
 

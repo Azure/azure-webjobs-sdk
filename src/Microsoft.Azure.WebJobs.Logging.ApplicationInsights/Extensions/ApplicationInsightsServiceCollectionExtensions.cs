@@ -11,11 +11,11 @@ using Microsoft.ApplicationInsights.DependencyCollector;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.Implementation.ApplicationId;
+using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
 using Microsoft.ApplicationInsights.SnapshotCollector;
 using Microsoft.ApplicationInsights.WindowsServer;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
-using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -52,7 +52,19 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddSingleton<ITelemetryInitializer, WebJobsRoleEnvironmentTelemetryInitializer>();
             services.AddSingleton<ITelemetryInitializer, WebJobsTelemetryInitializer>();
             services.AddSingleton<ITelemetryInitializer, WebJobsSanitizingInitializer>();
+
             services.AddSingleton<ITelemetryModule, QuickPulseTelemetryModule>();
+            
+            services.AddSingleton<ITelemetryModule>(provider =>
+            {
+                ApplicationInsightsLoggerOptions options = provider.GetService<IOptions<ApplicationInsightsLoggerOptions>>().Value;
+                if (options.EnablePerformanceCountersCollection)
+                {
+                    return new PerformanceCollectorModule();
+                }
+
+                return NullTelemetryModule.Instance;
+            });
 
             services.AddSingleton<IApplicationIdProvider, ApplicationInsightsApplicationIdProvider>();
 

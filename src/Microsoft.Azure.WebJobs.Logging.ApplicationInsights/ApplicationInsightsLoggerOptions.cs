@@ -19,6 +19,13 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
         public string QuickPulseAuthenticationApiKey { get; set; }
 
+        /// <summary>
+        /// Gets or sets flag that enables Kudu performance counters collection.
+        /// https://github.com/projectkudu/kudu/wiki/Perf-Counters-exposed-as-environment-variables.
+        /// Enabled by default.
+        /// </summary>
+        public bool EnablePerformanceCountersCollection { get; set; } = true;
+
         public string Format()
         {
             JObject sampling = null;

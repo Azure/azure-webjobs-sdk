@@ -102,18 +102,14 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 {
                     foreach (var tag in currentActivity.Tags)
                     {
-                        // Apply well-known tags and custom properties                        
-                        if (!TryApplyProperty(request, tag))
+                        // Apply well-known tags and custom properties, 
+                        // but ignore internal ai tags
+                        if (!TryApplyProperty(request, tag) &&
+                            !tag.Key.StartsWith("w3c_") &&
+                            !tag.Key.StartsWith("ai_"))
                         {
                             request.Properties[tag.Key] = tag.Value;
                         }
-                    }
-                }
-                else // workaround for https://github.com/Microsoft/ApplicationInsights-dotnet-server/issues/1038
-                {
-                    foreach (var property in request.Properties)
-                    {
-                        TryApplyProperty(request, property);
                     }
                 }
             }
