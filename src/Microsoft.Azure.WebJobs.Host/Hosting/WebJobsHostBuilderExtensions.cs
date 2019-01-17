@@ -27,7 +27,9 @@ namespace Microsoft.Extensions.Hosting
         {
             builder.ConfigureAppConfiguration(config =>
             {
-                config.AddJsonFile("appsettings.json", optional: true);
+                var hostingEnvironment = context.HostingEnvironment;
+                config.AddJsonFile("appsettings.json", optional: true)
+                      .AddJsonFile("appsettings." + hostingEnvironment.EnvironmentName + ".json", optional: true);
                 config.AddEnvironmentVariables();
             });
 
