@@ -25,11 +25,13 @@ namespace Microsoft.Extensions.Hosting
 
         public static IHostBuilder ConfigureWebJobs(this IHostBuilder builder, Action<IWebJobsBuilder> configure, Action<JobHostOptions> configureOptions)
         {
-            builder.ConfigureAppConfiguration(config =>
+            builder.ConfigureAppConfiguration((hostingContext, config) =>
             {
-                var hostingEnvironment = context.HostingEnvironment;
-                config.AddJsonFile("appsettings.json", optional: true)
-                      .AddJsonFile("appsettings." + hostingEnvironment.EnvironmentName + ".json", optional: true);
+                var env = hostingContext.HostingEnvironment;
+
+                config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                      .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true);
+
                 config.AddEnvironmentVariables();
             });
 
