@@ -5,7 +5,7 @@
 namespace Microsoft.Azure.WebJobs.Logging
 {
     /// <summary>
-    /// Keys used by the <see cref="ILogger"/> infrastructure.
+    /// Keys used by the <see cref="Extensions.Logging.ILogger"/> infrastructure.
     /// </summary>
     public static class LogConstants
     {
@@ -120,7 +120,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         public const string OriginalFormatKey = "{OriginalFormat}";
 
         /// <summary>
-        /// Gets the name of the key used to store the <see cref="LogLevel"/> of the log message.
+        /// Gets the name of the key used to store the <see cref="Extensions.Logging.LogLevel"/> of the log message.
         /// </summary>
         public const string LogLevelKey = "LogLevel";
 

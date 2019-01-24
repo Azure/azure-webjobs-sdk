@@ -19,7 +19,6 @@ namespace Microsoft.Azure.WebJobs.Logging
         /// <summary>
         /// Creates an instance.
         /// </summary>
-        /// <param name="level">The <see cref="TraceLevel"/> to use when filtering logs.</param>        
         public LoggerTraceWriter(ILogger logger)
             : base(TraceLevel.Verbose)
         {

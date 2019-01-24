@@ -8,7 +8,7 @@ using System.IO;
 using Microsoft.Azure.WebJobs.Description;
 
 namespace Microsoft.Azure.WebJobs
-{ 
+{
     /// <summary>
     /// Attribute used to bind a parameter to an Azure Blob. The attribute supports binding
     /// to single blobs, blob containers, or collections of blobs.
@@ -33,7 +33,7 @@ namespace Microsoft.Azure.WebJobs
     /// </item>
     /// </list>
     /// In addition to single blob bindings,  parameters can be bound to multiple blobs.
-    /// The parameter type can be CloudBlobContainer, CloudBlobDirectory or <see cref="IEnumerable{T}"/>
+    /// The parameter type can be CloudBlobContainer, CloudBlobDirectory or <see cref="System.Collections.Generic.IEnumerable{T}"/>
     /// of one of the following element types: 
     /// <list type = "bullet" >
     /// <item><description>ICloudBlob</description></item>

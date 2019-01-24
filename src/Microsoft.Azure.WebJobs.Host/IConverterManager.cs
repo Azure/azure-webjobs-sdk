@@ -8,7 +8,7 @@ namespace Microsoft.Azure.WebJobs
     /// <summary>
     /// General service for converting between types for parameter bindings.  
     /// Parameter bindings call this to convert from user parameter types to underlying binding types. 
-    /// Converters can be added via extension configuration rules on <see cref="FluentConverterRules"/>.
+    /// Converters can be added via extension configuration rules on <see cref="Host.Config.FluentConverterRules{TAttribute, TThis}"/>.
     /// </summary>
     public interface IConverterManager
     {

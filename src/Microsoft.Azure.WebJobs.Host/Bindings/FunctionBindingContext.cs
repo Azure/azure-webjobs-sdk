@@ -21,7 +21,6 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// </summary>
         /// <param name="functionInstanceId">The instance ID of the function being bound to.</param>
         /// <param name="functionCancellationToken">The <see cref="CancellationToken"/> to use.</param>
-        /// <param name="userLogger">The user logger.</param>
         /// <param name="functionDescriptor">Current function being executed. </param>
         public FunctionBindingContext(
             Guid functionInstanceId,

@@ -80,7 +80,7 @@ namespace Microsoft.Azure.WebJobs
         /// Type discovery is performed using the <see cref="DefaultStartupTypeLocator"/>.
         /// </summary>
         /// <param name="builder">The <see cref="IWebJobsBuilder"/> instance to configure.</param>
-        /// <returns>The updated <see cref="IHostBuilder"/> instance.</returns>
+        /// <returns>The updated <see cref="IWebJobsBuilder"/> instance.</returns>
         public static IWebJobsBuilder UseExternalStartup(this IWebJobsBuilder builder)
         {
             return builder.UseExternalStartup(new DefaultStartupTypeLocator());
@@ -93,7 +93,7 @@ namespace Microsoft.Azure.WebJobs
         /// <param name="builder">The <see cref="IWebJobsBuilder"/> instance to configure.</param>
         /// <param name="startupTypeLocator">An implementation of <see cref="IWebJobsStartupTypeLocator"/> that provides a list of types that 
         /// should be used in the startup process.</param>
-        /// <returns>The updated <see cref="IHostBuilder"/> instance.</returns>
+        /// <returns>The updated <see cref="IWebJobsBuilder"/> instance.</returns>
         public static IWebJobsBuilder UseExternalStartup(this IWebJobsBuilder builder, IWebJobsStartupTypeLocator startupTypeLocator)
         {
             Type[] types = startupTypeLocator.GetStartupTypes();

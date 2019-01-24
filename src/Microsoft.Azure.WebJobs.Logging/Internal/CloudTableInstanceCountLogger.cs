@@ -26,7 +26,6 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
             get; set;
         }
 
-        ///
         public CloudTableInstanceCountLogger(string containerName, ILogTableProvider tableLookup, int containerSize)
         {
             // Default polling interval
@@ -37,7 +36,6 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
             this._containerSize = containerSize;
         }
 
-        /// 
         protected override async Task WriteEntry(long ticks, int currentActive, int totalThisPeriod)
         {
             if (currentActive == 0 && totalThisPeriod == 0)

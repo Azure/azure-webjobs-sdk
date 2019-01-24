@@ -13,7 +13,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
     /// Produces a CompositeBindingProvider that's a collection of all <see cref="IBindingProvider"/>
     /// This pulls from: 
     /// <list>
-    /// <item>Normal extensions in <see cref="IExtensionConfigProvider"/></item>
+    /// <item>Normal extensions in <see cref="Config.IExtensionConfigProvider"/></item>
     /// <item>Anything registered via DI, which includes a set of builtins.</item>
     /// <item>A <see cref="RuntimeBindingProvider"/> for binding to <see cref="IBinder"/></item>
     /// </list>

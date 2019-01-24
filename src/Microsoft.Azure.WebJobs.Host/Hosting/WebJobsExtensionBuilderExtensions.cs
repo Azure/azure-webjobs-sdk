@@ -17,7 +17,7 @@ namespace Microsoft.Azure.WebJobs
         /// </summary>
         /// <typeparam name="TOptions">The type of options to bind.</typeparam>
         /// <param name="builder">The <see cref="IWebJobsExtensionBuilder"/> to configure.</param>
-        /// <returns>The configured <see cref="IWebJobsExtensionBuilder"</returns>
+        /// <returns>The configured <see cref="IWebJobsExtensionBuilder"/></returns>
         public static IWebJobsExtensionBuilder BindOptions<TOptions>(this IWebJobsExtensionBuilder builder) where TOptions : class
         {
             builder.ConfigureOptions<TOptions>((section, options) =>
@@ -37,7 +37,7 @@ namespace Microsoft.Azure.WebJobs
         /// <typeparam name="TOptions">The type of options to bind.</typeparam>
         /// <param name="builder">The <see cref="IWebJobsExtensionBuilder"/> to configure.</param>
         /// <param name="configure">The <see cref="Action{IConfigurationSection, TOptions}"/> that will be invoked when configuring the options.</param>
-        /// <returns>The configured <see cref="IWebJobsExtensionBuilder"</returns>
+        /// <returns>The configured <see cref="IWebJobsExtensionBuilder"/></returns>
         public static IWebJobsExtensionBuilder ConfigureOptions<TOptions>(this IWebJobsExtensionBuilder builder, Action<IConfigurationSection, TOptions> configure) where TOptions : class
         {
             if (configure == null)
@@ -59,9 +59,9 @@ namespace Microsoft.Azure.WebJobs
         /// </summary>
         /// <typeparam name="TOptions">The type of options to bind.</typeparam>
         /// <param name="builder">The <see cref="IWebJobsExtensionBuilder"/> to configure.</param>
-        /// <param name="configure">The <see cref="Action{IConfiguration, string, TOptions}"/> that will be invoked when configuring the options, providing the root configuration, the
+        /// <param name="configure">The <see cref="Action{IConfiguration, String, TOptions}"/> that will be invoked when configuring the options, providing the root configuration, the
         /// extension configuration section path and the option to configure.</param>
-        /// <returns>The configured <see cref="IWebJobsExtensionBuilder"</returns>
+        /// <returns>The configured <see cref="IWebJobsExtensionBuilder"/></returns>
         public static IWebJobsExtensionBuilder ConfigureOptions<TOptions>(this IWebJobsExtensionBuilder builder, Action<IConfiguration, string, TOptions> configure) where TOptions : class
         {
             if (configure == null)

@@ -10,7 +10,6 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
     /// </summary>
     public static class ProjectionHelper
     {
-        /// 
         public static Tuple<long, double>[] Work(InstanceCountEntity[] rows, long startTicks, long endTicks, int numberBuckets)
         {
             if (rows == null)

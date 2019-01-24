@@ -45,7 +45,7 @@ namespace Microsoft.Azure.WebJobs
         /// Initializes a new instance of the <see cref="ServiceBusAttribute"/> class.
         /// </summary>
         /// <param name="queueOrTopicName">The name of the queue or topic to bind to.</param>
-        /// <param name="queueOrTopicName">The type of the entity to bind to.</param>
+        /// <param name="entityType">The type of the entity to bind to.</param>
         public ServiceBusAttribute(string queueOrTopicName, EntityType entityType)
         {
             QueueOrTopicName = queueOrTopicName;
