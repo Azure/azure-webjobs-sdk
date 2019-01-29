@@ -285,8 +285,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
 
                 IFunctionIndex functions = await functionIndexProvider.GetAsync(combinedCancellationToken);
-                IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), singletonManager, activator, nameResolver, trace, loggerFactory, config.AllowPartialHostStartup);
-
+                Action listenersCreatedCallback = () =>
+                {
+                    // only trigger HostInitialized after all listeners are created (but before
+                    // they are started).
+                    host.OnHostInitialized();
+                };
+                IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), singletonManager, activator, nameResolver, trace, loggerFactory, config.AllowPartialHostStartup, listenersCreatedCallback);
+                
                 IFunctionExecutor hostCallExecutor;
                 IListener listener;
                 HostOutputMessage hostOutputMessage;
