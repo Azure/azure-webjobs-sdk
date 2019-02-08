@@ -25,6 +25,16 @@ namespace Microsoft.Extensions.Hosting
 
         public static IHostBuilder ConfigureWebJobs(this IHostBuilder builder, Action<IWebJobsBuilder> configure, Action<JobHostOptions> configureOptions)
         {
+            return builder.ConfigureWebJobs((context, b) => configure(b), configureOptions);
+        }
+
+        public static IHostBuilder ConfigureWebJobs(this IHostBuilder builder, Action<HostBuilderContext, IWebJobsBuilder> configure)
+        {
+            return builder.ConfigureWebJobs(configure, o => { });
+        }
+
+        public static IHostBuilder ConfigureWebJobs(this IHostBuilder builder, Action<HostBuilderContext, IWebJobsBuilder> configure, Action<JobHostOptions> configureOptions)
+        {
             builder.ConfigureAppConfiguration(config =>
             {
                 config.AddJsonFile("appsettings.json", optional: true);
@@ -34,7 +44,7 @@ namespace Microsoft.Extensions.Hosting
             builder.ConfigureServices((context, services) =>
             {
                 IWebJobsBuilder webJobsBuilder = services.AddWebJobs(configureOptions);
-                configure(webJobsBuilder);
+                configure(context, webJobsBuilder);
 
                 services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, JobHostService>());
             });
