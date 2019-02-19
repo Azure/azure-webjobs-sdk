@@ -11,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     /// The default <see cref="IJobActivator"/> integrates with DI,
     /// supporting constructor injection for registered services.
     /// </summary>
-    internal class DefaultJobActivator : IJobActivator
+    internal class DefaultJobActivator : IJobActivatorEx
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ConcurrentDictionary<Type, ObjectFactory> _factories;
@@ -24,12 +24,22 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public T CreateInstance<T>()
         {
+            return CreateInstance<T>(_serviceProvider);
+        }
+
+        public T CreateInstance<T>(IFunctionInstanceEx functionInstance)
+        {
+            return CreateInstance<T>(functionInstance.InstanceServices);
+        }
+
+        private T CreateInstance<T>(IServiceProvider serviceProvider)
+        {
             var factory = _factories.GetOrAdd(typeof(T), t =>
             {
                 return ActivatorUtilities.CreateFactory(t, Type.EmptyTypes);
             });
 
-            return (T)factory(_serviceProvider, null);
+            return (T)factory(serviceProvider, null);
         }
     }
 }

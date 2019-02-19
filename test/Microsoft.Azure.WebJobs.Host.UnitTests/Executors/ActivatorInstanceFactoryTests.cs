@@ -21,10 +21,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                          .Verifiable();
             IJobActivator activator = activatorMock.Object;
 
-            IFactory<object> product = CreateProductUnderTest<object>(activator);
+            IJobInstanceFactory<object> product = CreateProductUnderTest<object>(activator);
+
+            var functionInstanceMock = new Mock<IFunctionInstanceEx>();
 
             // Act
-            object instance = product.Create();
+            object instance = product.Create(functionInstanceMock.Object);
 
             // Assert
             Assert.Same(expectedInstance, instance);

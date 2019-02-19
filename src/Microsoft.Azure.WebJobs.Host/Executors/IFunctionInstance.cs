@@ -23,4 +23,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         FunctionDescriptor FunctionDescriptor { get; }
     }
+
+    public interface IFunctionInstanceEx : IFunctionInstance
+    {
+        IServiceProvider InstanceServices { get; }
+    }
 }

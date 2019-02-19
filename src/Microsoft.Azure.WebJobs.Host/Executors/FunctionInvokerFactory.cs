@@ -53,12 +53,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             IMethodInvoker<TReflected, TReturnValue> methodInvoker = MethodInvokerFactory.Create<TReflected, TReturnValue>(method);
 
-            IFactory<TReflected> instanceFactory = CreateInstanceFactory<TReflected>(method, activator);
+            IJobInstanceFactory<TReflected> instanceFactory = CreateInstanceFactory<TReflected>(method, activator);
 
             return new FunctionInvoker<TReflected, TReturnValue>(parameterNames, instanceFactory, methodInvoker);
         }
 
-        private static IFactory<TReflected> CreateInstanceFactory<TReflected>(MethodInfo method,
+        private static IJobInstanceFactory<TReflected> CreateInstanceFactory<TReflected>(MethodInfo method,
             IJobActivator jobActivator)
         {
             Debug.Assert(method != null);

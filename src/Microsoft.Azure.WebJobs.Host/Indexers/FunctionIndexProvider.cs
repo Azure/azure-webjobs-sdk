@@ -9,6 +9,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -21,7 +22,6 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly CompositeBindingProvider _bindingProviderFactory;
         private readonly IJobActivator _activator;
         private readonly IFunctionExecutor _executor;
-        private readonly IExtensionRegistry _extensions;
         private readonly SingletonManager _singletonManager;
         private readonly ILoggerFactory _loggerFactory;
         private readonly SharedQueueHandler _sharedQueue;
@@ -35,7 +35,6 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             CompositeBindingProvider bindingProviderFactory,
             IJobActivator activator,
             IFunctionExecutor executor,
-            IExtensionRegistry extensions,
             SingletonManager singletonManager,
             ILoggerFactory loggerFactory,
             SharedQueueHandler sharedQueue,
@@ -48,10 +47,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _bindingProviderFactory = bindingProviderFactory ?? throw new ArgumentNullException(nameof(bindingProviderFactory));
             _activator = activator ?? throw new ArgumentNullException(nameof(activator));
             _executor = executor ?? throw new ArgumentNullException(nameof(executor));
-            _extensions = extensions ?? throw new ArgumentNullException(nameof(extensions));
             _singletonManager = singletonManager ?? throw new ArgumentNullException(nameof(singletonManager));
             _sharedQueue = sharedQueue ?? throw new ArgumentNullException(nameof(sharedQueue));
-
             _loggerFactory = loggerFactory;
             _defaultTimeout = timeoutOptions.Value.ToAttribute();
             _allowPartialHostStartup = hostOptions.Value.AllowPartialHostStartup;
@@ -71,7 +68,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         {
             FunctionIndex index = new FunctionIndex();
             IBindingProvider bindingProvider = _bindingProviderFactory;
-            FunctionIndexer indexer = new FunctionIndexer(_triggerBindingProvider, bindingProvider, _activator, _executor, _extensions, _singletonManager, _loggerFactory, null, _sharedQueue, _defaultTimeout, _allowPartialHostStartup);
+            FunctionIndexer indexer = new FunctionIndexer(_triggerBindingProvider, bindingProvider, _activator, _executor, _singletonManager, _loggerFactory, null, _sharedQueue, _defaultTimeout, _allowPartialHostStartup);
             IReadOnlyList<Type> types = _typeLocator.GetTypes();
 
             foreach (Type type in types)

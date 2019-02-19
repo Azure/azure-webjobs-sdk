@@ -6,17 +6,18 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Azure.WebJobs.Host.Triggers
 {
     internal class TriggeredFunctionInstanceFactory<TTriggerValue> : ITriggeredFunctionInstanceFactory<TTriggerValue>
     {
         private readonly ITriggeredFunctionBinding<TTriggerValue> _binding;
-        private readonly IFunctionInvoker _invoker;
+        private readonly IFunctionInvokerEx _invoker;
         private readonly FunctionDescriptor _descriptor;
-
+        
         public TriggeredFunctionInstanceFactory(ITriggeredFunctionBinding<TTriggerValue> binding,
-            IFunctionInvoker invoker, FunctionDescriptor descriptor)
+            IFunctionInvokerEx invoker, FunctionDescriptor descriptor)
         {
             _binding = binding;
             _invoker = invoker;
@@ -44,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             return new FunctionInstance(context.Id, context.TriggerDetails, context.ParentId, context.ExecutionReason, bindingSource, invoker, _descriptor);
         }
 
-        private IFunctionInvoker CreateInvoker(FunctionInstanceFactoryContext context)
+        private IFunctionInvokerEx CreateInvoker(FunctionInstanceFactoryContext context)
         {
             if (context.InvokeHandler != null)
             {
@@ -56,12 +57,12 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             }
         }
 
-        private class InvokeWrapper : IFunctionInvoker
+        private class InvokeWrapper : IFunctionInvokerEx
         {
-            private readonly IFunctionInvoker _inner;
+            private readonly IFunctionInvokerEx _inner;
             private readonly Func<Func<Task<object>>, Task<object>> _handler;
 
-            public InvokeWrapper(IFunctionInvoker inner, Func<Func<Task<object>>, Task<object>> handler)
+            public InvokeWrapper(IFunctionInvokerEx inner, Func<Func<Task<object>>, Task<object>> handler)
             {
                 _inner = inner;
                 _handler = handler;
@@ -74,9 +75,14 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                 return _handler(inner);
             }
 
+            public object CreateInstance(IFunctionInstanceEx functionInstance)
+            {
+                return _inner.CreateInstance(functionInstance);
+            }
+
             public object CreateInstance()
             {
-                return _inner.CreateInstance();
+                throw new NotSupportedException($"{nameof(CreateInstance)} is not supported. Please use the overload that accepts an instance of an {nameof(IFunctionInstance)}");
             }
         }
     }

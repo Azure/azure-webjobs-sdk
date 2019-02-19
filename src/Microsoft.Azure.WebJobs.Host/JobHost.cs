@@ -192,16 +192,20 @@ namespace Microsoft.Azure.WebJobs
         /// <param name="arguments">The argument names and values to bind to parameters in the job method. In addition to parameter values, these may also include binding data values. </param>
         /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
         /// <returns>A <see cref="Task"/> that will call the job method.</returns>
-        public Task CallAsync(MethodInfo method, IDictionary<string, object> arguments, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task CallAsync(MethodInfo method, IDictionary<string, object> arguments, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (method == null)
             {
-                throw new ArgumentNullException("method");
+                throw new ArgumentNullException(nameof(method));
             }
 
             ThrowIfDisposed();
 
-            return CallAsyncCore(method, arguments, cancellationToken);
+            await EnsureHostInitializedAsync(cancellationToken);
+
+            IFunctionDefinition function = _context.FunctionLookup.Lookup(method);
+
+            await CallAsyncCore(function, method, arguments, cancellationToken);
         }
 
         /// <summary>Calls a job method.</summary>
@@ -221,32 +225,27 @@ namespace Microsoft.Azure.WebJobs
             await EnsureHostInitializedAsync(cancellationToken);
 
             IFunctionDefinition function = _context.FunctionLookup.LookupByName(name);
-            Validate(function, name);
-            IFunctionInstance instance = CreateFunctionInstance(function, arguments);
-
-            IDelayedException exception = await _context.Executor.TryExecuteAsync(instance, cancellationToken);
-
-            if (exception != null)
-            {
-                exception.Throw();
-            }
+            
+            await CallAsyncCore(function, name, arguments, cancellationToken);
         }
 
-        private async Task CallAsyncCore(MethodInfo method, IDictionary<string, object> arguments, CancellationToken cancellationToken)
+
+        private async Task CallAsyncCore(IFunctionDefinition function, object functionKey, IDictionary<string, object> arguments, CancellationToken cancellationToken)
         {
-            await EnsureHostInitializedAsync(cancellationToken);
+            Validate(function, functionKey);
 
-            IFunctionDefinition function = _context.FunctionLookup.Lookup(method);
-            Validate(function, method);
             IFunctionInstance instance = CreateFunctionInstance(function, arguments);
 
-            IDelayedException exception = await _context.Executor.TryExecuteAsync(instance, cancellationToken);
+            IDelayedException exception = null;
+
+            exception = await _context.Executor.TryExecuteAsync(instance, cancellationToken);
 
             if (exception != null)
             {
                 exception.Throw();
             }
         }
+
 
         /// <summary>
         /// Dispose the instance

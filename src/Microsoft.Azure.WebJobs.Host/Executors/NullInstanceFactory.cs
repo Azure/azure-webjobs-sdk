@@ -3,20 +3,15 @@
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal class NullInstanceFactory<TReflected> : IFactory<TReflected>
+    internal class NullInstanceFactory<TReflected> : IJobInstanceFactory<TReflected>
     {
-        private static readonly NullInstanceFactory<TReflected> Singleton = new NullInstanceFactory<TReflected>();
-
         private NullInstanceFactory()
         {
         }
 
-        public static NullInstanceFactory<TReflected> Instance
-        {
-            get { return Singleton; }
-        }
+        public static NullInstanceFactory<TReflected> Instance { get; } = new NullInstanceFactory<TReflected>();
 
-        public TReflected Create()
+        public TReflected Create(IFunctionInstanceEx functionInstance)
         {
             return default(TReflected);
         }

@@ -26,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                 });
 
             bool innerInvokerInvoked = false;
-            Mock<IFunctionInvoker> mockInvoker = new Mock<IFunctionInvoker>();
+            Mock<IFunctionInvokerEx> mockInvoker = new Mock<IFunctionInvokerEx>();
             mockInvoker.Setup(m => m.InvokeAsync(null, null)).Returns(() =>
             {
                 innerInvokerInvoked = true;
