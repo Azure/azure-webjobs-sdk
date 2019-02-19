@@ -35,7 +35,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             var context = new FunctionInstanceFactoryContext<TTriggerValue>()
             {
                 TriggerValue = (TTriggerValue)input.TriggerValue,
-                ParentId = input.ParentId, 
+                ParentId = input.ParentId,
                 TriggerDetails = input.TriggerDetails
             };
 
@@ -52,6 +52,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
 
             IFunctionInstance instance = _instanceFactory.Create(context);
+
             IDelayedException exception = await _executor.TryExecuteAsync(instance, cancellationToken);
 
             FunctionResult result = exception != null ?

@@ -21,11 +21,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             object expectedInstance = new object();
             object[] expectedArguments = new object[0];
 
-            Mock<IFactory<object>> instanceFactoryMock = new Mock<IFactory<object>>(MockBehavior.Strict);
-            instanceFactoryMock.Setup(f => f.Create())
+            IFunctionInstanceEx functionInstance = new Mock<IFunctionInstanceEx>().Object;
+            Mock<IJobInstanceFactory<object>> instanceFactoryMock = new Mock<IJobInstanceFactory<object>>(MockBehavior.Strict);
+            instanceFactoryMock.Setup(f => f.Create(It.IsAny<IFunctionInstanceEx>()))
                                .Returns(expectedInstance)
                                .Verifiable();
-            IFactory<object> instanceFactory = instanceFactoryMock.Object;
+            IJobInstanceFactory<object> instanceFactory = instanceFactoryMock.Object;
 
             Mock<IMethodInvoker<object, object>> methodInvokerMock = new Mock<IMethodInvoker<object, object>>(MockBehavior.Strict);
             methodInvokerMock.Setup(i => i.InvokeAsync(expectedInstance, expectedArguments))
@@ -33,10 +34,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                              .Verifiable();
             IMethodInvoker<object, object> methodInvoker = methodInvokerMock.Object;
 
-            IFunctionInvoker product = CreateProductUnderTest(instanceFactory, methodInvoker);
+            IFunctionInvokerEx product = CreateProductUnderTest(instanceFactory, methodInvoker);
 
             // Act
-            var instance = product.CreateInstance();
+            var instance = product.CreateInstance(functionInstance);
             product.InvokeAsync(instance, expectedArguments).GetAwaiter().GetResult();
 
             // Assert
@@ -87,7 +88,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             Assert.True(prog._disposed, "User job should be disposed.");
         }
 
-        private static FunctionInvoker<object, object> CreateProductUnderTest(IFactory<object> instanceFactory,
+        private static FunctionInvoker<object, object> CreateProductUnderTest(IJobInstanceFactory<object> instanceFactory,
             IMethodInvoker<object, object> methodInvoker)
         {
             return CreateProductUnderTest<object, object>(new string[0], instanceFactory, methodInvoker);
@@ -95,7 +96,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
         private static FunctionInvoker<TReflected, TReturnValue> CreateProductUnderTest<TReflected, TReturnValue>(
             IReadOnlyList<string> parameterNames,
-            IFactory<TReflected> instanceFactory,
+            IJobInstanceFactory<TReflected> instanceFactory,
             IMethodInvoker<TReflected, TReturnValue> methodInvoker)
         {
             return new FunctionInvoker<TReflected, TReturnValue>(parameterNames, instanceFactory, methodInvoker);

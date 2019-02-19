@@ -24,11 +24,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         {
             foreach (var method in this.GetType().GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
             {
-                Mock<IExtensionRegistry> extensionsMock = new Mock<IExtensionRegistry>(MockBehavior.Strict);
-                extensionsMock.Setup(p => p.GetExtensions(typeof(IExtensionConfigProvider))).Returns(Enumerable.Empty<object>());
-                extensionsMock.Setup(p => p.GetExtensions(typeof(ITriggerBindingProvider))).Returns(Enumerable.Empty<object>());
-                extensionsMock.Setup(p => p.GetExtensions(typeof(IBindingProvider))).Returns(Enumerable.Empty<object>());
-                extensionsMock.Setup(p => p.GetExtensions(typeof(IArgumentBindingProvider<>))).Returns(Enumerable.Empty<object>());
                 Mock<IFunctionExecutor> executorMock = new Mock<IFunctionExecutor>(MockBehavior.Strict);
 
                 IFunctionIndexCollector stubIndex = new Mock<IFunctionIndexCollector>().Object;
@@ -38,7 +33,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                     new Mock<IBindingProvider>(MockBehavior.Strict).Object,
                     new Mock<IJobActivator>(MockBehavior.Strict).Object,
                     executorMock.Object,
-                    extensionsMock.Object,
                     new SingletonManager(),
                     null);
 

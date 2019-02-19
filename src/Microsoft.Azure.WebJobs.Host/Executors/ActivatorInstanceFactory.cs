@@ -5,23 +5,25 @@ using System;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal class ActivatorInstanceFactory<TReflected> : IFactory<TReflected>
+    internal class ActivatorInstanceFactory<T> : IJobInstanceFactory<T> 
     {
-        private readonly IJobActivator _activator;
+        private readonly Func<IFunctionInstanceEx, T> _createInstance;
 
         public ActivatorInstanceFactory(IJobActivator activator)
         {
             if (activator == null)
             {
-                throw new ArgumentNullException("activator");
+                throw new ArgumentNullException(nameof(activator));
             }
 
-            _activator = activator;
+            _createInstance = activator is IJobActivatorEx activatorEx
+                ? new Func<IFunctionInstanceEx, T>(i => activatorEx.CreateInstance<T>(i))
+                : new Func<IFunctionInstanceEx, T>(i => activator.CreateInstance<T>());
         }
 
-        public TReflected Create()
+        public T Create(IFunctionInstanceEx functionInstance)
         {
-            return _activator.CreateInstance<TReflected>();
+            return _createInstance(functionInstance);
         }
     }
 }

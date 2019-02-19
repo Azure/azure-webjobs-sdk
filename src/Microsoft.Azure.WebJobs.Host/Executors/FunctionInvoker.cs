@@ -7,38 +7,23 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal class FunctionInvoker<TReflected, TReturnValue> : IFunctionInvoker
+    internal class FunctionInvoker<TReflected, TReturnValue> : IFunctionInvokerEx
     {
         private readonly IReadOnlyList<string> _parameterNames;
-        private readonly IFactory<TReflected> _instanceFactory;
+        private readonly IJobInstanceFactory<TReflected> _instanceFactory;
         private readonly IMethodInvoker<TReflected, TReturnValue> _methodInvoker;
 
         public FunctionInvoker(
             IReadOnlyList<string> parameterNames,
-            IFactory<TReflected> instanceFactory,
+            IJobInstanceFactory<TReflected> instanceFactory,
             IMethodInvoker<TReflected, TReturnValue> methodInvoker)
         {
-            if (parameterNames == null)
-            {
-                throw new ArgumentNullException("parameterNames");
-            }
-
-            if (instanceFactory == null)
-            {
-                throw new ArgumentNullException("instanceFactory");
-            }
-
-            if (methodInvoker == null)
-            {
-                throw new ArgumentNullException("methodInvoker");
-            }
-
-            _parameterNames = parameterNames;
-            _instanceFactory = instanceFactory;
-            _methodInvoker = methodInvoker;
+            _parameterNames = parameterNames ?? throw new ArgumentNullException(nameof(parameterNames));
+            _instanceFactory = instanceFactory ?? throw new ArgumentNullException(nameof(instanceFactory));
+            _methodInvoker = methodInvoker ?? throw new ArgumentNullException(nameof(methodInvoker));
         }
 
-        public IFactory<TReflected> InstanceFactory
+        public IJobInstanceFactory<TReflected> InstanceFactory
         {
             get { return _instanceFactory; }
         }
@@ -51,8 +36,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public object CreateInstance()
         {
-            TReflected instance = _instanceFactory.Create();
-            return instance;
+            throw new NotSupportedException($"{nameof(CreateInstance)} is not supported, please use the overload that accepts an {nameof(IFunctionInstance)} argument.");
+        }
+
+        public object CreateInstance(IFunctionInstanceEx functionInstance)
+        {
+            return _instanceFactory.Create(functionInstance);
         }
 
         public async Task<object> InvokeAsync(object instance, object[] arguments)
@@ -60,7 +49,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // Return a task immediately in case the method is not async.
             await Task.Yield();
 
-            return await _methodInvoker.InvokeAsync((TReflected) instance, arguments);            
+            return await _methodInvoker.InvokeAsync((TReflected)instance, arguments);
         }
     }
 }

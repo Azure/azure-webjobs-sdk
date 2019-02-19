@@ -17,6 +17,7 @@ using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
@@ -26,6 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IFunctionInstanceLogger _functionInstanceLogger;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IAsyncCollector<FunctionInstanceLogEntry> _functionEventCollector;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger _resultsLogger;
         private readonly IEnumerable<IFunctionFilter> _globalFunctionFilters;
@@ -50,6 +52,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 IFunctionOutputLogger functionOutputLogger,
                 IWebJobsExceptionHandler exceptionHandler,
                 IAsyncCollector<FunctionInstanceLogEntry> functionEventCollector,
+                IServiceScopeFactory serviceScopeFactory,
                 ILoggerFactory loggerFactory = null,
                 IEnumerable<IFunctionFilter> globalFunctionFilters = null)
         {
@@ -57,6 +60,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _functionOutputLogger = functionOutputLogger;
             _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
             _functionEventCollector = functionEventCollector ?? throw new ArgumentNullException(nameof(functionEventCollector));
+            _serviceScopeFactory = serviceScopeFactory;
             _loggerFactory = loggerFactory;
             _resultsLogger = _loggerFactory?.CreateLogger(LogCategories.Results);
             _globalFunctionFilters = globalFunctionFilters ?? Enumerable.Empty<IFunctionFilter>();
@@ -68,8 +72,32 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             set { _hostOutputMessage = value; }
         }
 
-        public async Task<IDelayedException> TryExecuteAsync(IFunctionInstance functionInstance, CancellationToken cancellationToken)
+        public async Task<IDelayedException> TryExecuteAsync(IFunctionInstance instance, CancellationToken cancellationToken)
         {
+            bool ownsInstance = false;
+
+            if (!(instance is IFunctionInstanceEx functionInstance))
+            {
+                functionInstance = new FunctionInstanceWrapper(instance, _serviceScopeFactory);
+                ownsInstance = true;
+            }
+
+            try
+            {
+                return await TryExecuteAsyncCore(functionInstance, cancellationToken);
+            }
+            finally
+            {
+                if (ownsInstance)
+                {
+                    (functionInstance as IDisposable)?.Dispose();
+                }
+            }
+        }
+
+        private async Task<IDelayedException> TryExecuteAsyncCore(IFunctionInstanceEx functionInstance, CancellationToken cancellationToken)
+        {
+
             ILogger logger = _loggerFactory?.CreateLogger(LogCategories.CreateFunctionCategory(functionInstance.FunctionDescriptor.LogName));
 
             FunctionStartedMessage functionStartedMessage = CreateStartedMessageWithoutArguments(functionInstance);
@@ -196,7 +224,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
         }
 
-        private async Task<string> ExecuteWithLoggingAsync(IFunctionInstance instance, FunctionStartedMessage message,
+        private async Task<string> ExecuteWithLoggingAsync(IFunctionInstanceEx instance, FunctionStartedMessage message,
             FunctionInstanceLogEntry instanceLogEntry, ParameterHelper parameterHelper, ILogger logger, CancellationToken cancellationToken)
         {
             IFunctionOutputDefinition outputDefinition = null;
@@ -420,7 +448,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             return timer;
         }
 
-        private async Task ExecuteWithLoggingAsync(IFunctionInstance instance,
+        private async Task ExecuteWithLoggingAsync(IFunctionInstanceEx instance,
             ParameterHelper parameterHelper,
             IFunctionOutputDefinition outputDefinition,
             ILogger logger,
@@ -458,12 +486,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
         }
 
-        internal async Task ExecuteWithWatchersAsync(IFunctionInstance instance,
+        internal async Task ExecuteWithWatchersAsync(IFunctionInstanceEx instance,
             ParameterHelper parameterHelper,
             ILogger logger,
             CancellationTokenSource functionCancellationTokenSource)
         {
-            IFunctionInvoker invoker = instance.Invoker;
+            IFunctionInvokerEx invoker = instance.GetFunctionInvoker();
             IDelayedException delayedBindingException = await parameterHelper.PrepareParametersAsync();
 
             if (delayedBindingException != null)
@@ -760,7 +788,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         //  3. System.Object[]. which can be passed to the actual MethodInfo for execution 
         internal class ParameterHelper : IDisposable
         {
-            private readonly IFunctionInstance _functionInstance;
+            private readonly IFunctionInstanceEx _functionInstance;
 
             // Logs, contain the result from invoking the IWatchers.
             private IDictionary<string, ParameterLog> _parameterLogCollector = new Dictionary<string, ParameterLog>();
@@ -789,7 +817,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
             }
 
-            public ParameterHelper(IFunctionInstance functionInstance)
+            public ParameterHelper(IFunctionInstanceEx functionInstance)
             {
                 if (functionInstance == null)
                 {
@@ -814,7 +842,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             public void Initialize()
             {
-                JobInstance = _functionInstance.Invoker.CreateInstance();
+                JobInstance = _functionInstance.GetFunctionInvoker().CreateInstance(_functionInstance);
             }
 
             // Convert the parameters and their names to a dictionary
@@ -1083,17 +1111,17 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
         }
 
-        private class FunctionInvocationFilterInvoker : IFunctionInvoker
+        private class FunctionInvocationFilterInvoker : IFunctionInvokerEx
         {
             private List<IFunctionInvocationFilter> _filters;
-            private IFunctionInvoker _innerInvoker;
+            private IFunctionInvokerEx _innerInvoker;
             private IFunctionInstance _functionInstance;
             private ParameterHelper _parameterHelper;
             private ILogger _logger;
 
             public IReadOnlyList<string> ParameterNames => _innerInvoker.ParameterNames;
 
-            public static IFunctionInvoker Create(IFunctionInvoker innerInvoker, List<IFunctionInvocationFilter> filters, IFunctionInstance functionInstance, ParameterHelper parameterHelper, ILogger logger)
+            public static IFunctionInvokerEx Create(IFunctionInvokerEx innerInvoker, List<IFunctionInvocationFilter> filters, IFunctionInstance functionInstance, ParameterHelper parameterHelper, ILogger logger)
             {
                 if (filters.Count == 0)
                 {
@@ -1112,7 +1140,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             public object CreateInstance()
             {
-                return _innerInvoker.CreateInstance();
+                throw new NotSupportedException($"{nameof(CreateInstance)} is not supported. Please use the overload that accepts an instance of an {nameof(IFunctionInstance)}");
+            }
+
+            public object CreateInstance(IFunctionInstanceEx functionInstance)
+            {
+                return _innerInvoker.CreateInstance(functionInstance);
             }
 
             public async Task<object> InvokeAsync(object instance, object[] arguments)

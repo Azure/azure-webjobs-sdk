@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using Microsoft.Azure.WebJobs.Host.Executors;
+using Moq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
@@ -12,10 +13,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         public void Create_ReturnsNull()
         {
             // Arrange
-            IFactory<object> product = CreateProductUnderTest<object>();
+            IJobInstanceFactory<object> product = CreateProductUnderTest<object>();
+            var functionInstanceMock = new Mock<IFunctionInstanceEx>();
 
             // Act
-            object instance = product.Create();
+            object instance = product.Create(functionInstanceMock.Object);
 
             // Assert
             Assert.Null(instance);

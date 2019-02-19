@@ -18,6 +18,7 @@ using Microsoft.Azure.WebJobs.Host.Properties;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Indexers
@@ -44,7 +45,6 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             IBindingProvider bindingProvider,
             IJobActivator activator,
             IFunctionExecutor executor,
-            IExtensionRegistry extensions,
             SingletonManager singletonManager,
             ILoggerFactory loggerFactory,
             INameResolver nameResolver = null,
@@ -52,41 +52,11 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             TimeoutAttribute defaultTimeout = null,
             bool allowPartialHostStartup = false)
         {
-            if (triggerBindingProvider == null)
-            {
-                throw new ArgumentNullException("triggerBindingProvider");
-            }
-
-            if (bindingProvider == null)
-            {
-                throw new ArgumentNullException("bindingProvider");
-            }
-
-            if (activator == null)
-            {
-                throw new ArgumentNullException("activator");
-            }
-
-            if (executor == null)
-            {
-                throw new ArgumentNullException("executor");
-            }
-
-            if (extensions == null)
-            {
-                throw new ArgumentNullException("extensions");
-            }
-
-            if (singletonManager == null)
-            {
-                throw new ArgumentNullException("singletonManager");
-            }
-
-            _triggerBindingProvider = triggerBindingProvider;
-            _bindingProvider = bindingProvider;
-            _activator = activator;
-            _executor = executor;
-            _singletonManager = singletonManager;
+            _triggerBindingProvider = triggerBindingProvider ?? throw new ArgumentNullException(nameof(triggerBindingProvider));
+            _bindingProvider = bindingProvider ?? throw new ArgumentNullException(nameof(bindingProvider));
+            _activator = activator ?? throw new ArgumentNullException(nameof(activator));
+            _executor = executor ?? throw new ArgumentNullException(nameof(executor));
+            _singletonManager = singletonManager ?? throw new ArgumentNullException(nameof(singletonManager));
             _nameResolver = nameResolver;
             _logger = loggerFactory?.CreateLogger(LogCategories.Startup);
             _sharedQueue = sharedQueue;
@@ -359,7 +329,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
         private FunctionDefinition CreateTriggeredFunctionDefinition<TTriggerValue>(
             ITriggerBinding triggerBinding, string parameterName, FunctionDescriptor descriptor,
-            IReadOnlyDictionary<string, IBinding> nonTriggerBindings, IFunctionInvoker invoker)
+            IReadOnlyDictionary<string, IBinding> nonTriggerBindings, IFunctionInvokerEx invoker)
         {
             ITriggeredFunctionBinding<TTriggerValue> functionBinding = new TriggeredFunctionBinding<TTriggerValue>(descriptor, parameterName, triggerBinding, nonTriggerBindings, _singletonManager);
             ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory = new TriggeredFunctionInstanceFactory<TTriggerValue>(functionBinding, invoker, descriptor);

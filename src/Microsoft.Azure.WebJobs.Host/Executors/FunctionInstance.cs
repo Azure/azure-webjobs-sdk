@@ -9,59 +9,30 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 {
     internal class FunctionInstance : IFunctionInstance
     {
-        private readonly Guid _id;
-        private readonly IDictionary<string, string> _triggerDetails;
-        private readonly Guid? _parentId;
-        private readonly ExecutionReason _reason;
-        private readonly IBindingSource _bindingSource;
-        private readonly IFunctionInvoker _invoker;
-        private readonly FunctionDescriptor _functionDescriptor;
-
         public FunctionInstance(Guid id, IDictionary<string, string> triggerDetails, Guid? parentId, ExecutionReason reason, IBindingSource bindingSource,
             IFunctionInvoker invoker, FunctionDescriptor functionDescriptor)
         {
-            _id = id;
-            _triggerDetails = triggerDetails;
-            _parentId = parentId;
-            _reason = reason;
-            _bindingSource = bindingSource;
-            _invoker = invoker;
-            _functionDescriptor = functionDescriptor;
+            Id = id;
+            TriggerDetails = triggerDetails;
+            ParentId = parentId;
+            Reason = reason;
+            BindingSource = bindingSource;
+            Invoker = invoker;
+            FunctionDescriptor = functionDescriptor;
         }
 
-        public Guid Id
-        {
-            get { return _id; }
-        }
+        public Guid Id { get; }
 
-        public IDictionary<string, string> TriggerDetails
-        {
-            get { return _triggerDetails; }
-        }
+        public IDictionary<string, string> TriggerDetails { get; }
 
-        public Guid? ParentId
-        {
-            get { return _parentId; }
-        }
+        public Guid? ParentId { get; }
 
-        public ExecutionReason Reason
-        {
-            get { return _reason; }
-        }
+        public ExecutionReason Reason { get; }
 
-        public IBindingSource BindingSource
-        {
-            get { return _bindingSource; }
-        }
+        public IBindingSource BindingSource { get; }
 
-        public IFunctionInvoker Invoker
-        {
-            get { return _invoker; }
-        }
+        public IFunctionInvoker Invoker { get; }
 
-        public FunctionDescriptor FunctionDescriptor
-        {
-            get { return _functionDescriptor; }
-        }
+        public FunctionDescriptor FunctionDescriptor { get; }
     }
 }
