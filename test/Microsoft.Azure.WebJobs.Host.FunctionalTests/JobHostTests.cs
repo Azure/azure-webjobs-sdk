@@ -609,7 +609,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 Assert.True(logMessage.FormattedMessage.Contains("BindingErrorsProgram.Valid"));
 
                 // verify that the job host was started successfully
-                logMessage = errorLogger.GetLogMessages()[9];
+                logMessage = errorLogger.GetLogMessages()[10];
                 Assert.Equal("Job host started", logMessage.FormattedMessage);
 
                 await host.StopAsync();
