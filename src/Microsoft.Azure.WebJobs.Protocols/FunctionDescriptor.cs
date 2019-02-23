@@ -74,6 +74,9 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
         /// </summary>
         [JsonIgnore]
         internal IEnumerable<IFunctionFilter> ClassLevelFilters { get; set; }
+
+        [JsonIgnore]
+        internal string ErrorMessage { get; set; }
 #endif
     }
 }

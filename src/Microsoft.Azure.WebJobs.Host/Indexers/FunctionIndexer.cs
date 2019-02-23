@@ -114,6 +114,12 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                     // If recoverable, continue to the rest of the methods.
                     // The method in error simply won't be running in the JobHost.
                     string msg = $"Function '{Utility.GetFunctionShortName(method)}' failed indexing and will be disabled.";
+
+                    FunctionDescriptor functionDescriptor = FromMethod(method);
+                    functionDescriptor.ErrorMessage = msg;
+                    functionDescriptor.IsDisabled = true;
+                    index.Add(new FunctionDefinition(functionDescriptor, null, null), functionDescriptor, method);
+
                     _logger?.LogWarning(msg);
                     continue;
                 }

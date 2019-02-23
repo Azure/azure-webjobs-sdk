@@ -12,5 +12,10 @@ namespace Microsoft.Azure.WebJobs.Host
         /// Gets or sets whether this method is disabled.
         /// </summary>
         public bool IsDisabled {get; set;}
+
+        /// <summary>
+        /// Gets or sets error message.
+        /// </summary>
+        public string ErrorMessage { get; set;}
     }
 }

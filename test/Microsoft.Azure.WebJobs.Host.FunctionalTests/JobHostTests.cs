@@ -591,7 +591,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 Assert.Equal("BindingErrorsProgram.Invalid", fex.MethodName);
 
                 // verify that the binding error was logged
-                Assert.Equal(10, errorLogger.GetLogMessages().Count);
+                Assert.Equal(11, errorLogger.GetLogMessages().Count);
 
                 // Skip validating the initial 'Starting JobHost' message and the OptionsFormatters
                 

@@ -336,7 +336,8 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 result = new FunctionMetadata()
                 {
-                    IsDisabled = functionDefinition.Descriptor.IsDisabled
+                    IsDisabled = functionDefinition.Descriptor.IsDisabled,
+                    ErrorMessage = functionDefinition.Descriptor.ErrorMessage
                 };
             }
 
