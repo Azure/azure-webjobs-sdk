@@ -227,12 +227,23 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
                 if (exception.IsBadRequestPopReceiptMismatch())
                 {
                     // If someone else took over the message; let them delete it.
+                    string msg = $"Unable to delete queue message '{message.Id}' because the {nameof(CloudQueueMessage.PopReceipt)} did not match. This could indicate that the function has modified the message and may be expected.";
+                    _trace.Verbose(msg);
+                    _logger.LogDebug(msg);
                     return;
                 }
-                else if (exception.IsNotFoundMessageOrQueueNotFound() ||
-                         exception.IsConflictQueueBeingDeletedOrDisabled())
+                else if (exception.IsNotFoundMessageOrQueueNotFound())
+                {
+                    string msg = $"Unable to delete queue message '{message.Id}' because either the message or the queue '{_queue.Name}' was not found.";
+                    _trace.Verbose(msg);
+                    _logger.LogDebug(msg);
+                }
+                else if (exception.IsConflictQueueBeingDeletedOrDisabled())
                 {
                     // The message or queue is gone, or the queue is down; no need to delete the message.
+                    string msg = $"Unable to delete queue message '{message.Id}' because the queue `{_queue.Name}` is either disabled or being deleted.";
+                    _trace.Verbose(msg);
+                    _logger.LogDebug(msg);
                     return;
                 }
                 else
