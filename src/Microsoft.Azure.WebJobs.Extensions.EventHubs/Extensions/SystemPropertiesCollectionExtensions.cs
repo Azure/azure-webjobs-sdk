@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
 using static Microsoft.Azure.EventHubs.EventData;
 
 namespace Microsoft.Azure.WebJobs.EventHubs
@@ -11,13 +10,14 @@ namespace Microsoft.Azure.WebJobs.EventHubs
     {
         internal static IDictionary<string, object> ToDictionary(this SystemPropertiesCollection collection)
         {
-            return new Dictionary<string, object>()
-            {
-                { "SequenceNumber", collection.SequenceNumber},
-                { "Offset", collection.Offset },
-                { "PartitionKey", collection.PartitionKey },
-                { "EnqueuedTimeUtc", collection.EnqueuedTimeUtc }
-            };
+            IDictionary<string, object> modifiedDictionary = collection;
+            
+            // Following is needed to maintain structure of bindingdata: https://github.com/Azure/azure-webjobs-sdk/pull/1849
+            modifiedDictionary["SequenceNumber"] = collection.SequenceNumber;
+            modifiedDictionary["Offset"] = collection.Offset;
+            modifiedDictionary["PartitionKey"] = collection.PartitionKey;
+            modifiedDictionary["EnqueuedTimeUtc"] = collection.EnqueuedTimeUtc;
+            return modifiedDictionary;
         }
     }
 }
