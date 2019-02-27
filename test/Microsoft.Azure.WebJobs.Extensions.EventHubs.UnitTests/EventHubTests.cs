@@ -95,6 +95,8 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             Assert.Equal(bindingDataSysProps["Offset"], bindingData["Offset"]);
             Assert.Equal(bindingDataSysProps["SequenceNumber"], bindingData["SequenceNumber"]);
             Assert.Equal(bindingDataSysProps["EnqueuedTimeUtc"], bindingData["EnqueuedTimeUtc"]);
+            Assert.Equal(bindingDataSysProps["iothub-connection-device-id"], "testDeviceId");
+            Assert.Equal(bindingDataSysProps["iothub-enqueuedtime"], DateTime.MinValue);
         }
 
         private static IDictionary<string, object> GetSystemProperties(string partitionKey = "TestKey")
@@ -105,6 +107,8 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             sysProps["x-opt-offset"] = "TestOffset";
             sysProps["x-opt-enqueued-time"] = DateTime.MinValue;
             sysProps["x-opt-sequence-number"] = testSequence;
+            sysProps["iothub-connection-device-id"] = "testDeviceId";
+            sysProps["iothub-enqueuedtime"] = DateTime.MinValue;
             return sysProps;
         }
 
