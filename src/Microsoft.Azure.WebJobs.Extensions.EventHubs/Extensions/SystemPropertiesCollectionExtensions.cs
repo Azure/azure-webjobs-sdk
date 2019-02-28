@@ -10,7 +10,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
     {
         internal static IDictionary<string, object> ToDictionary(this SystemPropertiesCollection collection)
         {
-            IDictionary<string, object> modifiedDictionary = collection;
+            IDictionary<string, object> modifiedDictionary = new Dictionary<string, object>(collection);
             
             // Following is needed to maintain structure of bindingdata: https://github.com/Azure/azure-webjobs-sdk/pull/1849
             modifiedDictionary["SequenceNumber"] = collection.SequenceNumber;
