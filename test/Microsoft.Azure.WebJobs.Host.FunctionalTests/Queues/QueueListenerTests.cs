@@ -4,6 +4,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
@@ -111,6 +112,57 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Queues
             // Make sure the message was processed and deleted.
             await queue.FetchAttributesAsync();
             Assert.Equal(0, queue.ApproximateMessageCount);
+        }
+
+        [Fact]
+        public async Task CancelledToken_WhileFunctionRunning_DoesNotDeleteMessage()
+        {
+            TestTraceWriter trace = new TestTraceWriter(TraceLevel.Verbose);
+            CloudQueue queue = Fixture.CreateNewQueue();
+            SemaphoreSlim functionStarted = new SemaphoreSlim(1, 1);
+            SemaphoreSlim tokenCancelled = new SemaphoreSlim(1, 1);
+
+            StorageQueue storageQueue = new StorageQueue(new StorageQueueClient(Fixture.QueueClient), queue);
+            Mock<ITriggerExecutor<IStorageQueueMessage>> mockTriggerExecutor = new Mock<ITriggerExecutor<IStorageQueueMessage>>(MockBehavior.Strict);
+
+            string messageContent = Guid.NewGuid().ToString();
+            CloudQueueMessage message = new CloudQueueMessage(messageContent);
+            await queue.AddMessageAsync(message, CancellationToken.None);
+            CloudQueueMessage messageFromCloud = await queue.GetMessageAsync();
+
+            QueueListener listener = new QueueListener(storageQueue, null, mockTriggerExecutor.Object, new WebJobsExceptionHandler(), trace,
+                null, null, new JobHostQueuesConfiguration());
+
+            // Set up a function that pauses until the token is cancelled.
+            CancellationTokenSource cts = new CancellationTokenSource();
+            mockTriggerExecutor
+                .Setup(m => m.ExecuteAsync(It.Is<IStorageQueueMessage>(msg => msg.DequeueCount == 1), cts.Token))
+                .Returns(async () =>
+                {
+                    functionStarted.Release();
+
+                    // Don't continue until we know the token was cancelled.
+                    await tokenCancelled.WaitAsync();
+                    return new FunctionResult(true);
+                });
+
+            await functionStarted.WaitAsync();
+            await tokenCancelled.WaitAsync();
+
+            // Only cancel the token once we know the function has started
+            Task ignore = Task.Run(async () =>
+            {
+                await functionStarted.WaitAsync();
+                cts.Cancel();
+                tokenCancelled.Release();
+            });
+
+            await listener.ProcessMessageAsync(new StorageQueueMessage(messageFromCloud), TimeSpan.FromMinutes(10), cts.Token);
+
+            // This delete should succeed since it wasn't deleted by the listener.
+            await queue.DeleteMessageAsync(messageFromCloud);
+
+            Assert.Contains("was not fully processed due to a pending host shutdown", trace.GetTraces().Select(p => p.Message).Single());
         }
 
         public class TestFixture : IDisposable

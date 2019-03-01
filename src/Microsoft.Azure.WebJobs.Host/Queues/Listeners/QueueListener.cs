@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,6 +12,7 @@ using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Storage.Queue;
 using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -21,6 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
     {
         private readonly ITaskSeriesTimer _timer;
         private readonly IDelayStrategy _delayStrategy;
+        private readonly TraceWriter _trace;
         private readonly IStorageQueue _queue;
         private readonly IStorageQueue _poisonQueue;
         private readonly ITriggerExecutor<IStorageQueueMessage> _triggerExecutor;
@@ -31,7 +34,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         private readonly IQueueConfiguration _queueConfiguration;
         private readonly QueueProcessor _queueProcessor;
         private readonly TimeSpan _visibilityTimeout;
-
+        private readonly ILogger _logger;
         private bool? _queueExists;
         private bool _foundMessageSinceLastDelay;
         private bool _disposed;
@@ -99,6 +102,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             }
 
             _delayStrategy = new RandomizedExponentialBackoffStrategy(QueuePollingIntervals.Minimum, maximumInterval);
+            _trace = trace;
+            _logger = loggerFactory?.CreateLogger(LogCategories.CreateTriggerCategory("Queue"));
         }
 
         // for testing
@@ -146,7 +151,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
                 _stopWaitingTaskSource = new TaskCompletionSource<object>();
             }
 
-            IEnumerable<IStorageQueueMessage> batch  = null;
+            IEnumerable<IStorageQueueMessage> batch = null;
             try
             {
                 if (!_queueExists.GetValueOrDefault(false))
@@ -286,9 +291,12 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
 
                 await _queueProcessor.CompleteProcessingMessageAsync(message.SdkObject, result, cancellationToken);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException exception)
             {
                 // Don't fail the top-level task when an inner task cancels.
+                string msg = $"Message '{message.Id}' was not fully processed due to a pending host shutdown. This message may appear back on the queue after the visibility timeout ({visibilityTimeout}) expires.";
+                _trace.Trace(new TraceEvent(TraceLevel.Warning, msg, null, exception));
+                _logger?.LogWarning(0, exception, msg);
             }
             catch (Exception exception)
             {
