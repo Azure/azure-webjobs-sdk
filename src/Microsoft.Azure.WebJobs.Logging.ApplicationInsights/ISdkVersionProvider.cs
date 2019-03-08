@@ -9,13 +9,16 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
     {
         string GetSdkVersion();
     }
+
     internal class WebJobsSdkVersionProvider : ISdkVersionProvider
     {
         private readonly string sdkVersion = "webjobs: " + GetAssemblyFileVersion(typeof(JobHost).Assembly);
+
         public string GetSdkVersion()
         {
             return sdkVersion;
         }
+
         internal static string GetAssemblyFileVersion(Assembly assembly)
         {
             AssemblyFileVersionAttribute fileVersionAttr = assembly.GetCustomAttribute<AssemblyFileVersionAttribute>();

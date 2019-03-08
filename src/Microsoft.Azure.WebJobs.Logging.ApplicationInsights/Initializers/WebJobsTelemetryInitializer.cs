@@ -140,34 +140,66 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             {
                 request.ResponseCode = "0";
             }
+
+            // If the Url is not null, it's an actual HttpRequest, as opposed to a
+            // Service Bus or other function invocation that we're tracking as a Request
+            if (request.Url != null)
+            {
+                if (!request.Properties.ContainsKey(LogConstants.HttpMethodKey))
+                {
+                    // App Insights sets request.Name as 'VERB /path'. We want to extract the VERB. 
+                    var verbEnd = request.Name.IndexOf(' ');
+                    if (verbEnd > 0)
+                    {
+                        request.Properties.Add(LogConstants.HttpMethodKey, request.Name.Substring(0, verbEnd));
+                    }
+                }
+
+                if (!request.Properties.ContainsKey(LogConstants.HttpPathKey))
+                {
+                    request.Properties.Add(LogConstants.HttpPathKey, request.Url.LocalPath);
+                }
+
+                // sanitize request Url - remove query string
+                request.Url = new Uri(request.Url.GetLeftPart(UriPartial.Path));
+            }
         }
 
         /// <summary>
         /// Tries to apply well-known properties from a KeyValuePair onto the RequestTelemetry.
         /// </summary>
         /// <param name="request">The request.</param>
-        /// <param name="property">The property.</param>
-        /// <returns>True if the property was applied. Otherwise, false.</returns>
-        private bool TryApplyProperty(RequestTelemetry request, KeyValuePair<string, string> property)
+        /// <param name="activityTag">Tag on the request activity.</param>
+        /// <returns>True if the tag was applied. Otherwise, false.</returns>
+        private bool TryApplyProperty(RequestTelemetry request, KeyValuePair<string, string> activityTag)
         {
             bool wasPropertySet = false;
 
-            if (property.Key == LogConstants.NameKey)
+            if (activityTag.Key == LogConstants.NameKey)
             {
-                request.Context.Operation.Name = property.Value;
-                request.Name = property.Value;
+                request.Context.Operation.Name = activityTag.Value;
+                request.Name = activityTag.Value;
+
                 wasPropertySet = true;
             }
-            else if (property.Key == LogConstants.SucceededKey &&
-                bool.TryParse(property.Value, out bool success))
+            else if (activityTag.Key == LogConstants.SucceededKey &&
+                bool.TryParse(activityTag.Value, out bool success))
             {
                 // no matter what App Insights says about the response, we always
-                // want to use the function's result for Succeeeded
+                // want to use the function's result for Succeeded
                 request.Success = success;
                 wasPropertySet = true;
 
-                // Remove the Succeeded property as it's duplicated
-                request.Properties.Remove(LogConstants.SucceededKey);
+                // Remove the Succeeded property if set
+                if (request.Properties.ContainsKey(LogConstants.SucceededKey))
+                {
+                    request.Properties.Remove(LogConstants.SucceededKey);
+                }
+            }
+            else if (activityTag.Key == LoggingConstants.ClientIpKey)
+            {
+                request.Context.Location.Ip = activityTag.Value;
+                wasPropertySet = true;
             }
 
             return wasPropertySet;

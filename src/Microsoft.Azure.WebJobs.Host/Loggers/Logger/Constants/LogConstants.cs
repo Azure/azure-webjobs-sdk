@@ -100,11 +100,6 @@ namespace Microsoft.Azure.WebJobs.Logging
         public const string CategoryNameKey = "Category";
 
         /// <summary>
-        /// Gets the name of the key used to store the HTTP method.
-        /// </summary>
-        public const string HttpMethodKey = "HttpMethod";
-
-        /// <summary>
         /// Gets the prefix for custom properties.
         /// </summary>
         public const string CustomPropertyPrefix = "prop__";
@@ -148,5 +143,15 @@ namespace Microsoft.Azure.WebJobs.Logging
         /// Gets the name of the key used to store function execution time in the ApplicationInsights RequestTelemetry properties.
         /// </summary>
         public const string FunctionExecutionTimeKey = "FunctionExecutionTimeMs";
+
+        /// <summary>
+        /// Gets the name of the key used to store HTTP request method
+        /// </summary>
+        public const string HttpMethodKey = "HttpMethod";
+
+        /// <summary>
+        /// Gets the name of the key used to store HTTP request path
+        /// </summary>
+        public const string HttpPathKey = "HttpPath";
     }
 }

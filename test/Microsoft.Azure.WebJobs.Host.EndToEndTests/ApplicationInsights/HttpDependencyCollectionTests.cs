@@ -114,7 +114,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             }
 
 
-            // PUT conatiner, HEAD blob, PUT lease, PUT content
+            // PUT container, HEAD blob, PUT lease, PUT content
             // since there could be failures and retries, we should expect more
             Assert.True(outDependencies.Count <= 4);
 
@@ -156,6 +156,30 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.Equal("www.microsoft.com", dependency.Target);
             Assert.Contains("https://www.microsoft.com", dependency.Data);
             Assert.Equal("GET /", dependency.Name);
+        }
+
+        [Fact]
+        public async Task UserCodeHttpCallsAreReportedOnceWhenMultipleHostsAreActive()
+        {
+            string testName = nameof(UserCodeHttpCall);
+            using (var host1 = ConfigureHost(LogLevel.Information))
+            using (var host2 = ConfigureHost(LogLevel.Information))
+            {
+                await host1.StartAsync();
+                await host2.StartAsync();
+
+                await host1.GetJobHost()
+                    .CallAsync(typeof(HttpDependencyCollectionTests).GetMethod(testName));
+
+                _functionWaitHandle.WaitOne();
+                await Task.Delay(1000);
+
+                await host1.StopAsync();
+                await host2.StopAsync();
+            }
+
+            Assert.Single(_channel.Telemetries.OfType<RequestTelemetry>());
+            Assert.Single(_channel.Telemetries.OfType<DependencyTelemetry>());
         }
 
         [Fact]
@@ -278,7 +302,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             using (HttpClient httpClient = new HttpClient())
             {
                 // we don't really care about the result, so, we'll ignore all errors
-                await httpClient.GetAsync("http://microsoft.com").ContinueWith(t => { });
+                await httpClient.GetAsync("http://microsoft.com/").ContinueWith(t => { });
             }
             _functionWaitHandle.Set();
         }
