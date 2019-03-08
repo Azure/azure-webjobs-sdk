@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.AspNetCore;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DependencyCollector;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -13,6 +14,7 @@ using Microsoft.ApplicationInsights.Extensibility.Implementation.ApplicationId;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
 using Microsoft.ApplicationInsights.SnapshotCollector;
+using Microsoft.ApplicationInsights.Extensibility.W3C;
 using Microsoft.ApplicationInsights.WindowsServer;
 using Microsoft.ApplicationInsights.WindowsServer.Channel.Implementation;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
@@ -57,13 +59,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 var config = host.Services.GetService<TelemetryConfiguration>();
 
                 // Verify Initializers
-                Assert.Equal(5, config.TelemetryInitializers.Count);
+                Assert.Equal(6, config.TelemetryInitializers.Count);
                 // These will throw if there are not exactly one
                 Assert.Single(config.TelemetryInitializers.OfType<OperationCorrelationTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<HttpDependenciesParsingTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<WebJobsTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<WebJobsSanitizingInitializer>());
+                Assert.Single(config.TelemetryInitializers.OfType<W3COperationCorrelationTelemetryInitializer>());
 
                 var sdkVersionProvider = host.Services.GetServices<ISdkVersionProvider>().ToList();
                 Assert.Single(sdkVersionProvider);
@@ -75,16 +78,22 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 var modules = host.Services.GetServices<ITelemetryModule>().ToList();
 
                 // Verify Modules
-                Assert.Equal(4, modules.Count);
+                Assert.Equal(5, modules.Count);
                 Assert.Single(modules.OfType<DependencyTrackingTelemetryModule>());
+
                 Assert.Single(modules.OfType<QuickPulseTelemetryModule>());
                 Assert.Single(modules.OfType<PerformanceCollectorModule>());
                 Assert.Single(modules.OfType<AppServicesHeartbeatTelemetryModule>());
+                Assert.Single(modules.OfType<RequestTrackingTelemetryModule>());
+
+                var dependencyModule = modules.OfType<DependencyTrackingTelemetryModule>().Single();
+                Assert.True(dependencyModule.EnableW3CHeadersInjection);
+
                 Assert.Same(config.TelemetryChannel, host.Services.GetServices<ITelemetryChannel>().Single());
                 // Verify client
                 var client = host.Services.GetService<TelemetryClient>();
                 Assert.NotNull(client);
-                Assert.True(client.Context.GetInternalContext().SdkVersion.StartsWith("webjobs"));
+                Assert.StartsWith("webjobs", client.Context.GetInternalContext().SdkVersion);
 
                 // Verify provider
                 var providers = host.Services.GetServices<ILoggerProvider>().ToList();
@@ -128,6 +137,81 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Assert.IsType<AdaptiveSamplingTelemetryProcessor>(config.TelemetryProcessors[3]);
 
                 Assert.Equal(samplingSettings.MaxTelemetryItemsPerSecond, ((AdaptiveSamplingTelemetryProcessor)config.TelemetryProcessors[3]).MaxTelemetryItemsPerSecond);
+            }
+        }
+
+
+        [Fact]
+        public void DependencyInjectionConfiguration_ConfiguresRequestCollectionOptions()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsights(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                    });
+                })
+                .Build())
+            {
+                var modules = host.Services.GetServices<ITelemetryModule>().ToList();
+                var dependencyModule = modules.OfType<DependencyTrackingTelemetryModule>().Single();
+                var requestModule = modules.OfType<RequestTrackingTelemetryModule>().Single();
+
+                Assert.True(dependencyModule.EnableW3CHeadersInjection);
+                Assert.True(requestModule.CollectionOptions.EnableW3CDistributedTracing);
+                Assert.True(requestModule.CollectionOptions.InjectResponseHeaders);
+                Assert.False(requestModule.CollectionOptions.TrackExceptions);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_ConfiguresCustomRequestCollectionOptions()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsights(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                        o.HttpAutoCollectionOptions.EnableW3CDistributedTracing = false;
+                        o.HttpAutoCollectionOptions.EnableResponseHeaderInjection = false;
+                    });
+                })
+                .Build())
+            {
+                var modules = host.Services.GetServices<ITelemetryModule>().ToList();
+                var dependencyModule = modules.OfType<DependencyTrackingTelemetryModule>().Single();
+                var requestModule = modules.OfType<RequestTrackingTelemetryModule>().Single();
+
+                Assert.False(dependencyModule.EnableW3CHeadersInjection);
+                Assert.False(requestModule.CollectionOptions.EnableW3CDistributedTracing);
+                Assert.False(requestModule.CollectionOptions.InjectResponseHeaders);
+                Assert.False(requestModule.CollectionOptions.TrackExceptions);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_DisableHttpRequestCollectionOptions()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsights(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                        o.HttpAutoCollectionOptions.EnableHttpTriggerExtendedInfoCollection = false;
+                        o.HttpAutoCollectionOptions.EnableW3CDistributedTracing = false;
+                    });
+                })
+                .Build())
+            {
+                var modules = host.Services.GetServices<ITelemetryModule>().ToList();
+                var dependencyModule = modules.OfType<DependencyTrackingTelemetryModule>().Single();
+                var requestModules = modules.OfType<RequestTrackingTelemetryModule>();
+
+                Assert.False(dependencyModule.EnableW3CHeadersInjection);
+                Assert.Empty(requestModules);
             }
         }
 
@@ -231,11 +315,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 }).Build())
             {
                 // Verify Initializers
-                Assert.Equal(2, TelemetryConfiguration.Active.TelemetryInitializers.Count);
+                Assert.Equal(4, TelemetryConfiguration.Active.TelemetryInitializers.Count);
 
                 // These will throw if there are not exactly one
                 Assert.Single(TelemetryConfiguration.Active.TelemetryInitializers.OfType<OperationCorrelationTelemetryInitializer>());
+                Assert.Single(TelemetryConfiguration.Active.TelemetryInitializers.OfType<W3COperationCorrelationTelemetryInitializer>());
                 Assert.Single(TelemetryConfiguration.Active.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>());
+                Assert.Single(TelemetryConfiguration.Active.TelemetryInitializers.OfType<WebJobsTelemetryInitializer>());
 
                 // ikey should still be set
                 Assert.Equal("some key", TelemetryConfiguration.Active.InstrumentationKey);
@@ -256,13 +342,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 }).Build())
             {
                 // Verify Initializers
-                Assert.Equal(2, TelemetryConfiguration.Active.TelemetryInitializers.Count);
+                Assert.Equal(4, TelemetryConfiguration.Active.TelemetryInitializers.Count);
 
                 // These will throw if there are not exactly one
                 Assert.Single(TelemetryConfiguration.Active.TelemetryInitializers.OfType<OperationCorrelationTelemetryInitializer>());
                 Assert.Single(TelemetryConfiguration.Active.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>());
+                Assert.Single(TelemetryConfiguration.Active.TelemetryInitializers.OfType<WebJobsTelemetryInitializer>());
+                Assert.Single(TelemetryConfiguration.Active.TelemetryInitializers.OfType<W3COperationCorrelationTelemetryInitializer>());
             }
         }
+
         [Fact]
         public void DependencyInjectionConfiguration_ConfiguresActiveOnlyOnce()
         {
@@ -289,11 +378,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 }).Build())
             {
                 // Verify Initializers
-                Assert.Equal(2, TelemetryConfiguration.Active.TelemetryInitializers.Count);
+                Assert.Equal(4, TelemetryConfiguration.Active.TelemetryInitializers.Count);
 
                 // These will throw if there are not exactly one
                 Assert.Single(TelemetryConfiguration.Active.TelemetryInitializers.OfType<OperationCorrelationTelemetryInitializer>());
                 Assert.Single(TelemetryConfiguration.Active.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>());
+                Assert.Single(TelemetryConfiguration.Active.TelemetryInitializers.OfType<WebJobsTelemetryInitializer>());
+                Assert.Single(TelemetryConfiguration.Active.TelemetryInitializers.OfType<W3COperationCorrelationTelemetryInitializer>());
 
                 // ikey should still be set
                 Assert.Equal("some key", TelemetryConfiguration.Active.InstrumentationKey);

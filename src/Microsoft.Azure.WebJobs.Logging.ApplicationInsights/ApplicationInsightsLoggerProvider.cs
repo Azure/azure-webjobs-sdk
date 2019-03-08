@@ -5,24 +5,26 @@ using System;
 using System.Threading;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
-
     [ProviderAlias(Alias)]
     public class ApplicationInsightsLoggerProvider : ILoggerProvider
     {
         internal const string Alias = "ApplicationInsights";
 
         private readonly TelemetryClient _client;
+        private readonly ApplicationInsightsLoggerOptions _loggerOptions;
         private bool _disposed;
 
-        public ApplicationInsightsLoggerProvider(TelemetryClient client)
+        public ApplicationInsightsLoggerProvider(TelemetryClient client, IOptions<ApplicationInsightsLoggerOptions> loggerOptions)
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));
+            _loggerOptions = loggerOptions?.Value ?? throw new ArgumentNullException(nameof(loggerOptions));
         }
 
-        public ILogger CreateLogger(string categoryName) => new ApplicationInsightsLogger(_client, categoryName);
+        public ILogger CreateLogger(string categoryName) => new ApplicationInsightsLogger(_client, categoryName, _loggerOptions);
 
         public void Dispose()
         {

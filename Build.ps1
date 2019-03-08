@@ -32,7 +32,7 @@ foreach ($project in $projects)
   {
     $cmd += "--version-suffix", "-$packageSuffix"
   }
-  
+
   & dotnet $cmd  
 }
 

@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.ApplicationInsights.Extensibility.W3C;
+using Microsoft.ApplicationInsights.SnapshotCollector;
+using Microsoft.ApplicationInsights.WindowsServer.Channel.Implementation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
@@ -22,6 +25,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Newtonsoft.Json;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
@@ -41,7 +45,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         private readonly string defaultIp = "0.0.0.0";
         private readonly TelemetryClient _client;
         private readonly int _durationMs = 450;
-        private readonly IFunctionInstance _functionInstance;
         private readonly IHost _host;
 
         public ApplicationInsightsLoggerTests()
@@ -74,8 +77,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 FullName = _functionFullName,
                 ShortName = _functionShortName
             };
-
-            _functionInstance = new FunctionInstance(_invocationId, new Dictionary<string, string>(), null, ExecutionReason.AutomaticTrigger, null, null, descriptor);
         }
 
         [Fact]
@@ -87,8 +88,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             string expectedOperationId, expectedRequestId;
             using (logger.BeginFunctionScope(CreateFunctionInstance(_invocationId), _hostInstanceId))
             {
-                expectedRequestId = Activity.Current.Id;
-                expectedOperationId = Activity.Current.RootId;
+                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
+                expectedOperationId = Activity.Current.GetTraceId();
 
                 // sleep briefly to provide a non-zero Duration
                 await Task.Delay(100);
@@ -122,8 +123,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             string expectedOperationId, expectedRequestId;
             using (logger.BeginFunctionScope(CreateFunctionInstance(_invocationId), _hostInstanceId))
             {
-                expectedRequestId = Activity.Current.Id;
-                expectedOperationId = Activity.Current.RootId;
+                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
+                expectedOperationId = Activity.Current.GetTraceId();
 
                 logger.LogFunctionResult(result);
             }
@@ -213,8 +214,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 logger.LogTrace("Trace");
                 logger.LogWarning("Warning");
 
-                expectedRequestId = Activity.Current.Id;
-                expectedOperationId = Activity.Current.RootId;
+                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
+                expectedOperationId = Activity.Current.GetTraceId();
             }
 
             Assert.Equal(6, _channel.Telemetries.Count);
@@ -280,8 +281,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             {
                 logger.LogError(0, ex, "Error with customer: {customer}.", "John Doe");
 
-                expectedRequestId = Activity.Current.Id;
-                expectedOperationId = Activity.Current.RootId;
+                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
+                expectedOperationId = Activity.Current.GetTraceId();
             }
 
             void ValidateProperties(ISupportProperties telemetry)
@@ -330,8 +331,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             {
                 logger.LogMetric("CustomMetric", 44.9);
 
-                expectedRequestId = Activity.Current.Id;
-                expectedOperationId = Activity.Current.RootId;
+                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
+                expectedOperationId = Activity.Current.GetTraceId();
             }
 
             var telemetry = _channel.Telemetries.Single() as MetricTelemetry;
@@ -393,8 +394,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             string expectedOperationId, expectedRequestId;
             using (logger.BeginFunctionScope(CreateFunctionInstance(scopeGuid), _hostInstanceId))
             {
-                expectedRequestId = Activity.Current.Id;
-                expectedOperationId = Activity.Current.RootId;
+                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
+                expectedOperationId = Activity.Current.GetTraceId();
 
                 var props = new Dictionary<string, object>
                 {
@@ -452,8 +453,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 };
                 logger.LogMetric("CustomMetric", 1.1, props);
 
-                expectedRequestId = Activity.Current.Id;
-                expectedOperationId = Activity.Current.RootId;
+                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
+                expectedOperationId = Activity.Current.GetTraceId();
             }
 
             var telemetry = _channel.Telemetries.Single() as MetricTelemetry;
@@ -637,6 +638,120 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             await Task.WhenAll(tasks);
         }
 
+        [Fact]
+        public void ApplicationInsightsLoggerOptions_Format()
+        {
+            var options = new ApplicationInsightsLoggerOptions
+            {
+                SamplingSettings = new SamplingPercentageEstimatorSettings()
+                {
+                    EvaluationInterval = TimeSpan.FromHours(1),
+                    InitialSamplingPercentage = 0.1,
+                    MaxSamplingPercentage = 0.1,
+                    MaxTelemetryItemsPerSecond = 42,
+                    MinSamplingPercentage = 0.1,
+                    MovingAverageRatio = 1.0,
+                    SamplingPercentageDecreaseTimeout = TimeSpan.FromSeconds(1),
+                    SamplingPercentageIncreaseTimeout = TimeSpan.FromSeconds(1)
+                },
+                SnapshotConfiguration = new SnapshotCollectorConfiguration()
+                {
+                    AgentEndpoint = "123",
+                    FailedRequestLimit = 42,
+                    IsEnabled = false,
+                    IsEnabledInDeveloperMode = false,
+                    IsEnabledWhenProfiling = false,
+                    IsLowPrioritySnapshotUploader = false,
+                    MaximumCollectionPlanSize = 42,
+                    MaximumSnapshotsRequired = 42,
+                    ProblemCounterResetInterval = TimeSpan.FromMinutes(42),
+                    ProvideAnonymousTelemetry = false,
+                    ReconnectInterval = TimeSpan.FromMinutes(42),
+                    ShadowCopyFolder = "123",
+                    SnapshotInLowPriorityThread = false,
+                    SnapshotsPerDayLimit = 42,
+                    SnapshotsPerTenMinutesLimit = 42,
+                    TempFolder = "123",
+                    ThresholdForSnapshotting = 42,
+                    UploaderProxy = "123"
+                },
+                HttpAutoCollectionOptions = new HttpAutoCollectionOptions()
+                {
+                    EnableResponseHeaderInjection = false,
+                    EnableW3CDistributedTracing = false,
+                    EnableHttpTriggerExtendedInfoCollection = true
+                }
+            };
+
+            var deserializedOptions = JsonConvert.DeserializeObject<ApplicationInsightsLoggerOptions>(options.Format());
+
+            Assert.Equal(options.HttpAutoCollectionOptions.EnableHttpTriggerExtendedInfoCollection, deserializedOptions.HttpAutoCollectionOptions.EnableHttpTriggerExtendedInfoCollection);
+            Assert.Equal(options.HttpAutoCollectionOptions.EnableW3CDistributedTracing, deserializedOptions.HttpAutoCollectionOptions.EnableW3CDistributedTracing);
+            Assert.Equal(options.HttpAutoCollectionOptions.EnableResponseHeaderInjection, deserializedOptions.HttpAutoCollectionOptions.EnableResponseHeaderInjection);
+
+            Assert.Equal(options.SamplingSettings.EvaluationInterval, deserializedOptions.SamplingSettings.EvaluationInterval);
+            Assert.Equal(options.SamplingSettings.InitialSamplingPercentage, deserializedOptions.SamplingSettings.InitialSamplingPercentage);
+            Assert.Equal(options.SamplingSettings.MaxSamplingPercentage, deserializedOptions.SamplingSettings.MaxSamplingPercentage);
+            Assert.Equal(options.SamplingSettings.MaxTelemetryItemsPerSecond, deserializedOptions.SamplingSettings.MaxTelemetryItemsPerSecond);
+            Assert.Equal(options.SamplingSettings.MinSamplingPercentage, deserializedOptions.SamplingSettings.MinSamplingPercentage);
+            Assert.Equal(options.SamplingSettings.MovingAverageRatio, deserializedOptions.SamplingSettings.MovingAverageRatio);
+            Assert.Equal(options.SamplingSettings.SamplingPercentageDecreaseTimeout, deserializedOptions.SamplingSettings.SamplingPercentageDecreaseTimeout);
+            Assert.Equal(options.SamplingSettings.SamplingPercentageIncreaseTimeout, deserializedOptions.SamplingSettings.SamplingPercentageIncreaseTimeout);
+
+
+            Assert.Equal(options.SnapshotConfiguration.FailedRequestLimit, deserializedOptions.SnapshotConfiguration.FailedRequestLimit);
+            Assert.Equal(options.SnapshotConfiguration.IsEnabled, deserializedOptions.SnapshotConfiguration.IsEnabled);
+            Assert.Equal(options.SnapshotConfiguration.IsEnabledInDeveloperMode, deserializedOptions.SnapshotConfiguration.IsEnabledInDeveloperMode);
+            Assert.Equal(options.SnapshotConfiguration.IsEnabledWhenProfiling, deserializedOptions.SnapshotConfiguration.IsEnabledWhenProfiling);
+            Assert.Equal(options.SnapshotConfiguration.IsLowPrioritySnapshotUploader, deserializedOptions.SnapshotConfiguration.IsLowPrioritySnapshotUploader);
+            Assert.Equal(options.SnapshotConfiguration.MaximumCollectionPlanSize, deserializedOptions.SnapshotConfiguration.MaximumCollectionPlanSize);
+            Assert.Equal(options.SnapshotConfiguration.MaximumSnapshotsRequired, deserializedOptions.SnapshotConfiguration.MaximumSnapshotsRequired);
+            Assert.Equal(options.SnapshotConfiguration.ProblemCounterResetInterval, deserializedOptions.SnapshotConfiguration.ProblemCounterResetInterval);
+            Assert.Equal(options.SnapshotConfiguration.ProvideAnonymousTelemetry, deserializedOptions.SnapshotConfiguration.ProvideAnonymousTelemetry);
+            Assert.Equal(options.SnapshotConfiguration.ReconnectInterval, deserializedOptions.SnapshotConfiguration.ReconnectInterval);
+            Assert.Equal(options.SnapshotConfiguration.ShadowCopyFolder, deserializedOptions.SnapshotConfiguration.ShadowCopyFolder);
+            Assert.Equal(options.SnapshotConfiguration.SnapshotInLowPriorityThread, deserializedOptions.SnapshotConfiguration.SnapshotInLowPriorityThread);
+            Assert.Equal(options.SnapshotConfiguration.SnapshotsPerDayLimit, deserializedOptions.SnapshotConfiguration.SnapshotsPerDayLimit);
+            Assert.Equal(options.SnapshotConfiguration.SnapshotsPerTenMinutesLimit, deserializedOptions.SnapshotConfiguration.SnapshotsPerTenMinutesLimit);
+            Assert.Equal(options.SnapshotConfiguration.TempFolder, deserializedOptions.SnapshotConfiguration.TempFolder);
+            Assert.Equal(options.SnapshotConfiguration.ThresholdForSnapshotting, deserializedOptions.SnapshotConfiguration.ThresholdForSnapshotting);
+        }
+
+        [Fact]
+        public void ApplicationInsights_RequestIsTrackedIfActivityIsIgnored()
+        {
+            var result = CreateDefaultInstanceLogEntry();
+            var logger = CreateLogger(LogCategories.Results);
+
+            Activity parent = new Activity("foo").Start();
+            using (logger.BeginScope(new Dictionary<string, object> { ["MS_IgnoreActivity"] = null} ))
+            using (logger.BeginFunctionScope(CreateFunctionInstance(_invocationId), _hostInstanceId))
+            {
+                logger.LogFunctionResult(result);
+            }
+
+            Assert.Single(_channel.Telemetries.OfType<RequestTelemetry>());
+            RequestTelemetry telemetry = _channel.Telemetries.OfType<RequestTelemetry>().Single();
+
+            Assert.NotEqual(telemetry.Id, parent.Id);
+        }
+
+        [Fact]
+        public void ApplicationInsights_RequestIsNotTrackedIfActivityIsNotIgnored()
+        {
+            var result = CreateDefaultInstanceLogEntry();
+            var logger = CreateLogger(LogCategories.Results);
+
+            Activity parent = new Activity("foo").Start();
+            using (logger.BeginFunctionScope(CreateFunctionInstance(_invocationId), _hostInstanceId))
+            {
+                logger.LogFunctionResult(result);
+            }
+
+            // ApplicationInsights auto-tracks telemetry, functions do not track it.
+            Assert.Empty(_channel.Telemetries.OfType<RequestTelemetry>());
+        }
+
         private async Task Level1(Guid asyncLocalSetting)
         {
             // Push and pop values onto the dictionary at various levels. Make sure they
@@ -727,7 +842,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
         private ILogger CreateLogger(string category)
         {
-            return new ApplicationInsightsLogger(_client, category);
+            return new ApplicationInsightsLogger(_client, category, new ApplicationInsightsLoggerOptions());
         }
 
         private static void ValidateScope(IDictionary<string, object> expected)
@@ -746,15 +861,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             var descriptor = FunctionIndexer.FromMethod(method);
 
             return new FunctionInstance(id, new Dictionary<string, string>(), null, new ExecutionReason(), null, null, descriptor);
-        }
-
-        private static IDictionary<string, object> CreateScopeDictionary(string invocationId, string functionName)
-        {
-            return new Dictionary<string, object>
-            {
-                [ScopeKeys.FunctionInvocationId] = invocationId,
-                [ScopeKeys.FunctionName] = functionName
-            };
         }
 
         private static void TestFunction()
@@ -785,6 +891,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         {
             _channel?.Dispose();
             _host?.Dispose();
+
+            while (Activity.Current != null)
+            {
+                Activity.Current.Stop();
+            }
         }
     }
 }
