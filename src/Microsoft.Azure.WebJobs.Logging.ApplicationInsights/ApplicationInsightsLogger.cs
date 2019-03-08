@@ -9,6 +9,7 @@ using System.Linq;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.ApplicationInsights.Extensibility.W3C;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
@@ -18,6 +19,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
     internal class ApplicationInsightsLogger : ILogger
     {
         private readonly TelemetryClient _telemetryClient;
+        private readonly ApplicationInsightsLoggerOptions _loggerOptions;
         private readonly string _categoryName;
         private readonly bool _isUserFunction = false;
 
@@ -36,6 +38,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 LogConstants.LogLevelKey,
                 LogConstants.EventIdKey,
                 LogConstants.OriginalFormatKey,
+                ApplicationInsightsScopeKeys.HttpRequest,
                 ScopeKeys.Event,
                 ScopeKeys.FunctionInvocationId,
                 ScopeKeys.FunctionName,
@@ -43,9 +46,10 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 OperationContext
             };
 
-        public ApplicationInsightsLogger(TelemetryClient client, string categoryName)
+        public ApplicationInsightsLogger(TelemetryClient client, string categoryName, ApplicationInsightsLoggerOptions loggerOptions)
         {
             _telemetryClient = client;
+            _loggerOptions = loggerOptions;
             _categoryName = categoryName ?? DefaultCategoryName;
             _isUserFunction = LogCategories.IsFunctionUserCategory(categoryName);
         }
@@ -65,7 +69,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             // Initialize stateValues so the rest of the methods don't have to worry about null values.
             stateValues = stateValues ?? new Dictionary<string, object>();
 
-            // Add some well-known properties to the scope dictionary so the TelemetryIniitalizer can add them
+            // Add some well-known properties to the scope dictionary so the TelemetryInitializer can add them
             // for all telemetry.
             using (BeginScope(new Dictionary<string, object>
             {
@@ -351,8 +355,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         private static void ApplyFunctionResultActivityTags(IEnumerable<KeyValuePair<string, object>> state, IDictionary<string, object> scope)
         {
             // Activity carries tracing context. It is managed by instrumented library (e.g. ServiceBus or Asp.Net Core)
-            // and consumed by ApplicationInsigts.
-            // This function stamps all function-related tags on the Activity. Then WebJobsTelemetryIntitializer sets them on the RequestTelemetry.
+            // and consumed by ApplicationInsights.
+            // This function stamps all function-related tags on the Activity. Then WebJobsTelemetryInitializer sets them on the RequestTelemetry.
             // This way, requests reported by WebJobs (e.g. timer trigger) and requests reported by ApplicationInsights (Http, ServiceBus)
             // both have essential information about function execution
             Activity currentActivity = Activity.Current;
@@ -388,6 +392,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                             break;
                     }
                 }
+
                 if (scope.TryGetValue(LogConstants.CategoryNameKey, out object category))
                 {
                     currentActivity.AddTag(LogConstants.CategoryNameKey, category.ToString());
@@ -396,6 +401,11 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 if (scope.TryGetValue(LogConstants.LogLevelKey, out object logLevel))
                 {
                     currentActivity.AddTag(LogConstants.LogLevelKey, logLevel.ToString());
+                }
+
+                if (scope.TryGetValue(ApplicationInsightsScopeKeys.HttpRequest, out var request) && request is HttpRequest httpRequest)
+                {
+                    currentActivity.AddTag(LoggingConstants.ClientIpKey, GetIpAddress(httpRequest));
                 }
             }
         }
@@ -426,11 +436,19 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 return;
             }
 
-            // Http and ServiceBus triggers are tracked automatically by the ApplicationInsights SDK
+            // HTTP and ServiceBus triggers are tracked automatically by the ApplicationInsights SDK
             // In such case a current Activity is present.
-            // We won't track and only stamp function specific details on the RequestTelemtery
+            // We won't track and only stamp function specific details on the RequestTelemetry
             // created by SDK via Activity when function ends
-            if (Activity.Current == null)
+
+            var currentActivity = Activity.Current;
+            if (currentActivity == null ||
+                // Activity is tracked, but Functions wants to ignore it:
+                DictionaryLoggerScope.GetMergedStateDictionary().ContainsKey("MS_IgnoreActivity") ||
+                // Functions create another RequestTrackingTelemetryModule to make sure first request is tracked (as ASP.NET Core starts before web jobs)
+                // however at this point we may discover that RequestTrackingTelemetryModule is disabled by customer and even though Activity exists, request won't be tracked
+                // So, if we've got AspNetCore Activity and EnableHttpTriggerExtendedInfoCollection is false - track request here.
+                (!_loggerOptions.HttpAutoCollectionOptions.EnableHttpTriggerExtendedInfoCollection && IsHttpRequestActivity(currentActivity)))
             {
                 string functionName = stateValues.GetValueOrDefault<string>(ScopeKeys.FunctionName);
                 string functionInvocationId = stateValues.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId);
@@ -442,17 +460,39 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     !string.IsNullOrEmpty(functionInvocationId) &&
                     eventName == LogConstants.FunctionStartEvent)
                 {
-                    RequestTelemetry request = new RequestTelemetry()
+                    RequestTelemetry request = new RequestTelemetry
                     {
                         Name = functionName
                     };
 
                     // We'll need to store this operation context so we can stop it when the function completes
                     IOperationHolder<RequestTelemetry> operation = _telemetryClient.StartOperation(request);
+
+                    if (_loggerOptions.HttpAutoCollectionOptions.EnableW3CDistributedTracing)
+                    {
+                        // currently ApplicationInsights supports 2 parallel correlation schemes:
+                        // legacy and W3C, they both appear in telemetry. UX handles all differences in operation Ids. 
+                        // This will be resolved in next .NET SDK on Activity level.
+                        // This ensures W3C context is set on the Activity.
+                        Activity.Current?.GenerateW3CContext();
+                    }
+
                     stateValues[OperationContext] = operation;
                 }
             }
         }
+
+        private bool IsHttpRequestActivity(Activity activity)
+        {
+            // Http Activity could be created by ASP.NET Core and then is has OperationName = "Microsoft.AspNetCore.Hosting.HttpRequestIn"
+            // or it could be created by ApplicaitonInsights in certain scenarios (like W3C support until it is integrated into the ASP.NET Core)
+            // ApplicaitonInsights Activity is called "ActivityCreatedByHostingDiagnosticListener"
+            // Here we check if activity passed is one of those.
+            return activity != null &&
+                   (activity.OperationName == "Microsoft.AspNetCore.Hosting.HttpRequestIn" || 
+                    activity.OperationName == "ActivityCreatedByHostingDiagnosticListener");
+        }
+
 
         internal static string GetIpAddress(HttpRequest httpRequest)
         {
@@ -466,7 +506,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 }
             }
 
-            return httpRequest.HttpContext?.Connection.RemoteIpAddress.ToString() ?? LoggingConstants.ZeroIpAddress;
+            return httpRequest.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? LoggingConstants.ZeroIpAddress;
         }
 
         private static string RemovePort(string address)

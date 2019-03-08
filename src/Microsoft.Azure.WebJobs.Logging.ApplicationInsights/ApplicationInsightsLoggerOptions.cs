@@ -11,12 +11,24 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
     public class ApplicationInsightsLoggerOptions : IOptionsFormatter
     {
+        /// <summary>
+        /// Gets or sets Application Insights instrumentation key.
+        /// </summary>
         public string InstrumentationKey { get; set; }
 
+        /// <summary>
+        /// Gets or sets sampling settings.
+        /// </summary>
         public SamplingPercentageEstimatorSettings SamplingSettings { get; set; }
 
+        /// <summary>
+        /// Gets or sets snapshot collection options.
+        /// </summary>
         public SnapshotCollectorConfiguration SnapshotConfiguration { get; set; }
 
+        /// <summary>
+        /// Gets or sets authentication key for Quick Pulse (Live Metrics).
+        /// </summary>
         public string QuickPulseAuthenticationApiKey { get; set; }
 
         /// <summary>
@@ -25,6 +37,11 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// Enabled by default.
         /// </summary>
         public bool EnablePerformanceCountersCollection { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets HTTP request collection options. 
+        /// </summary>
+        public HttpAutoCollectionOptions HttpAutoCollectionOptions { get; set; } = new HttpAutoCollectionOptions();
 
         public string Format()
         {
@@ -68,10 +85,19 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 };
             }
 
+            JObject httpOptions = new JObject
+            {
+                { nameof(HttpAutoCollectionOptions.EnableHttpTriggerExtendedInfoCollection), HttpAutoCollectionOptions.EnableHttpTriggerExtendedInfoCollection },
+                { nameof(HttpAutoCollectionOptions.EnableW3CDistributedTracing), HttpAutoCollectionOptions.EnableW3CDistributedTracing },
+                { nameof(HttpAutoCollectionOptions.EnableResponseHeaderInjection), HttpAutoCollectionOptions.EnableResponseHeaderInjection }
+            };
+
             JObject options = new JObject
             {
                 { nameof(SamplingSettings), sampling },
-                { nameof(SnapshotConfiguration), snapshot }
+                { nameof(SnapshotConfiguration), snapshot },
+                { nameof(EnablePerformanceCountersCollection), EnablePerformanceCountersCollection},
+                { nameof(HttpAutoCollectionOptions), httpOptions},
             };
 
             return options.ToString(Formatting.Indented);
