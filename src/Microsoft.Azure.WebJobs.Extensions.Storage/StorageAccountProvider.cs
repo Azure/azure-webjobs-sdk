@@ -40,7 +40,7 @@ namespace Microsoft.Azure.WebJobs
             if (connectionString == null)
             {
                 // Not found
-                throw new InvalidOperationException($"Storage account connection string '{name}' does not exists. Make sure that it is defined in application settings.");
+                throw new InvalidOperationException($"Storage account connection string '{name}' does not exist. Make sure that it is defined in application settings.");
             }
 
             return StorageAccount.NewFromConnectionString(connectionString);
