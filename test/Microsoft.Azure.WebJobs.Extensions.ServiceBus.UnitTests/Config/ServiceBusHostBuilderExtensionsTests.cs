@@ -24,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
             var values = new Dictionary<string, string>
             {
                 { $"{extensionPath}:PrefetchCount", "123" },
-                { $"ConnectionStrings:ServiceBus", "TestConnectionString" },
+                { $"ConnectionStrings:AzureWebJobsServiceBus", "TestConnectionString" },
                 { $"{extensionPath}:MessageHandlerOptions:MaxConcurrentCalls", "123" },
                 { $"{extensionPath}:MessageHandlerOptions:AutoComplete", "false" },
                 { $"{extensionPath}:MessageHandlerOptions:MaxAutoRenewDuration", "00:00:15" }
