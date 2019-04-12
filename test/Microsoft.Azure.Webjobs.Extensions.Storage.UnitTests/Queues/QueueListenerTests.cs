@@ -210,6 +210,36 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
         }
 
         [Fact]
+        public async Task CreateQueueListener_CreatesListenerWithVisibilityTimeoutAppliedCorrectly()
+        {
+            _mockQueue = new Mock<CloudQueue>(new Uri("https://test.queue.core.windows.net/testqueue"));
+            _mockQueue.Setup(q => q.ExistsAsync()).ReturnsAsync(true);
+            _mockTriggerExecutor = new Mock<ITriggerExecutor<CloudQueueMessage>>(MockBehavior.Strict);
+            Mock<IWebJobsExceptionHandler> mockExceptionDispatcher = new Mock<IWebJobsExceptionHandler>(MockBehavior.Strict);
+            _loggerFactory = new LoggerFactory();
+            _loggerFactory.AddProvider(new TestLoggerProvider());
+            Mock<IQueueProcessorFactory> mockQueueProcessorFactory = new Mock<IQueueProcessorFactory>(MockBehavior.Strict);
+            QueuesOptions queuesOptions = new QueuesOptions();
+            QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_mockQueue.Object, _loggerFactory, queuesOptions);
+
+            _mockQueueProcessor = new Mock<QueueProcessor>(MockBehavior.Strict, context);
+
+            TimeSpan visibilityTimeout = TimeSpan.FromSeconds(15);
+            QueuesOptions queueConfig = new QueuesOptions
+            {
+                MaxDequeueCount = 5,
+                VisibilityTimeout = visibilityTimeout
+            };
+
+            mockQueueProcessorFactory.Setup(p => p.Create(It.IsAny<QueueProcessorFactoryContext>())).Returns(_mockQueueProcessor.Object);
+
+            _listener = new QueueListener(_mockQueue.Object, null, _mockTriggerExecutor.Object, mockExceptionDispatcher.Object, _loggerFactory, null, queueConfig, queueProcessorFactory: mockQueueProcessorFactory.Object);
+            CancellationToken cancellationToken = new CancellationToken();
+            await _listener.ExecuteAsync(cancellationToken);
+            _mockQueue.Verify(q => q.GetMessagesAsync(It.IsAny<int>(), visibilityTimeout, It.IsAny<QueueRequestOptions>(), It.IsAny<OperationContext>(), It.IsAny<CancellationToken>()));
+        }
+
+        [Fact]
         public async Task ProcessMessageAsync_Success()
         {
             CancellationToken cancellationToken = new CancellationToken();
