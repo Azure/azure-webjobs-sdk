@@ -1,12 +1,16 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.EventHubs.Processor;
 using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -127,6 +131,60 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             await eventProcessor.CloseAsync(partitionContext, CloseReason.Shutdown);
 
             checkpointer.Verify(p => p.CheckpointAsync(partitionContext), Times.Never);
+        }        
+
+        [Fact]
+        public async Task ProcessErrorsAsync_LoggedAsError()
+        {
+            var partitionContext = EventHubTests.GetPartitionContext(partitionId: "123", eventHubPath: "abc", owner: "def");
+            var options = new EventHubOptions();
+            var checkpointer = new Mock<EventHubListener.ICheckpointer>(MockBehavior.Strict);
+            var executor = new Mock<ITriggeredFunctionExecutor>(MockBehavior.Strict);
+            var testLogger = new TestLogger("Test");
+            var eventProcessor = new EventHubListener.EventProcessor(options, executor.Object, testLogger, true, checkpointer.Object);
+
+            var ex = new InvalidOperationException("My InvalidOperationException!");
+
+            await eventProcessor.ProcessErrorAsync(partitionContext, ex);
+            var msg = testLogger.GetLogMessages().Single();
+            Assert.Equal("Error processing event from Partition Id: '123', Owner: 'def', EventHubPath: 'abc'", msg.FormattedMessage);
+            Assert.IsType<InvalidOperationException>(msg.Exception);
+            Assert.Equal(LogLevel.Error, msg.Level);
+        }
+
+        [Fact]
+        public async Task ProcessErrorsAsync_RebalancingExceptions_LoggedAsInformation()
+        {
+            var partitionContext = EventHubTests.GetPartitionContext(partitionId: "123", eventHubPath: "abc", owner: "def");
+            var options = new EventHubOptions();
+            var checkpointer = new Mock<EventHubListener.ICheckpointer>(MockBehavior.Strict);
+            var executor = new Mock<ITriggeredFunctionExecutor>(MockBehavior.Strict);
+            var testLogger = new TestLogger("Test");
+            var eventProcessor = new EventHubListener.EventProcessor(options, executor.Object, testLogger, true, checkpointer.Object);
+
+            // ctor is private
+            var constructor = typeof(ReceiverDisconnectedException)
+                .GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { typeof(string) }, null);
+            ReceiverDisconnectedException disconnectedEx = (ReceiverDisconnectedException)constructor.Invoke(new[] { "My ReceiverDisconnectedException!" });
+
+            await eventProcessor.ProcessErrorAsync(partitionContext, disconnectedEx);
+            var msg = testLogger.GetLogMessages().Single();
+            Assert.Equal("An Event Hub exception of type 'ReceiverDisconnectedException' was thrown from Partition Id: '123', Owner: 'def', EventHubPath: 'abc'. This exception type is typically a result of Event Hub processor rebalancing and can be safely ignored.", msg.FormattedMessage);
+            Assert.Null(msg.Exception);
+            Assert.Equal(LogLevel.Information, msg.Level);
+
+            testLogger.ClearLogMessages();
+
+            // ctor is private
+            constructor = typeof(LeaseLostException)
+                .GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { typeof(string), typeof(Exception) }, null);
+            LeaseLostException leaseLostEx = (LeaseLostException)constructor.Invoke(new object[] { "My LeaseLostException!", new Exception() });
+
+            await eventProcessor.ProcessErrorAsync(partitionContext, leaseLostEx);
+            msg = testLogger.GetLogMessages().Single();
+            Assert.Equal("An Event Hub exception of type 'LeaseLostException' was thrown from Partition Id: '123', Owner: 'def', EventHubPath: 'abc'. This exception type is typically a result of Event Hub processor rebalancing and can be safely ignored.", msg.FormattedMessage);
+            Assert.Null(msg.Exception);
+            Assert.Equal(LogLevel.Information, msg.Level);
         }
     }
 }
