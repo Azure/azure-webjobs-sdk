@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -259,14 +258,25 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             Assert.Equal(5, options.BatchCheckpointFrequency);
         }
 
-        internal static PartitionContext GetPartitionContext()
+        internal static PartitionContext GetPartitionContext(string partitionId = null, string eventHubPath = null,
+            string consumerGroupName = null, string owner = null)
         {
             var constructor = typeof(PartitionContext).GetConstructor(
                 BindingFlags.NonPublic | BindingFlags.Instance,
                 null,
                 new Type[] { typeof(EventProcessorHost), typeof(string), typeof(string), typeof(string), typeof(CancellationToken) },
                 null);
-            return (PartitionContext)constructor.Invoke(new object[] { null, null, null, null, null });
+            var context = (PartitionContext)constructor.Invoke(new object[] { null, partitionId, eventHubPath, consumerGroupName, null });
+
+            // Set a lease, which allows us to grab the "Owner"
+            constructor = typeof(Lease).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { }, null);
+            var lease = (Lease)constructor.Invoke(new object[] { });
+            lease.Owner = owner;
+
+            var leaseProperty = typeof(PartitionContext).GetProperty("Lease", BindingFlags.NonPublic | BindingFlags.Instance);
+            leaseProperty.SetValue(context, lease);
+
+            return context;
         }
     }
 }
