@@ -74,7 +74,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
 
             // if the function runs longer than this, the invisibility will be updated
             // on a timer periodically for the duration of the function execution
-            if (_queueOptions.VisibilityTimeout != default)
+            if (_queueOptions.VisibilityTimeout > TimeSpan.Zero)
             {
                 _visibilityTimeout = _queueOptions.VisibilityTimeout;
             }
