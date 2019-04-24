@@ -59,13 +59,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 var config = host.Services.GetService<TelemetryConfiguration>();
 
                 // Verify Initializers
-                Assert.Equal(6, config.TelemetryInitializers.Count);
+                Assert.Equal(7, config.TelemetryInitializers.Count);
                 // These will throw if there are not exactly one
                 Assert.Single(config.TelemetryInitializers.OfType<OperationCorrelationTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<HttpDependenciesParsingTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<WebJobsTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<WebJobsSanitizingInitializer>());
+                Assert.Single(config.TelemetryInitializers.OfType<MetricSdkVersionTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<W3COperationCorrelationTelemetryInitializer>());
 
                 var sdkVersionProvider = host.Services.GetServices<ISdkVersionProvider>().ToList();
