@@ -66,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Assert.Single(config.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<WebJobsTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<WebJobsSanitizingInitializer>());
-                Assert.Single(config.TelemetryInitializers.OfType<PerfCounterSdkVersionTelemetryInitializer>());
+                Assert.Single(config.TelemetryInitializers.OfType<MetricSdkVersionTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<W3COperationCorrelationTelemetryInitializer>());
 
                 var sdkVersionProvider = host.Services.GetServices<ISdkVersionProvider>().ToList();
