@@ -1013,7 +1013,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private static void ValidateSdkVersion(ITelemetry telemetry)
         {
-            Assert.StartsWith("webjobs: ", telemetry.Context.GetInternalContext().SdkVersion);
+            Assert.StartsWith("f_webjobs: ", telemetry.Context.GetInternalContext().SdkVersion);
         }
 
         private class QuickPulsePayload
