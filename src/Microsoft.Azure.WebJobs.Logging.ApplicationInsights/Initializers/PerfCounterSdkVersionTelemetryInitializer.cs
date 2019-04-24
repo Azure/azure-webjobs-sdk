@@ -5,11 +5,13 @@ using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
+using System;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
     internal class PerfCounterSdkVersionTelemetryInitializer : ITelemetryInitializer
     {
+        private const string Prefix = "f_";
         public void Initialize(ITelemetry telemetry)
         {
             if (telemetry == null)
@@ -20,9 +22,9 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             if (telemetry is PerformanceCounterTelemetry)
             {
                 var internalContext = telemetry.Context != null ? telemetry.Context.GetInternalContext() : null;
-                if (internalContext != null && internalContext.SdkVersion != null)
+                if (internalContext != null && internalContext.SdkVersion != null && !internalContext.SdkVersion.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase))
                 {
-                    internalContext.SdkVersion = "f_" + telemetry.Context.GetInternalContext().SdkVersion;
+                    internalContext.SdkVersion = Prefix + telemetry.Context.GetInternalContext().SdkVersion;
                 }
             }
         }
