@@ -39,7 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         {
             // Create a PerfCounter telemetry with some SDK version
             string originalVersion = "azwapccore:2.9.1-26132";
-            var performanceCounterTelemetry = new PerformanceCounterTelemetry("cat", "counter", "instance", 100.00);
+            var performanceCounterTelemetry = new MetricTelemetry("metric", 100.00);
             performanceCounterTelemetry.Context.GetInternalContext().SdkVersion = originalVersion;
 
             // Apply Initializer
@@ -58,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         {
             // Create a PerfCounter telemetry with SDK version starting with "f_"
             string originalVersion = "f_azwapccore:2.9.1-26132";
-            var performanceCounterTelemetry = new PerformanceCounterTelemetry("cat", "counter", "instance", 100.00);            
+            var performanceCounterTelemetry = new MetricTelemetry("metric", 100.00);
             performanceCounterTelemetry.Context.GetInternalContext().SdkVersion = originalVersion;
 
             // Apply Initializer, more than once.
@@ -75,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         public void Initializer_DoesNotThrowOnEmptyOrNullVersion_PerfCounterTelemetry()
         {
             // Create a PerfCounter telemetry.
-            var performanceCounterTelemetry = new PerformanceCounterTelemetry("cat", "counter", "instance", 100.00);
+            var performanceCounterTelemetry = new MetricTelemetry("metric", 100.00);
             var initializer = new PerfCounterSdkVersionTelemetryInitializer();
 
             // Assign Empty Version

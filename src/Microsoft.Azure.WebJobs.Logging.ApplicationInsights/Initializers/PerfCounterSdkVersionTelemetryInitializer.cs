@@ -19,7 +19,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 return;
             }
             
-            if (telemetry is PerformanceCounterTelemetry)
+            if (telemetry is MetricTelemetry)
             {
                 var internalContext = telemetry.Context?.GetInternalContext();
                 if (internalContext != null && internalContext.SdkVersion != null && !internalContext.SdkVersion.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase))
