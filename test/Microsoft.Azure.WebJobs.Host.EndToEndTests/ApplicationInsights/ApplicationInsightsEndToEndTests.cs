@@ -742,7 +742,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.Equal("100", telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}MyCustomMetricProperty"]);
             ValidateCustomScopeProperty(telemetry);
 
-            ValidateSdkVersion(telemetry);
+            ValidateSdkVersion(telemetry, "f_");
         }
 
         private static void ValidateCustomScopeProperty(ISupportProperties telemetry)
@@ -1011,9 +1011,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 success ? LogLevel.Information : LogLevel.Error, success, statusCode);
         }
 
-        private static void ValidateSdkVersion(ITelemetry telemetry)
-        {
-            Assert.StartsWith("webjobs: ", telemetry.Context.GetInternalContext().SdkVersion);
+        private static void ValidateSdkVersion(ITelemetry telemetry, string prefix = null)
+        {            
+            Assert.StartsWith($"{prefix}webjobs:", telemetry.Context.GetInternalContext().SdkVersion);
         }
 
         private class QuickPulsePayload
