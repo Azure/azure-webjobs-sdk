@@ -9,7 +9,7 @@ using System;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
-    internal class PerfCounterSdkVersionTelemetryInitializer : ITelemetryInitializer
+    internal class MetricSdkVersionTelemetryInitializer : ITelemetryInitializer
     {
         private const string Prefix = "f_";
         public void Initialize(ITelemetry telemetry)
