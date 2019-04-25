@@ -1,25 +1,28 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
 {
-    internal class ServiceBusQueueListenerFactory : IListenerFactory
+    internal class ServiceBusListenerFactory : IListenerFactory
     {
         private readonly ServiceBusAccount _account;
-        private readonly string _queueName;
         private readonly ITriggeredFunctionExecutor _executor;
         private readonly ServiceBusOptions _options;
         private readonly MessagingProvider _messagingProvider;
+        private readonly ServiceBusEntityInfo _entity;
 
-        public ServiceBusQueueListenerFactory(ServiceBusAccount account, string queueName, ITriggeredFunctionExecutor executor, ServiceBusOptions options, MessagingProvider messagingProvider)
+        public ServiceBusListenerFactory(ServiceBusAccount account, ServiceBusEntityInfo entity, ITriggeredFunctionExecutor executor, ServiceBusOptions options, MessagingProvider messagingProvider)
         {
             _account = account;
-            _queueName = queueName;
+            _entity = entity;
             _executor = executor;
             _options = options;
             _messagingProvider = messagingProvider;
@@ -28,7 +31,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         public Task<IListener> CreateAsync(CancellationToken cancellationToken)
         {
             var triggerExecutor = new ServiceBusTriggerExecutor(_executor);
-            var listener = new ServiceBusListener(_queueName, triggerExecutor, _options, _account, _messagingProvider);
+            var listener = new ServiceBusListener(_entity, triggerExecutor, _options, _account, _messagingProvider);
 
             return Task.FromResult<IListener>(listener);
         }
