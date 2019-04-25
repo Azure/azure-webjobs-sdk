@@ -27,6 +27,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             {
                 MaxConcurrentCalls = 16
             };
+
+            SessionHandlerOptions = new SessionHandlerOptions(ExceptionReceivedHandler);
         }
 
         /// <summary>
@@ -39,6 +41,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// <see cref="MessageReceiver"/>s.
         /// </summary>
         public MessageHandlerOptions MessageHandlerOptions { get; set; }
+
+        /// <summary>
+        /// Gets or sets the default <see cref="Azure.ServiceBus.SessionHandlerOptions"/> that will be used by
+        /// <see cref="ClientEntity"/>s.
+        /// </summary>
+        public SessionHandlerOptions SessionHandlerOptions { get; set; }
 
         /// <summary>
         /// Gets or sets the default PrefetchCount that will be used by <see cref="MessageReceiver"/>s.
@@ -60,11 +68,24 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 };
             }
 
+            JObject sessionHandlerOptions = null;
+            if (SessionHandlerOptions != null)
+            {
+                sessionHandlerOptions = new JObject
+                {
+                    { nameof(SessionHandlerOptions.AutoComplete), SessionHandlerOptions.AutoComplete },
+                    { nameof(SessionHandlerOptions.MaxAutoRenewDuration), SessionHandlerOptions.MaxAutoRenewDuration },
+                    { nameof(SessionHandlerOptions.MaxConcurrentSessions), SessionHandlerOptions.MaxConcurrentSessions },
+                    { nameof(SessionHandlerOptions.MessageWaitTimeout), SessionHandlerOptions.MessageWaitTimeout }
+                };
+            }
+
             // Do not include ConnectionString in loggable options.
             JObject options = new JObject
             {
                 { nameof(PrefetchCount), PrefetchCount },
-                { nameof(MessageHandlerOptions), messageHandlerOptions }
+                { nameof(MessageHandlerOptions), messageHandlerOptions },
+                { nameof(SessionHandlerOptions), sessionHandlerOptions }
             };
 
             return options.ToString(Formatting.Indented);
