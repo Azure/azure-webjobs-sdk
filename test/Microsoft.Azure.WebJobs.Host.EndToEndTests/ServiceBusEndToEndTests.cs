@@ -296,6 +296,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "      \"MaxAutoRenewDuration\": \"00:05:00\",",
                     "      \"MaxConcurrentCalls\": 16",
                     "  }",
+                    "  \"SessionHandlerOptions\": {",
+                    "      \"MaxAutoRenewDuration\": 00:01:00,",
+                    "      \"MessageWaitTimeout\": \"00:05:00\",",
+                    "      \"MaxConcurrentSessions\": 16",
+                    "      \"AutoComplete\": true",
+                    "  }",
                     "}",
                     "SingletonOptions",
                     "{",
@@ -389,7 +395,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await messageSender.SendAsync(message);
             }
 
-            // Passes a service bus message from a queue to topic using a brokered message
+            // Passes a service bus message from a queue to topic using a brokered message 
             public static void SBQueue2SBTopic(
                 [ServiceBusTrigger(SecondQueueName)] string message,
                 [ServiceBus(TopicName)] out Message output)

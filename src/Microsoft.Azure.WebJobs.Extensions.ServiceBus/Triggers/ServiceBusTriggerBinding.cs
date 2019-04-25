@@ -24,29 +24,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         private readonly ITriggerDataArgumentBinding<Message> _argumentBinding;
         private readonly IReadOnlyDictionary<string, Type> _bindingDataContract;
         private readonly ServiceBusAccount _account;
-        private readonly string _queueName;
-        private readonly string _topicName;
-        private readonly string _subscriptionName;
-        private readonly string _entityPath;
+        private readonly ServiceBusEntityInfo _entity;
         private readonly ServiceBusOptions _options;
         private ServiceBusListener _listener;
         private readonly MessagingProvider _messagingProvider;
 
         public ServiceBusTriggerBinding(string parameterName, Type parameterType, ITriggerDataArgumentBinding<Message> argumentBinding, ServiceBusAccount account,
-            ServiceBusOptions options, MessagingProvider messagingProvider, string queueName)
+            ServiceBusOptions options, MessagingProvider messagingProvider, ServiceBusEntityInfo entity)
             : this(parameterName, parameterType, argumentBinding, account, options, messagingProvider)
         {
-            _queueName = queueName;
-            _entityPath = queueName;
-        }
-
-        public ServiceBusTriggerBinding(string parameterName, Type parameterType, ITriggerDataArgumentBinding<Message> argumentBinding, ServiceBusAccount account,
-            ServiceBusOptions options, MessagingProvider messagingProvider, string topicName, string subscriptionName)
-            : this(parameterName, parameterType, argumentBinding, account, options, messagingProvider)
-        {
-            _topicName = topicName;
-            _subscriptionName = subscriptionName;
-            _entityPath = EntityNameHelper.FormatSubscriptionPath(topicName, subscriptionName);
+            _entity = entity;
         }
 
         private ServiceBusTriggerBinding(string parameterName, Type parameterType, ITriggerDataArgumentBinding<Message> argumentBinding,
@@ -83,7 +70,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             }
 
             ITriggerData triggerData = await _argumentBinding.BindAsync(message, context);
-            IReadOnlyDictionary<string, object> bindingData = CreateBindingData(message, _listener?.Receiver, triggerData.BindingData);
+            IReadOnlyDictionary<string, object> bindingData = CreateBindingData(message, _listener?.Receiver, _listener?.ClientEntity, triggerData.BindingData);
 
             return new TriggerData(triggerData.ValueProvider, bindingData);
         }
@@ -95,16 +82,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
                 throw new ArgumentNullException("context");
             }
 
-            IListenerFactory factory = null;
-            if (_queueName != null)
-            {
-                factory = new ServiceBusQueueListenerFactory(_account, _queueName, context.Executor, _options, _messagingProvider);
-            }
-            else
-            {
-                factory = new ServiceBusSubscriptionListenerFactory(_account, _topicName, _subscriptionName, context.Executor, _options, _messagingProvider);
-            }
-            _listener = (ServiceBusListener)(await factory.CreateAsync(context.CancellationToken));
+            IListenerFactory factory = new ServiceBusListenerFactory(_account, _entity, context.Executor, _options, _messagingProvider);
+
+            _listener = (ServiceBusListener)await factory.CreateAsync(context.CancellationToken);
 
             return _listener;
         }
@@ -126,6 +106,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             contract.Add("CorrelationId", typeof(string));
             contract.Add("UserProperties", typeof(IDictionary<string, object>));
             contract.Add("MessageReceiver", typeof(MessageReceiver));
+            contract.Add("ClientEntity", typeof(ClientEntity));
 
             if (argumentBindingContract != null)
             {
@@ -139,7 +120,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             return contract;
         }
 
-        internal static IReadOnlyDictionary<string, object> CreateBindingData(Message value, MessageReceiver receiver, IReadOnlyDictionary<string, object> bindingDataFromValueType)
+        internal static IReadOnlyDictionary<string, object> CreateBindingData(Message value, MessageReceiver receiver, ClientEntity entity, IReadOnlyDictionary<string, object> bindingDataFromValueType)
         {
             var bindingData = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
@@ -157,6 +138,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             SafeAddValue(() => bindingData.Add(nameof(value.CorrelationId), value.CorrelationId));
             SafeAddValue(() => bindingData.Add(nameof(value.UserProperties), value.UserProperties));
             SafeAddValue(() => bindingData.Add("MessageReceiver", receiver));
+            SafeAddValue(() => bindingData.Add("ClientEntity", entity));
 
             if (bindingDataFromValueType != null)
             {
@@ -185,16 +167,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
 
         public ParameterDescriptor ToParameterDescriptor()
         {
-            string entityPath = _queueName != null ?
-                    _queueName : string.Format(CultureInfo.InvariantCulture, "{0}/Subscriptions/{1}", _topicName, _subscriptionName);
-
             return new ServiceBusTriggerParameterDescriptor
             {
                 Name = _parameterName,
-                QueueName = _queueName,
-                TopicName = _topicName,
-                SubscriptionName = _subscriptionName,
-                DisplayHints = ServiceBusBinding.CreateParameterDisplayHints(entityPath, true)
+                QueueName = _entity.QueueName,
+                TopicName = _entity.TopicName,
+                SubscriptionName = _entity.SubscriptionName,
+                DisplayHints = ServiceBusBinding.CreateParameterDisplayHints(_entity.EntityPath, true)
             };
         }
 

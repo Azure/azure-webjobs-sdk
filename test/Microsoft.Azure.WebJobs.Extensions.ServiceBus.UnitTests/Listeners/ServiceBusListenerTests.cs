@@ -22,7 +22,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
         private readonly Mock<ITriggeredFunctionExecutor> _mockExecutor;
         private readonly Mock<MessagingProvider> _mockMessagingProvider;
         private readonly Mock<MessageProcessor> _mockMessageProcessor;
-        private readonly string _entityPath = "test-entity-path";
+        private readonly ServiceBusEntityInfo _entity = new ServiceBusEntityInfo()
+        {
+            QueueName = "test-entity-path"
+        };
         private readonly string _testConnection = "Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=abc123=";
 
         public ServiceBusListenerTests()
@@ -30,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
             _mockExecutor = new Mock<ITriggeredFunctionExecutor>(MockBehavior.Strict);
 
             MessageHandlerOptions messageOptions = new MessageHandlerOptions(ExceptionReceivedHandler);
-            MessageReceiver messageReceiver = new MessageReceiver(_testConnection, _entityPath);
+            MessageReceiver messageReceiver = new MessageReceiver(_testConnection, _entity.EntityPath);
             _mockMessageProcessor = new Mock<MessageProcessor>(MockBehavior.Strict, messageReceiver, messageOptions);
 
             ServiceBusOptions config = new ServiceBusOptions
@@ -39,14 +42,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
             };
             _mockMessagingProvider = new Mock<MessagingProvider>(MockBehavior.Strict, new OptionsWrapper<ServiceBusOptions>(config));
 
-            _mockMessagingProvider.Setup(p => p.CreateMessageProcessor(_entityPath, _testConnection))
+            _mockMessagingProvider.Setup(p => p.CreateMessageProcessor(_entity.EntityPath, _testConnection))
                 .Returns(_mockMessageProcessor.Object);
 
             ServiceBusTriggerExecutor triggerExecutor = new ServiceBusTriggerExecutor(_mockExecutor.Object);
             var mockServiceBusAccount = new Mock<ServiceBusAccount>(MockBehavior.Strict);
             mockServiceBusAccount.Setup(a => a.ConnectionString).Returns(_testConnection);
 
-            _listener = new ServiceBusListener(_entityPath, triggerExecutor, config, mockServiceBusAccount.Object, _mockMessagingProvider.Object);
+            _listener = new ServiceBusListener(_entity, triggerExecutor, config, mockServiceBusAccount.Object, _mockMessagingProvider.Object);
         }
 
         [Fact]

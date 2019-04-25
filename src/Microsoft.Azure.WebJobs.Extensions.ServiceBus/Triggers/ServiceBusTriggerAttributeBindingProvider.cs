@@ -51,21 +51,20 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
                 return Task.FromResult<ITriggerBinding>(null);
             }
 
-            string queueName = null;
-            string topicName = null;
-            string subscriptionName = null;
-            string entityPath = null;
+
+            ServiceBusEntityInfo entity = new ServiceBusEntityInfo()
+            {
+                IsSessionsEnabled = attribute.IsSessionsEnabled
+            };
 
             if (attribute.QueueName != null)
             {
-                queueName = Resolve(attribute.QueueName);
-                entityPath = queueName;
+                entity.QueueName = Resolve(attribute.QueueName);
             }
             else
             {
-                topicName = Resolve(attribute.TopicName);
-                subscriptionName = Resolve(attribute.SubscriptionName);
-                entityPath = EntityNameHelper.FormatSubscriptionPath(topicName, subscriptionName);
+                entity.TopicName = Resolve(attribute.TopicName);
+                entity.SubscriptionName = Resolve(attribute.SubscriptionName);
             }
 
             ITriggerDataArgumentBinding<Message> argumentBinding = InnerProvider.TryCreate(parameter);
@@ -77,15 +76,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             attribute.Connection = Resolve(attribute.Connection);
             ServiceBusAccount account = new ServiceBusAccount(_options, _configuration, attribute);
 
-            ITriggerBinding binding;
-            if (queueName != null)
-            {
-                binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, _options, _messagingProvider, queueName);
-            }
-            else
-            {
-                binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, _options, _messagingProvider, topicName, subscriptionName);
-            }
+            ITriggerBinding binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, _options, _messagingProvider, entity);
+
 
             return Task.FromResult<ITriggerBinding>(binding);
         }

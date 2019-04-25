@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.ServiceBus.Core;
 using Microsoft.Extensions.Options;
 
@@ -17,6 +18,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         private readonly ServiceBusOptions _options;
         private readonly ConcurrentDictionary<string, MessageReceiver> _messageReceiverCache = new ConcurrentDictionary<string, MessageReceiver>();
         private readonly ConcurrentDictionary<string, MessageSender> _messageSenderCache = new ConcurrentDictionary<string, MessageSender>();
+        private readonly ConcurrentDictionary<string, ClientEntity> _clientEntityCache = new ConcurrentDictionary<string, ClientEntity>();
 
         /// <summary>
         /// Constructs a new instance.
@@ -93,6 +95,49 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             return GetOrAddMessageSender(entityPath, connectionString);
         }
 
+        /// <summary>
+        /// Creates a <see cref="ClientEntity"/> for the specified ServiceBus entity. It's used for sessions scenarios.
+        /// </summary>
+        /// <remarks>
+        /// You can override this method to customize the <see cref="ClientEntity"/>.
+        /// </remarks>
+        /// <param name="entityPath">The ServiceBus entity to create a <see cref="MessageSender"/> for.</param>
+        /// <param name="connectionString">The ServiceBus connection string.</param>
+        /// <returns></returns>
+        public virtual ClientEntity CreateClientEntity(string entityPath, string connectionString)
+        {
+            if (string.IsNullOrEmpty(entityPath))
+            {
+                throw new ArgumentNullException("entityPath");
+            }
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                throw new ArgumentNullException("connectionString");
+            }
+
+             return GetOrAddClientEntity(entityPath, connectionString);
+        }
+
+        /// <summary>
+        /// Creates a <see cref="SessionMessageProcessor"/> for the specified ServiceBus entity.
+        /// </summary>
+        /// <param name="entityPath">The ServiceBus entity to create a <see cref="MessageSender"/> for.</param>
+        /// <param name="connectionString">The ServiceBus connection string.</param>
+        /// <returns></returns>
+        public virtual SessionMessageProcessor CreateSessionMessageProcessor(string entityPath, string connectionString)
+        {
+            if (string.IsNullOrEmpty(entityPath))
+            {
+                throw new ArgumentNullException("entityPath");
+            }
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                throw new ArgumentNullException("connectionString");
+            }
+
+            return new SessionMessageProcessor(GetOrAddClientEntity(entityPath, connectionString), _options.SessionHandlerOptions);
+        }
+
         private MessageReceiver GetOrAddMessageReceiver(string entityPath, string connectionString)
         {
             string cacheKey = $"{entityPath}-{connectionString}";
@@ -107,6 +152,22 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         {
             string cacheKey = $"{entityPath}-{connectionString}";
             return _messageSenderCache.GetOrAdd(cacheKey, new MessageSender(connectionString, entityPath));
+        }
+
+        private ClientEntity GetOrAddClientEntity(string entityPath, string connectionString)
+        {
+            string cacheKey = $"{entityPath}-{connectionString}";
+            string[] arr = entityPath.Split('/');
+            if (arr.Length > 1)
+            {
+                // entityPath for a subscription is "{TopicName}/Subscriptions/{SubscriptionName}"
+                return _clientEntityCache.GetOrAdd(cacheKey, new SubscriptionClient(connectionString, arr[0], arr[2]));
+            }
+            else
+            {
+                // entityPath for a queue is "  {QueueName}"
+                return _clientEntityCache.GetOrAdd(cacheKey, new QueueClient(connectionString, entityPath));
+            }
         }
     }
 }
