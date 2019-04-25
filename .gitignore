@@ -9,6 +9,7 @@ csx
 *.suo
 *.cscfg
 *.Cache
+launchSettings.json
 
 /packages
 /TestResults

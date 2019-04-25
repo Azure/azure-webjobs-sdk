@@ -83,6 +83,11 @@ namespace Microsoft.Azure.WebJobs
             get { return _subscriptionName; }
         }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether the sessions are enabled.
+        /// </summary>
+        public bool IsSessionsEnabled { get; set; }
+
         private string DebuggerDisplay
         {
             get
