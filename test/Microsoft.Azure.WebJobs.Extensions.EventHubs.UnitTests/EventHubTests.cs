@@ -273,7 +273,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             var lease = (Lease)constructor.Invoke(new object[] { });
             lease.Owner = owner;
 
-            var leaseProperty = typeof(PartitionContext).GetProperty("Lease", BindingFlags.NonPublic | BindingFlags.Instance);
+            var leaseProperty = typeof(PartitionContext).GetProperty("Lease", BindingFlags.Public | BindingFlags.Instance);
             leaseProperty.SetValue(context, lease);
 
             return context;
