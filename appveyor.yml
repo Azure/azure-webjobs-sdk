@@ -12,7 +12,7 @@ branches:
   - dev
   - master
   - next
-  - alrod-sb-sessions
+  - feature/servicebus-sessions
 image: Visual Studio 2017
 max_jobs: 1
 install:
