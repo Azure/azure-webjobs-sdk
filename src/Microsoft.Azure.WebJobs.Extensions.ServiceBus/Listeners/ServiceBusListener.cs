@@ -59,6 +59,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
                 throw new InvalidOperationException("The listener has already been started.");
             }
 
+            _receiver = _messagingProvider.CreateMessageReceiver(_entity.EntityPath, _serviceBusAccount.ConnectionString);
+
             if (_entity.IsSessionsEnabled)
             {
                 _clientEntity = _messagingProvider.CreateClientEntity(_entity.EntityPath, _serviceBusAccount.ConnectionString);
@@ -76,7 +78,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             }
             else
             {
-                _receiver = _messagingProvider.CreateMessageReceiver(_entity.EntityPath, _serviceBusAccount.ConnectionString);
                 _receiver.RegisterMessageHandler(ProcessMessageAsync, _serviceBusOptions.MessageHandlerOptions);
             }
             _started = true;
