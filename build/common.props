@@ -3,7 +3,7 @@
     <!-- Extensions can have independent versions and only increment when released -->
     <Version>3.0.9$(VersionSuffix)</Version>
     <ExtensionsEventHubsVersion>3.0.6$(VersionSuffix)</ExtensionsEventHubsVersion>
-    <ExtensionsServiceBusVersion>3.1.0-beta1</ExtensionsServiceBusVersion>
+    <ExtensionsServiceBusVersion>3.1.0-beta2</ExtensionsServiceBusVersion>
     <ExtensionsStorageVersion>3.0.7$(VersionSuffix)</ExtensionsStorageVersion>
 
     <TargetFramework>netstandard2.0</TargetFramework>
