@@ -334,12 +334,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             public static void SBQueue1Trigger(
                 [ServiceBusTrigger(_queueName, IsSessionsEnabled = true)] Message message, int deliveryCount,
-                ClientEntity clientEntity,
+                IMessageSession messageSession,
                 ILogger log,
                 string lockToken)
             {
-                QueueClient queueClient = (QueueClient)clientEntity;
-                Assert.Equal(_queueName, queueClient.Path);
+                Assert.Equal(_queueName, messageSession.Path);
                 Assert.Equal(1, deliveryCount);
 
                 ServiceBusSessionsTestHelper.ProcessMessage(message, log, _waitHandle1, _waitHandle2);
@@ -347,12 +346,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             public static void SBSub1Trigger(
                 [ServiceBusTrigger(_topicName, _subscriptionName, IsSessionsEnabled = true)] Message message, int deliveryCount,
-                ClientEntity clientEntity,
+                IMessageSession messageSession,
                 ILogger log,
                 string lockToken)
             {
-                SubscriptionClient subClient = (SubscriptionClient)clientEntity;
-                Assert.Equal(EntityNameHelper.FormatSubscriptionPath(_topicName, _subscriptionName), subClient.Path);
+                Assert.Equal(EntityNameHelper.FormatSubscriptionPath(_topicName, _subscriptionName), messageSession.Path);
                 Assert.Equal(1, deliveryCount);
 
                 ServiceBusSessionsTestHelper.ProcessMessage(message, log, _waitHandle1, _waitHandle2);

@@ -21,10 +21,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         private readonly ServiceBusAccount _serviceBusAccount;
         private readonly ServiceBusOptions _serviceBusOptions;
         private MessageReceiver _receiver;
+        private ClientEntity _clientEntity;
         private bool _disposed;
         private bool _started;
 
-        private ClientEntity _clientEntity;
+        private IMessageSession _messageSession;
         private SessionMessageProcessor _sessionMessageProcessor;
 
         public ServiceBusListener(ServiceBusTriggerExecutor triggerExecutor, ServiceBusOptions config, ServiceBusAccount serviceBusAccount, MessagingProvider messagingProvider)
@@ -47,7 +48,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
 
         internal MessageReceiver Receiver => _receiver;
 
-        internal ClientEntity ClientEntity => _clientEntity;
+        internal IMessageSession MessageSession => _messageSession;
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
@@ -156,6 +157,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
 
         internal async Task ProcessSessionMessageAsync(IMessageSession session, Message message, CancellationToken cancellationToken)
         {
+            _messageSession = session;
             if (!await _sessionMessageProcessor.BeginProcessingMessageAsync(session, message, cancellationToken))
             {
                 return;

@@ -63,7 +63,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             }
 
             ITriggerData triggerData = await _argumentBinding.BindAsync(message, context);
-            IReadOnlyDictionary<string, object> bindingData = CreateBindingData(message, _listener?.Receiver, _listener?.ClientEntity, triggerData.BindingData);
+            IReadOnlyDictionary<string, object> bindingData = CreateBindingData(message, _listener?.Receiver, _listener?.MessageSession, triggerData.BindingData);
 
             return new TriggerData(triggerData.ValueProvider, bindingData);
         }
@@ -99,7 +99,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             contract.Add("CorrelationId", typeof(string));
             contract.Add("UserProperties", typeof(IDictionary<string, object>));
             contract.Add("MessageReceiver", typeof(MessageReceiver));
-            contract.Add("ClientEntity", typeof(ClientEntity));
+            contract.Add("MessageSession", typeof(IMessageSession));
 
             if (argumentBindingContract != null)
             {
@@ -113,7 +113,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             return contract;
         }
 
-        internal static IReadOnlyDictionary<string, object> CreateBindingData(Message value, MessageReceiver receiver, ClientEntity entity, IReadOnlyDictionary<string, object> bindingDataFromValueType)
+        internal static IReadOnlyDictionary<string, object> CreateBindingData(Message value, MessageReceiver receiver, IMessageSession messageSession, IReadOnlyDictionary<string, object> bindingDataFromValueType)
         {
             var bindingData = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
@@ -131,7 +131,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             SafeAddValue(() => bindingData.Add(nameof(value.CorrelationId), value.CorrelationId));
             SafeAddValue(() => bindingData.Add(nameof(value.UserProperties), value.UserProperties));
             SafeAddValue(() => bindingData.Add("MessageReceiver", receiver));
-            SafeAddValue(() => bindingData.Add("ClientEntity", entity));
+            SafeAddValue(() => bindingData.Add("MessageSession", messageSession));
 
             if (bindingDataFromValueType != null)
             {
