@@ -35,21 +35,17 @@ namespace Microsoft.Azure.WebJobs
         /// Initializes a new instance of the <see cref="ServiceBusAttribute"/> class.
         /// </summary>
         /// <param name="queueOrTopicName">The name of the queue or topic to bind to.</param>
-        public ServiceBusAttribute(string queueOrTopicName)
+        public ServiceBusAttribute()
         {
-            QueueOrTopicName = queueOrTopicName;
-            EntityType = EntityType.Queue;
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ServiceBusAttribute"/> class.
         /// </summary>
         /// <param name="queueOrTopicName">The name of the queue or topic to bind to.</param>
-        /// <param name="queueOrTopicName">The type of the entity to bind to.</param>
-        public ServiceBusAttribute(string queueOrTopicName, EntityType entityType)
+        public ServiceBusAttribute(string queueOrTopicName)
         {
             QueueOrTopicName = queueOrTopicName;
-            EntityType = entityType;
         }
 
         /// <summary>
@@ -61,10 +57,5 @@ namespace Microsoft.Azure.WebJobs
         /// Gets or sets the app setting name that contains the Service Bus connection string.
         /// </summary>
         public string Connection { get; set; }
-
-        /// <summary>
-        /// Value indicating the type of the entity to bind to.
-        /// </summary>
-        public EntityType EntityType { get; set; }
     }
 }

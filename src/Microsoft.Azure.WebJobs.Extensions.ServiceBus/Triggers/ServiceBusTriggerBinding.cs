@@ -24,19 +24,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
         private readonly ITriggerDataArgumentBinding<Message> _argumentBinding;
         private readonly IReadOnlyDictionary<string, Type> _bindingDataContract;
         private readonly ServiceBusAccount _account;
-        private readonly ServiceBusEntityInfo _entity;
         private readonly ServiceBusOptions _options;
         private ServiceBusListener _listener;
         private readonly MessagingProvider _messagingProvider;
 
-        public ServiceBusTriggerBinding(string parameterName, Type parameterType, ITriggerDataArgumentBinding<Message> argumentBinding, ServiceBusAccount account,
-            ServiceBusOptions options, MessagingProvider messagingProvider, ServiceBusEntityInfo entity)
-            : this(parameterName, parameterType, argumentBinding, account, options, messagingProvider)
-        {
-            _entity = entity;
-        }
 
-        private ServiceBusTriggerBinding(string parameterName, Type parameterType, ITriggerDataArgumentBinding<Message> argumentBinding,
+        public ServiceBusTriggerBinding(string parameterName, Type parameterType, ITriggerDataArgumentBinding<Message> argumentBinding,
             ServiceBusAccount account, ServiceBusOptions options, MessagingProvider messagingProvider)
         {
             _parameterName = parameterName;
@@ -82,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
                 throw new ArgumentNullException("context");
             }
 
-            IListenerFactory factory = new ServiceBusListenerFactory(_account, _entity, context.Executor, _options, _messagingProvider);
+            IListenerFactory factory = new ServiceBusListenerFactory(_account, context.Executor, _options, _messagingProvider);
 
             _listener = (ServiceBusListener)await factory.CreateAsync(context.CancellationToken);
 
@@ -170,10 +163,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             return new ServiceBusTriggerParameterDescriptor
             {
                 Name = _parameterName,
-                QueueName = _entity.QueueName,
-                TopicName = _entity.TopicName,
-                SubscriptionName = _entity.SubscriptionName,
-                DisplayHints = ServiceBusBinding.CreateParameterDisplayHints(_entity.EntityPath, true)
+                EntityPath = _account.EntityPath,
+                DisplayHints = ServiceBusBinding.CreateParameterDisplayHints(_account.EntityPath, true)
             };
         }
 

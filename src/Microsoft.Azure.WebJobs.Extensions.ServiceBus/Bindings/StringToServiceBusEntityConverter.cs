@@ -12,14 +12,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
     {
         private readonly ServiceBusAccount _account;
         private readonly IBindableServiceBusPath _defaultPath;
-        private readonly EntityType _entityType;
         private readonly MessagingProvider _messagingProvider;
 
-        public StringToServiceBusEntityConverter(ServiceBusAccount account, IBindableServiceBusPath defaultPath, EntityType entityType, MessagingProvider messagingProvider)
+        public StringToServiceBusEntityConverter(ServiceBusAccount account, IBindableServiceBusPath defaultPath, MessagingProvider messagingProvider)
         {
             _account = account;
             _defaultPath = defaultPath;
-            _entityType = entityType;
             _messagingProvider = messagingProvider;
         }
 
@@ -42,8 +40,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 
             var entity = new ServiceBusEntity
             {
-                MessageSender = messageSender,
-                EntityType = _entityType
+                MessageSender = messageSender
             };
 
             return Task.FromResult(entity);

@@ -17,12 +17,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         private readonly ITriggeredFunctionExecutor _executor;
         private readonly ServiceBusOptions _options;
         private readonly MessagingProvider _messagingProvider;
-        private readonly ServiceBusEntityInfo _entity;
 
-        public ServiceBusListenerFactory(ServiceBusAccount account, ServiceBusEntityInfo entity, ITriggeredFunctionExecutor executor, ServiceBusOptions options, MessagingProvider messagingProvider)
+        public ServiceBusListenerFactory(ServiceBusAccount account, ITriggeredFunctionExecutor executor, ServiceBusOptions options, MessagingProvider messagingProvider)
         {
             _account = account;
-            _entity = entity;
             _executor = executor;
             _options = options;
             _messagingProvider = messagingProvider;
@@ -31,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
         public Task<IListener> CreateAsync(CancellationToken cancellationToken)
         {
             var triggerExecutor = new ServiceBusTriggerExecutor(_executor);
-            var listener = new ServiceBusListener(_entity, triggerExecutor, _options, _account, _messagingProvider);
+            var listener = new ServiceBusListener(triggerExecutor, _options, _account, _messagingProvider);
 
             return Task.FromResult<IListener>(listener);
         }

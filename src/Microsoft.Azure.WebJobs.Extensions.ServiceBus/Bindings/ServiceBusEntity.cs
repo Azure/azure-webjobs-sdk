@@ -13,11 +13,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
     {
         public MessageSender MessageSender { get; set; }
 
-        public EntityType EntityType { get; set; } = EntityType.Queue;
-
         public Task SendAndCreateEntityIfNotExistsAsync(Message message, Guid functionInstanceId, CancellationToken cancellationToken)
         {
-            return MessageSender.SendAndCreateEntityIfNotExists(message, functionInstanceId, EntityType, cancellationToken);
+            return MessageSender.SendAndCreateEntityIfNotExists(message, functionInstanceId, cancellationToken);
         }
     }
 }

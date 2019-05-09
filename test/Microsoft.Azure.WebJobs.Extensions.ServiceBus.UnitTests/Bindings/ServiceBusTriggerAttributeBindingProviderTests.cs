@@ -57,13 +57,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
 
         public static void TestJob_AccountOverride(
             [ServiceBusTriggerAttribute("test"),
-             ServiceBusAccount("testaccount")] Message message)
+             ServiceBusAccount(Constants.DefaultConnectionStringName)] Message message)
         {
             message = new Message();
         }
 
         public static void TestJob(
-            [ServiceBusTriggerAttribute("test")] Message message)
+            [ServiceBusTriggerAttribute("test", Connection = Constants.DefaultConnectionStringName)] Message message)
         {
             message = new Message();
         }

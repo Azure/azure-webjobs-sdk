@@ -22,7 +22,7 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
-    public class ServiceSessionsBusEndToEndTests : IDisposable
+    public class ServiceBusSessionsBusEndToEndTests : IDisposable
     {
         private const string _prefix = "core-test-";
         private const string _queueName = _prefix + "queue1-sessions";
@@ -34,14 +34,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private const int SBTimeout = 120 * 1000;
         private readonly string _connectionString;
 
-        public ServiceSessionsBusEndToEndTests()
+        public ServiceBusSessionsBusEndToEndTests()
         {
             var config = new ConfigurationBuilder()
                 .AddEnvironmentVariables()
                 .AddTestSettings()
                 .Build();
 
-            _connectionString = config.GetConnectionString(ServiceBus.Constants.DefaultConnectionStringName);
+            _connectionString = config.GetConnectionStringOrSetting(ServiceBus.Constants.DefaultConnectionStringName);
 
             _nameResolver = new RandomNameResolver();
 
@@ -520,7 +520,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     services.AddSingleton(reolver);
                     if (addCustomProvider)
                     {
-                        services.AddSingleton<MessagingProvider, ServiceSessionsBusEndToEndTests.CustomMessagingProvider>();
+                        services.AddSingleton<MessagingProvider, ServiceBusSessionsBusEndToEndTests.CustomMessagingProvider>();
                     }
                 })
                 .Build();
