@@ -47,17 +47,17 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             initializer.Initialize(metricTelemetry);
             
             var actualSdkVersion = metricTelemetry.Context.GetInternalContext().SdkVersion;
-            // Validate that "f_" is prefixed
-            Assert.StartsWith("f_", actualSdkVersion);
-            // And validate that original version is kept after "f_"
+            // Validate that "af_" is prefixed
+            Assert.StartsWith("af_", actualSdkVersion);
+            // And validate that original version is kept after "af_"
             Assert.EndsWith(originalVersion, actualSdkVersion);
         }
 
         [Fact]
         public void Initializer_IsIdempotent()
         {
-            // Create a Metric telemetry with SDK version starting with "f_"
-            string originalVersion = "f_azwapccore:2.9.1-26132";
+            // Create a Metric telemetry with SDK version starting with "af_"
+            string originalVersion = "af_azwapccore:2.9.1-26132";
             var metricTelemetry = new MetricTelemetry("metric", 100.00);
             metricTelemetry.Context.GetInternalContext().SdkVersion = originalVersion;
 
@@ -66,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             initializer.Initialize(metricTelemetry);
             initializer.Initialize(metricTelemetry);
 
-            // Validate that initializer does not modify the SDKVersion as it is already prefixed with "f_"
+            // Validate that initializer does not modify the SDKVersion as it is already prefixed with "af_"
             var actualSdkVersion = metricTelemetry.Context.GetInternalContext().SdkVersion;
             Assert.Equal(originalVersion, actualSdkVersion);
         }

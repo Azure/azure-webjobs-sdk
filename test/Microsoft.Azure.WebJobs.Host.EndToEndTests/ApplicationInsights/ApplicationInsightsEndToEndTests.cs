@@ -742,7 +742,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.Equal("100", telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}MyCustomMetricProperty"]);
             ValidateCustomScopeProperty(telemetry);
 
-            ValidateSdkVersion(telemetry, "f_");
+            ValidateSdkVersion(telemetry, "af_");
         }
 
         private static void ValidateCustomScopeProperty(ISupportProperties telemetry)
