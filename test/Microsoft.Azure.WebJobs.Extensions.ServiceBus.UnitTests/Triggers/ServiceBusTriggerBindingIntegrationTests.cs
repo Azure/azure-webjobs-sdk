@@ -27,18 +27,10 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Triggers
             ParameterInfo pi = new StubParameterInfo("parameterName", typeof(UserDataType));
             var argumentBinding = provider.TryCreate(pi);
             var options = new ServiceBusOptions();
-            var entityQueue = new ServiceBusEntityInfo()
-            {
-                QueueName = "queueName"
-            };
-            var entitySub = new ServiceBusEntityInfo()
-            {
-                TopicName = "subscriptionName",
-                SubscriptionName = "topicName"
-            };
+
             var messagingProvider = new MessagingProvider(new OptionsWrapper<ServiceBusOptions>(options));
-            _queueBinding = new ServiceBusTriggerBinding("parameterName", typeof(UserDataType), argumentBinding, null, options, messagingProvider, entityQueue);
-            _topicBinding = new ServiceBusTriggerBinding("parameterName", typeof(UserDataType), argumentBinding, null, options, messagingProvider, entitySub);
+            _queueBinding = new ServiceBusTriggerBinding("parameterName", typeof(UserDataType), argumentBinding, null, options, messagingProvider);
+            _topicBinding = new ServiceBusTriggerBinding("parameterName", typeof(UserDataType), argumentBinding, null, options, messagingProvider);
         }
 
         [Theory]

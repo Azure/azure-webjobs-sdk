@@ -26,22 +26,21 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
 
         private ClientEntity _clientEntity;
         private SessionMessageProcessor _sessionMessageProcessor;
-        private readonly ServiceBusEntityInfo _entity;
 
-        public ServiceBusListener(ServiceBusEntityInfo entity, ServiceBusTriggerExecutor triggerExecutor, ServiceBusOptions config, ServiceBusAccount serviceBusAccount, MessagingProvider messagingProvider)
+        public ServiceBusListener(ServiceBusTriggerExecutor triggerExecutor, ServiceBusOptions config, ServiceBusAccount serviceBusAccount, MessagingProvider messagingProvider)
         {
-            _entity = entity;
             _triggerExecutor = triggerExecutor;
             _cancellationTokenSource = new CancellationTokenSource();
             _messagingProvider = messagingProvider;
-            _serviceBusAccount = serviceBusAccount;
-            if (entity.IsSessionsEnabled)
+            _serviceBusAccount = serviceBusAccount;        
+
+            if (serviceBusAccount.IsSessionsEnabled)
             {
-                _sessionMessageProcessor = _messagingProvider.CreateSessionMessageProcessor(_entity.EntityPath, _serviceBusAccount.ConnectionString);
+                _sessionMessageProcessor = _messagingProvider.CreateSessionMessageProcessor(_serviceBusAccount.EntityPath, _serviceBusAccount.ConnectionString);
             }
             else
             {
-                _messageProcessor = _messagingProvider.CreateMessageProcessor(entity.EntityPath, _serviceBusAccount.ConnectionString);
+                _messageProcessor = _messagingProvider.CreateMessageProcessor(_serviceBusAccount.EntityPath, _serviceBusAccount.ConnectionString);
             }
             _serviceBusOptions = config;
         }
@@ -59,9 +58,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
                 throw new InvalidOperationException("The listener has already been started.");
             }
 
-            if (_entity.IsSessionsEnabled)
+            if (_serviceBusAccount.IsSessionsEnabled)
             {
-                _clientEntity = _messagingProvider.CreateClientEntity(_entity.EntityPath, _serviceBusAccount.ConnectionString);
+                _clientEntity = _messagingProvider.CreateClientEntity(_serviceBusAccount.EntityPath, _serviceBusAccount.ConnectionString);
 
                 QueueClient queueClient = _clientEntity as QueueClient;
                 if (queueClient != null)
@@ -76,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             }
             else
             {
-                _receiver = _messagingProvider.CreateMessageReceiver(_entity.EntityPath, _serviceBusAccount.ConnectionString);
+                _receiver = _messagingProvider.CreateMessageReceiver(_serviceBusAccount.EntityPath, _serviceBusAccount.ConnectionString);
                 _receiver.RegisterMessageHandler(ProcessMessageAsync, _serviceBusOptions.MessageHandlerOptions);
             }
             _started = true;
