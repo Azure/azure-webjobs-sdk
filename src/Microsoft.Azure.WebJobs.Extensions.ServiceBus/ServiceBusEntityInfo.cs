@@ -26,9 +26,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 {
                     return QueueName;
                 }
-                else
+                else if (!string.IsNullOrEmpty(SubscriptionName))
                 {
                     return EntityNameHelper.FormatSubscriptionPath(TopicName, SubscriptionName);
+                }
+                else
+                {
+                    return null;
                 }
             }
         }

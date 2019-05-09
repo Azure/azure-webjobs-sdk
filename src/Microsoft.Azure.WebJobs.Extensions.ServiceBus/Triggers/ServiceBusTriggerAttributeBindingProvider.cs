@@ -51,20 +51,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
                 return Task.FromResult<ITriggerBinding>(null);
             }
 
-
-            ServiceBusEntityInfo entity = new ServiceBusEntityInfo()
+            string entityPath = null;
+            if (!string.IsNullOrEmpty(attribute.QueueName))
             {
-                IsSessionsEnabled = attribute.IsSessionsEnabled
-            };
-
-            if (attribute.QueueName != null)
-            {
-                entity.QueueName = Resolve(attribute.QueueName);
+                entityPath = Resolve(attribute.QueueName);
             }
-            else
+            else if (!string.IsNullOrEmpty(attribute.TopicName) && !string.IsNullOrEmpty(attribute.SubscriptionName))
             {
-                entity.TopicName = Resolve(attribute.TopicName);
-                entity.SubscriptionName = Resolve(attribute.SubscriptionName);
+                entityPath = EntityNameHelper.FormatSubscriptionPath(attribute.TopicName, attribute.SubscriptionName);
             }
 
             ITriggerDataArgumentBinding<Message> argumentBinding = InnerProvider.TryCreate(parameter);
@@ -74,9 +68,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             }
 
             attribute.Connection = Resolve(attribute.Connection);
-            ServiceBusAccount account = new ServiceBusAccount(_options, _configuration, attribute);
+            ServiceBusAccount account = new ServiceBusAccount(_options, _configuration, entityPath, attribute, attribute.IsSessionsEnabled);
 
-            ITriggerBinding binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, _options, _messagingProvider, entity);
+            ITriggerBinding binding = new ServiceBusTriggerBinding(parameter.Name, parameter.ParameterType, argumentBinding, account, _options, _messagingProvider);
 
 
             return Task.FromResult<ITriggerBinding>(binding);

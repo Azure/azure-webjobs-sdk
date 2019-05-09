@@ -34,6 +34,13 @@ namespace Microsoft.Azure.WebJobs
         /// <summary>
         /// Initializes a new instance of the <see cref="ServiceBusTriggerAttribute"/> class.
         /// </summary>
+        public ServiceBusTriggerAttribute()
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ServiceBusTriggerAttribute"/> class.
+        /// </summary>
         /// <param name="queueName">The name of the queue to which to bind.</param>
         public ServiceBusTriggerAttribute(string queueName)
         {
