@@ -238,7 +238,9 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                     containerScanInfo.CurrentSweepCycleLatestModified = lastModifiedTimestamp;
                 }
 
-                if (lastModifiedTimestamp > containerScanInfo.LastSweepCycleLatestModified)
+                // Blob timestamps are rounded to the nearest second, so make sure we continue to check
+                // the previous timestamp to catch any blobs that came in slightly after our previous poll.
+                if (lastModifiedTimestamp >= containerScanInfo.LastSweepCycleLatestModified)
                 {
                     newBlobs.Add(currentBlob);
                 }
