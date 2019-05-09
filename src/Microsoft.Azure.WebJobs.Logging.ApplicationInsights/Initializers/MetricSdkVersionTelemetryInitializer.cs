@@ -11,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
     internal class MetricSdkVersionTelemetryInitializer : ITelemetryInitializer
     {
-        private const string Prefix = "f_";
+        private const string Prefix = "af_";
         public void Initialize(ITelemetry telemetry)
         {
             if (telemetry == null)
