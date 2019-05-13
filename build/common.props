@@ -1,8 +1,8 @@
 <Project>
   <PropertyGroup>
     <!-- Extensions can have independent versions and only increment when released -->
-    <Version>3.0.9$(VersionSuffix)</Version>
-    <ExtensionsEventHubsVersion>3.0.6$(VersionSuffix)</ExtensionsEventHubsVersion>
+    <Version>3.0.8$(VersionSuffix)</Version>
+    <ExtensionsEventHubsVersion>4.0.0-beta1</ExtensionsEventHubsVersion>
     <ExtensionsServiceBusVersion>3.0.6$(VersionSuffix)</ExtensionsServiceBusVersion>
     <ExtensionsStorageVersion>3.0.7$(VersionSuffix)</ExtensionsStorageVersion>
 
