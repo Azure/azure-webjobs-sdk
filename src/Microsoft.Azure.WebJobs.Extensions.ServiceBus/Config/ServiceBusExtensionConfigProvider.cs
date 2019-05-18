@@ -85,7 +85,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
             {
                 var ctxt = e.ExceptionReceivedContext;
                 var logger = loggerFactory?.CreateLogger(LogCategories.Executor);
-                string message = $"MessageReceiver error (Action={ctxt.Action}, ClientId={ctxt.ClientId}, EntityPath={ctxt.EntityPath}, Endpoint={ctxt.Endpoint})";
+                string message = $"Message processing error (Action={ctxt.Action}, ClientId={ctxt.ClientId}, EntityPath={ctxt.EntityPath}, Endpoint={ctxt.Endpoint})";
 
                 var logLevel = GetLogLevel(e.Exception);
                 logger?.Log(logLevel, 0, message, e.Exception, (s, ex) => message);

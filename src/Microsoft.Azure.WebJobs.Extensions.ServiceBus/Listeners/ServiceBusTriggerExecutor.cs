@@ -38,7 +38,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
                 { "MessageId", value.MessageId },
                 { "DeliveryCount", value.SystemProperties.DeliveryCount.ToString() },
                 { "EnqueuedTime", value.SystemProperties.EnqueuedTimeUtc.ToString() },
-                { "LockedUntil", value.SystemProperties.LockedUntilUtc.ToString() }
+                { "LockedUntil", value.SystemProperties.LockedUntilUtc.ToString() },
+                { "SessionId", value.SessionId }
             };
         }
     }

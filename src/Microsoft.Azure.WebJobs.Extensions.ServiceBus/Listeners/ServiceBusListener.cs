@@ -63,8 +63,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
             {
                 _clientEntity = _messagingProvider.CreateClientEntity(_serviceBusAccount.EntityPath, _serviceBusAccount.ConnectionString);
 
-                QueueClient queueClient = _clientEntity as QueueClient;
-                if (queueClient != null)
+                if (_clientEntity is QueueClient queueClient)
                 {
                     queueClient.RegisterSessionHandler(ProcessSessionMessageAsync, _serviceBusOptions.SessionHandlerOptions);
                 }
