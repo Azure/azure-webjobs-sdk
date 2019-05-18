@@ -19,10 +19,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             SessionHandlerOptions = sessionHandlerOptions ?? throw new ArgumentNullException(nameof(sessionHandlerOptions));
         }
 
+        /// <summary>
+        /// Gets the <see cref="SessionHandlerOptions"/> that will be used by the <see cref="SessionMessageProcessor"/>.
+        /// </summary>
         public SessionHandlerOptions SessionHandlerOptions { get; }
 
         /// <summary>
-        /// Gets or sets the <see cref="ClientEntity"/> that will be used by the <see cref="ClientEntity"/>.
+        /// Gets or sets the <see cref="ClientEntity"/> that will be used by the <see cref="SessionMessageProcessor"/>.
         /// </summary>
         protected ClientEntity ClientEntity { get; set; }
 
@@ -43,8 +46,8 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// This method completes processing of the specified message, after the job function has been invoked.
         /// </summary>
         /// <remarks>
-        /// The message is completed by the ServiceBus SDK based on how the <see cref="MessageHandlerOptions.AutoComplete"/> option
-        /// is configured. E.g. if <see cref="MessageHandlerOptions.AutoComplete"/> is false, it is up to the job function to complete
+        /// The message is completed by the ServiceBus SDK based on how the <see cref="SessionHandlerOptions.AutoComplete"/> option
+        /// is configured. E.g. if <see cref="SessionHandlerOptions.AutoComplete"/> is false, it is up to the job function to complete
         /// the message.
         /// </remarks>
         /// <param name="session">The session associated with the message.</param>

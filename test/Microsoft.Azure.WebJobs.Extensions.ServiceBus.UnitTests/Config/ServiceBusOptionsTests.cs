@@ -49,7 +49,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
             ExceptionReceivedEventArgs e = new ExceptionReceivedEventArgs(ex, "TestAction", "TestEndpoint", "TestEntity", "TestClient");
             ServiceBusExtensionConfigProvider.LogExceptionReceivedEvent(e, _loggerFactory);
 
-            var expectedMessage = $"MessageReceiver error (Action=TestAction, ClientId=TestClient, EntityPath=TestEntity, Endpoint=TestEndpoint)";
+            var expectedMessage = $"Message processing error (Action=TestAction, ClientId=TestClient, EntityPath=TestEntity, Endpoint=TestEndpoint)";
             var logMessage = _loggerProvider.GetAllLogMessages().Single();
             Assert.Equal(LogLevel.Error, logMessage.Level);
             Assert.Same(ex, logMessage.Exception);
@@ -64,7 +64,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
             ExceptionReceivedEventArgs e = new ExceptionReceivedEventArgs(ex, "TestAction", "TestEndpoint", "TestEntity", "TestClient");
             ServiceBusExtensionConfigProvider.LogExceptionReceivedEvent(e, _loggerFactory);
 
-            var expectedMessage = $"MessageReceiver error (Action=TestAction, ClientId=TestClient, EntityPath=TestEntity, Endpoint=TestEndpoint)";
+            var expectedMessage = $"Message processing error (Action=TestAction, ClientId=TestClient, EntityPath=TestEntity, Endpoint=TestEndpoint)";
             var logMessage = _loggerProvider.GetAllLogMessages().Single();
             Assert.Equal(LogLevel.Information, logMessage.Level);
             Assert.Same(ex, logMessage.Exception);
@@ -78,7 +78,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
             ExceptionReceivedEventArgs e = new ExceptionReceivedEventArgs(ex, "TestAction", "TestEndpoint", "TestEntity", "TestClient");
             ServiceBusExtensionConfigProvider.LogExceptionReceivedEvent(e, _loggerFactory);
 
-            var expectedMessage = $"MessageReceiver error (Action=TestAction, ClientId=TestClient, EntityPath=TestEntity, Endpoint=TestEndpoint)";
+            var expectedMessage = $"Message processing error (Action=TestAction, ClientId=TestClient, EntityPath=TestEntity, Endpoint=TestEndpoint)";
             var logMessage = _loggerProvider.GetAllLogMessages().Single();
             Assert.Equal(LogLevel.Error, logMessage.Level);
             Assert.Same(ex, logMessage.Exception);
