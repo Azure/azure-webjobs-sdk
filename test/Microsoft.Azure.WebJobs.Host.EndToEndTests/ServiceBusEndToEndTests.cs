@@ -76,11 +76,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await ServiceBusEndToEndInternal<ServiceBusTestJobs>();
         }
 
-        [Fact]
-        public async Task ServiceBusEndToEndEntityPath()
-        {
-            await ServiceBusEndToEndInternal<ServiceBusTestJobsEntityPath>();
-        }
+        //[Fact]
+        //public async Task ServiceBusEndToEndEntityPath()
+        //{
+        //    await ServiceBusEndToEndInternal<ServiceBusTestJobsEntityPath>();
+        //}
 
         [Fact]
         public async Task ServiceBusBinderTest()
