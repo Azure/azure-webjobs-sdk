@@ -47,9 +47,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// <param name="message">The message to process.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> to use.</param>
         /// <returns>A <see cref="Task"/> that returns true if the message processing should continue, false otherwise.</returns>
-        public virtual async Task<bool> BeginProcessingMessageAsync(Message message, CancellationToken cancellationToken)
+        public virtual Task<bool> BeginProcessingMessageAsync(Message message, CancellationToken cancellationToken)
         {
-            return await Task.FromResult<bool>(true);
+            return Task.FromResult<bool>(true);
         }
 
         /// <summary>
