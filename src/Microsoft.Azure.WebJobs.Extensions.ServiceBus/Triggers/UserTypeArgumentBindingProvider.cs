@@ -11,6 +11,7 @@ using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.ServiceBus;
 using Newtonsoft.Json;
 using Microsoft.Azure.ServiceBus.InteropExtensions;
+using System.Runtime.Serialization;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
 {
@@ -96,7 +97,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
                 }
                 else
                 {
-                    return message.GetBody<TInput>();
+                    try
+                    {
+                        return message.GetBody<TInput>();
+                    }
+                    catch (SerializationException e)
+                    {
+                        throw new InvalidOperationException($"XML formatted message is expected for ContentType='{message.ContentType}'. For JSON formatted message set ContentType='application/json': {e.Message} ");
+                    }
                 }
             }
         }
