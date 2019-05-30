@@ -21,7 +21,7 @@ namespace Microsoft.Extensions.Logging
         public static ILoggingBuilder AddApplicationInsights(
             this ILoggingBuilder builder)
         {
-            return builder.AddApplicationInsights(null);
+            return AddApplicationInsights(builder, null);
         }
 
         /// <summary>
