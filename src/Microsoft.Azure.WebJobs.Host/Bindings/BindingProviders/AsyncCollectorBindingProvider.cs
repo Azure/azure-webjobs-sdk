@@ -91,6 +91,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return null;
             }
 
+            // Check if parameter inplemets IAsyncCollector<>
+            var asyncCollectorInterface = parameterType.GetInterface("IAsyncCollector`1");
+            if (asyncCollectorInterface != null)
+            {
+                var elementType = asyncCollectorInterface.GetGenericArguments()[0];
+                return new CollectorBindingPattern(Mode.IAsyncCollector, elementType);
+            }
+
             if (parameter.IsOut)
             {
                 // How should "out byte[]" bind?
