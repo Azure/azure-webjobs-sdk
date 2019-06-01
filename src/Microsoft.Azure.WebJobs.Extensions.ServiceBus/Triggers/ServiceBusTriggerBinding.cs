@@ -126,6 +126,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             contract.Add("CorrelationId", typeof(string));
             contract.Add("UserProperties", typeof(IDictionary<string, object>));
             contract.Add("MessageReceiver", typeof(MessageReceiver));
+            contract.Add("IMessageReceiver", typeof(MessageReceiver));
 
             if (argumentBindingContract != null)
             {
@@ -157,6 +158,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Triggers
             SafeAddValue(() => bindingData.Add(nameof(value.CorrelationId), value.CorrelationId));
             SafeAddValue(() => bindingData.Add(nameof(value.UserProperties), value.UserProperties));
             SafeAddValue(() => bindingData.Add("MessageReceiver", receiver));
+            SafeAddValue(() => bindingData.Add("IMessageReceiver", receiver));
 
             if (bindingDataFromValueType != null)
             {

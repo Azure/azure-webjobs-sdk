@@ -19,7 +19,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
         {
             IReadOnlyDictionary<string, Type> argumentContract = null;
             var bindingDataContract = ServiceBusTriggerBinding.CreateBindingDataContract(argumentContract);
-            Assert.Equal(14, bindingDataContract.Count);
+            Assert.Equal(15, bindingDataContract.Count);
             Assert.Equal(bindingDataContract["DeliveryCount"], typeof(int));
             Assert.Equal(bindingDataContract["DeadLetterSource"], typeof(string));
             Assert.Equal(bindingDataContract["LockToken"], typeof(string));
@@ -34,6 +34,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
             Assert.Equal(bindingDataContract["CorrelationId"], typeof(string));
             Assert.Equal(bindingDataContract["UserProperties"], typeof(IDictionary<string, object>));
             Assert.Equal(bindingDataContract["MessageReceiver"], typeof(MessageReceiver));
+            Assert.Equal(bindingDataContract["IMessageReceiver"], typeof(MessageReceiver));
 
             // verify that argument binding values override built ins
             argumentContract = new Dictionary<string, Type>
@@ -42,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
                 { "NewProperty", typeof(decimal) }
             };
             bindingDataContract = ServiceBusTriggerBinding.CreateBindingDataContract(argumentContract);
-            Assert.Equal(15, bindingDataContract.Count);
+            Assert.Equal(16, bindingDataContract.Count);
             Assert.Equal(bindingDataContract["DeliveryCount"], typeof(string));
             Assert.Equal(bindingDataContract["NewProperty"], typeof(decimal));
         }
@@ -68,7 +69,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
 
             var messageReceiver = new MessageReceiver(config.ConnectionString, "test");
             var bindingData = ServiceBusTriggerBinding.CreateBindingData(message, messageReceiver, valueBindingData);
-            Assert.Equal(9, bindingData.Count);
+            Assert.Equal(10, bindingData.Count);
             Assert.Equal(message.ReplyTo, bindingData["ReplyTo"]);
             Assert.Equal(string.Empty, bindingData["lockToken"]);
             Assert.Equal(message.To, bindingData["To"]);
@@ -78,6 +79,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
             Assert.Equal(message.CorrelationId, bindingData["CorrelationId"]);
             Assert.Same(message.UserProperties, bindingData["UserProperties"]);
             Assert.Same(messageReceiver, bindingData["MessageReceiver"]);
+            Assert.Same(messageReceiver, bindingData["IMessageReceiver"]);
 
             // verify that value binding data overrides built ins
             valueBindingData = new Dictionary<string, object>
@@ -86,7 +88,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
                 { "NewProperty", 123 }
             };
             bindingData = ServiceBusTriggerBinding.CreateBindingData(message, messageReceiver, valueBindingData);
-            Assert.Equal(10, bindingData.Count);
+            Assert.Equal(11, bindingData.Count);
             Assert.Equal("override", bindingData["ReplyTo"]);
             Assert.Equal(123, bindingData["NewProperty"]);
         }

@@ -4,7 +4,6 @@
 using System;
 using System.Reflection;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Converters;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings.Data
 {
@@ -24,7 +23,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings.Data
                 throw new ArgumentNullException("parameter");
             }
 
-            if (parameter.ParameterType != typeof(T))
+            if (parameter.ParameterType != typeof(T)
+                && !parameter.ParameterType.IsAssignableFrom(typeof(T)))
             {
                 return null;
             }
