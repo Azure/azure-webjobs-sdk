@@ -47,14 +47,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Bindings
             Assert.Equal(bindingDataContract["NewProperty"], typeof(decimal));
         }
 
-        [Fact]
-        public void CreateBindingData_ReturnsExpectedValue()
+        [Theory]
+        [InlineData("application/json")]
+        [InlineData("text/plain")]
+        public void CreateBindingData_ReturnsExpectedValue(string contentType)
         {
             Message message = new Message(Encoding.UTF8.GetBytes("Test Message"))
             {
                 ReplyTo = "test-queue",
                 To = "test",
-                ContentType = "application/json",
+                ContentType = contentType,
                 Label = "test label",
                 CorrelationId = Guid.NewGuid().ToString(),
             };
