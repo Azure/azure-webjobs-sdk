@@ -296,7 +296,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "{",
                     "  \"BatchSize\": 16",
                     "  \"MaxDequeueCount\": 5,",
-                    "  \"MaxPollingInterval\": \"00:00:02\",",
+                    "  \"MaxPollingInterval\": \"00:01:00\",",
                     "  \"NewBatchThreshold\": 8,",
                     "  \"VisibilityTimeout\": \"00:00:00\"",
                     "}",
@@ -309,9 +309,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "      \"MaxConcurrentCalls\": 16",
                     "  }",
                     "  \"SessionHandlerOptions\": {",
-                    "      \"MaxAutoRenewDuration\": 00:01:00,",
-                    "      \"MessageWaitTimeout\": \"00:05:00\",",
-                    "      \"MaxConcurrentSessions\": 16",
+                    "      \"MaxAutoRenewDuration\": \"00:05:00\",",
+                    "      \"MessageWaitTimeout\": \"00:01:00\",",
+                    "      \"MaxConcurrentSessions\": 2000",
                     "      \"AutoComplete\": true",
                     "  }",
                     "}",
@@ -325,7 +325,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "}",
                 }.OrderBy(p => p).ToArray();
 
-                Action<string>[] inspectors = expectedOutputLines.Select<string, Action<string>>(p => (string m) => m.StartsWith(p)).ToArray();
+                Action<string>[] inspectors = expectedOutputLines.Select<string, Action<string>>(p => (string m) =>
+                {
+                    string mString = m.Replace(" ", string.Empty);
+                    string pString = p.Replace(" ", string.Empty);
+                    Assert.True(mString.StartsWith(pString) || pString.StartsWith(mString));
+                }).ToArray();
                 Assert.Collection(consoleOutputLines, inspectors);
 
                 // Verify that trigger details are properly formatted
