@@ -157,11 +157,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         private ClientEntity GetOrAddClientEntity(string entityPath, string connectionString)
         {
             string cacheKey = $"{entityPath}-{connectionString}";
-            string[] arr = entityPath.Split('/');
-            if (arr.Length > 1)
+            string[] arr = entityPath.Split(new string[] { "/Subscriptions/" }, StringSplitOptions.None);
+            if (arr.Length == 2)
             {
                 // entityPath for a subscription is "{TopicName}/Subscriptions/{SubscriptionName}"
-                return _clientEntityCache.GetOrAdd(cacheKey, new SubscriptionClient(connectionString, arr[0], arr[2])
+                return _clientEntityCache.GetOrAdd(cacheKey, new SubscriptionClient(connectionString, arr[0], arr[1])
                 {
                     PrefetchCount = _options.PrefetchCount
                 });
