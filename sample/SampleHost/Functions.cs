@@ -14,70 +14,60 @@ namespace SampleHost
     [ErrorHandler]
     public class Functions
     {
+        private readonly ISampleServiceA _sampleServiceA;
+        private readonly ISampleServiceB _sampleServiceB;
 
-        [FunctionName("Function1")]
-        public static void Run(
-            [ServiceBusTrigger("yuc.youniflow/process_queue_session", Connection = "AzureWebJobsServiceBus", IsSessionsEnabled=true)]
-            string myQueueItem,
-            ILogger log)
+        public Functions(ISampleServiceA sampleServiceA, ISampleServiceB sampleServiceB)
         {
-            log.LogInformation($"C# ServiceBus queue trigger function processed message: {myQueueItem}");
+            _sampleServiceA = sampleServiceA;
+            _sampleServiceB = sampleServiceB;
         }
 
-        //private readonly ISampleServiceA _sampleServiceA;
-        //private readonly ISampleServiceB _sampleServiceB;
+        [Singleton]
+        public void BlobTrigger(
+            [BlobTrigger("test")] string blob, ILogger logger)
+        {
+            _sampleServiceB.DoIt();
+            logger.LogInformation("Processed blob: " + blob);
+        }
 
-        //public Functions(ISampleServiceA sampleServiceA, ISampleServiceB sampleServiceB)
-        //{
-        //    _sampleServiceA = sampleServiceA;
-        //    _sampleServiceB = sampleServiceB;
-        //}
+        public void BlobPoisonBlobHandler(
+            [QueueTrigger("webjobs-blobtrigger-poison")] JObject blobInfo, ILogger logger)
+        {
+            string container = (string)blobInfo["ContainerName"];
+            string blobName = (string)blobInfo["BlobName"];
 
-        //[Singleton]
-        //public void BlobTrigger(
-        //    [BlobTrigger("test")] string blob, ILogger logger)
-        //{
-        //    _sampleServiceB.DoIt();
-        //    logger.LogInformation("Processed blob: " + blob);
-        //}
+            logger.LogInformation($"Poison blob: {container}/{blobName}");
+        }
 
-        //public void BlobPoisonBlobHandler(
-        //    [QueueTrigger("webjobs-blobtrigger-poison")] JObject blobInfo, ILogger logger)
-        //{
-        //    string container = (string)blobInfo["ContainerName"];
-        //    string blobName = (string)blobInfo["BlobName"];
+        [WorkItemValidator]
+        public void ProcessWorkItem(
+            [QueueTrigger("test")] WorkItem workItem, ILogger logger)
+        {
+            _sampleServiceA.DoIt();
+            logger.LogInformation($"Processed work item {workItem.ID}");
+        }
 
-        //    logger.LogInformation($"Poison blob: {container}/{blobName}");
-        //}
+        public async Task ProcessWorkItem_ServiceBus(
+            [ServiceBusTrigger("test-items")] WorkItem item,
+            string messageId,
+            int deliveryCount,
+            ILogger log)
+        {
+            log.LogInformation($"Processing ServiceBus message (Id={messageId}, DeliveryCount={deliveryCount})");
 
-        //[WorkItemValidator]
-        //public void ProcessWorkItem(
-        //    [QueueTrigger("test")] WorkItem workItem, ILogger logger)
-        //{
-        //    _sampleServiceA.DoIt();
-        //    logger.LogInformation($"Processed work item {workItem.ID}");
-        //}
+            await Task.Delay(1000);
 
-        //public async Task ProcessWorkItem_ServiceBus(
-        //    [ServiceBusTrigger("test-items")] WorkItem item,
-        //    string messageId,
-        //    int deliveryCount,
-        //    ILogger log)
-        //{
-        //    log.LogInformation($"Processing ServiceBus message (Id={messageId}, DeliveryCount={deliveryCount})");
+            log.LogInformation($"Message complete (Id={messageId})");
+        }
 
-        //    await Task.Delay(1000);
-
-        //    log.LogInformation($"Message complete (Id={messageId})");
-        //}
-
-        //public void ProcessEvents([EventHubTrigger("testhub2", Connection = "TestEventHubConnection")] EventData[] events,
-        //    ILogger log)
-        //{
-        //    foreach (var evt in events)
-        //    {
-        //        log.LogInformation($"Event processed (Offset={evt.SystemProperties.Offset}, SequenceNumber={evt.SystemProperties.SequenceNumber})");
-        //    }
-        //}
+        public void ProcessEvents([EventHubTrigger("testhub2", Connection = "TestEventHubConnection")] EventData[] events,
+            ILogger log)
+        {
+            foreach (var evt in events)
+            {
+                log.LogInformation($"Event processed (Offset={evt.SystemProperties.Offset}, SequenceNumber={evt.SystemProperties.SequenceNumber})");
+            }
+        }
     }
 }
