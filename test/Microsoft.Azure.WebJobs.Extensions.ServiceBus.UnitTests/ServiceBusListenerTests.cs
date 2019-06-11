@@ -17,7 +17,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
 {
     public class ServiceBusListenerTests
     {
-        //private readonly MessagingFactory _messagingFactory;
         private readonly ServiceBusListener _listener;
         private readonly Mock<ITriggeredFunctionExecutor> _mockExecutor;
         private readonly Mock<MessagingProvider> _mockMessagingProvider;
@@ -27,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
 
         public ServiceBusListenerTests()
         {
-            _mockExecutor = new Mock<ITriggeredFunctionExecutor>(MockBehavior.Strict);
+            _mockExecutor = new Mock<ITriggeredFunctionExecutor>(MockBehavior.Loose);
 
             MessageHandlerOptions messageOptions = new MessageHandlerOptions(ExceptionReceivedHandler);
             MessageReceiver messageReceiver = new MessageReceiver(_testConnection, _entityPath);
@@ -42,12 +41,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
             _mockMessagingProvider.Setup(p => p.CreateMessageProcessor(_entityPath, _testConnection))
                 .Returns(_mockMessageProcessor.Object);
 
-            ServiceBusTriggerExecutor triggerExecutor = new ServiceBusTriggerExecutor(_mockExecutor.Object);
             var mockServiceBusAccount = new Mock<ServiceBusAccount>(MockBehavior.Strict);
             mockServiceBusAccount.Setup(a => a.ConnectionString).Returns(_testConnection);
             mockServiceBusAccount.Setup(a => a.EntityPath).Returns(_entityPath);
 
-            _listener = new ServiceBusListener(triggerExecutor, config, mockServiceBusAccount.Object, _mockMessagingProvider.Object);
+            _listener = new ServiceBusListener(_mockExecutor.Object, config, mockServiceBusAccount.Object, _mockMessagingProvider.Object, false);
         }
 
         [Fact]
@@ -66,7 +64,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Listeners
             _mockMessageProcessor.Setup(p => p.BeginProcessingMessageAsync(message, cancellationToken)).ReturnsAsync(true);
 
             FunctionResult result = new FunctionResult(true);
-            _mockExecutor.Setup(p => p.TryExecuteAsync(It.Is<TriggeredFunctionData>(q => q.TriggerValue == message), cancellationToken)).ReturnsAsync(result);
+            _mockExecutor.Setup(p => p.TryExecuteAsync(It.IsAny<TriggeredFunctionData>(), cancellationToken)).ReturnsAsync(result);
 
             _mockMessageProcessor.Setup(p => p.CompleteProcessingMessageAsync(message, result, cancellationToken)).Returns(Task.FromResult(0));
 

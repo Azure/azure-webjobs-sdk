@@ -10,11 +10,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Listeners
     {
         private const string ParentGuidFieldName = "$AzureWebJobsParentId";
 
-        public static void EncodePayload(Guid functionOwner, Message msg)
-        {
-            msg.UserProperties[ParentGuidFieldName] = functionOwner.ToString();
-        }
-
         public static Guid? GetOwner(Message msg)
         {
             object parent;

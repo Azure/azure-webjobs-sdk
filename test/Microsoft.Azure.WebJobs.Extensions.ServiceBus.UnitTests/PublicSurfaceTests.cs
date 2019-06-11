@@ -15,6 +15,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             var expected = new[]
             {
+                "BatchOptions",
                 "Constants",
                 "EntityType",
                 "MessageProcessor",

@@ -32,7 +32,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             ITriggerBindingStrategy<TMessage, TTriggerValue> bindingStrategy,
             ParameterInfo parameter,
             IConverterManager converterManager,
-            Func<ListenerFactoryContext, bool, Task<IListener>> createListener)
+            Func<ListenerFactoryContext, bool, Task<IListener>> createListener,
+            ParameterDescriptor parameterDescriptor = null)
         {
             if (bindingStrategy == null)
             {
@@ -46,14 +47,17 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             bool singleDispatch;
             var argumentBinding = BindingFactoryHelpers.GetTriggerArgumentBinding(bindingStrategy, parameter, converterManager, out singleDispatch);
 
-            var parameterDescriptor = new ParameterDescriptor
+            if (parameterDescriptor == null)
             {
-                Name = parameter.Name,
-                DisplayHints = new ParameterDisplayHints
+                parameterDescriptor = new ParameterDescriptor
                 {
-                    Description = singleDispatch ? "message" : "messages"
-                }
-            };
+                    Name = parameter.Name,
+                    DisplayHints = new ParameterDisplayHints
+                    {
+                        Description = singleDispatch ? "message" : "messages"
+                    }
+                };
+            }
 
             ITriggerBinding binding = new StrategyTriggerBinding<TMessage, TTriggerValue>(
                 bindingStrategy, argumentBinding, createListener, parameterDescriptor, singleDispatch);

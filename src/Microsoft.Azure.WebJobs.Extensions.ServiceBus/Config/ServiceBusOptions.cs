@@ -29,6 +29,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             };
 
             SessionHandlerOptions = new SessionHandlerOptions(ExceptionReceivedHandler);
+
+            BatchOptions = new BatchOptions()
+            {
+                MaxMessageCount = 100,
+                OperationTimeout = TimeSpan.FromSeconds(5),
+                DelayBetweenOperations = TimeSpan.FromSeconds(2)
+            };
         }
 
         /// <summary>
@@ -47,6 +54,13 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         /// <see cref="ClientEntity"/>s.
         /// </summary>
         public SessionHandlerOptions SessionHandlerOptions { get; set; }
+
+
+        /// <summary>
+        /// Gets or sets the default <see cref="Azure.ServiceBus.BatchOptions"/> that will be used by
+        /// <see cref="ClientEntity"/>s.
+        /// </summary>
+        public BatchOptions BatchOptions { get; set; }
 
         /// <summary>
         /// Gets or sets the default PrefetchCount that will be used by <see cref="MessageReceiver"/>s.
@@ -80,12 +94,25 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
                 };
             }
 
+            JObject batchOptions = null;
+            if (BatchOptions != null)
+            {
+                batchOptions = new JObject
+                {
+                    { nameof(BatchOptions.DelayBetweenOperations), BatchOptions.DelayBetweenOperations },
+                    { nameof(BatchOptions.MaxMessageCount), BatchOptions.MaxMessageCount },
+                    { nameof(BatchOptions.OperationTimeout), BatchOptions.OperationTimeout },
+                };
+            }
+
+
             // Do not include ConnectionString in loggable options.
             JObject options = new JObject
             {
                 { nameof(PrefetchCount), PrefetchCount },
                 { nameof(MessageHandlerOptions), messageHandlerOptions },
-                { nameof(SessionHandlerOptions), sessionHandlerOptions }
+                { nameof(SessionHandlerOptions), sessionHandlerOptions },
+                { nameof(BatchOptions), batchOptions}
             };
 
             return options.ToString(Formatting.Indented);
@@ -97,5 +124,14 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
 
             return Task.CompletedTask;
         }
+    }
+
+    public class BatchOptions
+    {
+        public int MaxMessageCount { get; set; }
+
+        public TimeSpan OperationTimeout { get; set; }
+
+        public TimeSpan DelayBetweenOperations { get; set; }
     }
 }

@@ -18,7 +18,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="EventHubTests.cs" />
-    <Compile Remove="Listeners\EventHubListenerTests.cs" />
   </ItemGroup>
 
   <ItemGroup>

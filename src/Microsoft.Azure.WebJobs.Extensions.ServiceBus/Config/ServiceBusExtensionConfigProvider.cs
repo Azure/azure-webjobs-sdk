@@ -2,8 +2,14 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Azure.ServiceBus;
+using Microsoft.Azure.ServiceBus.Core;
 using Microsoft.Azure.WebJobs.Description;
+using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.ServiceBus.Bindings;
@@ -12,6 +18,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Config
 {
@@ -26,6 +33,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
         private readonly ILoggerFactory _loggerFactory;
         private readonly ServiceBusOptions _options;
         private readonly MessagingProvider _messagingProvider;
+        private readonly IConverterManager _converterManager;
 
         /// <summary>
         /// Creates a new <see cref="ServiceBusExtensionConfigProvider"/> instance.
@@ -35,13 +43,15 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
             MessagingProvider messagingProvider,
             INameResolver nameResolver,
             IConfiguration configuration,
-            ILoggerFactory loggerFactory)
+            ILoggerFactory loggerFactory,
+            IConverterManager converterManager)
         {
             _options = options.Value;
             _messagingProvider = messagingProvider;
             _nameResolver = nameResolver;
             _configuration = configuration;
             _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+            _converterManager = converterManager;
         }
 
         /// <summary>
@@ -70,13 +80,23 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
                 LogExceptionReceivedEvent(e, _loggerFactory);
             };
 
+            context
+                .AddConverter<string, Message>(ConvertString2Message)
+                .AddConverter<Message, string>(ConvertMessage2String)
+                .AddConverter<byte[], Message>(ConvertBytes2Message)
+                .AddConverter<Message, byte[]>(ConvertMessage2Bytes)
+                .AddOpenConverter<OpenType.Poco, Message>(ConvertPocoToMesage);
+
             // register our trigger binding provider
-            ServiceBusTriggerAttributeBindingProvider triggerBindingProvider = new ServiceBusTriggerAttributeBindingProvider(_nameResolver, _options, _messagingProvider, _configuration);
+            ServiceBusTriggerAttributeBindingProvider triggerBindingProvider = new ServiceBusTriggerAttributeBindingProvider(_nameResolver, _options, _messagingProvider, _configuration, _converterManager);
             context.AddBindingRule<ServiceBusTriggerAttribute>().BindToTrigger(triggerBindingProvider);
 
-            // register our binding provider
-            ServiceBusAttributeBindingProvider bindingProvider = new ServiceBusAttributeBindingProvider(_nameResolver, _options, _configuration, _messagingProvider);
-            context.AddBindingRule<ServiceBusAttribute>().Bind(bindingProvider);
+            // register our output binding provider
+            context.AddBindingRule<ServiceBusAttribute>()
+                .BindToCollector(GetBusAsyncCollector);
+
+            // register MessageSender output binding
+            context.AddBindingRule<ServiceBusAttribute>().BindToValueProvider(GetMessageSender);
         }
 
         internal static void LogExceptionReceivedEvent(ExceptionReceivedEventArgs e, ILoggerFactory loggerFactory)
@@ -96,6 +116,40 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
             }
         }
 
+        private ServiceBusAsyncCollector GetBusAsyncCollector(ServiceBusAttribute attribute)
+        {
+            ServiceBusAccount account = GetServiceBusAccount(attribute);
+            MessageSender messageSender = _messagingProvider.CreateMessageSender(account.EntityPath, account.ConnectionString);
+            return new ServiceBusAsyncCollector(messageSender);
+        }
+
+        private Task<IValueBinder> GetMessageSender(ServiceBusAttribute attribute, Type type)
+        {
+            ServiceBusAccount account = GetServiceBusAccount(attribute);
+            MessageSender messageSender = _messagingProvider.CreateMessageSender(account.EntityPath, account.ConnectionString);
+            MessageSenderBinder binder = new MessageSenderBinder(messageSender, messageSender.GetType());
+            return Task.FromResult(binder as IValueBinder);
+        }
+
+        private ServiceBusAccount GetServiceBusAccount(ServiceBusAttribute attribute)
+        {
+            string queueOrTopicName = Resolve(attribute.QueueOrTopicName);
+            attribute.Connection = Resolve(attribute.Connection);
+            ServiceBusAccount account = new ServiceBusAccount(_options, _configuration, queueOrTopicName, attribute);
+
+            return account;
+        }
+
+        private string Resolve(string queueName)
+        {
+            if (_nameResolver == null)
+            {
+                return queueName;
+            }
+
+            return _nameResolver.ResolveWholeString(queueName);
+        }
+
         private static LogLevel GetLogLevel(Exception ex)
         {
             var sbex = ex as ServiceBusException;
@@ -111,6 +165,43 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Config
                 // of them, but we don't treat them as actual errors
                 return LogLevel.Information;
             }
+        }
+
+        private static string ConvertMessage2String(Message x)
+            => Encoding.UTF8.GetString(ConvertMessage2Bytes(x));
+
+        private static Message ConvertBytes2Message(byte[] input)
+            => new Message(input);
+
+        private static byte[] ConvertMessage2Bytes(Message input)
+            => input.Body;
+
+        private static Message ConvertString2Message(string input)
+            => ConvertBytes2Message(Encoding.UTF8.GetBytes(input));
+
+        private static Task<object> ConvertPocoToMesage(object arg, Attribute attrResolved, ValueBindingContext context)
+        {
+            return Task.FromResult<object>(ConvertString2Message(JsonConvert.SerializeObject(arg)));
+        }
+
+        private sealed class MessageSenderBinder : IValueBinder
+        {
+            private readonly object _messageSender;
+            private readonly Type _type;
+
+            public MessageSenderBinder(object messageSender, Type type)
+            {
+                _messageSender = messageSender;
+                _type = type;
+            }
+
+            public Type Type => _type;
+
+            public Task<object> GetValueAsync() => Task.FromResult(_messageSender);
+
+            public string ToInvokeString() => null;
+
+            public Task SetValueAsync(object value, CancellationToken cancellationToken) => Task.CompletedTask;
         }
     }
 }
