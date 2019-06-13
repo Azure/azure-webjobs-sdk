@@ -51,7 +51,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             var builder = new HostBuilder()
                 .ConfigureLogging(b =>
                 {
-                    b.AddApplicationInsights(o => o.InstrumentationKey = "some key");
+                    b.AddApplicationInsightsWebJobs(o => o.InstrumentationKey = "some key");
                 });
 
             using (var host = builder.Build())
@@ -122,7 +122,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             using (var host = new HostBuilder()
                 .ConfigureLogging(b =>
                 {
-                    b.AddApplicationInsights(o =>
+                    b.AddApplicationInsightsWebJobs(o =>
                     {
                         o.InstrumentationKey = "some key";
                         o.SamplingSettings = samplingSettings;
@@ -148,7 +148,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             using (var host = new HostBuilder()
                 .ConfigureLogging(b =>
                 {
-                    b.AddApplicationInsights(o =>
+                    b.AddApplicationInsightsWebJobs(o =>
                     {
                         o.InstrumentationKey = "some key";
                     });
@@ -172,7 +172,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             using (var host = new HostBuilder()
                 .ConfigureLogging(b =>
                 {
-                    b.AddApplicationInsights(o =>
+                    b.AddApplicationInsightsWebJobs(o =>
                     {
                         o.InstrumentationKey = "some key";
                         o.HttpAutoCollectionOptions.EnableW3CDistributedTracing = false;
@@ -198,7 +198,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             using (var host = new HostBuilder()
                 .ConfigureLogging(b =>
                 {
-                    b.AddApplicationInsights(o =>
+                    b.AddApplicationInsightsWebJobs(o =>
                     {
                         o.InstrumentationKey = "some key";
                         o.HttpAutoCollectionOptions.EnableHttpTriggerExtendedInfoCollection = false;
@@ -222,7 +222,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             using (var host = new HostBuilder()
                 .ConfigureLogging(b =>
                 {
-                    b.AddApplicationInsights(o =>
+                    b.AddApplicationInsightsWebJobs(o =>
                     {
                         o.InstrumentationKey = "some key";
                         o.EnablePerformanceCountersCollection = false;
@@ -241,7 +241,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             using (var host = new HostBuilder()
                 .ConfigureLogging(b =>
                 {
-                    b.AddApplicationInsights(o =>
+                    b.AddApplicationInsightsWebJobs(o =>
                     {
                         o.InstrumentationKey = "some key";
                         o.QuickPulseAuthenticationApiKey = "some auth key";
@@ -262,7 +262,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             using (var host = new HostBuilder()
                 .ConfigureLogging(b =>
                 {
-                    b.AddApplicationInsights(o =>
+                    b.AddApplicationInsightsWebJobs(o =>
                     {
                         o.InstrumentationKey = "some key";
                         o.SamplingSettings = samplingSettings;
@@ -287,7 +287,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             using (var host = new HostBuilder()
                 .ConfigureLogging(b =>
                 {
-                    b.AddApplicationInsights(o =>
+                    b.AddApplicationInsightsWebJobs(o =>
                     {
                         o.InstrumentationKey = "some key";
                         o.SnapshotConfiguration = snapshotConfiguration;
@@ -309,7 +309,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             using (var host = new HostBuilder()
                 .ConfigureLogging(b =>
                 {
-                    b.AddApplicationInsights(o =>
+                    b.AddApplicationInsightsWebJobs(o =>
                     {
                         o.InstrumentationKey = "some key";
                     });
@@ -336,7 +336,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             using (new HostBuilder()
                 .ConfigureLogging(b =>
                 {
-                    b.AddApplicationInsights(o =>
+                    b.AddApplicationInsightsWebJobs(o =>
                     {
                         o.InstrumentationKey = "some key";
                     });
@@ -359,7 +359,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             using (var _ = new HostBuilder()
                 .ConfigureLogging(b =>
                 {
-                    b.AddApplicationInsights(o =>
+                    b.AddApplicationInsightsWebJobs(o =>
                     {
                         o.InstrumentationKey = "some key";
                     });
@@ -372,7 +372,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             using (var host2 = new HostBuilder()
                 .ConfigureLogging(b =>
                 {
-                    b.AddApplicationInsights(o =>
+                    b.AddApplicationInsightsWebJobs(o =>
                     {
                         o.InstrumentationKey = "some key";
                     });
@@ -511,7 +511,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 .ConfigureWebJobs()
                 .ConfigureLogging((c, b) =>
                 {
-                    b.AddApplicationInsights(o =>
+                    b.AddApplicationInsightsWebJobs(o =>
                     {
                         o.InstrumentationKey = "some key";
                     });

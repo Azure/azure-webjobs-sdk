@@ -81,7 +81,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 .ConfigureLogging(b =>
                 {
                     b.SetMinimumLevel(minLevel);
-                    b.AddApplicationInsights(o =>
+                    b.AddApplicationInsightsWebJobs(o =>
                     {
                         o.InstrumentationKey = _mockApplicationInsightsKey;
                         o.HttpAutoCollectionOptions = httpOptions;

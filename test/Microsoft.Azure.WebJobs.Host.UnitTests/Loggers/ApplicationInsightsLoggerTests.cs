@@ -61,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 .ConfigureLogging(b =>
                 {
                     b.SetMinimumLevel(LogLevel.Trace);
-                    b.AddApplicationInsights(o =>
+                    b.AddApplicationInsightsWebJobs(o =>
                     {
                         o.InstrumentationKey = "some key";
                     });
