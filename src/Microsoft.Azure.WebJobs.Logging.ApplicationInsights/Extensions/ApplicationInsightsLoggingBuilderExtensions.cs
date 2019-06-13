@@ -15,19 +15,34 @@ namespace Microsoft.Extensions.Logging
     /// </summary>
     public static class ApplicationInsightsLoggingBuilderExtensions
     {
-        /// <summary>
-        /// Registers Application Insights and <see cref="ApplicationInsightsLoggerProvider"/> with an <see cref="ILoggingBuilder"/>.
-        /// </summary>        
+        [Obsolete("Use " + nameof(AddApplicationInsightsWebJobs) + " instead.", false)]
         public static ILoggingBuilder AddApplicationInsights(
             this ILoggingBuilder builder)
         {
-            return AddApplicationInsights(builder, null);
+            return AddApplicationInsightsWebJobs(builder);
+        }
+
+        [Obsolete("Use " + nameof(AddApplicationInsightsWebJobs) + " instead.", false)]
+        public static ILoggingBuilder AddApplicationInsights(
+           this ILoggingBuilder builder,
+           Action<ApplicationInsightsLoggerOptions> configure)
+        {
+            return AddApplicationInsightsWebJobs(builder, configure);
         }
 
         /// <summary>
         /// Registers Application Insights and <see cref="ApplicationInsightsLoggerProvider"/> with an <see cref="ILoggingBuilder"/>.
         /// </summary>        
-        public static ILoggingBuilder AddApplicationInsights(
+        public static ILoggingBuilder AddApplicationInsightsWebJobs(
+            this ILoggingBuilder builder)
+        {
+            return builder.AddApplicationInsightsWebJobs(null);
+        }
+
+        /// <summary>
+        /// Registers Application Insights and <see cref="ApplicationInsightsLoggerProvider"/> with an <see cref="ILoggingBuilder"/>.
+        /// </summary>        
+        public static ILoggingBuilder AddApplicationInsightsWebJobs(
             this ILoggingBuilder builder,
             Action<ApplicationInsightsLoggerOptions> configure)
         {

@@ -294,7 +294,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 .ConfigureLogging(b =>
                 {
                     b.SetMinimumLevel(LogLevel.Information);
-                    b.AddApplicationInsights(o => o.InstrumentationKey = _mockApplicationInsightsKey);
+                    b.AddApplicationInsightsWebJobs(o => o.InstrumentationKey = _mockApplicationInsightsKey);
                 })
                 .Build();
 
