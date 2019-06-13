@@ -59,9 +59,6 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
         {
             get
             {
-                if (string.IsNullOrEmpty(_connectionString))
-                {
-                }
                 return _connectionString;
             }
         }

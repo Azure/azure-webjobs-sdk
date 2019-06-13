@@ -11,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
     // This gets converted to the user type (Message, string, poco, etc) 
     internal sealed class ServiceBusTriggerInput
     {
-        // If != -1, then only process a single event in this batch. 
+        // If != -1, then only process a single message in this batch. 
         private int _selector = -1;
 
         public MessageReceiver MessageReceiver { get; set; }

@@ -125,13 +125,4 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             return Task.CompletedTask;
         }
     }
-
-    public class BatchOptions
-    {
-        public int MaxMessageCount { get; set; }
-
-        public TimeSpan OperationTimeout { get; set; }
-
-        public TimeSpan DelayBetweenOperations { get; set; }
-    }
 }

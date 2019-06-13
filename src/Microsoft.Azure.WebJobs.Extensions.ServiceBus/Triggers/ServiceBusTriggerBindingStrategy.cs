@@ -11,7 +11,7 @@ using Microsoft.Azure.WebJobs.Host.Triggers;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus
 {
-    // Binding strategy for an event hub triggers. 
+    // Binding strategy for an service bus triggers. 
     internal class ServiceBusTriggerBindingStrategy : ITriggerBindingStrategy<Message, ServiceBusTriggerInput>
     {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
@@ -20,11 +20,11 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             byte[] bytes = Encoding.UTF8.GetBytes(input);
             Message message = new Message(bytes);
 
-            // Return a single event. Doesn't support multiple dispatch 
+            // Return a single message. Doesn't support multiple dispatch 
             return ServiceBusTriggerInput.New(message);
         }
 
-        // Single instance: Core --> EventData
+        // Single instance: Core --> Message
         public Message BindSingle(ServiceBusTriggerInput value, ValueBindingContext context)
         {
             if (value == null)
@@ -114,19 +114,19 @@ namespace Microsoft.Azure.WebJobs.ServiceBus
             var correlationIds = new string[length];
             var userProperties = new IDictionary<string, object>[length];
 
-            SafeAddValue(() => bindingData.Add("DeliveryCount", deliveryCounts));
-            SafeAddValue(() => bindingData.Add("DeadLetterSource", deadLetterSources));
-            SafeAddValue(() => bindingData.Add("LockToken", lockTokens));
-            SafeAddValue(() => bindingData.Add("ExpiresAtUtc", expiresAtUtcs));
-            SafeAddValue(() => bindingData.Add("EnqueuedTimeUtc", enqueuedTimeUtcs));
-            SafeAddValue(() => bindingData.Add("MessageId", messageIds));
-            SafeAddValue(() => bindingData.Add("ContentType", contentTypes));
-            SafeAddValue(() => bindingData.Add("ReplyTo", replyTos));
-            SafeAddValue(() => bindingData.Add("SequenceNumber", sequenceNumbers));
-            SafeAddValue(() => bindingData.Add("To", tos));
-            SafeAddValue(() => bindingData.Add("Label", labels));
-            SafeAddValue(() => bindingData.Add("CorrelationId", correlationIds));
-            SafeAddValue(() => bindingData.Add("UserProperties", userProperties));
+            SafeAddValue(() => bindingData.Add("DeliveryCountArray", deliveryCounts));
+            SafeAddValue(() => bindingData.Add("DeadLetterSourceArray", deadLetterSources));
+            SafeAddValue(() => bindingData.Add("LockTokenArray", lockTokens));
+            SafeAddValue(() => bindingData.Add("ExpiresAtUtcArray", expiresAtUtcs));
+            SafeAddValue(() => bindingData.Add("EnqueuedTimeUtcArray", enqueuedTimeUtcs));
+            SafeAddValue(() => bindingData.Add("MessageIdArray", messageIds));
+            SafeAddValue(() => bindingData.Add("ContentTypeArray", contentTypes));
+            SafeAddValue(() => bindingData.Add("ReplyToArray", replyTos));
+            SafeAddValue(() => bindingData.Add("SequenceNumberArray", sequenceNumbers));
+            SafeAddValue(() => bindingData.Add("ToArray", tos));
+            SafeAddValue(() => bindingData.Add("LabelArray", labels));
+            SafeAddValue(() => bindingData.Add("CorrelationIdArray", correlationIds));
+            SafeAddValue(() => bindingData.Add("UserPropertiesArray", userProperties));
 
             for (int i = 0; i < messages.Length; i++)
             {

@@ -27,7 +27,16 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
                 { $"ConnectionStrings:ServiceBus", "TestConnectionString" },
                 { $"{extensionPath}:MessageHandlerOptions:MaxConcurrentCalls", "123" },
                 { $"{extensionPath}:MessageHandlerOptions:AutoComplete", "false" },
-                { $"{extensionPath}:MessageHandlerOptions:MaxAutoRenewDuration", "00:00:15" }
+                { $"{extensionPath}:MessageHandlerOptions:MaxAutoRenewDuration", "00:00:15" },
+
+                { $"{extensionPath}:SessionHandlerOptions:AutoComplete", "true" },
+                { $"{extensionPath}:SessionHandlerOptions:MaxAutoRenewDuration", "00:00:15" },
+                { $"{extensionPath}:SessionHandlerOptions:MaxConcurrentSessions", "15" },
+                { $"{extensionPath}:SessionHandlerOptions:MessageWaitTimeout", "00:00:15" },
+
+                { $"{extensionPath}:BatchOptions:DelayBetweenOperations", "00:00:15" },
+                { $"{extensionPath}:BatchOptions:MaxMessageCount", "15" },
+                { $"{extensionPath}:BatchOptions:OperationTimeout", "00:00:15" }
             };
 
             ServiceBusOptions options = TestHelpers.GetConfiguredOptions<ServiceBusOptions>(b =>
@@ -40,6 +49,15 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Config
             Assert.Equal(123, options.MessageHandlerOptions.MaxConcurrentCalls);
             Assert.Equal(false, options.MessageHandlerOptions.AutoComplete);
             Assert.Equal(TimeSpan.FromSeconds(15), options.MessageHandlerOptions.MaxAutoRenewDuration);
+
+            Assert.Equal(true, options.SessionHandlerOptions.AutoComplete);
+            Assert.Equal(15, options.SessionHandlerOptions.MaxConcurrentSessions);
+            Assert.Equal(TimeSpan.FromSeconds(15), options.SessionHandlerOptions.MaxAutoRenewDuration);
+            Assert.Equal(TimeSpan.FromSeconds(15), options.SessionHandlerOptions.MessageWaitTimeout);
+
+            Assert.Equal(15, options.BatchOptions.MaxMessageCount);
+            Assert.Equal(TimeSpan.FromSeconds(15), options.BatchOptions.DelayBetweenOperations);
+            Assert.Equal(TimeSpan.FromSeconds(15), options.BatchOptions.OperationTimeout);
         }
 
         [Fact]

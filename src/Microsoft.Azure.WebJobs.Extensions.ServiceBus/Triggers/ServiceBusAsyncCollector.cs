@@ -2,8 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.ServiceBus;
@@ -11,6 +9,11 @@ using Microsoft.Azure.ServiceBus.Core;
 
 namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
 {
+    /// <summary>
+    /// Core object to send events to ServiceBus. 
+    /// Any user parameter that sends ServiceBus messages will eventually get bound to this object. 
+    /// Batching is not supported.
+    /// </summary>
     internal class ServiceBusAsyncCollector : IAsyncCollector<Message>
     {
         private MessageSender _messageSender { get; set; }
@@ -21,9 +24,9 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
         }
 
         /// <summary>
-        /// Add an event. 
+        /// Add a message. 
         /// </summary>
-        /// <param name="item">The event to add</param>
+        /// <param name="item">The message to add</param>
         /// <param name="cancellationToken">a cancellation token. </param>
         /// <returns></returns>
         public async Task AddAsync(Message item, CancellationToken cancellationToken = default(CancellationToken))
@@ -39,12 +42,12 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.Bindings
         }
 
         /// <summary>
-        /// synchronously flush events that have been queued up via AddAsync.
+        /// synchronously flush messages that have been queued up via AddAsync.
         /// </summary>
         /// <param name="cancellationToken">a cancellation token</param>
         public Task FlushAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            // Batching not supported. 
+            // Batching is not supported. 
             return Task.FromResult(0);
         }
     }

@@ -18,18 +18,26 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests
                 .Build();
         }
 
-        [Fact]
-        public void GetConnectionString_ReturnsExpectedConnectionString()
+        [Theory]
+        [InlineData(
+            "Endpoint=sb://default.servicebus.windows.net;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=abc123=",
+            "Endpoint=sb://default.servicebus.windows.net;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=abc123=",
+            "entity-name")]
+        [InlineData(
+            "Endpoint=sb://default.servicebus.windows.net;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=abc123=;EntityPath=entity-name-cs",
+            "Endpoint=sb://default.servicebus.windows.net;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=abc123=",
+            "entity-name-cs")]
+        public void GetConnectionString_ReturnsExpectedConnectionString(string connectionStringInitial, string connectionString, string entityName)
         {
-            string defaultConnection = "Endpoint=sb://default.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=abc123=";
             var options = new ServiceBusOptions()
             {
-                ConnectionString = defaultConnection
+                ConnectionString = connectionStringInitial
             };
-            var attribute = new ServiceBusTriggerAttribute("entity-name");
-            var account = new ServiceBusAccount(options, _configuration, "entity-name", attribute);
+            ServiceBusTriggerAttribute attribute = new ServiceBusTriggerAttribute(entityName);
+            var account = new ServiceBusAccount(options, _configuration, entityName, attribute);
 
-            Assert.True(defaultConnection == account.ConnectionString);
+            Assert.Equal(connectionString, account.ConnectionString);
+            Assert.Equal(entityName, account.EntityPath);
         }
 
         [Fact]
