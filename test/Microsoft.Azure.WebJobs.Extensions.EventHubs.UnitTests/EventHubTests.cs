@@ -244,6 +244,8 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
                         { "AzureWebJobs:extensions:EventHubs:EventProcessorOptions:MaxBatchSize", "100" },
                         { "AzureWebJobs:extensions:EventHubs:EventProcessorOptions:PrefetchCount", "200" },
                         { "AzureWebJobs:extensions:EventHubs:BatchCheckpointFrequency", "5" },
+                        { "AzureWebJobs:extensions:EventHubs:PartitionManagerOptions:LeaseDuration", "00:00:31" },
+                        { "AzureWebJobs:extensions:EventHubs:PartitionManagerOptions:RenewInterval", "00:00:21" }
                     });
                 })
                 .Build();
@@ -256,6 +258,8 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             Assert.Equal(100, eventProcessorOptions.MaxBatchSize);
             Assert.Equal(200, eventProcessorOptions.PrefetchCount);
             Assert.Equal(5, options.BatchCheckpointFrequency);
+            Assert.Equal(31, options.PartitionManagerOptions.LeaseDuration.TotalSeconds);
+            Assert.Equal(21, options.PartitionManagerOptions.RenewInterval.TotalSeconds);
         }
 
         internal static PartitionContext GetPartitionContext(string partitionId = null, string eventHubPath = null,
