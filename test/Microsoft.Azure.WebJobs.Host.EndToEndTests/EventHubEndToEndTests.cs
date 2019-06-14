@@ -5,8 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
+using Microsoft.Azure.WebJobs.EventHubs;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -14,62 +16,68 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
-    public class EventHubEndToEndTests : IClassFixture<EventHubEndToEndTests.TestFixture>
+    public class EventHubEndToEndTests
     {
         private const string TestHubName = "webjobstesthub";
-        private const string TestHub2Name = "webjobstesthub2";
-        private const string TestHub2Connection = "AzureWebJobsTestHubConnection2";
+        private const int Timeout = 30000;
+        private static EventWaitHandle _eventWait;
+        private static string _testId;
+        private static List<string> _results;
 
-        public EventHubEndToEndTests(TestFixture fixture)
+        public EventHubEndToEndTests()
         {
-            Fixture = fixture;
-
-            EventHubTestJobs.Result = null;
+            _results = new List<string>();
+            _testId = Guid.NewGuid().ToString();
+            _eventWait = new ManualResetEvent(initialState: false);
         }
-
-        private TestFixture Fixture { get; }
 
         [Fact]
         public async Task EventHub_SingleDispatch()
         {
-            var method = typeof(EventHubTestJobs).GetMethod("SendEvent_TestHub", BindingFlags.Static | BindingFlags.Public);
-            var id = Guid.NewGuid().ToString();
-            EventHubTestJobs.EventId = id;
-            await Fixture.Host.CallAsync(method, new { input = id });
-
-            await TestHelpers.Await(() =>
+            using (JobHost host = BuildHost<EventHubTestSingleDispatchJobs>())
             {
-                return EventHubTestJobs.Result != null;
-            });
+                var method = typeof(EventHubTestSingleDispatchJobs).GetMethod("SendEvent_TestHub", BindingFlags.Static | BindingFlags.Public);
+                var id = Guid.NewGuid().ToString();
+                await host.CallAsync(method, new { input = _testId });
 
-            Assert.Equal(id, EventHubTestJobs.Result);
+                bool result = _eventWait.WaitOne(Timeout);
+                Assert.True(result);
+            }
         }
 
         [Fact]
         public async Task EventHub_MultipleDispatch()
         {
-            // send some events BEFORE starting the host, to ensure
-            // the events are received in batch
-            var method = typeof(EventHubTestJobs).GetMethod("SendEvents_TestHub2", BindingFlags.Static | BindingFlags.Public);
-            var id = Guid.NewGuid().ToString();
-            EventHubTestJobs.EventId = id;
-            int numEvents = 5;
-            await Fixture.Host.CallAsync(method, new { numEvents = numEvents, input = id });
-
-            await TestHelpers.Await(() =>
+            using (JobHost host = BuildHost<EventHubTestMultipleDispatchJobs>())
             {
-                return EventHubTestJobs.Result != null;
-            });
+                // send some events BEFORE starting the host, to ensure
+                // the events are received in batch
+                var method = typeof(EventHubTestMultipleDispatchJobs).GetMethod("SendEvents_TestHub", BindingFlags.Static | BindingFlags.Public);
+                int numEvents = 5;
+                await host.CallAsync(method, new { numEvents = numEvents, input = _testId });
 
-            var eventsProcessed = (string[])EventHubTestJobs.Result;
-            Assert.True(eventsProcessed.Length >= 1);
+                bool result = _eventWait.WaitOne(Timeout);
+                Assert.True(result);
+            }
         }
 
-        public class EventHubTestJobs
+        [Fact]
+        public async Task EventHub_PartitionKey()
         {
-            public static string EventId;
-            public static object Result { get; set; }
+            using (JobHost host = BuildHost<EventHubParitionKeyTestJobs>())
+            {
+                var method = typeof(EventHubParitionKeyTestJobs).GetMethod("SendEvents_TestHub", BindingFlags.Static | BindingFlags.Public);
+                _eventWait = new ManualResetEvent(initialState: false);
+                await host.CallAsync(method, new { input = _testId });
 
+                bool result = _eventWait.WaitOne(Timeout);
+
+                Assert.True(result);
+            }
+        }
+
+        public class EventHubTestSingleDispatchJobs
+        {
             public static void SendEvent_TestHub(string input, [EventHub(TestHubName)] out EventData evt)
             {
                 evt = new EventData(Encoding.UTF8.GetBytes(input));
@@ -77,7 +85,28 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 evt.Properties.Add("TestProp2", "value2");
             }
 
-            public static void SendEvents_TestHub2(int numEvents, string input, [EventHub(TestHub2Name, Connection = TestHub2Connection)] out EventData[] events)
+
+            public static void ProcessSingleEvent([EventHubTrigger(TestHubName)] string evt,
+                       string partitionKey, DateTime enqueuedTimeUtc, IDictionary<string, object> properties,
+                       IDictionary<string, object> systemProperties)
+            {
+                // filter for the ID the current test is using
+                if (evt == _testId)
+                {
+                    Assert.True((DateTime.Now - enqueuedTimeUtc).TotalSeconds < 30);
+
+                    Assert.Equal("value1", properties["TestProp1"]);
+                    Assert.Equal("value2", properties["TestProp2"]);
+
+                    _eventWait.Set();
+                }
+            }
+        }
+
+        public class EventHubTestMultipleDispatchJobs
+        {
+
+            public static void SendEvents_TestHub(int numEvents, string input, [EventHub(TestHubName)] out EventData[] events)
             {
                 events = new EventData[numEvents];
                 for (int i = 0; i < numEvents; i++)
@@ -90,23 +119,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 }
             }
 
-            public static void ProcessSingleEvent([EventHubTrigger(TestHubName)] string evt,
-                string partitionKey, DateTime enqueuedTimeUtc, IDictionary<string, object> properties,
-                IDictionary<string, object> systemProperties)
-            {
-                // filter for the ID the current test is using
-                if (evt == EventId)
-                {
-                    Assert.True((DateTime.Now - enqueuedTimeUtc).TotalSeconds < 30);
-
-                    Assert.Equal("value1", properties["TestProp1"]);
-                    Assert.Equal("value2", properties["TestProp2"]);
-
-                    Result = evt;
-                }
-            }
-
-            public static void ProcessMultipleEvents([EventHubTrigger(TestHub2Name, Connection = TestHub2Connection)] string[] events,
+            public static void ProcessMultipleEvents([EventHubTrigger(TestHubName)] string[] events,
                 string[] partitionKeyArray, DateTime[] enqueuedTimeUtcArray, IDictionary<string, object>[] propertiesArray,
                 IDictionary<string, object>[] systemPropertiesArray)
             {
@@ -121,47 +134,82 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 }
 
                 // filter for the ID the current test is using
-                if (events[0] == EventId)
+                if (events[0] == _testId)
                 {
-                    Result = events;
+                    _results.AddRange(events);
+                    _eventWait.Set();
                 }
             }
         }
 
-        public class TestFixture : IDisposable
+        public class EventHubParitionKeyTestJobs
         {
-            public JobHost Host { get; }
-
-            public TestFixture()
+            public static async Task SendEvents_TestHub(
+                string input,
+                [EventHub(TestHubName)] EventHubClient client)
             {
-                var config = new ConfigurationBuilder()
-                    .AddEnvironmentVariables()
-                    .AddTestSettings()
-                    .Build();
+                List<EventData> list = new List<EventData>();
+                EventData evt = new EventData(Encoding.UTF8.GetBytes(input));
 
-                string connection = config.GetConnectionStringOrSetting("AzureWebJobsTestHubConnection");
-                Assert.True(!string.IsNullOrEmpty(connection), "Required test connection string is missing.");
+                // Send event without PK
+                await client.SendAsync(evt);
 
-                var host = new HostBuilder()
-                    .ConfigureDefaultTestHost<EventHubTestJobs>(b =>
+                // Send event with different PKs
+                for (int i = 0; i < 5; i++)
+                {
+                    evt = new EventData(Encoding.UTF8.GetBytes(input));
+                    await client.SendAsync(evt, "test_pk" + i);
+                }
+            }
+
+            public static void ProcessMultiplePartitionEvents([EventHubTrigger(TestHubName)] EventData[] events)
+            {
+                foreach (EventData eventData in events)
+                {
+                    string message = Encoding.UTF8.GetString(eventData.Body);
+
+                    // filter for the ID the current test is using
+                    if (message == _testId)
                     {
-                        b.AddAzureStorage()
-                        .AddEventHubs(options =>
+                        _results.Add(eventData.SystemProperties.PartitionKey);
+                        _results.Sort();
+
+                        if (_results.Count == 6 && _results[5] == "test_pk4")
                         {
-                            options.AddSender(TestHubName, connection);
-                            options.AddReceiver(TestHubName, connection);
-                        });
-                    })
-                    .Build();
-
-                Host = host.GetJobHost();
-                Host.StartAsync().GetAwaiter().GetResult();
+                            _eventWait.Set();
+                        }
+                    }
+                }
             }
+        }
 
-            public void Dispose()
-            {
-                Host?.Dispose();
-            }
+        private JobHost BuildHost<T>()
+        {
+            JobHost jobHost = null;
+
+            var config = new ConfigurationBuilder()
+                .AddEnvironmentVariables()
+                .AddTestSettings()
+                .Build();
+
+            string connection = config.GetConnectionStringOrSetting("AzureWebJobsTestHubConnection");
+            Assert.True(!string.IsNullOrEmpty(connection), "Required test connection string is missing.");
+
+            var host = new HostBuilder()
+                .ConfigureDefaultTestHost<T>(b =>
+                {
+                    b.AddEventHubs(options =>
+                    {
+                        options.AddSender(TestHubName, connection);
+                        options.AddReceiver(TestHubName, connection);
+                    });
+                })
+                .Build();
+
+            jobHost = host.GetJobHost();
+            jobHost.StartAsync().GetAwaiter().GetResult();
+
+            return jobHost;
         }
     }
 }
