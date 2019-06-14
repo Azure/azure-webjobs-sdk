@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
@@ -35,6 +36,39 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
         [Fact]
         public void ConfigureOptions_AppliesValuesCorrectly()
         {
+            EventHubOptions options = CreateOptions();
+
+            Assert.Equal(123, options.EventProcessorOptions.MaxBatchSize);
+            Assert.Equal(TimeSpan.FromSeconds(33), options.EventProcessorOptions.ReceiveTimeout);
+            Assert.Equal(true, options.EventProcessorOptions.EnableReceiverRuntimeMetric);
+            Assert.Equal(123, options.EventProcessorOptions.PrefetchCount);
+            Assert.Equal(true, options.EventProcessorOptions.InvokeProcessorAfterReceiveTimeout);
+            Assert.Equal(5, options.BatchCheckpointFrequency);
+            Assert.Equal(31, options.PartitionManagerOptions.LeaseDuration.TotalSeconds);
+            Assert.Equal(21, options.PartitionManagerOptions.RenewInterval.TotalSeconds);
+        }
+
+        [Fact]
+        public void ConfigureOptions_Format_Returns_Expected()
+        {
+            EventHubOptions options = CreateOptions();
+
+            string format = options.Format();
+            JObject iObj = JObject.Parse(format);
+            EventHubOptions result = iObj.ToObject<EventHubOptions>();
+
+            Assert.Equal(result.BatchCheckpointFrequency, 5);
+            Assert.Equal(result.EventProcessorOptions.EnableReceiverRuntimeMetric, true);
+            Assert.Equal(result.EventProcessorOptions.InvokeProcessorAfterReceiveTimeout, true);
+            Assert.Equal(result.EventProcessorOptions.MaxBatchSize, 123);
+            Assert.Equal(result.EventProcessorOptions.PrefetchCount, 123);
+            Assert.Equal(result.EventProcessorOptions.ReceiveTimeout, TimeSpan.FromSeconds(33));
+            Assert.Equal(result.PartitionManagerOptions.LeaseDuration, TimeSpan.FromSeconds(31));
+            Assert.Equal(result.PartitionManagerOptions.RenewInterval, TimeSpan.FromSeconds(21));
+        }
+
+        private EventHubOptions CreateOptions()
+        {
             string extensionPath = "AzureWebJobs:Extensions:EventHubs";
             var values = new Dictionary<string, string>
             {
@@ -43,20 +77,15 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
                 { $"{extensionPath}:EventProcessorOptions:EnableReceiverRuntimeMetric", "true" },
                 { $"{extensionPath}:EventProcessorOptions:PrefetchCount", "123" },
                 { $"{extensionPath}:EventProcessorOptions:InvokeProcessorAfterReceiveTimeout", "true" },
-                { $"{extensionPath}:BatchCheckpointFrequency", "5" }
+                { $"{extensionPath}:BatchCheckpointFrequency", "5" },
+                { $"{extensionPath}:PartitionManagerOptions:LeaseDuration", "00:00:31" },
+                { $"{extensionPath}:PartitionManagerOptions:RenewInterval", "00:00:21" }
             };
 
-            EventHubOptions options = TestHelpers.GetConfiguredOptions<EventHubOptions>(b =>
+            return TestHelpers.GetConfiguredOptions<EventHubOptions>(b =>
             {
                 b.AddEventHubs();
             }, values);
-
-            Assert.Equal(123, options.EventProcessorOptions.MaxBatchSize);
-            Assert.Equal(TimeSpan.FromSeconds(33), options.EventProcessorOptions.ReceiveTimeout);
-            Assert.Equal(true, options.EventProcessorOptions.EnableReceiverRuntimeMetric);
-            Assert.Equal(123, options.EventProcessorOptions.PrefetchCount);
-            Assert.Equal(true, options.EventProcessorOptions.InvokeProcessorAfterReceiveTimeout);
-            Assert.Equal(5, options.BatchCheckpointFrequency);
         }
 
         [Fact]

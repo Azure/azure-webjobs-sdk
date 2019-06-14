@@ -37,6 +37,7 @@ namespace Microsoft.Azure.WebJobs.EventHubs
         public EventHubOptions()
         {
             EventProcessorOptions = EventProcessorOptions.DefaultOptions;
+            PartitionManagerOptions = new PartitionManagerOptions();
         }
 
         /// <summary>
@@ -60,6 +61,8 @@ namespace Microsoft.Azure.WebJobs.EventHubs
         }
 
         public EventProcessorOptions EventProcessorOptions { get; }
+
+        public PartitionManagerOptions PartitionManagerOptions { get; }
 
         /// <summary>
         /// Add an existing client for sending messages to an event hub.  Infer the eventHub name from client.path
@@ -255,6 +258,8 @@ namespace Microsoft.Azure.WebJobs.EventHubs
                     leaseContainerName: LeaseContainerName,
                     storageBlobPrefix: blobPrefix);
 
+                host.PartitionManagerOptions = PartitionManagerOptions;
+
                 return host;
             }
             else
@@ -368,10 +373,21 @@ namespace Microsoft.Azure.WebJobs.EventHubs
                 };
             }
 
+            JObject partitionManagerOptions = null;
+            if (PartitionManagerOptions != null)
+            {
+                partitionManagerOptions = new JObject
+                {
+                    { nameof(PartitionManagerOptions.LeaseDuration), PartitionManagerOptions.LeaseDuration },
+                    { nameof(PartitionManagerOptions.RenewInterval), PartitionManagerOptions.RenewInterval },
+                };
+            }
+
             JObject options = new JObject
             {
                 { nameof(BatchCheckpointFrequency), BatchCheckpointFrequency },
-                { nameof(EventProcessorOptions), eventProcessorOptions }
+                { nameof(EventProcessorOptions), eventProcessorOptions },
+                { nameof(PartitionManagerOptions), partitionManagerOptions }
             };
 
             return options.ToString(Formatting.Indented);
