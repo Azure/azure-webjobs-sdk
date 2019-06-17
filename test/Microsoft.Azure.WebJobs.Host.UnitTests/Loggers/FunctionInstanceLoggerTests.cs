@@ -31,6 +31,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         [Fact]
         public async Task LogFunctionStarted_CallsLogger()
         {
+            const string functionName = "Function.TestJob";
+            const string reason = "TestReason";
+
             Dictionary<string, string> triggerDetails = new Dictionary<string, string>()
             {
                 { "MessageId", Guid.NewGuid().ToString() },
@@ -41,10 +44,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             {
                 Function = new FunctionDescriptor
                 {
-                    ShortName = "Function.TestJob",
-                    LogName = "TestJob"
+                    ShortName = functionName,
+                    LogName = "TestJob",
+                    FullName = "Functions." + functionName,
                 },
-                ReasonDetails = "TestReason",
+                ReasonDetails = reason,
                 HostInstanceId = Guid.NewGuid(),
                 FunctionInstanceId = Guid.NewGuid(),
                 TriggerDetails = triggerDetails
@@ -65,8 +69,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             LogMessage invocationLogMessage = logMessages[0];
             Assert.Equal(LogLevel.Information, invocationLogMessage.Level);
             Assert.Equal(expectedCategory, invocationLogMessage.Category);
-            Assert.Null(invocationLogMessage.State);
-            Assert.Equal($"Executing 'Function.TestJob' (Reason='TestReason', Id={message.FunctionInstanceId})", 
+            Assert.Equal(new Dictionary<string, object>
+            {
+                {"Function", functionName},
+                {"Reason", reason},
+                {"Id", message.FunctionInstanceId},
+                {"{OriginalFormat}", "Executing '{Function}' (Reason='{Reason}', Id={Id})"}
+            }, invocationLogMessage.State);
+
+            Assert.Equal($"Executing '{functionName}' (Reason='{reason}', Id={message.FunctionInstanceId})",
                 invocationLogMessage.FormattedMessage);
 
             LogMessage triggerDetailsLogMessage = logMessages[1];
@@ -80,9 +91,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         [Fact]
         public async Task LogFunctionCompleted_CallsLogger()
         {
+            const string functionName = "Function.TestJob";
+
             FunctionDescriptor descriptor = new FunctionDescriptor
             {
-                ShortName = "Function.TestJob",
+                ShortName = functionName,
                 LogName = "TestJob"
             };
             FunctionCompletedMessage successMessage = new FunctionCompletedMessage
@@ -113,16 +126,28 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             LogMessage logMessage = logMessages[0];
             Assert.Equal(LogLevel.Information, logMessage.Level);
             Assert.Equal(expectedCategory, logMessage.Category);
-            Assert.Equal($"Executed 'Function.TestJob' (Succeeded, Id={successMessage.FunctionInstanceId})", 
+
+            Assert.Equal($"Executed '{functionName}' (Succeeded, Id={successMessage.FunctionInstanceId})",
                 logMessage.FormattedMessage);
-            Assert.Null(logMessage.State);
+
+            Assert.Equal(new Dictionary<string, object>
+            {
+                {"Function", functionName},
+                {"Id", successMessage.FunctionInstanceId},
+                {"{OriginalFormat}", "Executed '{Function}' (Succeeded, Id={Id})"}
+            }, logMessage.State);
 
             logMessage = logMessages[1];
             Assert.Equal(LogLevel.Error, logMessage.Level);
             Assert.Equal(expectedCategory, logMessage.Category);
-            Assert.Equal($"Executed 'Function.TestJob' (Failed, Id={failureMessage.FunctionInstanceId})", logMessage.FormattedMessage);
+            Assert.Equal($"Executed '{functionName}' (Failed, Id={failureMessage.FunctionInstanceId})", logMessage.FormattedMessage);
             Assert.Same(ex, logMessage.Exception);
-            Assert.Null(logMessage.State);
+            Assert.Equal(new Dictionary<string, object>
+            {
+                {"Function", functionName},
+                {"Id", failureMessage.FunctionInstanceId},
+                {"{OriginalFormat}", "Executed '{Function}' (Failed, Id={Id})"}
+            }, logMessage.State);
         }
     }
 }
