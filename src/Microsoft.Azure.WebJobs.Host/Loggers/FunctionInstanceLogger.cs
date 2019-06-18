@@ -40,11 +40,14 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
         public Task<string> LogFunctionStartedAsync(FunctionStartedMessage message, CancellationToken cancellationToken)
         {
             var logger = GetLogger(message.Function);
-            LogFunctionStarted(logger, message.Function.ShortName, message.FormatReason(), message.FunctionInstanceId, null);
-
-            if (logger!= null && message.TriggerDetails != null && message.TriggerDetails.Count != 0)
+            if (logger != null)
             {
-                LogTemplatizedTriggerDetails(logger, message);
+                LogFunctionStarted(logger, message.Function.ShortName, message.FormatReason(), message.FunctionInstanceId, null);
+
+                if (message.TriggerDetails != null && message.TriggerDetails.Count != 0)
+                {
+                    LogTemplatizedTriggerDetails(logger, message);
+                }
             }
 
             return StringNullTask;
@@ -122,7 +125,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
                             return false;
                         }
 
-                        if (!values.TryGetValue(key0, out var value0) || 
+                        if (!values.TryGetValue(key0, out var value0) ||
                             !values.TryGetValue(key1, out var value1))
                         {
                             return false;
@@ -147,7 +150,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
                             return false;
                         }
 
-                        if (!values.TryGetValue(key0, out var value0) || 
+                        if (!values.TryGetValue(key0, out var value0) ||
                             !values.TryGetValue(key1, out var value1) ||
                             !values.TryGetValue(key2, out var value2))
                         {
@@ -205,13 +208,16 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
         {
             ILogger logger = GetLogger(message.Function);
 
-            if (message.Succeeded)
+            if (logger != null)
             {
-                LogFunctionCompletedSuccess(logger, message.Function.ShortName, message.FunctionInstanceId, null);
-            }
-            else
-            {
-                LogFunctionCompletedFailure(logger, message.Function.ShortName, message.FunctionInstanceId, message.Failure.Exception);
+                if (message.Succeeded)
+                {
+                    LogFunctionCompletedSuccess(logger, message.Function.ShortName, message.FunctionInstanceId, null);
+                }
+                else
+                {
+                    LogFunctionCompletedFailure(logger, message.Function.ShortName, message.FunctionInstanceId, message.Failure.Exception);
+                }
             }
 
             return Task.CompletedTask;
