@@ -17,7 +17,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
                 "BatchOptions",
                 "Constants",
-                "EntityType",
                 "MessageProcessor",
                 "MessagingProvider",
                 "ServiceBusAccountAttribute",
