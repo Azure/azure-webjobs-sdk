@@ -12,6 +12,7 @@ branches:
   - dev
   - master
   - next
+  - alrod-update-for-sb-ext
 image: Visual Studio 2017
 max_jobs: 1
 install:
