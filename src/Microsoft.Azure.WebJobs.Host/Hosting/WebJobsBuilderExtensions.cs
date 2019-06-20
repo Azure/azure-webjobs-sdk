@@ -175,6 +175,9 @@ namespace Microsoft.Azure.WebJobs
             // arbitrary binding to binding data 
             builder.Services.AddSingleton<IBindingProvider, DataBindingProvider>();
 
+            // for any type registered as a service via dependency injection
+            builder.Services.AddSingleton<IBindingProvider, ServiceProviderBindingProvider>();
+
             return builder;
         }
     }
