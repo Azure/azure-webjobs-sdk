@@ -17,6 +17,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
     {
         private const string ComputerNameKey = "COMPUTERNAME";
         private const string WebSiteInstanceIdKey = "WEBSITE_INSTANCE_ID";
+        private const string ContainerNameKey = "CONTAINER_NAME";
 
         private static readonly string _roleInstanceName = GetRoleInstanceName();
         private readonly string _sdkVersion;
@@ -121,6 +122,10 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             if (string.IsNullOrEmpty(instanceName))
             {
                 instanceName = Environment.GetEnvironmentVariable(ComputerNameKey);
+                if (string.IsNullOrEmpty(instanceName))
+                {
+                    instanceName = Environment.GetEnvironmentVariable(ContainerNameKey);
+                }
             }
 
             return instanceName;
