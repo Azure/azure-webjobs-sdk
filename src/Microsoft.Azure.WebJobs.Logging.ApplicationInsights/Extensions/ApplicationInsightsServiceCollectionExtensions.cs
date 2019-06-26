@@ -55,9 +55,17 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddSingleton<ITelemetryInitializer, WebJobsSanitizingInitializer>();
             services.AddSingleton<ITelemetryInitializer, WebJobsTelemetryInitializer>();
             services.AddSingleton<ITelemetryInitializer, MetricSdkVersionTelemetryInitializer>();
-
-            services.AddSingleton<ITelemetryModule, QuickPulseTelemetryModule>();
             services.AddSingleton<QuickPulseInitializationScheduler>();
+
+            services.AddSingleton<ITelemetryModule>(provider =>
+            {
+                ApplicationInsightsLoggerOptions options = provider.GetService<IOptions<ApplicationInsightsLoggerOptions>>().Value;
+                if (options.EnableQuickPulse)
+                {
+                    return new QuickPulseTelemetryModule();
+                }
+                return NullTelemetryModule.Instance;
+            });
 
             services.AddSingleton<ITelemetryModule>(provider =>
             {
@@ -76,24 +84,29 @@ namespace Microsoft.Extensions.DependencyInjection
 
             services.AddSingleton<IApplicationIdProvider, ApplicationInsightsApplicationIdProvider>();
 
-            services.AddSingleton<ITelemetryModule, DependencyTrackingTelemetryModule>(provider =>
+            services.AddSingleton<ITelemetryModule>(provider =>
             {
                 var options = provider.GetService<IOptions<ApplicationInsightsLoggerOptions>>().Value;
 
-                var dependencyCollector = new DependencyTrackingTelemetryModule();
-                var excludedDomains = dependencyCollector.ExcludeComponentCorrelationHttpHeadersOnDomains;
-                excludedDomains.Add("core.windows.net");
-                excludedDomains.Add("core.chinacloudapi.cn");
-                excludedDomains.Add("core.cloudapi.de");
-                excludedDomains.Add("core.usgovcloudapi.net");
-                excludedDomains.Add("localhost");
-                excludedDomains.Add("127.0.0.1");
+                if (options.EnableDependencyTracking)
+                {
+                    var dependencyCollector = new DependencyTrackingTelemetryModule();
+                    var excludedDomains = dependencyCollector.ExcludeComponentCorrelationHttpHeadersOnDomains;
+                    excludedDomains.Add("core.windows.net");
+                    excludedDomains.Add("core.chinacloudapi.cn");
+                    excludedDomains.Add("core.cloudapi.de");
+                    excludedDomains.Add("core.usgovcloudapi.net");
+                    excludedDomains.Add("localhost");
+                    excludedDomains.Add("127.0.0.1");
 
-                var includedActivities = dependencyCollector.IncludeDiagnosticSourceActivities;
-                includedActivities.Add("Microsoft.Azure.ServiceBus");
+                    var includedActivities = dependencyCollector.IncludeDiagnosticSourceActivities;
+                    includedActivities.Add("Microsoft.Azure.ServiceBus");
 
-                dependencyCollector.EnableW3CHeadersInjection = options.HttpAutoCollectionOptions.EnableW3CDistributedTracing;
-                return dependencyCollector;
+                    dependencyCollector.EnableW3CHeadersInjection = options.HttpAutoCollectionOptions.EnableW3CDistributedTracing;
+                    return dependencyCollector;
+                }
+
+                return NullTelemetryModule.Instance;
             });
 
             services.AddSingleton<ITelemetryModule>(provider =>

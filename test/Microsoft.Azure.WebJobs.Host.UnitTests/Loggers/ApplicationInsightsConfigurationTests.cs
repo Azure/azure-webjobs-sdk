@@ -236,6 +236,64 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         }
 
         [Fact]
+        public void DependencyInjectionConfiguration_DisablesDependencyTracking()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsights(o =>
+                    {
+                        o.InstrumentationKey = "KI";
+                        o.EnableDependencyTracking = false;
+                    });
+                })
+                .Build())
+            {
+                var modules = host.Services.GetServices<ITelemetryModule>();
+                Assert.True(modules.Count(m => m is DependencyTrackingTelemetryModule) == 0);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_DisablesQuickPulseTelemetry()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsights(o =>
+                    {
+                        o.InstrumentationKey = "LOKI";
+                        o.EnableQuickPulse = false;
+                    });
+                })
+                .Build())
+            {
+                var modules = host.Services.GetServices<ITelemetryModule>();
+                Assert.True(modules.Count(m => m is QuickPulseTelemetryModule) == 0);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_EnableTelemetryModulesByDefault()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsights(o =>
+                    {
+                        o.InstrumentationKey = "LOKI";
+                    });
+                })
+                .Build())
+            {
+                var modules = host.Services.GetServices<ITelemetryModule>();
+                Assert.True(modules.Count(m => m is QuickPulseTelemetryModule) == 1);
+                Assert.True(modules.Count(m => m is DependencyTrackingTelemetryModule) == 1);
+                Assert.True(modules.Count(m => m is PerformanceCollectorModule) == 1);
+            }
+        }
+
+        [Fact]
         public void DependencyInjectionConfiguration_ConfiguresQuickPulseAuthApiKey()
         {
             using (var host = new HostBuilder()
