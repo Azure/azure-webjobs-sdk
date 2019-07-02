@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Globalization;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -42,9 +43,27 @@ namespace Microsoft.Azure.WebJobs.ServiceBus.UnitTests.Triggers
             // Arrange
             UserDataType expectedObject = new UserDataType();
             PropertyInfo userProperty = typeof(UserDataType).GetProperty(userPropertyName);
+
+            object[] parseMethodParameters = new object[] { userPropertyValue };
+
+            // Search for culture aware parse method.
             var parseMethod = userProperty.PropertyType.GetMethod(
-                "Parse", new Type[] { typeof(string) });
-            object convertedPropertyValue = parseMethod.Invoke(null, new object[] { userPropertyValue });
+                "Parse", new Type[] { typeof(string), typeof(IFormatProvider) });
+
+            if (parseMethod != null)
+            {
+                // Add US culture IFormatProvider
+                parseMethodParameters = new object[] { userPropertyValue, new CultureInfo("us", false) };
+            }
+            else
+            {
+                // Fall back to non culture aware.
+                parseMethod = userProperty.PropertyType.GetMethod(
+                    "Parse", new Type[] { typeof(string) });
+            }
+
+
+            object convertedPropertyValue = parseMethod.Invoke(null, parseMethodParameters);
             userProperty.SetValue(expectedObject, convertedPropertyValue);
             string messageContent = JsonConvert.SerializeObject(expectedObject);
             ValueBindingContext context = new ValueBindingContext(null, CancellationToken.None);
