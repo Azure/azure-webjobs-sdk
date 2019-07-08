@@ -2,7 +2,7 @@
   <Import Project="..\..\build\common.props" />
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <IsPackable>false</IsPackable>
+    <IsPackable>true</IsPackable>
     <AssemblyName>Microsoft.Azure.WebJobs.Host.TestCommon</AssemblyName>
     <RootNamespace>Microsoft.Azure.WebJobs.Host.TestCommon</RootNamespace>
   </PropertyGroup>
