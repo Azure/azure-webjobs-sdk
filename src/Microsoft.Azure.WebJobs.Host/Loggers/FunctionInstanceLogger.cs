@@ -17,18 +17,16 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
     {
         private readonly ILoggerFactory _loggerFactory;
 
-        private readonly ConcurrentDictionary<string, ILogger> _loggers = new ConcurrentDictionary<string, ILogger>();
-
         private readonly ConcurrentDictionary<string, Func<ILogger, IDictionary<string, string>, bool>> _triggerLoggers = new ConcurrentDictionary<string, Func<ILogger, IDictionary<string, string>, bool>>();
 
-        private static readonly Action<ILogger, string, string, Guid, Exception> LogFunctionStarted =
-            LoggerMessage.Define<string, string, Guid>(LogLevel.Information, 0, "Executing '{Function}' (Reason='{Reason}', Id={Id})");
+        private static readonly Action<ILogger, string, string, Guid, Exception> FunctionStarted =
+            LoggerMessage.Define<string, string, Guid>(LogLevel.Information, new EventId(1000, nameof(FunctionStarted)), "Executing '{Function}' (Reason='{Reason}', Id={Id})");
 
-        private static readonly Action<ILogger, string, Guid, Exception> LogFunctionCompletedSuccess =
-            LoggerMessage.Define<string, Guid>(LogLevel.Information, 0, "Executed '{Function}' (Succeeded, Id={Id})");
+        private static readonly Action<ILogger, string, Guid, Exception> FunctionCompletedSuccess =
+            LoggerMessage.Define<string, Guid>(LogLevel.Information, new EventId(1001, nameof(FunctionCompletedSuccess)), "Executed '{Function}' (Succeeded, Id={Id})");
 
-        private static readonly Action<ILogger, string, Guid, Exception> LogFunctionCompletedFailure =
-            LoggerMessage.Define<string, Guid>(LogLevel.Error, 0, "Executed '{Function}' (Failed, Id={Id})");
+        private static readonly Action<ILogger, string, Guid, Exception> FunctionCompletedFailure =
+            LoggerMessage.Define<string, Guid>(LogLevel.Error, new EventId(1002, nameof(FunctionCompletedFailure)), "Executed '{Function}' (Failed, Id={Id})");
 
         private static readonly Task<string> StringNullTask = Task.FromResult<string>(null);
 
@@ -42,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             var logger = GetLogger(message.Function);
             if (logger != null)
             {
-                LogFunctionStarted(logger, message.Function.ShortName, message.FormatReason(), message.FunctionInstanceId, null);
+                FunctionStarted(logger, message.Function.ShortName, message.FormatReason(), message.FunctionInstanceId, null);
 
                 if (message.TriggerDetails != null && message.TriggerDetails.Count != 0)
                 {
@@ -212,11 +210,11 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             {
                 if (message.Succeeded)
                 {
-                    LogFunctionCompletedSuccess(logger, message.Function.ShortName, message.FunctionInstanceId, null);
+                    FunctionCompletedSuccess(logger, message.Function.ShortName, message.FunctionInstanceId, null);
                 }
                 else
                 {
-                    LogFunctionCompletedFailure(logger, message.Function.ShortName, message.FunctionInstanceId, message.Failure.Exception);
+                    FunctionCompletedFailure(logger, message.Function.ShortName, message.FunctionInstanceId, message.Failure.Exception);
                 }
             }
 
@@ -225,7 +223,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
 
         private ILogger GetLogger(FunctionDescriptor descriptor)
         {
-            return _loggers.GetOrAdd(descriptor.LogName, logName => _loggerFactory?.CreateLogger(LogCategories.CreateFunctionCategory(logName)));
+            return _loggerFactory?.CreateLogger(LogCategories.CreateFunctionCategory(descriptor.LogName));
         }
 
         public Task DeleteLogFunctionStartedAsync(string startedMessageId, CancellationToken cancellationToken)
