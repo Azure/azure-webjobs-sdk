@@ -355,11 +355,7 @@ namespace Microsoft.Azure.WebJobs
         {
             try
             {
-                var context = await _jobHostContextFactory.Create(_shutdownTokenSource.Token, cancellationToken);
-
-                // must call this BEFORE setting the results below
-                // since listener startup is blocking on those members
-                OnHostInitialized();
+                var context = await _jobHostContextFactory.Create(this, _shutdownTokenSource.Token, cancellationToken);
 
                 _context = context;
                 _listener = context.Listener;
@@ -377,7 +373,7 @@ namespace Microsoft.Azure.WebJobs
         /// Called when host initialization has been completed, but before listeners
         /// are started.
         /// </summary>
-        protected virtual void OnHostInitialized()
+        protected internal virtual void OnHostInitialized()
         {
         }
 

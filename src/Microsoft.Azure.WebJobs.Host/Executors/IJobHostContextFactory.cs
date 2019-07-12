@@ -11,6 +11,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 {
     public interface IJobHostContextFactory
     {
-        Task<JobHostContext> Create(CancellationToken shutdownToken, CancellationToken cancellationToken);
+        Task<JobHostContext> Create(JobHost host, CancellationToken shutdownToken, CancellationToken cancellationToken);
     }
 }

@@ -56,7 +56,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             functions.Add(definition);
 
             var monitorManager = new ScaleMonitorManager();
-            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManager);
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManager, () => {});
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 
             var innerListeners = ((IEnumerable<IListener>)listener).ToArray();
@@ -130,7 +130,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             // Create the composite listener - this will fail if any of the
             // function definitions indicate that they are not disabled
             var monitorManagerMock = new Mock<IScaleMonitorManager>(MockBehavior.Strict);
-            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManagerMock.Object);
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManagerMock.Object, () => { });
+
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 
             string expectedMessage = $"Function '{descriptor.ShortName}' is disabled";

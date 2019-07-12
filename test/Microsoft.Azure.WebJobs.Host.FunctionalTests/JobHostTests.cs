@@ -113,7 +113,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             // Arrange
             // Create a way to block StartAsync.
             TaskCompletionSource<JobHostContext> createTaskSource = new TaskCompletionSource<JobHostContext>();
-            var provider = new LambdaJobHostContextFactory((a, b) => createTaskSource.Task);
+            var provider = new LambdaJobHostContextFactory((a, b, c) => createTaskSource.Task);
 
             var host = new HostBuilder()
                 .ConfigureDefaultTestHost()
@@ -222,7 +222,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             // Arrange
             // Create a way to block StartAsync.
             TaskCompletionSource<JobHostContext> createTaskSource = new TaskCompletionSource<JobHostContext>();
-            var provider = new LambdaJobHostContextFactory((a, b) => createTaskSource.Task);
+            var provider = new LambdaJobHostContextFactory((a, b, c) => createTaskSource.Task);
 
             var host = new HostBuilder()
                 .ConfigureDefaultTestHost()
@@ -641,16 +641,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
         private class LambdaJobHostContextFactory : IJobHostContextFactory
         {
-            private readonly Func<CancellationToken, CancellationToken, Task<JobHostContext>> _create;
+            private readonly Func<JobHost, CancellationToken, CancellationToken, Task<JobHostContext>> _create;
 
-            public LambdaJobHostContextFactory(Func<CancellationToken, CancellationToken, Task<JobHostContext>> create)
+            public LambdaJobHostContextFactory(Func<JobHost, CancellationToken, CancellationToken, Task<JobHostContext>> create)
             {
                 _create = create;
             }
 
-            public Task<JobHostContext> Create(CancellationToken shutdownToken, CancellationToken cancellationToken)
+            public Task<JobHostContext> Create(JobHost host, CancellationToken shutdownToken, CancellationToken cancellationToken)
             {
-                return _create.Invoke(shutdownToken, cancellationToken);
+                return _create.Invoke(host, shutdownToken, cancellationToken);
             }
         }
 
