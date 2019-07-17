@@ -8,6 +8,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Bindings.Data;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Data
@@ -30,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Data
             // Assert
             Assert.NotNull(binding);
 
-            var functionBindingContext = new FunctionBindingContext(Guid.NewGuid(), CancellationToken.None, null);
+            FunctionBindingContext functionBindingContext = new FunctionBindingContext(Guid.NewGuid(), CancellationToken.None);
             var valueBindingContext = new ValueBindingContext(functionBindingContext, CancellationToken.None);
             var bindingData = new Dictionary<string, object>
             {
@@ -64,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Data
             // Assert
             Assert.NotNull(binding);
 
-            var functionBindingContext = new FunctionBindingContext(Guid.NewGuid(), CancellationToken.None, null);
+            FunctionBindingContext functionBindingContext = new FunctionBindingContext(Guid.NewGuid(), CancellationToken.None);
             var valueBindingContext = new ValueBindingContext(functionBindingContext, CancellationToken.None);
             var bindingData = new Dictionary<string, object>
             {
@@ -98,7 +100,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Data
             // Assert
             Assert.NotNull(binding);
 
-            var functionBindingContext = new FunctionBindingContext(Guid.NewGuid(), CancellationToken.None, null);
+            FunctionBindingContext functionBindingContext = new FunctionBindingContext(Guid.NewGuid(), CancellationToken.None);
             var valueBindingContext = new ValueBindingContext(functionBindingContext, CancellationToken.None);
             var bindingData = new Dictionary<string, object>
             {

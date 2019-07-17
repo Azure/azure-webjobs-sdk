@@ -186,6 +186,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
                     throw new InvalidOperationException($"Can't convert blob to {typeof(T).FullName}.");
                 }
             }
+
             public async Task<IEnumerable<T>> ConvertAsync(MultiBlobContext context, CancellationToken cancellationToken)
             {
                 // Query the blob container using the blob prefix (if specified)
@@ -209,7 +210,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
                 {
                     var src = (ICloudBlob)blobItem;
 
-                    var funcCtx = new FunctionBindingContext(Guid.Empty, CancellationToken.None, null);
+                    var funcCtx = new FunctionBindingContext(Guid.Empty, CancellationToken.None);
                     var valueCtx = new ValueBindingContext(funcCtx, CancellationToken.None);
 
                     var converted = await _converter(src, null, valueCtx);

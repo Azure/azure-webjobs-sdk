@@ -251,9 +251,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     FunctionOutputLogger.SetOutput(outputLog);
 
                     // Must bind before logging (bound invoke string is included in log message).
-                    FunctionBindingContext functionContext = new FunctionBindingContext(
+                    var functionContext = new FunctionBindingContext(
                         instance.Id,
                         functionCancellationTokenSource.Token,
+                        instance.InstanceServices,
                         instance.FunctionDescriptor);
                     var valueBindingContext = new ValueBindingContext(functionContext, cancellationToken);
 
