@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings.Path;
 using Microsoft.Azure.WebJobs.Host.Indexers;
+using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
 
@@ -26,9 +27,10 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger _logger;
         private readonly bool _allowPartialHostStartup;
+        private readonly IScaleMonitorManager _monitorManager;
 
         public HostListenerFactory(IEnumerable<IFunctionDefinition> functionDefinitions, SingletonManager singletonManager, IJobActivator activator,
-            INameResolver nameResolver, ILoggerFactory loggerFactory, bool allowPartialHostStartup = false)
+            INameResolver nameResolver, ILoggerFactory loggerFactory, IScaleMonitorManager monitorManager, bool allowPartialHostStartup = false)
         {
             _functionDefinitions = functionDefinitions;
             _singletonManager = singletonManager;
@@ -37,6 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             _loggerFactory = loggerFactory;
             _logger = _loggerFactory?.CreateLogger(LogCategories.Startup);
             _allowPartialHostStartup = allowPartialHostStartup;
+            _monitorManager = monitorManager;
         }
 
         public async Task<IListener> CreateAsync(CancellationToken cancellationToken)
@@ -61,6 +64,8 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 
                 IListener listener = await listenerFactory.CreateAsync(cancellationToken);
 
+                RegisterScaleMonitor(listener, _monitorManager);
+
                 // if the listener is a Singleton, wrap it with our SingletonListener
                 SingletonAttribute singletonAttribute = SingletonManager.GetListenerSingletonOrNull(listener.GetType(), functionDefinition.Descriptor);
                 if (singletonAttribute != null)
@@ -74,6 +79,38 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             }
 
             return new CompositeListener(listeners);
+        }
+
+        /// <summary>
+        /// Check to see if the specified listener is an <see cref="IScaleMonitor"/> and if so
+        /// register it with the <see cref="IScaleMonitorManager"/>.
+        /// </summary>
+        /// <remarks>
+        /// Note that disabled functions won't have their monitors registered. Therefore we'll only be
+        /// monitoring valid, non-disabled functions which is what we want.
+        /// Similarly, any functions failing indexing won't have their monitors registered.
+        /// </remarks>
+        /// <param name="listener">The listener to check and register a monitor for.</param>
+        /// <param name="monitorManager">The monitor manager to register to.</param>
+        internal static void RegisterScaleMonitor(IListener listener, IScaleMonitorManager monitorManager)
+        {
+            if (listener is IScaleMonitor scaleMonitor)
+            {
+                monitorManager.Register(scaleMonitor);
+            }
+            else if (listener is IScaleMonitorProvider)
+            {
+                var monitor = ((IScaleMonitorProvider)listener).GetMonitor();
+                monitorManager.Register(monitor);
+            }
+            else if (listener is IEnumerable<IListener>)
+            {
+                // for composite listeners, we need to check all the inner listeners
+                foreach (var innerListener in ((IEnumerable<IListener>)listener))
+                {
+                    RegisterScaleMonitor(innerListener, monitorManager);
+                }
+            }
         }
 
         internal static bool IsDisabled(MethodInfo method, INameResolver nameResolver, IJobActivator activator)

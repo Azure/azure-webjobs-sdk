@@ -2,13 +2,14 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Listeners
 {
-    internal sealed class CompositeListener : IListener
+    internal sealed class CompositeListener : IListener, IEnumerable<IListener>
     {
         private readonly IEnumerable<IListener> _listeners;
 
@@ -81,6 +82,16 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             {
                 throw new ObjectDisposedException(null);
             }
+        }
+
+        public IEnumerator<IListener> GetEnumerator()
+        {
+            return _listeners.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return ((IEnumerable<IListener>)this).GetEnumerator();
         }
     }
 }

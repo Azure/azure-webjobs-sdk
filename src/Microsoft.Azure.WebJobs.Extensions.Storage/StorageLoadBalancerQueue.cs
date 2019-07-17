@@ -22,6 +22,10 @@ namespace WebJobs.Extensions.Storage
     // $$$ Review APIs
     internal class StorageLoadBalancerQueue : ILoadBalancerQueue
     {
+        // this shared queue listener doesn't have a corresponding function, so we use
+        // this constant for the scale monitor
+        private const string SharedLoadBalancerQueueListenerFunctionId = "SharedLoadBalancerQueueListener";
+
         private readonly QueuesOptions _queueOptions;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
@@ -111,7 +115,7 @@ namespace WebJobs.Extensions.Storage
                 sharedWatcher: _sharedWatcher,
                 queueOptions: _queueOptions,
                 queueProcessorFactory: _queueProcessorFactory,
-                functionDescriptor: new FunctionDescriptor(),
+                functionDescriptor: new FunctionDescriptor { Id = SharedLoadBalancerQueueListenerFunctionId },
                 maxPollingInterval: maxPollingInterval);
 
             return listener;

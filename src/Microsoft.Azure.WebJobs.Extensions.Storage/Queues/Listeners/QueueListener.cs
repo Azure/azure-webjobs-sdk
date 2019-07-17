@@ -12,6 +12,7 @@ using Microsoft.Azure.WebJobs.Extensions.Storage;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
@@ -19,8 +20,10 @@ using Microsoft.WindowsAzure.Storage.Queue;
 
 namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
 {
-    internal sealed partial class QueueListener : IListener, ITaskSeriesCommand, INotificationCommand
+    internal sealed partial class QueueListener : IListener, ITaskSeriesCommand, INotificationCommand, IScaleMonitor<QueueTriggerMetrics>
     {
+        const int NumberOfSamplesToConsider = 5;
+
         private readonly ITaskSeriesTimer _timer;
         private readonly IDelayStrategy _delayStrategy;
         private readonly CloudQueue _queue;
@@ -35,10 +38,18 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         private readonly TimeSpan _visibilityTimeout;
         private readonly ILogger<QueueListener> _logger;
         private readonly FunctionDescriptor _functionDescriptor;
+        private readonly string _functionId;
+        private readonly ScaleMonitorDescriptor _scaleMonitorDescriptor;
+
         private bool? _queueExists;
         private bool _foundMessageSinceLastDelay;
         private bool _disposed;
         private TaskCompletionSource<object> _stopWaitingTaskSource;
+
+        // for mock testing only
+        internal QueueListener()
+        {
+        }
 
         public QueueListener(CloudQueue queue,
             CloudQueue poisonQueue,
@@ -49,6 +60,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             QueuesOptions queueOptions,
             IQueueProcessorFactory queueProcessorFactory,
             FunctionDescriptor functionDescriptor,
+            string functionId = null,
             TimeSpan? maxPollingInterval = null)
         {
             if (queueOptions == null)
@@ -84,6 +96,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             _queueOptions = queueOptions;
             _logger = loggerFactory.CreateLogger<QueueListener>();
             _functionDescriptor = functionDescriptor ?? throw new ArgumentNullException(nameof(functionDescriptor));
+            _functionId = functionId ?? _functionDescriptor.Id;
 
             // if the function runs longer than this, the invisibility will be updated
             // on a timer periodically for the duration of the function execution
@@ -107,6 +120,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             }
 
             _delayStrategy = new RandomizedExponentialBackoffStrategy(QueuePollingIntervals.Minimum, maximumInterval);
+
+            _scaleMonitorDescriptor = new ScaleMonitorDescriptor($"{_functionId}-QueueTrigger-{_queue.Name}".ToLower());
         }
 
         // for testing
@@ -376,6 +391,187 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             }
 
             return queueProcessor;
+        }
+
+        public ScaleMonitorDescriptor Descriptor
+        {
+            get
+            {
+                return _scaleMonitorDescriptor;
+            }
+        }
+
+        async Task<ScaleMetrics> IScaleMonitor.GetMetricsAsync()
+        {
+            return await GetMetricsAsync();
+        }
+
+        public async Task<QueueTriggerMetrics> GetMetricsAsync()
+        {
+            int queueLength = 0;
+            TimeSpan queueTime = TimeSpan.Zero;
+
+            try
+            {
+                await _queue.FetchAttributesAsync();
+                queueLength = _queue.ApproximateMessageCount.GetValueOrDefault();
+
+                if (queueLength > 0)
+                {
+                    CloudQueueMessage message = await _queue.PeekMessageAsync();
+                    if (message != null)
+                    {
+                        if (message.InsertionTime.HasValue)
+                        {
+                            queueTime = DateTime.UtcNow.Subtract(message.InsertionTime.Value.DateTime);
+                        }
+                    }
+                    else
+                    {
+                        // ApproximateMessageCount often returns a stale value,
+                        // especially when the queue is empty.
+                        queueLength = 0;
+                    }
+                }
+            }
+            catch (StorageException ex)
+            {
+                if (ex.IsNotFoundQueueNotFound() ||
+                    ex.IsConflictQueueBeingDeletedOrDisabled() ||
+                    ex.IsServerSideError())
+                {
+                    // ignore transient errors, and return default metrics
+                    // E.g. if the queue doesn't exist, we'll return a zero queue length
+                    // and scale in
+                    _logger.LogWarning($"Error querying for queue scale status: {ex.Message}");
+                }
+            }
+
+            return new QueueTriggerMetrics
+            {
+                QueueLength = queueLength,
+                QueueTime = queueTime,
+                Timestamp = DateTime.UtcNow
+            };
+        }
+
+        ScaleStatus IScaleMonitor.GetScaleStatus(ScaleStatusContext context)
+        {
+            return GetScaleStatusCore(context.WorkerCount, context.Metrics?.Cast<QueueTriggerMetrics>().ToArray());
+        }
+
+        public ScaleStatus GetScaleStatus(ScaleStatusContext<QueueTriggerMetrics> context)
+        {
+            return GetScaleStatusCore(context.WorkerCount, context.Metrics?.ToArray());
+        }
+
+        private ScaleStatus GetScaleStatusCore(int workerCount, QueueTriggerMetrics[] metrics)
+        {
+            ScaleStatus status = new ScaleStatus
+            {
+                Vote = ScaleVote.None
+            };
+
+            // verify we have enough samples to make a scale decision.
+            if (metrics == null || (metrics.Length < NumberOfSamplesToConsider))
+            {
+                return status;
+            }
+
+            // Maintain a minimum ratio of 1 worker per 1,000 queue messages.
+            long latestQueueLength = metrics.Last().QueueLength;
+            if (latestQueueLength > workerCount * 1000)
+            {
+                status.Vote = ScaleVote.ScaleOut;
+                _logger.LogInformation($"QueueLength ({latestQueueLength}) > workerCount ({workerCount}) * 1,000");
+                _logger.LogInformation($"Length of queue ({_queue.Name}, {latestQueueLength}) is too high relative to the number of instances ({workerCount}).");
+                return status;
+            }
+
+            // Check to see if the queue has been empty for a while.
+            bool queueIsIdle = metrics.All(p => p.QueueLength == 0);
+            if (queueIsIdle)
+            {
+                status.Vote = ScaleVote.ScaleIn;
+                _logger.LogInformation($"Queue '{_queue.Name}' is idle");
+                return status;
+            }
+
+            // Samples are in chronological order. Check for a continuous increase in time or length.
+            // If detected, this results in an automatic scale out.
+            if (metrics[0].QueueLength > 0)
+            {
+                bool queueLengthIncreasing =
+                IsTrueForLastN(
+                    metrics,
+                    NumberOfSamplesToConsider,
+                    (prev, next) => prev.QueueLength < next.QueueLength);
+                if (queueLengthIncreasing)
+                {
+                    status.Vote = ScaleVote.ScaleOut;
+                    _logger.LogInformation($"Queue length is increasing for '{_queue.Name}'");
+                    return status;
+                }
+            }
+
+            if (metrics[0].QueueTime > TimeSpan.Zero && metrics[0].QueueTime < metrics[NumberOfSamplesToConsider - 1].QueueTime)
+            {
+                bool queueTimeIncreasing =
+                    IsTrueForLastN(
+                        metrics,
+                        NumberOfSamplesToConsider,
+                        (prev, next) => prev.QueueTime <= next.QueueTime);
+                if (queueTimeIncreasing)
+                {
+                    status.Vote = ScaleVote.ScaleOut;
+                    _logger.LogInformation($"Queue time is increasing for '{_queue.Name}'");
+                    return status;
+                }
+            }
+            
+            bool queueLengthDecreasing =
+                IsTrueForLastN(
+                    metrics,
+                    NumberOfSamplesToConsider,
+                    (prev, next) => prev.QueueLength > next.QueueLength);
+            if (queueLengthDecreasing)
+            {
+                status.Vote = ScaleVote.ScaleIn;
+                _logger.LogInformation($"Queue length is decreasing for '{_queue.Name}'");
+                return status;
+            }
+
+            bool queueTimeDecreasing = IsTrueForLastN(
+                metrics,
+                NumberOfSamplesToConsider,
+                (prev, next) => prev.QueueTime > next.QueueTime);
+            if (queueTimeDecreasing)
+            {
+                status.Vote = ScaleVote.ScaleIn;
+                _logger.LogInformation($"Queue time is decreasing for '{_queue.Name}'");
+                return status;
+            }
+
+            _logger.LogInformation($"Queue '{_queue.Name}' is steady");
+
+            return status;
+        }
+
+        private static bool IsTrueForLastN(IList<QueueTriggerMetrics> samples, int count, Func<QueueTriggerMetrics, QueueTriggerMetrics, bool> predicate)
+        {
+            Debug.Assert(count > 1, "count must be greater than 1.");
+            Debug.Assert(count <= samples.Count, "count must be less than or equal to the list size.");
+
+            // Walks through the list from left to right starting at len(samples) - count.
+            for (int i = samples.Count - count; i < samples.Count - 1; i++)
+            {
+                if (!predicate(samples[i], samples[i + 1]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }

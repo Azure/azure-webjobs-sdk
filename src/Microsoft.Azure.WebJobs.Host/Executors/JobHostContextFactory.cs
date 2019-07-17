@@ -17,6 +17,7 @@ using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Properties;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.Logging;
@@ -46,6 +47,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IConverterManager _converterManager;
         private readonly IAsyncCollector<FunctionInstanceLogEntry> _eventCollector;
         private readonly IDashboardLoggingSetup _dashboardLoggingSetup;
+        private readonly IScaleMonitorManager _monitorManager;
 
         public JobHostContextFactory(
             IDashboardLoggingSetup dashboardLoggingSetup,
@@ -65,7 +67,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             IFunctionInstanceLogger functionInstanceLogger,
             IFunctionOutputLogger functionOutputLogger,
             IConverterManager converterManager,
-            IAsyncCollector<FunctionInstanceLogEntry> eventCollector)
+            IAsyncCollector<FunctionInstanceLogEntry> eventCollector,
+            IScaleMonitorManager monitorManager)
         {
             _dashboardLoggingSetup = dashboardLoggingSetup;
             _functionExecutor = functionExecutor;
@@ -85,6 +88,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _functionOutputLogger = functionOutputLogger;
             _converterManager = converterManager;
             _eventCollector = eventCollector;
+            _monitorManager = monitorManager;
         }
 
         public async Task<JobHostContext> Create(CancellationToken shutdownToken, CancellationToken cancellationToken)
@@ -99,7 +103,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 _loggerFactory.AddProvider(new FunctionOutputLoggerProvider());
 
                 IFunctionIndex functions = await _functionIndexProvider.GetAsync(combinedCancellationToken);
-                IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), _singletonManager, _activator, _nameResolver, _loggerFactory, _jobHostOptions.Value.AllowPartialHostStartup);
+                IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), _singletonManager, _activator, _nameResolver, _loggerFactory, _monitorManager, _jobHostOptions.Value.AllowPartialHostStartup);
 
                 string hostId = await _hostIdProvider.GetHostIdAsync(cancellationToken);
                 bool dashboardLoggingEnabled = _dashboardLoggingSetup.Setup(functions, functionsListenerFactory, out IFunctionExecutor hostCallExecutor,

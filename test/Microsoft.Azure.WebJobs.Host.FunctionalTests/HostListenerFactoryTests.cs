@@ -11,6 +11,7 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -32,6 +33,66 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
 
             DisableProvider_Static.Method = null;
             DisableProvider_Instance.Method = null;
+        }
+
+        [Fact]
+        public async Task CreateAsync_RegistersScaleMonitors()
+        {
+            Mock<IFunctionDefinition> mockFunctionDefinition = new Mock<IFunctionDefinition>();
+            Mock<IFunctionInstanceFactory> mockInstanceFactory = new Mock<IFunctionInstanceFactory>(MockBehavior.Strict);
+            Mock<IListenerFactory> mockListenerFactory = new Mock<IListenerFactory>(MockBehavior.Strict);
+            var testListener = new TestListener_Monitor();
+            mockListenerFactory.Setup(p => p.CreateAsync(It.IsAny<CancellationToken>())).ReturnsAsync(testListener);
+            SingletonManager singletonManager = new SingletonManager();
+
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            TestLoggerProvider loggerProvider = new TestLoggerProvider();
+            loggerFactory.AddProvider(loggerProvider);
+
+            List<FunctionDefinition> functions = new List<FunctionDefinition>();
+            var method = typeof(Functions1).GetMethod("TestJob", BindingFlags.Public | BindingFlags.Static);
+            FunctionDescriptor descriptor = FunctionIndexer.FromMethod(method, _jobActivator);
+            FunctionDefinition definition = new FunctionDefinition(descriptor, mockInstanceFactory.Object, mockListenerFactory.Object);
+            functions.Add(definition);
+
+            var monitorManager = new ScaleMonitorManager();
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManager);
+            IListener listener = await factory.CreateAsync(CancellationToken.None);
+
+            var innerListeners = ((IEnumerable<IListener>)listener).ToArray();
+
+            var monitors = monitorManager.GetMonitors().ToArray();
+            Assert.Single(monitors);
+            Assert.Same(testListener, monitors[0]);
+        }
+
+        [Fact]
+        public void RegisterScaleMonitor_Succeeds()
+        {
+            // listener is a direct monitor
+            var monitorManager = new ScaleMonitorManager();
+            var testListener = new TestListener_Monitor();
+            HostListenerFactory.RegisterScaleMonitor(testListener, monitorManager);
+            var monitors = monitorManager.GetMonitors().ToArray();
+            Assert.Single(monitors);
+            Assert.Same(testListener, monitors[0]);
+
+            // listener is a monitor provider
+            monitorManager = new ScaleMonitorManager();
+            var testListenerMonitorProvider = new TestListener_MonitorProvider();
+            HostListenerFactory.RegisterScaleMonitor(testListenerMonitorProvider, monitorManager);
+            monitors = monitorManager.GetMonitors().ToArray();
+            Assert.Single(monitors);
+            Assert.Same(testListenerMonitorProvider.GetMonitor(), monitors[0]);
+
+            // listener is composite, so we expect recursion
+            monitorManager = new ScaleMonitorManager();
+            var compositListener = new CompositeListener(testListener, testListenerMonitorProvider);
+            HostListenerFactory.RegisterScaleMonitor(compositListener, monitorManager);
+            monitors = monitorManager.GetMonitors().ToArray();
+            Assert.Equal(2, monitors.Length);
+            Assert.Same(testListener, monitors[0]);
+            Assert.Same(testListenerMonitorProvider.GetMonitor(), monitors[1]);
         }
 
         [Theory]
@@ -68,7 +129,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
 
             // Create the composite listener - this will fail if any of the
             // function definitions indicate that they are not disabled
-            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory);
+            var monitorManagerMock = new Mock<IScaleMonitorManager>(MockBehavior.Strict);
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManagerMock.Object);
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 
             string expectedMessage = $"Function '{descriptor.ShortName}' is disabled";
@@ -245,6 +307,91 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
         {
             public static void IsDisabled(MethodInfo method)
             {
+            }
+        }
+
+        public class TestListener_Monitor : IListener, IScaleMonitor
+        {
+            public ScaleMonitorDescriptor Descriptor => throw new NotImplementedException();
+
+            public void Cancel()
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Dispose()
+            {
+                throw new NotImplementedException();
+            }
+
+            public Task<ScaleMetrics> GetMetricsAsync()
+            {
+                throw new NotImplementedException();
+            }
+
+            public ScaleStatus GetScaleStatus(ScaleStatusContext context)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Task StartAsync(CancellationToken cancellationToken)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Task StopAsync(CancellationToken cancellationToken)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public class TestListener_MonitorProvider : IListener, IScaleMonitorProvider
+        {
+            private readonly IScaleMonitor _monitor;
+
+            public TestListener_MonitorProvider()
+            {
+                _monitor = new TestListener_MonitorImpl();
+            }
+
+            public void Cancel()
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Dispose()
+            {
+                throw new NotImplementedException();
+            }
+
+            public IScaleMonitor GetMonitor()
+            {
+                return _monitor;
+            }
+
+            public Task StartAsync(CancellationToken cancellationToken)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Task StopAsync(CancellationToken cancellationToken)
+            {
+                throw new NotImplementedException();
+            }
+
+            public class TestListener_MonitorImpl : IScaleMonitor
+            {
+                public ScaleMonitorDescriptor Descriptor => throw new NotImplementedException();
+
+                public Task<ScaleMetrics> GetMetricsAsync()
+                {
+                    throw new NotImplementedException();
+                }
+
+                public ScaleStatus GetScaleStatus(ScaleStatusContext context)
+                {
+                    throw new NotImplementedException();
+                }
             }
         }
     }

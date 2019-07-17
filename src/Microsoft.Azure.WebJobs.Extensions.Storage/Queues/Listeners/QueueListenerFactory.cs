@@ -55,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             QueueTriggerExecutor triggerExecutor = new QueueTriggerExecutor(_executor);
 
             IListener listener = new QueueListener(_queue, _poisonQueue, triggerExecutor, _exceptionHandler, _loggerFactory,
-                _messageEnqueuedWatcherSetter, _queueOptions, _queueProcessorFactory, functionDescriptor: _descriptor);
+                _messageEnqueuedWatcherSetter, _queueOptions, _queueProcessorFactory, _descriptor);
 
             return Task.FromResult(listener);
         }

@@ -11,6 +11,7 @@ using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
+using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Hosting;
@@ -31,6 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
         private Mock<ITriggerExecutor<CloudQueueMessage>> _mockTriggerExecutor;
         private CloudQueueMessage _queueMessage;
         private ILoggerFactory _loggerFactory;
+        private TestLoggerProvider _loggerProvider;
 
         public QueueListenerTests(TestFixture fixture)
         {
@@ -41,7 +43,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             _mockTriggerExecutor = new Mock<ITriggerExecutor<CloudQueueMessage>>(MockBehavior.Strict);
             Mock<IWebJobsExceptionHandler> mockExceptionDispatcher = new Mock<IWebJobsExceptionHandler>(MockBehavior.Strict);
             _loggerFactory = new LoggerFactory();
-            _loggerFactory.AddProvider(new TestLoggerProvider());
+            _loggerProvider = new TestLoggerProvider();
+            _loggerFactory.AddProvider(_loggerProvider);
             Mock<IQueueProcessorFactory> mockQueueProcessorFactory = new Mock<IQueueProcessorFactory>(MockBehavior.Strict);
             QueuesOptions queuesOptions = new QueuesOptions();
             QueueProcessorFactoryContext context = new QueueProcessorFactoryContext(_mockQueue.Object, _loggerFactory, queuesOptions);
@@ -54,12 +57,317 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
 
             mockQueueProcessorFactory.Setup(p => p.Create(It.IsAny<QueueProcessorFactoryContext>())).Returns(_mockQueueProcessor.Object);
 
-            _listener = new QueueListener(_mockQueue.Object, null, _mockTriggerExecutor.Object, mockExceptionDispatcher.Object, _loggerFactory, null, queueConfig,
-                mockQueueProcessorFactory.Object, new FunctionDescriptor());
+            _listener = new QueueListener(_mockQueue.Object, null, _mockTriggerExecutor.Object, mockExceptionDispatcher.Object, _loggerFactory, null, queueConfig, mockQueueProcessorFactory.Object, new FunctionDescriptor { Id = "TestFunction" });
             _queueMessage = new CloudQueueMessage("TestMessage");
         }
 
         public TestFixture Fixture { get; set; }
+
+        [Fact]
+        public void ScaleMonitor_Id_ReturnsExpectedValue()
+        {
+            Assert.Equal("testfunction-queuetrigger-testqueue", _listener.Descriptor.Id);
+        }
+
+        [Fact]
+        public async Task GetMetrics_ReturnsExpectedResult()
+        {
+            var queuesOptions = new QueuesOptions();
+            Mock<ITriggerExecutor<CloudQueueMessage>> mockTriggerExecutor = new Mock<ITriggerExecutor<CloudQueueMessage>>(MockBehavior.Strict);
+            var queueProcessorFactory = new DefaultQueueProcessorFactory();
+            QueueListener listener = new QueueListener(Fixture.Queue, null, mockTriggerExecutor.Object, new WebJobsExceptionHandler(null),
+                _loggerFactory, null, queuesOptions, queueProcessorFactory, new FunctionDescriptor { Id = "TestFunction" });
+
+            var metrics = await listener.GetMetricsAsync();
+
+            Assert.Equal(0, metrics.QueueLength);
+            Assert.Equal(TimeSpan.Zero, metrics.QueueTime);
+            Assert.NotEqual(default(DateTime), metrics.Timestamp);
+
+            // add some test messages
+            for (int i = 0; i < 5; i++)
+            {
+                await Fixture.Queue.AddMessageAsync(new CloudQueueMessage($"Message {i}"), null, null, null, null, CancellationToken.None);
+            }
+
+            await Task.Delay(25);
+
+            metrics = await listener.GetMetricsAsync();
+
+            Assert.Equal(5, metrics.QueueLength);
+            Assert.True(metrics.QueueTime.Ticks > 0);
+            Assert.NotEqual(default(DateTime), metrics.Timestamp);
+
+            // verify non-generic interface works as expected
+            metrics = (QueueTriggerMetrics)(await ((IScaleMonitor)listener).GetMetricsAsync());
+            Assert.Equal(5, metrics.QueueLength);
+        }
+
+        [Fact]
+        public async Task GetMetrics_HandlesStorageExceptions()
+        {
+            var exception = new StorageException(
+                new RequestResult
+                {
+                    HttpStatusCode = 500
+                },
+                "Things are very wrong.",
+                new Exception());
+
+            _mockQueue.Setup(p => p.FetchAttributesAsync()).Throws(exception);
+
+            var metrics = await _listener.GetMetricsAsync();
+
+            Assert.Equal(0, metrics.QueueLength);
+            Assert.Equal(TimeSpan.Zero, metrics.QueueTime);
+            Assert.NotEqual(default(DateTime), metrics.Timestamp);
+
+            var warning = _loggerProvider.GetAllLogMessages().Single(p => p.Level == Microsoft.Extensions.Logging.LogLevel.Warning);
+            Assert.Equal("Error querying for queue scale status: Things are very wrong.", warning.FormattedMessage);
+        }
+
+        [Fact]
+        public void GetScaleStatus_NoMetrics_ReturnsVote_None()
+        {
+            var context = new ScaleStatusContext<QueueTriggerMetrics>
+            {
+                WorkerCount = 1
+            };
+
+            var status = _listener.GetScaleStatus(context);
+            Assert.Equal(ScaleVote.None, status.Vote);
+
+            // verify the non-generic implementation works properly
+            status = ((IScaleMonitor)_listener).GetScaleStatus(context);
+            Assert.Equal(ScaleVote.None, status.Vote);
+        }
+
+        [Fact]
+        public void GetScaleStatus_MessagesPerWorkerThresholdExceeded_ReturnsVote_ScaleOut()
+        {
+            var context = new ScaleStatusContext<QueueTriggerMetrics>
+            {
+                WorkerCount = 1
+            };
+            var timestamp = DateTime.UtcNow;
+            var queueTriggerMetrics = new List<QueueTriggerMetrics>
+            {
+                new QueueTriggerMetrics { QueueLength = 2500, QueueTime = TimeSpan.FromSeconds(1), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 2505, QueueTime = TimeSpan.FromSeconds(1), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 2612, QueueTime = TimeSpan.FromSeconds(1), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 2700, QueueTime = TimeSpan.FromSeconds(1), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 2810, QueueTime = TimeSpan.FromSeconds(1), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 2900, QueueTime = TimeSpan.FromSeconds(1), Timestamp = timestamp.AddSeconds(15) }
+            };
+            context.Metrics = queueTriggerMetrics;
+
+            var status = _listener.GetScaleStatus(context);
+
+            Assert.Equal(ScaleVote.ScaleOut, status.Vote);
+
+            var logs = _loggerProvider.GetAllLogMessages().ToArray();
+            var log = logs[0];
+            Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Information, log.Level);
+            Assert.Equal("QueueLength (2900) > workerCount (1) * 1,000", log.FormattedMessage);
+            log = logs[1];
+            Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Information, log.Level);
+            Assert.Equal($"Length of queue (testqueue, 2900) is too high relative to the number of instances (1).", log.FormattedMessage);
+
+            // verify again with a non generic context instance
+            var context2 = new ScaleStatusContext
+            {
+                WorkerCount = 1,
+                Metrics = queueTriggerMetrics
+            };
+            status = ((IScaleMonitor)_listener).GetScaleStatus(context2);
+            Assert.Equal(ScaleVote.ScaleOut, status.Vote);
+        }
+
+        [Fact]
+        public void GetScaleStatus_QueueLengthIncreasing_ReturnsVote_ScaleOut()
+        {
+            var context = new ScaleStatusContext<QueueTriggerMetrics>
+            {
+                WorkerCount = 1
+            };
+            var timestamp = DateTime.UtcNow;
+            context.Metrics = new List<QueueTriggerMetrics>
+            {
+                new QueueTriggerMetrics { QueueLength = 10, QueueTime = TimeSpan.FromSeconds(1), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 20, QueueTime = TimeSpan.FromSeconds(1), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 40, QueueTime = TimeSpan.FromSeconds(1), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 80, QueueTime = TimeSpan.FromSeconds(1), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 100, QueueTime = TimeSpan.FromSeconds(1), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 150, QueueTime = TimeSpan.FromSeconds(1), Timestamp = timestamp.AddSeconds(15) }
+            };
+
+            var status = _listener.GetScaleStatus(context);
+
+            Assert.Equal(ScaleVote.ScaleOut, status.Vote);
+
+            var logs = _loggerProvider.GetAllLogMessages().ToArray();
+            var log = logs[0];
+            Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Information, log.Level);
+            Assert.Equal("Queue length is increasing for 'testqueue'", log.FormattedMessage);
+        }
+
+        [Fact]
+        public void GetScaleStatus_QueueTimeIncreasing_ReturnsVote_ScaleOut()
+        {
+            var context = new ScaleStatusContext<QueueTriggerMetrics>
+            {
+                WorkerCount = 1
+            };
+            var timestamp = DateTime.UtcNow;
+            context.Metrics = new List<QueueTriggerMetrics>
+            {
+                new QueueTriggerMetrics { QueueLength = 100, QueueTime = TimeSpan.FromSeconds(1), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 100, QueueTime = TimeSpan.FromSeconds(2), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 100, QueueTime = TimeSpan.FromSeconds(3), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 100, QueueTime = TimeSpan.FromSeconds(4), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 100, QueueTime = TimeSpan.FromSeconds(5), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 100, QueueTime = TimeSpan.FromSeconds(6), Timestamp = timestamp.AddSeconds(15) }
+            };
+
+            var status = _listener.GetScaleStatus(context);
+
+            Assert.Equal(ScaleVote.ScaleOut, status.Vote);
+
+            var logs = _loggerProvider.GetAllLogMessages().ToArray();
+            var log = logs[0];
+            Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Information, log.Level);
+            Assert.Equal("Queue time is increasing for 'testqueue'", log.FormattedMessage);
+        }
+
+        [Fact]
+        public void GetScaleStatus_QueueLengthDecreasing_ReturnsVote_ScaleIn()
+        {
+            var context = new ScaleStatusContext<QueueTriggerMetrics>
+            {
+                WorkerCount = 5
+            };
+            var timestamp = DateTime.UtcNow;
+            context.Metrics = new List<QueueTriggerMetrics>
+            {
+                new QueueTriggerMetrics { QueueLength = 150, QueueTime = TimeSpan.FromMilliseconds(400), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 100, QueueTime = TimeSpan.FromMilliseconds(400), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 80, QueueTime = TimeSpan.FromMilliseconds(400), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 40, QueueTime = TimeSpan.FromMilliseconds(400), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 20, QueueTime = TimeSpan.FromMilliseconds(400), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 10, QueueTime = TimeSpan.FromMilliseconds(400), Timestamp = timestamp.AddSeconds(15) }
+            };
+
+            var status = _listener.GetScaleStatus(context);
+
+            Assert.Equal(ScaleVote.ScaleIn, status.Vote);
+
+            var logs = _loggerProvider.GetAllLogMessages().ToArray();
+            var log = logs[0];
+            Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Information, log.Level);
+            Assert.Equal("Queue length is decreasing for 'testqueue'", log.FormattedMessage);
+        }
+
+        [Fact]
+        public void GetScaleStatus_QueueTimeDecreasing_ReturnsVote_ScaleIn()
+        {
+            var context = new ScaleStatusContext<QueueTriggerMetrics>
+            {
+                WorkerCount = 1
+            };
+            var timestamp = DateTime.UtcNow;
+            context.Metrics = new List<QueueTriggerMetrics>
+            {
+                new QueueTriggerMetrics { QueueLength = 100, QueueTime = TimeSpan.FromSeconds(5), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 100, QueueTime = TimeSpan.FromSeconds(4), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 100, QueueTime = TimeSpan.FromSeconds(3), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 100, QueueTime = TimeSpan.FromSeconds(2), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 100, QueueTime = TimeSpan.FromSeconds(1), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 100, QueueTime = TimeSpan.FromMilliseconds(100), Timestamp = timestamp.AddSeconds(15) }
+            };
+
+            var status = _listener.GetScaleStatus(context);
+
+            Assert.Equal(ScaleVote.ScaleIn, status.Vote);
+
+            var logs = _loggerProvider.GetAllLogMessages().ToArray();
+            var log = logs[0];
+            Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Information, log.Level);
+            Assert.Equal("Queue time is decreasing for 'testqueue'", log.FormattedMessage);
+        }
+
+        [Fact]
+        public void GetScaleStatus_QueueSteady_ReturnsVote_None()
+        {
+            var context = new ScaleStatusContext<QueueTriggerMetrics>
+            {
+                WorkerCount = 2
+            };
+            var timestamp = DateTime.UtcNow;
+            context.Metrics = new List<QueueTriggerMetrics>
+            {
+                new QueueTriggerMetrics { QueueLength = 1500, QueueTime = TimeSpan.FromSeconds(1), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 1600, QueueTime = TimeSpan.FromSeconds(1), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 1400, QueueTime = TimeSpan.FromSeconds(1), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 1300, QueueTime = TimeSpan.FromSeconds(1), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 1700, QueueTime = TimeSpan.FromSeconds(1), Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 1600, QueueTime = TimeSpan.FromSeconds(1), Timestamp = timestamp.AddSeconds(15) }
+            };
+
+            var status = _listener.GetScaleStatus(context);
+
+            Assert.Equal(ScaleVote.None, status.Vote);
+
+            var logs = _loggerProvider.GetAllLogMessages().ToArray();
+            var log = logs[0];
+            Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Information, log.Level);
+            Assert.Equal("Queue 'testqueue' is steady", log.FormattedMessage);
+        }
+
+        [Fact]
+        public void GetScaleStatus_QueueIdle_ReturnsVote_ScaleOut()
+        {
+            var context = new ScaleStatusContext<QueueTriggerMetrics>
+            {
+                WorkerCount = 3
+            };
+            var timestamp = DateTime.UtcNow;
+            context.Metrics = new List<QueueTriggerMetrics>
+            {
+                new QueueTriggerMetrics { QueueLength = 0, QueueTime = TimeSpan.Zero, Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 0, QueueTime = TimeSpan.Zero, Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 0, QueueTime = TimeSpan.Zero, Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 0, QueueTime = TimeSpan.Zero, Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 0, QueueTime = TimeSpan.Zero, Timestamp = timestamp.AddSeconds(15) },
+                new QueueTriggerMetrics { QueueLength = 0, QueueTime = TimeSpan.Zero, Timestamp = timestamp.AddSeconds(15) }
+            };
+
+            var status = _listener.GetScaleStatus(context);
+
+            Assert.Equal(ScaleVote.ScaleIn, status.Vote);
+
+            var logs = _loggerProvider.GetAllLogMessages().ToArray();
+            var log = logs[0];
+            Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Information, log.Level);
+            Assert.Equal("Queue 'testqueue' is idle", log.FormattedMessage);
+        }
+
+        [Fact]
+        public void GetScaleStatus_UnderSampleCountThreshold_ReturnsVote_None()
+        {
+            var context = new ScaleStatusContext<QueueTriggerMetrics>
+            {
+                WorkerCount = 1
+            };
+            context.Metrics = new List<QueueTriggerMetrics>
+            {
+                new QueueTriggerMetrics { QueueLength = 5, QueueTime = TimeSpan.FromSeconds(1), Timestamp = DateTime.UtcNow },
+                new QueueTriggerMetrics { QueueLength = 10, QueueTime = TimeSpan.FromSeconds(1), Timestamp = DateTime.UtcNow }
+            };
+
+            var status = _listener.GetScaleStatus(context);
+
+            Assert.Equal(ScaleVote.None, status.Vote);
+        }
 
         [Fact]
         public async Task UpdatedQueueMessage_RetainsOriginalProperties()
@@ -78,7 +386,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             var queueProcessorFactory = new DefaultQueueProcessorFactory();
 
             QueueListener listener = new QueueListener(queue, poisonQueue, mockTriggerExecutor.Object, new WebJobsExceptionHandler(null),
-                NullLoggerFactory.Instance, null, queuesOptions, queueProcessorFactory, new FunctionDescriptor());
+                NullLoggerFactory.Instance, null, queuesOptions, queueProcessorFactory, new FunctionDescriptor { Id = "TestFunction" });
 
             mockTriggerExecutor
                 .Setup(m => m.ExecuteAsync(It.IsAny<CloudQueueMessage>(), CancellationToken.None))
@@ -116,7 +424,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             CloudQueueMessage messageFromCloud = await queue.GetMessageAsync();
 
             QueueListener listener = new QueueListener(queue, null, mockTriggerExecutor.Object, new WebJobsExceptionHandler(null),
-                NullLoggerFactory.Instance, null, new QueuesOptions(), new DefaultQueueProcessorFactory(), new FunctionDescriptor());
+                _loggerFactory, null, new QueuesOptions(), new DefaultQueueProcessorFactory(), new FunctionDescriptor { Id = "TestFunction" });
+
             listener.MinimumVisibilityRenewalInterval = TimeSpan.FromSeconds(1);
 
             // Set up a function that sleeps to allow renewal
@@ -367,7 +676,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
 
             public void Dispose()
             {
-
                 var result = QueueClient.ListQueuesSegmentedAsync(TestQueuePrefix, null).Result;
                 var tasks = new List<Task>();
 

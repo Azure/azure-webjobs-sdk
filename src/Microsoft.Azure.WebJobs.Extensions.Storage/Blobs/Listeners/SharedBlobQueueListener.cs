@@ -5,10 +5,11 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Azure.WebJobs.Host.Scale;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {
-    internal sealed class SharedBlobQueueListener : ISharedListener
+    internal sealed class SharedBlobQueueListener : ISharedListener, IScaleMonitorProvider
     {
         private readonly IListener _listener;
         private readonly BlobQueueTriggerExecutor _executor;
@@ -67,6 +68,11 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 _listener.Dispose();
                 _disposed = true;
             }
+        }
+
+        public IScaleMonitor GetMonitor()
+        {
+            return (IScaleMonitor)_listener;
         }
     }
 }

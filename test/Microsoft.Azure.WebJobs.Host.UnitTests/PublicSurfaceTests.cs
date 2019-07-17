@@ -246,7 +246,18 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "WebJobsServiceCollectionExtensions",
                 "WebJobsShutdownWatcher",
                 "WebJobsStartupAttribute",
-                "IConfigurationExtensions"
+                "IConfigurationExtensions",
+                "IScaleMonitor",
+                "IScaleMonitor`1",
+                "IScaleMonitorManager",
+                "IScaleMonitorProvider",
+                "ScaleMetrics",
+                "ScaleStatus",
+                "ScaleStatusContext",
+                "ScaleStatusContext`1",
+                "ScaleVote",
+                "ScaleMonitorDescriptor",
+                "ScaleMonitorScope"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);

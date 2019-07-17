@@ -5,10 +5,11 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Azure.WebJobs.Host.Scale;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {
-    internal sealed class BlobListener : IListener
+    internal sealed class BlobListener : IListener, IScaleMonitorProvider
     {
         private readonly ISharedListener _sharedListener;
 
@@ -85,6 +86,16 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             {
                 throw new ObjectDisposedException(null);
             }
+        }
+
+        public IScaleMonitor GetMonitor()
+        {
+            // BlobListener is special - it uses a single shared QueueListener for all BlobTrigger functions,
+            // so we must return that single shared instance.
+            // Each individual BlobTrigger function will have its own listener, each pointing to the single
+            // shared QueueListener. If all BlobTrigger functions are disabled, their listeners won't be created
+            // so the shared queue won't be monitored.
+            return ((IScaleMonitorProvider)_sharedListener).GetMonitor();
         }
     }
 }
