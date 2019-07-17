@@ -4,6 +4,7 @@
 using System;
 using System.Threading;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -15,6 +16,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     {
         private readonly Guid _functionInstanceId;
         private readonly CancellationToken _functionCancellationToken;
+        private readonly IServiceProvider _functionInvocationServices;
+        private static Lazy<IServiceProvider> _emptyServiceProvider = new Lazy<IServiceProvider>(CreateEmptyServiceProvider);
 
         /// <summary>
         /// Creates a new instance.
@@ -26,12 +29,13 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         public FunctionBindingContext(
             Guid functionInstanceId,
             CancellationToken functionCancellationToken,
+            IServiceProvider functionInvocationServices = null,
             FunctionDescriptor functionDescriptor = null)
         {
             _functionInstanceId = functionInstanceId;
             _functionCancellationToken = functionCancellationToken;
-
-            this.MethodName = functionDescriptor?.LogName;
+            _functionInvocationServices = functionInvocationServices ?? _emptyServiceProvider.Value;
+            MethodName = functionDescriptor?.LogName;
         }
 
         /// <summary>
@@ -48,5 +52,39 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// The short name of the current function. 
         /// </summary>
         public string MethodName { get; private set; }
+
+        /// <summary>
+        /// The service provider for the current function invocation scope.
+        /// </summary>
+        public IServiceProvider FunctionServices { get; set; }
+
+        /// <summary>
+        /// Creates an object instance with constructor arguments provided in the
+        /// method call and from the current function context scoped services.
+        /// </summary>
+        /// <param name="type">The type to instantiate.</param>
+        /// <param name="parameters">Parameters not provided by the function service provider.</param>
+        /// <returns>An instance of the type specified.</returns>
+        public object CreateObjectInstance(Type type, params object[] parameters)
+        {
+            return ActivatorUtilities.CreateInstance(_functionInvocationServices, type, parameters);
+        }
+
+        /// <summary>
+        /// Creates an object instance with constructor arguments provided in the
+        /// method call and from the current function context scoped services.
+        /// </summary>
+        /// <typeparam name="T">The type to instantiate.</typeparam>
+        /// <param name="parameters">Parameters not provided by the function service provider.</param>
+        /// <returns>An instance of type T.</returns>
+        public T CreateObjectInstance<T>(params object[] parameters)
+        {
+            return ActivatorUtilities.CreateInstance<T>(_functionInvocationServices, parameters);
+        }
+
+        private static IServiceProvider CreateEmptyServiceProvider()
+        {
+            return new ServiceCollection().BuildServiceProvider();
+        }
     }
 }
