@@ -860,8 +860,12 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
             {
                 var tableClient = GetTableClient();
                 var tableName = _tableNamePrefix + "x" + suffix;
-                var table = tableClient.GetTableReference(tableName);
-                _tables.Add(table);
+                var table = _tables.FirstOrDefault(x => x.Name == tableName);
+                if (table == null)
+                {
+                    table = tableClient.GetTableReference(tableName);
+                    _tables.Add(table);
+                }
                 return table;
             }
         }
