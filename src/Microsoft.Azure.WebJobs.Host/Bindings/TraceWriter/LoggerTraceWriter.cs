@@ -1,11 +1,12 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Logging
 {
@@ -15,6 +16,7 @@ namespace Microsoft.Azure.WebJobs.Logging
     internal class LoggerTraceWriter : TraceWriter
     {
         private ILogger _logger;
+        private const string _originalFormat = "{OriginalFormat}";
 
         /// <summary>
         /// Creates an instance.
@@ -35,8 +37,14 @@ namespace Microsoft.Azure.WebJobs.Logging
             }
 
             LogLevel level = GetLogLevel(traceEvent.Level);
-            FormattedLogValuesCollection logState = new FormattedLogValuesCollection(traceEvent.Message, null, new ReadOnlyDictionary<string, object>(traceEvent.Properties));
-            _logger?.Log(level, 0, logState, traceEvent.Exception, (s, e) => s.ToString());
+
+            var state = new ReadOnlyDictionary<string, object>(new Dictionary<string, object>(traceEvent.Properties)
+            {
+                // Maintain parity with ILogger
+                [_originalFormat] = traceEvent.Message
+            });
+
+            _logger?.Log(level, 0, state, traceEvent.Exception, (s, e) => traceEvent.Message);
         }
 
         internal static LogLevel GetLogLevel(TraceLevel traceLevel)
