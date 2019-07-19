@@ -37,7 +37,19 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
                 tasks.Add(table.DeleteIfExistsAsync());
             }
 
-            Task.WaitAll(tasks.ToArray());
+            try
+            {
+                Task.WaitAll(tasks.ToArray());
+            }
+            catch (AggregateException aex)
+            {
+                // handle any exceptions that are due to the table is already being deleted
+                aex.Handle(e =>
+                {
+                    return e is StorageException storageEx &&
+                           storageEx?.RequestInformation?.ExtendedErrorInformation?.ErrorCode == "TableBeingDeleted";
+                });
+            }
         }
 
         // Test abandonded status
