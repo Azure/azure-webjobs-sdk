@@ -1,9 +1,8 @@
 <Project>
   <PropertyGroup>
     <!-- Extensions can have independent versions and only increment when released -->
-    <Version>3.0.10$(VersionSuffix)</Version>
+    <Version>3.0.11$(VersionSuffix)</Version>
     <ExtensionsEventHubsVersion>3.0.6$(VersionSuffix)</ExtensionsEventHubsVersion>
-    <ExtensionsServiceBusVersion>3.0.6$(VersionSuffix)</ExtensionsServiceBusVersion>
     <ExtensionsStorageVersion>3.0.7$(VersionSuffix)</ExtensionsStorageVersion>
 
     <TargetFramework>netstandard2.0</TargetFramework>
