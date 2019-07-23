@@ -3,11 +3,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
@@ -15,7 +18,7 @@ using Microsoft.WindowsAzure.Storage.Queue;
 
 namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
 {
-    internal sealed class QueueListener : IListener, ITaskSeriesCommand, INotificationCommand
+    internal sealed partial class QueueListener : IListener, ITaskSeriesCommand, INotificationCommand
     {
         private readonly ITaskSeriesTimer _timer;
         private readonly IDelayStrategy _delayStrategy;
@@ -29,7 +32,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         private readonly QueuesOptions _queueOptions;
         private readonly QueueProcessor _queueProcessor;
         private readonly TimeSpan _visibilityTimeout;
-
+        private readonly ILogger<QueueListener> _logger;
+        private readonly FunctionDescriptor _functionDescriptor;
         private bool? _queueExists;
         private bool _foundMessageSinceLastDelay;
         private bool _disposed;
@@ -43,6 +47,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             SharedQueueWatcher sharedWatcher,
             QueuesOptions queueOptions,
             IQueueProcessorFactory queueProcessorFactory,
+            FunctionDescriptor functionDescriptor,
             TimeSpan? maxPollingInterval = null)
         {
             if (queueOptions == null)
@@ -53,6 +58,11 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             if (queueProcessorFactory == null)
             {
                 throw new ArgumentNullException(nameof(queueProcessorFactory));
+            }
+
+            if (loggerFactory == null)
+            {
+                throw new ArgumentNullException(nameof(loggerFactory));
             }
 
             if (queueOptions.BatchSize <= 0)
@@ -71,6 +81,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             _triggerExecutor = triggerExecutor;
             _exceptionHandler = exceptionHandler;
             _queueOptions = queueOptions;
+            _logger = loggerFactory.CreateLogger<QueueListener>();
+            _functionDescriptor = functionDescriptor ?? throw new ArgumentNullException(nameof(functionDescriptor));
 
             // if the function runs longer than this, the invisibility will be updated
             // on a timer periodically for the duration of the function execution
@@ -157,11 +169,16 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
 
                 if (_queueExists.Value)
                 {
+                    Stopwatch sw = Stopwatch.StartNew();
+                    OperationContext context = new OperationContext { ClientRequestID = Guid.NewGuid().ToString() };
+
                     batch = await _queue.GetMessagesAsync(_queueProcessor.BatchSize,
                         _visibilityTimeout,
                         options: null,
-                        operationContext: null,
+                        operationContext: context,
                         cancellationToken: cancellationToken);
+
+                    Logger.GetMessages(_logger, _functionDescriptor.LogName, _queue.Name, context.ClientRequestID, batch.Count(), sw.ElapsedMilliseconds);
                 }
             }
             catch (StorageException exception)
@@ -235,8 +252,12 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
 
         private Task CreateDelayWithNotificationTask()
         {
-            Task normalDelay = Task.Delay(_delayStrategy.GetNextDelay(executionSucceeded: _foundMessageSinceLastDelay));
+            TimeSpan nextDelay = _delayStrategy.GetNextDelay(executionSucceeded: _foundMessageSinceLastDelay);
+            Task normalDelay = Task.Delay(nextDelay);
             _foundMessageSinceLastDelay = false;
+
+            Logger.BackoffDelay(_logger, _functionDescriptor.LogName, _queue.Name, nextDelay.TotalMilliseconds);
+
             return Task.WhenAny(_stopWaitingTaskSource.Task, normalDelay);
         }
 
