@@ -8,12 +8,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Moq;
@@ -52,7 +54,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
 
             mockQueueProcessorFactory.Setup(p => p.Create(It.IsAny<QueueProcessorFactoryContext>())).Returns(_mockQueueProcessor.Object);
 
-            _listener = new QueueListener(_mockQueue.Object, null, _mockTriggerExecutor.Object, mockExceptionDispatcher.Object, _loggerFactory, null, queueConfig, queueProcessorFactory: mockQueueProcessorFactory.Object);
+            _listener = new QueueListener(_mockQueue.Object, null, _mockTriggerExecutor.Object, mockExceptionDispatcher.Object, _loggerFactory, null, queueConfig,
+                mockQueueProcessorFactory.Object, new FunctionDescriptor());
             _queueMessage = new CloudQueueMessage("TestMessage");
         }
 
@@ -75,7 +78,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             var queueProcessorFactory = new DefaultQueueProcessorFactory();
 
             QueueListener listener = new QueueListener(queue, poisonQueue, mockTriggerExecutor.Object, new WebJobsExceptionHandler(null),
-                null, null, queuesOptions, queueProcessorFactory);
+                NullLoggerFactory.Instance, null, queuesOptions, queueProcessorFactory, new FunctionDescriptor());
 
             mockTriggerExecutor
                 .Setup(m => m.ExecuteAsync(It.IsAny<CloudQueueMessage>(), CancellationToken.None))
@@ -113,7 +116,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             CloudQueueMessage messageFromCloud = await queue.GetMessageAsync();
 
             QueueListener listener = new QueueListener(queue, null, mockTriggerExecutor.Object, new WebJobsExceptionHandler(null),
-                null, null, new QueuesOptions(), new DefaultQueueProcessorFactory());
+                NullLoggerFactory.Instance, null, new QueuesOptions(), new DefaultQueueProcessorFactory(), new FunctionDescriptor());
             listener.MinimumVisibilityRenewalInterval = TimeSpan.FromSeconds(1);
 
             // Set up a function that sleeps to allow renewal
@@ -246,7 +249,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             var cancellationToken = new CancellationToken();
             bool queueExists = false;
             _mockQueue.Setup(p => p.ExistsAsync()).ReturnsAsync(() => queueExists);
-            _mockQueue.Setup(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), null, null, cancellationToken)).ReturnsAsync(Enumerable.Empty<CloudQueueMessage>());
+            _mockQueue.Setup(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), null, It.IsAny<OperationContext>(), cancellationToken)).ReturnsAsync(Enumerable.Empty<CloudQueueMessage>());
 
             int numIterations = 5;
             int numFailedExistenceChecks = 2;
@@ -264,7 +267,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             }
 
             _mockQueue.Verify(p => p.ExistsAsync(), Times.Exactly(numIterations - numFailedExistenceChecks));
-            _mockQueue.Verify(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), null, null, cancellationToken), Times.Exactly(numIterations - numFailedExistenceChecks));
+            _mockQueue.Verify(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), null, It.IsAny<OperationContext>(), cancellationToken), Times.Exactly(numIterations - numFailedExistenceChecks));
         }
 
         [Fact]
@@ -278,7 +281,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
                     HttpStatusCode = 503
                 },
                 string.Empty, new Exception());
-            _mockQueue.Setup(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), null, null, cancellationToken)).Throws(exception);
+            _mockQueue.Setup(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), null, It.IsAny<OperationContext>(), cancellationToken)).Throws(exception);
 
             for (int i = 0; i < 5; i++)
             {
@@ -287,7 +290,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             }
 
             _mockQueue.Verify(p => p.ExistsAsync(), Times.Exactly(5));
-            _mockQueue.Verify(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), null, null, cancellationToken), Times.Exactly(5));
+            _mockQueue.Verify(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), null, It.IsAny<OperationContext>(), cancellationToken), Times.Exactly(5));
         }
 
         [Fact]

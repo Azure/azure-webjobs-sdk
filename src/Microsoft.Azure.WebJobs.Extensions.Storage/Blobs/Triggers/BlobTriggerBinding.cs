@@ -178,7 +178,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
 
             var factory = new BlobListenerFactory(_hostIdProvider, _queueOptions, _blobsOptions, _exceptionHandler,
                 _blobWrittenWatcherSetter, _messageEnqueuedWatcherSetter, _sharedContextProvider, _loggerFactory,
-                context.Descriptor.Id, _hostAccount, _dataAccount, container, _path, context.Executor, _singletonManager);
+                context.Descriptor, _hostAccount, _dataAccount, container, _path, context.Executor, _singletonManager);
 
             return factory.CreateAsync(context.CancellationToken);
         }

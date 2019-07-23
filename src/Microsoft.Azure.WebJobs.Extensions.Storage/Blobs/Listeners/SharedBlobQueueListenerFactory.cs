@@ -5,6 +5,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Microsoft.Azure.WebJobs.Host.Timers;
@@ -21,6 +22,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private readonly QueuesOptions _queueOptions;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IBlobWrittenWatcher _blobWrittenWatcher;
+        private readonly FunctionDescriptor _functionDescriptor;
         private readonly StorageAccount _hostAccount;
         private readonly ILoggerFactory _loggerFactory;
 
@@ -31,7 +33,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             QueuesOptions queueOptions,
             IWebJobsExceptionHandler exceptionHandler,
             ILoggerFactory loggerFactory,
-            IBlobWrittenWatcher blobWrittenWatcher)
+            IBlobWrittenWatcher blobWrittenWatcher,
+            FunctionDescriptor functionDescriptor)
         {
             _hostAccount = hostAccount ?? throw new ArgumentNullException(nameof(hostAccount));
             _sharedQueueWatcher = sharedQueueWatcher ?? throw new ArgumentNullException(nameof(sharedQueueWatcher));
@@ -40,6 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
             _loggerFactory = loggerFactory;
             _blobWrittenWatcher = blobWrittenWatcher ?? throw new ArgumentNullException(nameof(blobWrittenWatcher));
+            _functionDescriptor = functionDescriptor;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
@@ -59,7 +63,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             // So we define our own custom queue processor factory for this listener
             var queueProcessorFactory = new SharedBlobQueueProcessorFactory(triggerExecutor, _hostBlobTriggerQueue, _loggerFactory, _queueOptions, defaultPoisonQueue);
             IListener listener = new QueueListener(_hostBlobTriggerQueue, defaultPoisonQueue, triggerExecutor, _exceptionHandler, _loggerFactory,
-                _sharedQueueWatcher, _queueOptions, queueProcessorFactory);
+                _sharedQueueWatcher, _queueOptions, queueProcessorFactory, functionDescriptor: _functionDescriptor);
 
             return new SharedBlobQueueListener(listener, triggerExecutor);
         }

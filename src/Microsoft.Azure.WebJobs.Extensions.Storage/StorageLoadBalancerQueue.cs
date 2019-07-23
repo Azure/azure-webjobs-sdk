@@ -33,7 +33,7 @@ namespace WebJobs.Extensions.Storage
             StorageAccountProvider storageAccountProvider,
                IOptions<QueuesOptions> queueOptions,
                IWebJobsExceptionHandler exceptionHandler,
-               SharedQueueWatcher sharedWatcher, 
+               SharedQueueWatcher sharedWatcher,
                ILoggerFactory loggerFactory,
                IQueueProcessorFactory queueProcessorFactory)
         {
@@ -44,7 +44,7 @@ namespace WebJobs.Extensions.Storage
             _loggerFactory = loggerFactory;
             _queueProcessorFactory = queueProcessorFactory;
         }
-        
+
         public IAsyncCollector<T> GetQueueWriter<T>(string queue)
         {
             return new QueueWriter<T>(this, Convert(queue));
@@ -65,7 +65,7 @@ namespace WebJobs.Extensions.Storage
             public async Task AddAsync(T item, CancellationToken cancellationToken = default(CancellationToken))
             {
                 string contents = JsonConvert.SerializeObject(
-                    item, 
+                    item,
                     JsonSerialization.Settings);
 
                 var msg = new CloudQueueMessage(contents);
@@ -91,7 +91,7 @@ namespace WebJobs.Extensions.Storage
         public IListener CreateQueueListenr(
             string queue,
             string poisonQueue,
-            Func<string, CancellationToken,  Task<FunctionResult>> callback
+            Func<string, CancellationToken, Task<FunctionResult>> callback
             )
         {
             // Provide an upper bound on the maximum polling interval for run/abort from dashboard.
@@ -111,6 +111,7 @@ namespace WebJobs.Extensions.Storage
                 sharedWatcher: _sharedWatcher,
                 queueOptions: _queueOptions,
                 queueProcessorFactory: _queueProcessorFactory,
+                functionDescriptor: new FunctionDescriptor(),
                 maxPollingInterval: maxPollingInterval);
 
             return listener;

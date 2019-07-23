@@ -6,7 +6,6 @@ using System.Collections.Generic;
 #if PUBLICPROTOCOL
 namespace Microsoft.Azure.WebJobs.Protocols
 #else
-using Microsoft.Azure.WebJobs.Host;
 using Newtonsoft.Json;
 namespace Microsoft.Azure.WebJobs.Host.Protocols
 #endif
@@ -35,7 +34,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
 #else
         /// <summary>Gets or sets the name used for logging. This is 'Method' or the value overwritten by [FunctionName] </summary>
         [JsonIgnore]
-        internal string LogName { get; set; }
+        public string LogName { get; set; }
 
         /// <summary>Gets or sets whether this method is disabled. </summary>
         [JsonIgnore]

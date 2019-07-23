@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Microsoft.Azure.WebJobs.Host.Timers;
@@ -25,8 +26,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private readonly IContextSetter<IBlobWrittenWatcher> _blobWrittenWatcherSetter;
         private readonly SharedQueueWatcher _messageEnqueuedWatcherSetter;
         private readonly ISharedContextProvider _sharedContextProvider;
+        private readonly FunctionDescriptor _functionDescriptor;
         private readonly ILoggerFactory _loggerFactory;
-        private readonly string _functionId;
         private readonly StorageAccount _hostAccount;
         private readonly StorageAccount _dataAccount;
         private readonly CloudBlobContainer _container;
@@ -42,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             SharedQueueWatcher messageEnqueuedWatcherSetter,
             ISharedContextProvider sharedContextProvider,
             ILoggerFactory loggerFactory,
-            string functionId,
+            FunctionDescriptor functionDescriptor,
             StorageAccount hostAccount,
             StorageAccount dataAccount,
             CloudBlobContainer container,
@@ -57,8 +58,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             _blobWrittenWatcherSetter = blobWrittenWatcherSetter ?? throw new ArgumentNullException(nameof(blobWrittenWatcherSetter));
             _messageEnqueuedWatcherSetter = messageEnqueuedWatcherSetter ?? throw new ArgumentNullException(nameof(messageEnqueuedWatcherSetter));
             _sharedContextProvider = sharedContextProvider ?? throw new ArgumentNullException(nameof(sharedContextProvider));
+            _functionDescriptor = functionDescriptor ?? throw new ArgumentNullException(nameof(functionDescriptor));
             _loggerFactory = loggerFactory;
-            _functionId = functionId;
             _hostAccount = hostAccount ?? throw new ArgumentNullException(nameof(hostAccount));
             _dataAccount = dataAccount ?? throw new ArgumentNullException(nameof(dataAccount));
             _container = container ?? throw new ArgumentNullException(nameof(container));
@@ -97,7 +98,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             // notification queue and dispatch to the target job function.
             SharedBlobQueueListener sharedBlobQueueListener = _sharedContextProvider.GetOrCreateInstance<SharedBlobQueueListener>(
                 new SharedBlobQueueListenerFactory(_hostAccount, sharedQueueWatcher, hostBlobTriggerQueue,
-                    _queueOptions, _exceptionHandler, _loggerFactory, sharedBlobListener.BlobWritterWatcher));
+                    _queueOptions, _exceptionHandler, _loggerFactory, sharedBlobListener.BlobWritterWatcher, _functionDescriptor));
             var queueListener = new BlobListener(sharedBlobQueueListener);
 
             // determine which client to use for the poison queue
@@ -148,7 +149,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             IMessageEnqueuedWatcher messageEnqueuedWatcher,
             CancellationToken cancellationToken)
         {
-            BlobTriggerExecutor triggerExecutor = new BlobTriggerExecutor(hostId, _functionId, _input,
+            BlobTriggerExecutor triggerExecutor = new BlobTriggerExecutor(hostId, _functionDescriptor.Id, _input,
                 BlobETagReader.Instance, new BlobReceiptManager(blobClient),
                 new BlobTriggerQueueWriter(hostBlobTriggerQueue, messageEnqueuedWatcher));
 
@@ -167,7 +168,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 QueueClient = queueClient
             };
 
-            sharedBlobQueueListener.Register(_functionId, registration);
+            sharedBlobQueueListener.Register(_functionDescriptor.Id, registration);
         }
     }
 }

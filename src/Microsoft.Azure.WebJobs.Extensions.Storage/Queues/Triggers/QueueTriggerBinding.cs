@@ -122,7 +122,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             }
 
             var factory = new QueueListenerFactory(_queue, _queueOptions, _exceptionHandler,
-                    _messageEnqueuedWatcherSetter, _loggerFactory, context.Executor, _queueProcessorFactory);
+                    _messageEnqueuedWatcherSetter, _loggerFactory, context.Executor, _queueProcessorFactory, context.Descriptor);
 
             return factory.CreateAsync(context.CancellationToken);
         }
