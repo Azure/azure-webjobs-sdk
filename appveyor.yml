@@ -26,34 +26,15 @@ build_script:
     if (-not $hasTag) {
       $buildNumber = $env:APPVEYOR_BUILD_NUMBER
       Write-Host "No git tag found. Setting packages suffix to '$buildNumber'"
-    }    
+    }
+
+    if ($hasTag) {
+      $env:Configuration = "Release"
+    }
+
     .\Build.ps1 -packageSuffix "$buildNumber"
 test_script:
-- ps: >-
-    $success = $true
-
-    dotnet test .\test\Microsoft.Azure.WebJobs.Host.UnitTests\ -v q --no-build
-
-    $success = $success -and $?
-
-    dotnet test .\test\Microsoft.Azure.WebJobs.Host.FunctionalTests\ -v q --no-build
-
-    $success = $success -and $?
-
-    dotnet test .\test\Microsoft.Azure.WebJobs.Logging.FunctionalTests\ -v q --no-build
-
-    $success = $success -and $?
-
-    # see results in app insights AntaresDemo 'functionse2eai'
-
-    dotnet test .\test\Microsoft.Azure.WebJobs.Host.EndToEndTests\ -v q --no-build
-
-    $success = $success -and $?
-
-    dotnet test .\test\Microsoft.Azure.Webjobs.Extensions.Storage.UnitTests\ -v q --no-build
-
-    $success = $success -and $?
-
-    if (-not $success) { exit 1 }
+- ps: |
+    .\runtests.ps1
 on_finish:
 - ps: .\tools\PollSigningResults.ps1 
