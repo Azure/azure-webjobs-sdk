@@ -14,8 +14,8 @@ using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.Implementation.ApplicationId;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
-using Microsoft.ApplicationInsights.SnapshotCollector;
 using Microsoft.ApplicationInsights.Extensibility.W3C;
+using Microsoft.ApplicationInsights.SnapshotCollector;
 using Microsoft.ApplicationInsights.WindowsServer;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
@@ -57,13 +57,18 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddSingleton<ITelemetryInitializer, MetricSdkVersionTelemetryInitializer>();
 
             services.AddSingleton<ITelemetryModule, QuickPulseTelemetryModule>();
-            
+            services.AddSingleton<QuickPulseInitializationScheduler>();
+
             services.AddSingleton<ITelemetryModule>(provider =>
             {
                 ApplicationInsightsLoggerOptions options = provider.GetService<IOptions<ApplicationInsightsLoggerOptions>>().Value;
                 if (options.EnablePerformanceCountersCollection)
                 {
-                    return new PerformanceCollectorModule();
+                    return new PerformanceCollectorModule
+                    {
+                        // Disabling this can improve cold start times
+                        EnableIISExpressPerformanceCounters = false
+                    };
                 }
 
                 return NullTelemetryModule.Instance;
@@ -132,7 +137,7 @@ namespace Microsoft.Extensions.DependencyInjection
 
                 var activeConfig = TelemetryConfiguration.Active;
                 if (!string.IsNullOrEmpty(options.InstrumentationKey) &&
-                    string.IsNullOrEmpty(activeConfig.InstrumentationKey))
+                string.IsNullOrEmpty(activeConfig.InstrumentationKey))
                 {
                     activeConfig.InstrumentationKey = options.InstrumentationKey;
                 }
@@ -158,22 +163,22 @@ namespace Microsoft.Extensions.DependencyInjection
                     provider.GetServices<ITelemetryInitializer>(),
                     provider.GetServices<ITelemetryModule>(),
                     appIdProvider,
-                    filterOptions);
+                    filterOptions,
+                    provider.GetService<QuickPulseInitializationScheduler>());
 
                 return config;
             });
 
             services.AddSingleton<TelemetryClient>(provider =>
-                {
-                    TelemetryConfiguration configuration = provider.GetService<TelemetryConfiguration>();
-                    TelemetryClient client = new TelemetryClient(configuration);
+            {
+                TelemetryConfiguration configuration = provider.GetService<TelemetryConfiguration>();
+                TelemetryClient client = new TelemetryClient(configuration);
 
-                    ISdkVersionProvider versionProvider = provider.GetService<ISdkVersionProvider>();
-                    client.Context.GetInternalContext().SdkVersion = versionProvider?.GetSdkVersion();
+                ISdkVersionProvider versionProvider = provider.GetService<ISdkVersionProvider>();
+                client.Context.GetInternalContext().SdkVersion = versionProvider?.GetSdkVersion();
 
-                    return client;
-                }
-            );
+                return client;
+            });
 
             services.AddSingleton<ILoggerProvider, ApplicationInsightsLoggerProvider>();
 
@@ -215,7 +220,8 @@ namespace Microsoft.Extensions.DependencyInjection
             IEnumerable<ITelemetryInitializer> telemetryInitializers,
             IEnumerable<ITelemetryModule> telemetryModules,
             IApplicationIdProvider applicationIdProvider,
-            LoggerFilterOptions filterOptions)
+            LoggerFilterOptions filterOptions,
+            QuickPulseInitializationScheduler delayer)
         {
             if (options.InstrumentationKey != null)
             {
@@ -249,9 +255,14 @@ namespace Microsoft.Extensions.DependencyInjection
                     {
                         quickPulseModule.AuthenticationApiKey = options.QuickPulseAuthenticationApiKey;
                     }
-                }
 
-                module.Initialize(configuration);
+                    // QuickPulse can have a startup performance hit, so delay its initialization.
+                    delayer.ScheduleInitialization(() => module.Initialize(configuration), options.QuickPulseInitializationDelay);
+                }
+                else
+                {
+                    module.Initialize(configuration);
+                }
             }
 
             QuickPulseTelemetryProcessor quickPulseProcessor = null;

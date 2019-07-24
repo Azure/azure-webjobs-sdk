@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using Microsoft.ApplicationInsights.SnapshotCollector;
 using Microsoft.ApplicationInsights.WindowsServer.Channel.Implementation;
 using Microsoft.Azure.WebJobs.Hosting;
@@ -30,6 +31,12 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// Gets or sets authentication key for Quick Pulse (Live Metrics).
         /// </summary>
         public string QuickPulseAuthenticationApiKey { get; set; }
+
+        /// <summary>
+        /// Gets or sets the time to delay Quick Pulse (Live Metrics) initialization. Delaying this initialization
+        /// can result in decreased application startup time. Default value is 15 seconds.
+        /// </summary>
+        public TimeSpan QuickPulseInitializationDelay { get; set; } = TimeSpan.FromSeconds(15);
 
         /// <summary>
         /// Gets or sets flag that enables Kudu performance counters collection.
@@ -98,6 +105,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(SnapshotConfiguration), snapshot },
                 { nameof(EnablePerformanceCountersCollection), EnablePerformanceCountersCollection},
                 { nameof(HttpAutoCollectionOptions), httpOptions},
+                { nameof(QuickPulseInitializationDelay), QuickPulseInitializationDelay }
             };
 
             return options.ToString(Formatting.Indented);
