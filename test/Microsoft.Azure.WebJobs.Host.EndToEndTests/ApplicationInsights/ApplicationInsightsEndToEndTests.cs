@@ -85,6 +85,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     {
                         o.InstrumentationKey = _mockApplicationInsightsKey;
                         o.HttpAutoCollectionOptions = httpOptions;
+                        o.QuickPulseInitializationDelay = TimeSpan.FromSeconds(1);
                     });
                 })
                 .ConfigureServices(services =>
@@ -465,10 +466,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 request.Headers.Add("traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01");
 
                 var mockHttpContext = new DefaultHttpContext();
-                mockHttpContext.Connection.RemoteIpAddress = new IPAddress(new byte[] {1, 2, 3, 4});
+                mockHttpContext.Connection.RemoteIpAddress = new IPAddress(new byte[] { 1, 2, 3, 4 });
 
                 // simulate functions behavior to set request on the scope
-                using (var _ = logger.BeginScope(new Dictionary<string, object> { ["MS_HttpRequest"] = mockHttpContext.Request}))
+                using (var _ = logger.BeginScope(new Dictionary<string, object> { ["MS_HttpRequest"] = mockHttpContext.Request }))
                 {
                     await client.SendAsync(request);
                 }
@@ -489,7 +490,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.True(functionRequest.Duration.TotalMilliseconds >= functionDuration);
                 Assert.Equal("1.2.3.4", functionRequest.Context.Location.Ip);
                 Assert.Equal("http://localhost/some/path", functionRequest.Url.ToString());
-                
+
                 ValidateRequest(
                     functionRequest,
                     testName,
@@ -665,7 +666,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 }
             }
         }
-        
+
         // Test Functions
         [NoAutomaticTrigger]
         public static void TestApplicationInsightsInformation(string input, TraceWriter trace, ILogger logger)
@@ -719,7 +720,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             TelemetryClient telemetryClient = new TelemetryClient(); // use TelemetryConfiguration.Active
             telemetryClient.TrackEvent("custom event");
         }
-        
+
         [NoAutomaticTrigger]
         public static void TestApplicationInsightsDisposeRequestsModule(string input, ILogger logger)
         {
@@ -1012,7 +1013,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         private static void ValidateSdkVersion(ITelemetry telemetry, string prefix = null)
-        {            
+        {
             Assert.StartsWith($"{prefix}webjobs:", telemetry.Context.GetInternalContext().SdkVersion);
         }
 
@@ -1106,7 +1107,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                     try
                     {
-                        await Host.GetJobHost().CallAsync(methodInfo, new {input = "input"});
+                        await Host.GetJobHost().CallAsync(methodInfo, new { input = "input" });
                     }
                     catch
                     {
