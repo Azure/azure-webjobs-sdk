@@ -49,7 +49,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// Gets or sets the flag that enables quick pulse collection.
         /// Enabled by default.
         /// </summary>
-        public bool EnableQuickPulse { get; set; } = true;
+        public bool EnableLiveMetrics { get; set; } = true;
 
         /// <summary>
         /// Gets or sets the flag that enables dependency tracking.
@@ -118,7 +118,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(EnablePerformanceCountersCollection), EnablePerformanceCountersCollection},
                 { nameof(HttpAutoCollectionOptions), httpOptions},
                 { nameof(QuickPulseInitializationDelay), QuickPulseInitializationDelay },
-                { nameof(EnableQuickPulse), EnableQuickPulse },
+                { nameof(EnableLiveMetrics), EnableLiveMetrics },
                 { nameof(EnableDependencyTracking), EnableDependencyTracking }
             };
 

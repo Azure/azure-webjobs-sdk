@@ -56,13 +56,14 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddSingleton<ITelemetryInitializer, WebJobsTelemetryInitializer>();
             services.AddSingleton<ITelemetryInitializer, MetricSdkVersionTelemetryInitializer>();
             services.AddSingleton<QuickPulseInitializationScheduler>();
+            services.AddSingleton<QuickPulseTelemetryModule>();
 
             services.AddSingleton<ITelemetryModule>(provider =>
             {
                 ApplicationInsightsLoggerOptions options = provider.GetService<IOptions<ApplicationInsightsLoggerOptions>>().Value;
-                if (options.EnableQuickPulse)
+                if (options.EnableLiveMetrics)
                 {
-                    return new QuickPulseTelemetryModule();
+                    return provider.GetService<QuickPulseTelemetryModule>();
                 }
                 return NullTelemetryModule.Instance;
             });
@@ -272,7 +273,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     // QuickPulse can have a startup performance hit, so delay its initialization.
                     delayer.ScheduleInitialization(() => module.Initialize(configuration), options.QuickPulseInitializationDelay);
                 }
-                else
+                else if (module != null)
                 {
                     module.Initialize(configuration);
                 }

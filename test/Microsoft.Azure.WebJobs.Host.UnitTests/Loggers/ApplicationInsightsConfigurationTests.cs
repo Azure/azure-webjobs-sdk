@@ -263,7 +263,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                     b.AddApplicationInsights(o =>
                     {
                         o.InstrumentationKey = "LOKI";
-                        o.EnableQuickPulse = false;
+                        o.EnableLiveMetrics = false;
                     });
                 })
                 .Build())
