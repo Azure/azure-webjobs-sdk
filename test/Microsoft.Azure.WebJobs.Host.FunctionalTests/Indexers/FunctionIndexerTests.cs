@@ -214,11 +214,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
         [AttributeUsage(AttributeTargets.Parameter)]
         [Binding]
-        public class ExtensionTrigger : Attribute
+        public class ExtensionTriggerAttribute : Attribute
         {
             private string _path;
 
-            public ExtensionTrigger(string path)
+            public ExtensionTriggerAttribute(string path)
             {
                 _path = path;
             }
@@ -231,11 +231,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
         [AttributeUsage(AttributeTargets.Parameter)]
         [Binding]
-        public class Extension : Attribute
+        public class ExtensionAttribute : Attribute
         {
             private string _path;
 
-            public Extension(string path)
+            public ExtensionAttribute(string path)
             {
                 _path = path;
             }
@@ -303,7 +303,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             throw new NotImplementedException();
         }
 
-        public static void MethodWithExtensionJobParameterAttributes([ExtensionTrigger("path")] string input, [@Extension("path")] TextWriter writer)
+        public static void MethodWithExtensionJobParameterAttributes([ExtensionTrigger("path")] string input, [Extension("path")] TextWriter writer)
         {
             throw new NotImplementedException();
         }
