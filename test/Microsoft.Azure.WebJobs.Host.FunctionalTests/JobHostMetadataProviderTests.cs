@@ -202,8 +202,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.Equal(typeof(IAsyncCollector<byte[]>), t3);
         }
 
-        [Fact]
-        public void TestBatchFluentDefaultType()
+        [Theory]
+        [InlineData(typeof(object[]))]
+        [InlineData(typeof(string[]))]
+        [InlineData(typeof(SomeData[]))]
+        public void TestBatchFluentDefaultType(Type requestedType)
         {
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost(b =>
@@ -214,8 +217,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             var metadataProvider = host.CreateMetadataProvider();
 
-            var dataType = metadataProvider.GetDefaultType(new TestAttribute(), FileAccess.Read, typeof(object[]));
-            Assert.Equal(typeof(object[]), dataType);
+            var dataType = metadataProvider.GetDefaultType(new TestAttribute(), FileAccess.Read, requestedType);
+            Assert.Equal(requestedType, dataType);
         }
     }
 }
