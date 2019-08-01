@@ -271,7 +271,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     }
 
                     // QuickPulse can have a startup performance hit, so delay its initialization.
-                    delayer.ScheduleInitialization(() => module.Initialize(configuration), options.QuickPulseInitializationDelay);
+                    delayer.ScheduleInitialization(() => module.Initialize(configuration), options.LiveMetricsInitializationDelay);
                 }
                 else if (module != null)
                 {

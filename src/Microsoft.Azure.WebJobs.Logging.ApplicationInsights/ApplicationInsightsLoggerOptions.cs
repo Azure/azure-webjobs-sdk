@@ -36,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// Gets or sets the time to delay Quick Pulse (Live Metrics) initialization. Delaying this initialization
         /// can result in decreased application startup time. Default value is 15 seconds.
         /// </summary>
-        public TimeSpan QuickPulseInitializationDelay { get; set; } = TimeSpan.FromSeconds(15);
+        public TimeSpan LiveMetricsInitializationDelay { get; set; } = TimeSpan.FromSeconds(15);
 
         /// <summary>
         /// Gets or sets flag that enables Kudu performance counters collection.
@@ -117,7 +117,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(SnapshotConfiguration), snapshot },
                 { nameof(EnablePerformanceCountersCollection), EnablePerformanceCountersCollection},
                 { nameof(HttpAutoCollectionOptions), httpOptions},
-                { nameof(QuickPulseInitializationDelay), QuickPulseInitializationDelay },
+                { nameof(LiveMetricsInitializationDelay), LiveMetricsInitializationDelay },
                 { nameof(EnableLiveMetrics), EnableLiveMetrics },
                 { nameof(EnableDependencyTracking), EnableDependencyTracking }
             };

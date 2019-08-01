@@ -85,7 +85,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     {
                         o.InstrumentationKey = _mockApplicationInsightsKey;
                         o.HttpAutoCollectionOptions = httpOptions;
-                        o.QuickPulseInitializationDelay = TimeSpan.FromSeconds(1);
+                        o.LiveMetricsInitializationDelay = TimeSpan.FromSeconds(1);
                     });
                 })
                 .ConfigureServices(services =>
