@@ -43,7 +43,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         public Type GetDefaultType(Attribute attribute, FileAccess access, Type requestedType)
         {
-            foreach (var target in _defaultTypes)
+            IEnumerable<Type> targets = (requestedType != typeof(object)) ? new Type[] { requestedType } : _defaultTypes;
+
+            foreach (var target in targets)
             {
                 if (_converterManager.HasConverter<TAttribute>(typeof(TTriggerValue), target))
                 {
