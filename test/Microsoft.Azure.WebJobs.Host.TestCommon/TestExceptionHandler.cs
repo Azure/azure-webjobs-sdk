@@ -15,25 +15,24 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
         private TestExceptionHandler _handler = new TestExceptionHandler();
 
         public IWebJobsExceptionHandler Create(IHost jobHost) => _handler;
+    }
 
-
-        private class TestExceptionHandler : IWebJobsExceptionHandler
+    public class TestExceptionHandler : IWebJobsExceptionHandler
+    {
+        public void Initialize(JobHost host)
         {
-            public void Initialize(JobHost host)
-            {
-            }
+        }
 
-            public Task OnTimeoutExceptionAsync(ExceptionDispatchInfo exceptionInfo, TimeSpan timeoutGracePeriod)
-            {
-                Assert.True(false, $"Timeout exception in test exception handler: {exceptionInfo.SourceException}");
-                return Task.CompletedTask;
-            }
+        public Task OnTimeoutExceptionAsync(ExceptionDispatchInfo exceptionInfo, TimeSpan timeoutGracePeriod)
+        {
+            Assert.True(false, $"Timeout exception in test exception handler: {exceptionInfo.SourceException}");
+            return Task.CompletedTask;
+        }
 
-            public Task OnUnhandledExceptionAsync(ExceptionDispatchInfo exceptionInfo)
-            {
-                Assert.True(false, $"Error in test exception handler: {exceptionInfo.SourceException}");
-                return Task.CompletedTask;
-            }
+        public Task OnUnhandledExceptionAsync(ExceptionDispatchInfo exceptionInfo)
+        {
+            Assert.True(false, $"Error in test exception handler: {exceptionInfo.SourceException}");
+            return Task.CompletedTask;
         }
     }
 }
