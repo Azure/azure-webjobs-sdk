@@ -25,10 +25,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private readonly Thread _initialScanThread;
         private readonly ConcurrentQueue<ICloudBlob> _blobsFoundFromScanOrNotification;
         private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly IWebJobsExceptionHandler _exceptionHandler;
+
         private bool _performInitialScan;
         private bool _disposed;
 
-        public PollLogsStrategy(bool performInitialScan = true)
+        public PollLogsStrategy(IWebJobsExceptionHandler exceptionHandler, bool performInitialScan = true)
         {
             _registrations = new Dictionary<CloudBlobContainer, ICollection<ITriggerExecutor<ICloudBlob>>>(
                 new CloudBlobContainerComparer());
@@ -37,6 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             _blobsFoundFromScanOrNotification = new ConcurrentQueue<ICloudBlob>();
             _cancellationTokenSource = new CancellationTokenSource();
             _performInitialScan = performInitialScan;
+            _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
         }
 
         public async Task RegisterAsync(CloudBlobContainer container, ITriggerExecutor<ICloudBlob> triggerExecutor,
@@ -70,7 +73,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 
             if (!_logListeners.ContainsKey(client))
             {
-                BlobLogListener logListener = await BlobLogListener.CreateAsync(client, cancellationToken);
+                BlobLogListener logListener = await BlobLogListener.CreateAsync(client, _exceptionHandler, cancellationToken);
                 _logListeners.Add(client, logListener);
             }
         }

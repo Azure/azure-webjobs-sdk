@@ -122,12 +122,7 @@ namespace FakeStorage
             if (options != null)
             {
                 throw new NotImplementedException();
-            }
-
-            if (operationContext != null)
-            {
-                throw new NotImplementedException();
-            }
+            }           
 
             Func<string, FakeStorageBlobContainer> containerFactory = (n) => new FakeStorageBlobContainer(this, n);
             BlobResultSegment segment = _store.ListBlobsSegmented(containerFactory, prefix, useFlatBlobListing,

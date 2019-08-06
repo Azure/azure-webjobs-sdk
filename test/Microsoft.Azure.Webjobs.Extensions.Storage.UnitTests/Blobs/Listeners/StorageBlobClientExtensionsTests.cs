@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Moq;
@@ -60,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             // Mock the List function to return the correct blob page
             HashSet<BlobContinuationToken> seenTokens = new HashSet<BlobContinuationToken>();
             BlobResultSegment resultSegment = null;
-            mockClient.Setup(p => p.ListBlobsSegmentedAsync("test", true, BlobListingDetails.None, null, It.IsAny<BlobContinuationToken>(), null, null))
+            mockClient.Setup(p => p.ListBlobsSegmentedAsync("test", true, BlobListingDetails.None, null, It.IsAny<BlobContinuationToken>(), null, It.IsAny<OperationContext>()))
                 .Callback<string, bool, BlobListingDetails, int?, BlobContinuationToken, BlobRequestOptions, OperationContext>(
                     (prefix, useFlatBlobListing, blobListingDetails, maxResultsValue, currentToken, options, operationContext) =>
                     {
@@ -81,7 +82,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
                     })
                 .Returns(() => { return Task.FromResult(resultSegment); });
 
-            IEnumerable<IListBlobItem> results = await mockClient.Object.ListBlobsAsync("test", true, BlobListingDetails.None, CancellationToken.None);
+            IEnumerable<IListBlobItem> results = await mockClient.Object.ListBlobsAsync("test", true, BlobListingDetails.None, "test", new TestExceptionHandler(), CancellationToken.None);
 
             Assert.Equal(blobCount, results.Count());
         }

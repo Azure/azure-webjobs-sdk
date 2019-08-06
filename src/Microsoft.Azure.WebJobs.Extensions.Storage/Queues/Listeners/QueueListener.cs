@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Extensions.Storage;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
@@ -172,13 +173,17 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
                     Stopwatch sw = Stopwatch.StartNew();
                     OperationContext context = new OperationContext { ClientRequestID = Guid.NewGuid().ToString() };
 
-                    batch = await _queue.GetMessagesAsync(_queueProcessor.BatchSize,
-                        _visibilityTimeout,
-                        options: null,
-                        operationContext: context,
-                        cancellationToken: cancellationToken);
+                    batch = await TimeoutHandler.ExecuteWithTimeout("GetMessages", context.ClientRequestID, _exceptionHandler, () =>
+                    {
+                        return _queue.GetMessagesAsync(_queueProcessor.BatchSize,
+                            _visibilityTimeout,
+                            options: null,
+                            operationContext: context,
+                            cancellationToken: cancellationToken);
+                    });
 
-                    Logger.GetMessages(_logger, _functionDescriptor.LogName, _queue.Name, context.ClientRequestID, batch.Count(), sw.ElapsedMilliseconds);
+                    int count = batch?.Count() ?? -1;
+                    Logger.GetMessages(_logger, _functionDescriptor.LogName, _queue.Name, context.ClientRequestID, count, sw.ElapsedMilliseconds);
                 }
             }
             catch (StorageException exception)
