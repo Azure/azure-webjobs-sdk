@@ -30,10 +30,42 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// <summary>
         /// Gets or sets authentication key for Quick Pulse (Live Metrics).
         /// </summary>
-        public string QuickPulseAuthenticationApiKey { get; set; }
+        [Obsolete("Use LiveMetricsAuthenticationApiKey instead.")]
+        public string QuickPulseAuthenticationApiKey
+        {
+            get
+            {
+                return LiveMetricsAuthenticationApiKey;
+            }
+            set
+            {
+                LiveMetricsAuthenticationApiKey = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets authentication key for Live Metrics.
+        /// </summary>
+        public string LiveMetricsAuthenticationApiKey { get; set; }
 
         /// <summary>
         /// Gets or sets the time to delay Quick Pulse (Live Metrics) initialization. Delaying this initialization
+        /// can result in decreased application startup time. Default value is 15 seconds.
+        /// </summary>
+        [Obsolete("Use LiveMetricsInitializationDelay instead.")]
+        public TimeSpan QuickPulseInitializationDelay {
+            get
+            {
+                return LiveMetricsInitializationDelay;
+            }
+            set
+            {
+                LiveMetricsInitializationDelay = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the time to delay Live Metrics initialization. Delaying this initialization
         /// can result in decreased application startup time. Default value is 15 seconds.
         /// </summary>
         public TimeSpan LiveMetricsInitializationDelay { get; set; } = TimeSpan.FromSeconds(15);
@@ -46,7 +78,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         public bool EnablePerformanceCountersCollection { get; set; } = true;
 
         /// <summary>
-        /// Gets or sets the flag that enables quick pulse collection.
+        /// Gets or sets the flag that enables live metrics collection.
         /// Enabled by default.
         /// </summary>
         public bool EnableLiveMetrics { get; set; } = true;

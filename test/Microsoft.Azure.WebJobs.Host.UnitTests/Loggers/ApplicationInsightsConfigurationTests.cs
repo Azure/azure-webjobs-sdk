@@ -294,7 +294,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         }
 
         [Fact]
-        public void DependencyInjectionConfiguration_ConfiguresQuickPulseAuthApiKey()
+        public void DependencyInjectionConfiguration_ConfiguresQuickPulseAuthApiKeyDeprecated()
         {
             using (var host = new HostBuilder()
                 .ConfigureLogging(b =>
@@ -302,7 +302,27 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                     b.AddApplicationInsightsWebJobs(o =>
                     {
                         o.InstrumentationKey = "some key";
-                        o.QuickPulseAuthenticationApiKey = "some auth key";
+                        o.QuickPulseAuthenticationApiKey = "some auth key";  // This is deprecated, but still supported
+                    });
+                })
+                .Build())
+            {
+                var modules = host.Services.GetServices<ITelemetryModule>().ToList();
+                var quickPulseTelemetryModule = modules.OfType<QuickPulseTelemetryModule>().Single();
+                Assert.Equal("some auth key", quickPulseTelemetryModule.AuthenticationApiKey);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_ConfiguresLiveMetricsAuthApiKey()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsightsWebJobs(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                        o.LiveMetricsAuthenticationApiKey = "some auth key";
                     });
                 })
                 .Build())

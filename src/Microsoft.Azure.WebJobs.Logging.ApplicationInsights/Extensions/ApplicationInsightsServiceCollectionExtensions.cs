@@ -265,9 +265,9 @@ namespace Microsoft.Extensions.DependencyInjection
                 if (module is QuickPulseTelemetryModule telemetryModule)
                 {
                     quickPulseModule = telemetryModule;
-                    if (options.QuickPulseAuthenticationApiKey != null)
+                    if (options.LiveMetricsAuthenticationApiKey != null)
                     {
-                        quickPulseModule.AuthenticationApiKey = options.QuickPulseAuthenticationApiKey;
+                        quickPulseModule.AuthenticationApiKey = options.LiveMetricsAuthenticationApiKey;
                     }
 
                     // QuickPulse can have a startup performance hit, so delay its initialization.
