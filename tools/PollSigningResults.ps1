@@ -2,7 +2,7 @@ $isPr = Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER
 $directoryPath = Split-Path $MyInvocation.MyCommand.Path -Parent
 
 if (-not $isPr -and $env:SkipAssemblySigning -ne "true") {
-  $timeout = new-timespan -Minutes 5
+  $timeout = new-timespan -Minutes 15
   $sw = [diagnostics.stopwatch]::StartNew();
   $polling = $true;
   $ctx = New-AzureStorageContext $env:FILES_ACCOUNT_NAME $env:FILES_ACCOUNT_KEY
