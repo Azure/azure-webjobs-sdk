@@ -236,7 +236,65 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         }
 
         [Fact]
-        public void DependencyInjectionConfiguration_ConfiguresQuickPulseAuthApiKey()
+        public void DependencyInjectionConfiguration_DisablesDependencyTracking()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsights(o =>
+                    {
+                        o.InstrumentationKey = "KI";
+                        o.EnableDependencyTracking = false;
+                    });
+                })
+                .Build())
+            {
+                var modules = host.Services.GetServices<ITelemetryModule>();
+                Assert.True(modules.Count(m => m is DependencyTrackingTelemetryModule) == 0);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_DisablesQuickPulseTelemetry()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsights(o =>
+                    {
+                        o.InstrumentationKey = "LOKI";
+                        o.EnableLiveMetrics = false;
+                    });
+                })
+                .Build())
+            {
+                var modules = host.Services.GetServices<ITelemetryModule>();
+                Assert.True(modules.Count(m => m is QuickPulseTelemetryModule) == 0);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_EnableTelemetryModulesByDefault()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsights(o =>
+                    {
+                        o.InstrumentationKey = "LOKI";
+                    });
+                })
+                .Build())
+            {
+                var modules = host.Services.GetServices<ITelemetryModule>();
+                Assert.True(modules.Count(m => m is QuickPulseTelemetryModule) == 1);
+                Assert.True(modules.Count(m => m is DependencyTrackingTelemetryModule) == 1);
+                Assert.True(modules.Count(m => m is PerformanceCollectorModule) == 1);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_ConfiguresQuickPulseAuthApiKeyDeprecated()
         {
             using (var host = new HostBuilder()
                 .ConfigureLogging(b =>
@@ -244,7 +302,27 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                     b.AddApplicationInsightsWebJobs(o =>
                     {
                         o.InstrumentationKey = "some key";
-                        o.QuickPulseAuthenticationApiKey = "some auth key";
+                        o.QuickPulseAuthenticationApiKey = "some auth key";  // This is deprecated, but still supported
+                    });
+                })
+                .Build())
+            {
+                var modules = host.Services.GetServices<ITelemetryModule>().ToList();
+                var quickPulseTelemetryModule = modules.OfType<QuickPulseTelemetryModule>().Single();
+                Assert.Equal("some auth key", quickPulseTelemetryModule.AuthenticationApiKey);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_ConfiguresLiveMetricsAuthApiKey()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsightsWebJobs(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                        o.LiveMetricsAuthenticationApiKey = "some auth key";
                     });
                 })
                 .Build())
