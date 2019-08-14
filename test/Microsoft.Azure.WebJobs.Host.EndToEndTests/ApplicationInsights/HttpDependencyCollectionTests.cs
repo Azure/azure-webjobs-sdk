@@ -155,7 +155,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.Equal("Http", dependency.Type);
             Assert.Equal("www.microsoft.com", dependency.Target);
             Assert.Contains("https://www.microsoft.com", dependency.Data);
-            Assert.Equal("GET /", dependency.Name);
+            Assert.Equal("GET /en-us/", dependency.Name);
         }
 
         [Fact]
@@ -385,7 +385,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 .ConfigureLogging(b =>
                 {
                     b.SetMinimumLevel(logLevel);
-                    b.AddApplicationInsights(o => o.InstrumentationKey = _mockApplicationInsightsKey);
+                    b.AddApplicationInsightsWebJobs(o => o.InstrumentationKey = _mockApplicationInsightsKey);
                 })
                 .Build();
 

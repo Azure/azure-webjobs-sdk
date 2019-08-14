@@ -1,9 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -38,7 +36,7 @@ namespace SampleHost
                     string appInsightsKey = context.Configuration["APPINSIGHTS_INSTRUMENTATIONKEY"];
                     if (!string.IsNullOrEmpty(appInsightsKey))
                     {
-                        b.AddApplicationInsights(o => o.InstrumentationKey = appInsightsKey);
+                        b.AddApplicationInsightsWebJobs(o => o.InstrumentationKey = appInsightsKey);
                     }
                 })
                 .ConfigureServices(services =>

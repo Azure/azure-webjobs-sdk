@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -245,6 +244,8 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
                         { "AzureWebJobs:extensions:EventHubs:EventProcessorOptions:MaxBatchSize", "100" },
                         { "AzureWebJobs:extensions:EventHubs:EventProcessorOptions:PrefetchCount", "200" },
                         { "AzureWebJobs:extensions:EventHubs:BatchCheckpointFrequency", "5" },
+                        { "AzureWebJobs:extensions:EventHubs:PartitionManagerOptions:LeaseDuration", "00:00:31" },
+                        { "AzureWebJobs:extensions:EventHubs:PartitionManagerOptions:RenewInterval", "00:00:21" }
                     });
                 })
                 .Build();
@@ -257,16 +258,29 @@ namespace Microsoft.Azure.WebJobs.EventHubs.UnitTests
             Assert.Equal(100, eventProcessorOptions.MaxBatchSize);
             Assert.Equal(200, eventProcessorOptions.PrefetchCount);
             Assert.Equal(5, options.BatchCheckpointFrequency);
+            Assert.Equal(31, options.PartitionManagerOptions.LeaseDuration.TotalSeconds);
+            Assert.Equal(21, options.PartitionManagerOptions.RenewInterval.TotalSeconds);
         }
 
-        internal static PartitionContext GetPartitionContext()
+        internal static PartitionContext GetPartitionContext(string partitionId = null, string eventHubPath = null,
+            string consumerGroupName = null, string owner = null)
         {
             var constructor = typeof(PartitionContext).GetConstructor(
                 BindingFlags.NonPublic | BindingFlags.Instance,
                 null,
                 new Type[] { typeof(EventProcessorHost), typeof(string), typeof(string), typeof(string), typeof(CancellationToken) },
                 null);
-            return (PartitionContext)constructor.Invoke(new object[] { null, null, null, null, null });
+            var context = (PartitionContext)constructor.Invoke(new object[] { null, partitionId, eventHubPath, consumerGroupName, null });
+
+            // Set a lease, which allows us to grab the "Owner"
+            constructor = typeof(Lease).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { }, null);
+            var lease = (Lease)constructor.Invoke(new object[] { });
+            lease.Owner = owner;
+
+            var leaseProperty = typeof(PartitionContext).GetProperty("Lease", BindingFlags.NonPublic | BindingFlags.Instance);
+            leaseProperty.SetValue(context, lease);
+
+            return context;
         }
     }
 }

@@ -106,8 +106,20 @@ namespace Microsoft.Azure.WebJobs.EventHubs
 
             public Task ProcessErrorAsync(PartitionContext context, Exception error)
             {
-                string errorMessage = $"Error processing event from Partition Id:{context.PartitionId}, Owner:{context.Owner}, EventHubPath:{context.EventHubPath}";
-                _logger.LogError(error, errorMessage);
+                string errorDetails = $"Partition Id: '{context.PartitionId}', Owner: '{context.Owner}', EventHubPath: '{context.EventHubPath}'";
+
+                if (error is ReceiverDisconnectedException ||
+                    error is LeaseLostException)
+                {
+                    // For EventProcessorHost these exceptions can happen as part
+                    // of normal partition balancing across instances, so we want to
+                    // trace them, but not treat them as errors.
+                    _logger.LogInformation($"An Event Hub exception of type '{error.GetType().Name}' was thrown from {errorDetails}. This exception type is typically a result of Event Hub processor rebalancing and can be safely ignored.");
+                }
+                else
+                {
+                    _logger.LogError(error, $"Error processing event from {errorDetails}");
+                }
 
                 return Task.CompletedTask;
             }
@@ -216,6 +228,6 @@ namespace Microsoft.Azure.WebJobs.EventHubs
             {
                 await context.CheckpointAsync();
             }
-        } 
+        }
     }
 }
