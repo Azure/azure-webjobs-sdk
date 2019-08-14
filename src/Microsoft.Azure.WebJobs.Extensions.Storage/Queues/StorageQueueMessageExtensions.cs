@@ -22,16 +22,9 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
             {
                 value = message.AsString;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is DecoderFallbackException || ex is FormatException)
             {
-                if (ex is DecoderFallbackException || ex is FormatException)
-                {
-                    value = null;
-                }
-                else
-                {
-                    throw;
-                }
+                value = null;
             }
 
             return value;
