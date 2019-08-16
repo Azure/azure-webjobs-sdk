@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
@@ -68,7 +69,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             public string Message { get; set; }
         }
 
-        class FluentExtensionConfig : IExtensionConfigProvider
+        class FluentExtensionConfigStringBatch : IExtensionConfigProvider
         {
             public void Initialize(ExtensionConfigContext context)
             {
@@ -77,6 +78,45 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
                 rule.AddConverter<SomeData[], string[]>(
                     msgs => msgs.Select(m => m.Message).ToArray());
+            }
+        }
+
+        class FluentExtensionConfigJObjectBatch : IExtensionConfigProvider
+        {
+            public void Initialize(ExtensionConfigContext context)
+            {
+                var rule = context.AddBindingRule<TestAttribute>();
+                rule.BindToTrigger<SomeData[]>(new MyTriggerBindingProvider());
+
+                rule.AddConverter<SomeData[], JObject[]>(
+                    msgs => msgs.Select(m => JObject.Parse(m.Message)).ToArray());
+            }
+        }
+
+        class FluentExtensionConfigBytesBatch : IExtensionConfigProvider
+        {
+            public void Initialize(ExtensionConfigContext context)
+            {
+                var rule = context.AddBindingRule<TestAttribute>();
+                rule.BindToTrigger<SomeData[]>(new MyTriggerBindingProvider());
+
+                rule.AddConverter<SomeData[], byte[][]>(
+                    msgs => msgs.Select(m => Encoding.ASCII.GetBytes(m.Message)).ToArray());
+
+                rule.AddConverter<SomeData[], string[]>(
+                    msgs => msgs.Select(m => m.Message).ToArray());
+            }
+        }
+
+        class FluentExtensionConfigDefaultBatch : IExtensionConfigProvider
+        {
+            public void Initialize(ExtensionConfigContext context)
+            {
+                var rule = context.AddBindingRule<TestAttribute>();
+                rule.BindToTrigger<SomeData[]>(new MyTriggerBindingProvider());
+
+                rule.AddConverter<SomeData[], int[]>(
+                    msgs => msgs.Select(m => m.Message.Length).ToArray());
             }
         }
 
@@ -203,22 +243,35 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Theory]
-        [InlineData(typeof(object[]))]
-        [InlineData(typeof(string[]))]
-        [InlineData(typeof(SomeData[]))]
-        public void TestBatchFluentDefaultType(Type requestedType)
+        [InlineData(typeof(FluentExtensionConfigStringBatch), typeof(string[]), typeof(string[]))]
+        [InlineData(typeof(FluentExtensionConfigStringBatch), typeof(byte[][]), typeof(string[]))]
+        [InlineData(typeof(FluentExtensionConfigStringBatch), typeof(JObject[]), typeof(string[]))]
+        [InlineData(typeof(FluentExtensionConfigStringBatch), typeof(object[]), typeof(string[]))]
+        [InlineData(typeof(FluentExtensionConfigJObjectBatch), typeof(string[][]), typeof(JObject[]))]
+        [InlineData(typeof(FluentExtensionConfigJObjectBatch), typeof(byte[][]), typeof(JObject[]))]
+        [InlineData(typeof(FluentExtensionConfigJObjectBatch), typeof(JObject[]), typeof(JObject[]))]
+        [InlineData(typeof(FluentExtensionConfigJObjectBatch), typeof(object[]), typeof(JObject[]))]
+        [InlineData(typeof(FluentExtensionConfigBytesBatch), typeof(string[][]), typeof(byte[][]))]
+        [InlineData(typeof(FluentExtensionConfigBytesBatch), typeof(byte[][]), typeof(byte[][]))]
+        [InlineData(typeof(FluentExtensionConfigBytesBatch), typeof(JObject[]), typeof(byte[][]))]
+        [InlineData(typeof(FluentExtensionConfigBytesBatch), typeof(object[]), typeof(byte[][]))]
+        [InlineData(typeof(FluentExtensionConfigDefaultBatch), typeof(string[][]), typeof(object[]))]
+        [InlineData(typeof(FluentExtensionConfigDefaultBatch), typeof(byte[][]), typeof(object[]))]
+        [InlineData(typeof(FluentExtensionConfigDefaultBatch), typeof(JObject[]), typeof(object[]))]
+        [InlineData(typeof(FluentExtensionConfigDefaultBatch), typeof(object[]), typeof(object[]))]
+        public void TestBatchFluentDefaultType(Type extensionConfigProvider, Type requestedType, Type expectedType)
         {
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost(b =>
                 {
-                    b.AddExtension<FluentExtensionConfig>();
+                    b.AddExtension(extensionConfigProvider);
                 })
                 .Build();
 
             var metadataProvider = host.CreateMetadataProvider();
 
             var dataType = metadataProvider.GetDefaultType(new TestAttribute(), FileAccess.Read, requestedType);
-            Assert.Equal(requestedType, dataType);
+            Assert.Equal(expectedType, dataType);
         }
     }
 }
