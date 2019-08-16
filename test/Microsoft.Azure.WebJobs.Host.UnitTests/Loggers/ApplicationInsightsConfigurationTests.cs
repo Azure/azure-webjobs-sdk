@@ -119,6 +119,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         public void DependencyInjectionConfiguration_ConfiguresSampling()
         {
             var samplingSettings = new SamplingPercentageEstimatorSettings { MaxTelemetryItemsPerSecond = 1 };
+            var samplingExcludedTypes = "PageView;Request";
+            var samplingIncludedTypes = "Trace";
             using (var host = new HostBuilder()
                 .ConfigureLogging(b =>
                 {
@@ -126,6 +128,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                     {
                         o.InstrumentationKey = "some key";
                         o.SamplingSettings = samplingSettings;
+                        o.SamplingExcludedTypes = samplingExcludedTypes;
+                        o.SamplingIncludedTypes = samplingIncludedTypes;
                     });
                 })
                 .Build())
@@ -138,6 +142,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Assert.IsType<AdaptiveSamplingTelemetryProcessor>(config.TelemetryProcessors[3]);
 
                 Assert.Equal(samplingSettings.MaxTelemetryItemsPerSecond, ((AdaptiveSamplingTelemetryProcessor)config.TelemetryProcessors[3]).MaxTelemetryItemsPerSecond);
+                Assert.Equal(samplingExcludedTypes, ((AdaptiveSamplingTelemetryProcessor)config.TelemetryProcessors[3]).ExcludedTypes);
+                Assert.Equal(samplingIncludedTypes, ((AdaptiveSamplingTelemetryProcessor)config.TelemetryProcessors[3]).IncludedTypes);
             }
         }
 

@@ -292,7 +292,18 @@ namespace Microsoft.Extensions.DependencyInjection
             if (options.SamplingSettings != null)
             {
                 configuration.TelemetryProcessorChainBuilder.Use((next) =>
-                    new AdaptiveSamplingTelemetryProcessor(options.SamplingSettings, null, next));
+                {
+                    var processor = new AdaptiveSamplingTelemetryProcessor(options.SamplingSettings, null, next);
+                    if (options.SamplingExcludedTypes != null)
+                    {
+                        processor.ExcludedTypes = options.SamplingExcludedTypes;
+                    }
+                    if (options.SamplingIncludedTypes != null)
+                    {
+                        processor.IncludedTypes = options.SamplingIncludedTypes;
+                    }
+                    return processor;
+                });
             }
 
             if (options.SnapshotConfiguration != null)
