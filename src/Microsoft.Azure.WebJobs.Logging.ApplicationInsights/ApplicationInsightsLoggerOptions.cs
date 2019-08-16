@@ -23,6 +23,16 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         public SamplingPercentageEstimatorSettings SamplingSettings { get; set; }
 
         /// <summary>
+        /// Gets or sets excluded types for sampling.
+        /// </summary>
+        public string SamplingExcludedTypes { get; set; }
+
+        /// <summary>
+        /// Gets or sets included types for sampling.
+        /// </summary>
+        public string SamplingIncludedTypes { get; set; }
+
+        /// <summary>
         /// Gets or sets snapshot collection options.
         /// </summary>
         public SnapshotCollectorConfiguration SnapshotConfiguration { get; set; }
@@ -146,9 +156,11 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             JObject options = new JObject
             {
                 { nameof(SamplingSettings), sampling },
+                { nameof(SamplingExcludedTypes), SamplingExcludedTypes },
+                { nameof(SamplingIncludedTypes), SamplingIncludedTypes },
                 { nameof(SnapshotConfiguration), snapshot },
-                { nameof(EnablePerformanceCountersCollection), EnablePerformanceCountersCollection},
-                { nameof(HttpAutoCollectionOptions), httpOptions},
+                { nameof(EnablePerformanceCountersCollection), EnablePerformanceCountersCollection },
+                { nameof(HttpAutoCollectionOptions), httpOptions },
                 { nameof(LiveMetricsInitializationDelay), LiveMetricsInitializationDelay },
                 { nameof(EnableLiveMetrics), EnableLiveMetrics },
                 { nameof(EnableDependencyTracking), EnableDependencyTracking }
