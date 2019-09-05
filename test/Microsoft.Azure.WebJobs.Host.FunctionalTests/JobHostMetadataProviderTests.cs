@@ -108,6 +108,20 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
+        class FluentExtensionConfigBytesSingle : IExtensionConfigProvider
+        {
+            public void Initialize(ExtensionConfigContext context)
+            {
+                var rule = context.AddBindingRule<TestAttribute>();
+                rule.BindToTrigger<SomeData>(new MyTriggerBindingProvider());
+
+                rule.AddConverter<SomeData, byte[]>(msg => Encoding.ASCII.GetBytes(msg.Message));
+
+                rule.AddConverter<SomeData[], byte[][]>(
+                    msgs => msgs.Select(m => Encoding.ASCII.GetBytes(m.Message)).ToArray());
+            }
+        }
+
         class FluentExtensionConfigDefaultBatch : IExtensionConfigProvider
         {
             public void Initialize(ExtensionConfigContext context)
@@ -259,6 +273,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [InlineData(typeof(FluentExtensionConfigDefaultBatch), typeof(byte[][]), typeof(object[]))]
         [InlineData(typeof(FluentExtensionConfigDefaultBatch), typeof(JObject[]), typeof(object[]))]
         [InlineData(typeof(FluentExtensionConfigDefaultBatch), typeof(object[]), typeof(object[]))]
+        [InlineData(typeof(FluentExtensionConfigBytesSingle), typeof(byte[]), typeof(byte[]))]
         public void TestBatchFluentDefaultType(Type extensionConfigProvider, Type requestedType, Type expectedType)
         {
             IHost host = new HostBuilder()
