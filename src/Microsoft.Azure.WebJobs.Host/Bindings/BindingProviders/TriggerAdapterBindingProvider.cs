@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Config;
@@ -41,9 +42,21 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             typeof(string)
         };
 
+        // Listed in precedence for providing via DefaultType.
+        // Precedence is more important than how we produce the default type (a direct conversion vs. a converter)
+        private static readonly Type[] _defaultBatchTypes = new Type[] {
+            typeof(byte[][]),
+            typeof(JObject[]),
+            typeof(JArray),
+            typeof(string[])
+        };
+
         public Type GetDefaultType(Attribute attribute, FileAccess access, Type requestedType)
         {
-            IEnumerable<Type> targets = (requestedType != typeof(object)) ? new Type[] { requestedType } : _defaultTypes;
+            // If the requestedType is a batch type, we need to return the batch version of default types
+            IEnumerable<Type> targets = requestedType.IsArray && !_defaultTypes.Contains(requestedType) 
+                ? _defaultBatchTypes
+                : _defaultTypes;
 
             foreach (var target in targets)
             {
@@ -51,6 +64,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 {
                     return target;
                 }
+            }
+
+            if (requestedType.IsArray)
+            {
+                return typeof(object[]);
             }
 
             return typeof(object);
