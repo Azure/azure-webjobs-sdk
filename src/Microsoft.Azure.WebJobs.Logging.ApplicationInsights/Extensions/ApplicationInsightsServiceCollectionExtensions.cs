@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.AspNetCore;
@@ -14,7 +15,6 @@ using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.Extensibility.Implementation.ApplicationId;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse;
-using Microsoft.ApplicationInsights.Extensibility.W3C;
 using Microsoft.ApplicationInsights.SnapshotCollector;
 using Microsoft.ApplicationInsights.WindowsServer;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
@@ -103,7 +103,6 @@ namespace Microsoft.Extensions.DependencyInjection
                     var includedActivities = dependencyCollector.IncludeDiagnosticSourceActivities;
                     includedActivities.Add("Microsoft.Azure.ServiceBus");
 
-                    dependencyCollector.EnableW3CHeadersInjection = options.HttpAutoCollectionOptions.EnableW3CDistributedTracing;
                     return dependencyCollector;
                 }
 
@@ -122,7 +121,6 @@ namespace Microsoft.Extensions.DependencyInjection
                         CollectionOptions = new RequestCollectionOptions
                         {
                             TrackExceptions = false, // webjobs/functions track exceptions themselves
-                            EnableW3CDistributedTracing = options.HttpAutoCollectionOptions.EnableW3CDistributedTracing,
                             InjectResponseHeaders = options.HttpAutoCollectionOptions.EnableResponseHeaderInjection
                         }
                     };
@@ -137,6 +135,11 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddSingleton<TelemetryConfiguration>(provider =>
             {
                 ApplicationInsightsLoggerOptions options = provider.GetService<IOptions<ApplicationInsightsLoggerOptions>>().Value;
+
+                Activity.DefaultIdFormat = options.HttpAutoCollectionOptions.EnableW3CDistributedTracing
+                    ? ActivityIdFormat.W3C
+                    : ActivityIdFormat.Hierarchical;
+
                 LoggerFilterOptions filterOptions = CreateFilterOptions(provider.GetService<IOptions<LoggerFilterOptions>>().Value);
 
                 ITelemetryChannel channel = provider.GetService<ITelemetryChannel>();
@@ -160,14 +163,6 @@ namespace Microsoft.Extensions.DependencyInjection
                 {
                     activeConfig.TelemetryInitializers.Add(new WebJobsRoleEnvironmentTelemetryInitializer());
                     activeConfig.TelemetryInitializers.Add(new WebJobsTelemetryInitializer(sdkVersionProvider));
-                    if (options.HttpAutoCollectionOptions.EnableW3CDistributedTracing)
-                    {
-                        // W3C distributed tracing is enabled by the feature flag inside ApplicationInsights SDK
-                        // W3COperationCorrelationTelemetryInitializer will go away once W3C is implemented
-                        // in the DiagnosticSource (.NET)
-
-                        TelemetryConfiguration.Active.TelemetryInitializers.Add(new W3COperationCorrelationTelemetryInitializer());
-                    }
                 }
 
                 SetupTelemetryConfiguration(
@@ -240,14 +235,6 @@ namespace Microsoft.Extensions.DependencyInjection
             if (options.InstrumentationKey != null)
             {
                 configuration.InstrumentationKey = options.InstrumentationKey;
-            }
-
-            if (options.HttpAutoCollectionOptions.EnableW3CDistributedTracing)
-            {
-                // W3C distributed tracing is enabled by the feature flag inside ApplicationInsights SDK
-                // W3COperationCorrelationTelemetryInitializer will go away once W3C is implemented
-                // in the DiagnosticSource (.NET)
-                configuration.TelemetryInitializers.Add(new W3COperationCorrelationTelemetryInitializer());
             }
 
             configuration.TelemetryChannel = channel;
