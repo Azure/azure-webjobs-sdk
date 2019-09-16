@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.ApplicationInsights.Extensibility.W3C;
 using Microsoft.ApplicationInsights.SnapshotCollector;
 using Microsoft.ApplicationInsights.WindowsServer.Channel.Implementation;
 using Microsoft.AspNetCore.Http;
@@ -88,8 +87,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             string expectedOperationId, expectedRequestId;
             using (logger.BeginFunctionScope(CreateFunctionInstance(_invocationId), _hostInstanceId))
             {
-                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
-                expectedOperationId = Activity.Current.GetTraceId();
+                expectedRequestId = $"|{Activity.Current.TraceId.ToHexString()}.{Activity.Current.SpanId.ToHexString()}.";
+                expectedOperationId = Activity.Current.TraceId.ToHexString();
 
                 // sleep briefly to provide a non-zero Duration
                 await Task.Delay(100);
@@ -124,8 +123,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             string expectedOperationId, expectedRequestId;
             using (logger.BeginFunctionScope(CreateFunctionInstance(_invocationId), _hostInstanceId))
             {
-                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
-                expectedOperationId = Activity.Current.GetTraceId();
+                expectedRequestId = $"|{Activity.Current.TraceId.ToHexString()}.{Activity.Current.SpanId.ToHexString()}.";
+                expectedOperationId = Activity.Current.TraceId.ToHexString();
 
                 logger.LogFunctionResult(result);
             }
@@ -217,8 +216,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 logger.LogTrace("Trace");
                 logger.LogWarning("Warning");
 
-                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
-                expectedOperationId = Activity.Current.GetTraceId();
+                expectedRequestId = $"|{Activity.Current.TraceId.ToHexString()}.{Activity.Current.SpanId.ToHexString()}.";
+                expectedOperationId = Activity.Current.TraceId.ToHexString();
             }
 
             Assert.Equal(6, _channel.Telemetries.Count);
@@ -285,8 +284,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             {
                 logger.LogError(0, ex, "Error with customer: {customer}.", "John Doe");
 
-                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
-                expectedOperationId = Activity.Current.GetTraceId();
+                expectedRequestId = $"|{Activity.Current.TraceId.ToHexString()}.{Activity.Current.SpanId.ToHexString()}.";
+                expectedOperationId = Activity.Current.TraceId.ToHexString();
             }
 
             void ValidateProperties(ISupportProperties telemetry)
@@ -336,8 +335,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             {
                 logger.LogMetric("CustomMetric", 44.9);
 
-                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
-                expectedOperationId = Activity.Current.GetTraceId();
+                expectedRequestId = $"|{Activity.Current.TraceId.ToHexString()}.{Activity.Current.SpanId.ToHexString()}.";
+                expectedOperationId = Activity.Current.TraceId.ToHexString();
             }
 
             var telemetry = _channel.Telemetries.Single() as MetricTelemetry;
@@ -402,8 +401,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             string expectedOperationId, expectedRequestId;
             using (logger.BeginFunctionScope(CreateFunctionInstance(scopeGuid), _hostInstanceId))
             {
-                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
-                expectedOperationId = Activity.Current.GetTraceId();
+                expectedRequestId = $"|{Activity.Current.TraceId.ToHexString()}.{Activity.Current.SpanId.ToHexString()}.";
+                expectedOperationId = Activity.Current.TraceId.ToHexString();
 
                 var props = new Dictionary<string, object>
                 {
@@ -462,8 +461,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 };
                 logger.LogMetric("CustomMetric", 1.1, props);
 
-                expectedRequestId = $"|{Activity.Current.GetTraceId()}.{Activity.Current.GetSpanId()}.";
-                expectedOperationId = Activity.Current.GetTraceId();
+                expectedRequestId = $"|{Activity.Current.TraceId.ToHexString()}.{Activity.Current.SpanId.ToHexString()}.";
+                expectedOperationId = Activity.Current.TraceId.ToHexString();
             }
 
             var telemetry = _channel.Telemetries.Single() as MetricTelemetry;

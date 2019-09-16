@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -81,28 +82,17 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             var sbTriggerRequest = requests.Single(r => r.Context.Operation.Name == nameof(ServiceBusTrigger));
             var manualCallRequest = requests.Single(r => r.Context.Operation.Name == nameof(ServiceBusOut));
 
-            string manualOperationId = manualCallRequest.Context.Operation.Id;
-            string triggerOperationId = sbTriggerRequest.Context.Operation.Id;
+            var operationId = manualCallRequest.Context.Operation.Id;
+            Assert.Equal(operationId, sbTriggerRequest.Context.Operation.Id);
 
-            // currently ApplicationInsights supports 2 parallel correlation schemes:
-            // legacy and W3C, they both appear in telemetry. UX handles all differences in operation Ids. 
-            // This will be resolved in next .NET SDK on Activity level
-            string dependencyLegacyId = sbOutDependency.Properties.Single(p => p.Key == "ai_legacyRequestId").Value;
-            string triggerCallLegacyRootId = sbTriggerRequest.Properties.Single(p => p.Key == "ai_legacyRootId").Value;
-            string manualCallLegacyRootId = manualCallRequest.Properties.Single(p => p.Key == "ai_legacyRootId").Value;
-
-            Assert.Equal(sbTriggerRequest.Context.Operation.ParentId, dependencyLegacyId);
-            Assert.Equal(manualOperationId, sbOutDependency.Context.Operation.Id);
-            Assert.Equal(manualCallLegacyRootId, triggerCallLegacyRootId);
-
-            ValidateServiceBusRequest(sbTriggerRequest, success, _endpoint, _queueName, nameof(ServiceBusTrigger), triggerOperationId, dependencyLegacyId);
+            ValidateServiceBusRequest(sbTriggerRequest, success, _endpoint, _queueName, nameof(ServiceBusTrigger), operationId, sbOutDependency.Id);
             ValidateServiceBusDependency(
                 sbOutDependency,
                 _endpoint,
                 _queueName, 
                 "Send", 
-                nameof(ServiceBusOut), 
-                manualOperationId, 
+                nameof(ServiceBusOut),
+                operationId, 
                 manualCallRequest.Id,
                 LogCategories.Bindings);
 
@@ -112,18 +102,23 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 _queueName,
                 "Complete",
                 nameof(ServiceBusTrigger),
-                sbTriggerRequest.Context.Operation.Id,
+                operationId,
                 sbTriggerRequest.Id,
                 LogCategories.CreateFunctionCategory(nameof(ServiceBusTrigger)));
 
-            var functionTraces = traces.Where(t => t.Context.Operation.Id == sbTriggerRequest.Context.Operation.Id).ToList();
-            Assert.Equal(success ? 4 : 6, functionTraces.Count);
+            var allFunctionTraces = traces.Where(t => t.Context.Operation.Id == sbTriggerRequest.Context.Operation.Id).ToList();
+            var manualFunctionTraces = traces.Where(t => t.Context.Operation.Id == sbTriggerRequest.Context.Operation.Id && 
+                                                         t.Context.Operation.ParentId == manualCallRequest.Id).ToList();
 
-            foreach (var trace in functionTraces)
-            {
-                Assert.Equal(sbTriggerRequest.Context.Operation.Id, trace.Context.Operation.Id);
-                Assert.Equal(sbTriggerRequest.Id, trace.Context.Operation.ParentId);
-            }
+            var triggerFunctionTraces = traces.Where(t => t.Context.Operation.Id == sbTriggerRequest.Context.Operation.Id &&
+                                                          t.Context.Operation.ParentId == sbTriggerRequest.Id).ToList();
+            Assert.Equal(success ? 6 : 8, allFunctionTraces.Count);
+
+            // manual function only writes 'executing' and 'executed'
+            Assert.Equal(2, manualFunctionTraces.Count);
+
+            // trigger writes 'executing', 'executed', trigger and log inside function + 2 errors on exception
+            Assert.Equal(success ? 4 : 6, triggerFunctionTraces.Count);
         }
 
         [Fact]
@@ -194,6 +189,135 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 _queueName, 
                 "Complete",
                 nameof(ServiceBusTrigger), 
+                request.Context.Operation.Id,
+                request.Id,
+                LogCategories.CreateFunctionCategory(nameof(ServiceBusTrigger)));
+
+            // Make sure that the trigger traces are correlated
+            traces = _channel.Telemetries.OfType<TraceTelemetry>().Where(t => t.Context.Operation.Id == request.Context.Operation.Id).ToList();
+            Assert.Equal(4, traces.Count());
+
+            foreach (var trace in traces)
+            {
+                Assert.Equal(request.Context.Operation.Id, trace.Context.Operation.Id);
+                Assert.Equal(request.Id, trace.Context.Operation.ParentId);
+            }
+        }
+
+        [Fact]
+        public async Task ServiceBusRequestLegacyCompatibleParent()
+        {
+            var sender = new MessageSender(_connectionString, _queueName);
+
+            var compatibleRoot = ActivityTraceId.CreateRandom().ToHexString();
+            var legacyParent = $"|{compatibleRoot}.1.2.3.";
+            var message = new Message
+            {
+                Body = Encoding.UTF8.GetBytes("message"),
+                ContentType = "text/plain",
+                UserProperties = { ["Diagnostic-Id"] = legacyParent }
+            };
+
+            await sender.SendAsync(message);
+
+            using (var host = ConfigureHost())
+            {
+                await host.StartAsync();
+
+                _functionWaitHandle.WaitOne();
+                await Task.Delay(1000);
+
+                await host.StopAsync();
+            }
+
+            List<RequestTelemetry> requests = _channel.Telemetries.OfType<RequestTelemetry>().ToList();
+            List<DependencyTelemetry> dependencies = _channel.Telemetries.OfType<DependencyTelemetry>().ToList();
+            List<TraceTelemetry> traces = _channel.Telemetries.OfType<TraceTelemetry>().ToList();
+
+            Assert.Single(requests);
+
+            // The call to Complete the message registers as a dependency
+            Assert.Single(dependencies);
+
+            Assert.Single(dependencies, d => d.Name == "Complete");
+            var completeDependency = dependencies.Single(d => d.Name == "Complete");
+
+            var request = requests.Single();
+
+            Assert.False(request.Properties.TryGetValue("ai_legacyRootId", out var legacyRoot));
+
+            ValidateServiceBusRequest(request, true, _endpoint, _queueName, nameof(ServiceBusTrigger), compatibleRoot, legacyParent);
+            ValidateServiceBusDependency(
+                completeDependency,
+                _endpoint,
+                _queueName,
+                "Complete",
+                nameof(ServiceBusTrigger),
+                request.Context.Operation.Id,
+                request.Id,
+                LogCategories.CreateFunctionCategory(nameof(ServiceBusTrigger)));
+
+            // Make sure that the trigger traces are correlated
+            traces = _channel.Telemetries.OfType<TraceTelemetry>().Where(t => t.Context.Operation.Id == request.Context.Operation.Id).ToList();
+            Assert.Equal(4, traces.Count());
+
+            foreach (var trace in traces)
+            {
+                Assert.Equal(request.Context.Operation.Id, trace.Context.Operation.Id);
+                Assert.Equal(request.Id, trace.Context.Operation.ParentId);
+            }
+        }
+
+        [Fact]
+        public async Task ServiceBusRequestLegacyNotCompatibleParent()
+        {
+            var sender = new MessageSender(_connectionString, _queueName);
+
+            var legacyParent = "|legacyId.1.2.3.";
+            var message = new Message
+            {
+                Body = Encoding.UTF8.GetBytes("message"),
+                ContentType = "text/plain",
+                UserProperties = {["Diagnostic-Id"] = legacyParent}
+            };
+
+            await sender.SendAsync(message);
+
+            using (var host = ConfigureHost())
+            {
+                await host.StartAsync();
+
+                _functionWaitHandle.WaitOne();
+                await Task.Delay(1000);
+
+                await host.StopAsync();
+            }
+
+            List<RequestTelemetry> requests = _channel.Telemetries.OfType<RequestTelemetry>().ToList();
+            List<DependencyTelemetry> dependencies = _channel.Telemetries.OfType<DependencyTelemetry>().ToList();
+            List<TraceTelemetry> traces = _channel.Telemetries.OfType<TraceTelemetry>().ToList();
+
+            Assert.Single(requests);
+
+            // The call to Complete the message registers as a dependency
+            Assert.Single(dependencies);
+
+            Assert.Single(dependencies, d => d.Name == "Complete");
+            var completeDependency = dependencies.Single(d => d.Name == "Complete");
+
+            var request = requests.Single();
+
+            Assert.NotNull(request.Context.Operation.Id);
+
+            Assert.True(request.Properties.TryGetValue("ai_legacyRootId", out var legacyRoot));
+            Assert.Equal("legacyId", legacyRoot);
+            ValidateServiceBusRequest(request, true, _endpoint, _queueName, nameof(ServiceBusTrigger), request.Context.Operation.Id, legacyParent);
+            ValidateServiceBusDependency(
+                completeDependency,
+                _endpoint,
+                _queueName,
+                "Complete",
+                nameof(ServiceBusTrigger),
                 request.Context.Operation.Id,
                 request.Id,
                 LogCategories.CreateFunctionCategory(nameof(ServiceBusTrigger)));
