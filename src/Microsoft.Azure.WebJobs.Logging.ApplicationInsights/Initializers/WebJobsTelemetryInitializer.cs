@@ -72,7 +72,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
             // this could be telemetry tracked in scope of function call - then we should apply the logger scope
             // or RequestTelemetry tracked by the WebJobs SDK or AppInsight SDK - then we should apply Activity.Tags
-            if (request == null && scopeProps.Any())
+            if (scopeProps.Any())
             {
                 telemetry.Context.Operation.Name = scopeProps.GetValueOrDefault<string>(ScopeKeys.FunctionName);
 
@@ -95,8 +95,9 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     telemetryProps[LogConstants.EventIdKey] = eventId.Value.ToString();
                 }
             }
+            
             // we may track traces/dependencies after function scope ends - we don't want to update those
-            else if (request != null)
+            if (request != null)
             {
                 UpdateRequestProperties(request);
 
