@@ -346,6 +346,44 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
+        [Theory]
+        [InlineData(true, true)]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        [InlineData(false, false)]
+        public async Task ApplicationInsights_CustomStartOperation(bool testRequestTelemetry, bool useCustomOperationId)
+        {
+            string testName = nameof(TestApplicationInsightsStartOperation);
+            using (IHost host = ConfigureHost())
+            {
+                var telemetryClient = host.Services.GetRequiredService<TelemetryClient>();
+                string customOperationId = useCustomOperationId ? ActivityTraceId.CreateRandom().ToHexString() : null;
+
+                await host.StartAsync();
+                MethodInfo methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+                await host.GetJobHost().CallAsync(methodInfo, new {
+                    telemetryClient = telemetryClient,
+                    testRequestTelemetry = testRequestTelemetry,
+                    customOperationId = customOperationId
+                });
+
+                await host.StopAsync();
+
+                OperationTelemetry[] telemetries = _channel.Telemetries.OfType<OperationTelemetry>().ToArray();
+                Assert.Equal(2, telemetries.Length);
+
+                Assert.Single(telemetries.Where(t => t.Name == "custom"));
+                if (useCustomOperationId)
+                {
+                    Assert.Equal(customOperationId, telemetries.Single(t => t.Name == "custom").Context.Operation.Id);
+                }
+                else
+                {
+                    Assert.Equal(telemetries[0].Context.Operation.Id, telemetries[1].Context.Operation.Id);
+                }
+            }
+        }
+
         [Fact]
         public async Task ApplicationInsights_OuterRequestIsTrackedOnce()
         {
@@ -719,6 +757,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             TelemetryClient telemetryClient = new TelemetryClient(); // use TelemetryConfiguration.Active
             telemetryClient.TrackEvent("custom event");
+        }
+
+        [NoAutomaticTrigger]
+        public static void TestApplicationInsightsStartOperation(TelemetryClient telemetryClient, bool testRequestTelemetry, string customOperationId)
+        {
+            OperationTelemetry operationTelemetry = testRequestTelemetry ? new RequestTelemetry() : (OperationTelemetry)new DependencyTelemetry();
+
+            operationTelemetry.Name = "custom";
+            if (customOperationId != null)
+            {
+                operationTelemetry.Context.Operation.Id = customOperationId;
+            }
+
+            using (telemetryClient.StartOperation(operationTelemetry)) { }
         }
 
         [NoAutomaticTrigger]

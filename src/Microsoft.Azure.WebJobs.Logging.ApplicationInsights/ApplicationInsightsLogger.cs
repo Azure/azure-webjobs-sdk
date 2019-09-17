@@ -374,6 +374,12 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                             // These values are set by the calls to Start/Stop the telemetry. Other
                             // Loggers may want them, but we'll ignore.
                             break;
+                        case LogConstants.LogLevelKey:
+                        case LogConstants.CategoryNameKey:
+                        case LogConstants.EventIdKey:
+                            // this is set in the WebJobs initializer,
+                            // we will ignore it here
+                            break;
                         case LogConstants.DurationKey:
                             if (prop.Value is TimeSpan duration)
                             {
