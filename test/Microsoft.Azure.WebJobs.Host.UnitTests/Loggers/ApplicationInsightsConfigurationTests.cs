@@ -72,6 +72,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Assert.Single(sdkVersionProvider);
                 Assert.Single(sdkVersionProvider.OfType<WebJobsSdkVersionProvider>());
 
+                var roleInstanceProvider = host.Services.GetServices<IRoleInstanceProvider>().ToList();
+                Assert.Single(roleInstanceProvider);
+                Assert.Single(roleInstanceProvider.OfType<WebJobsRoleInstanceProvider>());
+
                 // Verify Channel
                 Assert.IsType<ServerTelemetryChannel>(config.TelemetryChannel);
 
@@ -336,6 +340,26 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 var modules = host.Services.GetServices<ITelemetryModule>().ToList();
                 var quickPulseTelemetryModule = modules.OfType<QuickPulseTelemetryModule>().Single();
                 Assert.Equal("some auth key", quickPulseTelemetryModule.AuthenticationApiKey);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_ConfiguresLiveMetricsServerId()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.Services.AddSingleton<IRoleInstanceProvider>(new TestRoleInstanceProvider("my role instance"));
+                    b.AddApplicationInsightsWebJobs(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                    });
+                })
+                .Build())
+            {
+                var modules = host.Services.GetServices<ITelemetryModule>().ToList();
+                var quickPulseTelemetryModule = modules.OfType<QuickPulseTelemetryModule>().Single();
+                Assert.Equal("my role instance", quickPulseTelemetryModule.ServerId);
             }
         }
 
@@ -632,6 +656,21 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             ruleSelector.Select(options, providerType, category, out LogLevel? minLevel, out Func<string, string, LogLevel, bool> filter);
 
             return new LoggerFilterRule(providerType.FullName, category, minLevel, filter);
+        }
+
+        class TestRoleInstanceProvider : IRoleInstanceProvider
+        {
+            private readonly string _roleInstance;
+
+            public TestRoleInstanceProvider(string roleInstance)
+            {
+                _roleInstance = roleInstance;
+            }
+
+            public string GetRoleInstanceName()
+            {
+                return _roleInstance;
+            }
         }
     }
 }

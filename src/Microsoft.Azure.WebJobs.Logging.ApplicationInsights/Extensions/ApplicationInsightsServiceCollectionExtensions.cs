@@ -42,6 +42,7 @@ namespace Microsoft.Extensions.DependencyInjection
         public static IServiceCollection AddApplicationInsights(this IServiceCollection services)
         {
             services.TryAddSingleton<ISdkVersionProvider, WebJobsSdkVersionProvider>();
+            services.TryAddSingleton<IRoleInstanceProvider, WebJobsRoleInstanceProvider>();
 
             // Bind to the configuration section registered with 
             services.AddOptions<ApplicationInsightsLoggerOptions>()
@@ -65,6 +66,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 {
                     return provider.GetService<QuickPulseTelemetryModule>();
                 }
+
                 return NullTelemetryModule.Instance;
             });
 
@@ -147,6 +149,8 @@ namespace Microsoft.Extensions.DependencyInjection
 
                 IApplicationIdProvider appIdProvider = provider.GetService<IApplicationIdProvider>();
                 ISdkVersionProvider sdkVersionProvider = provider.GetService<ISdkVersionProvider>();
+                IRoleInstanceProvider roleInstanceProvider = provider.GetService<IRoleInstanceProvider>();
+
                 // Because of https://github.com/Microsoft/ApplicationInsights-dotnet-server/issues/943
                 // we have to touch (and create) Active configuration before initializing telemetry modules
                 // Active configuration is used to report AppInsights heartbeats
@@ -162,7 +166,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 if (!activeConfig.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>().Any())
                 {
                     activeConfig.TelemetryInitializers.Add(new WebJobsRoleEnvironmentTelemetryInitializer());
-                    activeConfig.TelemetryInitializers.Add(new WebJobsTelemetryInitializer(sdkVersionProvider));
+                    activeConfig.TelemetryInitializers.Add(new WebJobsTelemetryInitializer(sdkVersionProvider, roleInstanceProvider));
                 }
 
                 SetupTelemetryConfiguration(
@@ -173,6 +177,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     provider.GetServices<ITelemetryModule>(),
                     appIdProvider,
                     filterOptions,
+                    roleInstanceProvider,
                     provider.GetService<QuickPulseInitializationScheduler>());
 
                 return config;
@@ -230,6 +235,7 @@ namespace Microsoft.Extensions.DependencyInjection
             IEnumerable<ITelemetryModule> telemetryModules,
             IApplicationIdProvider applicationIdProvider,
             LoggerFilterOptions filterOptions,
+            IRoleInstanceProvider roleInstanceProvider,
             QuickPulseInitializationScheduler delayer)
         {
             if (options.InstrumentationKey != null)
@@ -256,6 +262,8 @@ namespace Microsoft.Extensions.DependencyInjection
                     {
                         quickPulseModule.AuthenticationApiKey = options.LiveMetricsAuthenticationApiKey;
                     }
+
+                    quickPulseModule.ServerId = roleInstanceProvider?.GetRoleInstanceName();
 
                     // QuickPulse can have a startup performance hit, so delay its initialization.
                     delayer.ScheduleInitialization(() => module.Initialize(configuration), options.LiveMetricsInitializationDelay);

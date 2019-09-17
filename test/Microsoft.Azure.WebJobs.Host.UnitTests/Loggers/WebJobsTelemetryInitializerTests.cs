@@ -39,7 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             requestActivity.AddTag(LogConstants.NameKey, functionName);
             requestActivity.AddTag(LogConstants.SucceededKey, "true");
 
-            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider());
+            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new WebJobsRoleInstanceProvider());
 
             initializer.Initialize(request);
             initializer.Initialize(request);
@@ -75,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             requestActivity.AddTag(LogConstants.NameKey, functionName);
             requestActivity.AddTag(LogConstants.SucceededKey, "true");
 
-            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider());
+            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new WebJobsRoleInstanceProvider());
 
             initializer.Initialize(request);
             initializer.Initialize(request);
@@ -87,11 +87,37 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.DoesNotContain(request.Properties, p => p.Key == LogConstants.SucceededKey);
         }
 
+        [Fact]
+        public void Initializer_SetsRoleInstance()
+        {
+            var request = new RequestTelemetry { Name = "custom" };
+            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new TestRoleInstanceProvider("my custom role instance"));
+
+            initializer.Initialize(request);
+
+            Assert.Equal("my custom role instance", request.Context.Cloud.RoleInstance);
+        }
+
         public void Dispose()
         {
             while (Activity.Current != null)
             {
                 Activity.Current.Stop();
+            }
+        }
+
+        class TestRoleInstanceProvider : IRoleInstanceProvider
+        {
+            private readonly string _roleInstance;
+
+            public TestRoleInstanceProvider(string roleInstance)
+            {
+                _roleInstance = roleInstance;
+            }
+
+            public string GetRoleInstanceName()
+            {
+                return _roleInstance;
             }
         }
     }
