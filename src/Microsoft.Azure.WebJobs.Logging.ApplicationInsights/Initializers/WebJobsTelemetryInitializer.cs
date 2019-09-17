@@ -15,22 +15,24 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
     internal class WebJobsTelemetryInitializer : ITelemetryInitializer
     {
-        private const string ComputerNameKey = "COMPUTERNAME";
-        private const string WebSiteInstanceIdKey = "WEBSITE_INSTANCE_ID";
-        private const string ContainerNameKey = "CONTAINER_NAME";
-
-        private static readonly string _roleInstanceName = GetRoleInstanceName();
         private static readonly string _currentProcessId = Process.GetCurrentProcess().Id.ToString();
         private readonly string _sdkVersion;
+        private readonly string _roleInstanceName;
 
-        public WebJobsTelemetryInitializer(ISdkVersionProvider versionProvider)
+        public WebJobsTelemetryInitializer(ISdkVersionProvider versionProvider, IRoleInstanceProvider roleInstanceProvider)
         {
             if (versionProvider == null)
             {
                 throw new ArgumentNullException(nameof(versionProvider));
             }
 
+            if (roleInstanceProvider == null)
+            {
+                throw new ArgumentNullException(nameof(roleInstanceProvider));
+            }
+
             _sdkVersion = versionProvider.GetSdkVersion();
+            _roleInstanceName = roleInstanceProvider.GetRoleInstanceName();
         }
 
         public void Initialize(ITelemetry telemetry)
@@ -116,21 +118,6 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     }
                 }
             }
-        }
-
-        private static string GetRoleInstanceName()
-        {
-            string instanceName = Environment.GetEnvironmentVariable(WebSiteInstanceIdKey);
-            if (string.IsNullOrEmpty(instanceName))
-            {
-                instanceName = Environment.GetEnvironmentVariable(ComputerNameKey);
-                if (string.IsNullOrEmpty(instanceName))
-                {
-                    instanceName = Environment.GetEnvironmentVariable(ContainerNameKey);
-                }
-            }
-
-            return instanceName;
         }
 
         /// <summary>
