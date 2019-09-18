@@ -104,6 +104,7 @@ namespace Microsoft.Extensions.DependencyInjection
 
                     var includedActivities = dependencyCollector.IncludeDiagnosticSourceActivities;
                     includedActivities.Add("Microsoft.Azure.ServiceBus");
+                    includedActivities.Add("Microsoft.Azure.EventHubs");
 
                     return dependencyCollector;
                 }

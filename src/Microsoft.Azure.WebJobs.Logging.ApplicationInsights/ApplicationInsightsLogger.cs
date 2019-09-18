@@ -6,12 +6,15 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
+using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
@@ -441,6 +444,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 return;
             }
 
+            var allScopes = DictionaryLoggerScope.GetMergedStateDictionary();
             // HTTP and ServiceBus triggers are tracked automatically by the ApplicationInsights SDK
             // In such case a current Activity is present.
             // We won't track and only stamp function specific details on the RequestTelemetry
@@ -449,7 +453,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             var currentActivity = Activity.Current;
             if (currentActivity == null ||
                 // Activity is tracked, but Functions wants to ignore it:
-                DictionaryLoggerScope.GetMergedStateDictionary().ContainsKey("MS_IgnoreActivity") ||
+                allScopes.ContainsKey("MS_IgnoreActivity") ||
                 // Functions create another RequestTrackingTelemetryModule to make sure first request is tracked (as ASP.NET Core starts before web jobs)
                 // however at this point we may discover that RequestTrackingTelemetryModule is disabled by customer and even though Activity exists, request won't be tracked
                 // So, if we've got AspNetCore Activity and EnableHttpTriggerExtendedInfoCollection is false - track request here.
@@ -465,30 +469,107 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     !string.IsNullOrEmpty(functionInvocationId) &&
                     eventName == LogConstants.FunctionStartEvent)
                 {
-                    RequestTelemetry request = new RequestTelemetry
+                    IOperationHolder<RequestTelemetry> operation;
+
+                    // link represents context from the upstream service that is not necessarily immediate parent
+                    // it is used by EventHubs to represent context in the message.
+                    // if there is just one link, we'll use it as a parent as an optimization.
+                    // if there is more than one, we'll populate them as custom properties
+                    IEnumerable<Activity> links = allScopes.GetValueOrDefault<IEnumerable<Activity>>("Links");
+                    var activities = links as Activity[] ?? links?.ToArray();
+
+                    if (activities != null && activities.Length == 1)
                     {
-                        Name = functionName
-                    };
+                        operation = _telemetryClient.StartOperation<RequestTelemetry>(activities[0]);
+                        operation.Telemetry.Name = functionName;
+                    }
+                    else
+                    {
+                        RequestTelemetry request = new RequestTelemetry
+                        {
+                            Name = functionName
+                        };
+
+                        operation = _telemetryClient.StartOperation(request);
+
+                        // if there is more than one link (batch dispatch in EventHub trigger)
+                        // we'll populate link information on the request telemetry, but don't touch parent for this request
+                        PopulateLinks(activities, request);
+
+                        // If any of the links is sampled in (on upstream) we also preliminary sample in 
+                        // request telemetry and everything that happens in this request scope. 
+                        // There will be additional level of sampling applied to limit rate to one 
+                        // configured on this Function/WebJob
+                        if (request.ProactiveSamplingDecision == SamplingDecision.SampledIn)
+                        {
+                            Activity.Current.ActivityTraceFlags |= ActivityTraceFlags.Recorded;
+                        }
+                    }
 
                     // We'll need to store this operation context so we can stop it when the function completes
-                    IOperationHolder<RequestTelemetry> operation = _telemetryClient.StartOperation(request);
-
                     stateValues[OperationContext] = operation;
                 }
             }
         }
 
+        private void PopulateLinks(Activity[] activities, RequestTelemetry request)
+        {
+            if (activities == null)
+            {
+                return;
+            }
+
+            if (activities.Any(l => l.Recorded))
+            {
+                request.ProactiveSamplingDecision = SamplingDecision.SampledIn;
+            }
+
+            var linksJson = new StringBuilder();
+            linksJson.Append('[');
+            foreach (var link in activities)
+            {
+                var linkTraceId = link.TraceId.ToHexString();
+
+                // avoiding json serializers for now for the sake of perf.
+                // serialization is trivial and looks like `_MS.links` property with json blob
+                // [{"operation_Id":"5eca8b153632494ba00f619d6877b134","id":"|5eca8b153632494ba00f619d6877b134.d4c1279b6e7b7c47."},
+                //  {"operation_Id":"ff28988d0776b44f9ca93352da126047","id":"|ff28988d0776b44f9ca93352da126047.bf4fa4855d161141."}]
+                linksJson
+                    .Append('{')
+                    .Append("\"operation_Id\":")
+                    .Append('\"')
+                    .Append(linkTraceId)
+                    .Append('\"')
+                    .Append(',');
+                linksJson
+                    .Append("\"id\":")
+                    .Append('\"')
+                    .Append('|')
+                    .Append(linkTraceId)
+                    .Append('.')
+                    .Append(link.ParentSpanId.ToHexString())
+                    .Append('.')
+                    .Append('\"');
+
+                // we explicitly ignore sampling flag, tracestate and attributes at this point.
+                linksJson.Append("},");
+            }
+
+            linksJson.Append("]");
+
+            request.Properties["_MS.links"] = linksJson.ToString();
+        }
+
         private bool IsHttpRequestActivity(Activity activity)
         {
             // Http Activity could be created by ASP.NET Core and then is has OperationName = "Microsoft.AspNetCore.Hosting.HttpRequestIn"
-            // or it could be created by ApplicaitonInsights in certain scenarios (like W3C support until it is integrated into the ASP.NET Core)
-            // ApplicaitonInsights Activity is called "ActivityCreatedByHostingDiagnosticListener"
+            // or it could be created by ApplicationInsights in certain scenarios (like W3C support until it is integrated into the ASP.NET Core)
+            // ApplicationInsights Activity is called "ActivityCreatedByHostingDiagnosticListener"
             // Here we check if activity passed is one of those.
             return activity != null &&
                    (activity.OperationName == "Microsoft.AspNetCore.Hosting.HttpRequestIn" || 
                     activity.OperationName == "ActivityCreatedByHostingDiagnosticListener");
         }
-
 
         internal static string GetIpAddress(HttpRequest httpRequest)
         {

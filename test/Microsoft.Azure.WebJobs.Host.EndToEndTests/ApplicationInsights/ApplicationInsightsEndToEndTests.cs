@@ -56,6 +56,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private readonly CustomTestWebHostFactory _factory;
         private static RequestTrackingTelemetryModule _requestModuleForFirstRequest;
 
+        private readonly JsonSerializerSettings jsonSettingThrowOnError = new JsonSerializerSettings
+        {
+            MissingMemberHandling = MissingMemberHandling.Error,
+            ReferenceLoopHandling = ReferenceLoopHandling.Error,
+            NullValueHandling = NullValueHandling.Include,
+            DefaultValueHandling = DefaultValueHandling.Include,
+        };
+
         public ApplicationInsightsEndToEndTests(CustomTestWebHostFactory factory)
         {
             _factory = factory;
@@ -502,6 +510,241 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 var traces = _channel.Telemetries.OfType<TraceTelemetry>()
                     .Where(t => t.Context.Operation.Id == functionRequest.Context.Operation.Id);
                 Assert.Equal(success ? 4 : 5, traces.Count());
+            }
+        }
+
+        [Fact]
+        public async Task ApplicationInsights_EventHubTrackingByWebJobs_SingleLink_LegacyCompatibleFormat()
+        {
+            string testName = nameof(TestApplicationInsightsInformation);
+
+            using (IHost host = ConfigureHost())
+            {
+                Startup.Host = host;
+                await host.StartAsync();
+
+                var loggerProvider = host.Services.GetServices<ILoggerProvider>().OfType<ApplicationInsightsLoggerProvider>().Single();
+                var logger = loggerProvider.CreateLogger(LogCategories.Results);
+
+                string operationId = ActivityTraceId.CreateRandom().ToHexString();
+                string parentId = $"|{operationId}.{ActivitySpanId.CreateRandom().ToHexString()}.";
+
+                // simulate functions behavior to set request on the scope
+                using (var _ = logger.BeginScope(new Dictionary<string, object>
+                {
+                    ["Links"] = new[] { new Activity("event hub process").SetParentId(parentId) }
+                }))
+                {
+                    MethodInfo methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+                    await host.GetJobHost().CallAsync(methodInfo, new { input = "function input" });
+                }
+
+                await host.StopAsync();
+
+                // Validate the request
+                RequestTelemetry functionRequest = _channel.Telemetries.OfType<RequestTelemetry>().SingleOrDefault();
+
+                ValidateRequest(
+                    functionRequest,
+                    testName,
+                    testName,
+                    null,
+                    null,
+                    true,
+                    "0",
+                    operationId,
+                    parentId);
+
+                // Make sure operation ids match
+                var traces = _channel.Telemetries.OfType<TraceTelemetry>().Where(t => t.Context.Operation.Id == functionRequest.Context.Operation.Id);
+                Assert.Equal(4, traces.Count());
+                Assert.False(functionRequest.Properties.ContainsKey("_MS.links"));
+                Assert.False(functionRequest.Properties.ContainsKey("Links"));
+            }
+        }
+
+        [Fact]
+        public async Task ApplicationInsights_EventHubTrackingByWebJobs_SingleLink_LegacyIncompatibleFormat()
+        {
+            string testName = nameof(TestApplicationInsightsInformation);
+
+            using (IHost host = ConfigureHost())
+            {
+                Startup.Host = host;
+                await host.StartAsync();
+
+                var loggerProvider = host.Services.GetServices<ILoggerProvider>().OfType<ApplicationInsightsLoggerProvider>().Single();
+                var logger = loggerProvider.CreateLogger(LogCategories.Results);
+
+                string parentId = "|legacyRoot.1.2.3.";
+
+                // simulate functions behavior to set request on the scope
+                using (var _ = logger.BeginScope(new Dictionary<string, object>
+                {
+                    ["Links"] = new[] { new Activity("event hub process").SetParentId(parentId) }
+                }))
+                {
+                    MethodInfo methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+                    await host.GetJobHost().CallAsync(methodInfo, new { input = "function input" });
+                }
+
+                await host.StopAsync();
+
+                // Validate the request
+                RequestTelemetry functionRequest = _channel.Telemetries.OfType<RequestTelemetry>().SingleOrDefault();
+
+                ValidateRequest(
+                    functionRequest,
+                    testName,
+                    testName,
+                    null,
+                    null,
+                    true,
+                    "0",
+                    null,
+                    parentId);
+
+                // Make sure operation ids match
+                var traces = _channel.Telemetries.OfType<TraceTelemetry>().Where(
+                    t => t.Context.Operation.Id == functionRequest.Context.Operation.Id);
+                Assert.Equal(4, traces.Count());
+                Assert.False(functionRequest.Properties.ContainsKey("_MS.links"));
+
+                Assert.True(functionRequest.Properties.TryGetValue("ai_legacyRootId", out var legacyRoot));
+                Assert.Equal("legacyRoot", legacyRoot);
+                Assert.False(functionRequest.Properties.ContainsKey("Links"));
+            }
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task ApplicationInsights_EventHubTrackingByWebJobs_SingleLink(bool sampledIn)
+        {
+            string testName = nameof(TestApplicationInsightsInformation);
+
+            using (IHost host = ConfigureHost())
+            {
+                Startup.Host = host;
+                await host.StartAsync();
+
+                var loggerProvider = host.Services.GetServices<ILoggerProvider>().OfType<ApplicationInsightsLoggerProvider>().Single();
+                var logger = loggerProvider.CreateLogger(LogCategories.Results);
+
+                string traceId = ActivityTraceId.CreateRandom().ToHexString();
+                string parentSpanId = ActivitySpanId.CreateRandom().ToHexString();
+                string traceFlags = sampledIn ? "01" : "00";
+                string parentId = $"00-{traceId}-{parentSpanId}-{traceFlags}";
+
+                // simulate functions behavior to set request on the scope
+                using (var _ = logger.BeginScope(new Dictionary<string, object>
+                {
+                    ["Links"] = new[] { new Activity("event hub process").SetParentId(parentId) }
+                }))
+                {
+                    MethodInfo methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+                    await host.GetJobHost().CallAsync(methodInfo, new { input = "function input" });
+                }
+
+                await host.StopAsync();
+
+                // Validate the request
+                RequestTelemetry functionRequest = _channel.Telemetries.OfType<RequestTelemetry>().SingleOrDefault();
+
+                 ValidateRequest(
+                    functionRequest,
+                    testName,
+                    testName,
+                    null,
+                    null,
+                    true,
+                    "0",
+                    traceId,
+                    $"|{traceId}.{parentSpanId}.");
+                Assert.Equal(sampledIn ? SamplingDecision.SampledIn : SamplingDecision.None, functionRequest.ProactiveSamplingDecision);                    
+
+                // Make sure operation ids match
+                var traces = _channel.Telemetries.OfType<TraceTelemetry>().Where(t => t.Context.Operation.Id == functionRequest.Context.Operation.Id);
+                Assert.Equal(4, traces.Count());
+                Assert.False(functionRequest.Properties.ContainsKey("_MS.links"));
+                Assert.False(functionRequest.Properties.ContainsKey("Links"));
+            }
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task ApplicationInsights_EventHubTrackingByWebJobs_MultipleLinks(bool anySampledIn)
+        {
+            string testName = nameof(TestApplicationInsightsInformation);
+
+            using (IHost host = ConfigureHost())
+            {
+                Startup.Host = host;
+                await host.StartAsync();
+
+                var loggerProvider = host.Services.GetServices<ILoggerProvider>().OfType<ApplicationInsightsLoggerProvider>().Single();
+                var logger = loggerProvider.CreateLogger(LogCategories.Results);
+
+                var links = new Activity[2];
+                links[0] = new Activity("link0").SetParentId(
+                        ActivityTraceId.CreateRandom(), 
+                        ActivitySpanId.CreateRandom(), 
+                        anySampledIn ? ActivityTraceFlags.Recorded : ActivityTraceFlags.None);
+                links[1] = new Activity("link1").SetParentId(
+                    ActivityTraceId.CreateRandom(), 
+                    ActivitySpanId.CreateRandom(),
+                    ActivityTraceFlags.None);
+
+                // simulate functions behavior to set request on the scope
+                using (var _ = logger.BeginScope(new Dictionary<string, object>
+                {
+                    ["Links"] = links
+                }))
+                {
+                    MethodInfo methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+                    await host.GetJobHost().CallAsync(methodInfo, new { input = "function input" });
+                }
+
+                await host.StopAsync();
+
+                // Validate the request
+                RequestTelemetry functionRequest = _channel.Telemetries.OfType<RequestTelemetry>().SingleOrDefault();
+
+                ValidateRequest(
+                    functionRequest,
+                    testName,
+                    testName,
+                    null,
+                    null,
+                    true);
+
+                // Make sure operation ids match
+                var traces = _channel.Telemetries.OfType<TraceTelemetry>().Where(t => t.Context.Operation.Id == functionRequest.Context.Operation.Id).ToArray();
+                Assert.Equal(4, traces.Length);
+
+                foreach (var trace in traces)
+                {
+                    Assert.Equal(anySampledIn ? SamplingDecision.SampledIn : SamplingDecision.None, trace.ProactiveSamplingDecision);
+                }
+
+                Assert.Equal(anySampledIn ? SamplingDecision.SampledIn : SamplingDecision.None,
+                    functionRequest.ProactiveSamplingDecision);
+
+                Assert.False(functionRequest.Properties.ContainsKey("Links"));
+                Assert.True(functionRequest.Properties.TryGetValue("_MS.links", out var linksStr));
+
+                // does not throw
+                var actualLinks = JsonConvert.DeserializeObject<TestLink[]>(linksStr, jsonSettingThrowOnError);
+
+                Assert.NotNull(actualLinks);
+                Assert.Equal(2, actualLinks.Length);
+
+                Assert.Equal(links[0].TraceId.ToHexString(), actualLinks[0].operation_Id);
+                Assert.Equal(links[1].TraceId.ToHexString(), actualLinks[1].operation_Id);
+
+                Assert.Equal($"|{links[0].TraceId.ToHexString()}.{links[0].ParentSpanId.ToHexString()}.", actualLinks[0].id);
+                Assert.Equal($"|{links[1].TraceId.ToHexString()}.{links[1].ParentSpanId.ToHexString()}.", actualLinks[1].id);
             }
         }
 
@@ -1212,6 +1455,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 builder.UseContentRoot(".");
                 base.ConfigureWebHost(builder);
             }
+        }
+
+        private class TestLink
+        {
+            public string operation_Id { get; set; }
+            public string id { get; set; }
         }
     }
 }
