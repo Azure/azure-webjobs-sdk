@@ -102,6 +102,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(expectedOperationId, telemetry.Context.Operation.Id);
             Assert.Null(telemetry.Context.Operation.ParentId);
             Assert.Contains(LogConstants.InvocationIdKey, telemetry.Properties.Keys);
+            Assert.Contains(LogConstants.ProcessIdKey, telemetry.Properties.Keys);
             Assert.Equal(_invocationId.ToString(), telemetry.Properties[LogConstants.InvocationIdKey]);
             Assert.Equal(_functionShortName, telemetry.Name);
             Assert.Equal(_functionShortName, telemetry.Context.Operation.Name);
@@ -141,6 +142,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(_functionShortName, requestTelemetry.Context.Operation.Name);
             Assert.Equal(defaultIp, requestTelemetry.Context.Location.Ip);
             Assert.Contains(LogConstants.InvocationIdKey, requestTelemetry.Properties.Keys);
+            Assert.Contains(LogConstants.ProcessIdKey, requestTelemetry.Properties.Keys);
             Assert.Equal(_invocationId.ToString(), requestTelemetry.Properties[LogConstants.InvocationIdKey]);
             Assert.Equal(LogCategories.Results, requestTelemetry.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(LogLevel.Error.ToString(), requestTelemetry.Properties[LogConstants.LogLevelKey]);
@@ -192,9 +194,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         private static void ValidateMetric(MetricTelemetry metric, double expectedValue, LogLevel expectedLevel, string expectedCategory = LogCategories.Aggregator)
         {
             Assert.Equal(expectedValue, metric.Value);
-            Assert.Equal(2, metric.Properties.Count);
+            Assert.Equal(3, metric.Properties.Count);
             Assert.Equal(expectedCategory, metric.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(expectedLevel.ToString(), metric.Properties[LogConstants.LogLevelKey]);
+            Assert.Equal(Process.GetCurrentProcess().Id.ToString(), metric.Properties[LogConstants.ProcessIdKey]);
         }
 
         [Fact]
@@ -236,7 +239,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 }
                 Assert.Equal(expectedSeverityLevel, telemetry.SeverityLevel);
 
-                Assert.Equal(4, telemetry.Properties.Count);
+                Assert.Equal(5, telemetry.Properties.Count);
+                Assert.Equal(Process.GetCurrentProcess().Id.ToString(), telemetry.Properties[LogConstants.ProcessIdKey]);
                 Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
                 Assert.Equal(telemetry.Message, telemetry.Properties[LogConstants.CustomPropertyPrefix + LogConstants.OriginalFormatKey]);
                 Assert.Equal(scopeGuid.ToString(), telemetry.Properties[LogConstants.InvocationIdKey]);
@@ -301,14 +305,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(SeverityLevel.Error, exceptionTelemetry.SeverityLevel);
 
             // verify the properties for the telemetries
-            Assert.Equal(6, exceptionTelemetry.Properties.Count);
-            Assert.Equal(5, traceTelemetry.Properties.Count);
+            Assert.Equal(7, exceptionTelemetry.Properties.Count);
+            Assert.Equal(6, traceTelemetry.Properties.Count);
             ValidateProperties(exceptionTelemetry);
             ValidateProperties(traceTelemetry);
             // We add the formatted message as a property for exceptions
             Assert.Equal("Error with customer: John Doe.", exceptionTelemetry.Properties[LogConstants.FormattedMessageKey]);
 
             Assert.Same(ex, exceptionTelemetry.Exception);
+            Assert.Equal(Process.GetCurrentProcess().Id.ToString(), exceptionTelemetry.Properties[LogConstants.ProcessIdKey]);
             Assert.Equal(expectedOperationId, exceptionTelemetry.Context.Operation.Id);
             Assert.Equal(expectedRequestId, exceptionTelemetry.Context.Operation.ParentId);
             Assert.Equal(_functionShortName, exceptionTelemetry.Context.Operation.Name);
@@ -337,7 +342,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             var telemetry = _channel.Telemetries.Single() as MetricTelemetry;
 
-            Assert.Equal(4, telemetry.Properties.Count);
+            Assert.Equal(5, telemetry.Properties.Count);
+            Assert.Equal(Process.GetCurrentProcess().Id.ToString(), telemetry.Properties[LogConstants.ProcessIdKey]);
             Assert.Equal(scopeGuid.ToString(), telemetry.Properties[LogConstants.InvocationIdKey]);
             Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
@@ -366,7 +372,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             var telemetry = _channel.Telemetries.Single() as ISupportProperties;
 
-            Assert.Equal(3, telemetry.Properties.Count);
+            Assert.Equal(4, telemetry.Properties.Count);
+            Assert.Equal(Process.GetCurrentProcess().Id.ToString(), telemetry.Properties[LogConstants.ProcessIdKey]);
             Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
             Assert.Equal("100", telemetry.Properties[LogConstants.EventIdKey]);
@@ -380,7 +387,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             var telemetry = _channel.Telemetries.Single() as ISupportProperties;
 
-            Assert.Equal(2, telemetry.Properties.Count);
+            Assert.Equal(3, telemetry.Properties.Count);
+            Assert.Equal(Process.GetCurrentProcess().Id.ToString(), telemetry.Properties[LogConstants.ProcessIdKey]);
             Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
         }
@@ -411,7 +419,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             var telemetry = _channel.Telemetries.Single() as MetricTelemetry;
 
-            Assert.Equal(6, telemetry.Properties.Count);
+            Assert.Equal(7, telemetry.Properties.Count);
+            Assert.Equal(Process.GetCurrentProcess().Id.ToString(), telemetry.Properties[LogConstants.ProcessIdKey]);
             Assert.Equal(scopeGuid.ToString(), telemetry.Properties[LogConstants.InvocationIdKey]);
             Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
@@ -459,7 +468,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             var telemetry = _channel.Telemetries.Single() as MetricTelemetry;
 
-            Assert.Equal(6, telemetry.Properties.Count);
+            Assert.Equal(7, telemetry.Properties.Count);
+            Assert.Equal(Process.GetCurrentProcess().Id.ToString(), telemetry.Properties[LogConstants.ProcessIdKey]);
             Assert.Equal(scopeGuid.ToString(), telemetry.Properties[LogConstants.InvocationIdKey]);
             Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);

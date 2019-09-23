@@ -153,5 +153,10 @@ namespace Microsoft.Azure.WebJobs.Logging
         /// Gets the name of the key used to store HTTP request path
         /// </summary>
         public const string HttpPathKey = "HttpPath";
+
+        /// <summary>
+        ///  Get the name of the key to store the current process id.
+        /// </summary>
+        public const string ProcessIdKey = "ProcessId";
     }
 }
