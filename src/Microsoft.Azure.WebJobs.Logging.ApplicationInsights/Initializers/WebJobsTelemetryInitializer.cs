@@ -20,6 +20,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         private const string ContainerNameKey = "CONTAINER_NAME";
 
         private static readonly string _roleInstanceName = GetRoleInstanceName();
+        private static readonly string _currentProcessId = Process.GetCurrentProcess().Id.ToString();
         private readonly string _sdkVersion;
 
         public WebJobsTelemetryInitializer(ISdkVersionProvider versionProvider)
@@ -57,6 +58,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             }
 
             IDictionary<string, string> telemetryProps = telemetry.Context.Properties;
+            telemetryProps[LogConstants.ProcessIdKey] = _currentProcessId;
 
             // Apply our special scope properties
             IDictionary<string, object> scopeProps =
