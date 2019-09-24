@@ -11,7 +11,6 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         public ScaleMonitorDescriptor(string id)
         {
             Id = id;
-            Scope = ScaleMonitorScope.Application;
         }
 
         /// <summary>
@@ -23,10 +22,5 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// be of the form "{FunctionId}-QueueTrigger-{QueueName}".
         /// </remarks>
         public string Id { get; }
-
-        /// <summary>
-        /// Gets or sets the <see cref="ScaleMonitorScope"/> for the monitor.
-        /// </summary>
-        public ScaleMonitorScope Scope { get; set; }
     }
 }
