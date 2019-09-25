@@ -141,6 +141,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 Activity.DefaultIdFormat = options.HttpAutoCollectionOptions.EnableW3CDistributedTracing
                     ? ActivityIdFormat.W3C
                     : ActivityIdFormat.Hierarchical;
+                Activity.ForceDefaultIdFormat = true;
 
                 LoggerFilterOptions filterOptions = CreateFilterOptions(provider.GetService<IOptions<LoggerFilterOptions>>().Value);
 

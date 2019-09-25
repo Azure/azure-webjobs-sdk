@@ -164,6 +164,26 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [Fact]
+        public async Task ApplicationInsights_W3COff()
+        {
+            string testName = nameof(TestApplicationInsightsCheckActivityFormat);
+            using (IHost host = ConfigureHost(httpOptions: new HttpAutoCollectionOptions { EnableW3CDistributedTracing = false }))
+            {
+                await host.StartAsync();
+                MethodInfo methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+                await host.GetJobHost().CallAsync(methodInfo, new { expected = ActivityIdFormat.Hierarchical });
+                await host.StopAsync();
+
+                // Validate the request
+                RequestTelemetry request = _channel.Telemetries
+                    .OfType<RequestTelemetry>()
+                    .Single();
+                ValidateRequest(request, testName, testName, null, null, true);
+            }
+        }
+
+
+        [Fact]
         public async Task ApplicationInsights_FailedFunction()
         {
             string testName = nameof(TestApplicationInsightsFailure);
@@ -777,6 +797,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         public static void TestApplicationInsightsDisposeRequestsModule(string input, ILogger logger)
         {
             _requestModuleForFirstRequest.Dispose();
+        }
+
+        [NoAutomaticTrigger]
+        public static void TestApplicationInsightsCheckActivityFormat(ActivityIdFormat expected, ILogger logger)
+        {
+            Assert.Equal(expected, Activity.Current.IdFormat);
         }
 
         private static void ValidateMetric(MetricTelemetry telemetry, string expectedOperationName)

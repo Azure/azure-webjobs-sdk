@@ -223,6 +223,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
                 Assert.False(dependencyModule.EnableW3CHeadersInjection);
                 Assert.Empty(requestModules);
+
+                Assert.Equal(ActivityIdFormat.Hierarchical, Activity.DefaultIdFormat);
+                Assert.True(Activity.ForceDefaultIdFormat);
             }
         }
 
