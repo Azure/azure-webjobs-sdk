@@ -2,9 +2,15 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Authentication.ExtendedProtection;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 [assembly: WebJobsStartup(typeof(Microsoft.Azure.WebJobs.Host.UnitTests.Hosting.WebJobsStartupTests.ExternalTestStartup))]
@@ -13,6 +19,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
 {
     public class WebJobsStartupTests
     {
+        public WebJobsStartupTests() { }
+
         [Fact]
         public void WebJobsStartupAttribute_Constructor_InitializesAlias()
         {
@@ -70,12 +78,65 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
         }
 
         [Fact]
+        public void UseWebJobsStartup_TestLogging()
+        {
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            TestLoggerProvider provider = new TestLoggerProvider();
+            loggerFactory.AddProvider(provider);
+
+            using (new StartupScope())
+            {
+                var builder = new HostBuilder()
+                    .ConfigureWebJobs(webJobsBuilder =>
+                    {
+                        webJobsBuilder.UseWebJobsStartup(typeof(TestStartup), NullLoggerFactory.Instance);
+                        webJobsBuilder.UseWebJobsStartup(typeof(TestLoggingStartup), loggerFactory);
+                    });
+
+                IHost host = builder.Build();
+
+                Assert.True(TestStartup.ConfigureInvoked);
+                ITestService service = host.Services.GetService<ITestService>();
+                Assert.NotNull(service);
+
+                ITestLoggingService loggingService = host.Services.GetService<ITestLoggingService>();
+                Assert.NotNull(loggingService);
+
+                var messages = provider.GetAllLogMessages();
+                Assert.NotEmpty(messages.Where(m => m.FormattedMessage.Contains("ITestLoggingService")));
+            }
+        }
+
+        [Fact]
+        public void UseExternalStartup_TestLogging()
+        {
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            TestLoggerProvider provider = new TestLoggerProvider();
+            loggerFactory.AddProvider(provider);
+
+            var builder = new HostBuilder()
+               .ConfigureWebJobs(webJobsBuilder =>
+               {
+                   webJobsBuilder.UseExternalStartup(new DefaultStartupTypeLocator(GetType().Assembly), NullLoggerFactory.Instance);
+                   webJobsBuilder.UseExternalStartup(new DefaultStartupTypeLocator(GetType().Assembly), loggerFactory);
+               });
+
+            IHost host = builder.Build();
+
+            var service = host.Services.GetService<TestExternalService>();
+            Assert.NotNull(service);
+
+            var messages = provider.GetAllLogMessages();
+            Assert.NotEmpty(messages.Where(m => m.FormattedMessage.Contains("TestExternalService")));
+        }
+
+        [Fact]
         public void StartupTypes_FromAttributes_AreConfigured()
         {
             var builder = new HostBuilder()
                 .ConfigureWebJobs(webJobsBuilder =>
                 {
-                    webJobsBuilder.UseExternalStartup(new DefaultStartupTypeLocator(GetType().Assembly));
+                    webJobsBuilder.UseExternalStartup(new DefaultStartupTypeLocator(GetType().Assembly), NullLoggerFactory.Instance);
                 });
 
             IHost host = builder.Build();
@@ -118,6 +179,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             }
         }
 
+        private class TestLoggingStartup : IWebJobsStartup
+        {
+            public void Configure(IWebJobsBuilder builder)
+            {
+                builder.Services.AddSingleton<ITestLoggingService, TestLoggingService>();
+            }
+        }
 
         public class ExternalTestStartup : IWebJobsStartup
         {
@@ -145,7 +213,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
 
         private interface ITestService { }
 
+        private interface ITestLoggingService { }
+
         private class TestService : ITestService { }
+
+        private class TestLoggingService : ITestLoggingService
+        {
+            public string Name = "testLogging";
+        }
 
         private class TestExternalService { }
     }
