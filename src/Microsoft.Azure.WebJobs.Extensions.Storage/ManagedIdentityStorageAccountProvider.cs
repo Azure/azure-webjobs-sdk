@@ -8,18 +8,32 @@ using Microsoft.WindowsAzure.Storage.Auth;
 namespace Microsoft.Azure.WebJobs
 {
     /// <summary>
-    /// Provide storage account from a Managed Service Identity
+    /// Provide a storage account from a Managed Service Identity
     /// </summary>
     public class ManagedIdentityStorageAccountProvider : StorageAccountProvider
     {
         private readonly StorageCredentials storageCredentials;
-        public ManagedIdentityStorageAccountProvider() : base(null)
+
+        /// <summary>
+        /// The tenantId is used when we create this object so that the token is scoped to the
+        /// correct Azure AD tenant.
+        /// </summary>
+        public ManagedIdentityStorageAccountProvider(string tenantId) : base(null)
         {
+            if (string.IsNullOrWhiteSpace(tenantId))
+            {
+                throw new ArgumentNullException(nameof(tenantId));
+            }
+
             var tokenProvider = new AzureServiceTokenProvider();
-            string accessToken = tokenProvider.GetAccessTokenAsync("https://storage.azure.com/", "2fa2ec5a-717a-4157-8e6c-f3ec61fed660").Result;
+            string accessToken = tokenProvider.GetAccessTokenAsync("https://storage.azure.com/", tenantId).Result;
             this.storageCredentials = new StorageCredentials(new TokenCredential(accessToken));
         }
 
+        /// <summary>
+        /// Override default behaviour to return a CloudStorageAccount using Managed Identity.
+        /// The name of the Storage Account is passed in via the <see cref="StorageAccountAttribute"/>.
+        /// </summary>
         public override StorageAccount Get(string name)
         {
             if (string.IsNullOrEmpty(name))
@@ -35,6 +49,10 @@ namespace Microsoft.Azure.WebJobs
             return StorageAccount.New(cloudStorageAccount);
         }
 
+        /// <summary>
+        /// Override default behaviour to return a CloudStorageAccount using Managed Identity.
+        /// The name of the Storage Account is passed in via the <see cref="StorageAccountAttribute"/>.
+        /// </summary>
         public override StorageAccount GetHost(string internalStorageName)
         {
             // Managed Identity has a connection to the Storage Account

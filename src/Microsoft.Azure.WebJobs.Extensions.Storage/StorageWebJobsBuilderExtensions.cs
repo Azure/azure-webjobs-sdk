@@ -25,7 +25,7 @@ namespace Microsoft.Extensions.Hosting
 {
     public static class StorageWebJobsBuilderExtensions
     {
-        public static IWebJobsBuilder AddAzureStorage(this IWebJobsBuilder builder, Action<QueuesOptions> configureQueues = null, Action<BlobsOptions> configureBlobs = null, bool useManagedIdentity = false)
+        public static IWebJobsBuilder AddAzureStorage(this IWebJobsBuilder builder, Action<QueuesOptions> configureQueues = null, Action<BlobsOptions> configureBlobs = null, string managedIdentityTenantId = "")
         {
             // add webjobs to user agent for all storage calls
             OperationContext.GlobalSendingRequest += (sender, e) =>
@@ -43,9 +43,9 @@ namespace Microsoft.Extensions.Hosting
             // $$$ Remove this, should be done via DI 
             builder.Services.TryAddSingleton<ISharedContextProvider, SharedContextProvider>();
 
-            if (useManagedIdentity)
+            if (!string.IsNullOrWhiteSpace(managedIdentityTenantId))
             {
-                builder.Services.TryAddSingleton<StorageAccountProvider, ManagedIdentityStorageAccountProvider>();
+                builder.Services.TryAddSingleton<StorageAccountProvider>(new ManagedIdentityStorageAccountProvider(managedIdentityTenantId));
             }
             else
             {
