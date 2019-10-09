@@ -21,7 +21,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 throw new ArgumentNullException("y");
             }
 
-            return x.Credentials.AccountName == y.Credentials.AccountName;
+            return x.BaseUri == y.BaseUri;
         }
 
         public int GetHashCode(CloudBlobClient obj)
@@ -31,7 +31,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 throw new ArgumentNullException("obj");
             }
 
-            return obj.Credentials.AccountName.GetHashCode();
+            return obj.BaseUri.GetHashCode();
         }
     }
 }

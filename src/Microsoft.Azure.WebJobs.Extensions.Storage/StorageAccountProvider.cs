@@ -50,9 +50,9 @@ namespace Microsoft.Azure.WebJobs
         /// The host account is for internal storage mechanisms like load balancer queuing. 
         /// </summary>
         /// <returns></returns>
-        public virtual StorageAccount GetHost()
+        public virtual StorageAccount GetHost(string internalStorageName = null)
         {
-            return this.Get(null);
+            return this.Get(ConnectionStringNames.Storage);
         }
     }
 }

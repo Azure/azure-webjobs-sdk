@@ -19,7 +19,7 @@ namespace Microsoft.Azure.WebJobs
         public static StorageAccount GetStorageAccount(this IHost host)
         {
             var provider = host.Services.GetRequiredService<StorageAccountProvider>(); // $$$ ok?
-            return provider.GetHost();
+            return provider.GetHost(ConnectionStringNames.Storage);
         }
 
         public static async Task<CloudQueue> CreateQueueAsync(this StorageAccount account, string queueName)
