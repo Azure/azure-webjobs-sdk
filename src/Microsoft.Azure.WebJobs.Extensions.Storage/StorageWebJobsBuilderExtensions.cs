@@ -25,7 +25,7 @@ namespace Microsoft.Extensions.Hosting
 {
     public static class StorageWebJobsBuilderExtensions
     {
-        public static IWebJobsBuilder AddAzureStorage(this IWebJobsBuilder builder, Action<QueuesOptions> configureQueues = null, Action<BlobsOptions> configureBlobs = null)
+        public static IWebJobsBuilder AddAzureStorage(this IWebJobsBuilder builder, Action<QueuesOptions> configureQueues = null, Action<BlobsOptions> configureBlobs = null, bool useManagedIdentity = false)
         {
             // add webjobs to user agent for all storage calls
             OperationContext.GlobalSendingRequest += (sender, e) =>
@@ -43,7 +43,14 @@ namespace Microsoft.Extensions.Hosting
             // $$$ Remove this, should be done via DI 
             builder.Services.TryAddSingleton<ISharedContextProvider, SharedContextProvider>();
 
-            builder.Services.TryAddSingleton<StorageAccountProvider>();
+            if (useManagedIdentity)
+            {
+                builder.Services.TryAddSingleton<StorageAccountProvider, ManagedIdentityStorageAccountProvider>();
+            }
+            else
+            {
+                builder.Services.TryAddSingleton<StorageAccountProvider>();
+            }
 
             builder.Services.TryAddSingleton<IContextSetter<IBlobWrittenWatcher>>((p) => new ContextAccessor<IBlobWrittenWatcher>());
             builder.Services.TryAddSingleton((p) => p.GetService<IContextSetter<IBlobWrittenWatcher>>() as IContextGetter<IBlobWrittenWatcher>);
