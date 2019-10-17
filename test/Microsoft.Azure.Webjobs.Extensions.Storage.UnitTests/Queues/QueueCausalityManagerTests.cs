@@ -5,7 +5,7 @@ using System;
 using System.Text;
 using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.Azure.Storage.Queue;
 using Moq;
 using Newtonsoft.Json.Linq;
 using Xunit;

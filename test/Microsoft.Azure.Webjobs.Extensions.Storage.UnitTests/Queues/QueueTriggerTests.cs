@@ -10,7 +10,7 @@ using FakeStorage;
 using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Hosting;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.Azure.Storage.Queue;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -30,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
             else if (contents is byte[] bytearray)
             {
-                message = CloudQueueMessage.CreateCloudQueueMessageFromByteArray(bytearray);
+                message = new CloudQueueMessage(bytearray);
             }
             else
             {
@@ -97,7 +97,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             byte[] content = new byte[] { 0xFF, 0x00 }; // Not a valid UTF-8 byte sequence.
             var account = CreateFakeStorageAccount();
             CloudQueue queue = await CreateQueue(account, QueueName);
-            var message = CloudQueueMessage.CreateCloudQueueMessageFromByteArray(content);
+            var message = new CloudQueueMessage(content);
             await queue.AddMessageAsync(message);
 
             // Act
@@ -139,7 +139,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // Arrange
             var account = CreateFakeStorageAccount();
             CloudQueue queue = await CreateQueue(account, QueueName);
-            var message = CloudQueueMessage.CreateCloudQueueMessageFromByteArray(expectedContent);
+            var message = new CloudQueueMessage(expectedContent);
             await queue.AddMessageAsync(message);
 
             // Act
@@ -295,7 +295,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             byte[] content = Encoding.UTF8.GetBytes(expectedQueueTrigger);
             var account = CreateFakeStorageAccount();
             var queue = await CreateQueue(account, QueueName);
-            var message = CloudQueueMessage.CreateCloudQueueMessageFromByteArray(content);
+            var message = new CloudQueueMessage(content);
             await queue.AddMessageAsync(message);
 
             // Act
@@ -313,7 +313,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             byte[] content = new byte[] { 0xFF, 0x00 }; // Not a valid UTF-8 byte sequence.
             var account = CreateFakeStorageAccount();
             var queue = await CreateQueue(account, QueueName);
-            var message = CloudQueueMessage.CreateCloudQueueMessageFromByteArray(content);
+            var message = new CloudQueueMessage(content);
             await queue.AddMessageAsync(message);
 
             // Act

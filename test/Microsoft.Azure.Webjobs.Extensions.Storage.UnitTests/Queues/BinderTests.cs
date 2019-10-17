@@ -3,7 +3,7 @@
 
 using System;
 using System.Threading.Tasks;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.Azure.Storage.Queue;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests

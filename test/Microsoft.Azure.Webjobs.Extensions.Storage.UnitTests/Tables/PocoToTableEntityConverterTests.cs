@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Microsoft.Azure.WebJobs.Host.Tables;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.WindowsAzure.Storage.Table;
+using Microsoft.Azure.Cosmos.Table;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Tables

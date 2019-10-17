@@ -9,8 +9,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Blobs.Bindings;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.Storage;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Bindings
 {
@@ -177,6 +177,31 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Bindings
             {
                 throw new InvalidOperationException("The stream has already been committed.");
             }
+        }
+
+        public override void Commit()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ICancellableAsyncResult BeginCommit(AsyncCallback callback, object state)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void EndCommit(IAsyncResult asyncResult)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ICancellableAsyncResult BeginFlush(AsyncCallback callback, object state)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void EndFlush(IAsyncResult asyncResult)
+        {
+            throw new NotImplementedException();
         }
     }
 }

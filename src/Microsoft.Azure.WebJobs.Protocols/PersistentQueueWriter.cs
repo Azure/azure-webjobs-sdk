@@ -11,8 +11,8 @@ using Microsoft.Azure.WebJobs.Storage.Blob;
 #else
 
 #endif
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 using Newtonsoft.Json;
 
 #if PUBLICPROTOCOL

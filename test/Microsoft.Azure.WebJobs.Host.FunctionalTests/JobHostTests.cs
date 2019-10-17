@@ -17,9 +17,9 @@ using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.Storage.Queue;
 using Moq;
 using Xunit;
 
@@ -508,7 +508,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 {
                     MethodInfo methodInfo = typeof(QueueTriggerBindingDataProgram).GetMethod(nameof(QueueTriggerBindingDataProgram.OnQueue));
                     byte[] contents = new byte[] { 0x00, 0xFF }; // Not valid UTF-8
-                    CloudQueueMessage message = CloudQueueMessage.CreateCloudQueueMessageFromByteArray(contents);
+                    CloudQueueMessage message = new CloudQueueMessage(contents);
 
                     // Act & Assert
                     FunctionInvocationException exception = await Assert.ThrowsAsync<FunctionInvocationException>(
@@ -544,7 +544,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 {
                     MethodInfo methodInfo = typeof(QueueTriggerBindingDataProgram).GetMethod(nameof(QueueTriggerBindingDataProgram.ProcessQueueAsBytes));
                     byte[] expectedBytes = new byte[] { 0x00, 0xFF }; // Not valid UTF-8
-                    CloudQueueMessage message = CloudQueueMessage.CreateCloudQueueMessageFromByteArray(expectedBytes);
+                    CloudQueueMessage message = new CloudQueueMessage(expectedBytes);
 
                     // Act
                     await host.CallAsync(methodInfo, new { message = message });

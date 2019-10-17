@@ -7,8 +7,8 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 
 namespace FakeStorage
 {
@@ -89,12 +89,7 @@ namespace FakeStorage
         {
             throw new NotImplementedException();
             // return base.AcquireLeaseAsync(leaseTime, proposedLeaseId, accessCondition, options, operationContext, cancellationToken);
-        }
-
-        public override Task<long> AppendBlockAsync(Stream blockData)
-        {
-            return base.AppendBlockAsync(blockData);
-        }
+        }        
 
         public override Task<long> AppendBlockAsync(Stream blockData, string contentMD5)
         {
@@ -457,8 +452,8 @@ namespace FakeStorage
 
         public override Task<CloudBlobStream> OpenWriteAsync(bool createNew, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
-            // return base.OpenWriteAsync(createNew, accessCondition, options, operationContext, cancellationToken);
-            throw new NotImplementedException();
+            CloudBlobStream stream = _store.OpenWriteAppend(_containerName, _blobName, _metadata);
+            return Task.FromResult(stream);
         }
 
         public override Task ReleaseLeaseAsync(AccessCondition accessCondition)
@@ -653,14 +648,18 @@ namespace FakeStorage
 
         public override Task UploadTextAsync(string content, Encoding encoding, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
+            UploadText(content, encoding, accessCondition, options, operationContext);
+            return Task.CompletedTask;
+        }
+
+        public override void UploadText(string content, Encoding encoding = null, AccessCondition accessCondition = null, BlobRequestOptions options = null, OperationContext operationContext = null)
+        {
             using (CloudBlobStream stream = _store.OpenWriteAppend(_containerName, _blobName, _metadata))
             {
                 byte[] buffer = Encoding.UTF8.GetBytes(content);
                 stream.Write(buffer, 0, buffer.Length);
                 stream.CommitAsync().Wait();
             }
-
-            return Task.FromResult(0);
         }
     }
 }

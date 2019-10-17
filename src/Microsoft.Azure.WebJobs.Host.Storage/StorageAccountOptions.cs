@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
-using Microsoft.WindowsAzure.Storage;
+using Microsoft.Azure.Storage;
 
 namespace Microsoft.Azure.WebJobs
 {

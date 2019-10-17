@@ -8,8 +8,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Timers;
-using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage.Shared.Protocol;
+using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.Storage.Shared.Protocol;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {

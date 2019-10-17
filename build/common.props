@@ -1,9 +1,8 @@
 <Project>
   <PropertyGroup>
     <!-- Extensions can have independent versions and only increment when released -->
-    <Version>3.0.15$(VersionSuffix)</Version>
-    <ExtensionsStorageVersion>3.0.10$(VersionSuffix)</ExtensionsStorageVersion>
-
+    <Version>3.0.16$(VersionSuffix)</Version>
+    <ExtensionsStorageVersion>4.0.0$(VersionSuffix)</ExtensionsStorageVersion>
     <TargetFramework>netstandard2.0</TargetFramework>
     <DebugType>embedded</DebugType>      
     <LatestCommit Condition="$(LatestCommit) == ''">$(CommitHash)</LatestCommit>

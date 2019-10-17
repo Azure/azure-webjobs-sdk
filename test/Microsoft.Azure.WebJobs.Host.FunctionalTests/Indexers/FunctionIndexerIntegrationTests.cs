@@ -9,10 +9,11 @@ using System.Threading;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Cosmos.Table;
 using Moq;
 using Xunit;
+using CloudStorageAccount = Microsoft.Azure.Storage.CloudStorageAccount;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 {

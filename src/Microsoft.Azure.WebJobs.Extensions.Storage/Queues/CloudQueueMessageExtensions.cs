@@ -3,9 +3,10 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Azure.Storage.Queue;
 using Microsoft.Azure.WebJobs.Host;
 
-namespace Microsoft.WindowsAzure.Storage.Queue
+namespace Microsoft.Azure.WebJobs.Host.Queues
 {
     internal static class CloudQueueMessageExtensions
     {
