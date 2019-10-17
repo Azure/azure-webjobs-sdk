@@ -29,7 +29,7 @@ namespace Microsoft.Azure.WebJobs
         /// If this is set, <see cref="JobHostConfiguration.StorageConnectionString"/> and 
         /// <see cref="JobHostConfiguration.DashboardConnectionString"/> can be set to null and the runtime will use the container.
         /// </summary>
-        public CloudBlobContainer InternalContainer { get; set; }
+        public virtual CloudBlobContainer InternalContainer { get; set; }
     }
 
     /// <summary>

@@ -27,14 +27,21 @@ namespace Microsoft.Extensions.Hosting
 
         // Make the Runtime itself use storage for its internal operations. 
         // Uses v1 app settings, via a LegacyConfigSetup object. 
-        public static IWebJobsBuilder AddAzureStorageCoreServices(this IWebJobsBuilder builder)
+        public static IWebJobsBuilder AddAzureStorageCoreServices(this IWebJobsBuilder builder, string storageAccountName = "", string tenantId = "")
         {
             // Replace existing runtime services with storage-backed implementations.
             // Add runtime services that depend on storage.
             builder.Services.AddSingleton<IDistributedLockManager>(provider => Create(provider));
 
-            // Used specifically for the CloudBlobContainerDistributedLockManager implementaiton 
-            builder.Services.TryAddSingleton<DistributedLockManagerContainerProvider>();
+            if (!string.IsNullOrEmpty(storageAccountName) && !string.IsNullOrEmpty(tenantId))
+            {
+                builder.Services.TryAddSingleton(new ManagedIdentityDistributedLockManagerContainerProvider(storageAccountName, tenantId));
+            }
+            else
+            {
+                // Used specifically for the CloudBlobContainerDistributedLockManager implementaiton 
+                builder.Services.TryAddSingleton<DistributedLockManagerContainerProvider>();
+            }
 
             builder.Services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<StorageAccountOptions>, StorageAccountOptionsSetup>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, CoreWebJobsOptionsSetup<JobHostInternalStorageOptions>>());
