@@ -8,5 +8,7 @@ namespace Microsoft.Azure.WebJobs.Host
         public const string WebJobsConfigurationSectionName = "AzureWebJobs";
         public const string EnvironmentSettingName = "AzureWebJobsEnv";
         public const string DevelopmentEnvironmentValue = "Development";
+        public const string DynamicSku = "Dynamic";
+        public const string AzureWebsiteSku = "WEBSITE_SKU";
     }
 }

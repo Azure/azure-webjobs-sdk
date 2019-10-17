@@ -1,12 +1,11 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.WindowsAzure.Storage.Blob;
 using System;
-using System.Collections.Generic;
-using System.Text;
+using Microsoft.Azure.WebJobs.Host;
+using Microsoft.WindowsAzure.Storage.Blob;
 
-namespace Microsoft.Azure.WebJobs
+namespace Microsoft.Azure.WebJobs.Extensions.Storage
 {
     static class Utility
     {
@@ -18,6 +17,17 @@ namespace Microsoft.Azure.WebJobs
             var prefix = dir.Prefix; // already ends in /
             var blob = container.GetBlockBlobReference(prefix + blobName);
             return blob;
+        }
+
+        internal static int GetProcessorCount()
+        {
+            int processorCount = 1;
+            var skuValue = Environment.GetEnvironmentVariable(Constants.AzureWebsiteSku);
+            if (!string.Equals(skuValue, Constants.DynamicSku, StringComparison.OrdinalIgnoreCase))
+            {
+                processorCount = Environment.ProcessorCount;
+            }
+            return processorCount;
         }
     }
 }

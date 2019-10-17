@@ -109,6 +109,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     .OrderBy(p => p)
                     .ToArray();
 
+                int processorCount = Extensions.Storage.Utility.GetProcessorCount();
+
                 string[] expectedOutputLines = new string[]
                 {
                     "Found the following functions:",
@@ -149,7 +151,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "  \"BatchSize\": 16",
                     "  \"MaxDequeueCount\": 5,",
                     "  \"MaxPollingInterval\": \"00:00:02\",",
-                    "  \"NewBatchThreshold\": 8,",
+                    string.Format("  \"NewBatchThreshold\": {0},", 8 * processorCount),
                     "  \"VisibilityTimeout\": \"00:00:00\"",
                     "}",
                     "LoggerFilterOptions",
