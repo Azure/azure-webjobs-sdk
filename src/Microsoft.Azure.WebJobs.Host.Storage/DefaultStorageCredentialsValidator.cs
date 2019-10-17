@@ -7,7 +7,6 @@ using System.Net;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.WindowsAzure.Storage;
 
 #if false // $$$
 namespace Microsoft.Azure.WebJobs.Host.Executors

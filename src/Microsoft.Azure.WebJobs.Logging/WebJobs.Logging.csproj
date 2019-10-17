@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\build\common.props" />
   <PropertyGroup>
+    <Version>4.0.0$(VersionSuffix)</Version>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>Microsoft.Azure.WebJobs.Logging</PackageId>
     <Description>This package contains the runtime assemblies for Microsoft.Azure.WebJobs.Logging. For more information, please visit http://go.microsoft.com/fwlink/?LinkID=320971</Description>
@@ -23,9 +24,10 @@
   </ItemGroup>
   
   <ItemGroup>
+    <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.5" />
+    <PackageReference Include="Microsoft.Azure.Storage.Blob" Version="11.1.0" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.0-beta004">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="WindowsAzure.Storage" Version="9.3.1" />
   </ItemGroup>
 </Project>

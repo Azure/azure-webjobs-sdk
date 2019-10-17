@@ -3,7 +3,7 @@
 
 using System.Net.Http;
 using System.Reflection;
-using Microsoft.WindowsAzure.Storage;
+using Microsoft.Azure.Storage;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors

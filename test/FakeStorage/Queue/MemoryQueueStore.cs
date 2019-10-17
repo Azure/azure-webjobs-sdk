@@ -5,7 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.Azure.Storage.Queue;
 
 namespace FakeStorage
 {
@@ -74,7 +74,7 @@ namespace FakeStorage
             {
                 // need to create a new instance so other queues handling this message aren't updated
                 DateTimeOffset now = DateTimeOffset.Now;
-                var newMessage = CloudQueueMessage.CreateCloudQueueMessageFromByteArray(message.AsBytes);
+                var newMessage = new CloudQueueMessage(message.AsBytes);
                 newMessage.SetId(Guid.NewGuid().ToString());
                 newMessage.SetInsertionTime(now);
                 newMessage.SetExpirationTime(now.AddDays(7));

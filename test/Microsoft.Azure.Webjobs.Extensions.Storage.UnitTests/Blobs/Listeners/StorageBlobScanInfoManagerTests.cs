@@ -6,7 +6,7 @@ using System.Globalization;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Extensions.Storage;
 using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage.Blob;
 using Newtonsoft.Json.Linq;
 using Xunit;
 

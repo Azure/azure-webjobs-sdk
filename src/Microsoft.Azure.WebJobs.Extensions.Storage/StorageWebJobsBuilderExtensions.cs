@@ -18,7 +18,7 @@ using Microsoft.Azure.WebJobs.Host.Tables.Config;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
-using Microsoft.WindowsAzure.Storage;
+using Microsoft.Azure.Storage;
 using WebJobs.Extensions.Storage;
 
 namespace Microsoft.Extensions.Hosting

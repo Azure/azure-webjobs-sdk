@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Configuration;
@@ -185,7 +186,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 var uri2 = new Uri("https://contoso.blob.core.windows.net/myContainer2?signature=foo");
                 services.AddSingleton<DistributedLockManagerContainerProvider>(new DistributedLockManagerContainerProvider()
                 {
-                    InternalContainer = new WindowsAzure.Storage.Blob.CloudBlobContainer(uri2)
+                    InternalContainer = new CloudBlobContainer(uri2)
                 });
             });
 

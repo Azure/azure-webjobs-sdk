@@ -6,8 +6,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 
 namespace FakeStorage
 {
@@ -387,9 +387,13 @@ namespace FakeStorage
 
         public override Task<CloudBlobStream> OpenWriteAsync(long? size, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
+            return base.OpenWriteAsync(size, accessCondition, options, operationContext, cancellationToken);
+        }
+
+        public override Task<CloudBlobStream> OpenWriteAsync(long? size, PremiumPageBlobTier? premiumPageBlobTier, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
+        {
             CloudBlobStream stream = _store.OpenWritePage(_containerName, _blobName, size, _metadata);
             return Task.FromResult(stream);
-            // return base.OpenWriteAsync(size, accessCondition, options, operationContext, cancellationToken);
         }
 
         public override Task ReleaseLeaseAsync(AccessCondition accessCondition)
@@ -561,9 +565,9 @@ namespace FakeStorage
             return base.StartIncrementalCopyAsync(sourceSnapshot);
         }
 
-        public override Task<string> StartIncrementalCopyAsync(Uri sourceSnapshot)
+        public override Task<string> StartIncrementalCopyAsync(CloudPageBlob source, CancellationToken cancellationToken)
         {
-            return base.StartIncrementalCopyAsync(sourceSnapshot);
+            return base.StartIncrementalCopyAsync(source, cancellationToken);
         }
 
         public override Task<string> StartIncrementalCopyAsync(CloudPageBlob sourceSnapshot, AccessCondition destAccessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
@@ -657,22 +661,6 @@ namespace FakeStorage
         {
             throw new NotImplementedException();
             // return base.UploadFromStreamAsync(source, length, premiumBlobTier, accessCondition, options, operationContext, cancellationToken);
-        }
-
-        public override Task WritePagesAsync(Stream pageData, long startOffset, string contentMD5)
-        {
-            return base.WritePagesAsync(pageData, startOffset, contentMD5);
-        }
-
-        public override Task WritePagesAsync(Stream pageData, long startOffset, string contentMD5, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
-        {
-            return base.WritePagesAsync(pageData, startOffset, contentMD5, accessCondition, options, operationContext);
-        }
-
-        public override Task WritePagesAsync(Stream pageData, long startOffset, string contentMD5, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
-            // return base.WritePagesAsync(pageData, startOffset, contentMD5, accessCondition, options, operationContext, cancellationToken);
         }
     }
 }

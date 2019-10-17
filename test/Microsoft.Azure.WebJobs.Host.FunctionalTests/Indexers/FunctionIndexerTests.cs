@@ -16,7 +16,7 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage;
+using Microsoft.Azure.Storage;
 using Moq;
 using Xunit;
 

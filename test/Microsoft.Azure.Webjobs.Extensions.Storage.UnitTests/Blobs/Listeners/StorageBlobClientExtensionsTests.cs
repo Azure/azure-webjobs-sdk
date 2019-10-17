@@ -8,8 +8,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 using Moq;
 using Xunit;
 
@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
         [InlineData(30000)]
         public async Task ListBlobsAsync_FollowsContinuationTokensToEnd(int blobCount)
         {
-            Mock<CloudBlobClient> mockClient = new Mock<CloudBlobClient>(MockBehavior.Strict, new Uri("https://fakestorage"));
+            Mock<CloudBlobClient> mockClient = new Mock<CloudBlobClient>(MockBehavior.Strict, new Uri("https://fakestorage"), null);
 
             int maxResults = 5000;
             List<IListBlobItem> blobs = GetMockBlobs(blobCount);

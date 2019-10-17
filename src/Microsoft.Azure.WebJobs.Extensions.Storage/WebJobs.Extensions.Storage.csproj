@@ -5,6 +5,7 @@
   
   <PropertyGroup>
     <Version>$(ExtensionsStorageVersion)</Version>
+    <InformationalVersion>$(Version) Commit hash: $(CommitHash)</InformationalVersion>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>Microsoft.Azure.WebJobs.Extensions.Storage</AssemblyName>
     <RootNamespace>Microsoft.Azure.WebJobs.Extensions.Storage</RootNamespace>
@@ -92,10 +93,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.5" />
+    <PackageReference Include="Microsoft.Azure.Storage.Blob" Version="11.1.0" />
+    <PackageReference Include="Microsoft.Azure.Storage.Queue" Version="11.1.0" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.0-beta004">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="WindowsAzure.Storage" Version="9.3.1" />
   </ItemGroup>
 
   <ItemGroup>

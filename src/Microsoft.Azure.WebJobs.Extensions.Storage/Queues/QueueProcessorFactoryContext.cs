@@ -3,7 +3,7 @@
 
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.Azure.Storage.Queue;
 using System;
 
 namespace Microsoft.Azure.WebJobs.Host.Queues

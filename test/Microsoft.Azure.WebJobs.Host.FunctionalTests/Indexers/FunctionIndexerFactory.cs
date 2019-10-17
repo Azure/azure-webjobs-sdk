@@ -9,7 +9,7 @@ using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage;
+using Microsoft.Azure.Storage;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {

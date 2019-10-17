@@ -7,7 +7,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using Microsoft.Azure.WebJobs.Host.Converters;
-using Microsoft.WindowsAzure.Storage.Table;
+using Microsoft.Azure.Cosmos.Table;
 
 namespace Microsoft.Azure.WebJobs.Host.Tables
 {

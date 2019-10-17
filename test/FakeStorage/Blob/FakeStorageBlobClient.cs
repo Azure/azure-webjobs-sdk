@@ -4,9 +4,9 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage.Shared.Protocol;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.Storage.Shared.Protocol;
 
 namespace FakeStorage
 {
@@ -73,7 +73,7 @@ namespace FakeStorage
             throw new NotImplementedException();
         }
 
-        public Task<ServiceProperties> GetServicePropertiesAsync(CancellationToken cancellationToken)
+        public override Task<ServiceProperties> GetServicePropertiesAsync(CancellationToken cancellationToken)
         {
             ServiceProperties properties = _store.GetServiceProperties();
             return Task.FromResult(properties);
@@ -150,7 +150,7 @@ namespace FakeStorage
             throw new NotImplementedException();
         }
 
-        public Task SetServicePropertiesAsync(ServiceProperties properties, CancellationToken cancellationToken)
+        public override Task SetServicePropertiesAsync(ServiceProperties properties, CancellationToken cancellationToken)
         {
             _store.SetServiceProperties(properties);
             return Task.CompletedTask;
