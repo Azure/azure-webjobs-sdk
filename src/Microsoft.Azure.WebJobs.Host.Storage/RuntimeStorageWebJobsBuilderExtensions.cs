@@ -35,7 +35,7 @@ namespace Microsoft.Extensions.Hosting
 
             if (!string.IsNullOrEmpty(storageAccountName) && !string.IsNullOrEmpty(tenantId))
             {
-                builder.Services.TryAddSingleton(new ManagedIdentityDistributedLockManagerContainerProvider(storageAccountName, tenantId));
+                builder.Services.TryAddSingleton<DistributedLockManagerContainerProvider>(new ManagedIdentityDistributedLockManagerContainerProvider(storageAccountName, tenantId));
             }
             else
             {
