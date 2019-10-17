@@ -2,8 +2,12 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Diagnostics.Tracing;
+using System.Reflection.Metadata;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -54,16 +58,31 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         [Theory]
         // One is special case (the old behaviour)
-        [InlineData(1, 1)]
+        [InlineData(1, 0, false)]
         // Odd and even values
-        [InlineData(2, 3)]
-        [InlineData(3, 3)]
-        public async Task MaxDegreeOfParallelism_Queues(int batchSize, int maxExpectedParallelism)
+        [InlineData(2, 0, false)]
+        [InlineData(3, 0, false)]
+        // One is special case (the old behaviour)
+        [InlineData(1, 1, true)]
+        // Odd and even values
+        [InlineData(2, 3, true)]
+        [InlineData(3, 3, true)]
+        public async Task MaxDegreeOfParallelism_Queues(int batchSize, int maxExpectedParallelism, bool isDynamicSku)
         {
+            var processorCount = Extensions.Storage.Utility.GetProcessorCount();
             _receivedMessages = 0;
             _currentSimultaneouslyRunningFunctions = 0;
             _maxSimultaneouslyRunningFunctions = 0;
             _numberOfQueueMessages = batchSize * 3;
+
+            if (!isDynamicSku)
+            {
+                maxExpectedParallelism = Math.Min(_numberOfQueueMessages, ((batchSize / 2) * processorCount) + batchSize);
+            }
+            else
+            {
+                Environment.SetEnvironmentVariable(Constants.AzureWebsiteSku, "dynamic");
+            }
 
             RandomNameResolver nameResolver = new RandomNameResolver();
             IHost host = new HostBuilder()
@@ -105,6 +124,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // running the test.
             int delta = _maxSimultaneouslyRunningFunctions - maxExpectedParallelism;
             Assert.True(delta == 0 || delta == 1, $"Expected delta of 0 or 1. Actual: {delta}.");
+            if (isDynamicSku)
+            {
+                Environment.SetEnvironmentVariable(Constants.AzureWebsiteSku, string.Empty);
+            }
         }
 
         public void Dispose()

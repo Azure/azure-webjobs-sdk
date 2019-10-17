@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using Microsoft.Azure.WebJobs.Extensions.Storage;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -14,26 +15,29 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public void Constructor_Defaults()
         {
+            int processorCount = Utility.GetProcessorCount();
             QueuesOptions options = new QueuesOptions();
 
             Assert.Equal(16, options.BatchSize);
-            Assert.Equal(8, options.NewBatchThreshold);
+            Assert.Equal(8 * processorCount, options.NewBatchThreshold);
             Assert.Equal(QueuePollingIntervals.DefaultMaximum, options.MaxPollingInterval);
         }
 
         [Fact]
         public void NewBatchThreshold_CanSetAndGetValue()
         {
+            int processorCount = Utility.GetProcessorCount();
+
             QueuesOptions options = new QueuesOptions();
 
             // Unless explicitly set, NewBatchThreshold will be computed based
             // on the current BatchSize
             options.BatchSize = 20;
-            Assert.Equal(10, options.NewBatchThreshold);
+            Assert.Equal(10 * processorCount, options.NewBatchThreshold);
             options.BatchSize = 1;
-            Assert.Equal(0, options.NewBatchThreshold);
+            Assert.Equal(0 * processorCount, options.NewBatchThreshold);
             options.BatchSize = 32;
-            Assert.Equal(16, options.NewBatchThreshold);
+            Assert.Equal(16 * processorCount, options.NewBatchThreshold);
 
             // Once set, the set value holds
             options.NewBatchThreshold = 1000;
