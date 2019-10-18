@@ -70,7 +70,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Storage.Blobs.Triggers
             string resolvedCombinedPath = Resolve(blobTriggerAttribute.BlobPath);
             IBlobPathSource path = BlobPathSource.Create(resolvedCombinedPath);
 
-            var hostAccount = _accountProvider.GetHost(blobTriggerAttribute.Connection);
+            var hostAccount = _accountProvider.GetHost(blobTriggerAttribute.Connection, _nameResolver);
             var dataAccount = _accountProvider.Get(blobTriggerAttribute.Connection, _nameResolver);
 
             // premium does not support blob logs, so disallow for blob triggers

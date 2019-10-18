@@ -28,12 +28,16 @@ namespace Microsoft.Azure.WebJobs
         public static StorageAccount NewFromConnectionString(string accountConnectionString)
         {
             var account = CloudStorageAccount.Parse(accountConnectionString);
-            return New(account);
+            return New(account, account.Credentials.AccountName);
         }
 
-        public static StorageAccount New(CloudStorageAccount account)
+        public static StorageAccount New(CloudStorageAccount account, string storageAccountName)
         {
-            return new StorageAccount { SdkObject = account };
+            return new StorageAccount
+            { 
+                SdkObject = account,
+                Name = storageAccountName
+            };
         }
 
         public virtual bool IsDevelopmentStorageAccount()
@@ -45,10 +49,7 @@ namespace Microsoft.Azure.WebJobs
                 StringComparison.OrdinalIgnoreCase);
         }
 
-        public virtual string Name
-        {
-            get { return SdkObject.Credentials.AccountName; }
-        }
+        public virtual string Name { get; protected set; }
 
         public virtual Uri BlobEndpoint => SdkObject.BlobEndpoint;
 

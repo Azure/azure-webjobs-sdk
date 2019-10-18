@@ -46,17 +46,16 @@ namespace Microsoft.Azure.WebJobs
                 "core.windows.net",
                 true);
 
-            return StorageAccount.New(cloudStorageAccount);
+            return StorageAccount.New(cloudStorageAccount, name);
         }
 
         /// <summary>
         /// Override default behaviour to return a CloudStorageAccount using Managed Identity.
         /// The name of the Storage Account is passed in via the <see cref="StorageAccountAttribute"/>.
         /// </summary>
-        public override StorageAccount GetHost(string internalStorageName)
+        public override StorageAccount GetHost(string internalStorageName, INameResolver nameResolver)
         {
-            // Managed Identity has a connection to the Storage Account
-            return this.Get(internalStorageName);
+            return this.Get(internalStorageName, nameResolver);
         }
     }
 }

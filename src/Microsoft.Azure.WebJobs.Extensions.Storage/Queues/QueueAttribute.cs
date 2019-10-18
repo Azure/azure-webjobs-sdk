@@ -50,6 +50,7 @@ namespace Microsoft.Azure.WebJobs
         /// <summary>
         /// Gets or sets the app setting name that contains the Azure Storage connection string.
         /// </summary>
+        [AutoResolve]
         public string Connection { get; set; }
     }
 }
