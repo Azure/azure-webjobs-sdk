@@ -31,6 +31,18 @@ namespace Microsoft.Azure.WebJobs
             return New(account, account.Credentials.AccountName);
         }
 
+        public static StorageAccount New(CloudStorageAccount account)
+        {
+            if (account.Credentials == null)
+            {
+                throw new InvalidOperationException("Cannot infer storage account name with ManagedIdentity. Use the New method that requires the storageAccounyName.");
+            }
+
+            return New(account, account.Credentials.AccountName);
+        }
+
+        // When we use Managed Identity, we do not have a Credentials object on the 
+        // CloudStorageAccount - therefore we need to know the storage account name
         public static StorageAccount New(CloudStorageAccount account, string storageAccountName)
         {
             return new StorageAccount
