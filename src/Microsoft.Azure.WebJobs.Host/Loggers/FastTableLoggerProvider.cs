@@ -16,9 +16,9 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
 {
     // Disable most SDK logging. Useful when we don't have a storage account and Fast-logging is enabled. 
     // This wires in an output logger to aide in capturing the TextWriter log output in memory and saving to the fast tables. 
-    internal class FastTableLoggerProvider : 
-        IHostInstanceLoggerProvider, 
-        IFunctionInstanceLoggerProvider, 
+    internal class FastTableLoggerProvider :
+        IHostInstanceLoggerProvider,
+        IFunctionInstanceLoggerProvider,
         IFunctionOutputLoggerProvider,
         IFunctionOutputLogger
     {
@@ -60,7 +60,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
 
             public PerFunc()
             {
-                _writer = new StreamWriter(_ms);
+                _writer = TextWriter.Synchronized(new StreamWriter(_ms));
             }
 
             public TextWriter Output
@@ -111,7 +111,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2213:DisposableFieldsShouldBeDisposed", MessageId = "_writer")]
             [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2213:DisposableFieldsShouldBeDisposed", MessageId = "_ms")]
             public void Dispose()
-            {                
+            {
             }
 
             public Task SaveAndCloseAsync(FunctionInstanceLogEntry item, CancellationToken cancellationToken)
@@ -122,7 +122,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
 
                     // Truncate. 
                     if (str.Length > FunctionInstanceLogEntry.MaxLogOutputLength)
-                    {                        
+                    {
                         // 0123456789
                         // abcdefghij
                         str = str.Substring(0, FunctionInstanceLogEntry.MaxLogOutputLength - 1) + "…";
