@@ -107,7 +107,8 @@ namespace Microsoft.Azure.WebJobs
 
                     foreach (ServiceDescriptor service in tracker.TrackedCollectionChanges)
                     {
-                        sb.Append($"\n {service.ServiceType.FullName}: ");
+                        sb.Append(Environment.NewLine);
+                        sb.Append($" {service.ServiceType.FullName}: ");
 
                         if (service.ImplementationType != null)
                         {
