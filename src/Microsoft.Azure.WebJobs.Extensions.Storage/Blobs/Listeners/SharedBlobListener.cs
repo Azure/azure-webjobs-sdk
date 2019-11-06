@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
@@ -14,15 +15,25 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
     {
         private readonly IBlobListenerStrategy _strategy;
         private readonly ITaskSeriesTimer _timer;
-        private readonly IWebJobsExceptionHandler _exceptionHandler;
+
         private bool _started;
         private bool _disposed;
 
         public SharedBlobListener(string hostId, StorageAccount storageAccount,
-            IWebJobsExceptionHandler exceptionHandler)
+            IWebJobsExceptionHandler exceptionHandler, ILogger<BlobListener> logger)
         {
-            _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
-            _strategy = CreateStrategy(hostId, storageAccount);
+            if (logger == null)
+            {
+                throw new ArgumentNullException(nameof(logger));
+            }
+
+            if (exceptionHandler == null)
+            {
+                throw new ArgumentNullException(nameof(exceptionHandler));
+            }
+
+            _strategy = CreateStrategy(hostId, storageAccount, exceptionHandler, logger);
+
             // Start the first iteration immediately.
             _timer = new TaskSeriesTimer(_strategy, exceptionHandler, initialWait: Task.Delay(0));
         }
@@ -32,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             get { return _strategy; }
         }
 
-        public Task RegisterAsync(CloudBlobContainer container, ITriggerExecutor<ICloudBlob> triggerExecutor,
+        public Task RegisterAsync(CloudBlobContainer container, ITriggerExecutor<BlobTriggerExecutorContext> triggerExecutor,
             CancellationToken cancellationToken)
         {
             if (_started)
@@ -87,12 +98,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             }
         }
 
-        private IBlobListenerStrategy CreateStrategy(string hostId, StorageAccount account)
+        private static IBlobListenerStrategy CreateStrategy(string hostId, StorageAccount account, IWebJobsExceptionHandler exceptionHandler, ILogger<BlobListener> logger)
         {
             if (!account.IsDevelopmentStorageAccount())
             {
                 IBlobScanInfoManager scanInfoManager = new StorageBlobScanInfoManager(hostId, account.CreateCloudBlobClient());
-                return new ScanBlobScanLogHybridPollingStrategy(scanInfoManager, _exceptionHandler);
+                return new ScanBlobScanLogHybridPollingStrategy(scanInfoManager, exceptionHandler, logger);
             }
             else
             {

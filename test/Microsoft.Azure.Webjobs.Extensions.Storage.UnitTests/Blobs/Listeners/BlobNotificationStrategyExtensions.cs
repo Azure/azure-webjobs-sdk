@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
         }
 
         public static void Register(this IBlobListenerStrategy strategy, CloudBlobContainer container,
-            ITriggerExecutor<ICloudBlob> triggerExecutor)
+            ITriggerExecutor<BlobTriggerExecutorContext> triggerExecutor)
         {
             if (strategy == null)
             {

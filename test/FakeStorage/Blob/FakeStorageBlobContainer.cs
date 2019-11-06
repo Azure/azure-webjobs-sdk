@@ -230,7 +230,7 @@ namespace FakeStorage
             if (options != null)
             {
                 throw new NotImplementedException();
-            }            
+            }           
 
             string fullPrefix;
 

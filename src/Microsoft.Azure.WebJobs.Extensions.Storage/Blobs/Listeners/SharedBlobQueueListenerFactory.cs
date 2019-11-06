@@ -53,7 +53,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         public SharedBlobQueueListener Create()
         {
-            BlobQueueTriggerExecutor triggerExecutor = new BlobQueueTriggerExecutor(_blobWrittenWatcher);
+            BlobQueueTriggerExecutor triggerExecutor = new BlobQueueTriggerExecutor(_blobWrittenWatcher, _loggerFactory.CreateLogger<BlobListener>());
 
             // The poison queue to use for a given poison blob lives in the same
             // storage account as the triggering blob by default. In multi-storage account scenarios

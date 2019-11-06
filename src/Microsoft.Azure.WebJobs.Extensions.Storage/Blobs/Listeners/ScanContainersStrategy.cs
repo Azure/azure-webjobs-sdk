@@ -19,13 +19,13 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
     {
         private static readonly TimeSpan TwoSeconds = TimeSpan.FromSeconds(2);
 
-        private readonly IDictionary<CloudBlobContainer, ICollection<ITriggerExecutor<ICloudBlob>>> _registrations;
+        private readonly IDictionary<CloudBlobContainer, ICollection<ITriggerExecutor<BlobTriggerExecutorContext>>> _registrations;
         private readonly IDictionary<CloudBlobContainer, DateTime> _lastModifiedTimestamps;
         private readonly ConcurrentQueue<ICloudBlob> _blobWrittenNotifications;
 
         public ScanContainersStrategy()
         {
-            _registrations = new Dictionary<CloudBlobContainer, ICollection<ITriggerExecutor<ICloudBlob>>>(
+            _registrations = new Dictionary<CloudBlobContainer, ICollection<ITriggerExecutor<BlobTriggerExecutorContext>>>(
                 new CloudBlobContainerComparer());
             _lastModifiedTimestamps = new Dictionary<CloudBlobContainer, DateTime>(
                 new CloudBlobContainerComparer());
@@ -37,12 +37,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             _blobWrittenNotifications.Enqueue(blobWritten);
         }
 
-        public Task RegisterAsync(CloudBlobContainer container, ITriggerExecutor<ICloudBlob> triggerExecutor,
+        public Task RegisterAsync(CloudBlobContainer container, ITriggerExecutor<BlobTriggerExecutorContext> triggerExecutor,
             CancellationToken cancellationToken)
         {
             // Register and Execute are not concurrency-safe.
             // Avoiding calling Register while Execute is running is the caller's responsibility.
-            ICollection<ITriggerExecutor<ICloudBlob>> containerRegistrations;
+            ICollection<ITriggerExecutor<BlobTriggerExecutorContext>> containerRegistrations;
 
             if (_registrations.ContainsKey(container))
             {
@@ -50,7 +50,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             }
             else
             {
-                containerRegistrations = new List<ITriggerExecutor<ICloudBlob>>();
+                containerRegistrations = new List<ITriggerExecutor<BlobTriggerExecutorContext>>();
                 _registrations.Add(container, containerRegistrations);
             }
 
@@ -72,9 +72,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                ICloudBlob blob;
 
-                if (!_blobWrittenNotifications.TryDequeue(out blob))
+                if (!_blobWrittenNotifications.TryDequeue(out ICloudBlob blob))
                 {
                     break;
                 }
@@ -131,11 +130,18 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 return;
             }
 
-            foreach (ITriggerExecutor<ICloudBlob> registration in _registrations[container])
+            foreach (ITriggerExecutor<BlobTriggerExecutorContext> registration in _registrations[container])
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                FunctionResult result = await registration.ExecuteAsync(blob, cancellationToken);
+                BlobTriggerExecutorContext context = new BlobTriggerExecutorContext
+                {
+                    Blob = blob,
+                    PollId = null,
+                    TriggerSource = BlobTriggerSource.ContainerScan
+                };
+
+                FunctionResult result = await registration.ExecuteAsync(context, cancellationToken);
                 if (!result.Succeeded)
                 {
                     // If notification failed, try again on the next iteration.

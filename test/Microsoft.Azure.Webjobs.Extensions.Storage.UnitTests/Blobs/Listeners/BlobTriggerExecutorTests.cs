@@ -2,14 +2,16 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Blobs;
 using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.WindowsAzure.Storage;
+using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Moq;
 using Xunit;
@@ -20,6 +22,17 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
     {
         // Note: The tests that return true consume the notification.
         // The tests that return false reset the notification (to be provided again later).
+        private const string TestClientRequestId = "testClientRequestId";
+
+        private readonly TestLoggerProvider _loggerProvider = new TestLoggerProvider();
+        private readonly ILogger<BlobListener> _logger;
+
+        public BlobTriggerExecutorTests()
+        {
+            var loggerFactory = new LoggerFactory();
+            loggerFactory.AddProvider(_loggerProvider);
+            _logger = loggerFactory.CreateLogger<BlobListener>();
+        }
 
         [Fact]
         public void ExecuteAsync_IfBlobDoesNotMatchPattern_ReturnsSuccessfulResult()
@@ -33,58 +46,99 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
 
             IBlobPathSource input = BlobPathSource.Create(containerName + "/{name}");
 
-            ITriggerExecutor<ICloudBlob> product = CreateProductUnderTest(input);
+            ITriggerExecutor<BlobTriggerExecutorContext> product = CreateProductUnderTest(input);
 
+            // Note: this test does not set the PollId. This ensures that we work okay with null values for these.
             var blob = otherContainer.GetBlockBlobReference("nonmatch");
+            var context = new BlobTriggerExecutorContext
+            {
+                Blob = blob,
+                TriggerSource = BlobTriggerSource.ContainerScan
+            };
 
             // Act
-            Task<FunctionResult> task = product.ExecuteAsync(blob, CancellationToken.None);
+            Task<FunctionResult> task = product.ExecuteAsync(context, CancellationToken.None);
 
             // Assert
             Assert.True(task.Result.Succeeded);
+
+            // Validate log is written
+            var logMessage = _loggerProvider.GetAllLogMessages().Single();
+            Assert.Equal("BlobDoesNotMatchPattern", logMessage.EventId.Name);
+            Assert.Equal(LogLevel.Debug, logMessage.Level);
+            Assert.Equal(6, logMessage.State.Count());
+            Assert.Equal("FunctionIdLogName", logMessage.GetStateValue<string>("functionName"));
+            Assert.Equal(containerName + "/{name}", logMessage.GetStateValue<string>("pattern"));
+            Assert.Equal(blob.Name, logMessage.GetStateValue<string>("blobName"));
+            Assert.Null(logMessage.GetStateValue<string>("pollId"));
+            Assert.Equal(context.TriggerSource, logMessage.GetStateValue<BlobTriggerSource>("triggerSource"));
+            Assert.True(!string.IsNullOrWhiteSpace(logMessage.GetStateValue<string>("{OriginalFormat}")));
         }
 
         [Fact]
         public void ExecuteAsync_IfBlobDoesNotExist_ReturnsSuccessfulResult()
         {
             // Arrange
-            var blob = CreateBlobReference();
-            IBlobPathSource input = CreateBlobPath(blob);
+            BlobTriggerExecutorContext context = CreateExecutorContext();
+            IBlobPathSource input = CreateBlobPath(context.Blob);
             IBlobETagReader eTagReader = CreateStubETagReader(null);
 
-            ITriggerExecutor<ICloudBlob> product = CreateProductUnderTest(input, eTagReader);
+            ITriggerExecutor<BlobTriggerExecutorContext> product = CreateProductUnderTest(input, eTagReader);
 
             // Act
-            Task<FunctionResult> task = product.ExecuteAsync(blob, CancellationToken.None);
+            Task<FunctionResult> task = product.ExecuteAsync(context, CancellationToken.None);
 
             // Assert
             Assert.True(task.Result.Succeeded);
+
+            // Validate log is written
+            var logMessage = _loggerProvider.GetAllLogMessages().Single();
+            Assert.Equal("BlobHasNoETag", logMessage.EventId.Name);
+            Assert.Equal(LogLevel.Debug, logMessage.Level);
+            Assert.Equal(5, logMessage.State.Count());
+            Assert.Equal(context.Blob.Name, logMessage.GetStateValue<string>("blobName"));
+            Assert.Equal("FunctionIdLogName", logMessage.GetStateValue<string>("functionName"));
+            Assert.Equal(context.PollId, logMessage.GetStateValue<string>("pollId"));
+            Assert.Equal(context.TriggerSource, logMessage.GetStateValue<BlobTriggerSource>("triggerSource"));
+            Assert.True(!string.IsNullOrWhiteSpace(logMessage.GetStateValue<string>("{OriginalFormat}")));
         }
 
         [Fact]
         public void ExecuteAsync_IfCompletedBlobReceiptExists_ReturnsSuccessfulResult()
         {
             // Arrange
-            ICloudBlob blob = CreateBlobReference();
-            IBlobPathSource input = CreateBlobPath(blob);
+            BlobTriggerExecutorContext context = CreateExecutorContext();
+            IBlobPathSource input = CreateBlobPath(context.Blob);
             IBlobETagReader eTagReader = CreateStubETagReader("ETag");
             IBlobReceiptManager receiptManager = CreateCompletedReceiptManager();
 
-            ITriggerExecutor<ICloudBlob> product = CreateProductUnderTest(input, eTagReader, receiptManager);
+            ITriggerExecutor<BlobTriggerExecutorContext> product = CreateProductUnderTest(input, eTagReader, receiptManager);
 
             // Act
-            Task<FunctionResult> task = product.ExecuteAsync(blob, CancellationToken.None);
+            Task<FunctionResult> task = product.ExecuteAsync(context, CancellationToken.None);
 
             // Assert
             Assert.True(task.Result.Succeeded);
+
+            // Validate log is written
+            var logMessage = _loggerProvider.GetAllLogMessages().Single();
+            Assert.Equal("BlobAlreadyProcessed", logMessage.EventId.Name);
+            Assert.Equal(LogLevel.Debug, logMessage.Level);
+            Assert.Equal(6, logMessage.State.Count());
+            Assert.Equal("FunctionIdLogName", logMessage.GetStateValue<string>("functionName"));
+            Assert.Equal(context.Blob.Name, logMessage.GetStateValue<string>("blobName"));
+            Assert.Equal("ETag", logMessage.GetStateValue<string>("eTag"));
+            Assert.Equal(context.PollId, logMessage.GetStateValue<string>("pollId"));
+            Assert.Equal(context.TriggerSource, logMessage.GetStateValue<BlobTriggerSource>("triggerSource"));
+            Assert.True(!string.IsNullOrWhiteSpace(logMessage.GetStateValue<string>("{OriginalFormat}")));
         }
 
         [Fact]
         public void ExecuteAsync_IfIncompleteBlobReceiptExists_TriesToAcquireLease()
         {
             // Arrange
-            ICloudBlob blob = CreateBlobReference();
-            IBlobPathSource input = CreateBlobPath(blob);
+            BlobTriggerExecutorContext context = CreateExecutorContext();
+            IBlobPathSource input = CreateBlobPath(context.Blob);
             IBlobETagReader eTagReader = CreateStubETagReader("ETag");
 
             Mock<IBlobReceiptManager> mock = CreateReceiptManagerReferenceMock();
@@ -95,10 +149,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
                 .Verifiable();
             IBlobReceiptManager receiptManager = mock.Object;
 
-            ITriggerExecutor<ICloudBlob> product = CreateProductUnderTest(input, eTagReader, receiptManager);
+            ITriggerExecutor<BlobTriggerExecutorContext> product = CreateProductUnderTest(input, eTagReader, receiptManager);
 
             // Act
-            Task<FunctionResult> task = product.ExecuteAsync(blob, CancellationToken.None);
+            Task<FunctionResult> task = product.ExecuteAsync(context, CancellationToken.None);
 
             // Assert
             task.GetAwaiter().GetResult();
@@ -109,8 +163,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
         public void ExecuteAsync_IfBlobReceiptDoesNotExist_TriesToCreateReceipt()
         {
             // Arrange
-            ICloudBlob blob = CreateBlobReference();
-            IBlobPathSource input = CreateBlobPath(blob);
+            BlobTriggerExecutorContext context = CreateExecutorContext();
+            IBlobPathSource input = CreateBlobPath(context.Blob);
             IBlobETagReader eTagReader = CreateStubETagReader("ETag");
 
             Mock<IBlobReceiptManager> mock = CreateReceiptManagerReferenceMock();
@@ -121,10 +175,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
                 .Verifiable();
             IBlobReceiptManager receiptManager = mock.Object;
 
-            ITriggerExecutor<ICloudBlob> product = CreateProductUnderTest(input, eTagReader, receiptManager);
+            ITriggerExecutor<BlobTriggerExecutorContext> product = CreateProductUnderTest(input, eTagReader, receiptManager);
 
             // Act
-            Task<FunctionResult> task = product.ExecuteAsync(blob, CancellationToken.None);
+            Task<FunctionResult> task = product.ExecuteAsync(context, CancellationToken.None);
 
             // Assert
             task.GetAwaiter().GetResult();
@@ -135,8 +189,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
         public void ExecuteAsync_IfTryCreateReceiptFails_ReturnsUnsuccessfulResult()
         {
             // Arrange
-            ICloudBlob blob = CreateBlobReference();
-            IBlobPathSource input = CreateBlobPath(blob);
+            BlobTriggerExecutorContext context = CreateExecutorContext();
+            IBlobPathSource input = CreateBlobPath(context.Blob);
             IBlobETagReader eTagReader = CreateStubETagReader("ETag");
 
             Mock<IBlobReceiptManager> mock = CreateReceiptManagerReferenceMock();
@@ -146,10 +200,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
                 .Returns(Task.FromResult(false));
             IBlobReceiptManager receiptManager = mock.Object;
 
-            ITriggerExecutor<ICloudBlob> product = CreateProductUnderTest(input, eTagReader, receiptManager);
+            ITriggerExecutor<BlobTriggerExecutorContext> product = CreateProductUnderTest(input, eTagReader, receiptManager);
 
             // Act
-            Task<FunctionResult> task = product.ExecuteAsync(blob, CancellationToken.None);
+            Task<FunctionResult> task = product.ExecuteAsync(context, CancellationToken.None);
 
             // Assert
             Assert.False(task.Result.Succeeded);
@@ -159,8 +213,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
         public void ExecuteAsync_IfTryCreateReceiptSucceeds_TriesToAcquireLease()
         {
             // Arrange
-            ICloudBlob blob = CreateBlobReference();
-            IBlobPathSource input = CreateBlobPath(blob);
+            BlobTriggerExecutorContext context = CreateExecutorContext();
+            IBlobPathSource input = CreateBlobPath(context.Blob);
             IBlobETagReader eTagReader = CreateStubETagReader("ETag");
 
             Mock<IBlobReceiptManager> mock = CreateReceiptManagerReferenceMock();
@@ -173,10 +227,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
                 .Verifiable();
             IBlobReceiptManager receiptManager = mock.Object;
 
-            ITriggerExecutor<ICloudBlob> product = CreateProductUnderTest(input, eTagReader, receiptManager);
+            ITriggerExecutor<BlobTriggerExecutorContext> product = CreateProductUnderTest(input, eTagReader, receiptManager);
 
             // Act
-            Task<FunctionResult> task = product.ExecuteAsync(blob, CancellationToken.None);
+            Task<FunctionResult> task = product.ExecuteAsync(context, CancellationToken.None);
 
             // Assert
             task.GetAwaiter().GetResult();
@@ -187,8 +241,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
         public void ExecuteAsync_IfTryAcquireLeaseFails_ReturnsFailureResult()
         {
             // Arrange
-            ICloudBlob blob = CreateBlobReference();
-            IBlobPathSource input = CreateBlobPath(blob);
+            BlobTriggerExecutorContext context = CreateExecutorContext();
+            IBlobPathSource input = CreateBlobPath(context.Blob);
             IBlobETagReader eTagReader = CreateStubETagReader("ETag");
 
             Mock<IBlobReceiptManager> mock = CreateReceiptManagerReferenceMock();
@@ -198,10 +252,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
                 .Returns(Task.FromResult<string>(null));
             IBlobReceiptManager receiptManager = mock.Object;
 
-            ITriggerExecutor<ICloudBlob> product = CreateProductUnderTest(input, eTagReader, receiptManager);
+            ITriggerExecutor<BlobTriggerExecutorContext> product = CreateProductUnderTest(input, eTagReader, receiptManager);
 
             // Act
-            Task<FunctionResult> task = product.ExecuteAsync(blob, CancellationToken.None);
+            Task<FunctionResult> task = product.ExecuteAsync(context, CancellationToken.None);
 
             // Assert
             Assert.False(task.Result.Succeeded);
@@ -211,8 +265,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
         public void ExecuteAsync_IfTryAcquireLeaseSucceeds_ReadsLatestReceipt()
         {
             // Arrange
-            ICloudBlob blob = CreateBlobReference();
-            IBlobPathSource input = CreateBlobPath(blob);
+            BlobTriggerExecutorContext context = CreateExecutorContext();
+            IBlobPathSource input = CreateBlobPath(context.Blob);
             IBlobETagReader eTagReader = CreateStubETagReader("ETag");
 
             Mock<IBlobReceiptManager> mock = CreateReceiptManagerReferenceMock();
@@ -229,10 +283,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
                 .Returns(Task.FromResult(0));
             IBlobReceiptManager receiptManager = mock.Object;
 
-            ITriggerExecutor<ICloudBlob> product = CreateProductUnderTest(input, eTagReader, receiptManager);
+            ITriggerExecutor<BlobTriggerExecutorContext> product = CreateProductUnderTest(input, eTagReader, receiptManager);
 
             // Act
-            Task<FunctionResult> task = product.ExecuteAsync(blob, CancellationToken.None);
+            Task<FunctionResult> task = product.ExecuteAsync(context, CancellationToken.None);
 
             // Assert
             task.GetAwaiter().GetResult();
@@ -243,8 +297,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
         public void ExecuteAsync_IfLeasedReceiptBecameCompleted_ReleasesLeaseAndReturnsSuccessResult()
         {
             // Arrange
-            ICloudBlob blob = CreateBlobReference();
-            IBlobPathSource input = CreateBlobPath(blob);
+            BlobTriggerExecutorContext context = CreateExecutorContext();
+            IBlobPathSource input = CreateBlobPath(context.Blob);
             IBlobETagReader eTagReader = CreateStubETagReader("ETag");
 
             Mock<IBlobReceiptManager> mock = CreateReceiptManagerReferenceMock();
@@ -263,10 +317,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
                 .Verifiable();
             IBlobReceiptManager receiptManager = mock.Object;
 
-            ITriggerExecutor<ICloudBlob> product = CreateProductUnderTest(input, eTagReader, receiptManager);
+            ITriggerExecutor<BlobTriggerExecutorContext> product = CreateProductUnderTest(input, eTagReader, receiptManager);
 
             // Act
-            Task<FunctionResult> task = product.ExecuteAsync(blob, CancellationToken.None);
+            Task<FunctionResult> task = product.ExecuteAsync(context, CancellationToken.None);
 
             // Assert
             task.WaitUntilCompleted();
@@ -278,8 +332,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
         public void ExecuteAsync_IfEnqueueAsyncThrows_ReleasesLease()
         {
             // Arrange
-            ICloudBlob blob = CreateBlobReference();
-            IBlobPathSource input = CreateBlobPath(blob);
+            BlobTriggerExecutorContext context = CreateExecutorContext();
+            IBlobPathSource input = CreateBlobPath(context.Blob);
             IBlobETagReader eTagReader = CreateStubETagReader("ETag");
             InvalidOperationException expectedException = new InvalidOperationException();
 
@@ -300,11 +354,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
                 .Throws(expectedException);
             IBlobTriggerQueueWriter queueWriter = queueWriterMock.Object;
 
-            ITriggerExecutor<ICloudBlob> product = CreateProductUnderTest(input, eTagReader, receiptManager,
+            ITriggerExecutor<BlobTriggerExecutorContext> product = CreateProductUnderTest(input, eTagReader, receiptManager,
                 queueWriter);
 
             // Act
-            Task<FunctionResult> task = product.ExecuteAsync(blob, CancellationToken.None);
+            Task<FunctionResult> task = product.ExecuteAsync(context, CancellationToken.None);
 
             // Assert
             task.WaitUntilCompleted();
@@ -320,9 +374,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             // Arrange
             string expectedFunctionId = "FunctionId";
             string expectedETag = "ETag";
-            ICloudBlob blob = CreateBlobReference("container", "blob");
-            IBlobPathSource input = CreateBlobPath(blob);
+            BlobTriggerExecutorContext context = CreateExecutorContext();
+            IBlobPathSource input = CreateBlobPath(context.Blob);
             IBlobETagReader eTagReader = CreateStubETagReader(expectedETag);
+
 
             Mock<IBlobReceiptManager> managerMock = CreateReceiptManagerReferenceMock();
             managerMock
@@ -346,14 +401,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             Mock<IBlobTriggerQueueWriter> queueWriterMock = new Mock<IBlobTriggerQueueWriter>(MockBehavior.Strict);
             queueWriterMock
                 .Setup(w => w.EnqueueAsync(It.IsAny<BlobTriggerMessage>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(0));
+                .Returns(Task.FromResult(("testQueueName", "testMessageId")));
             IBlobTriggerQueueWriter queueWriter = queueWriterMock.Object;
 
-            ITriggerExecutor<ICloudBlob> product = CreateProductUnderTest(expectedFunctionId, input, eTagReader,
+            ITriggerExecutor<BlobTriggerExecutorContext> product = CreateProductUnderTest(expectedFunctionId, input, eTagReader,
                 receiptManager, queueWriter);
 
             // Act
-            Task<FunctionResult> task = product.ExecuteAsync(blob, CancellationToken.None);
+            Task<FunctionResult> task = product.ExecuteAsync(context, CancellationToken.None);
 
             // Assert
             task.WaitUntilCompleted();
@@ -361,11 +416,24 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
                 .Verify(
                     w => w.EnqueueAsync(It.Is<BlobTriggerMessage>(m =>
                         m != null && m.FunctionId == expectedFunctionId /*&& m.BlobType == StorageBlobType.BlockBlob $$$ */ &&
-                        m.BlobName == blob.Name && m.ContainerName == blob.Container.Name && m.ETag == expectedETag),
+                        m.BlobName == context.Blob.Name && m.ContainerName == context.Blob.Container.Name && m.ETag == expectedETag),
                         It.IsAny<CancellationToken>()),
                     Times.Once());
             managerMock.Verify();
             Assert.True(task.Result.Succeeded);
+
+            // Validate log is written
+            var logMessage = _loggerProvider.GetAllLogMessages().Single();
+            Assert.Equal("BlobMessageEnqueued", logMessage.EventId.Name);
+            Assert.Equal(LogLevel.Debug, logMessage.Level);
+            Assert.Equal(7, logMessage.State.Count());
+            Assert.Equal("FunctionIdLogName", logMessage.GetStateValue<string>("functionName"));
+            Assert.Equal(context.Blob.Name, logMessage.GetStateValue<string>("blobName"));
+            Assert.Equal("testQueueName", logMessage.GetStateValue<string>("queueName"));
+            Assert.Equal("testMessageId", logMessage.GetStateValue<string>("messageId"));
+            Assert.Equal(context.PollId, logMessage.GetStateValue<string>("pollId"));
+            Assert.Equal(context.TriggerSource, logMessage.GetStateValue<BlobTriggerSource>("triggerSource"));
+            Assert.True(!string.IsNullOrWhiteSpace(logMessage.GetStateValue<string>("{OriginalFormat}")));
         }
 
         private static FakeStorageAccount CreateAccount()
@@ -375,9 +443,24 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             return new FakeStorageAccount();
         }
 
-        private static CloudBlockBlob CreateBlobReference()
+        private static BlobTriggerExecutorContext CreateExecutorContext()
         {
-            return CreateBlobReference("container", "blob");
+            return new BlobTriggerExecutorContext
+            {
+                Blob = CreateBlobReference("container", "blob"),
+                PollId = TestClientRequestId,
+                TriggerSource = BlobTriggerSource.ContainerScan
+            };
+        }
+
+        private static BlobTriggerExecutorContext CreateExecutorContext(string containerName, string blobName)
+        {
+            return new BlobTriggerExecutorContext
+            {
+                Blob = CreateBlobReference(containerName, blobName),
+                PollId = TestClientRequestId,
+                TriggerSource = BlobTriggerSource.ContainerScan
+            };
         }
 
         private static CloudBlockBlob CreateBlobReference(string containerName, string blobName)
@@ -416,32 +499,38 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             return new Mock<IBlobTriggerQueueWriter>(MockBehavior.Strict).Object;
         }
 
-        private static BlobTriggerExecutor CreateProductUnderTest(IBlobPathSource input)
+        private BlobTriggerExecutor CreateProductUnderTest(IBlobPathSource input)
         {
             return CreateProductUnderTest(input, CreateDummyETagReader());
         }
 
-        private static BlobTriggerExecutor CreateProductUnderTest(IBlobPathSource input, IBlobETagReader eTagReader)
+        private BlobTriggerExecutor CreateProductUnderTest(IBlobPathSource input, IBlobETagReader eTagReader)
         {
             return CreateProductUnderTest(input, eTagReader, CreateDummyReceiptManager());
         }
 
-        private static BlobTriggerExecutor CreateProductUnderTest(IBlobPathSource input, IBlobETagReader eTagReader,
+        private BlobTriggerExecutor CreateProductUnderTest(IBlobPathSource input, IBlobETagReader eTagReader,
             IBlobReceiptManager receiptManager)
         {
             return CreateProductUnderTest("FunctionId", input, eTagReader, receiptManager, CreateDummyQueueWriter());
         }
 
-        private static BlobTriggerExecutor CreateProductUnderTest(IBlobPathSource input, IBlobETagReader eTagReader,
+        private BlobTriggerExecutor CreateProductUnderTest(IBlobPathSource input, IBlobETagReader eTagReader,
             IBlobReceiptManager receiptManager, IBlobTriggerQueueWriter queueWriter)
         {
             return CreateProductUnderTest("FunctionId", input, eTagReader, receiptManager, queueWriter);
         }
 
-        private static BlobTriggerExecutor CreateProductUnderTest(string functionId, IBlobPathSource input,
+        private BlobTriggerExecutor CreateProductUnderTest(string functionId, IBlobPathSource input,
             IBlobETagReader eTagReader, IBlobReceiptManager receiptManager, IBlobTriggerQueueWriter queueWriter)
         {
-            return new BlobTriggerExecutor(String.Empty, functionId, input, eTagReader, receiptManager, queueWriter);
+            var descriptor = new FunctionDescriptor
+            {
+                Id = functionId,
+                LogName = functionId + "LogName"
+            };
+
+            return new BlobTriggerExecutor(String.Empty, descriptor, input, eTagReader, receiptManager, queueWriter, _logger);
         }
 
         private static Mock<IBlobReceiptManager> CreateReceiptManagerReferenceMock()

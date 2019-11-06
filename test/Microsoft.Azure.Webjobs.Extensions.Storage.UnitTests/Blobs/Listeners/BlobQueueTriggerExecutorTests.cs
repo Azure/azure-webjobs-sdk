@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FakeStorage;
@@ -9,7 +10,7 @@ using Microsoft.Azure.WebJobs.Host.Blobs;
 using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.WindowsAzure.Storage;
+using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Moq;
@@ -22,6 +23,17 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
     {
         private const string TestBlobName = "TestBlobName";
         private const string TestContainerName = "container";
+        private const string TestQueueMessageId = "abc123";
+
+        private readonly TestLoggerProvider _loggerProvider = new TestLoggerProvider();
+        private readonly ILogger<BlobListener> _logger;
+
+        public BlobQueueTriggerExecutorTests()
+        {
+            var loggerFactory = new LoggerFactory();
+            loggerFactory.AddProvider(_loggerProvider);
+            _logger = loggerFactory.CreateLogger<BlobListener>();
+        }
 
         [Fact]
         public void ExecuteAsync_IfMessageIsNotJson_Throws()
@@ -71,13 +83,23 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
         {
             // Arrange
             BlobQueueTriggerExecutor product = CreateProductUnderTest();
-            var message = CreateMessage(new BlobTriggerMessage { FunctionId = "Missing" });
+            var message = CreateMessage(new BlobTriggerMessage { BlobName = TestBlobName, FunctionId = "Missing" });
 
             // Act
             Task<FunctionResult> task = product.ExecuteAsync(message, CancellationToken.None);
 
             // Assert
             Assert.True(task.Result.Succeeded);
+
+            // Validate log is written
+            var logMessage = _loggerProvider.GetAllLogMessages().Single();
+            Assert.Equal("FunctionNotFound", logMessage.EventId.Name);
+            Assert.Equal(LogLevel.Debug, logMessage.Level);
+            Assert.Equal(4, logMessage.State.Count());
+            Assert.Equal(TestBlobName, logMessage.GetStateValue<string>("blobName"));
+            Assert.Equal("Missing", logMessage.GetStateValue<string>("functionName"));
+            Assert.Equal(TestQueueMessageId, logMessage.GetStateValue<string>("queueMessageId"));
+            Assert.True(!string.IsNullOrWhiteSpace(logMessage.GetStateValue<string>("{OriginalFormat}")));
         }
 
         [Fact]
@@ -104,6 +126,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
 
             // Assert
             Assert.True(task.Result.Succeeded);
+
+            // Validate log is written
+            var logMessage = _loggerProvider.GetAllLogMessages().Single();
+            Assert.Equal("BlobNotFound", logMessage.EventId.Name);
+            Assert.Equal(LogLevel.Debug, logMessage.Level);
+            Assert.Equal(3, logMessage.State.Count());
+            Assert.Equal(TestBlobName, logMessage.GetStateValue<string>("blobName"));
+            Assert.Equal(TestQueueMessageId, logMessage.GetStateValue<string>("queueMessageId"));
+            Assert.True(!string.IsNullOrWhiteSpace(logMessage.GetStateValue<string>("{OriginalFormat}")));
         }
 
         [Fact]
@@ -262,7 +293,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             // Assert
             Assert.False(task.Result.Succeeded);
         }
-                
+
         private static IBlobWrittenWatcher CreateDummyBlobWrittenWatcher()
         {
             return new Mock<IBlobWrittenWatcher>(MockBehavior.Strict).Object;
@@ -303,31 +334,35 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
 
         private static CloudQueueMessage CreateMessage(string content)
         {
-            return new CloudQueueMessage(content);
+            var message = new CloudQueueMessage(content);
+            message.SetId(TestQueueMessageId);
+            message.SetInsertionTime(DateTimeOffset.UtcNow);
+            message.SetDequeueCount(0);
+            return message;
         }
 
-        private static BlobQueueTriggerExecutor CreateProductUnderTest()
+        private BlobQueueTriggerExecutor CreateProductUnderTest()
         {
             return CreateProductUnderTest(CreateDummyBlobWrittenWatcher());
         }
 
-        private static BlobQueueTriggerExecutor CreateProductUnderTest(IBlobWrittenWatcher blobWrittenWatcher)
+        private BlobQueueTriggerExecutor CreateProductUnderTest(IBlobWrittenWatcher blobWrittenWatcher)
         {
             IBlobCausalityReader causalityReader = CreateDummyCausalityReader();
 
             return CreateProductUnderTest(causalityReader, blobWrittenWatcher);
         }
 
-        private static BlobQueueTriggerExecutor CreateProductUnderTest(
+        private BlobQueueTriggerExecutor CreateProductUnderTest(
             IBlobCausalityReader causalityReader)
         {
             return CreateProductUnderTest(causalityReader, CreateDummyBlobWrittenWatcher());
         }
 
-        private static BlobQueueTriggerExecutor CreateProductUnderTest(
+        private BlobQueueTriggerExecutor CreateProductUnderTest(
              IBlobCausalityReader causalityReader, IBlobWrittenWatcher blobWrittenWatcher)
         {
-            return new BlobQueueTriggerExecutor(causalityReader, blobWrittenWatcher);
+            return new BlobQueueTriggerExecutor(causalityReader, blobWrittenWatcher, _logger);
         }
 
         private static IBlobCausalityReader CreateStubCausalityReader()
