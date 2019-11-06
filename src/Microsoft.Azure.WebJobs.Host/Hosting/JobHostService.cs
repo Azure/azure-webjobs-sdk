@@ -29,7 +29,15 @@ namespace Microsoft.Azure.WebJobs.Hosting
         public Task StopAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("Stopping JobHost");
-            return _jobHost.StopAsync();
+
+            if (_jobHost is IHostedService jobHostHostedService)
+            {
+                return jobHostHostedService.StopAsync(cancellationToken);
+            }
+            else
+            {
+                return _jobHost.StopAsync();
+            }
         }
     }
 }

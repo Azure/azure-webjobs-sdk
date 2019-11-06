@@ -15,6 +15,7 @@ using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -24,7 +25,7 @@ namespace Microsoft.Azure.WebJobs
     /// A <see cref="JobHost"/> is the execution container for jobs. Once started, the
     /// <see cref="JobHost"/> will manage and run job functions when they are triggered.
     /// </summary>
-    public class JobHost : IJobHost, IDisposable, IJobInvoker
+    public class JobHost : IJobHost, IHostedService, IDisposable, IJobInvoker
     {
         private const int StateNotStarted = 0;
         private const int StateStarting = 1;
@@ -109,8 +110,9 @@ namespace Microsoft.Azure.WebJobs
         }
 
         /// <summary>Stops the host.</summary>
+        /// <param name="cancellationToken">Indicates that the shutdown process should no longer be graceful.</param>
         /// <returns>A <see cref="Task"/> that will stop the host.</returns>
-        public Task StopAsync()
+        public Task StopAsync(CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
 
@@ -127,11 +129,18 @@ namespace Microsoft.Azure.WebJobs
                 if (_stopTask == null)
                 {
                     _stoppingTokenSource.Cancel();
-                    _stopTask = StopAsyncCore(CancellationToken.None);
+                    _stopTask = StopAsyncCore(cancellationToken);
                 }
             }
 
             return _stopTask;
+        }
+
+        /// <summary>Stops the host.</summary>
+        /// <returns>A <see cref="Task"/> that will stop the host.</returns>
+        public Task StopAsync()
+        {
+            return StopAsync(CancellationToken.None);
         }
 
         protected virtual async Task StopAsyncCore(CancellationToken cancellationToken)
