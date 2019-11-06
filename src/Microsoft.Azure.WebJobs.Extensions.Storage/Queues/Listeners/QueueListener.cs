@@ -170,6 +170,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             }
 
             IEnumerable<CloudQueueMessage> batch = null;
+            string clientRequestId = Guid.NewGuid().ToString();
+            Stopwatch sw = null;
             try
             {
                 if (!_queueExists.HasValue || !_queueExists.Value)
@@ -185,8 +187,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
 
                 if (_queueExists.Value)
                 {
-                    Stopwatch sw = Stopwatch.StartNew();
-                    OperationContext context = new OperationContext { ClientRequestID = Guid.NewGuid().ToString() };
+                    sw = Stopwatch.StartNew();
+                    OperationContext context = new OperationContext { ClientRequestID = clientRequestId };
 
                     batch = await TimeoutHandler.ExecuteWithTimeout("GetMessages", context.ClientRequestID, _exceptionHandler, () =>
                     {
@@ -212,6 +214,9 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
                     exception.IsConflictQueueBeingDeletedOrDisabled() ||
                     exception.IsServerSideError())
                 {
+                    long pollLatency = sw?.ElapsedMilliseconds ?? -1;
+                    Logger.HandlingStorageException(_logger, _functionDescriptor.LogName, _queue.Name, clientRequestId, pollLatency, exception);
+
                     // Back off when no message is available, or when
                     // transient errors occur
                     return CreateBackoffResult();

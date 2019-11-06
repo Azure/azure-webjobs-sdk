@@ -59,13 +59,13 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             return new FakeStorageAccount();
         }
 
-        private class LambdaBlobTriggerExecutor : ITriggerExecutor<ICloudBlob>
+        private class LambdaBlobTriggerExecutor : ITriggerExecutor<BlobTriggerExecutorContext>
         {
             public Func<ICloudBlob, bool> ExecuteLambda { get; set; }
 
-            public Task<FunctionResult> ExecuteAsync(ICloudBlob value, CancellationToken cancellationToken)
+            public Task<FunctionResult> ExecuteAsync(BlobTriggerExecutorContext value, CancellationToken cancellationToken)
             {
-                bool succeeded = ExecuteLambda.Invoke(value);
+                bool succeeded = ExecuteLambda.Invoke(value.Blob);
                 FunctionResult result = new FunctionResult(succeeded);
                 return Task.FromResult(result);
             }

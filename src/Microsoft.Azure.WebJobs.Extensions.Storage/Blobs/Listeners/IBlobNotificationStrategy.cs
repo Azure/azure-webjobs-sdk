@@ -11,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {
     internal interface IBlobNotificationStrategy : ITaskSeriesCommand, IBlobWrittenWatcher
     {
-        Task RegisterAsync(CloudBlobContainer container, ITriggerExecutor<ICloudBlob> triggerExecutor,
+        Task RegisterAsync(CloudBlobContainer container, ITriggerExecutor<BlobTriggerExecutorContext> triggerExecutor,
             CancellationToken cancellationToken);
     }
 }

@@ -10,7 +10,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {
     internal class ContainerScanInfo
     {
-        public ICollection<ITriggerExecutor<ICloudBlob>> Registrations { get; set; }
+        public ICollection<ITriggerExecutor<BlobTriggerExecutorContext>> Registrations { get; set; }
 
         public DateTime LastSweepCycleLatestModified { get; set; }
 
