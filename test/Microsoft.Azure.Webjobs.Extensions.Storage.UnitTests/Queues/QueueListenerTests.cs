@@ -528,7 +528,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             FunctionResult result = new FunctionResult(true);
             _mockQueueProcessor.Setup(p => p.BeginProcessingMessageAsync(_queueMessage, cancellationToken)).ReturnsAsync(true);
             _mockTriggerExecutor.Setup(p => p.ExecuteAsync(_queueMessage, cancellationToken)).ReturnsAsync(result);
-            _mockQueueProcessor.Setup(p => p.CompleteProcessingMessageAsync(_queueMessage, result, cancellationToken)).Returns(Task.FromResult(true));
+            _mockQueueProcessor.Setup(p => p.CompleteProcessingMessageAsync(_queueMessage, result, It.IsNotIn(cancellationToken))).Returns(Task.FromResult(true));
 
             await _listener.ProcessMessageAsync(_queueMessage, TimeSpan.FromMinutes(10), cancellationToken);
         }
@@ -618,7 +618,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             FunctionResult result = new FunctionResult(false);
             _mockQueueProcessor.Setup(p => p.BeginProcessingMessageAsync(_queueMessage, cancellationToken)).ReturnsAsync(true);
             _mockTriggerExecutor.Setup(p => p.ExecuteAsync(_queueMessage, cancellationToken)).ReturnsAsync(result);
-            _mockQueueProcessor.Setup(p => p.CompleteProcessingMessageAsync(_queueMessage, result, cancellationToken)).Returns(Task.FromResult(true));
+            _mockQueueProcessor.Setup(p => p.CompleteProcessingMessageAsync(_queueMessage, result, It.IsNotIn(cancellationToken))).Returns(Task.FromResult(true));
 
             await _listener.ProcessMessageAsync(_queueMessage, TimeSpan.FromMinutes(10), cancellationToken);
         }

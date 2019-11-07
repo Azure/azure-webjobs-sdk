@@ -5,6 +5,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings.Path;
 using System.Linq;
 using Xunit;
 using System;
+using System.Globalization;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Path
 {
@@ -75,10 +76,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Path
             Assert.NotNull(DateTime.Parse(resolvedValue));
 
             resolvedValue = resolver.Resolve("datetime:MM/yyyy");
-            Assert.Equal(DateTime.UtcNow.ToString("MM/yyyy"), resolvedValue);
+            Assert.Equal(DateTime.UtcNow.ToString("MM/yyyy", CultureInfo.InvariantCulture), resolvedValue);
 
             resolvedValue = resolver.Resolve("datetime:yyyyMMdd");
-            Assert.Equal(DateTime.UtcNow.ToString("yyyyMMdd"), resolvedValue);
+            Assert.Equal(DateTime.UtcNow.ToString("yyyyMMdd", CultureInfo.InvariantCulture), resolvedValue);
         }
     }
 }
