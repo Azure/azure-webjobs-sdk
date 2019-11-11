@@ -740,11 +740,17 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.NotNull(actualLinks);
                 Assert.Equal(2, actualLinks.Length);
 
-                Assert.Equal(links[0].TraceId.ToHexString(), actualLinks[0].operation_Id);
-                Assert.Equal(links[1].TraceId.ToHexString(), actualLinks[1].operation_Id);
+                var linkTraceId0 = links[0].TraceId.ToHexString();
+                var linkTraceId1 = links[1].TraceId.ToHexString();
+                Assert.Equal(linkTraceId0, actualLinks[0].operation_Id);
+                Assert.Equal(linkTraceId1, actualLinks[1].operation_Id);
 
-                Assert.Equal($"|{links[0].TraceId.ToHexString()}.{links[0].ParentSpanId.ToHexString()}.", actualLinks[0].id);
-                Assert.Equal($"|{links[1].TraceId.ToHexString()}.{links[1].ParentSpanId.ToHexString()}.", actualLinks[1].id);
+                var linkSpanId0 = links[0].ParentSpanId.ToHexString();
+                var linkSpanId1 = links[1].ParentSpanId.ToHexString();
+                Assert.Equal(linkSpanId0, actualLinks[0].id);
+                Assert.Equal(linkSpanId1, actualLinks[1].id);
+
+                Assert.Equal($"[{{\"operation_Id\":\"{linkTraceId0}\",\"id\":\"{linkSpanId0}\"}},{{\"operation_Id\":\"{linkTraceId1}\",\"id\":\"{linkSpanId1}\"}}]", linksStr);
             }
         }
 
