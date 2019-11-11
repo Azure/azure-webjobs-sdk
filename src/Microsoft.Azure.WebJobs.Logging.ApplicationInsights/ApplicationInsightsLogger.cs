@@ -532,8 +532,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
                 // avoiding json serializers for now for the sake of perf.
                 // serialization is trivial and looks like `_MS.links` property with json blob
-                // [{"operation_Id":"5eca8b153632494ba00f619d6877b134","id":"|5eca8b153632494ba00f619d6877b134.d4c1279b6e7b7c47."},
-                //  {"operation_Id":"ff28988d0776b44f9ca93352da126047","id":"|ff28988d0776b44f9ca93352da126047.bf4fa4855d161141."}]
+                // [{"operation_Id":"5eca8b153632494ba00f619d6877b134","id":"d4c1279b6e7b7c47"},
+                //  {"operation_Id":"ff28988d0776b44f9ca93352da126047","id":"bf4fa4855d161141"}]
                 linksJson
                     .Append('{')
                     .Append("\"operation_Id\":")
@@ -544,15 +544,17 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 linksJson
                     .Append("\"id\":")
                     .Append('\"')
-                    .Append('|')
-                    .Append(linkTraceId)
-                    .Append('.')
                     .Append(link.ParentSpanId.ToHexString())
-                    .Append('.')
                     .Append('\"');
 
                 // we explicitly ignore sampling flag, tracestate and attributes at this point.
                 linksJson.Append("},");
+            }
+
+            if (linksJson.Length > 0)
+            {
+                // remove last comma - trailing commas are not allowed
+                linksJson.Remove(linksJson.Length - 1, 1); 
             }
 
             linksJson.Append("]");
