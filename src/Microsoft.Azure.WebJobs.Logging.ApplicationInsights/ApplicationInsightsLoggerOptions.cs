@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Net;
 using Microsoft.ApplicationInsights.SnapshotCollector;
 using Microsoft.ApplicationInsights.WindowsServer.Channel.Implementation;
 using Microsoft.Azure.WebJobs.Hosting;
@@ -101,17 +100,17 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         public bool EnableDependencyTracking { get; set; } = true;
 
         /// <summary>
-        /// 
+        /// Gets or sets the endpoint address for the telemetry channel
         /// </summary>
         public string EndpointAddress { get; set; }
 
         /// <summary>
-        /// 
+        /// Gets or sets the Profile Query Endpoint for the Application Id Provider
         /// </summary>
         public string ProfileQueryEndpoint { get; set; }
 
         /// <summary>
-        /// 
+        /// Gets or sets the Quick Pulse Service Endpoint for the Quick Pulse Telemetry Module
         /// </summary>
         public string QuickPulseServiceEndpoint { get; set; }
 
