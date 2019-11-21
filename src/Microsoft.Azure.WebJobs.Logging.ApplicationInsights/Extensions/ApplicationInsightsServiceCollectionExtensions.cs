@@ -57,7 +57,19 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddSingleton<ITelemetryInitializer, WebJobsTelemetryInitializer>();
             services.AddSingleton<ITelemetryInitializer, MetricSdkVersionTelemetryInitializer>();
             services.AddSingleton<QuickPulseInitializationScheduler>();
-            services.AddSingleton<QuickPulseTelemetryModule>();
+
+            services.AddSingleton<QuickPulseTelemetryModule>(provider =>
+            {
+                ApplicationInsightsLoggerOptions options = provider.GetService<IOptions<ApplicationInsightsLoggerOptions>>().Value;
+                if (!string.IsNullOrEmpty(options.QuickPulseServiceEndpoint))
+                {
+                    return new QuickPulseTelemetryModule
+                    {
+                        QuickPulseServiceEndpoint = options.QuickPulseServiceEndpoint
+                    };
+                }
+                return new QuickPulseTelemetryModule();
+            });
 
             services.AddSingleton<ITelemetryModule>(provider =>
             {
@@ -85,7 +97,18 @@ namespace Microsoft.Extensions.DependencyInjection
                 return NullTelemetryModule.Instance;
             });
 
-            services.AddSingleton<IApplicationIdProvider, ApplicationInsightsApplicationIdProvider>();
+            services.AddSingleton<IApplicationIdProvider, ApplicationInsightsApplicationIdProvider>(provider =>
+            {
+                ApplicationInsightsLoggerOptions options = provider.GetService<IOptions<ApplicationInsightsLoggerOptions>>().Value;
+                if (!string.IsNullOrEmpty(options.ProfileQueryEndpoint))
+                {
+                    return new ApplicationInsightsApplicationIdProvider
+                    {
+                        ProfileQueryEndpoint = options.ProfileQueryEndpoint
+                    };
+                }
+                return new ApplicationInsightsApplicationIdProvider();
+            });
 
             services.AddSingleton<ITelemetryModule>(provider =>
             {
@@ -134,7 +157,19 @@ namespace Microsoft.Extensions.DependencyInjection
 
             services.AddSingleton<ITelemetryModule, AppServicesHeartbeatTelemetryModule>();
 
-            services.AddSingleton<ITelemetryChannel, ServerTelemetryChannel>();
+            services.AddSingleton<ITelemetryChannel, ServerTelemetryChannel>(provider =>
+            {
+                ApplicationInsightsLoggerOptions options = provider.GetService<IOptions<ApplicationInsightsLoggerOptions>>().Value;
+                if (!string.IsNullOrEmpty(options.EndpointAddress))
+                {
+                    return new ServerTelemetryChannel
+                    {
+                        EndpointAddress = options.EndpointAddress
+                    };
+                }
+                return new ServerTelemetryChannel();
+            });
+
             services.AddSingleton<TelemetryConfiguration>(provider =>
             {
                 ApplicationInsightsLoggerOptions options = provider.GetService<IOptions<ApplicationInsightsLoggerOptions>>().Value;

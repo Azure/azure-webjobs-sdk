@@ -501,6 +501,37 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         }
 
         [Fact]
+        public void DependencyInjectionConfiguration_ConfiguresEndpoints()
+        {
+            var endpointAddress = "http://endpoint.address.com/";
+            var quickPulseServiceEndpoint = "http://quickpulse.serviceendpoint.com/";
+            var profileQueryEndpoint = "http://profile.queryendpoint.com/";
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsightsWebJobs(o =>
+                    {
+                        o.EndpointAddress = endpointAddress;
+                        o.QuickPulseServiceEndpoint = quickPulseServiceEndpoint;
+                        o.ProfileQueryEndpoint = profileQueryEndpoint;
+                    });
+                })
+                .Build())
+            {
+                var config = host.Services.GetService<TelemetryConfiguration>();
+
+                Assert.Equal(endpointAddress, config.TelemetryChannel.EndpointAddress);
+
+                Assert.IsType<ApplicationInsightsApplicationIdProvider>(config.ApplicationIdProvider);
+                Assert.Equal(profileQueryEndpoint, ((ApplicationInsightsApplicationIdProvider)config.ApplicationIdProvider).ProfileQueryEndpoint);
+
+                var modules = host.Services.GetServices<ITelemetryModule>().ToList();
+                var quickPulseTelemetryModule = modules.OfType<QuickPulseTelemetryModule>().Single();
+                Assert.Equal(quickPulseServiceEndpoint, quickPulseTelemetryModule.QuickPulseServiceEndpoint);
+            }
+        }
+
+        [Fact]
         public void CreateFilterOptions_MinLevel()
         {
             using (var host = CreateHost((c, b) => b.SetMinimumLevel(LogLevel.None)))

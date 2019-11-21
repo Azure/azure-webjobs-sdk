@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Net;
 using Microsoft.ApplicationInsights.SnapshotCollector;
 using Microsoft.ApplicationInsights.WindowsServer.Channel.Implementation;
 using Microsoft.Azure.WebJobs.Hosting;
@@ -100,6 +101,21 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         public bool EnableDependencyTracking { get; set; } = true;
 
         /// <summary>
+        /// 
+        /// </summary>
+        public string EndpointAddress { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string ProfileQueryEndpoint { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string QuickPulseServiceEndpoint { get; set; }
+
+        /// <summary>
         /// Gets or sets HTTP request collection options. 
         /// </summary>
         public HttpAutoCollectionOptions HttpAutoCollectionOptions { get; set; } = new HttpAutoCollectionOptions();
@@ -163,7 +179,10 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(HttpAutoCollectionOptions), httpOptions },
                 { nameof(LiveMetricsInitializationDelay), LiveMetricsInitializationDelay },
                 { nameof(EnableLiveMetrics), EnableLiveMetrics },
-                { nameof(EnableDependencyTracking), EnableDependencyTracking }
+                { nameof(EnableDependencyTracking), EnableDependencyTracking },
+                { nameof(EndpointAddress), EndpointAddress },
+                { nameof(ProfileQueryEndpoint), ProfileQueryEndpoint },
+                { nameof(QuickPulseServiceEndpoint), QuickPulseServiceEndpoint }
             };
 
             return options.ToString(Formatting.Indented);
