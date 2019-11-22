@@ -98,7 +98,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 })
                 .ConfigureServices(services =>
                 {
-                    ServiceDescriptor quickPulse = services.Single(s => s.ImplementationType == typeof(QuickPulseTelemetryModule));
+                    ServiceDescriptor quickPulse = services.Single(s => s.ServiceType.Name == nameof(QuickPulseTelemetryModule));
                     services.Remove(quickPulse);
                     services.AddSingleton<ITelemetryModule, QuickPulseTelemetryModule>(s => new QuickPulseTelemetryModule()
                     {
