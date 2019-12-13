@@ -46,7 +46,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         }
 
         [Fact]
-        public void DependencyInjectionConfiguration_Configures()
+        public void DependencyInjectionConfiguration_Configures_With_InstrumentationKey()
         {
             var builder = new HostBuilder()
                 .ConfigureLogging(b =>
@@ -117,6 +117,85 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 // Verify ApplicationIdProvider
                 Assert.NotNull(config.ApplicationIdProvider);
                 Assert.IsType<ApplicationInsightsApplicationIdProvider>(config.ApplicationIdProvider);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_Configures_With_ConnectionString()
+        {
+            var builder = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsightsWebJobs(o => o.ConnectionString = "InstrumentationKey=somekey;EndpointSuffix=applicationinsights.us");
+                });
+
+            using (var host = builder.Build())
+            {
+                var config = host.Services.GetService<TelemetryConfiguration>();
+
+                Assert.Equal("somekey", config.InstrumentationKey);
+
+                // Verify Initializers
+                Assert.Equal(6, config.TelemetryInitializers.Count);
+                // These will throw if there are not exactly one
+                Assert.Single(config.TelemetryInitializers.OfType<OperationCorrelationTelemetryInitializer>());
+                Assert.Single(config.TelemetryInitializers.OfType<HttpDependenciesParsingTelemetryInitializer>());
+                Assert.Single(config.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>());
+                Assert.Single(config.TelemetryInitializers.OfType<WebJobsTelemetryInitializer>());
+                Assert.Single(config.TelemetryInitializers.OfType<WebJobsSanitizingInitializer>());
+                Assert.Single(config.TelemetryInitializers.OfType<MetricSdkVersionTelemetryInitializer>());
+
+                var sdkVersionProvider = host.Services.GetServices<ISdkVersionProvider>().ToList();
+                Assert.Single(sdkVersionProvider);
+                Assert.Single(sdkVersionProvider.OfType<WebJobsSdkVersionProvider>());
+
+                var roleInstanceProvider = host.Services.GetServices<IRoleInstanceProvider>().ToList();
+                Assert.Single(roleInstanceProvider);
+                Assert.Single(roleInstanceProvider.OfType<WebJobsRoleInstanceProvider>());
+
+                // Verify Channel
+                Assert.IsType<ServerTelemetryChannel>(config.TelemetryChannel);
+                Assert.Contains("applicationinsights.us", config.TelemetryChannel.EndpointAddress);
+
+                var modules = host.Services.GetServices<ITelemetryModule>().ToList();
+
+                // Verify Modules
+                Assert.Equal(5, modules.Count);
+                Assert.Single(modules.OfType<DependencyTrackingTelemetryModule>());
+
+                Assert.Single(modules.OfType<QuickPulseTelemetryModule>());
+                Assert.Single(modules.OfType<PerformanceCollectorModule>());
+                Assert.Single(modules.OfType<AppServicesHeartbeatTelemetryModule>());
+                Assert.Single(modules.OfType<RequestTrackingTelemetryModule>());
+
+                var dependencyModule = modules.OfType<DependencyTrackingTelemetryModule>().Single();
+
+                Assert.Equal(ActivityIdFormat.W3C, Activity.DefaultIdFormat);
+                Assert.True(Activity.ForceDefaultIdFormat);
+
+                Assert.Same(config.TelemetryChannel, host.Services.GetServices<ITelemetryChannel>().Single());
+                // Verify client
+                var client = host.Services.GetService<TelemetryClient>();
+                Assert.NotNull(client);
+                Assert.StartsWith("webjobs", client.Context.GetInternalContext().SdkVersion);
+
+                // Verify provider
+                var providers = host.Services.GetServices<ILoggerProvider>().ToList();
+                Assert.Single(providers);
+                Assert.IsType<ApplicationInsightsLoggerProvider>(providers[0]);
+                Assert.NotNull(providers[0]);
+
+                // Verify Processors
+                Assert.Equal(4, config.TelemetryProcessors.Count);
+                Assert.IsType<OperationFilteringTelemetryProcessor>(config.TelemetryProcessors[0]);
+                Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[1]);
+                Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[2]);
+                Assert.Empty(config.TelemetryProcessors.OfType<AdaptiveSamplingTelemetryProcessor>());
+
+                // Verify ApplicationIdProvider
+                Assert.NotNull(config.ApplicationIdProvider);
+                Assert.IsType<ApplicationInsightsApplicationIdProvider>(config.ApplicationIdProvider);
+                Assert.Contains("applicationinsights.us", ((ApplicationInsightsApplicationIdProvider)config.ApplicationIdProvider).ProfileQueryEndpoint);
             }
         }
 
