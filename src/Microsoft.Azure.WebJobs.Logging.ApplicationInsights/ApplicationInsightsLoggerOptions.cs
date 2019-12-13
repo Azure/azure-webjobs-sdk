@@ -18,6 +18,12 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         public string InstrumentationKey { get; set; }
 
         /// <summary>
+        /// Gets or sets Application Insights connection string. If set, this will
+        /// take precedence over the InstrumentationKey and overwrite it.
+        /// </summary>
+        public string ConnectionString { get; set; }
+
+        /// <summary>
         /// Gets or sets sampling settings.
         /// </summary>
         public SamplingPercentageEstimatorSettings SamplingSettings { get; set; }
