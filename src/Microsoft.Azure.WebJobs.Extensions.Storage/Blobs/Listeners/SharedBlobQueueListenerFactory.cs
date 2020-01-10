@@ -46,7 +46,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             _queueOptions = queueOptions ?? throw new ArgumentNullException(nameof(queueOptions));
             _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
             _loggerFactory = loggerFactory;
-            _blobWrittenWatcher = blobWrittenWatcher ?? throw new ArgumentNullException(nameof(blobWrittenWatcher));
+            _blobWrittenWatcher = blobWrittenWatcher;
             _functionDescriptor = functionDescriptor;
         }
 

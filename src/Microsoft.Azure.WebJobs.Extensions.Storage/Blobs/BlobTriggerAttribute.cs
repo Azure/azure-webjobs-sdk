@@ -59,5 +59,10 @@ namespace Microsoft.Azure.WebJobs
         {
             get { return _blobPath; }
         }
+
+        /// <summary>
+        /// Gets or sets using of existing EventGrid subscriptions for triggering.
+        /// </summary>
+        public bool UseEventGrid { get; set; }
     }
 }

@@ -39,7 +39,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
         private readonly IAsyncObjectToTypeConverter<ICloudBlob> _converter;
         private readonly IReadOnlyDictionary<string, Type> _bindingDataContract;
         private readonly IHostSingletonManager _singletonManager;
-
+        private readonly bool _useEventGrid;
+        
         public BlobTriggerBinding(ParameterInfo parameter,
             StorageAccount hostAccount,
             StorageAccount dataAccount,
@@ -52,7 +53,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             SharedQueueWatcher messageEnqueuedWatcherSetter,
             ISharedContextProvider sharedContextProvider,
             IHostSingletonManager singletonManager,
-            ILoggerFactory loggerFactory)
+            ILoggerFactory loggerFactory,
+            bool useEventGrid)
         {
             _parameter = parameter ?? throw new ArgumentNullException(nameof(parameter));
             _hostAccount = hostAccount ?? throw new ArgumentNullException(nameof(hostAccount));
@@ -73,6 +75,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             _loggerFactory = loggerFactory;
             _converter = CreateConverter(_blobClient);
             _bindingDataContract = CreateBindingDataContract(path);
+            _useEventGrid = useEventGrid;
         }
 
         public Type TriggerValueType
@@ -178,7 +181,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
 
             var factory = new BlobListenerFactory(_hostIdProvider, _queueOptions, _blobsOptions, _exceptionHandler,
                 _blobWrittenWatcherSetter, _messageEnqueuedWatcherSetter, _sharedContextProvider, _loggerFactory,
-                context.Descriptor, _hostAccount, _dataAccount, container, _path, context.Executor, _singletonManager);
+                context.Descriptor, _hostAccount, _dataAccount, container, _path, context.Executor, _singletonManager, _useEventGrid);
 
             return factory.CreateAsync(context.CancellationToken);
         }

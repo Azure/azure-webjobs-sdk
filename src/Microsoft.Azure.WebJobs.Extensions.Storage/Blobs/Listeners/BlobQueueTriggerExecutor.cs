@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.EventGrid.Models;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
@@ -15,6 +16,7 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {
@@ -53,7 +55,31 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 
         public async Task<FunctionResult> ExecuteAsync(CloudQueueMessage value, CancellationToken cancellationToken)
         {
+            // the message Json can be BlobTriggerMessage or EventGridEvent
             BlobTriggerMessage message = JsonConvert.DeserializeObject<BlobTriggerMessage>(value.AsString, JsonSerialization.Settings);
+            if (string.IsNullOrEmpty(message.FunctionId))
+            {
+                EventGridEvent eventGridEvent = JsonConvert.DeserializeObject<EventGridEvent>(value.AsString, JsonSerialization.Settings);
+                JObject data = eventGridEvent.Data as JObject;
+
+                CloudBlockBlob blobForParsing = new CloudBlockBlob(new Uri(data["url"].ToString()));
+
+                // TODO: remove test code
+                // Consider file name is a function name
+                if (data["functionId"] == null)
+                {
+                    data["functionId"] = System.IO.Path.GetFileNameWithoutExtension(data["url"].ToString());
+                }
+
+                message = new BlobTriggerMessage()
+                {
+                    ETag = $"\"{data["eTag"]}\"",
+                    BlobType = (BlobType)Enum.Parse(typeof(BlobType), data["blobType"].ToString()),
+                    ContainerName = blobForParsing.Container.Name,
+                    BlobName = blobForParsing.Name,
+                    FunctionId = data["functionId"].ToString()
+                };
+            }
 
             if (message == null)
             {
@@ -95,7 +121,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             string possibleETag = blob.Properties.ETag; // set since we fetched from server
 
             // If the blob still exists but the ETag is different, delete the message but do a fast path notification.
-            if (!string.Equals(message.ETag, possibleETag, StringComparison.Ordinal))
+            if (_blobWrittenWatcher != null && !string.Equals(message.ETag, possibleETag, StringComparison.Ordinal))
             {
                 _blobWrittenWatcher.Notify(blob);
                 return successResult;

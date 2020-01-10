@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,8 +14,12 @@ using Microsoft.Azure.WebJobs.Extensions.Storage.Blobs.Triggers;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.Queue;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 {
@@ -22,31 +27,41 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
     internal class BlobsExtensionConfigProvider : IExtensionConfigProvider,
         IAsyncConverter<BlobAttribute, CloudBlobContainer>,
         IAsyncConverter<BlobAttribute, CloudBlobDirectory>,
-        IAsyncConverter<BlobAttribute, BlobsExtensionConfigProvider.MultiBlobContext>
+        IAsyncConverter<BlobAttribute, BlobsExtensionConfigProvider.MultiBlobContext>,
+        IAsyncConverter<HttpRequestMessage, HttpResponseMessage>
     {
         private readonly BlobTriggerAttributeBindingProvider _triggerBinder;
         private StorageAccountProvider _accountProvider;
         private IContextGetter<IBlobWrittenWatcher> _blobWrittenWatcherGetter;
         private readonly INameResolver _nameResolver;
         private IConverterManager _converterManager;
+        private IHostIdProvider _hostIdProvider;
+        private ILogger _logger;
+        private readonly ILoggerFactory _loggerFactory;
+        private EventGridHttpRequestProcessor _httpRequestProcessor;
 
         public BlobsExtensionConfigProvider(StorageAccountProvider accountProvider,
             BlobTriggerAttributeBindingProvider triggerBinder,
             IContextGetter<IBlobWrittenWatcher> contextAccessor,
             INameResolver nameResolver,
-            IConverterManager converterManager)
+            IConverterManager converterManager,
+            IHostIdProvider hostIdProvider,
+            ILoggerFactory loggerFactory)
         {
             _accountProvider = accountProvider;
             _triggerBinder = triggerBinder;
             _blobWrittenWatcherGetter = contextAccessor;
             _nameResolver = nameResolver;
             _converterManager = converterManager;
+            _hostIdProvider = hostIdProvider;
+            _loggerFactory = loggerFactory;
         }
 
         public void Initialize(ExtensionConfigContext context)
         {
             InitilizeBlobBindings(context);
             InitializeBlobTriggerBindings(context);
+            InitilizeHttpProcessor();
         }
 
         private void InitilizeBlobBindings(ExtensionConfigContext context)
@@ -86,6 +101,11 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
         private void InitializeBlobTriggerBindings(ExtensionConfigContext context)
         {
+            _logger = _loggerFactory.CreateLogger(LogCategories.CreateTriggerCategory("BlobStorage"));
+
+            Uri url = context.GetWebhookHandler();
+            _logger.LogInformation($"registered EventGrid Endpoint = {url?.GetLeftPart(UriPartial.Path)}");
+
             var rule = context.AddBindingRule<BlobTriggerAttribute>();
             rule.BindToTrigger<ICloudBlob>(_triggerBinder);
 
@@ -103,6 +123,23 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             context.AddConverter(new StorageBlobConverter<CloudAppendBlob>());
             context.AddConverter(new StorageBlobConverter<CloudBlockBlob>());
             context.AddConverter(new StorageBlobConverter<CloudPageBlob>());
+        }
+
+        private void InitilizeHttpProcessor()
+        {
+            // TODO: do we realy need HTTP path?
+            string hostId = _hostIdProvider.GetHostIdAsync(CancellationToken.None).GetAwaiter().GetResult();
+            string hostBlobTriggerQueueName = HostQueueNames.GetHostBlobTriggerQueueName(hostId);
+            StorageAccount hostAccount = _accountProvider.GetHost();
+            CloudQueueClient primaryQueueClient = hostAccount.CreateCloudQueueClient();
+            CloudQueue hostBlobTriggerQueue = primaryQueueClient.GetQueueReference(hostBlobTriggerQueueName);
+
+            _httpRequestProcessor = new EventGridHttpRequestProcessor(hostBlobTriggerQueue, "BlobTrigger", _loggerFactory);
+        }
+
+        public async Task<HttpResponseMessage> ConvertAsync(HttpRequestMessage input, CancellationToken cancellationToken)
+        {
+            return await _httpRequestProcessor.ProcessHttpRequestAsync(input, cancellationToken);
         }
 
         #region Container rules

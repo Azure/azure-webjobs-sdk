@@ -31,5 +31,13 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             _watcher.Notify(_queue.Name);
             return (QueueName: _queue.Name, MessageId: queueMessage.Id);
         }
+
+        public async Task<(string QueueName, string MessageId)> EnqueueAsync(string contents, CancellationToken cancellationToken)
+        {
+            var queueMessage = new CloudQueueMessage(contents);
+            await _queue.AddMessageAndCreateIfNotExistsAsync(queueMessage, cancellationToken);
+            _watcher.Notify(_queue.Name);
+            return (QueueName: _queue.Name, MessageId: queueMessage.Id);
+        }
     }
 }

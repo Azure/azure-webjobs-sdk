@@ -37,7 +37,10 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         {
             // Starts the entire shared listener (if not yet started).
             // There is currently no scenario for controlling a single blob listener independently.
-            await _sharedListener.EnsureAllStartedAsync(cancellationToken);
+            if (_sharedListener != null)
+            {
+                await _sharedListener.EnsureAllStartedAsync(cancellationToken);
+            }
             _started = true;
         }
 
