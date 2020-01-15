@@ -7,6 +7,7 @@ using System.Linq;
 using System.Security.Authentication.ExtendedProtection;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -74,6 +75,29 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
                 ITestService service = host.Services.GetService<ITestService>();
 
                 Assert.NotNull(service);
+            }
+        }
+
+        [Fact]
+        public void UseWebJobsStartup_TestIConfiguration()
+        {
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            TestLoggerProvider provider = new TestLoggerProvider();
+            loggerFactory.AddProvider(provider);
+
+            TestConfigurationStartup.Configuration = null;
+            using (new StartupScope())
+            {
+                var builder = new HostBuilder()
+                    .ConfigureWebJobs(webJobsBuilder =>
+                    {
+                        webJobsBuilder.UseWebJobsStartup(typeof(TestConfigurationStartup), NullLoggerFactory.Instance);
+                    });
+
+                IHost host = builder.Build();
+
+                var configuration = host.Services.GetService<IConfiguration>();
+                Assert.Same(configuration, TestConfigurationStartup.Configuration);
             }
         }
 
@@ -176,6 +200,20 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             internal static void Reset()
             {
                 _configureInvoked = false;
+            }
+        }
+
+        private class TestConfigurationStartup : IWebJobsStartup
+        {
+            public TestConfigurationStartup(IConfiguration configuration)
+            {
+                Configuration = configuration;
+            }
+
+            public static IConfiguration Configuration { get; set; }
+
+            public void Configure(IWebJobsBuilder builder)
+            {
             }
         }
 

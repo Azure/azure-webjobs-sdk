@@ -8,6 +8,7 @@ using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Configuration;
 using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Azure.WebJobs.Host.Hosting;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Loggers;
@@ -38,6 +39,17 @@ namespace Microsoft.Azure.WebJobs
         /// <param name="services"></param>
         /// <returns></returns>
         public static IWebJobsBuilder AddWebJobs(this IServiceCollection services, Action<JobHostOptions> configure)
+        {
+            return services.AddWebJobs(configure, null);
+        }
+
+        /// <summary>
+        /// Adds the WebJobs services to the provided <see cref="IServiceCollection"/>.
+        /// </summary>
+        /// <param name="services">The service collection to populate.</param>
+        /// <param name="configure">Additional configuration callback.</param>
+        /// <param name="context">The host builder context. If non-null, this enables startup classes to receive the host IConfiguration and/or IHostingEnvironment as constructor arguments.</param>
+        public static IWebJobsBuilder AddWebJobs(this IServiceCollection services, Action<JobHostOptions> configure, HostBuilderContext context)
         {
             if (services == null)
             {
@@ -124,7 +136,9 @@ namespace Microsoft.Azure.WebJobs
                     section.Bind(options);
                 });
 
-            var builder = new WebJobsBuilder(services);
+            var builder = context == null
+                ? new WebJobsBuilder(services)
+                : new WebJobsBuilderWithHostContext(services, context);
             builder.AddBuiltInBindings();
 
             return builder;

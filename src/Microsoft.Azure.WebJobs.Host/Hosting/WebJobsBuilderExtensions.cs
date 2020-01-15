@@ -11,6 +11,7 @@ using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
@@ -81,7 +82,9 @@ namespace Microsoft.Azure.WebJobs
                 throw new ArgumentException($"The {nameof(startupType)} argument must be an implementation of {typeof(IWebJobsStartup).FullName}");
             }
 
-            IWebJobsStartup startup = (IWebJobsStartup)Activator.CreateInstance(startupType);
+            IWebJobsStartup startup = builder is ISupportsStartupInstantiation startupInit
+                ? startupInit.CreateStartupInstance(startupType)
+                : (IWebJobsStartup)Activator.CreateInstance(startupType);
 
             if (loggerFactory == NullLoggerFactory.Instance)
             {

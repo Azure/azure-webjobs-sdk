@@ -43,7 +43,7 @@ namespace Microsoft.Extensions.Hosting
 
             builder.ConfigureServices((context, services) =>
             {
-                IWebJobsBuilder webJobsBuilder = services.AddWebJobs(configureOptions);
+                IWebJobsBuilder webJobsBuilder = services.AddWebJobs(configureOptions, context);
                 configure(context, webJobsBuilder);
 
                 services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, JobHostService>());
