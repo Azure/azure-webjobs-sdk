@@ -175,7 +175,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             foreach (var item in blobs)
             {
                 ICloudBlob log = item as ICloudBlob;
-                if (log != null)
+                if (log != null && log.Metadata.ContainsKey(LogType))
                 {
                     // we will exclude the file if the file does not have log entries in the interested time range.
                     string logType = log.Metadata[LogType];
