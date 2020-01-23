@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\build\common.props" />
   <PropertyGroup>
-    <Version>4.0.0$(VersionSuffix)</Version>
+    <Version>$(LoggingVersion)</Version>
+    <InformationalVersion>$(Version) Commit hash: $(CommitHash)</InformationalVersion>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>Microsoft.Azure.WebJobs.Logging</PackageId>
     <Description>This package contains the runtime assemblies for Microsoft.Azure.WebJobs.Logging. For more information, please visit http://go.microsoft.com/fwlink/?LinkID=320971</Description>

@@ -6,7 +6,8 @@
   <Import Project="..\..\build\common.props" />  
   
   <PropertyGroup>
-    <Version>4.0.0$(VersionSuffix)</Version>
+    <Version>$(HostStorageVersion)</Version>
+    <InformationalVersion>$(Version) Commit hash: $(CommitHash)</InformationalVersion>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>Microsoft.Azure.WebJobs.Host.Storage</AssemblyName>
   </PropertyGroup>  
