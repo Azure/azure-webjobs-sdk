@@ -1,8 +1,11 @@
 <Project>
   <PropertyGroup>
-    <!-- Extensions can have independent versions and only increment when released -->
+    <!-- Packages can have independent versions and only increment when released -->
     <Version>3.0.16$(VersionSuffix)</Version>
-    <ExtensionsStorageVersion>4.0.0$(VersionSuffix)</ExtensionsStorageVersion>
+    <ExtensionsStorageVersion>4.0.0-preview1$(VersionSuffix)</ExtensionsStorageVersion>
+    <HostStorageVersion>4.0.0$(VersionSuffix)</HostStorageVersion>
+    <LoggingVersion>4.0.0$(VersionSuffix)</LoggingVersion>
+    
     <TargetFramework>netstandard2.0</TargetFramework>
     <DebugType>embedded</DebugType>      
     <LatestCommit Condition="$(LatestCommit) == ''">$(CommitHash)</LatestCommit>
