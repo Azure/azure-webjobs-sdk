@@ -2,7 +2,7 @@
   <PropertyGroup>
     <!-- Extensions can have independent versions and only increment when released -->
     <Version>3.0.15$(VersionSuffix)</Version>
-    <ExtensionsStorageVersion>3.0.10$(VersionSuffix)</ExtensionsStorageVersion>
+    <ExtensionsStorageVersion>3.0.11$(VersionSuffix)</ExtensionsStorageVersion>
 
     <TargetFramework>netstandard2.0</TargetFramework>
     <DebugType>embedded</DebugType>      
