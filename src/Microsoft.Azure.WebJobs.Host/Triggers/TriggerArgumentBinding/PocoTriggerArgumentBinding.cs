@@ -39,22 +39,31 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             Dictionary<string, object> bindingData,
             ValueBindingContext context)
         {
-            string json = await this.ConvertToStringAsync(value);
-
             object obj;
-            try
+
+            // Hooks can have their own implementation of converting from TMessage to object
+            if (Hooks is ICustomPocoConvertor<TMessage> customPocoConvertor)
             {
-                obj = JsonConvert.DeserializeObject(json, this.ElementType);
+                obj = customPocoConvertor.Convert(value, this.ElementType);
             }
-            catch (JsonException e)
+            else
             {
-                // Easy to have the queue payload not deserialize properly. So give a useful error. 
-                string msg = string.Format(CultureInfo.CurrentCulture,
-@"Binding parameters to complex objects (such as '{0}') uses Json.NET serialization. 
+                string json = await this.ConvertToStringAsync(value);
+
+                try
+                {
+                    obj = JsonConvert.DeserializeObject(json, this.ElementType);
+                }
+                catch (JsonException e)
+                {
+                    // Easy to have the queue payload not deserialize properly. So give a useful error. 
+                    string msg = string.Format(CultureInfo.CurrentCulture,
+    @"Binding parameters to complex objects (such as '{0}') uses Json.NET serialization. 
 1. Bind the parameter type as 'string' instead of '{0}' to get the raw values and avoid JSON deserialization, or
 2. Change the queue payload to be valid json. The JSON parser failed: {1}
 ", this.ElementType.Name, e.Message);
-                throw new InvalidOperationException(msg);
+                    throw new InvalidOperationException(msg);
+                }
             }
 
             if (bindingData != null && _provider != null)
