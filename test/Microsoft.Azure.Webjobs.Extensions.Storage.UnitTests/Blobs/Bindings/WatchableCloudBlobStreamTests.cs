@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Blobs.Bindings;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage.Blob;
 using Moq;
 using Xunit;
 

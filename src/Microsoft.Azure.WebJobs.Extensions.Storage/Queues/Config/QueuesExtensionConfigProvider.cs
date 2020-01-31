@@ -11,7 +11,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Queues.Triggers;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.Azure.Storage.Queue;
 using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Queues.Config
@@ -178,7 +178,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Config
 
             private CloudQueueMessage ConvertByteArrayToCloudQueueMessage(byte[] arg, QueueAttribute attrResolved)
             {
-                return CloudQueueMessage.CreateCloudQueueMessageFromByteArray(arg);
+                return new CloudQueueMessage(arg);
             }
 
             private CloudQueueMessage ConvertStringToCloudQueueMessage(string arg, QueueAttribute attrResolved)

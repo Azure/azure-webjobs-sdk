@@ -14,9 +14,9 @@ using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.Storage.Queue;
 using Xunit;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 

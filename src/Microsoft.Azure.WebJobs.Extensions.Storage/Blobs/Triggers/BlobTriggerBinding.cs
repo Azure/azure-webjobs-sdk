@@ -16,7 +16,7 @@ using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
 {

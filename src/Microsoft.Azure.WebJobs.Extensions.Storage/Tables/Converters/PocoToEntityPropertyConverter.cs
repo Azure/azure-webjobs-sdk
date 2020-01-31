@@ -3,7 +3,7 @@
 
 using Microsoft.Azure.WebJobs.Host.Converters;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.WindowsAzure.Storage.Table;
+using Microsoft.Azure.Cosmos.Table;
 using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Host.Tables.Converters

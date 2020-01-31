@@ -7,8 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Extensions.Storage;
 using Microsoft.Azure.WebJobs.Host.Timers;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {

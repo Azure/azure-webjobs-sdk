@@ -5,8 +5,8 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 
 namespace FakeStorage
 {
@@ -126,6 +126,31 @@ namespace FakeStorage
             {
                 throw new ObjectDisposedException(null);
             }
+        }
+
+        public override void Commit()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ICancellableAsyncResult BeginCommit(AsyncCallback callback, object state)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void EndCommit(IAsyncResult asyncResult)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ICancellableAsyncResult BeginFlush(AsyncCallback callback, object state)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void EndFlush(IAsyncResult asyncResult)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -9,8 +9,8 @@ using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Queue;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests

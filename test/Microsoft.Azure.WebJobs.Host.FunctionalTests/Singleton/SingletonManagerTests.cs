@@ -16,8 +16,8 @@ using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 using Moq;
 using Xunit;
 using SingletonLockHandle = Microsoft.Azure.WebJobs.Host.StorageBaseDistributedLockManager.SingletonLockHandle;
@@ -166,7 +166,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
                 return TestLeaseId;
             });
 
-            _mockStorageBlob.Setup(p => p.UploadTextAsync(string.Empty, null, null, null, null, cancellationToken)).Returns(Task.FromResult(true));
+            _mockStorageBlob.Setup(p => p.UploadTextAsync(string.Empty, cancellationToken)).Returns(Task.FromResult(true));
             //_mockStorageBlob.SetupGet(p => p.Metadata).Returns(_mockBlobMetadata);
             _mockStorageBlob.Setup(p => p.SetMetadataAsync(It.Is<AccessCondition>(q => q.LeaseId == TestLeaseId), null, null, cancellationToken)).Returns(Task.FromResult(true));
             _mockStorageBlob.Setup(p => p.ReleaseLeaseAsync(It.Is<AccessCondition>(q => q.LeaseId == TestLeaseId), null, null, cancellationToken)).Returns(Task.FromResult(true));

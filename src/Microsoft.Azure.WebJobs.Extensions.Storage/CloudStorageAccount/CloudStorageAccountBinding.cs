@@ -6,7 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Converters;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.WindowsAzure.Storage;
+using Microsoft.Azure.Storage;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings.StorageAccount
 {

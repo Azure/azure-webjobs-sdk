@@ -4,7 +4,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage.Blob;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests

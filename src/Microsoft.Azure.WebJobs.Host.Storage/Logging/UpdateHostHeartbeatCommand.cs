@@ -4,9 +4,9 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.Storage;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Timers;
-using Microsoft.WindowsAzure.Storage;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {

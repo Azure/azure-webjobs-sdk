@@ -12,9 +12,9 @@ using Microsoft.Azure.WebJobs.Extensions.Storage;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {

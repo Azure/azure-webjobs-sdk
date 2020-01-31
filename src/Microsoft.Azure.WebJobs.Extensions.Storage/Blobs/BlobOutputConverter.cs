@@ -4,7 +4,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Converters;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs
 {

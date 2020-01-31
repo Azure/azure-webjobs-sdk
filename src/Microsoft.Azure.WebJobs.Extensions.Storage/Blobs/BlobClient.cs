@@ -5,8 +5,8 @@ using System;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Microsoft.Azure.WebJobs.Description;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs
 {

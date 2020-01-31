@@ -5,8 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
+using Microsoft.Azure.Cosmos.Table;
 
 namespace FakeStorage
 {
@@ -105,34 +104,29 @@ namespace FakeStorage
             return Task.FromResult(_store.Execute(_tableName, operation));
         }
 
-        public override Task<IList<TableResult>> ExecuteBatchAsync(TableBatchOperation batch)
+        public override Task<TableBatchResult> ExecuteBatchAsync(TableBatchOperation batch, CancellationToken cancellationToken)
         {
             return Task.FromResult(_store.ExecuteBatch(_tableName, batch));
         }
 
-        public override Task<IList<TableResult>> ExecuteBatchAsync(TableBatchOperation batch, TableRequestOptions requestOptions, OperationContext operationContext)
+        public override Task<TableQuerySegment<DynamicTableEntity>> ExecuteQuerySegmentedAsync(TableQuery query, TableContinuationToken token, CancellationToken cancellationToken)
         {
-            return Task.FromResult(_store.ExecuteBatch(_tableName, batch));
+            return base.ExecuteQuerySegmentedAsync(query, token, cancellationToken);
         }
 
-        public override Task<IList<TableResult>> ExecuteBatchAsync(TableBatchOperation batch, TableRequestOptions requestOptions, OperationContext operationContext, CancellationToken cancellationToken)
+        public override Task<TableQuerySegment<TResult>> ExecuteQuerySegmentedAsync<TElement, TResult>(TableQuery<TElement> query, EntityResolver<TResult> resolver, TableContinuationToken token, CancellationToken cancellationToken)
         {
-            return Task.FromResult(_store.ExecuteBatch(_tableName, batch));
+            return base.ExecuteQuerySegmentedAsync(query, resolver, token, cancellationToken);
         }
 
-        public override Task<TableQuerySegment> ExecuteQuerySegmentedAsync(TableQuery query, TableContinuationToken token)
+        public override Task<TableQuerySegment<TElement>> ExecuteQuerySegmentedAsync<TElement>(TableQuery<TElement> query, TableContinuationToken token, CancellationToken cancellationToken)
         {
-            return base.ExecuteQuerySegmentedAsync(query, token);
+            return base.ExecuteQuerySegmentedAsync(query, token, cancellationToken);
         }
 
-        public override Task<TableQuerySegment> ExecuteQuerySegmentedAsync(TableQuery query, TableContinuationToken token, TableRequestOptions requestOptions, OperationContext operationContext)
+        public override Task<TableQuerySegment<TResult>> ExecuteQuerySegmentedAsync<TResult>(TableQuery query, EntityResolver<TResult> resolver, TableContinuationToken token, CancellationToken cancellationToken)
         {
-            return base.ExecuteQuerySegmentedAsync(query, token, requestOptions, operationContext);
-        }
-
-        public override Task<TableQuerySegment> ExecuteQuerySegmentedAsync(TableQuery query, TableContinuationToken token, TableRequestOptions requestOptions, OperationContext operationContext, CancellationToken cancellationToken)
-        {
-            return base.ExecuteQuerySegmentedAsync(query, token, requestOptions, operationContext, cancellationToken);
+            return base.ExecuteQuerySegmentedAsync(query, resolver, token, cancellationToken);
         }
 
         public override Task<TableQuerySegment<TResult>> ExecuteQuerySegmentedAsync<T, TResult>(TableQuery<T> query, EntityResolver<TResult> resolver, TableContinuationToken token)

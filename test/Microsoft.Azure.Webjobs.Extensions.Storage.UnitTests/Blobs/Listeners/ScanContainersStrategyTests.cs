@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage.Blob;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners

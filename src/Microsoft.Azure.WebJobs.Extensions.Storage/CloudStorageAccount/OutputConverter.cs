@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using Microsoft.Azure.WebJobs.Host.Converters;
-using Microsoft.WindowsAzure.Storage;
+using Microsoft.Azure.Storage;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings.StorageAccount
 {

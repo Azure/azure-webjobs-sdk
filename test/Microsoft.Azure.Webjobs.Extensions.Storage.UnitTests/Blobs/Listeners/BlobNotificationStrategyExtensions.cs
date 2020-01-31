@@ -6,7 +6,7 @@ using System.Threading;
 using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Timers;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
 {

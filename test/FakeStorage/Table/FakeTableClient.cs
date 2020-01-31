@@ -1,10 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Auth;
-using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage.Table;
+using Microsoft.Azure.Cosmos.Table;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -20,7 +17,7 @@ namespace FakeStorage
         internal FakeAccount _account;
 
         public FakeTableClient(FakeAccount account) :
-            base(FakeUri, account._creds)
+            base(FakeUri, account._tableCreds)
         {
             _account = account;
         }

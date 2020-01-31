@@ -11,7 +11,7 @@ using Microsoft.Azure.WebJobs.Host.Properties;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.Azure.Storage.Queue;
 using Newtonsoft.Json;
 using Xunit;
 

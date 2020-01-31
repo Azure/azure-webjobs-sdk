@@ -1,15 +1,15 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Queue;
-using Microsoft.WindowsAzure.Storage.Queue.Protocol;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Queue;
 using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.Storage.Queue.Protocol;
 
 namespace FakeStorage
 {
@@ -162,7 +162,11 @@ namespace FakeStorage
         public override Task DeleteMessageAsync(CloudQueueMessage message, QueueRequestOptions options, OperationContext operationContext)
         {
             // throw new NotImplementedException();
-            // return base.DeleteMessageAsync(message, options, operationContext);
+            return base.DeleteMessageAsync(message, options, operationContext);            
+        }
+
+        public override Task DeleteMessageAsync(CloudQueueMessage message, QueueRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
+        {
             _store.DeleteMessage(this.Name, message);
             return Task.CompletedTask;
         }

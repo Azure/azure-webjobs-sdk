@@ -14,7 +14,7 @@ using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.Azure.Storage.Queue;
 using Newtonsoft.Json;
 
 namespace WebJobs.Extensions.Storage
