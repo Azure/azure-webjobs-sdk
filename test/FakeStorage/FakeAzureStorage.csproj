@@ -6,7 +6,7 @@
 	  <AssemblyName>FakeAzureStorage</AssemblyName>
 	  <RootNamespace>FakeAzureStorage</RootNamespace>
   </PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<WarningsAsErrors />
@@ -21,10 +21,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="StyleCop.Analyzers" Version="1.1.0-beta004">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.5" />
     <PackageReference Include="Microsoft.Azure.Storage.Blob" Version="11.1.0" />
     <PackageReference Include="Microsoft.Azure.Storage.Queue" Version="11.1.0" />
-    <PackageReference Include="StyleCop.Analyzers" Version="1.1.0-beta004" />
   </ItemGroup>
 
 </Project>
