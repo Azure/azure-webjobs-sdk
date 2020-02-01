@@ -13,20 +13,20 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
     // Generally usable binding for trigger parameters using the trigger hook strategy. 
     internal class StrategyTriggerBinding<TMessage, TTriggerValue> : ITriggerBinding
     {
-        private readonly ITriggerBindingStrategy<TMessage, TTriggerValue> _hooks;
+        private readonly ITriggerBindingStrategy<TMessage, TTriggerValue> _triggerBindingStrategy;
         private readonly ITriggerDataArgumentBinding<TTriggerValue> _argumentBinding;
         private readonly Func<ListenerFactoryContext, bool, Task<IListener>> _createListener;
         private readonly ParameterDescriptor _parameterDescriptor;
         private readonly bool _singleDispatch;
 
         public StrategyTriggerBinding(
-            ITriggerBindingStrategy<TMessage, TTriggerValue> hooks,
+            ITriggerBindingStrategy<TMessage, TTriggerValue> triggerBindingStrategy,
             ITriggerDataArgumentBinding<TTriggerValue> argumentBinding,
             Func<ListenerFactoryContext, bool, Task<IListener>> createListener,
             ParameterDescriptor parameterDescriptor,
             bool singleDispatch)
         {
-            this._hooks = hooks;
+            this._triggerBindingStrategy = triggerBindingStrategy;
             this._argumentBinding = argumentBinding;
             this._createListener = createListener;
             this._parameterDescriptor = parameterDescriptor;
@@ -55,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             string invokeString = value as string;
             if (invokeString != null)
             {
-                value = _hooks.ConvertFromString(invokeString);
+                value = _triggerBindingStrategy.ConvertFromString(invokeString);
             }
 
             TTriggerValue v2 = (TTriggerValue)value;

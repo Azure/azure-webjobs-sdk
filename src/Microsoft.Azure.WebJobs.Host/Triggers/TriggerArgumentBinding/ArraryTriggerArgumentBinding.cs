@@ -14,18 +14,18 @@ namespace Microsoft.Azure.WebJobs.Host
         private readonly SimpleTriggerArgumentBinding<TMessage, TTriggerValue> _innerBinding;
 
         public ArrayTriggerArgumentBinding(
-            ITriggerBindingStrategy<TMessage, TTriggerValue> hooks,
+            ITriggerBindingStrategy<TMessage, TTriggerValue> triggerBindingStrategy,
             SimpleTriggerArgumentBinding<TMessage, TTriggerValue> innerBinding,
-            IConverterManager converterManager) : base(hooks, converterManager, false)
+            IConverterManager converterManager) : base(triggerBindingStrategy, converterManager, false)
         {
             this._innerBinding = innerBinding;
         }
 
         public override async Task<ITriggerData> BindAsync(TTriggerValue value, ValueBindingContext context)
         {
-            Dictionary<string, object> bindingData = Hooks.GetBindingData(value);
+            Dictionary<string, object> bindingData = TriggerBindingStrategy.GetBindingData(value);
 
-            TMessage[] arrayRaw = Hooks.BindMultiple(value, context);
+            TMessage[] arrayRaw = TriggerBindingStrategy.BindMultiple(value, context);
 
             int len = arrayRaw.Length;
             Type elementType = _innerBinding.ElementType;
