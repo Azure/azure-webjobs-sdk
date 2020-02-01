@@ -5,6 +5,7 @@ using System;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Description;
+using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,9 +15,85 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
-    // Unit test for exercising Host.Call passing route data. 
+    /// <summary>
+    /// Unit tests for the binding data pipeline using the Host.Call API.
+    /// </summary>
     public class HostCallTestsWithBindingData
     {
+        [Fact]
+        public async Task InvokeTrigger_ExplicitBindingData()
+        {
+            var obj = new Functions2.Payload
+            {
+                k1 = 100,
+                k2 = 200
+            };
+
+            string result = await Invoke<Functions2, TestExtension>(new
+            {
+                trigger = NewTriggerObject(obj), // supplies k1,k2
+                k1 = 111 // overwrites trigger.k1
+            });
+
+            // Explicit bindingData takes precedence over binding data inferred from the trigger object.
+            Assert.Equal("111-x;200-y;111", result);
+        }
+
+        [Fact]
+        public async Task InvokeTrigger_CustomPocoConversion()
+        {
+            var obj = new Functions2.Payload
+            {
+                k1 = 100,
+                k2 = 200
+            };
+
+            string result = await Invoke<Functions2, TestExtensionWithPocoConverter>(new
+            {
+                trigger = NewTriggerObject(obj),
+                k1 = 111
+            });
+
+            Assert.Equal("111-x;200-y;111", result);
+        }
+
+        [Fact]
+        public async Task InvokeWithBindingDataOnly_NoParameter()
+        {
+            string result = await Invoke<Functions, TestExtension>(new { k1 = 100, k2 = 200 });
+
+            Assert.Equal("100-x;200-y;100", result);
+        }
+
+        [Fact]
+        public async Task InvokeWithParameterAndBindingData()
+        {
+            string result = await Invoke<Functions, TestExtension>(new { k1 = 100, k2 = 200, p1 = "override" });
+            // Providing a direct parameter takes precedence overbinding data
+
+            Assert.Equal("override;200-y;100", result);
+        }
+
+        [Fact]
+        public async Task MissingBindingDataValues_Throws()
+        {
+            try
+            {
+                string result = await Invoke<Functions, TestExtension>(new { k1 = 100 });
+            }
+            catch (FunctionInvocationException e)
+            {
+                // There error should specifically be with p2. p1 and k1 binds ok since we supplied k1. 
+                var msg1 = "Exception binding parameter 'p2'";
+                Assert.Equal(msg1, e.InnerException.Message);
+
+                var msg2 = "No value for named parameter 'k2'.";
+                Assert.Equal(msg2, e.InnerException.InnerException.Message);
+                return;
+            }
+            Assert.True(false, "Invoker should have failed");
+        }
+
         public class FunctionBase
         {
             // Derived functions write to this variable, test harness can read from it.
@@ -59,22 +136,22 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             public string Path { get; set; }
         }
 
-        public class FakeExtClient : IExtensionConfigProvider, IConverter<TestAttribute, string>
+        public class TestExtension : IExtensionConfigProvider, IConverter<TestAttribute, string>
         {
             private readonly INameResolver _nameResolver;
             private readonly IConverterManager _converterManager;
 
-            public FakeExtClient(INameResolver nameResolver, IConverterManager converterManager)
+            public TestExtension(INameResolver nameResolver, IConverterManager converterManager)
             {
                 _nameResolver = nameResolver;
                 _converterManager = converterManager;
             }
 
-            public void Initialize(ExtensionConfigContext context)
+            public virtual void Initialize(ExtensionConfigContext context)
             {
                 // Add [Test] support
                 var rule = context.AddBindingRule<TestAttribute>();
-                rule.BindToInput<string>(typeof(FakeExtClient), _nameResolver, _converterManager);
+                rule.BindToInput<string>(typeof(TestExtension), _nameResolver, _converterManager);
 
                 // Add [FakeQueueTrigger] support.                 
                 context.AddConverter<string, FakeQueueData>(x => new FakeQueueData { Message = x });
@@ -90,22 +167,31 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
-        // Explicit bindingData takes precedence over binding data inferred from the trigger object. 
-        [Fact]
-        public async Task InvokeTrigger()
+        public class TestExtensionWithPocoConverter : TestExtension
         {
-            var obj = new Functions2.Payload
+            public TestExtensionWithPocoConverter(INameResolver nameResolver, IConverterManager converterManager) :
+                base(nameResolver, converterManager)
             {
-                k1 = 100,
-                k2 = 200
-            };
+            }
 
-            string result = await Invoke<Functions2>(new
+            public override void Initialize(ExtensionConfigContext context)
             {
-                trigger = NewTriggerObject(obj), // supplies k1,k2
-                k1 = 111 // overwrites trigger.k1
-            });
-            Assert.Equal("111-x;200-y;111", result);
+                base.Initialize(context);
+
+                // provide a custom poco converter
+                // this wil cause the CustomTriggerArgumentBinding to be used rather than
+                // the default PocoTriggerArgumentBinding to be used
+                context.AddOpenConverter<FakeQueueData, OpenType.Poco>(typeof(FakeQueueDataToPocoConverter<>));
+            }
+
+            private class FakeQueueDataToPocoConverter<TElement> : IConverter<FakeQueueData, TElement>
+            {
+                public TElement Convert(FakeQueueData input)
+                {
+                    var result = JsonConvert.DeserializeObject<TElement>(input.Message);
+                    return result;
+                }
+            }
         }
 
         // [FakeQueueTrigger] expects object to come as a FakeQueueDataBatch
@@ -123,45 +209,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             };
         }
 
-        // Invoke with binding data only, no parameters. 
-        [Fact]
-        public async Task InvokeWithBindingData()
-        {
-            string result = await Invoke<Functions>(new { k1 = 100, k2 = 200 });
-            Assert.Equal("100-x;200-y;100", result);
-        }
-
-        // Providing a direct parameter takes precedence overbinding data
-        [Fact]
-        public async Task Parameter_Takes_Precedence()
-        {
-            string result = await Invoke<Functions>(new { k1 = 100, k2 = 200, p1 = "override" });
-            Assert.Equal("override;200-y;100", result);
-        }
-
-        // Get an error when missing values. 
-        [Fact]
-        public async Task Missing()
-        {
-            try
-            {
-                string result = await Invoke<Functions>(new { k1 = 100 });
-            }
-            catch (FunctionInvocationException e)
-            {
-                // There error should specifically be with p2. p1 and k1 binds ok since we supplied k1. 
-                var msg1 = "Exception binding parameter 'p2'";
-                Assert.Equal(msg1, e.InnerException.Message);
-
-                var msg2 = "No value for named parameter 'k2'.";
-                Assert.Equal(msg2, e.InnerException.InnerException.Message);
-                return;
-            }
-            Assert.True(false, "Invoker should have failed");
-        }
-
         // Helper to invoke the method with the given parameters
-        private async Task<string> Invoke<TFunction>(object arguments) where TFunction : FunctionBase, new()
+        private async Task<string> Invoke<TFunction, TExtension>(object arguments) 
+            where TFunction : FunctionBase, new()
+            where TExtension : class, IExtensionConfigProvider
         {
             var activator = new FakeActivator();
             TFunction testInstance = new TFunction();
@@ -170,7 +221,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost<TFunction>(b=>
                 {
-                    b.AddExtension<FakeExtClient>();
+                    b.AddExtension<TExtension>();
                 })
                 .ConfigureServices(services => services.AddSingleton<IJobActivator>(activator))
                 .Build();
