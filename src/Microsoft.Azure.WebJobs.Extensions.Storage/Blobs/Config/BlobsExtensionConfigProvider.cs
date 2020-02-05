@@ -20,9 +20,9 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 {
     [Extension("AzureStorageBlobs", "Blobs")]
     internal class BlobsExtensionConfigProvider : IExtensionConfigProvider,
-        IAsyncConverter<BlobAttribute, CloudBlobContainer>,
-        IAsyncConverter<BlobAttribute, CloudBlobDirectory>,
-        IAsyncConverter<BlobAttribute, BlobsExtensionConfigProvider.MultiBlobContext>
+        IConverter<BlobAttribute, CloudBlobContainer>,
+        IConverter<BlobAttribute, CloudBlobDirectory>,
+        IConverter<BlobAttribute, BlobsExtensionConfigProvider.MultiBlobContext>
     {
         private readonly BlobTriggerAttributeBindingProvider _triggerBinder;
         private StorageAccountProvider _accountProvider;
@@ -106,18 +106,17 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         }
 
         #region Container rules
-        async Task<CloudBlobContainer> IAsyncConverter<BlobAttribute, CloudBlobContainer>.ConvertAsync(
-            BlobAttribute blobAttribute, CancellationToken cancellationToken)
+        CloudBlobContainer IConverter<BlobAttribute, CloudBlobContainer>.Convert(
+            BlobAttribute blobAttribute)
         {
-            var container = await GetContainerAsync(blobAttribute, cancellationToken);
-            return container;
+            return GetContainer(blobAttribute);
         }
 
         // Write-only rule. 
-        async Task<CloudBlobDirectory> IAsyncConverter<BlobAttribute, CloudBlobDirectory>.ConvertAsync(
-            BlobAttribute blobAttribute, CancellationToken cancellationToken)
+        CloudBlobDirectory IConverter<BlobAttribute, CloudBlobDirectory>.Convert(
+            BlobAttribute blobAttribute)
         {
-            var client = await GetClientAsync(blobAttribute, cancellationToken);
+            var client = GetClient(blobAttribute);
 
             BlobPath boundPath = BlobPath.ParseAndValidate(blobAttribute.BlobPath, isContainerBinding: false);
 
@@ -231,14 +230,14 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
         // Initial rule that captures the muti-blob context.
         // Then a converter morphs this to the user type
-        async Task<MultiBlobContext> IAsyncConverter<BlobAttribute, MultiBlobContext>.ConvertAsync(BlobAttribute attr, CancellationToken cancellationToken)
+        MultiBlobContext IConverter<BlobAttribute, MultiBlobContext>.Convert(BlobAttribute attr)
         {
             var path = BlobPath.ParseAndValidate(attr.BlobPath, isContainerBinding: true);
 
             return new MultiBlobContext
             {
                 Prefix = path.BlobName,
-                Container = await GetContainerAsync(attr, cancellationToken)
+                Container = GetContainer(attr)
             };
         }
         #endregion
@@ -286,20 +285,17 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             }
         }
 
-        private Task<CloudBlobClient> GetClientAsync(
-         BlobAttribute blobAttribute,
-         CancellationToken cancellationToken)
+        private CloudBlobClient GetClient(
+         BlobAttribute blobAttribute)
         {
             var account = _accountProvider.Get(blobAttribute.Connection, _nameResolver);
-            var client = account.CreateCloudBlobClient();
-            return Task.FromResult(client);
+            return account.CreateCloudBlobClient();
         }
 
-        private async Task<CloudBlobContainer> GetContainerAsync(
-            BlobAttribute blobAttribute,
-            CancellationToken cancellationToken)
+        private CloudBlobContainer GetContainer(
+            BlobAttribute blobAttribute)
         {
-            var client = await GetClientAsync(blobAttribute, cancellationToken);
+            var client = GetClient(blobAttribute);
 
             BlobPath boundPath = BlobPath.ParseAndValidate(blobAttribute.BlobPath, isContainerBinding: true);
 
@@ -312,7 +308,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
                 CancellationToken cancellationToken,
                 Type requestedType = null)
         {
-            var client = await GetClientAsync(blobAttribute, cancellationToken);
+            var client = GetClient(blobAttribute);
             BlobPath boundPath = BlobPath.ParseAndValidate(blobAttribute.BlobPath);
 
             var container = client.GetContainerReference(boundPath.ContainerName);
@@ -331,8 +327,9 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         }
         private ParameterDescriptor ToBlobDescr(BlobAttribute attr, ParameterInfo parameter, INameResolver nameResolver)
         {
-            // Resolve the connection string to get an account name. 
-            var client = Task.Run(() => GetClientAsync(attr, CancellationToken.None)).GetAwaiter().GetResult();
+            // Resolve the connection string to get an account name.
+            var client = GetClient(attr);
+
             var accountName = client.Credentials.AccountName;
 
             var resolved = nameResolver.ResolveWholeString(attr.BlobPath);
