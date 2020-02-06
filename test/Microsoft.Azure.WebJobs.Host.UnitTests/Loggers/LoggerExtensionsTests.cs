@@ -80,7 +80,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             Assert.Equal(1, logCount);
         }
-
+        
         [Fact]
         public void LogFunctionResultAggregate_CreatesCorrectState()
         {
@@ -120,6 +120,64 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             };
 
             logger.LogFunctionResultAggregate(resultAggregate);
+
+            Assert.Equal(1, logCount);
+        }
+
+
+        [Fact]
+        public void LogEvent_Succeeded_CreatesCorrectState()
+        {
+            int logCount = 0;
+            int id = 2;
+            string eventName = "TestEvent";
+            EventId eventId = new EventId(id, eventName);
+            IDictionary<string, string> state = new Dictionary<string, string>()
+            {
+                { LogConstants.FullNameKey, _functionFullName },
+                { LogConstants.NameKey, _functionShortName },
+                { LogConstants.InvocationIdKey, _invocationId.ToString() }
+            };
+
+            ILogger logger = CreateEventMockLogger<IDictionary<string, object>>(eventId, (l, e, o, ex, f) =>
+            {
+                logCount++;
+                Assert.Equal(LogLevel.Information, l);
+                Assert.Equal(id, e);
+                Assert.Equal(eventName, e.Name);
+                Assert.Null(ex);
+                Assert.Null(f(o, ex));
+
+                Assert.Equal(_functionFullName, o[LogConstants.FullNameKey]);
+                Assert.Equal(_functionShortName, o[LogConstants.NameKey]);
+                Assert.Equal(_invocationId.ToString(), o[LogConstants.InvocationIdKey]);
+            });
+
+            logger.LogEvent(eventId, state);
+
+            Assert.Equal(1, logCount);
+        }
+
+        [Fact]
+        public void LogEvent_Succeeded_WithoutState()
+        {
+            int logCount = 0;
+            int id = 2;
+            string eventName = "TestEvent";
+            EventId eventId = new EventId(id, eventName);
+            IDictionary<string, string> state = new Dictionary<string, string>();
+
+            ILogger logger = CreateEventMockLogger<IDictionary<string, object>>(eventId, (l, e, o, ex, f) =>
+            {
+                logCount++;
+                Assert.Equal(LogLevel.Information, l);
+                Assert.Equal(id, e);
+                Assert.Equal(eventName, e.Name);
+                Assert.Null(ex);
+                Assert.Null(f(o, ex));
+            });
+
+            logger.LogEvent(eventId);
 
             Assert.Equal(1, logCount);
         }
@@ -174,6 +232,19 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 .Callback<LogLevel, EventId, TState, Exception, Func<TState, Exception, string>>((l, e, o, ex, f) =>
                 {
                     callback(l, e, o, ex, f);
+                });
+
+            return mockLogger.Object;
+        }
+
+        private static ILogger CreateEventMockLogger<TState>(EventId eventId, Action<LogLevel, EventId, TState, Exception, Func<TState, Exception, string>> callback)
+        {
+            var mockLogger = new Mock<ILogger>(MockBehavior.Strict);
+            mockLogger
+                .Setup(l => l.Log(It.IsAny<LogLevel>(), It.IsAny<EventId>(), It.IsAny<TState>(), It.IsAny<Exception>(), It.IsAny<Func<TState, Exception, string>>()))
+                .Callback<LogLevel, EventId, TState, Exception, Func<TState, Exception, string>>((l, e, o, ex, f) =>
+                {
+                    callback(l, eventId, o, ex, f);
                 });
 
             return mockLogger.Object;

@@ -126,7 +126,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 await host.GetJobHost().CallAsync(methodInfo, new { input = "function input" });
                 await host.StopAsync();
 
-                Assert.Equal(16, _channel.Telemetries.Count);
+                Assert.Equal(17, _channel.Telemetries.Count);
 
                 // Validate the request
                 RequestTelemetry request = _channel.Telemetries
@@ -168,6 +168,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     .OfType<MetricTelemetry>()
                     .Single();
                 ValidateMetric(metric, testName);
+
+                // We should have 1 event.
+                EventTelemetry customEvent = _channel.Telemetries
+                    .OfType<EventTelemetry>()
+                    .Single();
+                ValidateEvent(customEvent, testName);
             }
         }
 
@@ -994,6 +1000,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     ["min"] = 10.4,
                     ["Max"] = 23
                 });
+
+                logger.LogEvent(new EventId(2, "MyCustomEvent"), new Dictionary<string, string>
+                {
+                    ["MyCustomEventProperty1"] = "Property1",
+                    ["MyCustomEventProperty2"] = "Property2",
+                });
             }
         }
 
@@ -1071,6 +1083,18 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             ValidateCustomScopeProperty(telemetry);
 
             ValidateSdkVersion(telemetry, "af_");
+        }
+
+        private static void ValidateEvent(EventTelemetry telemetry, string expectedOperationName)
+        {
+            Assert.Equal(expectedOperationName, telemetry.Context.Operation.Name);
+            Assert.NotNull(telemetry.Context.Operation.Id);
+            Assert.Equal(LogCategories.CreateFunctionUserCategory(expectedOperationName), telemetry.Properties[LogConstants.CategoryNameKey]);
+            Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
+
+            Assert.Equal("MyCustomEvent", telemetry.Name);
+            Assert.Equal("Property1", telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}MyCustomEventProperty1"]);
+            ValidateCustomScopeProperty(telemetry);
         }
 
         private static void ValidateCustomScopeProperty(ISupportProperties telemetry)

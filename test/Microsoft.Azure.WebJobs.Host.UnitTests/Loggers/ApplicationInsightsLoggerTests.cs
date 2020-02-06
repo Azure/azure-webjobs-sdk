@@ -761,6 +761,118 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Empty(_channel.Telemetries.OfType<RequestTelemetry>());
         }
 
+        [Fact]
+        public void LogEvent_NoProperties()
+        {
+            ILogger logger = CreateLogger(_functionCategoryName);
+            Guid scopeGuid = Guid.NewGuid();
+
+            string expectedOperationId, expectedRequestId;
+            using (logger.BeginFunctionScope(CreateFunctionInstance(scopeGuid), _hostInstanceId))
+            {
+                logger.LogEvent(new EventId(3, "CustomEvent"));
+
+                expectedRequestId = $"|{Activity.Current.TraceId.ToHexString()}.{Activity.Current.SpanId.ToHexString()}.";
+                expectedOperationId = Activity.Current.TraceId.ToHexString();
+            }
+
+            var telemetry = _channel.Telemetries.Single() as EventTelemetry;
+
+            Assert.Equal(5, telemetry.Properties.Count);
+            Assert.Equal(Process.GetCurrentProcess().Id.ToString(), telemetry.Properties[LogConstants.ProcessIdKey]);
+            Assert.Equal(scopeGuid.ToString(), telemetry.Properties[LogConstants.InvocationIdKey]);
+            Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
+            Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
+
+            // metrics are logged with EventId=1
+            Assert.Equal("3", telemetry.Properties[LogConstants.EventIdKey]);
+            Assert.Equal("CustomEvent", telemetry.Name);
+
+            Assert.Equal(expectedOperationId, telemetry.Context.Operation.Id);
+            Assert.Equal(expectedRequestId, telemetry.Context.Operation.ParentId);
+            Assert.Equal(_functionShortName, telemetry.Context.Operation.Name);
+        }
+
+        [Fact]
+        public void LogEvent_AllProperties()
+        {
+            ILogger logger = CreateLogger(_functionCategoryName);
+            Guid scopeGuid = Guid.NewGuid();
+
+            string expectedOperationId, expectedRequestId;
+            using (logger.BeginFunctionScope(CreateFunctionInstance(scopeGuid), _hostInstanceId))
+            {
+                expectedRequestId = $"|{Activity.Current.TraceId.ToHexString()}.{Activity.Current.SpanId.ToHexString()}.";
+                expectedOperationId = Activity.Current.TraceId.ToHexString();
+
+                var props = new Dictionary<string, string>
+                {
+                    ["MyCustomProp1"] = "abc",
+                    ["MyCustomProp2"] = "def",
+                };
+                logger.LogEvent(new EventId(2, "CustomEvent"), props);
+            }
+
+            var telemetry = _channel.Telemetries.Single() as EventTelemetry;
+
+            Assert.Equal(7, telemetry.Properties.Count);
+            Assert.Equal(Process.GetCurrentProcess().Id.ToString(), telemetry.Properties[LogConstants.ProcessIdKey]);
+            Assert.Equal(scopeGuid.ToString(), telemetry.Properties[LogConstants.InvocationIdKey]);
+            Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
+            Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
+            Assert.Equal("abc", telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}MyCustomProp1"]);
+            Assert.Equal("def", telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}MyCustomProp2"]);
+
+            // metrics are logged with EventId=1
+            Assert.Equal("2", telemetry.Properties[LogConstants.EventIdKey]);
+
+            Assert.Equal(expectedOperationId, telemetry.Context.Operation.Id);
+            Assert.Equal(expectedRequestId, telemetry.Context.Operation.ParentId);
+            Assert.Equal(_functionShortName, telemetry.Context.Operation.Name);
+
+            Assert.Equal("CustomEvent", telemetry.Name);
+        }
+
+        [Fact]
+        public void LogEvent_AllProperties_Lowercase()
+        {
+            ILogger logger = CreateLogger(_functionCategoryName);
+            Guid scopeGuid = Guid.NewGuid();
+
+            string expectedOperationId, expectedRequestId;
+            using (logger.BeginFunctionScope(CreateFunctionInstance(scopeGuid), _hostInstanceId))
+            {
+                var props = new Dictionary<string, string>
+                {
+                    ["MyCustomProp1"] = "abc",
+                    ["MyCustomProp2"] = "def",
+                };
+                logger.LogEvent(new EventId(2, "CustomEvent"), props);
+
+                expectedRequestId = $"|{Activity.Current.TraceId.ToHexString()}.{Activity.Current.SpanId.ToHexString()}.";
+                expectedOperationId = Activity.Current.TraceId.ToHexString();
+            }
+
+            var telemetry = _channel.Telemetries.Single() as EventTelemetry;
+
+            Assert.Equal(7, telemetry.Properties.Count);
+            Assert.Equal(Process.GetCurrentProcess().Id.ToString(), telemetry.Properties[LogConstants.ProcessIdKey]);
+            Assert.Equal(scopeGuid.ToString(), telemetry.Properties[LogConstants.InvocationIdKey]);
+            Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
+            Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
+            Assert.Equal("abc", telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}MyCustomProp1"]);
+            Assert.Equal("def", telemetry.Properties[$"{LogConstants.CustomPropertyPrefix}MyCustomProp2"]);
+
+            // metrics are logged with EventId=1
+            Assert.Equal("2", telemetry.Properties[LogConstants.EventIdKey]);
+
+            Assert.Equal(expectedOperationId, telemetry.Context.Operation.Id);
+            Assert.Equal(expectedRequestId, telemetry.Context.Operation.ParentId);
+            Assert.Equal(_functionShortName, telemetry.Context.Operation.Name);
+
+            Assert.Equal("CustomEvent", telemetry.Name);
+        }
+
         private async Task Level1(Guid asyncLocalSetting)
         {
             // Push and pop values onto the dictionary at various levels. Make sure they

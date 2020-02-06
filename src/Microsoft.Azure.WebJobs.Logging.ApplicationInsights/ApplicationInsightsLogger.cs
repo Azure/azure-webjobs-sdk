@@ -87,6 +87,13 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     return;
                 }
 
+                // Log a event from user logs only
+                if (_isUserFunction && !string.IsNullOrEmpty(eventId.Name))
+                {
+                    LogEvent(eventId.Name, stateValues);
+                    return;
+                }
+
                 // Log a function result
                 if (_categoryName == LogCategories.Results)
                 {
@@ -164,6 +171,21 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             }
 
             _telemetryClient.TrackMetric(telemetry);
+        }
+
+        private void LogEvent(string eventName, IEnumerable<KeyValuePair<string, object>> values)
+        {
+            EventTelemetry eventTelemetry = new EventTelemetry(eventName);
+
+            // Always apply scope first to allow state to override.
+            ApplyScopeProperties(eventTelemetry);
+
+            foreach (var entry in values)
+            {
+                ApplyProperty(eventTelemetry, entry, LogConstants.CustomPropertyPrefix);
+            }
+
+            _telemetryClient.TrackEvent(eventTelemetry);
         }
 
         // Applies scope properties; filters most system properties, which are used internally

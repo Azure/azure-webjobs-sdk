@@ -33,6 +33,19 @@ namespace Microsoft.Extensions.Logging
             logger?.Log(LogLevel.Information, LogConstants.MetricEventId, payload, null, (s, e) => null);
         }
 
+        /// <summary>
+        /// Logs a event.
+        /// </summary>
+        /// <param name="logger">The ILogger.</param>
+        /// <param name="eventId">The event to log.</param>
+        /// <param name="properties">Named string values for classifying and filtering metrics.</param>
+        public static void LogEvent(this ILogger logger, EventId eventId, IDictionary<string, string> properties = null)
+        {
+            IDictionary<string, string> state = properties ?? new Dictionary<string, string>();
+            IDictionary<string, object> payload = new ReadOnlyDictionary<string, object>(ToLogState(state));
+            logger?.Log(LogLevel.Information, eventId, payload, null, (s, e) => null);
+        }
+
         internal static void LogFunctionResult(this ILogger logger, FunctionInstanceLogEntry logEntry)
         {
             bool succeeded = logEntry.Exception == null;
@@ -69,6 +82,22 @@ namespace Microsoft.Extensions.Logging
                     [ScopeKeys.Event] = LogConstants.FunctionStartEvent,
                     [ScopeKeys.HostInstanceId] = hostInstanceId.ToString()
                 });
+        }
+
+        private static IDictionary<string, object> ToLogState(IDictionary<string, string> propeties)
+        {
+            if (propeties == null)
+            {
+                return null;
+            }
+
+            IDictionary<string, object> payload = new Dictionary<string, object>();
+            foreach (var pair in propeties)
+            {
+                payload.Add(pair.Key, pair.Value);
+            }
+
+            return payload;
         }
     }
 }
