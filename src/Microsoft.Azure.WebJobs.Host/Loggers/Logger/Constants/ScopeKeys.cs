@@ -27,5 +27,10 @@ namespace Microsoft.Azure.WebJobs.Logging
         /// A key identifying the current host instance.
         /// </summary>
         public const string HostInstanceId = "MS_HostInstanceId";
+
+        /// <summary>
+        /// A key identifying the current invocation trigger details.
+        /// </summary>
+        public const string TriggerDetails = "MS_TriggerDetails";
     }
 }
