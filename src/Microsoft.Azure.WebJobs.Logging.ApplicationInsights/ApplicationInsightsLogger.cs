@@ -11,10 +11,8 @@ using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
-using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
@@ -45,7 +43,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 ScopeKeys.FunctionInvocationId,
                 ScopeKeys.FunctionName,
                 ScopeKeys.HostInstanceId,
-                OperationContext
+                OperationContext,
+                ScopeKeys.TriggerDetails
             };
 
         public ApplicationInsightsLogger(TelemetryClient client, string categoryName, ApplicationInsightsLoggerOptions loggerOptions)
@@ -383,6 +382,10 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                             // this is set in the WebJobs initializer,
                             // we will ignore it here
                             break;
+                        case LogConstants.MessageEnqueuedTimeKey:
+                            // this is populated when creating telemetry
+                            // we will ignore it here
+                            break;
                         case LogConstants.DurationKey:
                             if (prop.Value is TimeSpan duration)
                             {
@@ -478,31 +481,45 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     IEnumerable<Activity> links = allScopes.GetValueOrDefault<IEnumerable<Activity>>("Links");
                     var activities = links as Activity[] ?? links?.ToArray();
 
-                    if (activities != null && activities.Length == 1)
+                    if (activities != null)
                     {
-                        operation = _telemetryClient.StartOperation<RequestTelemetry>(activities[0]);
-                        operation.Telemetry.Name = functionName;
+                        if (activities.Length == 1)
+                        {
+                            operation = _telemetryClient.StartOperation<RequestTelemetry>(activities[0]);
+                            operation.Telemetry.Name = functionName;
+                        }
+                        else
+                        {
+                            operation = CreateRequestFromLinks(activities, functionName);
+                        }
+
+                        if (this.TryGetAverageTimeInQueueForBatch(activities, operation.Telemetry.Timestamp, out long enqueuedTime))
+                        {
+                            operation.Telemetry.Metrics["timeSinceEnqueued"] = enqueuedTime;
+                        }
                     }
                     else
                     {
-                        RequestTelemetry request = new RequestTelemetry
+                        operation = _telemetryClient.StartOperation<RequestTelemetry>(functionName);
+                    }
+
+                    var triggerDetails = stateValues.GetValueOrDefault<IDictionary<string, string>>(ScopeKeys.TriggerDetails);
+                    if (triggerDetails != null)
+                    {
+                        triggerDetails.TryGetValue(LogConstants.TriggerDetailsEndpointKey, out var endpoint);
+                        triggerDetails.TryGetValue(LogConstants.TriggerDetailsEntityNameKey, out var entity);
+
+                        if (endpoint != null && entity != null)
                         {
-                            Name = functionName
-                        };
-
-                        operation = _telemetryClient.StartOperation(request);
-
-                        // if there is more than one link (batch dispatch in EventHub trigger)
-                        // we'll populate link information on the request telemetry, but don't touch parent for this request
-                        PopulateLinks(activities, request);
-
-                        // If any of the links is sampled in (on upstream) we also preliminary sample in 
-                        // request telemetry and everything that happens in this request scope. 
-                        // There will be additional level of sampling applied to limit rate to one 
-                        // configured on this Function/WebJob
-                        if (request.ProactiveSamplingDecision == SamplingDecision.SampledIn)
+                            operation.Telemetry.Source = endpoint.EndsWith("/") ? string.Concat(endpoint, entity) : string.Concat(endpoint, "/", entity);
+                        }
+                        else if (endpoint != null)
                         {
-                            Activity.Current.ActivityTraceFlags |= ActivityTraceFlags.Recorded;
+                            operation.Telemetry.Source = endpoint;
+                        }
+                        else if (entity != null)
+                        {
+                            operation.Telemetry.Source = entity;
                         }
                     }
 
@@ -512,13 +529,28 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             }
         }
 
-        private void PopulateLinks(Activity[] activities, RequestTelemetry request)
+        private IOperationHolder<RequestTelemetry> CreateRequestFromLinks(Activity[] activities, string functionName)
         {
-            if (activities == null)
+            var operation = _telemetryClient.StartOperation<RequestTelemetry>(functionName);
+            var request = operation.Telemetry;
+            // if there is more than one link (batch dispatch in EventHub trigger)
+            // we'll populate link information on the request telemetry, but don't touch parent for this request
+            PopulateLinks(activities, request);
+
+            // If any of the links is sampled in (on upstream) we also preliminary sample in 
+            // request telemetry and everything that happens in this request scope. 
+            // There will be additional level of sampling applied to limit rate to one 
+            // configured on this Function/WebJob
+            if (request.ProactiveSamplingDecision == SamplingDecision.SampledIn)
             {
-                return;
+                Activity.Current.ActivityTraceFlags |= ActivityTraceFlags.Recorded;
             }
 
+            return operation;
+        }
+
+        private void PopulateLinks(Activity[] activities, RequestTelemetry request)
+        {
             if (activities.Any(l => l.Recorded))
             {
                 request.ProactiveSamplingDecision = SamplingDecision.SampledIn;
@@ -599,6 +631,45 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             }
 
             return address;
+        }
+
+        private bool TryGetAverageTimeInQueueForBatch(Activity[] links, DateTimeOffset requestStartTime, out long avgTimeInQueue)
+        {
+            avgTimeInQueue = 0;
+            int linksCount = 0;
+            foreach (var link in links)
+            {
+                if (!this.TryGetEnqueuedTime(link, out var msgEnqueuedTime))
+                {
+                    // instrumentation does not consistently report enqueued time, ignoring whole span
+                    return false;
+                }
+
+                avgTimeInQueue += Math.Max(requestStartTime.ToUnixTimeMilliseconds() - msgEnqueuedTime, 0);
+                linksCount++;
+            }
+
+            if (linksCount == 0)
+            {
+                return false;
+            }
+
+            avgTimeInQueue /= linksCount;
+            return true;
+        }
+
+        private bool TryGetEnqueuedTime(Activity link, out long enqueuedTime)
+        {
+            enqueuedTime = 0;
+            foreach (var tag in link.Tags)
+            {
+                if (tag.Key == LogConstants.MessageEnqueuedTimeKey)
+                {
+                    return long.TryParse(tag.Value, out enqueuedTime);
+                }
+            }
+
+            return false;
         }
     }
 }
