@@ -13,7 +13,7 @@ using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.Hosting;
-using Microsoft.WindowsAzure.Storage;
+using Microsoft.Azure.Storage;
 using Moq;
 using Newtonsoft.Json;
 using Xunit;

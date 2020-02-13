@@ -20,9 +20,9 @@ using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.Storage.Queue;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
@@ -109,6 +109,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     .OrderBy(p => p)
                     .ToArray();
 
+                int processorCount = Extensions.Storage.Utility.GetProcessorCount();
+
                 string[] expectedOutputLines = new string[]
                 {
                     "Found the following functions:",
@@ -127,18 +129,19 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "Function 'AsyncChainEndToEndTests.DisabledJob' is disabled",
                     "Job host started",
                     "Executing 'AsyncChainEndToEndTests.WriteStartDataMessageToQueue' (Reason='This function was programmatically called via the host APIs.', Id=",
-                    $"Trigger Details:",
+                    "Trigger Details: MessageId: ",
                     "Executed 'AsyncChainEndToEndTests.WriteStartDataMessageToQueue' (Succeeded, Id=",
-                    string.Format("Executing 'AsyncChainEndToEndTests.QueueToQueueAsync' (Reason='New queue message detected on '{0}'.', Id=", firstQueueName),
-                    $"Trigger Details:",
+                    $"Executing 'AsyncChainEndToEndTests.QueueToQueueAsync' (Reason='New queue message detected on '{firstQueueName}'.', Id=",
+                    "Trigger Details: MessageId: ",
                     "Executed 'AsyncChainEndToEndTests.QueueToQueueAsync' (Succeeded, Id=",
-                    string.Format("Executing 'AsyncChainEndToEndTests.QueueToBlobAsync' (Reason='New queue message detected on '{0}'.', Id=", secondQueueName),
+                    $"Executing 'AsyncChainEndToEndTests.QueueToBlobAsync' (Reason='New queue message detected on '{secondQueueName}'.', Id=",
                     "Executed 'AsyncChainEndToEndTests.QueueToBlobAsync' (Succeeded, Id=",
-                    string.Format("Executing 'AsyncChainEndToEndTests.BlobToBlobAsync' (Reason='New blob detected: {0}/Blob1', Id=", blobContainerName),
+                    $"Executing 'AsyncChainEndToEndTests.BlobToBlobAsync' (Reason='New blob detected: {blobContainerName}/Blob1', Id=",
                     "Executed 'AsyncChainEndToEndTests.BlobToBlobAsync' (Succeeded, Id=",
                     "Job host stopped",
                     "Executing 'AsyncChainEndToEndTests.ReadResultBlob' (Reason='This function was programmatically called via the host APIs.', Id=",
                     "Executed 'AsyncChainEndToEndTests.ReadResultBlob' (Succeeded, Id=",
+                    "Trigger Details: MessageId: ",
                     "User ILogger log",
                     "User TraceWriter log 1",
                     "User TraceWriter log 2",
@@ -149,7 +152,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "  \"BatchSize\": 16",
                     "  \"MaxDequeueCount\": 5,",
                     "  \"MaxPollingInterval\": \"00:00:02\",",
-                    "  \"NewBatchThreshold\": 8,",
+                    string.Format("  \"NewBatchThreshold\": {0},", 8 * processorCount),
                     "  \"VisibilityTimeout\": \"00:00:00\"",
                     "}",
                     "LoggerFilterOptions",

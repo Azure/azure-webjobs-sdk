@@ -4,13 +4,13 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Azure.WebJobs.Host.Listeners;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {
     internal class ContainerScanInfo
     {
-        public ICollection<ITriggerExecutor<ICloudBlob>> Registrations { get; set; }
+        public ICollection<ITriggerExecutor<BlobTriggerExecutorContext>> Registrations { get; set; }
 
         public DateTime LastSweepCycleLatestModified { get; set; }
 

@@ -15,8 +15,8 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Queue;
 
 namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
 {
@@ -40,6 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         private readonly FunctionDescriptor _functionDescriptor;
         private readonly string _functionId;
         private readonly ScaleMonitorDescriptor _scaleMonitorDescriptor;
+        private readonly CancellationTokenSource _shutdownCancellationTokenSource;
 
         private bool? _queueExists;
         private bool _foundMessageSinceLastDelay;
@@ -122,6 +123,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             _delayStrategy = new RandomizedExponentialBackoffStrategy(QueuePollingIntervals.Minimum, maximumInterval);
 
             _scaleMonitorDescriptor = new ScaleMonitorDescriptor($"{_functionId}-QueueTrigger-{_queue.Name}".ToLower());
+            _shutdownCancellationTokenSource = new CancellationTokenSource();
         }
 
         // for testing
@@ -142,10 +144,13 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            ThrowIfDisposed();
-            _timer.Cancel();
-            await Task.WhenAll(_processing);
-            await _timer.StopAsync(cancellationToken);
+            using (cancellationToken.Register(() => _shutdownCancellationTokenSource.Cancel()))
+            {
+                ThrowIfDisposed();
+                _timer.Cancel();
+                await Task.WhenAll(_processing);
+                await _timer.StopAsync(cancellationToken);
+            }
         }
 
         public void Dispose()
@@ -153,6 +158,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             if (!_disposed)
             {
                 _timer.Dispose();
+                _shutdownCancellationTokenSource.Dispose();
                 _disposed = true;
             }
         }
@@ -170,6 +176,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             }
 
             IEnumerable<CloudQueueMessage> batch = null;
+            string clientRequestId = Guid.NewGuid().ToString();
+            Stopwatch sw = null;
             try
             {
                 if (!_queueExists.HasValue || !_queueExists.Value)
@@ -185,8 +193,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
 
                 if (_queueExists.Value)
                 {
-                    Stopwatch sw = Stopwatch.StartNew();
-                    OperationContext context = new OperationContext { ClientRequestID = Guid.NewGuid().ToString() };
+                    sw = Stopwatch.StartNew();
+                    OperationContext context = new OperationContext { ClientRequestID = clientRequestId };
 
                     batch = await TimeoutHandler.ExecuteWithTimeout("GetMessages", context.ClientRequestID, _exceptionHandler, () =>
                     {
@@ -212,6 +220,9 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
                     exception.IsConflictQueueBeingDeletedOrDisabled() ||
                     exception.IsServerSideError())
                 {
+                    long pollLatency = sw?.ElapsedMilliseconds ?? -1;
+                    Logger.HandlingStorageException(_logger, _functionDescriptor.LogName, _queue.Name, clientRequestId, pollLatency, exception);
+
                     // Back off when no message is available, or when
                     // transient errors occur
                     return CreateBackoffResult();
@@ -320,7 +331,10 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
                     await timer.StopAsync(cancellationToken);
                 }
 
-                await _queueProcessor.CompleteProcessingMessageAsync(message, result, cancellationToken);
+                // Use a different cancellation token for shutdown to allow graceful shutdown.
+                // Specifically, don't cancel the completion or update of the message itself during graceful shutdown.
+                // Only cancel completion or update of the message if a non-graceful shutdown is requested via _shutdownCancellationTokenSource.
+                await _queueProcessor.CompleteProcessingMessageAsync(message, result, _shutdownCancellationTokenSource.Token);
             }
             catch (StorageException ex) when (ex.IsTaskCanceled())
             {
@@ -528,7 +542,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
                     return status;
                 }
             }
-            
+
             bool queueLengthDecreasing =
                 IsTrueForLastN(
                     metrics,

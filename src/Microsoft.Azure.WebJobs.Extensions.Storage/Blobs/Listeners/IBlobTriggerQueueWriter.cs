@@ -8,6 +8,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {
     internal interface IBlobTriggerQueueWriter
     {
-        Task EnqueueAsync(BlobTriggerMessage message, CancellationToken cancellationToken);
+        /// <summary>
+        /// Enqueue the message into the queue.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>The name of the queue and the Id of the enqueued message.</returns>
+        Task<(string QueueName, string MessageId)> EnqueueAsync(BlobTriggerMessage message, CancellationToken cancellationToken);
     }
 }

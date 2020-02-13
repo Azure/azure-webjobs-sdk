@@ -1,14 +1,11 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using Microsoft.Azure.WebJobs.Host.Blobs;
 using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
-using Microsoft.Azure.WebJobs.Host.Scale;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -21,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Storage.UnitTests.Blobs.Listeners
         {
             var queueListener = new QueueListener();
             var watcherMock = new Mock<IBlobWrittenWatcher>(MockBehavior.Strict);
-            var executor = new BlobQueueTriggerExecutor(watcherMock.Object);
+            var executor = new BlobQueueTriggerExecutor(watcherMock.Object, NullLogger<BlobListener>.Instance);
             var sharedBlobQueueListener = new SharedBlobQueueListener(queueListener, executor);
             var sharedListenerMock = new Mock<ISharedListener>(MockBehavior.Strict);
             var blobListener1 = new BlobListener(sharedBlobQueueListener);

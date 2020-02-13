@@ -7,10 +7,11 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Extensions.Storage;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
@@ -160,7 +161,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
                 try
                 {
-                    return await blob.AcquireLeaseAsync(leasePeriod, null, cancellationToken);
+                    return await blob.AcquireLeaseAsync(leasePeriod, null, accessCondition: null, options: null, operationContext: null, cancellationToken: cancellationToken);
                 }
                 catch (StorageException exception)
                 {

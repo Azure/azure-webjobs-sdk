@@ -23,21 +23,25 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             var expectedReferences = new string[]
             {
+                "Microsoft.Azure.Cosmos.Table",
+                "Microsoft.Azure.Storage.Blob",
+                "Microsoft.Azure.Storage.Common",
+                "Microsoft.Azure.Storage.Queue",
                 "Microsoft.Azure.WebJobs",
                 "Microsoft.Azure.WebJobs.Host",
                 "Microsoft.Extensions.Configuration.Abstractions",
                 "Microsoft.Extensions.DependencyInjection.Abstractions",
                 "Microsoft.Extensions.Hosting.Abstractions",
                 "Microsoft.Extensions.Logging.Abstractions",
-                "Microsoft.Extensions.Options",
-                "Microsoft.WindowsAzure.Storage",
+                "Microsoft.Extensions.Options",                
                 "netstandard",
                 "Newtonsoft.Json",
                 "System.ComponentModel.Annotations"
             }.OrderBy(n => n);
 
-            Assert.True(expectedReferences.SequenceEqual(names, StringComparer.Ordinal),
-                "Assembly references do not match the expected references");
+            var namesString = string.Concat(names.Select(n => n.ToString() + ","));
+            var expectedReferencesString = string.Concat(expectedReferences.Select(n => n.ToString() + ","));
+            Assert.Equal(expectedReferencesString, namesString);
         }
 
         [Fact]

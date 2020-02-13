@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.Azure.Storage.Queue;
 
 namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
 {
@@ -26,19 +26,19 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             TriggeredFunctionData input = new TriggeredFunctionData
             {
                 ParentId = parentId,
-                TriggerValue = value, 
+                TriggerValue = value,
                 TriggerDetails = PopulateTriggerDetails(value)
             };
             return await _innerExecutor.TryExecuteAsync(input, cancellationToken);
         }
 
-        private Dictionary<string, string> PopulateTriggerDetails(CloudQueueMessage value)
+        internal static Dictionary<string, string> PopulateTriggerDetails(CloudQueueMessage value)
         {
             return new Dictionary<string, string>()
             {
                 { "MessageId", value.Id.ToString() },
-                { "DequeueCount", value.DequeueCount.ToString() },
-                { "InsertionTime", value.InsertionTime.ToString() }
+                { nameof(CloudQueueMessage.DequeueCount), value.DequeueCount.ToString() },
+                { nameof(CloudQueueMessage.InsertionTime), value.InsertionTime?.ToString(Constants.DateTimeFormatString) }
             };
         }
     }

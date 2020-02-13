@@ -1,7 +1,6 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Bindings.Cancellation;
 using Microsoft.Azure.WebJobs.Host.Bindings.Data;
@@ -12,6 +11,10 @@ using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using System;
+using System.Text;
 
 namespace Microsoft.Azure.WebJobs
 {
@@ -58,10 +61,20 @@ namespace Microsoft.Azure.WebJobs
 
         public static IWebJobsBuilder UseWebJobsStartup<T>(this IWebJobsBuilder builder) where T : IWebJobsStartup, new()
         {
-            return builder.UseWebJobsStartup(typeof(T));
+            return builder.UseWebJobsStartup<T>(NullLoggerFactory.Instance);
+        }
+
+        public static IWebJobsBuilder UseWebJobsStartup<T>(this IWebJobsBuilder builder, ILoggerFactory loggerFactory) where T : IWebJobsStartup, new()
+        {
+            return builder.UseWebJobsStartup(typeof(T), loggerFactory);
         }
 
         public static IWebJobsBuilder UseWebJobsStartup(this IWebJobsBuilder builder, Type startupType)
+        {
+            return builder.UseWebJobsStartup(startupType, NullLoggerFactory.Instance);
+        }
+
+        public static IWebJobsBuilder UseWebJobsStartup(this IWebJobsBuilder builder, Type startupType, ILoggerFactory loggerFactory)
         {
             if (!typeof(IWebJobsStartup).IsAssignableFrom(startupType))
             {
@@ -69,9 +82,53 @@ namespace Microsoft.Azure.WebJobs
             }
 
             IWebJobsStartup startup = (IWebJobsStartup)Activator.CreateInstance(startupType);
-            startup.Configure(builder);
 
+            if (loggerFactory == NullLoggerFactory.Instance)
+            {
+                startup.Configure(builder);
+            }
+            else
+            {
+                ConfigureAndLogUserConfiguredServices(startup, builder, loggerFactory);
+            }
             return builder;
+        }
+
+        private static void ConfigureAndLogUserConfiguredServices(IWebJobsStartup startup, IWebJobsBuilder builder, ILoggerFactory loggerFactory)
+        {
+            var logger = loggerFactory.CreateLogger<TrackedServiceCollection>();
+
+            if (builder.Services is ITrackedServiceCollection tracker)
+            {
+                if (tracker != null)
+                {
+                    tracker.ResetTracking();
+                    startup.Configure(builder);
+                    StringBuilder sb = new StringBuilder("Services registered by external startup type " + startup.GetType().ToString() + ":");
+
+                    foreach (ServiceDescriptor service in tracker.TrackedCollectionChanges)
+                    {
+                        sb.AppendLine();
+                        sb.Append($" {service.ServiceType.FullName}: ");
+
+                        if (service.ImplementationType != null)
+                        {
+                            sb.Append($"Implementation: {service.ImplementationType.FullName}");
+                        }
+                        else if (service.ImplementationInstance != null)
+                        {
+                            sb.Append($"Instance: {service.ImplementationInstance.GetType().FullName}");
+                        }
+                        else if (service.ImplementationFactory != null)
+                        {
+                            sb.Append("Factory");
+                        }
+
+                        sb.Append($", Lifetime: {service.Lifetime.ToString()}");
+                    }
+                    logger.LogDebug(new EventId(500, "ExternalStartupServices"), sb.ToString());
+                }
+            }
         }
 
         /// <summary>
@@ -83,7 +140,18 @@ namespace Microsoft.Azure.WebJobs
         /// <returns>The updated <see cref="IHostBuilder"/> instance.</returns>
         public static IWebJobsBuilder UseExternalStartup(this IWebJobsBuilder builder)
         {
-            return builder.UseExternalStartup(new DefaultStartupTypeLocator());
+            return builder.UseExternalStartup(new DefaultStartupTypeLocator(), NullLoggerFactory.Instance);
+        }
+
+
+        public static IWebJobsBuilder UseExternalStartup(this IWebJobsBuilder builder, ILoggerFactory loggerFactory)
+        {
+            return builder.UseExternalStartup(new DefaultStartupTypeLocator(), loggerFactory);
+        }
+
+        public static IWebJobsBuilder UseExternalStartup(this IWebJobsBuilder builder, IWebJobsStartupTypeLocator startupTypeLocator)
+        {
+            return builder.UseExternalStartup(startupTypeLocator, NullLoggerFactory.Instance);
         }
 
         /// <summary>
@@ -94,13 +162,13 @@ namespace Microsoft.Azure.WebJobs
         /// <param name="startupTypeLocator">An implementation of <see cref="IWebJobsStartupTypeLocator"/> that provides a list of types that 
         /// should be used in the startup process.</param>
         /// <returns>The updated <see cref="IHostBuilder"/> instance.</returns>
-        public static IWebJobsBuilder UseExternalStartup(this IWebJobsBuilder builder, IWebJobsStartupTypeLocator startupTypeLocator)
+        public static IWebJobsBuilder UseExternalStartup(this IWebJobsBuilder builder, IWebJobsStartupTypeLocator startupTypeLocator, ILoggerFactory loggerFactory)
         {
             Type[] types = startupTypeLocator.GetStartupTypes();
 
             foreach (var type in types)
             {
-                builder.UseWebJobsStartup(type);
+                builder.UseWebJobsStartup(type, loggerFactory);
             }
 
             return builder;

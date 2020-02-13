@@ -6,9 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Queues;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.Azure.Storage.Queue;
 using Newtonsoft.Json;
-using WebJobs.Extensions.Storage;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {
@@ -24,11 +23,13 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             _watcher = watcher;
         }
 
-        public async Task EnqueueAsync(BlobTriggerMessage message, CancellationToken cancellationToken)
+        public async Task<(string QueueName, string MessageId)> EnqueueAsync(BlobTriggerMessage message, CancellationToken cancellationToken)
         {
             string contents = JsonConvert.SerializeObject(message, JsonSerialization.Settings);
-            await _queue.AddMessageAndCreateIfNotExistsAsync(new CloudQueueMessage(contents), cancellationToken);
+            var queueMessage = new CloudQueueMessage(contents);
+            await _queue.AddMessageAndCreateIfNotExistsAsync(queueMessage, cancellationToken);
             _watcher.Notify(_queue.Name);
+            return (QueueName: _queue.Name, MessageId: queueMessage.Id);
         }
     }
 }

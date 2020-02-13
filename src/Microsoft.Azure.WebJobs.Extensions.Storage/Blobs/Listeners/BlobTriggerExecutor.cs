@@ -4,42 +4,55 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {
-    internal class BlobTriggerExecutor : ITriggerExecutor<ICloudBlob>
+    internal partial class BlobTriggerExecutor : ITriggerExecutor<BlobTriggerExecutorContext>
     {
+        internal const string TriggerSourceKey = "MS_TriggerSource";
+        internal const string TriggerClientRequestIdKey = "MS_ClientRequestId";
+
         private readonly string _hostId;
-        private readonly string _functionId;
+        private readonly FunctionDescriptor _functionDescriptor;
         private readonly IBlobPathSource _input;
         private readonly IBlobTriggerQueueWriter _queueWriter;
         private readonly IBlobETagReader _eTagReader;
         private readonly IBlobReceiptManager _receiptManager;
+        private readonly ILogger<BlobListener> _logger;
 
-        public BlobTriggerExecutor(string hostId, string functionId, IBlobPathSource input,
-            IBlobETagReader eTagReader, IBlobReceiptManager receiptManager, IBlobTriggerQueueWriter queueWriter)
+        public BlobTriggerExecutor(string hostId, FunctionDescriptor functionDescriptor, IBlobPathSource input, IBlobETagReader eTagReader,
+            IBlobReceiptManager receiptManager, IBlobTriggerQueueWriter queueWriter, ILogger<BlobListener> logger)
         {
             _hostId = hostId;
-            _functionId = functionId;
+            _functionDescriptor = functionDescriptor;
             _input = input;
             _queueWriter = queueWriter;
             _eTagReader = eTagReader;
             _receiptManager = receiptManager;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<FunctionResult> ExecuteAsync(ICloudBlob value, CancellationToken cancellationToken)
+        public async Task<FunctionResult> ExecuteAsync(BlobTriggerExecutorContext context, CancellationToken cancellationToken)
         {
+            ICloudBlob value = context.Blob;
+            BlobTriggerSource triggerSource = context.TriggerSource;
+            string pollId = context.PollId;
+
             // Avoid unnecessary network calls for non-matches. First, check to see if the blob matches this trigger.
             IReadOnlyDictionary<string, object> bindingData = _input.CreateBindingData(value.ToBlobPath());
 
             if (bindingData == null)
             {
+                string pattern = new BlobPath(_input.ContainerNamePattern, _input.BlobNamePattern).ToString();
+                Logger.BlobDoesNotMatchPattern(_logger, _functionDescriptor.LogName, value.Name, pattern, pollId, triggerSource);
+
                 // Blob is not a match for this trigger.
                 return new FunctionResult(true);
             }
@@ -49,11 +62,13 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 
             if (possibleETag == null)
             {
+                Logger.BlobHasNoETag(_logger, _functionDescriptor.LogName, value.Name, pollId, triggerSource);
+
                 // If the blob doesn't exist and have an ETag, don't trigger on it.
                 return new FunctionResult(true);
             }
 
-            var receiptBlob = _receiptManager.CreateReference(_hostId, _functionId, value.Container.Name,
+            var receiptBlob = _receiptManager.CreateReference(_hostId, _functionDescriptor.Id, value.Container.Name,
                 value.Name, possibleETag);
 
             // Check for the completed receipt. If it's already there, noop.
@@ -61,6 +76,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 
             if (unleasedReceipt != null && unleasedReceipt.IsCompleted)
             {
+                Logger.BlobAlreadyProcessed(_logger, _functionDescriptor.LogName, value.Name, possibleETag, pollId, triggerSource);
+
                 return new FunctionResult(true);
             }
             else if (unleasedReceipt == null)
@@ -84,8 +101,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 return new FunctionResult(false);
             }
 
-            ExceptionDispatchInfo exceptionInfo;
-
             try
             {
                 // Check again for the completed receipt. If it's already there, noop.
@@ -94,6 +109,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 
                 if (receipt.IsCompleted)
                 {
+                    Logger.BlobAlreadyProcessed(_logger, _functionDescriptor.LogName, value.Name, possibleETag, pollId, triggerSource);
+
                     await _receiptManager.ReleaseLeaseAsync(receiptBlob, leaseId, cancellationToken);
                     return new FunctionResult(true);
                 }
@@ -104,31 +121,26 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 // Enqueue a message: function ID + blob path + ETag
                 BlobTriggerMessage message = new BlobTriggerMessage
                 {
-                    FunctionId = _functionId,
+                    FunctionId = _functionDescriptor.Id,
                     BlobType = value.BlobType,
                     ContainerName = value.Container.Name,
                     BlobName = value.Name,
                     ETag = possibleETag
                 };
-                await _queueWriter.EnqueueAsync(message, cancellationToken);
 
-                // Complete the receipt & release the lease
+                var (queueName, messageId) = await _queueWriter.EnqueueAsync(message, cancellationToken);
+
+                Logger.BlobMessageEnqueued(_logger, _functionDescriptor.LogName, value.Name, messageId, queueName, pollId, triggerSource);
+
+                // Complete the receipt
                 await _receiptManager.MarkCompletedAsync(receiptBlob, leaseId, cancellationToken);
-                await _receiptManager.ReleaseLeaseAsync(receiptBlob, leaseId, cancellationToken);
 
                 return new FunctionResult(true);
             }
-            catch (Exception exception)
+            finally
             {
-                exceptionInfo = ExceptionDispatchInfo.Capture(exception);
+                await _receiptManager.ReleaseLeaseAsync(receiptBlob, leaseId, cancellationToken);
             }
-
-            Debug.Assert(exceptionInfo != null);
-            await _receiptManager.ReleaseLeaseAsync(receiptBlob, leaseId, cancellationToken);
-            exceptionInfo.Throw();
-
-            FunctionResult result = new FunctionResult(exceptionInfo.SourceException);
-            return result; // Keep the compiler happy; we'll never get here.
         }
     }
 }

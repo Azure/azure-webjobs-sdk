@@ -8,19 +8,17 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Timers;
-using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage.Shared.Protocol;
+using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.Storage.Shared.Protocol;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {
     // Scans storage logs for blob writes
     internal class BlobLogListener
     {
-        private const string LogStartTime = "StartTime";
-        private const string LogEndTime = "EndTime";
-        private const string LogType = "LogType";
+        internal const int DefaultScanHoursWindow = 2;
 
-        private const int DefaultScanHoursWindow = 2;
+        private const string LogType = "LogType";
 
         private readonly CloudBlobClient _blobClient;
         private readonly HashSet<string> _scannedBlobNames = new HashSet<string>();
@@ -177,7 +175,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             foreach (var item in blobs)
             {
                 ICloudBlob log = item as ICloudBlob;
-                if (log != null)
+                if (log != null && log.Metadata.ContainsKey(LogType))
                 {
                     // we will exclude the file if the file does not have log entries in the interested time range.
                     string logType = log.Metadata[LogType];

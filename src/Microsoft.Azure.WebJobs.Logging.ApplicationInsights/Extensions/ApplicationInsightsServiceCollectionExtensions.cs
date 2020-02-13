@@ -160,9 +160,18 @@ namespace Microsoft.Extensions.DependencyInjection
 
                 var activeConfig = TelemetryConfiguration.Active;
                 if (!string.IsNullOrEmpty(options.InstrumentationKey) &&
-                string.IsNullOrEmpty(activeConfig.InstrumentationKey))
+                    string.IsNullOrEmpty(activeConfig.InstrumentationKey))
                 {
                     activeConfig.InstrumentationKey = options.InstrumentationKey;
+                }
+
+                // Set ConnectionString second because it takes precedence and
+                // we don't want InstrumentationKey to overwrite the value
+                // ConnectionString sets
+                if (!string.IsNullOrEmpty(options.ConnectionString) &&
+                    string.IsNullOrEmpty(activeConfig.ConnectionString))
+                {
+                    activeConfig.ConnectionString = options.ConnectionString;
                 }
 
                 if (!activeConfig.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>().Any())
@@ -240,7 +249,11 @@ namespace Microsoft.Extensions.DependencyInjection
             IRoleInstanceProvider roleInstanceProvider,
             QuickPulseInitializationScheduler delayer)
         {
-            if (options.InstrumentationKey != null)
+            if (options.ConnectionString != null)
+            {
+                configuration.ConnectionString = options.ConnectionString;
+            }
+            else if (options.InstrumentationKey != null)
             {
                 configuration.InstrumentationKey = options.InstrumentationKey;
             }
