@@ -3,12 +3,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using SampleHost.Filters;
 
 namespace SampleHost
@@ -37,10 +35,13 @@ namespace SampleHost
                 // Copy metadata to a separate dictionary for output. 
                 // It must contains the required metadata OperationId, 
                 // and may contains the optional metadata Fileuri.
-                Dictionary<string, string> outputDict = new Dictionary<string, string>(metadata);
-                outputDict.Add("Timestamp", $"{properties.Created:o}");  // Add Timestamp
+                var outputDict = new Dictionary<string, string>(metadata)
+                {
+                    { "Timestamp", $"{properties.Created:o}" }
+                };
                 if (!outputDict.ContainsKey("Fileuri"))
-                {   // Add Fileuri if not provided
+                {
+                    // Add Fileuri if not provided
                     outputDict.Add("Fileuri", uri.ToString());
                 }
 
