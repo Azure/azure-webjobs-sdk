@@ -46,6 +46,7 @@ namespace Microsoft.Azure.WebJobs
                 "core.windows.net",
                 true);
 
+            // What do we do with the TableStorageAccountName
             return StorageAccount.New(cloudStorageAccount, null, name);
         }
 

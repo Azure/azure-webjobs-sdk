@@ -4,7 +4,6 @@
 using System;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Configuration;
-
 using CloudStorageAccount = Microsoft.Azure.Storage.CloudStorageAccount;
 using TableStorageAccount = Microsoft.Azure.Cosmos.Table.CloudStorageAccount;
 
@@ -56,7 +55,7 @@ namespace Microsoft.Azure.WebJobs
                 throw new InvalidOperationException($"Storage account connection string for '{IConfigurationExtensions.GetPrefixedConnectionStringName(name)}' is invalid");
             }
 
-            return StorageAccount.New(cloudStorageAccount, tableStorageAccount);
+            return StorageAccount.New(cloudStorageAccount, tableStorageAccount, cloudStorageAccount.Credentials.AccountName);
         }
 
         /// <summary>

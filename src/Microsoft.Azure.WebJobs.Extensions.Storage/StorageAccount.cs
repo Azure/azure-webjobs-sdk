@@ -27,6 +27,12 @@ namespace Microsoft.Azure.WebJobs
         public CloudStorageAccount SdkObject { get; protected set; }
         public TableStorageAccount TableSdkObject { get; protected set; }
 
+        /// <summary>
+        /// Create a storage account from a connection string
+        /// </summary>
+        /// <param name="accountConnectionString"></param>
+        /// <returns></returns>
+        /// <remarks>This method is only ever called when we have a connection string</remarks>
         public static StorageAccount NewFromConnectionString(string accountConnectionString)
         {
             var account = CloudStorageAccount.Parse(accountConnectionString);
