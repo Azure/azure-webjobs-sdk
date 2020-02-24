@@ -27,16 +27,28 @@ namespace Microsoft.Azure.WebJobs
         public CloudStorageAccount SdkObject { get; protected set; }
         public TableStorageAccount TableSdkObject { get; protected set; }
 
+        /// <summary>
+        /// Create a storage account from a connection string
+        /// </summary>
+        /// <param name="accountConnectionString"></param>
+        /// <returns></returns>
+        /// <remarks>This method is only ever called when we have a connection string</remarks>
         public static StorageAccount NewFromConnectionString(string accountConnectionString)
         {
             var account = CloudStorageAccount.Parse(accountConnectionString);
             var tableAccount = TableStorageAccount.Parse(accountConnectionString);
-            return New(account, tableAccount);
+            return New(account, tableAccount, account.Credentials.AccountName);
         }
 
-        public static StorageAccount New(CloudStorageAccount account, TableStorageAccount tableAccount = null)
+        public static StorageAccount New(CloudStorageAccount account, TableStorageAccount tableAccount = null, string storageAccountName = null)
         {
-            return new StorageAccount { SdkObject = account, TableSdkObject = tableAccount };
+            // The storage account name is normally in the credentials, but not when we are using a managed identity
+            if (storageAccountName == null)
+            {
+                storageAccountName = account.Credentials.AccountName;
+            }
+
+            return new StorageAccount { SdkObject = account, TableSdkObject = tableAccount, Name = storageAccountName };
         }
 
         public virtual bool IsDevelopmentStorageAccount()

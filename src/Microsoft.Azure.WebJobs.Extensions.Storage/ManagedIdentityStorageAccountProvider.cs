@@ -2,8 +2,8 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 using System;
 using Microsoft.Azure.Services.AppAuthentication;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Auth;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Auth;
 
 namespace Microsoft.Azure.WebJobs
 {
@@ -46,7 +46,8 @@ namespace Microsoft.Azure.WebJobs
                 "core.windows.net",
                 true);
 
-            return StorageAccount.New(cloudStorageAccount, name);
+            // What do we do with the TableStorageAccountName
+            return StorageAccount.New(cloudStorageAccount, null, name);
         }
 
         /// <summary>
