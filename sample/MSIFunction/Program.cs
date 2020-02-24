@@ -17,7 +17,7 @@ namespace SampleHost
                 .UseEnvironment("Development")
                 .ConfigureWebJobs(b =>
                 {
-                    b.AddAzureStorageCoreServices()
+                    b.AddAzureStorageCoreServices("mercz11", "72f988bf-86f1-41af-91ab-2d7cd011db47")
                     .AddAzureStorage(managedIdentityTenantId: "72f988bf-86f1-41af-91ab-2d7cd011db47");
                 })
                 .ConfigureAppConfiguration(b =>
