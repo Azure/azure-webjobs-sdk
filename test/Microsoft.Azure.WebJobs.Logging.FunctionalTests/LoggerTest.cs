@@ -8,8 +8,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging.Internal;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
+using Microsoft.Azure.Cosmos.Table;
 using Moq;
 using Xunit;
 
@@ -684,7 +683,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
         {
             Exception exToThrow = new InvalidOperationException("Some storage exception");
 
-            Mock<CloudTable> mockTable = new Mock<CloudTable>(MockBehavior.Strict, new Uri("https://fakeaccount.table.core.windows.net/sometable"));
+            Mock<CloudTable> mockTable = new Mock<CloudTable>(MockBehavior.Strict, new Uri("https://fakeaccount.table.core.windows.net/sometable"), null);
             mockTable
                 .Setup(t => t.ExecuteAsync(It.IsAny<TableOperation>(), null, null))
                 .ReturnsAsync(new TableResult());
@@ -729,14 +728,14 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
             Exception exToThrow1 = new InvalidOperationException("First storage exception");
             Exception exToThrow2 = new InvalidOperationException("Second storage exception");
 
-            Mock<CloudTable> mockTable = new Mock<CloudTable>(MockBehavior.Strict, new Uri("https://fakeaccount.table.core.windows.net/sometable"));
+            Mock<CloudTable> mockTable = new Mock<CloudTable>(MockBehavior.Strict, new Uri("https://fakeaccount.table.core.windows.net/sometable"), null);
             mockTable
                 .SetupSequence(t => t.ExecuteBatchAsync(It.IsAny<TableBatchOperation>()))
                 // First background flush
-                .ReturnsAsync(new List<TableResult> { new TableResult() })
+                .ReturnsAsync(new TableBatchResult())                
                 .ThrowsAsync(exToThrow1)
                 // Second background flush
-                .ReturnsAsync(new List<TableResult> { new TableResult() })
+                .ReturnsAsync(new TableBatchResult())
                 .ThrowsAsync(exToThrow2);
 
             Mock<ILogTableProvider> mockProvider = new Mock<ILogTableProvider>(MockBehavior.Strict);

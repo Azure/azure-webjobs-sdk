@@ -5,8 +5,8 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 {
@@ -147,6 +147,31 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         public override Task CommitAsync()
         {
             return _inner.CommitAsync();
+        }
+
+        public override void Commit()
+        {
+            _inner.Commit();            
+        }
+
+        public override ICancellableAsyncResult BeginCommit(AsyncCallback callback, object state)
+        {
+            return _inner.BeginCommit(callback, state);
+        }
+
+        public override void EndCommit(IAsyncResult asyncResult)
+        {
+            _inner.EndCommit(asyncResult);
+        }
+
+        public override ICancellableAsyncResult BeginFlush(AsyncCallback callback, object state)
+        {
+            return _inner.BeginFlush(callback, state);
+        }
+
+        public override void EndFlush(IAsyncResult asyncResult)
+        {
+            _inner.EndFlush(asyncResult);
         }
     }
 }

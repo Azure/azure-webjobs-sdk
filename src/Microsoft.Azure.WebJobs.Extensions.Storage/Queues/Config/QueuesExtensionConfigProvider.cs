@@ -11,7 +11,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Queues.Triggers;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.Azure.Storage.Queue;
 using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Queues.Config
@@ -48,7 +48,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Config
         // Multiple JobHost objects may share the same JobHostConfiguration.
         // But queues have per-host instance state (IMessageEnqueuedWatcher). 
         // so capture that and create new binding rules per host instance. 
-        private class PerHostConfig : IAsyncConverter<QueueAttribute, IAsyncCollector<CloudQueueMessage>>
+        private class PerHostConfig : IConverter<QueueAttribute, IAsyncCollector<CloudQueueMessage>>
         {
             // Fields that the various binding funcs need to close over. 
             private StorageAccountProvider _accountProvider;
@@ -178,7 +178,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Config
 
             private CloudQueueMessage ConvertByteArrayToCloudQueueMessage(byte[] arg, QueueAttribute attrResolved)
             {
-                return CloudQueueMessage.CreateCloudQueueMessageFromByteArray(arg);
+                return new CloudQueueMessage(arg);
             }
 
             private CloudQueueMessage ConvertStringToCloudQueueMessage(string arg, QueueAttribute attrResolved)
@@ -186,29 +186,21 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Config
                 return new CloudQueueMessage(arg);
             }
 
-            public async Task<IAsyncCollector<CloudQueueMessage>> ConvertAsync(QueueAttribute attrResolved, CancellationToken cancellationToken)
+            public IAsyncCollector<CloudQueueMessage> Convert(QueueAttribute attrResolved)
             {
-                var queue = await GetQueueAsync(attrResolved);
+                var queue = GetQueue(attrResolved);
                 return new QueueAsyncCollector(queue, _messageEnqueuedWatcherGetter.Value);
             }
 
-            internal Task<CloudQueue> GetQueueAsync(QueueAttribute attrResolved)
+            internal CloudQueue GetQueue(QueueAttribute attrResolved)
             {
-                // var account = await _accountProvider.GetStorageAccountAsync(attrResolved, CancellationToken.None);
                 var account = _accountProvider.Get(attrResolved.Connection);
                 var client = account.CreateCloudQueueClient();
 
                 string queueName = attrResolved.QueueName.ToLowerInvariant();
                 QueueClient.ValidateQueueName(queueName);
 
-                var queue = client.GetQueueReference(queueName);
-                return Task.FromResult(queue);
-            }
-
-            internal CloudQueue GetQueue(QueueAttribute attrResolved)
-            {
-                var queue = Task.Run(() => GetQueueAsync(attrResolved)).GetAwaiter().GetResult();
-                return queue;
+                return client.GetQueueReference(queueName);
             }
         }
 
@@ -226,7 +218,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Config
                 QueueAttribute attrResolved,
                 CancellationToken cancellation)
             {
-                CloudQueue queue = await _bindingProvider.GetQueueAsync(attrResolved);
+                CloudQueue queue = _bindingProvider.GetQueue(attrResolved);
                 await queue.CreateIfNotExistsAsync(cancellation);
                 return queue;
             }

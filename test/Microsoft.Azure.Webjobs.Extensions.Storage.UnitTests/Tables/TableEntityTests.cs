@@ -5,8 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.WindowsAzure.Storage.Queue;
-using Microsoft.WindowsAzure.Storage.Table;
+using Microsoft.Azure.Storage.Queue;
+using Microsoft.Azure.Cosmos.Table;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -142,7 +142,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             byte[] expectedValue = new byte[] { 0x56, 0x78 };
             StorageAccount account = CreateFakeStorageAccount();
             CloudQueue triggerQueue = await account.CreateQueueAsync(TriggerQueueName);
-            await triggerQueue.AddMessageAsync(CloudQueueMessage.CreateCloudQueueMessageFromByteArray(expectedValue));
+            await triggerQueue.AddMessageAsync(new CloudQueueMessage(expectedValue));
 
             CloudTable table = await account.CreateTableAsync(TableName);
             Dictionary<string, EntityProperty> originalProperties = new Dictionary<string, EntityProperty>

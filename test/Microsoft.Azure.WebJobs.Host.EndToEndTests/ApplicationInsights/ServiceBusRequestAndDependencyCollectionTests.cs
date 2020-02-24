@@ -40,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 .AddTestSettings()
                 .Build();
 
-            _connectionString = config.GetConnectionStringOrSetting(ServiceBus.Constants.DefaultConnectionStringName);
+            _connectionString = config.GetConnectionStringOrSetting(ServiceBus.Constants.DefaultConectionSettingStringName);
 
             var connStringBuilder = new ServiceBusConnectionStringBuilder(_connectionString);
             _endpoint = connStringBuilder.Endpoint;

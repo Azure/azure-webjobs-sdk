@@ -102,12 +102,14 @@ namespace Microsoft.Azure.WebJobs
             {
                 if (tracker != null)
                 {
+                    tracker.ResetTracking();
                     startup.Configure(builder);
                     StringBuilder sb = new StringBuilder("Services registered by external startup type " + startup.GetType().ToString() + ":");
 
                     foreach (ServiceDescriptor service in tracker.TrackedCollectionChanges)
                     {
-                        sb.Append($"\n {service.ServiceType.FullName}: ");
+                        sb.AppendLine();
+                        sb.Append($" {service.ServiceType.FullName}: ");
 
                         if (service.ImplementationType != null)
                         {
@@ -125,8 +127,6 @@ namespace Microsoft.Azure.WebJobs
                         sb.Append($", Lifetime: {service.Lifetime.ToString()}");
                     }
                     logger.LogDebug(new EventId(500, "ExternalStartupServices"), sb.ToString());
-
-                    tracker.ResetTracking();
                 }
             }
         }

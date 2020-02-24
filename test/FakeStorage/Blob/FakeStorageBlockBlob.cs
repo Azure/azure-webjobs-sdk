@@ -7,9 +7,9 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage.File;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.Storage.Core.Util;
 
 namespace FakeStorage
 {
@@ -70,7 +70,7 @@ namespace FakeStorage
             throw new NotImplementedException();
         }
 
-        public Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId,
+        public override Task<string> AcquireLeaseAsync(TimeSpan? leaseTime, string proposedLeaseId,
             CancellationToken cancellationToken)
         {
             return AcquireLeaseCore(leaseTime, proposedLeaseId);
@@ -147,7 +147,7 @@ namespace FakeStorage
             throw new NotImplementedException();
         }
 
-        public Task DeleteAsync(CancellationToken cancellationToken)
+        public override Task DeleteAsync(CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
             throw new NotImplementedException();
@@ -228,7 +228,7 @@ namespace FakeStorage
             throw new NotImplementedException();
         }
 
-        private async Task<string> DownloadTextCoreAsync(Encoding encoding)
+        public override async Task<string> DownloadTextAsync(Encoding encoding, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, IProgress<StorageProgress> progressHandler, CancellationToken cancellationToken)
         {
             encoding = encoding ?? Encoding.UTF8;
             using (Stream stream = await OpenReadAsync(CancellationToken.None))
@@ -240,24 +240,21 @@ namespace FakeStorage
             }
         }
 
+        public override string DownloadText(Encoding encoding = null, AccessCondition accessCondition = null, BlobRequestOptions options = null, OperationContext operationContext = null)
+        {
+            encoding = encoding ?? Encoding.UTF8;
+            using (Stream stream = OpenRead())
+            {
+                using (TextReader reader = new StreamReader(stream, encoding))
+                {
+                    return reader.ReadToEnd();
+                }
+            }
+        }
+
         public override Task<string> DownloadTextAsync()
         {
-            return DownloadTextCoreAsync(Encoding.UTF8);
-        }
-
-        public override Task<string> DownloadTextAsync(AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
-        {
-            return DownloadTextCoreAsync(Encoding.UTF8);
-        }
-
-        public override Task<string> DownloadTextAsync(Encoding encoding, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
-        {
-            return DownloadTextCoreAsync(encoding);
-        }
-
-        public override Task<string> DownloadTextAsync(Encoding encoding, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
-        {
-            return DownloadTextCoreAsync(encoding);
+            return base.DownloadTextAsync();
         }
 
         public override Task<int> DownloadToByteArrayAsync(byte[] target, int index)
@@ -313,7 +310,7 @@ namespace FakeStorage
             return false;
         }
 
-        public Task<bool> ExistsAsync(CancellationToken cancellationToken)
+        public override Task<bool> ExistsAsync(CancellationToken cancellationToken)
         {
             return Task.FromResult(_store.Exists(_containerName, _blobName));
         }
@@ -365,7 +362,7 @@ namespace FakeStorage
             return base.GetHashCode();
         }
 
-        public Task<Stream> OpenReadAsync(CancellationToken cancellationToken)
+        public override Task<Stream> OpenReadAsync(CancellationToken cancellationToken)
         {
             return Task.FromResult(_store.OpenRead(_containerName, _blobName));
         }
@@ -382,10 +379,15 @@ namespace FakeStorage
 
         public override Task<Stream> OpenReadAsync(AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
         {
-            return Task.FromResult(_store.OpenRead(_containerName, _blobName));
+            return Task.FromResult(OpenRead(accessCondition, options, operationContext));
         }
 
-        public Task<CloudBlobStream> OpenWriteAsync(CancellationToken cancellationToken)
+        public override Stream OpenRead(AccessCondition accessCondition = null, BlobRequestOptions options = null, OperationContext operationContext = null)
+        {
+            return _store.OpenRead(_containerName, _blobName);
+        }
+
+        public override Task<CloudBlobStream> OpenWriteAsync(CancellationToken cancellationToken)
         {
             CloudBlobStream stream = _store.OpenWriteBlock(_containerName, _blobName, _metadata);
             return Task.FromResult(stream);
@@ -402,9 +404,13 @@ namespace FakeStorage
         }
 
         public override Task<CloudBlobStream> OpenWriteAsync(AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
+        {            
+            return Task.FromResult(OpenWrite(accessCondition, options, operationContext));
+        }
+
+        public override CloudBlobStream OpenWrite(AccessCondition accessCondition = null, BlobRequestOptions options = null, OperationContext operationContext = null)
         {
-            CloudBlobStream stream = _store.OpenWriteBlock(_containerName, _blobName, _metadata);
-            return Task.FromResult(stream);
+            return _store.OpenWriteBlock(_containerName, _blobName, _metadata);
         }
 
         public override Task PutBlockAsync(string blockId, Stream blockData, string contentMD5)
@@ -568,11 +574,6 @@ namespace FakeStorage
             return base.SetStandardBlobTierAsync(standardBlobTier, accessCondition, options, operationContext);
         }
 
-        public override Task SetStandardBlobTierAsync(StandardBlobTier standardBlobTier, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
-        {
-            return base.SetStandardBlobTierAsync(standardBlobTier, accessCondition, options, operationContext, cancellationToken);
-        }
-
         public override Task<CloudBlob> SnapshotAsync()
         {
             return base.SnapshotAsync();
@@ -608,29 +609,9 @@ namespace FakeStorage
             return base.StartCopyAsync(source);
         }
 
-        public override Task<string> StartCopyAsync(CloudFile source)
-        {
-            return base.StartCopyAsync(source);
-        }
-
         public override Task<string> StartCopyAsync(CloudBlockBlob source, AccessCondition sourceAccessCondition, AccessCondition destAccessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             return base.StartCopyAsync(source, sourceAccessCondition, destAccessCondition, options, operationContext);
-        }
-
-        public override Task<string> StartCopyAsync(CloudBlockBlob source, AccessCondition sourceAccessCondition, AccessCondition destAccessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
-        {
-            return base.StartCopyAsync(source, sourceAccessCondition, destAccessCondition, options, operationContext, cancellationToken);
-        }
-
-        public override Task<string> StartCopyAsync(CloudFile source, AccessCondition sourceAccessCondition, AccessCondition destAccessCondition, BlobRequestOptions options, OperationContext operationContext)
-        {
-            return base.StartCopyAsync(source, sourceAccessCondition, destAccessCondition, options, operationContext);
-        }
-
-        public override Task<string> StartCopyAsync(CloudFile source, AccessCondition sourceAccessCondition, AccessCondition destAccessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
-        {
-            return base.StartCopyAsync(source, sourceAccessCondition, destAccessCondition, options, operationContext, cancellationToken);
         }
 
         public override string ToString()
@@ -703,17 +684,12 @@ namespace FakeStorage
             return base.UploadTextAsync(content);
         }
 
-        public override Task UploadTextAsync(string content, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
-        {
-            return base.UploadTextAsync(content, accessCondition, options, operationContext);
-        }
-
         public override Task UploadTextAsync(string content, Encoding encoding, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             return base.UploadTextAsync(content, encoding, accessCondition, options, operationContext);
         }
 
-        public override Task UploadTextAsync(string content, Encoding encoding, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
+        public override Task UploadTextAsync(string content, Encoding encoding, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, IProgress<StorageProgress> progressHandler, CancellationToken cancellationToken)
         {
             using (CloudBlobStream stream = _store.OpenWriteBlock(_containerName, _blobName, _metadata))
             {
@@ -723,6 +699,6 @@ namespace FakeStorage
             }
 
             return Task.FromResult(0);
-        }
+        }        
     }
 }

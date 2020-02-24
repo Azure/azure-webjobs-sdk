@@ -1,9 +1,10 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage.Shared.Protocol;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.Storage.Queue;
+using Microsoft.Azure.Storage.Shared.Protocol;
 using System;
 using System.IO;
 using System.Text;
@@ -19,7 +20,7 @@ internal static class StroageExtensions
 
     public static Task<ServiceProperties> GetServicePropertiesAsync(this CloudBlobClient sdk, CancellationToken cancellationToken)
     {
-        return sdk.GetServicePropertiesAsync(options: null, operationContext: null, cancellationToken: cancellationToken);
+        return sdk.GetServicePropertiesAsync(cancellationToken);
     }
 
     public static Task<CloudBlobStream> OpenWriteAsync(this CloudBlockBlob sdk, CancellationToken cancellationToken)
@@ -52,7 +53,7 @@ internal static class StroageExtensions
 
     public static Task<Stream> OpenReadAsync(this ICloudBlob sdk, CancellationToken cancellationToken)
     {
-        return sdk.OpenReadAsync(accessCondition: null, options: null, operationContext: null);
+        return sdk.OpenReadAsync(accessCondition: null, options: null, operationContext: null, cancellationToken: cancellationToken);
     }
 
     public static Task<string> AcquireLeaseAsync(this CloudBlockBlob sdk, TimeSpan? leaseTime, string proposedLeaseId,
@@ -63,11 +64,11 @@ internal static class StroageExtensions
 
     public static Task FetchAttributesAsync(this ICloudBlob sdk, CancellationToken cancellationToken)
     {
-        return sdk.FetchAttributesAsync(accessCondition: null, options: null, operationContext: null);
+        return sdk.FetchAttributesAsync(accessCondition: null, options: null, operationContext: null, cancellationToken: cancellationToken);
     }
 
     public static Task<ICloudBlob> GetBlobReferenceFromServerAsync(this CloudBlobContainer sdk, string blobName, CancellationToken cancellationToken)
     {
         return sdk.GetBlobReferenceFromServerAsync(blobName, accessCondition: null, options: null, operationContext: null, cancellationToken: cancellationToken);
-    }
+    }    
 }

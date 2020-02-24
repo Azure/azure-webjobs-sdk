@@ -3,6 +3,7 @@
 
 using System;
 using System.Globalization;
+using Microsoft.Azure.WebJobs.Extensions.Storage;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Microsoft.Azure.WebJobs.Hosting;
 using Newtonsoft.Json;
@@ -24,6 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
         private int _batchSize = DefaultBatchSize;
         private int _newBatchThreshold;
+        private int _processorCount = 1;
         private TimeSpan _maxPollingInterval = QueuePollingIntervals.DefaultMaximum;
         private TimeSpan _visibilityTimeout = TimeSpan.Zero;
         private int _maxDequeueCount = DefaultMaxDequeueCount;
@@ -34,6 +36,7 @@ namespace Microsoft.Azure.WebJobs.Host
         public QueuesOptions()
         {
             _newBatchThreshold = -1;
+            _processorCount = Utility.GetProcessorCount();
         }
 
         /// <summary>
@@ -69,7 +72,7 @@ namespace Microsoft.Azure.WebJobs.Host
                 if (_newBatchThreshold == -1)
                 {
                     // if this hasn't been set explicitly, default it
-                    return _batchSize / 2;
+                    return (_batchSize / 2) * _processorCount;
                 }
                 return _newBatchThreshold;
             }

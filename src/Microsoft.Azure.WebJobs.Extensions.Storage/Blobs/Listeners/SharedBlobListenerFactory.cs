@@ -4,6 +4,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {
@@ -12,37 +13,25 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private readonly StorageAccount _account;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly IContextSetter<IBlobWrittenWatcher> _blobWrittenWatcherSetter;
+        private readonly ILogger<BlobListener> _logger;
         private readonly string _hostId;
 
         public SharedBlobListenerFactory(string hostId, StorageAccount account,
             IWebJobsExceptionHandler exceptionHandler,
-            IContextSetter<IBlobWrittenWatcher> blobWrittenWatcherSetter)
+            IContextSetter<IBlobWrittenWatcher> blobWrittenWatcherSetter,
+            ILogger<BlobListener> logger)
         {
-            if (account == null)
-            {
-                throw new ArgumentNullException("account");
-            }
-
-            if (exceptionHandler == null)
-            {
-                throw new ArgumentNullException("exceptionHandler");
-            }
-
-            if (blobWrittenWatcherSetter == null)
-            {
-                throw new ArgumentNullException("blobWrittenWatcherSetter");
-            }
-
+            _account = account ?? throw new ArgumentNullException(nameof(account));
+            _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
+            _blobWrittenWatcherSetter = blobWrittenWatcherSetter ?? throw new ArgumentNullException(nameof(blobWrittenWatcherSetter));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _hostId = hostId;
-            _account = account;
-            _exceptionHandler = exceptionHandler;
-            _blobWrittenWatcherSetter = blobWrittenWatcherSetter;
         }
 
         [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         public SharedBlobListener Create()
         {
-            SharedBlobListener listener = new SharedBlobListener(_hostId, _account, _exceptionHandler);
+            SharedBlobListener listener = new SharedBlobListener(_hostId, _account, _exceptionHandler, _logger);
             _blobWrittenWatcherSetter.SetValue(listener.BlobWritterWatcher);
             return listener;
         }

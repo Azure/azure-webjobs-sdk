@@ -10,8 +10,8 @@ using Microsoft.Azure.WebJobs.Storage;
 using Microsoft.Azure.WebJobs.Storage.Blob;
 #else
 #endif
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 
 #if PUBLICPROTOCOL
 namespace Microsoft.Azure.WebJobs.Protocols

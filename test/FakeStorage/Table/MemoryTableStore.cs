@@ -6,9 +6,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using Microsoft.WindowsAzure.Storage.Table;
+using Microsoft.Azure.Cosmos.Table;
 
-using TableResolver = System.Func<string, string, System.DateTimeOffset, System.Collections.Generic.IDictionary<string, Microsoft.WindowsAzure.Storage.Table.EntityProperty>, string, object>;
+using TableResolver = System.Func<string, string, System.DateTimeOffset, System.Collections.Generic.IDictionary<string, Microsoft.Azure.Cosmos.Table.EntityProperty>, string, object>;
 
 namespace FakeStorage
 {
@@ -36,11 +36,11 @@ namespace FakeStorage
             return _items[tableName].Execute(operation);
         }
 
-        public IList<TableResult> ExecuteBatch(string tableName, TableBatchOperation batch)
+        public TableBatchResult ExecuteBatch(string tableName, TableBatchOperation batch)
         {
             if (!_items.ContainsKey(tableName))
             {
-                throw StorageExceptionFactory.Create(404, "TableNotFound");
+                throw StorageExceptionFactory.CreateTableStorageException(404, "TableNotFound");
             }
 
             return _items[tableName].ExecuteBatch(batch);
@@ -143,13 +143,13 @@ namespace FakeStorage
                 }
             }
 
-            public IList<TableResult> ExecuteBatch(TableBatchOperation batch)
+            public TableBatchResult ExecuteBatch(TableBatchOperation batch)
             {
                 TableOperation[] operations = batch.ToArray();
 
                 if (operations.Length == 0)
                 {
-                    return new List<TableResult>();
+                    return new TableBatchResult();
                 }
 
                 // Ensure all operations are for the same partition.
@@ -166,7 +166,7 @@ namespace FakeStorage
                     throw new InvalidOperationException("All operations in a batch must have distinct row keys.");
                 }
 
-                List<TableResult> results = new List<TableResult>();
+                var results = new TableBatchResult();
 
                 foreach (TableOperation operation in operations)
                 {

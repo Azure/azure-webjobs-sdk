@@ -1,13 +1,14 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage.Queue;
-using Microsoft.WindowsAzure.Storage.Table;
 using System;
-using System.Collections.Generic;
+using Microsoft.Azure.Cosmos.Table;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.Storage.Queue;
+
+using CloudStorageAccount = Microsoft.Azure.Storage.CloudStorageAccount;
+using TableStorageAccount = Microsoft.Azure.Cosmos.Table.CloudStorageAccount;
 
 namespace Microsoft.Azure.WebJobs
 {
@@ -24,30 +25,28 @@ namespace Microsoft.Azure.WebJobs
         /// else use the virtuals. 
         /// </summary>
         public CloudStorageAccount SdkObject { get; protected set; }
+        public TableStorageAccount TableSdkObject { get; protected set; }
 
         public static StorageAccount NewFromConnectionString(string accountConnectionString)
         {
             var account = CloudStorageAccount.Parse(accountConnectionString);
-            return New(account, account.Credentials.AccountName);
+            var tableAccount = TableStorageAccount.Parse(accountConnectionString);
+            return New(account, tableAccount, account.Credentials.AccountName);
         }
 
-        public static StorageAccount New(CloudStorageAccount account)
+        public static StorageAccount New(CloudStorageAccount account, TableStorageAccount tableAccount = null, string storageAccountName = null)
         {
-            if (account.Credentials == null)
+            // The storage account name is normally in the credentials,
+            // but not when we are using a managed identity
+            if (storageAccountName == null)
             {
-                throw new InvalidOperationException("Cannot infer storage account name with ManagedIdentity. Use the New method that requires the storageAccounyName.");
+                storageAccountName = account.Credentials.AccountName;
             }
 
-            return New(account, account.Credentials.AccountName);
-        }
-
-        // When we use Managed Identity, we do not have a Credentials object on the 
-        // CloudStorageAccount - therefore we need to know the storage account name
-        public static StorageAccount New(CloudStorageAccount account, string storageAccountName)
-        {
             return new StorageAccount
             { 
                 SdkObject = account,
+                TableSdkObject = tableAccount,
                 Name = storageAccountName
             };
         }
@@ -76,7 +75,7 @@ namespace Microsoft.Azure.WebJobs
 
         public virtual CloudTableClient CreateCloudTableClient()
         {
-            return SdkObject.CreateCloudTableClient();
+            return CloudStorageAccountExtensions.CreateCloudTableClient(TableSdkObject);            
         }
     }
 }
