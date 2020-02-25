@@ -5,6 +5,6 @@ namespace Microsoft.Azure.WebJobs.Hosting
 {
     public interface IWebJobsConfigurationStartup
     {
-        void Configure(IWebJobsConfigurationBuilder builder);
+        void Configure(WebJobsBuilderContext context, IWebJobsConfigurationBuilder builder);
     }
 }

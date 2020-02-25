@@ -79,6 +79,11 @@ namespace Microsoft.Azure.WebJobs
 
         public static IWebJobsBuilder UseWebJobsStartup(this IWebJobsBuilder builder, Type startupType, ILoggerFactory loggerFactory)
         {
+            return UseWebJobsStartup(builder, startupType, null, loggerFactory);
+        }
+
+        public static IWebJobsBuilder UseWebJobsStartup(this IWebJobsBuilder builder, Type startupType, WebJobsBuilderContext context, ILoggerFactory loggerFactory)
+        {
             if (!typeof(IWebJobsStartup).IsAssignableFrom(startupType))
             {
                 throw new ArgumentException($"The {nameof(startupType)} argument must be an implementation of {typeof(IWebJobsStartup).FullName}");
@@ -88,17 +93,17 @@ namespace Microsoft.Azure.WebJobs
 
             if (loggerFactory == NullLoggerFactory.Instance)
             {
-                startup.Configure(builder);
+                ConfigureStartup(startup, context, builder);
             }
             else
             {
-                ConfigureAndLogUserConfiguredServices(startup, builder, loggerFactory);
+                ConfigureAndLogUserConfiguredServices(startup, context, builder, loggerFactory);
             }
 
             return builder;
         }
 
-        private static void ConfigureAndLogUserConfiguredServices(IWebJobsStartup startup, IWebJobsBuilder builder, ILoggerFactory loggerFactory)
+        private static void ConfigureAndLogUserConfiguredServices(IWebJobsStartup startup, WebJobsBuilderContext context, IWebJobsBuilder builder, ILoggerFactory loggerFactory)
         {
             var logger = loggerFactory.CreateLogger<TrackedServiceCollection>();
 
@@ -107,7 +112,7 @@ namespace Microsoft.Azure.WebJobs
                 if (tracker != null)
                 {
                     tracker.ResetTracking();
-                    startup.Configure(builder);
+                    ConfigureStartup(startup, context, builder);
                     StringBuilder sb = new StringBuilder("Services registered by external startup type " + startup.GetType().ToString() + ":");
 
                     foreach (ServiceDescriptor service in tracker.TrackedCollectionChanges)
@@ -132,6 +137,18 @@ namespace Microsoft.Azure.WebJobs
                     }
                     logger.LogDebug(new EventId(500, "ExternalStartupServices"), sb.ToString());
                 }
+            }
+        }
+
+        private static void ConfigureStartup(IWebJobsStartup startup, WebJobsBuilderContext context, IWebJobsBuilder builder)
+        {
+            if (startup is IWebJobsStartup2 startup2)
+            {
+                startup2.Configure(context, builder);
+            }
+            else
+            {
+                startup.Configure(builder);
             }
         }
 
@@ -168,12 +185,17 @@ namespace Microsoft.Azure.WebJobs
         /// <returns>The updated <see cref="IHostBuilder"/> instance.</returns>
         public static IWebJobsBuilder UseExternalStartup(this IWebJobsBuilder builder, IWebJobsStartupTypeLocator startupTypeLocator, ILoggerFactory loggerFactory)
         {
+            return UseExternalStartup(builder, startupTypeLocator, null, loggerFactory);
+        }
+
+        public static IWebJobsBuilder UseExternalStartup(this IWebJobsBuilder builder, IWebJobsStartupTypeLocator startupTypeLocator, WebJobsBuilderContext context, ILoggerFactory loggerFactory)
+        {
             IEnumerable<Type> types = startupTypeLocator.GetStartupTypes()
                 .Where(t => typeof(IWebJobsStartup).IsAssignableFrom(t));
 
             foreach (var type in types)
             {
-                builder.UseWebJobsStartup(type, loggerFactory);
+                builder.UseWebJobsStartup(type, context, loggerFactory);
             }
 
             return builder;
@@ -251,22 +273,22 @@ namespace Microsoft.Azure.WebJobs
             return builder;
         }
 
-        public static IWebJobsConfigurationBuilder UseWebJobsConfigurationStartup<T>(this IWebJobsConfigurationBuilder builder) where T : IWebJobsConfigurationStartup, new()
+        public static IWebJobsConfigurationBuilder UseWebJobsConfigurationStartup<T>(this IWebJobsConfigurationBuilder builder, WebJobsBuilderContext context = null) where T : IWebJobsConfigurationStartup, new()
         {
-            return builder.UseWebJobsConfigurationStartup<T>(NullLoggerFactory.Instance);
+            return builder.UseWebJobsConfigurationStartup<T>(context, NullLoggerFactory.Instance);
         }
 
-        public static IWebJobsConfigurationBuilder UseWebJobsConfigurationStartup<T>(this IWebJobsConfigurationBuilder builder, ILoggerFactory loggerFactory) where T : IWebJobsConfigurationStartup, new()
+        public static IWebJobsConfigurationBuilder UseWebJobsConfigurationStartup<T>(this IWebJobsConfigurationBuilder builder, WebJobsBuilderContext context, ILoggerFactory loggerFactory) where T : IWebJobsConfigurationStartup, new()
         {
-            return builder.UseWebJobsConfigurationStartup(typeof(T), loggerFactory);
+            return builder.UseWebJobsConfigurationStartup(typeof(T), context, loggerFactory);
         }
 
-        public static IWebJobsConfigurationBuilder UseWebJobsConfigurationStartup(this IWebJobsConfigurationBuilder builder, Type startupType)
+        public static IWebJobsConfigurationBuilder UseWebJobsConfigurationStartup(this IWebJobsConfigurationBuilder builder, Type startupType, WebJobsBuilderContext context = null)
         {
-            return builder.UseWebJobsConfigurationStartup(startupType, NullLoggerFactory.Instance);
+            return builder.UseWebJobsConfigurationStartup(startupType, context, NullLoggerFactory.Instance);
         }
 
-        public static IWebJobsConfigurationBuilder UseWebJobsConfigurationStartup(this IWebJobsConfigurationBuilder builder, Type startupType, ILoggerFactory loggerFactory)
+        public static IWebJobsConfigurationBuilder UseWebJobsConfigurationStartup(this IWebJobsConfigurationBuilder builder, Type startupType, WebJobsBuilderContext context, ILoggerFactory loggerFactory)
         {
             if (!typeof(IWebJobsConfigurationStartup).IsAssignableFrom(startupType))
             {
@@ -277,17 +299,17 @@ namespace Microsoft.Azure.WebJobs
 
             if (loggerFactory == NullLoggerFactory.Instance)
             {
-                startup.Configure(builder);
+                startup.Configure(context, builder);
             }
             else
             {
-                ConfigureAndLogUserConfigurationProviders(startup, builder, loggerFactory);
+                ConfigureAndLogUserConfigurationProviders(startup, context, builder, loggerFactory);
             }
 
             return builder;
         }
 
-        private static void ConfigureAndLogUserConfigurationProviders(IWebJobsConfigurationStartup startup, IWebJobsConfigurationBuilder builder, ILoggerFactory loggerFactory)
+        private static void ConfigureAndLogUserConfigurationProviders(IWebJobsConfigurationStartup startup, WebJobsBuilderContext context, IWebJobsConfigurationBuilder builder, ILoggerFactory loggerFactory)
         {
             var logger = loggerFactory.CreateLogger<TrackedConfigurationBuilder>();
 
@@ -296,7 +318,7 @@ namespace Microsoft.Azure.WebJobs
                 if (tracker != null)
                 {
                     tracker.ResetTracking();
-                    startup.Configure(builder);
+                    startup.Configure(context, builder);
                     StringBuilder sb = new StringBuilder($"{nameof(IConfigurationSource)}s registered by external startup type " + startup.GetType().ToString() + ":");
 
                     foreach (IConfigurationSource source in tracker.TrackedConfigurationSources)
@@ -309,19 +331,19 @@ namespace Microsoft.Azure.WebJobs
             }
         }
 
-        public static IWebJobsConfigurationBuilder UseExternalConfigurationStartup(this IWebJobsConfigurationBuilder builder)
+        public static IWebJobsConfigurationBuilder UseExternalConfigurationStartup(this IWebJobsConfigurationBuilder builder, WebJobsBuilderContext context)
         {
-            return builder.UseExternalConfigurationStartup(new DefaultStartupTypeLocator(), NullLoggerFactory.Instance);
+            return builder.UseExternalConfigurationStartup(new DefaultStartupTypeLocator(), context, NullLoggerFactory.Instance);
         }
 
-        public static IWebJobsConfigurationBuilder UseExternalConfigurationStartup(this IWebJobsConfigurationBuilder builder, IWebJobsStartupTypeLocator startupTypeLocator, ILoggerFactory loggerFactory)
+        public static IWebJobsConfigurationBuilder UseExternalConfigurationStartup(this IWebJobsConfigurationBuilder builder, IWebJobsStartupTypeLocator startupTypeLocator, WebJobsBuilderContext context, ILoggerFactory loggerFactory)
         {
             IEnumerable<Type> types = startupTypeLocator.GetStartupTypes()
                 .Where(t => typeof(IWebJobsConfigurationStartup).IsAssignableFrom(t));
 
             foreach (var type in types)
             {
-                builder.UseWebJobsConfigurationStartup(type, loggerFactory);
+                builder.UseWebJobsConfigurationStartup(type, context, loggerFactory);
             }
 
             return builder;
