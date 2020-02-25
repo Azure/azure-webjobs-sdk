@@ -15,22 +15,30 @@ namespace Microsoft.Azure.WebJobs.Hosting
     internal class DefaultStartupTypeLocator : IWebJobsStartupTypeLocator
     {
         private readonly Assembly _entryAssembly;
+        private readonly Lazy<IEnumerable<Type>> _startupTypes;
 
         public DefaultStartupTypeLocator()
         {
+            _startupTypes = new Lazy<IEnumerable<Type>>(GetTypes);
         }
 
         internal DefaultStartupTypeLocator(Assembly entryAssembly)
+            : this()
         {
             _entryAssembly = entryAssembly;
         }
 
         public Type[] GetStartupTypes()
         {
-            Assembly assembly = _entryAssembly ?? Assembly.GetEntryAssembly();
-            IEnumerable<WebJobsStartupAttribute> startupAttributes = assembly.GetCustomAttributes<WebJobsStartupAttribute>();
+            return _startupTypes.Value
+                .Where(t => typeof(IWebJobsConfigurationStartup).IsAssignableFrom(t) || typeof(IWebJobsConfigurationStartup).IsAssignableFrom(t))
+                .ToArray();
+        }
 
-            return startupAttributes.Select(a => a.WebJobsStartupType).ToArray();
+        private IEnumerable<Type> GetTypes()
+        {
+            Assembly entryAssembly = _entryAssembly ?? Assembly.GetEntryAssembly();
+            return entryAssembly.GetCustomAttributes<WebJobsStartupAttribute>().Select(a => a.WebJobsStartupType);
         }
     }
 }

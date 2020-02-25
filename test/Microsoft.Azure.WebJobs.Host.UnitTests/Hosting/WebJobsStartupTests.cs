@@ -4,9 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Authentication.ExtendedProtection;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -187,11 +187,23 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             }
         }
 
-        public class ExternalTestStartup : IWebJobsStartup
+        public class ExternalTestStartup : IWebJobsStartup, IWebJobsConfigurationStartup
         {
             public void Configure(IWebJobsBuilder builder)
             {
                 builder.Services.AddSingleton<TestExternalService>();
+            }
+
+            public void Configure(IWebJobsConfigurationBuilder builder)
+            {
+                IDictionary<string, string> data = new Dictionary<string, string>
+                {
+                    { "abc", "123" }
+                };
+
+                builder.ConfigurationBuilder.AddInMemoryCollection(data);
+                builder.ConfigurationBuilder.AddEnvironmentVariables();
+                builder.ConfigurationBuilder.AddTestSettings();
             }
         }
 
