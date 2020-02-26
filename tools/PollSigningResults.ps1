@@ -43,4 +43,8 @@ if (-not $isPr -and $env:SkipAssemblySigning -ne "true") {
   Get-ChildItem "$PSScriptRoot/../bin/PackagesNuGet" | % {
     Push-AppveyorArtifact $_.FullName
   }
+
+  Get-ChildItem "$PSScriptRoot/../bin/SiteExtensions" | % {
+    Push-AppveyorArtifact $_.FullName
+  }
 }
