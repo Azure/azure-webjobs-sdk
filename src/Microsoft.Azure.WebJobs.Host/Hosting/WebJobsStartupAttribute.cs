@@ -25,9 +25,9 @@ namespace Microsoft.Azure.WebJobs.Hosting
                 throw new ArgumentNullException(nameof(startupType));
             }
 
-            if (!typeof(IWebJobsConfigurationStartup).IsAssignableFrom(startupType) && !typeof(IWebJobsConfigurationStartup).IsAssignableFrom(startupType))
+            if (!typeof(IWebJobsStartup).IsAssignableFrom(startupType) && !typeof(IWebJobsConfigurationStartup).IsAssignableFrom(startupType))
             {
-                throw new ArgumentException($@"""{startupType}"" does not implement {typeof(IWebJobsConfigurationStartup)} or {typeof(IWebJobsConfigurationStartup)}.", nameof(startupType));
+                throw new ArgumentException($@"""{startupType}"" does not implement {typeof(IWebJobsStartup)} or {typeof(IWebJobsConfigurationStartup)}.", nameof(startupType));
             }
 
             if (string.IsNullOrEmpty(name))
@@ -57,6 +57,6 @@ namespace Microsoft.Azure.WebJobs.Hosting
         /// <summary>
         /// Gets the friendly human readable name for the startup action.
         /// </summary>
-        public string Name { get;  }
+        public string Name { get; }
     }
 }

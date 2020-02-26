@@ -284,8 +284,6 @@ namespace Microsoft.Azure.WebJobs
                 ConfigureAndLogUserConfigurationProviders(startup, builder, loggerFactory);
             }
 
-            startup.Configure(builder);
-
             return builder;
         }
 

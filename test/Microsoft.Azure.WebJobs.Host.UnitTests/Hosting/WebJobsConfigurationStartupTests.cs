@@ -35,7 +35,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
 
                 IHost host = builder.Build();
 
-                Assert.True(TestStartup1.ConfigureInvoked);
+                Assert.Equal(1, TestStartup1.ConfigureInvoked);
 
                 IConfiguration config = host.Services.GetService<IConfiguration>();
 
@@ -57,7 +57,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
 
                 IHost host = builder.Build();
 
-                Assert.True(TestStartup1.ConfigureInvoked);
+                Assert.Equal(1, TestStartup1.ConfigureInvoked);
 
                 IConfiguration config = host.Services.GetService<IConfiguration>();
 
@@ -83,8 +83,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
 
                 IHost host = builder.Build();
 
-                Assert.True(TestStartup1.ConfigureInvoked);
-                Assert.True(TestStartup2.ConfigureInvoked);
+                Assert.Equal(1, TestStartup1.ConfigureInvoked);
+                Assert.Equal(1, TestStartup2.ConfigureInvoked);
 
                 IConfiguration config = host.Services.GetService<IConfiguration>();
                 Assert.Equal("000", config["abc"]);
@@ -144,9 +144,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
         private class TestStartup1 : IWebJobsConfigurationStartup
         {
             [ThreadStatic]
-            private static bool _configureInvoked;
+            private static int _configureInvoked;
 
-            public static bool ConfigureInvoked => _configureInvoked;
+            public static int ConfigureInvoked => _configureInvoked;
 
             public void Configure(IWebJobsConfigurationBuilder builder)
             {
@@ -157,21 +157,21 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
 
                 builder.ConfigurationBuilder.AddInMemoryCollection(data);
 
-                _configureInvoked = true;
+                _configureInvoked++;
             }
 
             internal static void Reset()
             {
-                _configureInvoked = false;
+                _configureInvoked = 0;
             }
         }
 
         private class TestStartup2 : IWebJobsConfigurationStartup
         {
             [ThreadStatic]
-            private static bool _configureInvoked;
+            private static int _configureInvoked;
 
-            public static bool ConfigureInvoked => _configureInvoked;
+            public static int ConfigureInvoked => _configureInvoked;
 
             public void Configure(IWebJobsConfigurationBuilder builder)
             {
@@ -183,12 +183,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
 
                 builder.ConfigurationBuilder.AddInMemoryCollection(data);
 
-                _configureInvoked = true;
+                _configureInvoked++;
             }
 
             internal static void Reset()
             {
-                _configureInvoked = false;
+                _configureInvoked = 0;
             }
         }
     }
