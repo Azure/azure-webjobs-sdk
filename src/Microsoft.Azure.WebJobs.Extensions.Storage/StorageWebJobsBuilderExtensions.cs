@@ -24,7 +24,7 @@ namespace Microsoft.Extensions.Hosting
 {
     public static class StorageWebJobsBuilderExtensions
     {
-        public static IWebJobsBuilder AddAzureStorage(this IWebJobsBuilder builder, Action<QueuesOptions> configureQueues = null, Action<BlobsOptions> configureBlobs = null, string managedIdentityTenantId = "")
+        public static IWebJobsBuilder AddAzureStorage(this IWebJobsBuilder builder, Action<QueuesOptions> configureQueues = null, Action<BlobsOptions> configureBlobs = null)
         {
             // add webjobs to user agent for all storage calls
             OperationContext.GlobalSendingRequest += (sender, e) =>
