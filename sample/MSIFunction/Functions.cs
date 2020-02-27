@@ -11,10 +11,10 @@ using SampleHost.Filters;
 
 namespace SampleHost
 {
+    [StorageAccount("%storageAccount%")]
     [ErrorHandler]
     public class Functions
     {
-        [StorageAccount("%storageAccount%")]
         public void ProcessQueueMessage(
             [BlobTrigger("%containerName%/{name}")] CloudBlockBlob blob,
             string name,

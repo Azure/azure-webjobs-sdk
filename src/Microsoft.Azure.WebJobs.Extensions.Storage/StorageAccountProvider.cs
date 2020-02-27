@@ -37,6 +37,19 @@ namespace Microsoft.Azure.WebJobs
                 name = ConnectionStringNames.Storage; // default
             }
 
+            // Defining the TenantId in config tells us that we want to get the Storage account from a Token
+            // and not a connection string
+            string tenantId = _configuration.GetConnectionStringOrSetting("TenantId");
+            if (!string.IsNullOrEmpty(tenantId))
+            {
+                // AccessToken could be empty, if it is, then we have to assume something else
+                // has logged in and their is a valid BearerToken
+                return StorageAccount.NewFromToken(
+                    tenantId,
+                    name,
+                    _configuration.GetConnectionStringOrSetting("AccessToken"));
+            }
+
             // $$$ Where does validation happen? 
             string connectionString = _configuration.GetWebJobsConnectionString(name);
             if (connectionString == null)
@@ -62,9 +75,13 @@ namespace Microsoft.Azure.WebJobs
         /// The host account is for internal storage mechanisms like load balancer queuing. 
         /// </summary>
         /// <returns></returns>
-        public virtual StorageAccount GetHost(string internalStorageName = null, INameResolver nameResolver = null)
+        public virtual StorageAccount GetHost()
         {
-            return this.Get(ConnectionStringNames.Storage);
+            // Defining StorageAccountName in config means connecting with a Token rather than a ConnectionStrings
+            string storageAccountName = _configuration.GetConnectionStringOrSetting("StorageAccountName");
+
+            // If we haven't defined StorageAccountName then it will be null and will full back to previous functionality.
+            return this.Get(storageAccountName);
         }
     }
 }

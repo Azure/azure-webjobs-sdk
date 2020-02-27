@@ -21,6 +21,11 @@ namespace Microsoft.Azure.WebJobs
         {
             return _account;
         }
+
+        public override StorageAccount GetHost()
+        {
+            return _account;
+        }
     }
 
     public class FakeStorageAccount : StorageAccount

@@ -197,7 +197,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                     .Build();
 
                 var accountProvider = host.Services.GetService<StorageAccountProvider>();
-                var task = accountProvider.GetHost(ConnectionStringNames.Storage);
+                var task = accountProvider.GetHost();
                 CloudQueueClient client = task.CreateCloudQueueClient();
                 QueueClient = client;
 

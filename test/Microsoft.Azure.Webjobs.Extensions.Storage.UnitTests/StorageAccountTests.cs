@@ -100,7 +100,7 @@ namespace Microsoft.Azure.WebJobs.Storage.IntegrationTests
                 })
                 .Build();
 
-            StorageAccount account = host.Services.GetService<StorageAccountProvider>().GetHost(ConnectionStringNames.Storage);
+            StorageAccount account = host.Services.GetService<StorageAccountProvider>().GetHost();
             Assert.NotNull(account);
 
             return account;

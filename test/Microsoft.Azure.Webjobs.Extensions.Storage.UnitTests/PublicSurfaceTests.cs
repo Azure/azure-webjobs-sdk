@@ -24,6 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var expectedReferences = new string[]
             {
                 "Microsoft.Azure.Cosmos.Table",
+                "Microsoft.Azure.Services.AppAuthentication",
                 "Microsoft.Azure.Storage.Blob",
                 "Microsoft.Azure.Storage.Common",
                 "Microsoft.Azure.Storage.Queue",

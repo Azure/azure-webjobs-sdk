@@ -17,7 +17,6 @@ using Microsoft.Azure.WebJobs.Host.Queues.Triggers;
 using Microsoft.Azure.WebJobs.Host.Tables.Config;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 using Microsoft.Azure.Storage;
 using WebJobs.Extensions.Storage;
 
@@ -43,14 +42,7 @@ namespace Microsoft.Extensions.Hosting
             // $$$ Remove this, should be done via DI 
             builder.Services.TryAddSingleton<ISharedContextProvider, SharedContextProvider>();
 
-            if (!string.IsNullOrWhiteSpace(managedIdentityTenantId))
-            {
-                builder.Services.TryAddSingleton<StorageAccountProvider>(new ManagedIdentityStorageAccountProvider(managedIdentityTenantId));
-            }
-            else
-            {
-                builder.Services.TryAddSingleton<StorageAccountProvider>();
-            }
+            builder.Services.TryAddSingleton<StorageAccountProvider>();
 
             builder.Services.TryAddSingleton<IContextSetter<IBlobWrittenWatcher>>((p) => new ContextAccessor<IBlobWrittenWatcher>());
             builder.Services.TryAddSingleton((p) => p.GetService<IContextSetter<IBlobWrittenWatcher>>() as IContextGetter<IBlobWrittenWatcher>);

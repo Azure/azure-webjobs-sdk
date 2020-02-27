@@ -3,11 +3,13 @@
 
 using System;
 using Microsoft.Azure.Cosmos.Table;
-using Microsoft.Azure.Storage;
+using Microsoft.Azure.Services.AppAuthentication;
+using Microsoft.Azure.Storage.Auth;
 using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.Storage.Queue;
 
 using CloudStorageAccount = Microsoft.Azure.Storage.CloudStorageAccount;
+using StorageCredentials = Microsoft.Azure.Storage.Auth.StorageCredentials;
 using TableStorageAccount = Microsoft.Azure.Cosmos.Table.CloudStorageAccount;
 
 namespace Microsoft.Azure.WebJobs
@@ -38,6 +40,29 @@ namespace Microsoft.Azure.WebJobs
             var account = CloudStorageAccount.Parse(accountConnectionString);
             var tableAccount = TableStorageAccount.Parse(accountConnectionString);
             return New(account, tableAccount, account.Credentials.AccountName);
+        }
+
+        internal static StorageAccount NewFromToken(string tenantId, string name, string accessToken = null)
+        {
+            if (string.IsNullOrWhiteSpace(tenantId))
+            {
+                throw new ArgumentNullException(nameof(tenantId));
+            }
+
+            if (string.IsNullOrEmpty(accessToken))
+            {
+                var tokenProvider = new AzureServiceTokenProvider();
+                accessToken = tokenProvider.GetAccessTokenAsync("https://storage.azure.com/", tenantId).Result;
+            }
+            var storageCredentials = new StorageCredentials(new TokenCredential(accessToken));
+            var cloudStorageAccount = new CloudStorageAccount(
+                storageCredentials,
+                name,
+                "core.windows.net",
+                true);
+
+            // Create the cosmos table storage account - at the moment pass null??
+            return New(cloudStorageAccount, null, name);
         }
 
         public static StorageAccount New(CloudStorageAccount account, TableStorageAccount tableAccount = null, string storageAccountName = null)

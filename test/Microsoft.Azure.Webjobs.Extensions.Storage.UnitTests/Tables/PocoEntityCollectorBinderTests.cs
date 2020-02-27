@@ -128,7 +128,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Tables
             //StorageClientFactory clientFactory = new StorageClientFactory();
             //IStorageTableClient client = new StorageAccount(CloudStorageAccount.DevelopmentStorageAccount, clientFactory).CreateTableClient();
             // return client;
-            var account = StorageAccount.New(null, CloudStorageAccount.DevelopmentStorageAccount);
+            var account = StorageAccount.New(null, CloudStorageAccount.DevelopmentStorageAccount, "Test");
             return account.CreateCloudTableClient();
         }
     }

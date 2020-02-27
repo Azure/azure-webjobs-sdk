@@ -1,8 +1,12 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Extensions.Options;
+using Microsoft.Azure.Services.AppAuthentication;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Auth;
 using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Extensions.Options;
 using System;
 
 namespace Microsoft.Azure.WebJobs
@@ -14,13 +18,45 @@ namespace Microsoft.Azure.WebJobs
     public class DistributedLockManagerContainerProvider
     {
         public DistributedLockManagerContainerProvider() { } 
-        public DistributedLockManagerContainerProvider(IOptions<JobHostInternalStorageOptions> x )
+        public DistributedLockManagerContainerProvider(IOptions<JobHostInternalStorageOptions> options)
         {
-            var sasBlobContainer = x.Value.InternalSasBlobContainer;
+            SetContainerFromSharedAccessSignature(options);
+            SetContainerFromAccessToken(options);
+        }
+
+        private void SetContainerFromSharedAccessSignature(IOptions<JobHostInternalStorageOptions> options)
+        {
+            var sasBlobContainer = options.Value.InternalSasBlobContainer;
             if (sasBlobContainer != null)
             {
                 var uri = new Uri(sasBlobContainer);
                 this.InternalContainer = new CloudBlobContainer(uri);
+            }
+        }
+
+        private void SetContainerFromAccessToken(IOptions<JobHostInternalStorageOptions> options)
+        {
+            var tenantId = options.Value.TenantId;
+            var accessToken = options.Value.AccessToken;
+            var storageAccountName = options.Value.StorageAccountName;
+            // Connect to storage using a Token that is specific to the defined Tenant from configuration
+            if (!string.IsNullOrEmpty(tenantId))
+            {
+                if (string.IsNullOrEmpty(accessToken))
+                {
+                    // This code assumes that the running process has logged into Azure. It will not log in for you.
+                    var tokenProvider = new AzureServiceTokenProvider();
+                    accessToken = tokenProvider.GetAccessTokenAsync("https://storage.azure.com/", tenantId).Result;
+                }
+                var storageCredentials = new StorageCredentials(new TokenCredential(accessToken));
+
+                var storageAccount = new CloudStorageAccount(storageCredentials,
+                    storageAccountName,
+                    "core.windows.net",
+                    true);
+
+                var blobClient = storageAccount.CreateCloudBlobClient();
+                this.InternalContainer = blobClient.GetContainerReference(HostContainerNames.Hosts);
             }
         }
 
@@ -40,5 +76,18 @@ namespace Microsoft.Azure.WebJobs
     public class JobHostInternalStorageOptions
     {
         public string InternalSasBlobContainer { get; set; }
+        /// <summary>
+        /// This is used if you want to use a Storage Account for the host and you want to connect with Managed Identity
+        /// </summary>
+        public string StorageAccountName { get; set; }
+        /// <summary>
+        /// This is used if you want to use a Storage Account for the host and you want to connect with Managed Identity
+        /// </summary>
+        public string TenantId { get; set; }
+        /// <summary>
+        /// This is useful when debugging and you cannot login as the user that is running the process and you want
+        /// to a use a Storage Account for the host and you want to connect with Managed Identity
+        /// </summary>
+        public string AccessToken { get; set; }
     }
 }

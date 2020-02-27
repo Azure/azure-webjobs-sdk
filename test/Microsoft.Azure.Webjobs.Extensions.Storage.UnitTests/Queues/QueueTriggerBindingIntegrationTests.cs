@@ -40,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
 
         [Theory]
         [InlineData("RequestId", "4b957741-c22e-471d-9f0f-e1e8534b9cb6")]
-        [InlineData("RequestReceivedTime", "8/16/2014 12:09:36 AM")]
+        [InlineData("RequestReceivedTime", "2014-08-16T12:09:36Z")]
         [InlineData("DeliveryCount", "8")]
         [InlineData("IsSuccess", "False")]
         public void BindAsync_IfUserDataType_ReturnsValidBindingData(string userPropertyName, string userPropertyValue)
