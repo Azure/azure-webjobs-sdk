@@ -548,6 +548,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 await parameterHelper.ProcessOutputParameters(functionCancellationTokenSource.Token);
             }
 
+            // If the function body or filter threw an exception, we have previously captured it to make sure we can process output parameters.
+            // We we rethrow it.
+            // (Should we do this after ingleton.ReleaseAsync(..)?)
+            parameterHelper.ThrowIfErrorCaptured();
+
             if (singleton != null)
             {
                 await singleton.ReleaseAsync(functionCancellationTokenSource.Token);
@@ -557,8 +562,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         internal static async Task InvokeAsync(IFunctionInvoker invoker, ParameterHelper parameterHelper, CancellationTokenSource timeoutTokenSource,
             CancellationTokenSource functionCancellationTokenSource, bool throwOnTimeout, TimeSpan timerInterval, IFunctionInstance instance)
         {
-            object[] invokeParameters = parameterHelper.InvokeParameters;
-
             // There are three ways the function can complete:
             //   1. The invokeTask itself completes first.
             //   2. A cancellation is requested (by host.Stop(), for example).
@@ -567,24 +570,41 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             //      a. If throwOnTimeout, we throw the FunctionTimeoutException.
             //      b. If !throwOnTimeout, wait for the task to complete.
 
-            // Start the invokeTask.
-            Task<object> invokeTask = invoker.InvokeAsync(parameterHelper.JobInstance, invokeParameters);
+            object returnValue = null;
+            Exception exception = null;
 
-            // Combine #1 and #2 with a timeout task (handled by this method).
-            // functionCancellationTokenSource.Token is passed to each function that requests it, so we need to call Cancel() on it
-            // if there is a timeout.
-            bool isTimeout = await TryHandleTimeoutAsync(invokeTask, functionCancellationTokenSource.Token, throwOnTimeout, timeoutTokenSource.Token,
-                timerInterval, instance, () => functionCancellationTokenSource.Cancel());
-
-            // #2 occurred. If we're going to throwOnTimeout, watch for a timeout while we wait for invokeTask to complete.
-            if (throwOnTimeout && !isTimeout && functionCancellationTokenSource.IsCancellationRequested)
+            try
             {
-                await TryHandleTimeoutAsync(invokeTask, CancellationToken.None, throwOnTimeout, timeoutTokenSource.Token, timerInterval, instance, null);
+                // Start the invokeTask.
+                Task<object> invokeTask = invoker.InvokeAsync(parameterHelper.JobInstance, parameterHelper.InvokeParameters);
+
+                // Combine #1 and #2 with a timeout task (handled by this method).
+                // functionCancellationTokenSource.Token is passed to each function that requests it, so we need to call Cancel() on it
+                // if there is a timeout.
+                bool isTimeout = await TryHandleTimeoutAsync(invokeTask, functionCancellationTokenSource.Token, throwOnTimeout, timeoutTokenSource.Token,
+                    timerInterval, instance, () => functionCancellationTokenSource.Cancel());
+
+                // #2 occurred. If we're going to throwOnTimeout, watch for a timeout while we wait for invokeTask to complete.
+                if (throwOnTimeout && !isTimeout && functionCancellationTokenSource.IsCancellationRequested)
+                {
+                    await TryHandleTimeoutAsync(invokeTask, CancellationToken.None, throwOnTimeout, timeoutTokenSource.Token, timerInterval, instance, null);
+                }
+
+                returnValue = await invokeTask;
+            }
+            catch (Exception ex)
+            {
+                exception = ex;
             }
 
-            object returnValue = await invokeTask;
-
-            parameterHelper.SetReturnValue(returnValue);
+            if (exception == null)
+            {
+                parameterHelper.SetResultValue(returnValue);
+            }
+            else
+            {
+                parameterHelper.SetErrorThrown(exception);
+            }
         }
 
         /// <summary>
@@ -809,7 +829,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             private readonly IDictionary<string, object> _filterContextProperties = new Dictionary<string, object>();
 
             // the return value of the function
-            private object _returnValue;
+            private object _resultValue;
+
+            // the error thrown by the function, if any
+            private Exception _resultError;
 
             private bool _disposed;
 
@@ -836,8 +859,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             public object JobInstance { get; set; }
 
             public IDictionary<string, ParameterLog> ParameterLogCollector => _parameterLogCollector;
-
-            public object ReturnValue => _returnValue;
 
             public IDictionary<string, object> FilterContextProperties => _filterContextProperties;
 
@@ -984,32 +1005,74 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // occurred by the time messages are enqueued.
             public async Task ProcessOutputParameters(CancellationToken cancellationToken)
             {
+                bool functionCompletedGracefully = (_resultError == null);
+                List<Exception> bindingProcessingErrors = null;
+
+                async Task InvokeBinderAndCaptureError(Func<Task> binderCallAsync, string parameterName)
+                {
+                    try
+                    {
+                        await binderCallAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        OperationCanceledException oce = ex as OperationCanceledException;
+                        if (oce != null && oce.CancellationToken == cancellationToken)
+                        {
+                            ExceptionDispatchInfo.Capture(oce).Throw();
+                        }
+
+                        bindingProcessingErrors = bindingProcessingErrors ?? new List<Exception>();
+                        bindingProcessingErrors.Add(
+                                new InvalidOperationException(
+                                        string.Format(
+                                                CultureInfo.InvariantCulture,
+                                                "Error while handling parameter \"{0}\" after function returned.",
+                                                parameterName),
+                                        ex));
+                    }
+                }
+
                 string[] parameterNamesInBindOrder = SortParameterNamesInStepOrder();
                 foreach (string name in parameterNamesInBindOrder)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
+
                     IValueProvider provider = _parameters[name];
-                    IValueBinder binder = provider as IValueBinder;
 
-                    if (binder != null)
+                    if (functionCompletedGracefully)
                     {
-                        bool isReturn = name == FunctionIndexer.ReturnParamName;
-                        object argument = isReturn ? _returnValue : InvokeParameters[GetParameterIndex(name)];
+                        IValueBinder binder = provider as IValueBinder;
+                        if (binder != null)
+                        {
+                            bool isReturn = FunctionIndexer.ReturnParamName.Equals(name);
+                            object argument = isReturn ? _resultValue : InvokeParameters[GetParameterIndex(name)];
 
-                        try
-                        {
-                            // This could do complex things that may fail. Catch the exception.
-                            await binder.SetValueAsync(argument, cancellationToken);
+                            await InvokeBinderAndCaptureError( () => binder.SetValueAsync(argument, cancellationToken), name);
                         }
-                        catch (OperationCanceledException)
+                    }
+                    else
+                    {
+                        IErrorAwareValueBinder binder = provider as IErrorAwareValueBinder;
+                        if (binder != null)
                         {
-                            throw;
+                            bool isReturn = FunctionIndexer.ReturnParamName.Equals(name);
+                            object argument = isReturn ? null : InvokeParameters[GetParameterIndex(name)];
+
+                            await InvokeBinderAndCaptureError( () => binder.SetErrorAsync(argument, _resultError, cancellationToken), name);
                         }
-                        catch (Exception exception)
-                        {
-                            string message = string.Format(CultureInfo.InvariantCulture,
-                                "Error while handling parameter {0} after function returned:", name);
-                            throw new InvalidOperationException(message, exception);
-                        }
+                    }
+                }
+
+                if (bindingProcessingErrors != null)
+                {
+                    if (bindingProcessingErrors.Count == 1)
+                    {
+                        ExceptionDispatchInfo.Capture(bindingProcessingErrors[0]).Throw();
+                    }
+                    else
+                    {
+                        throw new AggregateException("Error while handling multiple parameters after function returned.", bindingProcessingErrors);
                     }
                 }
             }
@@ -1051,9 +1114,28 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 return parameterNames;
             }
 
-            internal void SetReturnValue(object returnValue)
+            public void SetResultValue(object resultValue)
             {
-                _returnValue = returnValue;
+                _resultValue = resultValue;
+            }
+
+            public void SetErrorThrown(Exception error)
+            {
+                if (error == null)
+                {
+                    throw new ArgumentNullException(nameof(error));
+                }
+
+                _resultError = error;
+            }
+
+            public void ThrowIfErrorCaptured()
+            {
+                Exception error = _resultError;
+                if (error != null)
+                {
+                    ExceptionDispatchInfo.Capture(error).Throw();
+                }
             }
 
             public void Dispose()
