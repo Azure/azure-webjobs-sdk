@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
@@ -79,9 +80,10 @@ namespace WebJobs.Host.Storage.Logging
                 await _parameterLogBlob.UploadTextAsync(content, cancellationToken: cancellationToken);
                 return true;
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException oce)
             {
-                throw;
+                ExceptionDispatchInfo.Capture(oce).Throw();
+                throw;  // The above line always throws, but the compiler does not know about it and generates a "not all code paths return a value"-error.
             }
             catch (Exception e)
             {

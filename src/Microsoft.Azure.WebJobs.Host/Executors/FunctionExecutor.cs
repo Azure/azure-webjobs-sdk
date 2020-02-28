@@ -1000,9 +1000,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                             // This could do complex things that may fail. Catch the exception.
                             await binder.SetValueAsync(argument, cancellationToken);
                         }
-                        catch (OperationCanceledException)
+                        catch (OperationCanceledException oce)
                         {
-                            throw;
+                            ExceptionDispatchInfo.Capture(oce).Throw();
                         }
                         catch (Exception exception)
                         {
@@ -1180,7 +1180,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 catch (Exception ex)
                 {
                     exception = ex;
-                    throw;
+                    ExceptionDispatchInfo.Capture(ex).Throw();
+                    throw;  // The above line always throws, but the compiler does not know about it and generates a "not all code paths return a value"-error.
                 }
                 finally
                 {

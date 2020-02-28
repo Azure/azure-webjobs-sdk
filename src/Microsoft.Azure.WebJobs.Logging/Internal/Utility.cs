@@ -1,17 +1,15 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.Cosmos.Table;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml;
+using Microsoft.Azure.Cosmos.Table;
 
 namespace Microsoft.Azure.WebJobs.Logging
 {
@@ -101,13 +99,13 @@ namespace Microsoft.Azure.WebJobs.Logging
                     // This can throw 409 if the table is in the process of being deleted.                     
                     if (code != HttpStatusCode.Conflict)
                     {
-                        throw;
+                        ExceptionDispatchInfo.Capture(e).Throw();
                     }
 
                     if (totalMilliseconds < 0)
                     {
                         // timeout. 
-                        throw;
+                        ExceptionDispatchInfo.Capture(e).Throw();
                     }
                 }
                 await Task.Delay(intervalMilliseconds);
@@ -134,7 +132,8 @@ namespace Microsoft.Azure.WebJobs.Logging
                 {
                     return new TElement[0];
                 }
-                throw;
+                ExceptionDispatchInfo.Capture(e).Throw();
+                throw;  // The above line always throws, but the compiler does not know about it and generates a "not all code paths return a value"-error.
             }
         }
 
@@ -165,7 +164,8 @@ namespace Microsoft.Azure.WebJobs.Logging
                     // TableQuerySegment ctor is private, so return null. 
                     return null;
                 }
-                throw;
+                ExceptionDispatchInfo.Capture(e).Throw();
+                throw;  // The above line always throws, but the compiler does not know about it and generates a "not all code paths return a value"-error.
             }
         }
 
@@ -183,7 +183,7 @@ namespace Microsoft.Azure.WebJobs.Logging
                 var code = (HttpStatusCode)e.RequestInformation.HttpStatusCode;
                 if (code != HttpStatusCode.NotFound)
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(e).Throw();
                 }
             }
 
@@ -202,7 +202,7 @@ namespace Microsoft.Azure.WebJobs.Logging
                 var code = (HttpStatusCode)e.RequestInformation.HttpStatusCode;
                 if (code != HttpStatusCode.NotFound)
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(e).Throw();
                 }
             }
 

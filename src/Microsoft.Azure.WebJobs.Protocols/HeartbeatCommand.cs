@@ -3,6 +3,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 #if PUBLICPROTOCOL
@@ -61,7 +62,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
                 }
                 else
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
                 }
             }
 

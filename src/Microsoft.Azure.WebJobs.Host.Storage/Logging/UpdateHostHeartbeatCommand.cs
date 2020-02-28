@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.Storage;
@@ -38,7 +39,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     return false;
                 }
 
-                throw;
+                ExceptionDispatchInfo.Capture(exception).Throw();
+                throw;  // The compiler does not know that the above line throws and generates an error about a missing return value.
             }
         }
     }

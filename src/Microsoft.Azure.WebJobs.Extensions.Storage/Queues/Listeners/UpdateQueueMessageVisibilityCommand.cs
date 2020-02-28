@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Timers;
@@ -76,7 +77,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
                 }
                 else
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
                 }
             }
 

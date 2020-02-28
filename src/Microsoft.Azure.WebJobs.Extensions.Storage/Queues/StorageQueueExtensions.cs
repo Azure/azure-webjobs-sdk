@@ -3,6 +3,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.Storage;
@@ -31,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
             {
                 if (!exception.IsNotFoundQueueNotFound())
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
                 }
 
                 isQueueNotFoundException = true;

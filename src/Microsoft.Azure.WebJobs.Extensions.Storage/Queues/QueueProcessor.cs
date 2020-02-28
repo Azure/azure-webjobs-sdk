@@ -3,6 +3,7 @@
 
 using System;
 using System.Globalization;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.Storage.Queue;
@@ -199,7 +200,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
                 }
                 else
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
                 }
             }
         }
@@ -240,7 +241,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
                 }
                 else
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
                 }
             }
         }

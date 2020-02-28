@@ -3,7 +3,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
@@ -81,7 +83,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 string name = item.Key;
                 IBinding binding = item.Value;
-                IValueProvider valueProvider;
+                IValueProvider valueProvider = null;
 
                 try
                 {
@@ -94,9 +96,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                         valueProvider = await binding.BindAsync(bindingContext);
                     }
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException oce)
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(oce).Throw();
                 }
                 catch (Exception exception)
                 {

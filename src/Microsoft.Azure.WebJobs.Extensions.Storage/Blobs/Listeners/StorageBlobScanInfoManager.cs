@@ -4,6 +4,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.Storage;
@@ -68,7 +69,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                     // we haven't saved any scanInfo yet
                     return null;
                 }
-                throw;
+                ExceptionDispatchInfo.Capture(exception).Throw();
+                throw;  // The above line always throws, but the compiler does not know about it and generates a "not all code paths return a value"-error.
             }
         }
 

@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Extensions.Storage;
@@ -244,7 +245,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 }
                 else
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
+                    throw;  // The compiler does not know that the above line will always throw and generates an error about using "currentBlobs" below.
                 }
             }
 

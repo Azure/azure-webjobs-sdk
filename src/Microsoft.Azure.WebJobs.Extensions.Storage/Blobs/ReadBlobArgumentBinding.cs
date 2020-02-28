@@ -1,12 +1,14 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.IO;
-using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Bindings;
-using Microsoft.Azure.Storage;
+using System.Runtime.ExceptionServices;
 using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.WebJobs.Host.Bindings;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs
 {
@@ -30,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
                 // (HEAD request), including OpenRead. 
                 if (!exception.IsNotFound())
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
                 }
 
                 return null;

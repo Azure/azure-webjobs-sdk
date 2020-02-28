@@ -68,7 +68,7 @@ namespace Microsoft.Azure.WebJobs.Protocols
                 }
                 else
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
                 }
             }
         }
@@ -116,7 +116,7 @@ namespace Microsoft.Azure.WebJobs.Protocols
                 }
                 else
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
                 }
             }
 

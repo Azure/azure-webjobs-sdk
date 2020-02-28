@@ -5,6 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
@@ -155,7 +156,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         {
             DateTime updatedTimestamp = previousTimestamp;
 
-            IList<IListBlobItem> currentBlobs;
+            IList<IListBlobItem> currentBlobs = null;
 
             try
             {
@@ -171,7 +172,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 }
                 else
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
                 }
             }
 

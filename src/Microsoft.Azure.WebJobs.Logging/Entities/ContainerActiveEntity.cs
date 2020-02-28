@@ -4,6 +4,7 @@
 using System;
 using System.Globalization;
 using System.Net;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Microsoft.Azure.Cosmos.Table;
 
@@ -84,7 +85,7 @@ namespace Microsoft.Azure.WebJobs.Logging
                 var code = (HttpStatusCode)e.RequestInformation.HttpStatusCode;
                 if (code != HttpStatusCode.NotFound)
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(e).Throw();
                 }
                 result = null;
             }

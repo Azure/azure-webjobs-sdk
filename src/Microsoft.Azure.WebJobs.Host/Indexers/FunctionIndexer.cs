@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Description;
@@ -136,9 +137,9 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             {
                 await IndexMethodAsyncCore(method, index, cancellationToken);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException oce)
             {
-                throw;
+                ExceptionDispatchInfo.Capture(oce).Throw();
             }
             catch (Exception exception)
             {

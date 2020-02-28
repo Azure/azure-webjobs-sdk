@@ -5,6 +5,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Logging.Internal;
@@ -322,7 +323,7 @@ namespace Microsoft.Azure.WebJobs.Logging
                 // before we rethrow it
                 _onException?.Invoke(ex);
 
-                throw;
+                ExceptionDispatchInfo.Capture(ex).Throw();
             }
 
             if (_container != null)

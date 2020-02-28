@@ -5,6 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Extensions.Storage;
@@ -146,12 +147,12 @@ namespace Microsoft.Azure.WebJobs.Host
                     }
                     else
                     {
-                        throw;
+                        ExceptionDispatchInfo.Capture(exception).Throw();
                     }
                 }
                 else
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
                 }
             }
 
@@ -172,7 +173,7 @@ namespace Microsoft.Azure.WebJobs.Host
                     }
                     else
                     {
-                        throw;
+                        ExceptionDispatchInfo.Capture(exception).Throw();
                     }
                 }
             }
@@ -205,12 +206,12 @@ namespace Microsoft.Azure.WebJobs.Host
                     }
                     else
                     {
-                        throw;
+                        ExceptionDispatchInfo.Capture(exception).Throw();
                     }
                 }
                 else
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
                 }
             }
         }
@@ -240,12 +241,14 @@ namespace Microsoft.Azure.WebJobs.Host
                     }
                     else
                     {
-                        throw;
+                        ExceptionDispatchInfo.Capture(exception).Throw();
+                        throw;  // The above line always throws, but the compiler does not know about it and generates a "not all code paths return a value"-error.
                     }
                 }
                 else
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
+                    throw;  // The above line always throws, but the compiler does not know about it and generates a "not all code paths return a value"-error.
                 }
             }
 
@@ -277,7 +280,8 @@ namespace Microsoft.Azure.WebJobs.Host
                 }
                 else
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
+                    throw;  // The above line always throws, but the compiler does not know about it and generates a "not all code paths return a value"-error.
                 }
             }
         }
@@ -308,7 +312,7 @@ namespace Microsoft.Azure.WebJobs.Host
                 }
                 else
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
                 }
             }
         }
@@ -375,7 +379,8 @@ namespace Microsoft.Azure.WebJobs.Host
 
                         // If we've lost the lease or cannot re-establish it, we want to fail any
                         // in progress function execution
-                        throw;
+                        ExceptionDispatchInfo.Capture(exception).Throw();
+                        throw;  // The above line always throws, but the compiler does not know about it and generates a "not all code paths return a value"-error.
                     }
                 }
             }

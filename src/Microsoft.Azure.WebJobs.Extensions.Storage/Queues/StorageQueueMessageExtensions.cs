@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using Microsoft.Azure.Storage.Queue;
 
@@ -16,25 +17,20 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
                 throw new ArgumentNullException("message");
             }
 
-            string value;
-
             try
             {
-                value = message.AsString;
+                string value = message.AsString;
+                return value;
             }
             catch (Exception ex)
             {
-                if (ex is DecoderFallbackException || ex is FormatException)
+                if (! (ex is DecoderFallbackException || ex is FormatException))
                 {
-                    value = null;
+                    ExceptionDispatchInfo.Capture(ex).Throw();
                 }
-                else
-                {
-                    throw;
-                }
-            }
 
-            return value;
+                return null;
+            }
         }
     }
 }

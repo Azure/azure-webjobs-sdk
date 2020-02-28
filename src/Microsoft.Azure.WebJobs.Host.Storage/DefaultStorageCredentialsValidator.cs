@@ -36,9 +36,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 // If will fail fast if the password is incorrect.
                 await client.GetServicePropertiesAsync(cancellationToken);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException oce)
             {
-                throw;
+                ExceptionDispatchInfo.Capture(oce).Throw();
             }
             catch (Exception e)
             {

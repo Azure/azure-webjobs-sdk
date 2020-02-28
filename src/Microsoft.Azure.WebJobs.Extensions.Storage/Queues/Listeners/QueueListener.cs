@@ -229,7 +229,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
                 }
                 else
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
                 }
             }
 

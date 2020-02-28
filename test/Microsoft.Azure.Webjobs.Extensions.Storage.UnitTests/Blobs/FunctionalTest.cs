@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
@@ -62,11 +63,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 {
                     if (e is InvalidOperationException)
                     {
-                        throw e;
+                        ExceptionDispatchInfo.Capture(e).Throw();
                     }
                     e = e.InnerException;
                 }
-                throw;
+                ExceptionDispatchInfo.Capture(exception).Throw();
+                throw;  // The above line always throws, but the compiler does not know about it and generates a "not all code paths return a value"-error.
             }
         }
 

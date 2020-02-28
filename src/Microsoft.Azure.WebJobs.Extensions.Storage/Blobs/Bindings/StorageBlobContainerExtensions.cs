@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.Storage;
@@ -48,7 +49,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
                 if (result == null || result.HttpStatusCode != 404)
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
+                    throw;  // The above line always throws, but the compiler does not know about it and generates a "not all code paths return a value"-error.
                 }
                 else
                 {

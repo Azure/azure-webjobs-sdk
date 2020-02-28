@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Indexers;
@@ -48,8 +49,8 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
         private async Task<IReadOnlyDictionary<string, IValueProvider>> BindCoreAsync(ValueBindingContext context, object value, IDictionary<string, object> parameters)
         {
             Dictionary<string, IValueProvider> valueProviders = new Dictionary<string, IValueProvider>();
-            IValueProvider triggerProvider;
-            IReadOnlyDictionary<string, object> bindingData;
+            IValueProvider triggerProvider = null;
+            IReadOnlyDictionary<string, object> bindingData = null;
 
             IValueBinder triggerReturnValueProvider= null;
             try
@@ -59,14 +60,13 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                 bindingData = triggerData.BindingData;
                 triggerReturnValueProvider = (triggerData as TriggerData)?.ReturnValueProvider;
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException oce)
             {
-                throw;
+                ExceptionDispatchInfo.Capture(oce).Throw();
             }
             catch (Exception exception)
             {
                 triggerProvider = new BindingExceptionValueProvider(_triggerParameterName, exception);
-                bindingData = null;
             }
 
             valueProviders.Add(_triggerParameterName, triggerProvider);
@@ -85,7 +85,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             {
                 string name = item.Key;
                 IBinding binding = item.Value;
-                IValueProvider valueProvider;
+                IValueProvider valueProvider = null;
 
                 try
                 {
@@ -98,9 +98,9 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                         valueProvider = await binding.BindAsync(bindingContext);
                     }
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException oce)
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(oce).Throw();
                 }
                 catch (Exception exception)
                 {

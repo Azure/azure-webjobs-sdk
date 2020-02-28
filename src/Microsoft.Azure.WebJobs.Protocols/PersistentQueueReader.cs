@@ -7,6 +7,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 #if PUBLICPROTOCOL
 using Microsoft.Azure.WebJobs.Storage;
@@ -145,7 +146,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
             {
                 if (!exception.IsNotFound())
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
                 }
             }
 
@@ -205,7 +206,8 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
                 }
                 else
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
+                    throw;  // The above line always throws, but the compiler does not know about it and generates a "not all code paths return a value"-error.
                 }
             }
         }
@@ -241,7 +243,8 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
                 }
                 else
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
+                    throw;  // The above line always throws, but the compiler does not know about it and generates a "not all code paths return a value"-error.
                 }
             }
         }
@@ -279,14 +282,15 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
                 }
                 else
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
+                    throw;  // The above line always throws, but the compiler does not know about it and generates a "not all code paths return a value"-error.
                 }
             }
         }
 
         private static bool TryDownloadItem(ICloudBlob possibleNextItem, DateTimeOffset createdOn, out T nextItem)
         {
-            string contents;
+            string contents = null;
 
             try
             {
@@ -309,7 +313,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
                 }
                 else
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
                 }
             }
 
@@ -387,7 +391,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
             {
                 if (!exception.IsNotFound())
                 {
-                    throw;
+                    ExceptionDispatchInfo.Capture(exception).Throw();
                 }
                 else
                 {
