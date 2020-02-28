@@ -8,7 +8,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.ExceptionServices;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
@@ -782,6 +784,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             return _functionEventCollector.AddAsync(instanceLogEntry);
         }
 
+#region class ParameterHelper
+
         // Handle various phases of parameter building and logging.
         // The paramerter phases are: 
         //  1. Initial binding data from the trigger. 
@@ -789,6 +793,24 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         //  3. System.Object[]. which can be passed to the actual MethodInfo for execution 
         internal class ParameterHelper : IDisposable
         {
+            private class ParameterInfo
+            {
+                public string Name { get; private set; }
+                public IValueProvider ValueProvider { get; private set; }
+                public int InvocationIndex { get; private set; }
+                public int InputBindingIndex { get; internal set; }
+                public int OutputBindingIndex { get; internal set; }
+
+                public ParameterInfo(string name, IValueProvider valueProvider, int invocationIndex)
+                {
+                    Name = name;
+                    ValueProvider = valueProvider;
+                    InvocationIndex = invocationIndex;
+                    InputBindingIndex = 0;
+                    OutputBindingIndex = 0;
+                }
+            }
+
             private readonly IFunctionInstanceEx _functionInstance;
 
             // Logs, contain the result from invoking the IWatchers.
@@ -799,7 +821,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             // ValueProviders for the parameters. These are produced from binding. 
             // This includes a possible $return for the return value. 
-            private IReadOnlyDictionary<string, IValueProvider> _parameters;
+            private IReadOnlyDictionary<string, ParameterInfo> _parameters;
 
             // ordered parameter names of the underlying physical MethodInfo that will be invoked. 
             // This litererally matches the ParameterInfo[] and does not include return value. 
@@ -869,9 +891,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
                 Dictionary<string, IWatcher> watches = new Dictionary<string, IWatcher>();
 
-                foreach (KeyValuePair<string, IValueProvider> item in _parameters)
+                foreach (KeyValuePair<string, ParameterInfo> item in _parameters)
                 {
-                    IWatchable watchable = item.Value as IWatchable;
+                    IWatchable watchable = item.Value.ValueProvider as IWatchable;
                     if (watchable != null)
                     {
                         watches.Add(item.Key, watchable.Watcher);
@@ -912,7 +934,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // run the binding source to create a set of IValueProviders for this instance. 
             public async Task BindAsync(IBindingSource bindingSource, ValueBindingContext context)
             {
-                _parameters = await bindingSource.BindAsync(context);
+                IReadOnlyDictionary<string, IValueProvider> namedParameterBinders = await bindingSource.BindAsync(context);
+                IReadOnlyDictionary<string, ParameterInfo> parameters = ComputeParameterOrder(namedParameterBinders);
+                _parameters = parameters;
             }
 
             public IDictionary<string, string> CreateInvokeStringArguments()
@@ -921,34 +945,35 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                 if (_parameters != null)
                 {
-                    foreach (KeyValuePair<string, IValueProvider> parameter in _parameters)
+                    foreach (KeyValuePair<string, ParameterInfo> parameter in _parameters)
                     {
-                        arguments.Add(parameter.Key, parameter.Value?.ToInvokeString() ?? "null");
+                        arguments.Add(parameter.Key, parameter.Value?.ValueProvider?.ToInvokeString() ?? "null");
                     }
                 }
 
                 return arguments;
             }
 
-            // Run the IValuePRoviders to create the real set of underlying objects that we'll pass to the MethodInfo. 
+            // Run the IValueProviders to create the real set of underlying objects that we'll pass to the MethodInfo. 
             public async Task<IDelayedException> PrepareParametersAsync()
             {
                 object[] reflectionParameters = new object[_parameterNames.Count];
                 List<Exception> bindingExceptions = new List<Exception>();
 
-                for (int index = 0; index < _parameterNames.Count; index++)
+                IEnumerable<ParameterInfo> parametersInBindOrder = _parameters.Values.OrderBy( (p) => p.InputBindingIndex );
+                foreach (ParameterInfo parameter in parametersInBindOrder)
                 {
-                    string name = _parameterNames[index];
-                    IValueProvider provider = _parameters[name];
-
-                    BindingExceptionValueProvider exceptionProvider = provider as BindingExceptionValueProvider;
-
+                    BindingExceptionValueProvider exceptionProvider = parameter.ValueProvider as BindingExceptionValueProvider;
                     if (exceptionProvider != null)
                     {
                         bindingExceptions.Add(exceptionProvider.Exception);
                     }
 
-                    reflectionParameters[index] = await _parameters[name].GetValueAsync();
+                    object parameterValue = await parameter.ValueProvider.GetValueAsync();
+                    if (parameter.InvocationIndex >= 0)
+                    {
+                        reflectionParameters[parameter.InvocationIndex] = parameterValue;
+                    }
                 }
 
                 IDelayedException delayedBindingException = null;
@@ -970,9 +995,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             public async Task<SingletonLock> GetSingletonLockAsync()
             {
                 SingletonLock singleton = null;
-                if (_parameters.TryGetValue(SingletonValueProvider.SingletonParameterName, out IValueProvider singletonValueProvider))
+                if (_parameters.TryGetValue(SingletonValueProvider.SingletonParameterName, out ParameterInfo singletonValueProvider))
                 {
-                    singleton = (SingletonLock)(await singletonValueProvider.GetValueAsync());
+                    singleton = (SingletonLock)(await singletonValueProvider.ValueProvider.GetValueAsync());
                 }
 
                 return singleton;
@@ -984,16 +1009,15 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // occurred by the time messages are enqueued.
             public async Task ProcessOutputParameters(CancellationToken cancellationToken)
             {
-                string[] parameterNamesInBindOrder = SortParameterNamesInStepOrder();
-                foreach (string name in parameterNamesInBindOrder)
+                IEnumerable<ParameterInfo> parametersInBindOrder = _parameters.Values.OrderBy( (p) => p.OutputBindingIndex );
+                foreach (ParameterInfo parameter in parametersInBindOrder)
                 {
-                    IValueProvider provider = _parameters[name];
-                    IValueBinder binder = provider as IValueBinder;
+                    IValueBinder binder = parameter.ValueProvider as IValueBinder;
 
                     if (binder != null)
                     {
-                        bool isReturn = name == FunctionIndexer.ReturnParamName;
-                        object argument = isReturn ? _returnValue : InvokeParameters[GetParameterIndex(name)];
+                        bool isReturn = FunctionIndexer.ReturnParamName.Equals(parameter.Name);
+                        object argument = isReturn ? _returnValue : InvokeParameters[parameter.InvocationIndex];
 
                         try
                         {
@@ -1007,48 +1031,151 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         catch (Exception exception)
                         {
                             string message = string.Format(CultureInfo.InvariantCulture,
-                                "Error while handling parameter {0} after function returned:", name);
+                                "Error while handling parameter {0} after function returned:", parameter.Name);
                             throw new InvalidOperationException(message, exception);
                         }
                     }
                 }
             }
 
-            private int GetParameterIndex(string name)
+            /// <summary>
+            /// After executing bindingSource.BindAsync(context) we get a set of value providers that create/consume values
+            /// before and after the function execution respectively.
+            /// We need to make sure that the value binding is executed in the order described in <see cref="IOrderedValueBinder" />.
+            /// This method computes the respective indices.
+            /// </summary>
+            /// <param name="namedParameterBinders">A map of parameter names to value providers.</param>
+            /// <returns>A map of parameter names to parameter descriptors that encapsulate the value provider and the executuion indices.</returns>
+            private IReadOnlyDictionary<string, ParameterInfo> ComputeParameterOrder(IReadOnlyDictionary<string, IValueProvider> namedParameterBinders)
             {
-                for (int index = 0; index < _parameterNames.Count; index++)
+                int GetParameterInvocationIndex(string name)
                 {
-                    if (_parameterNames[index] == name)
+                    // Determining all param indices in this was is slow (n-square), but we expect the number or params to be not too large, so this is OK. 
+                    for (int index = 0; index < _parameterNames.Count; index++)
                     {
-                        return index;
+                        if (_parameterNames[index].Equals(name))
+                        {
+                            return index;
+                        }
+                    }
+
+                    return -1;
+                }
+
+                BindStepOrder GetBindStepOrderBucket(IValueProvider provider)
+                {
+                    IOrderedValueBinder orderedBinder = provider as IOrderedValueBinder;
+                    if (orderedBinder == null)
+                    {
+                        return BindStepOrder.Default;
+                    }
+
+                    switch (orderedBinder.StepOrder)
+                    {
+                        case BindStepOrder.TightFunctionWrapper:
+                        case BindStepOrder.Enqueue:
+                        case BindStepOrder.Default:
+                            return orderedBinder.StepOrder;
+
+                        default:
+                            return BindStepOrder.Default;
                     }
                 }
 
-                throw new InvalidOperationException("Cannot find parameter + " + name + ".");
-            }
-
-            private string[] SortParameterNamesInStepOrder()
-            {
-                string[] parameterNames = new string[_parameters.Count];
-                int index = 0;
-
-                foreach (string parameterName in _parameters.Keys)
+                void InsertIntoBindStepOrderBucket(ParameterInfo parameter, List<ParameterInfo> bindStepOrderBucket)
                 {
-                    parameterNames[index] = parameterName;
-                    index++;
+                    // Insert the current parameter into the bucket of parameters with the same BindStepOrder-kind;
+                    // While doing so, order first by invocation index (parameter position), then by binding resolution order:
+                    int i = 0;
+                    while (i < bindStepOrderBucket.Count && parameter.InvocationIndex <= bindStepOrderBucket[i].InvocationIndex)
+                    {
+                        i++;
+                    }
+
+                    bindStepOrderBucket.Insert(i, parameter);
                 }
 
-                IValueProvider[] parameterValues = new IValueProvider[_parameters.Count];
-                index = 0;
+                var parameters = new Dictionary<string, ParameterInfo>(capacity: namedParameterBinders.Count);
 
-                foreach (IValueProvider parameterValue in _parameters.Values)
+                var bindStepOrderBucket_TightFunctionWrapper = new List<ParameterInfo>();
+                var bindStepOrderBucket_Enqueue = new List<ParameterInfo>();
+                var bindStepOrderBucket_Default = new List<ParameterInfo>();
+                var bindStepOrderBucket_EnqueueOrDefault = new List<ParameterInfo>();
+
+                // Look at each bound parameter:
+                foreach (KeyValuePair<string, IValueProvider> namedParameterBinder in namedParameterBinders)
                 {
-                    parameterValues[index] = parameterValue;
-                    index++;
+                    // Find the invocation index and the BindStepOrder-kind:
+                    int invocationIndex = GetParameterInvocationIndex(namedParameterBinder.Key);
+                    BindStepOrder bindStepOrderBucketKind = GetBindStepOrderBucket(namedParameterBinder.Value);
+
+                    var parameter = new ParameterInfo(namedParameterBinder.Key, namedParameterBinder.Value, invocationIndex);
+                    parameters.Add(namedParameterBinder.Key, parameter);
+
+                    switch (bindStepOrderBucketKind)
+                    {
+                        case BindStepOrder.TightFunctionWrapper:
+                        {
+                            InsertIntoBindStepOrderBucket(parameter, bindStepOrderBucket_TightFunctionWrapper);
+                            break;
+                        }
+
+                        case BindStepOrder.Enqueue:
+                        {
+                            InsertIntoBindStepOrderBucket(parameter, bindStepOrderBucket_Enqueue);
+                            InsertIntoBindStepOrderBucket(parameter, bindStepOrderBucket_EnqueueOrDefault);
+                            break;
+                        }
+
+                        case BindStepOrder.Default:
+                        {
+                            InsertIntoBindStepOrderBucket(parameter, bindStepOrderBucket_Default);
+                            InsertIntoBindStepOrderBucket(parameter, bindStepOrderBucket_EnqueueOrDefault);
+                            break;
+                        }
+                    }
                 }
 
-                Array.Sort(parameterValues, parameterNames, ValueBinderStepOrderComparer.Instance);
-                return parameterNames;
+                {
+                    // The input is bound in the order: (Enqueue | Default)-bucket >> (TightFunctionWrapper)-bucket
+                    // Go through the buckets and determine the input binding order:
+
+                    int inputBindingIndex = 0;
+
+                    foreach (ParameterInfo parameter in bindStepOrderBucket_EnqueueOrDefault)
+                    {
+                        parameter.InputBindingIndex = inputBindingIndex++;
+                    }
+
+                    foreach (ParameterInfo parameter in bindStepOrderBucket_TightFunctionWrapper)
+                    {
+                        parameter.InputBindingIndex = inputBindingIndex++;
+                    }
+                }
+
+                {
+                    // The output is bound in the order: (TightFunctionWrapper)-bucket >> (Default)-bucket >> (Enqueue)-bucket
+                    // Go through the buckets and determine the output binding order:
+
+                    int outputBindingIndex = 0;
+
+                    foreach (ParameterInfo parameter in bindStepOrderBucket_TightFunctionWrapper)
+                    {
+                        parameter.OutputBindingIndex = outputBindingIndex++;
+                    }
+
+                    foreach (ParameterInfo parameter in bindStepOrderBucket_Default)
+                    {
+                        parameter.OutputBindingIndex = outputBindingIndex++;
+                    }
+
+                    foreach (ParameterInfo parameter in bindStepOrderBucket_Enqueue)
+                    {
+                        parameter.OutputBindingIndex = outputBindingIndex++;
+                    }
+                }
+
+                return parameters;
             }
 
             internal void SetReturnValue(object returnValue)
@@ -1062,7 +1189,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 {
                     if (_parameters != null)
                     {
-                        foreach (var disposableItem in _parameters.Values.OfType<IDisposable>())
+                        foreach (var disposableItem in _parameters.Values.Select( (p) => p.ValueProvider ).OfType<IDisposable>())
                         {
                             disposableItem.Dispose();
                         }
@@ -1076,41 +1203,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     _disposed = true;
                 }
             }
-
-            private class ValueBinderStepOrderComparer : IComparer<IValueProvider>
-            {
-                private static readonly ValueBinderStepOrderComparer Singleton = new ValueBinderStepOrderComparer();
-
-                private ValueBinderStepOrderComparer()
-                {
-                }
-
-                public static ValueBinderStepOrderComparer Instance
-                {
-                    get
-                    {
-                        return Singleton;
-                    }
-                }
-
-                public int Compare(IValueProvider x, IValueProvider y)
-                {
-                    return Comparer<int>.Default.Compare((int)GetStepOrder(x), (int)GetStepOrder(y));
-                }
-
-                private static BindStepOrder GetStepOrder(IValueProvider provider)
-                {
-                    IOrderedValueBinder orderedBinder = provider as IOrderedValueBinder;
-
-                    if (orderedBinder == null)
-                    {
-                        return BindStepOrder.Default;
-                    }
-
-                    return orderedBinder.StepOrder;
-                }
-            }
         }
+
+#endregion class ParameterHelper
+
+#region class ParameterHelper
 
         private class FunctionInvocationFilterInvoker : IFunctionInvokerEx
         {
@@ -1216,5 +1313,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
             }
         }
+
+#endregion class ParameterHelper
+    
     }
 }
