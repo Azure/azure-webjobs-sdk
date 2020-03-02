@@ -158,5 +158,25 @@ namespace Microsoft.Azure.WebJobs.Logging
         ///  Get the name of the key to store the current process id.
         /// </summary>
         public const string ProcessIdKey = "ProcessId";
+
+        /// <summary>
+        /// Get the name of the key to store the time when queue message
+        /// was enqueued in <see cref="System.Diagnostics.Activity"/> tags.
+        /// </summary>
+        public const string MessageEnqueuedTimeKey = "EnqueuedTime";
+
+        /// <summary>
+        /// Get the name of the key to store the endpoint in trigger details
+        /// that represents endpoint or FQDN of the service (Storage account, EventHub,
+        /// or any other Azure or non-Azure service).
+        /// </summary>
+        public const string TriggerDetailsEndpointKey = "Endpoint";
+
+        /// <summary>
+        /// Get the name of the key to store the entity or path in trigger details
+        /// that represents name of the entity (EventHub entity, Azure Blob container or
+        /// Storage queue name).
+        /// </summary>
+        public const string TriggerDetailsEntityNameKey = "Entity";
     }
 }
