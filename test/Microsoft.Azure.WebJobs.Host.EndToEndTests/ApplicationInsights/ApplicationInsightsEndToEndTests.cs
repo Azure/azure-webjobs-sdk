@@ -636,11 +636,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string traceFlags = sampledIn ? "01" : "00";
                 string parentId = $"00-{traceId}-{parentSpanId}-{traceFlags}";
 
+                var linkEnqueuedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                var link = new Activity("event hub process").SetParentId(parentId);
+                link.AddTag(LogConstants.MessageEnqueuedTimeKey, linkEnqueuedTime.ToString());
+
                 // simulate functions behavior to set request on the scope
-                using (var _ = logger.BeginScope(new Dictionary<string, object>
-                {
-                    ["Links"] = new[] { new Activity("event hub process").SetParentId(parentId) }
-                }))
+                using (var _ = logger.BeginScope(new Dictionary<string, object> { ["Links"] = new[] { link }, }))
                 {
                     MethodInfo methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
                     await host.GetJobHost().CallAsync(methodInfo, new { input = "function input" });
@@ -661,6 +662,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "0",
                     traceId,
                     $"|{traceId}.{parentSpanId}.");
+
                 Assert.Equal(sampledIn ? SamplingDecision.SampledIn : SamplingDecision.None, functionRequest.ProactiveSamplingDecision);                    
 
                 // Make sure operation ids match
@@ -668,6 +670,42 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.Equal(4, traces.Count());
                 Assert.False(functionRequest.Properties.ContainsKey("_MS.links"));
                 Assert.False(functionRequest.Properties.ContainsKey("Links"));
+
+                Assert.True(functionRequest.Metrics.TryGetValue("timeSinceEnqueued", out var timeSinceEnqueued));
+                Assert.Equal(functionRequest.Timestamp.ToUnixTimeMilliseconds() - linkEnqueuedTime, timeSinceEnqueued, 0);
+            }
+        }
+
+        [Fact]
+        public async Task ApplicationInsights_EventHubTrackingByWebJobs_SingleLink_NoTimeInQueue()
+        {
+            string testName = nameof(TestApplicationInsightsInformation);
+
+            using (IHost host = ConfigureHost())
+            {
+                Startup.Host = host;
+                await host.StartAsync();
+
+                var loggerProvider = host.Services.GetServices<ILoggerProvider>().OfType<ApplicationInsightsLoggerProvider>().Single();
+                var logger = loggerProvider.CreateLogger(LogCategories.Results);
+
+                string traceId = ActivityTraceId.CreateRandom().ToHexString();
+                string parentSpanId = ActivitySpanId.CreateRandom().ToHexString();
+                string parentId = $"00-{traceId}-{parentSpanId}-01";
+
+                var link = new Activity("event hub process").SetParentId(parentId);
+
+                // simulate functions behavior to set request on the scope
+                using (var _ = logger.BeginScope(new Dictionary<string, object> { ["Links"] = new[] { link } }))
+                {
+                    MethodInfo methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+                    await host.GetJobHost().CallAsync(methodInfo, new { input = "function input" });
+                }
+
+                await host.StopAsync();
+
+                RequestTelemetry functionRequest = _channel.Telemetries.OfType<RequestTelemetry>().SingleOrDefault();
+                Assert.False(functionRequest.Metrics.ContainsKey("timeSinceEnqueued"));
             }
         }
 
@@ -691,10 +729,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         ActivityTraceId.CreateRandom(), 
                         ActivitySpanId.CreateRandom(), 
                         anySampledIn ? ActivityTraceFlags.Recorded : ActivityTraceFlags.None);
+
+                var link0EnqueuedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                links[0].AddTag(LogConstants.MessageEnqueuedTimeKey, link0EnqueuedTime.ToString());
+
                 links[1] = new Activity("link1").SetParentId(
                     ActivityTraceId.CreateRandom(), 
                     ActivitySpanId.CreateRandom(),
                     ActivityTraceFlags.None);
+                var link1EnqueuedTime = DateTimeOffset.UtcNow.AddMilliseconds(-100).ToUnixTimeMilliseconds();
+                links[1].AddTag(LogConstants.MessageEnqueuedTimeKey, link1EnqueuedTime.ToString());
 
                 // simulate functions behavior to set request on the scope
                 using (var _ = logger.BeginScope(new Dictionary<string, object>
@@ -751,6 +795,100 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.Equal(linkSpanId1, actualLinks[1].id);
 
                 Assert.Equal($"[{{\"operation_Id\":\"{linkTraceId0}\",\"id\":\"{linkSpanId0}\"}},{{\"operation_Id\":\"{linkTraceId1}\",\"id\":\"{linkSpanId1}\"}}]", linksStr);
+
+                Assert.True(functionRequest.Metrics.TryGetValue("timeSinceEnqueued", out var timeSinceEnqueued));
+
+                var expectedTimeInQueue = ((functionRequest.Timestamp.ToUnixTimeMilliseconds() - link0EnqueuedTime) +
+                                           (functionRequest.Timestamp.ToUnixTimeMilliseconds() - link1EnqueuedTime)) / 2;
+                Assert.Equal(expectedTimeInQueue, timeSinceEnqueued, 0);
+            }
+        }
+
+        [Fact]
+        public async Task ApplicationInsights_EventHubTrackingByWebJobs_MultipleLinks_NegativeTimeInQueue()
+        {
+            string testName = nameof(TestApplicationInsightsInformation);
+
+            using (IHost host = ConfigureHost())
+            {
+                Startup.Host = host;
+                await host.StartAsync();
+
+                var loggerProvider = host.Services.GetServices<ILoggerProvider>().OfType<ApplicationInsightsLoggerProvider>().Single();
+                var logger = loggerProvider.CreateLogger(LogCategories.Results);
+
+                var links = new Activity[2];
+                links[0] = new Activity("link0").SetParentId(
+                        ActivityTraceId.CreateRandom(),
+                        ActivitySpanId.CreateRandom(),
+                        ActivityTraceFlags.Recorded);
+
+                var link0EnqueuedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                links[0].AddTag(LogConstants.MessageEnqueuedTimeKey, link0EnqueuedTime.ToString());
+
+                links[1] = new Activity("link1").SetParentId(
+                    ActivityTraceId.CreateRandom(),
+                    ActivitySpanId.CreateRandom());
+
+                var link1EnqueuedTime = DateTimeOffset.UtcNow.AddMilliseconds(1000).ToUnixTimeMilliseconds();
+                links[1].AddTag(LogConstants.MessageEnqueuedTimeKey, link1EnqueuedTime.ToString());
+
+                // simulate functions behavior to set request on the scope
+                using (var _ = logger.BeginScope(new Dictionary<string, object> { ["Links"] = links }))
+                {
+                    MethodInfo methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+                    await host.GetJobHost().CallAsync(methodInfo, new { input = "function input" });
+                }
+
+                await host.StopAsync();
+
+                // Validate the request
+                RequestTelemetry functionRequest = _channel.Telemetries.OfType<RequestTelemetry>().SingleOrDefault();
+
+                Assert.True(functionRequest.Metrics.TryGetValue("timeSinceEnqueued", out var timeSinceEnqueued));
+
+                var expectedTimeInQueue = functionRequest.Timestamp.ToUnixTimeMilliseconds() - link0EnqueuedTime;
+                Assert.Equal(expectedTimeInQueue, timeSinceEnqueued, 0);
+            }
+        }
+
+        [Fact]
+        public async Task ApplicationInsights_EventHubTrackingByWebJobs_MultipleLinks_TimeInQueueInconsistentlyPopulated()
+        {
+            string testName = nameof(TestApplicationInsightsInformation);
+
+            using (IHost host = ConfigureHost())
+            {
+                Startup.Host = host;
+                await host.StartAsync();
+
+                var loggerProvider = host.Services.GetServices<ILoggerProvider>().OfType<ApplicationInsightsLoggerProvider>().Single();
+                var logger = loggerProvider.CreateLogger(LogCategories.Results);
+
+                var links = new Activity[2];
+                links[0] = new Activity("link0").SetParentId(
+                        ActivityTraceId.CreateRandom(),
+                        ActivitySpanId.CreateRandom(),
+                        ActivityTraceFlags.Recorded);
+                links[0].AddTag(LogConstants.MessageEnqueuedTimeKey, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
+
+                links[1] = new Activity("link1").SetParentId(
+                    ActivityTraceId.CreateRandom(),
+                    ActivitySpanId.CreateRandom());
+
+                // simulate functions behavior to set request on the scope
+                using (var _ = logger.BeginScope(new Dictionary<string, object> { ["Links"] = links }))
+                {
+                    MethodInfo methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+                    await host.GetJobHost().CallAsync(methodInfo, new { input = "function input" });
+                }
+
+                await host.StopAsync();
+
+                // Validate the request
+                RequestTelemetry functionRequest = _channel.Telemetries.OfType<RequestTelemetry>().SingleOrDefault();
+
+                Assert.False(functionRequest.Metrics.TryGetValue("timeSinceEnqueued", out var timeSinceEnqueued));
             }
         }
 

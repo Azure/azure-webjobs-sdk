@@ -761,6 +761,77 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Empty(_channel.Telemetries.OfType<RequestTelemetry>());
         }
 
+        [Fact]
+        public async Task ApplicationInsights_RequestHasSourceIfTriggerDetailsArePopulated()
+        {
+            var result = CreateDefaultInstanceLogEntry();
+            ILogger logger = CreateLogger(LogCategories.Results);
+
+            var functionInstance = CreateFunctionInstance(_invocationId, new Dictionary<string, string>
+            {
+                ["Endpoint"] = "my-eventhub.somewhere-in-azure.com",
+                ["Entity"] = "images",
+            });
+
+            using (logger.BeginFunctionScope(functionInstance, _hostInstanceId))
+            {
+                // sleep briefly to provide a non-zero Duration
+                await Task.Delay(100);
+                logger.LogFunctionResult(result);
+            }
+
+            RequestTelemetry telemetry = _channel.Telemetries.Single() as RequestTelemetry;
+
+            Assert.Equal("my-eventhub.somewhere-in-azure.com/images", telemetry.Source);
+        }
+
+
+        [Fact]
+        public async Task ApplicationInsights_RequestHasSourceIfTriggerEndpointIsPopulated()
+        {
+            var result = CreateDefaultInstanceLogEntry();
+            ILogger logger = CreateLogger(LogCategories.Results);
+
+            var functionInstance = CreateFunctionInstance(_invocationId, new Dictionary<string, string>
+            {
+                ["Endpoint"] = "my-eventhub.somewhere-in-azure.com",
+            });
+
+            using (logger.BeginFunctionScope(functionInstance, _hostInstanceId))
+            {
+                // sleep briefly to provide a non-zero Duration
+                await Task.Delay(100);
+                logger.LogFunctionResult(result);
+            }
+
+            RequestTelemetry telemetry = _channel.Telemetries.Single() as RequestTelemetry;
+
+            Assert.Equal("my-eventhub.somewhere-in-azure.com", telemetry.Source);
+        }
+
+        [Fact]
+        public async Task ApplicationInsights_RequestHasSourceIfTriggerEntityIsPopulated()
+        {
+            var result = CreateDefaultInstanceLogEntry();
+            ILogger logger = CreateLogger(LogCategories.Results);
+
+            var functionInstance = CreateFunctionInstance(_invocationId, new Dictionary<string, string>
+            {
+                ["Entity"] = "images",
+            });
+
+            using (logger.BeginFunctionScope(functionInstance, _hostInstanceId))
+            {
+                // sleep briefly to provide a non-zero Duration
+                await Task.Delay(100);
+                logger.LogFunctionResult(result);
+            }
+
+            RequestTelemetry telemetry = _channel.Telemetries.Single() as RequestTelemetry;
+
+            Assert.Equal("images", telemetry.Source);
+        }
+
         private async Task Level1(Guid asyncLocalSetting)
         {
             // Push and pop values onto the dictionary at various levels. Make sure they
@@ -864,12 +935,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             }
         }
 
-        private IFunctionInstance CreateFunctionInstance(Guid id)
+        private IFunctionInstance CreateFunctionInstance(Guid id, Dictionary<string, string> triggerDetails = null)
         {
             var method = GetType().GetMethod(nameof(TestFunction), BindingFlags.NonPublic | BindingFlags.Static);
             var descriptor = FunctionIndexer.FromMethod(method);
 
-            return new FunctionInstance(id, new Dictionary<string, string>(), null, new ExecutionReason(), null, null, descriptor);
+            return new FunctionInstance(id, triggerDetails ?? new Dictionary<string, string>(), null, new ExecutionReason(), null, null, descriptor);
         }
 
         private static void TestFunction()
