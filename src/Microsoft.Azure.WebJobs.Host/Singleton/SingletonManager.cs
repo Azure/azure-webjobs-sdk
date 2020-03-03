@@ -224,6 +224,11 @@ namespace Microsoft.Azure.WebJobs.Host
 
         public static SingletonAttribute GetFunctionSingletonOrNull(FunctionDescriptor descriptor, bool isTriggered)
         {
+            if (!descriptor.SingletonAttributes.Any())
+            {
+                return null;
+            }
+
             if (!isTriggered && descriptor.SingletonAttributes.Any(p => p.Mode == SingletonMode.Listener))
             {
                 throw new NotSupportedException("SingletonAttribute using mode 'Listener' cannot be applied to non-triggered functions.");

@@ -11,8 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
     {
         public Task<IFunctionOutputDefinition> CreateAsync(IFunctionInstance instance, CancellationToken cancellationToken)
         {
-            IFunctionOutputDefinition outputDefinition = new NullFunctionOutputDefinition();
-            return Task.FromResult(outputDefinition);
+            return Task.FromResult(NullFunctionOutputDefinition.Instance);
         }
     }
 }

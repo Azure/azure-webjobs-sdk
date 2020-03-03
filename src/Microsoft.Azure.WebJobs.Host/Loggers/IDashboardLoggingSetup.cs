@@ -33,18 +33,18 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public NullDashboardLoggingSetup(IFunctionExecutor functionExecutor, SharedQueueHandler sharedQueueHandler)
         {
-            this._functionExecutor = functionExecutor;
-            this._sharedQueueHandler = sharedQueueHandler;
+            _functionExecutor = functionExecutor;
+            _sharedQueueHandler = sharedQueueHandler;
         }
 
         public bool Setup(IFunctionIndex functions, IListenerFactory functionsListenerFactory, out IFunctionExecutor hostCallExecutor, out IListener listener, out HostOutputMessage hostOutputMessage, string hostId, CancellationToken shutdownToken)
         {
             hostCallExecutor = new ShutdownFunctionExecutor(shutdownToken, _functionExecutor);
+            hostOutputMessage = new DataOnlyHostOutputMessage();
 
             IListener factoryListener = new ListenerFactoryListener(functionsListenerFactory, _sharedQueueHandler);
-            IListener shutdownListener = new ShutdownListener(shutdownToken, factoryListener);
-            listener = shutdownListener;
-            hostOutputMessage = new DataOnlyHostOutputMessage();
+            listener = new ShutdownListener(shutdownToken, factoryListener);
+            
             return false;
         }
     }
