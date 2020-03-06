@@ -591,25 +591,25 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 Assert.Equal("BindingErrorsProgram.Invalid", fex.MethodName);
 
                 // verify that the binding error was logged
-                Assert.Equal(10, errorLogger.GetLogMessages().Count);
+                Assert.Equal(11, errorLogger.GetLogMessages().Count);
 
                 // Skip validating the initial 'Starting JobHost' message and the OptionsFormatters
                 
-                LogMessage logMessage = errorLogger.GetLogMessages()[6];
+                LogMessage logMessage = errorLogger.GetLogMessages()[7];
                 Assert.Equal("Error indexing method 'BindingErrorsProgram.Invalid'", logMessage.FormattedMessage);
                 Assert.Same(fex, logMessage.Exception);
                 Assert.Equal("Invalid container name: invalid$=+1", logMessage.Exception.InnerException.Message);
 
-                logMessage = errorLogger.GetLogMessages()[7];
+                logMessage = errorLogger.GetLogMessages()[8];
                 Assert.Equal("Function 'BindingErrorsProgram.Invalid' failed indexing and will be disabled.", logMessage.FormattedMessage);
 
                 // verify that the valid function was still indexed
-                logMessage = errorLogger.GetLogMessages()[8];
+                logMessage = errorLogger.GetLogMessages()[9];
                 Assert.True(logMessage.FormattedMessage.Contains("Found the following functions"));
                 Assert.True(logMessage.FormattedMessage.Contains("BindingErrorsProgram.Valid"));
 
                 // verify that the job host was started successfully
-                logMessage = errorLogger.GetLogMessages()[9];
+                logMessage = errorLogger.GetLogMessages()[10];
                 Assert.Equal("Job host started", logMessage.FormattedMessage);
 
                 await host.StopAsync();

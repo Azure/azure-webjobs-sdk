@@ -77,7 +77,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         /// If you have registered once, you can retrieve the same queue by passing a null to this function
         /// </param>
         /// <returns> The <see cref="IDispatchQueueHandler"/> is used to enqueue messages </returns>
-        internal IDispatchQueueHandler GetDispatchQueue(IMessageHandler handler)
+        public IDispatchQueueHandler GetDispatchQueue(IMessageHandler handler)
         {
             if (_dispatchQueue == null)
             {

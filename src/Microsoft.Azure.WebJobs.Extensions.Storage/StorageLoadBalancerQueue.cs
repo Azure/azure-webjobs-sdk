@@ -68,11 +68,7 @@ namespace WebJobs.Extensions.Storage
 
             public async Task AddAsync(T item, CancellationToken cancellationToken = default(CancellationToken))
             {
-                string contents = JsonConvert.SerializeObject(
-                    item,
-                    JsonSerialization.Settings);
-
-                var msg = new CloudQueueMessage(contents);
+                var msg = new CloudQueueMessage(item.ToString());
                 await _queue.AddMessageAndCreateIfNotExistsAsync(msg, cancellationToken);
 
                 _parent._sharedWatcher.Notify(_queue.Name);
@@ -87,7 +83,7 @@ namespace WebJobs.Extensions.Storage
         private CloudQueue Convert(string queueMoniker)
         {
             // $$$ Review
-            var account = _storageAccountProvider.Get(ConnectionStringNames.Dashboard);
+            var account = _storageAccountProvider.Get(ConnectionStringNames.Storage);
             var queue = account.CreateCloudQueueClient().GetQueueReference(queueMoniker);
             return queue;
         }

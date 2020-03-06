@@ -59,6 +59,7 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<SingletonManager>();
             services.TryAddSingleton<IHostSingletonManager>(provider => provider.GetRequiredService<SingletonManager>());
             services.TryAddSingleton<SharedQueueHandler>();
+            services.TryAddSingleton<IHttpEndpointManager, HttpEndpointManager>();
             services.TryAddSingleton<IFunctionExecutor, FunctionExecutor>();
             services.TryAddSingleton<IJobHostContextFactory, JobHostContextFactory>();
 

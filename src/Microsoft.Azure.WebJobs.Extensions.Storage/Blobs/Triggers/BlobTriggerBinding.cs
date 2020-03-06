@@ -39,6 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
         private readonly IAsyncObjectToTypeConverter<ICloudBlob> _converter;
         private readonly IReadOnlyDictionary<string, Type> _bindingDataContract;
         private readonly IHostSingletonManager _singletonManager;
+        private readonly bool _useEventGrid;
 
         public BlobTriggerBinding(ParameterInfo parameter,
             StorageAccount hostAccount,
@@ -52,7 +53,9 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             SharedQueueWatcher messageEnqueuedWatcherSetter,
             ISharedContextProvider sharedContextProvider,
             IHostSingletonManager singletonManager,
-            ILoggerFactory loggerFactory)
+            bool useEventGrid,
+            ILoggerFactory loggerFactory
+            )
         {
             _parameter = parameter ?? throw new ArgumentNullException(nameof(parameter));
             _hostAccount = hostAccount ?? throw new ArgumentNullException(nameof(hostAccount));
@@ -73,6 +76,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             _loggerFactory = loggerFactory;
             _converter = CreateConverter(_blobClient);
             _bindingDataContract = CreateBindingDataContract(path);
+            _useEventGrid = useEventGrid;
         }
 
         public Type TriggerValueType
@@ -176,11 +180,19 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
 
             var container = _blobClient.GetContainerReference(_path.ContainerNamePattern);
 
-            var factory = new BlobListenerFactory(_hostIdProvider, _queueOptions, _blobsOptions, _exceptionHandler,
-                _blobWrittenWatcherSetter, _messageEnqueuedWatcherSetter, _sharedContextProvider, _loggerFactory,
-                context.Descriptor, _hostAccount, _dataAccount, container, _path, context.Executor, _singletonManager);
+            if (!_useEventGrid)
+            {
+                var factory = new BlobListenerFactory(_hostIdProvider, _queueOptions, _blobsOptions, _exceptionHandler,
+                    _blobWrittenWatcherSetter, _messageEnqueuedWatcherSetter, _sharedContextProvider, _loggerFactory,
+                    context.Descriptor, _hostAccount, _dataAccount, container, _path, context.Executor, _singletonManager);
 
-            return factory.CreateAsync(context.CancellationToken);
+                return factory.CreateAsync(context.CancellationToken);
+            }
+            else
+            {
+                var listener = new SharedQueueBlobListener(context, _dataAccount);
+                return Task.FromResult((IListener)listener);
+            }
         }
 
         public ParameterDescriptor ToParameterDescriptor()

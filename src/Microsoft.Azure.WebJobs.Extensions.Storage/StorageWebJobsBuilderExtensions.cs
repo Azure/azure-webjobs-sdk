@@ -36,7 +36,8 @@ namespace Microsoft.Extensions.Hosting
             };
 
             // $$$ Move to Host.Storage? 
-            builder.Services.TryAddSingleton<ILoadBalancerQueue, StorageLoadBalancerQueue>();
+            // Replace existing runtime InMemoryLoadBalancerQueue with storage-backed implementations.
+            builder.Services.AddSingleton<ILoadBalancerQueue, StorageLoadBalancerQueue>();
 
             builder.Services.TryAddSingleton<SharedQueueWatcher>();
 

@@ -59,5 +59,10 @@ namespace Microsoft.Azure.WebJobs
         {
             get { return _blobPath; }
         }
+
+        /// <summary>
+        /// Returns a bool value that indicates whether EventGrid is used.
+        /// </summary>
+        public bool UseEventGrid { get; set; }
     }
 }

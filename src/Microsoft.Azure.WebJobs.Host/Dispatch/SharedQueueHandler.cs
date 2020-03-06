@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
@@ -23,31 +24,29 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
     internal class SharedQueueHandler
     {
         internal const string InitErrorMessage = "Shared queue initialization error, fallback to in memory implementation";
+        internal const string FunctionId = "functionId";
 
         private readonly IHostIdProvider _hostIdProvider;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
         private readonly ILoggerFactory _loggerFactory;
-        private readonly ISharedContextProvider _sharedContextProvider;
         private readonly ILoadBalancerQueue _queueFactory;
 
         private Exception _initializationEx; // delay initialization error until consumer showed up
         private SharedQueueExecutor _triggerExecutor;
         private State _state;
         private IListener _sharedQueuelistener;
-        private IAsyncCollector<QueueMessage> _sharedQueueWriter;
+        private IAsyncCollector<string> _sharedQueueWriter;
 
         public SharedQueueHandler(
                 IHostIdProvider hostIdProvider,
                 IWebJobsExceptionHandler exceptionHandler,
                 ILoggerFactory loggerFactory,
-                ISharedContextProvider sharedContextProvider,
                 ILoadBalancerQueue queueFactory
                 )
         {            
             _hostIdProvider = hostIdProvider;
             _exceptionHandler = exceptionHandler;
             _loggerFactory = loggerFactory;
-            _sharedContextProvider = sharedContextProvider;
             _state = State.Created;
             _queueFactory = queueFactory;
         }
@@ -107,8 +106,8 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
                 var sharedPoisonQueue = HostQueueNames.GetHostSharedPoisonQueueName(hostId);
 
                 // queueWatcher will update queueListener's polling interval when queueWriter performes an enqueue operation
-                _sharedQueueWriter = _queueFactory.GetQueueWriter<QueueMessage>(sharedQueue);
-                                
+                _sharedQueueWriter = _queueFactory.GetQueueWriter<string>(sharedQueue);
+
                 _sharedQueuelistener = _queueFactory.CreateQueueListenr(sharedQueue, sharedPoisonQueue, _triggerExecutor.ExecuteAsync);
             }
             catch (Exception ex)
@@ -167,8 +166,15 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
             {
                 throw new InvalidOperationException("Cannot enqueue messages, shared queue is either uninitialized or has already stopped listening");
             }
-            var msg = new QueueMessage(message, functionId);
-            return _sharedQueueWriter.AddAsync(msg, cancellationToken);
+
+            if (!_triggerExecutor.HasMessageHandler(functionId))
+            {
+                throw new InvalidOperationException($"Cannot find function: '{functionId}', available function ids: [{ _triggerExecutor.GetKeys() }]");
+            }
+
+            // Adding functionId to root of JObject
+            message[FunctionId] = functionId;
+            return _sharedQueueWriter.AddAsync(message.ToString(), cancellationToken);
         }
 
         // IStorageQueueMessage is used in QueueTriggerBindingData
@@ -185,30 +191,27 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
             // handle dequeued message, execute the function
             public async Task<FunctionResult> ExecuteAsync(string value, CancellationToken cancellationToken)
             {
-                QueueMessage message = JsonConvert.DeserializeObject<QueueMessage>(value, JsonSerialization.Settings);
-                if (message == null)
+                // We are expecting that Json object will have the functionId in the root 
+                JObject jo = JObject.Parse(value);
+                
+                if (jo[FunctionId] == null)
                 {
-                    throw new InvalidOperationException("Invalid shared queue message.");
+                    throw new InvalidOperationException("Invalid function name.");
                 }
 
-                string functionId = message.FunctionId;
-
-                if (functionId == null)
-                {
-                    throw new InvalidOperationException("Invalid function ID.");
-                }
+                string functionName = jo[FunctionId].ToString();
 
                 // Ensure that the function ID is still valid
                 FunctionResult successResult = new FunctionResult(true);
                 IMessageHandler handler;
-                if (!_messageHandlers.TryGetValue(functionId, out handler))
+                if (!_messageHandlers.TryGetValue(functionName, out handler))
                 {
                     // if we cannot find the functionID, return success
                     // this message will not be put to the poisonQueue
                     return successResult;
                 }
 
-                return await handler.TryExecuteAsync(message.Data, cancellationToken);
+                return await handler.TryExecuteAsync(jo, cancellationToken);
             }
 
             internal void Register(string functionId, IMessageHandler handler)
@@ -220,21 +223,16 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
             {
                 return _messageHandlers.Count > 0;
             }
-        }
 
-        // Internal message format used for function queuing
-        private class QueueMessage
-        {
-            // public so that we can deserialize it
-            public QueueMessage(JObject data, string functionId)
+            internal bool HasMessageHandler(string key)
             {
-                Data = data;
-                FunctionId = functionId;
+                return _messageHandlers.ContainsKey(key);
             }
-            // public so that we can deserialize it
-            public JObject Data { get; private set; }
-            // public so that we can deserialize it
-            public string FunctionId { get; private set; }
+
+            internal string GetKeys()
+            {
+                return string.Join(", ", _messageHandlers.Keys.ToArray());
+            }
         }
     }
 }

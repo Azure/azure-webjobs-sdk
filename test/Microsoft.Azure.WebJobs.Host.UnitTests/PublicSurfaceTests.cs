@@ -256,7 +256,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "ScaleStatusContext",
                 "ScaleStatusContext`1",
                 "ScaleVote",
-                "ScaleMonitorDescriptor"
+                "ScaleMonitorDescriptor",
+                "IHttpEndpointManager",
+                "IDispatchQueueHandler",
+                "IMessageHandler"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);

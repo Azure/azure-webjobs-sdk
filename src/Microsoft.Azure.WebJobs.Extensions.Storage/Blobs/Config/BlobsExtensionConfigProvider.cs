@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +16,7 @@ using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.WebJobs.Host.Dispatch;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 {
@@ -22,25 +24,29 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
     internal class BlobsExtensionConfigProvider : IExtensionConfigProvider,
         IConverter<BlobAttribute, CloudBlobContainer>,
         IConverter<BlobAttribute, CloudBlobDirectory>,
-        IConverter<BlobAttribute, BlobsExtensionConfigProvider.MultiBlobContext>
+        IConverter<BlobAttribute, BlobsExtensionConfigProvider.MultiBlobContext>,
+        IAsyncConverter<HttpRequestMessage, HttpResponseMessage>
     {
         private readonly BlobTriggerAttributeBindingProvider _triggerBinder;
         private StorageAccountProvider _accountProvider;
         private IContextGetter<IBlobWrittenWatcher> _blobWrittenWatcherGetter;
         private readonly INameResolver _nameResolver;
         private IConverterManager _converterManager;
+        private readonly IHttpEndpointManager _httpEndpointManager;
 
         public BlobsExtensionConfigProvider(StorageAccountProvider accountProvider,
             BlobTriggerAttributeBindingProvider triggerBinder,
             IContextGetter<IBlobWrittenWatcher> contextAccessor,
             INameResolver nameResolver,
-            IConverterManager converterManager)
+            IConverterManager converterManager,
+            IHttpEndpointManager httpEndpointManager)
         {
             _accountProvider = accountProvider;
             _triggerBinder = triggerBinder;
             _blobWrittenWatcherGetter = contextAccessor;
             _nameResolver = nameResolver;
             _converterManager = converterManager;
+            _httpEndpointManager = httpEndpointManager;
         }
 
         public void Initialize(ExtensionConfigContext context)
@@ -86,6 +92,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
         private void InitializeBlobTriggerBindings(ExtensionConfigContext context)
         {
+            _httpEndpointManager.RegisterHttpEnpoint(context);
+
             var rule = context.AddBindingRule<BlobTriggerAttribute>();
             rule.BindToTrigger<ICloudBlob>(_triggerBinder);
 
@@ -103,6 +111,11 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             context.AddConverter(new StorageBlobConverter<CloudAppendBlob>());
             context.AddConverter(new StorageBlobConverter<CloudBlockBlob>());
             context.AddConverter(new StorageBlobConverter<CloudPageBlob>());
+        }
+
+        public async Task<HttpResponseMessage> ConvertAsync(HttpRequestMessage input, CancellationToken cancellationToken)
+        {
+            return await _httpEndpointManager.ProcessHttpRequestAsync(input, cancellationToken);
         }
 
         #region Container rules

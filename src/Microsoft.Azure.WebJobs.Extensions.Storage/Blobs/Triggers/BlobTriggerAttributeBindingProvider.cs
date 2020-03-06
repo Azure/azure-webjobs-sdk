@@ -79,7 +79,8 @@ namespace Microsoft.Azure.WebJobs.Extensions.Storage.Blobs.Triggers
 
             ITriggerBinding binding = new BlobTriggerBinding(parameter, hostAccount, dataAccount, path,
                 _hostIdProvider, _queueOptions, _blobsOptions, _exceptionHandler, _blobWrittenWatcherSetter,
-                _messageEnqueuedWatcherSetter, _sharedContextProvider, _singletonManager, _loggerFactory);
+                _messageEnqueuedWatcherSetter, _sharedContextProvider, _singletonManager,
+                blobTriggerAttribute.UseEventGrid, _loggerFactory);
 
             return Task.FromResult(binding);
         }
