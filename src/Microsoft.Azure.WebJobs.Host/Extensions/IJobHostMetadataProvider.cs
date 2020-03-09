@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using Newtonsoft.Json.Linq;
@@ -62,5 +63,10 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="functionName">Name of function to return metadata for.</param>
         /// <returns></returns>
         FunctionMetadata GetFunctionMetadata(string functionName);
+
+        /// <summary>
+        /// Gets the function bindings metadata
+        /// </summary>
+        IReadOnlyDictionary<string, BindingMetadata> BindingsMetadata { get; }
     }
 }

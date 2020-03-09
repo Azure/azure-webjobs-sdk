@@ -31,6 +31,8 @@ namespace Microsoft.Azure.WebJobs.Host
         private readonly IBindingProvider _bindingProvider;
         private readonly IConverterManager _converter;
 
+        public IReadOnlyDictionary<string, BindingMetadata> BindingsMetadata => throw new NotImplementedException();
+
         public JobHostMetadataProvider(IFunctionIndexProvider functionIndexProvider, IExtensionRegistry extensionRegistry, IBindingProvider bindingProvider, IConverterManager converter)
         {
             _functionIndexProvider = functionIndexProvider;
