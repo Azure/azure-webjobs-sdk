@@ -7,12 +7,12 @@ using System.Collections.Generic;
 namespace Microsoft.Azure.WebJobs.Host
 {
     /// <summary>
-    /// Metadata for function Binding
+    /// Metadata for function Extension
     /// </summary>
-    public class BindingMetadata : IUserTextElement, IUserIconElement
+    public class ExtensionMetadata : IUserTextElement, IUserIconElement
     {
         /// <summary>
-        /// Gets the binding identifier.
+        /// Gets the Extension identifier.
         /// </summary>
         public string Id { get; }
 
@@ -32,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host
         public uint BrandColor { get; }
 
         /// <summary>
-        /// Gets the binding's service operations
+        /// Gets the Extension's service operations
         /// </summary>
         public IReadOnlyDictionary<string, ServiceOperation> Operations { get; }
 

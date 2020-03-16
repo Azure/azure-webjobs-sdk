@@ -65,8 +65,8 @@ namespace Microsoft.Azure.WebJobs.Host
         FunctionMetadata GetFunctionMetadata(string functionName);
 
         /// <summary>
-        /// Gets the function bindings metadata
+        /// Gets the function Extensions metadata
         /// </summary>
-        IReadOnlyDictionary<string, BindingMetadata> BindingsMetadata { get; }
+        IReadOnlyDictionary<string, ExtensionMetadata> ExtensionsMetadata { get; }
     }
 }
