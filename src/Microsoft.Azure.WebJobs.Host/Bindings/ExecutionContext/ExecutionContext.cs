@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Threading;
 
 namespace Microsoft.Azure.WebJobs
 {
@@ -32,5 +33,10 @@ namespace Microsoft.Azure.WebJobs
         /// A host can set this via <see cref="CoreJobHostConfigurationExtensions.UseCore(JobHostConfiguration, string)"/>
         /// </remarks>
         public string FunctionAppDirectory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the function timeout token source.
+        /// </summary>
+        public CancellationTokenSource TimeoutTokenSource { get; set; }
     }
 }
