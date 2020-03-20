@@ -117,6 +117,30 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         }
 
         [Fact]
+        public async Task InvokeAsync_WithExecutionContext_PopulatesExecutionContextWithTimeoutTokenSource()
+        {
+
+            var timeoutSource = new CancellationTokenSource();
+            var shutdownSource = new CancellationTokenSource();
+            bool throwOnTimeout = true;
+            Mock<IFunctionInvoker> mockInvoker = new Mock<IFunctionInvoker>();
+            ExecutionContext execContext = new ExecutionContext();
+            var parameterHelper = NewArgs(new object[1] { execContext });
+
+            mockInvoker.Setup(i => i.InvokeAsync(It.IsAny<object>(), It.IsAny<object[]>()))
+                .Returns(() =>
+                {
+                    return Task.FromResult<object>(null);
+                });
+
+
+            await FunctionExecutor.InvokeAsync(mockInvoker.Object, parameterHelper, timeoutSource, shutdownSource,
+                throwOnTimeout, TimeSpan.MinValue, null);
+
+            Assert.Equal(execContext.TimeoutTokenSource, timeoutSource);
+        }
+
+        [Fact]
         public async Task InvokeAsync_NoCancellation()
         {
             bool called = false;
