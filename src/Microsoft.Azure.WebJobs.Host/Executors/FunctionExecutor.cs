@@ -558,7 +558,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             CancellationTokenSource functionCancellationTokenSource, bool throwOnTimeout, TimeSpan timerInterval, IFunctionInstance instance)
         {
             object[] invokeParameters = parameterHelper.InvokeParameters;
-            invokeParameters.OfType<ExecutionContext>().First().TimeoutTokenSource = timeoutTokenSource;
+            var executionContext = invokeParameters.OfType<ExecutionContext>().FirstOrDefault();
+            if (executionContext != null)
+            {
+                executionContext.TimeoutTokenSource = timeoutTokenSource;
+            }
 
             // There are three ways the function can complete:
             //   1. The invokeTask itself completes first.
