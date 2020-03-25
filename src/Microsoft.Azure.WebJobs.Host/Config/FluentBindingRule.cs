@@ -273,7 +273,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         /// <returns>A binding provider that applies these semantics.</returns>
         public FluentBinder BindToValueProvider(Func<TAttribute, Type, Task<IValueBinder>> builder)
         {
-            return BindToValueProvider<object>(builder);
+            return BindToValueProvider<object>(CreateValueBinderBuilderIgnoringContext(builder));
         }
 
         /// <summary>
@@ -287,8 +287,29 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         {
             var ot = OpenType.FromType<TType>();
             var nameResolver = _nameResolver;
+            var binder = new ItemBindingProvider<TAttribute>(_configuration, nameResolver, CreateValueBinderBuilderIgnoringContext(builder), ot);
+            return Bind(binder);
+        }
+
+        /// <summary>
+        /// Rule to provide an IValueBinder from a resolved attribute. 
+        /// IValueBinder will let you have an OnCompleted hook that is invoked after the user function completes. 
+        /// </summary>
+        /// <typeparam name="TType">An Open Type. This rule is only applied if the parameter type matches the open type</typeparam>
+        /// <param name="builder">Builder function to create a IValueBinder given a resolved attribute, the user parameter type and the binding context for the value. </param>
+        /// <returns>A binding provider that applies these semantics.</returns>
+        public FluentBinder BindToValueProvider<TType>(Func<TAttribute, Type, ValueBindingContext, Task<IValueBinder>> builder)
+        {
+            var ot = OpenType.FromType<TType>();
+            var nameResolver = _nameResolver;
             var binder = new ItemBindingProvider<TAttribute>(_configuration, nameResolver, builder, ot);
             return Bind(binder);
+        }
+
+        private static Func<TAttribute, Type, ValueBindingContext, Task<IValueBinder>> CreateValueBinderBuilderIgnoringContext(Func<TAttribute, Type, Task<IValueBinder>> valueBinderBuilder)
+        {
+            Func<TAttribute, Type, ValueBindingContext, Task<IValueBinder>> ignoringBuilder = (attribute, valueType, ignoredContext) => valueBinderBuilder(attribute, valueType);
+            return ignoringBuilder;
         }
 
 
