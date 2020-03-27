@@ -11,4 +11,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     {
         Task<IReadOnlyDictionary<string, IValueProvider>> BindAsync(ValueBindingContext context);
     }
+
+    public interface IBindingData : IBindingSource
+    {
+        Task<IReadOnlyDictionary<string, InstrumentableObjectMetadata>> GetBindingDataAsync(ValueBindingContext context);
+    }
 }

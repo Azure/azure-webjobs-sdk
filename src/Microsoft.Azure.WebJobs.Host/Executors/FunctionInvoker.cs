@@ -1,8 +1,15 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
@@ -12,15 +19,18 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IReadOnlyList<string> _parameterNames;
         private readonly IJobInstanceFactory<TReflected> _instanceFactory;
         private readonly IMethodInvoker<TReflected, TReturnValue> _methodInvoker;
+        private readonly ILogger _logger;
 
         public FunctionInvoker(
             IReadOnlyList<string> parameterNames,
             IJobInstanceFactory<TReflected> instanceFactory,
-            IMethodInvoker<TReflected, TReturnValue> methodInvoker)
+            IMethodInvoker<TReflected, TReturnValue> methodInvoker,
+            ILogger logger = null)
         {
             _parameterNames = parameterNames ?? throw new ArgumentNullException(nameof(parameterNames));
             _instanceFactory = instanceFactory ?? throw new ArgumentNullException(nameof(instanceFactory));
             _methodInvoker = methodInvoker ?? throw new ArgumentNullException(nameof(methodInvoker));
+            _logger = logger;
         }
 
         public IJobInstanceFactory<TReflected> InstanceFactory

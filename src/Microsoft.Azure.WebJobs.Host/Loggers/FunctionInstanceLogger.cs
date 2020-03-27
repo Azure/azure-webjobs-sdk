@@ -33,6 +33,16 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             return Task.FromResult<string>(null);
         }
 
+        // TODO this is hacky, create new message and use that here
+        private void LogStreamUsageDetails(string function, string functionInstanceId, string message)
+        {
+            FunctionDescriptor fd = new FunctionDescriptor
+            {
+                LogName = function
+            };
+            Log(LogLevel.Information, fd, functionInstanceId, message);
+        }
+
         private void LogTemplatizedTriggerDetails(FunctionStartedMessage message)
         {
             var templateKeys = message.TriggerDetails.Select(entry => $"{entry.Key}: {{{entry.Key}}}");

@@ -16,6 +16,7 @@ using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -101,7 +102,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             ILogger logger = _loggerFactory?.CreateLogger(LogCategories.CreateFunctionCategory(functionInstance.FunctionDescriptor.LogName));
 
             FunctionStartedMessage functionStartedMessage = CreateStartedMessageWithoutArguments(functionInstance);
-            var parameterHelper = new ParameterHelper(functionInstance);
+            
+            ILogger hostLogger = _loggerFactory?.CreateLogger("Host." + LogCategories.CreateFunctionCategory(functionInstance.FunctionDescriptor.LogName));
+            var parameterHelper = new ParameterHelper(functionInstance, hostLogger);
             FunctionCompletedMessage functionCompletedMessage = null;
             ExceptionDispatchInfo exceptionInfo = null;
             string functionStartedMessageId = null;
@@ -236,6 +239,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             outputDefinition = await outputLogger.CreateAsync(instance, cancellationToken);
             outputLog = outputDefinition.CreateOutput();
             functionOutputTextWriter = outputLog.Output;
+
             updateOutputLogTimer = StartOutputTimer(outputLog.UpdateCommand, _exceptionHandler);
 
             try
@@ -800,6 +804,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // ValueProviders for the parameters. These are produced from binding. 
             // This includes a possible $return for the return value. 
             private IReadOnlyDictionary<string, IValueProvider> _parameters;
+            
+            // Binding Data for the parameters.
+            // This includes a possible $return for the return value. 
+            private IReadOnlyDictionary<string, InstrumentableObjectMetadata> _bindingData;
 
             // ordered parameter names of the underlying physical MethodInfo that will be invoked. 
             // This litererally matches the ParameterInfo[] and does not include return value. 
@@ -813,12 +821,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             private bool _disposed;
 
+            private ILogger _logger;
+
             // for mock testing
             public ParameterHelper()
             {
             }
 
-            public ParameterHelper(IFunctionInstanceEx functionInstance)
+            public ParameterHelper(IFunctionInstanceEx functionInstance, ILogger logger = null)
             {
                 if (functionInstance == null)
                 {
@@ -827,6 +837,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                 _functionInstance = functionInstance;
                 _parameterNames = functionInstance.Invoker.ParameterNames;
+                _logger = logger;
             }
 
             // Phsyical objects to pass to the underlying method Info. These will get updated for out-parameters. 
@@ -912,6 +923,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // run the binding source to create a set of IValueProviders for this instance. 
             public async Task BindAsync(IBindingSource bindingSource, ValueBindingContext context)
             {
+                if (bindingSource is IBindingData)
+                {
+                    IBindingData bindingData = (IBindingData)bindingSource;
+                    _bindingData = await bindingData.GetBindingDataAsync(context);
+                }
+
                 _parameters = await bindingSource.BindAsync(context);
             }
 
@@ -935,7 +952,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 object[] reflectionParameters = new object[_parameterNames.Count];
                 List<Exception> bindingExceptions = new List<Exception>();
-
+                
                 for (int index = 0; index < _parameterNames.Count; index++)
                 {
                     string name = _parameterNames[index];
@@ -949,6 +966,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     }
 
                     reflectionParameters[index] = await _parameters[name].GetValueAsync();
+                    
+                    bool isWatchable = reflectionParameters[index].GetType().ToString().IndexOf("watchable", StringComparison.OrdinalIgnoreCase) >= 0;
+                    if (_bindingData != null && _bindingData.ContainsKey(name) && isWatchable)
+                    {
+                        InstrumentableStream instStr = new InstrumentableStream(_bindingData[name], (Stream)reflectionParameters[index], _logger);
+                        reflectionParameters[index] = instStr;
+                    }
                 }
 
                 IDelayedException delayedBindingException = null;

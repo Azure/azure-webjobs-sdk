@@ -7,10 +7,14 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Azure.WebJobs.Host.Executors;
+using System.Security.Cryptography;
+using System.Reflection;
+using System.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Triggers
 {
-    internal class TriggeredFunctionBinding<TTriggerValue> : ITriggeredFunctionBinding<TTriggerValue>
+    internal class TriggeredFunctionBinding<TTriggerValue> : ITriggeredFunctionBindingData<TTriggerValue>
     {
         private readonly FunctionDescriptor _descriptor;
         private readonly string _triggerParameterName;
@@ -32,6 +36,11 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
         {
             return await BindCoreAsync(context, value, null);
         }
+        
+        public async Task<IReadOnlyDictionary<string, InstrumentableObjectMetadata>> GetBindingDataAsync(ValueBindingContext context, TTriggerValue value)
+        {
+            return await GetBindingDataCoreAsync(context, value, null);
+        }
 
         public async Task<IReadOnlyDictionary<string, IValueProvider>> BindAsync(ValueBindingContext context,
             IDictionary<string, object> parameters)
@@ -43,6 +52,18 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
 
             object value = parameters[_triggerParameterName];
             return await BindCoreAsync(context, value, parameters);
+        }
+        
+        public async Task<IReadOnlyDictionary<string, InstrumentableObjectMetadata>> GetBindingDataAsync(ValueBindingContext context,
+            IDictionary<string, object> parameters)
+        {
+            if (parameters == null || !parameters.ContainsKey(_triggerParameterName))
+            {
+                throw new InvalidOperationException("Missing value for trigger parameter '" + _triggerParameterName + "'.");
+            }
+
+            object value = parameters[_triggerParameterName];
+            return await GetBindingDataCoreAsync(context, value, parameters);
         }
 
         private async Task<IReadOnlyDictionary<string, IValueProvider>> BindCoreAsync(ValueBindingContext context, object value, IDictionary<string, object> parameters)
@@ -120,6 +141,90 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                     valueProviders.Add(FunctionIndexer.ReturnParamName, triggerReturnValueProvider);
                 }
             }
+
+            return valueProviders;
+        }      
+        
+        private async Task<IReadOnlyDictionary<string, InstrumentableObjectMetadata>> GetBindingDataCoreAsync(ValueBindingContext context, object value, IDictionary<string, object> parameters)
+        {
+            Dictionary<string, InstrumentableObjectMetadata> valueProviders = new Dictionary<string, InstrumentableObjectMetadata>();
+            IReadOnlyDictionary<string, object> bindingData;
+            InstrumentableObjectMetadata triggerMetadata = new InstrumentableObjectMetadata();
+            triggerMetadata.Add("Type", "Trigger");
+
+            try
+            {
+                ITriggerData triggerData = await _triggerBinding.BindAsync(value, context);
+                bindingData = triggerData.BindingData;
+                
+                if (bindingData.TryGetValue("Uri", out object uri))
+                {
+                    triggerMetadata.Add("Uri", ((Uri)uri).ToString());
+                }
+                if (bindingData.TryGetValue("Properties", out object properties))
+                {
+                    try
+                    {
+                        string contentMd5 = properties.GetType().GetProperty("ContentMD5").GetValue(properties, null).ToString();
+                        triggerMetadata.Add("ContentMD5", contentMd5);
+                        string length = properties.GetType().GetProperty("Length").GetValue(properties, null).ToString();
+                        triggerMetadata.Add("Length", length.ToString());
+                        string created = properties.GetType().GetProperty("Created").GetValue(properties, null).ToString();
+                        triggerMetadata.Add("Created", created.ToString());
+                        string lastModifed = properties.GetType().GetProperty("LastModified").GetValue(properties, null).ToString();
+                        triggerMetadata.Add("LastModified", lastModifed.ToString());
+                    }
+                    catch (Exception exception)
+                    {
+                        // TODO may need to clean this
+                        triggerMetadata.Add("Exception", exception.Message);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+                bindingData = null;
+            }
+
+            valueProviders.Add(_triggerParameterName, triggerMetadata);
+
+            foreach (KeyValuePair<string, IBinding> item in _nonTriggerBindings)
+            {
+                string name = item.Key;
+                IBinding binding = item.Value;
+                InstrumentableObjectMetadata nontriggerMetadata = new InstrumentableObjectMetadata();
+                nontriggerMetadata.Add("Type", "NonTrigger");
+
+                try
+                {
+                    ParameterDescriptor param = binding.ToParameterDescriptor();
+                    if (param.GetType().ToString() == "Microsoft.Azure.WebJobs.Host.Protocols.BlobParameterDescriptor")
+                    {
+                        string access = param.GetType().GetProperty("Access").GetValue(param).ToString();
+                        nontriggerMetadata.Add("Access", access);
+                        string accountName = param.GetType().GetProperty("AccountName").GetValue(param).ToString();
+                        nontriggerMetadata.Add("AccountName", accountName);
+                        string blobName = param.GetType().GetProperty("BlobName").GetValue(param).ToString();
+                        nontriggerMetadata.Add("BlobName", blobName);
+                        string containerName = param.GetType().GetProperty("ContainerName").GetValue(param).ToString();
+                        nontriggerMetadata.Add("ContainerName", containerName);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    // TODO may need to clean this, making the compiler happy :)
+                    nontriggerMetadata.Add("Exception", exception.Message);
+                }
+
+                valueProviders.Add(name, nontriggerMetadata);
+            }
+
+            // TODO singleton and return value details are not yet captured
+            // Need to see when exactly they are used and if we need to instrument those too
 
             return valueProviders;
         }      

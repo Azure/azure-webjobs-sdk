@@ -8,7 +8,7 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 
 namespace Microsoft.Azure.WebJobs.Host.Triggers
 {
-    internal class TriggerBindingSource<TTriggerValue> : IBindingSource
+    internal class TriggerBindingSource<TTriggerValue> : IBindingData
     {
         private readonly ITriggeredFunctionBinding<TTriggerValue> _functionBinding;
         private readonly TTriggerValue _value;
@@ -22,6 +22,20 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
         public Task<IReadOnlyDictionary<string, IValueProvider>> BindAsync(ValueBindingContext context)
         {
             return _functionBinding.BindAsync(context, _value);
+        }
+        
+        public Task<IReadOnlyDictionary<string, InstrumentableObjectMetadata>> GetBindingDataAsync(ValueBindingContext context)
+        {
+            if (_functionBinding is ITriggeredFunctionBindingData<TTriggerValue>)
+            {
+                ITriggeredFunctionBindingData<TTriggerValue> functionBindingData = (ITriggeredFunctionBindingData<TTriggerValue>)_functionBinding;
+                return functionBindingData.GetBindingDataAsync(context, _value);
+            }
+            else
+            {
+                // TODO fix this
+                return null;
+            }
         }
     }
 }

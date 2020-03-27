@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,7 +13,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 {
     internal static class FunctionInvokerFactory
     {
-        public static IFunctionInvoker Create(MethodInfo method, IJobActivator activator)
+        public static IFunctionInvoker Create(MethodInfo method, IJobActivator activator, ILogger logger = null)
         {
             if (method == null)
             {
@@ -37,15 +38,16 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             MethodInfo genericMethod = genericMethodDefinition.MakeGenericMethod(reflectedType, returnType);
             Debug.Assert(genericMethod != null);
-            Func<MethodInfo, IJobActivator, IFunctionInvoker> lambda =
-                (Func<MethodInfo, IJobActivator, IFunctionInvoker>)Delegate.CreateDelegate(
-                typeof(Func<MethodInfo, IJobActivator, IFunctionInvoker>), genericMethod);
-            return lambda.Invoke(method, activator);
+            Func<MethodInfo, IJobActivator, ILogger, IFunctionInvoker> lambda =
+                (Func<MethodInfo, IJobActivator, ILogger, IFunctionInvoker>)Delegate.CreateDelegate(
+                typeof(Func<MethodInfo, IJobActivator, ILogger, IFunctionInvoker>), genericMethod);
+            return lambda.Invoke(method, activator, logger);
         }
 
         private static IFunctionInvoker CreateGeneric<TReflected, TReturnValue>(
             MethodInfo method,
-            IJobActivator activator)
+            IJobActivator activator,
+            ILogger logger)
         {
             Debug.Assert(method != null);
 
@@ -55,7 +57,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             IJobInstanceFactory<TReflected> instanceFactory = CreateInstanceFactory<TReflected>(method, activator);
 
-            return new FunctionInvoker<TReflected, TReturnValue>(parameterNames, instanceFactory, methodInvoker);
+            return new FunctionInvoker<TReflected, TReturnValue>(parameterNames, instanceFactory, methodInvoker, logger);
         }
 
         private static IJobInstanceFactory<TReflected> CreateInstanceFactory<TReflected>(MethodInfo method,

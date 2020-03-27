@@ -36,6 +36,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly IFunctionExecutor _executor;
         private readonly SingletonManager _singletonManager;
         private readonly ILogger _logger;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly SharedQueueHandler _sharedQueue;
         private readonly TimeoutAttribute _defaultTimeout;
         private readonly bool _allowPartialHostStartup;
@@ -58,6 +59,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _executor = executor ?? throw new ArgumentNullException(nameof(executor));
             _singletonManager = singletonManager ?? throw new ArgumentNullException(nameof(singletonManager));
             _nameResolver = nameResolver;
+            _loggerFactory = loggerFactory;
             _logger = loggerFactory?.CreateLogger(LogCategories.Startup);
             _sharedQueue = sharedQueue;
             _defaultTimeout = defaultTimeout;
@@ -297,7 +299,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
             string triggerParameterName = triggerParameter != null ? triggerParameter.Name : null;
             FunctionDescriptor functionDescriptor = CreateFunctionDescriptor(method, triggerParameterName, triggerBinding, nonTriggerBindings);
-            IFunctionInvoker invoker = FunctionInvokerFactory.Create(method, _activator);
+            ILogger logger = _loggerFactory?.CreateLogger("Host." + LogCategories.CreateFunctionCategory(functionDescriptor.LogName));
+            IFunctionInvoker invoker = FunctionInvokerFactory.Create(method, _activator, logger);
             IFunctionDefinition functionDefinition;
 
             if (triggerBinding != null)

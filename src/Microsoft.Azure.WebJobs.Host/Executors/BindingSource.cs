@@ -7,7 +7,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal class BindingSource : IBindingSource
+    internal class BindingSource : IBindingData
     {
         private readonly IFunctionBinding _binding;
         private readonly IDictionary<string, object> _parameters;
@@ -21,6 +21,20 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         public Task<IReadOnlyDictionary<string, IValueProvider>> BindAsync(ValueBindingContext context)
         {
             return _binding.BindAsync(context, _parameters);
+        }
+
+        public Task<IReadOnlyDictionary<string, InstrumentableObjectMetadata>> GetBindingDataAsync(ValueBindingContext context)
+        {
+            if (_binding is IFunctionBindingData)
+            {
+                IFunctionBindingData functionBindingData = (IFunctionBindingData)_binding;
+                return functionBindingData.GetBindingDataAsync(context, _parameters);
+            }
+            else
+            {
+                // TODO fix this
+                return null;
+            }
         }
     }
 }
