@@ -34,6 +34,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _countWrite = 0;
         }
 
+        ~InstrumentableStream()
+        {
+            LogStatus();
+        }
+
         public override bool CanRead
         {
             get { return _inner.CanRead; }
@@ -102,7 +107,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         public override void Close()
         {
             _inner.Close();
-            LogStatus();
         }
 
         public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
@@ -185,7 +189,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _inner.WriteByte(value);
             _countWrite++;
         }
-        
 
         public override int Read(byte[] buffer, int offset, int count)
         {

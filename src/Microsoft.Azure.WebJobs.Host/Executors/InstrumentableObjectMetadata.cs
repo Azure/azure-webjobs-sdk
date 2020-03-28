@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using Microsoft.Azure.WebJobs.Host.Protocols;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -25,7 +26,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 stringBuilder.Append(entry.Key);
                 stringBuilder.Append(": ");
                 stringBuilder.Append(entry.Value);
-                // TODO not doing new line for now, don't now how it shows up in logs
                 stringBuilder.Append(", ");
             }
 
@@ -34,6 +34,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public void Add(string key, string value)
         {
+            _properties.RemoveIfContainsKey(key);
             _properties.Add(key, value);
         }
     }

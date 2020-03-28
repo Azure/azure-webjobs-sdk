@@ -161,17 +161,21 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                 {
                     triggerMetadata.Add("Uri", ((Uri)uri).ToString());
                 }
+                if (bindingData.TryGetValue("Name", out object name))
+                {
+                    triggerMetadata.Add("Name", ((string)name));
+                }
                 if (bindingData.TryGetValue("Properties", out object properties))
                 {
                     try
                     {
-                        string contentMd5 = properties.GetType().GetProperty("ContentMD5").GetValue(properties, null).ToString();
+                        string contentMd5 = properties.GetType().GetProperty("ContentMD5")?.GetValue(properties, null)?.ToString();
                         triggerMetadata.Add("ContentMD5", contentMd5);
-                        string length = properties.GetType().GetProperty("Length").GetValue(properties, null).ToString();
+                        string length = properties.GetType().GetProperty("Length")?.GetValue(properties, null)?.ToString();
                         triggerMetadata.Add("Length", length.ToString());
-                        string created = properties.GetType().GetProperty("Created").GetValue(properties, null).ToString();
+                        string created = properties.GetType().GetProperty("Created")?.GetValue(properties, null)?.ToString();
                         triggerMetadata.Add("Created", created.ToString());
-                        string lastModifed = properties.GetType().GetProperty("LastModified").GetValue(properties, null).ToString();
+                        string lastModifed = properties.GetType().GetProperty("LastModified")?.GetValue(properties, null)?.ToString();
                         triggerMetadata.Add("LastModified", lastModifed.ToString());
                     }
                     catch (Exception exception)
@@ -204,13 +208,13 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                     ParameterDescriptor param = binding.ToParameterDescriptor();
                     if (param.GetType().ToString() == "Microsoft.Azure.WebJobs.Host.Protocols.BlobParameterDescriptor")
                     {
-                        string access = param.GetType().GetProperty("Access").GetValue(param).ToString();
+                        string access = param.GetType().GetProperty("Access")?.GetValue(param)?.ToString();
                         nontriggerMetadata.Add("Access", access);
-                        string accountName = param.GetType().GetProperty("AccountName").GetValue(param).ToString();
+                        string accountName = param.GetType().GetProperty("AccountName")?.GetValue(param)?.ToString();
                         nontriggerMetadata.Add("AccountName", accountName);
-                        string blobName = param.GetType().GetProperty("BlobName").GetValue(param).ToString();
-                        nontriggerMetadata.Add("BlobName", blobName);
-                        string containerName = param.GetType().GetProperty("ContainerName").GetValue(param).ToString();
+                        string blobName = param.GetType().GetProperty("BlobName")?.GetValue(param)?.ToString();
+                        nontriggerMetadata.Add("Name", blobName);
+                        string containerName = param.GetType().GetProperty("ContainerName")?.GetValue(param)?.ToString();
                         nontriggerMetadata.Add("ContainerName", containerName);
                     }
                 }
