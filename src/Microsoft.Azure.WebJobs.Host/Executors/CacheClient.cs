@@ -19,22 +19,31 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     {
         // TODO check what guarantees we have about multiple readers reading from same stream (may change position) - not cool
         private static readonly ConcurrentDictionary<string, MemoryStream> inMemoryCache = new ConcurrentDictionary<string, MemoryStream>();
-        private static readonly HashSet<string> commitedStreams = new HashSet<string>();
 
         private readonly string _key;
         private readonly List<Task> _tasks;
         private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly MemoryStream _memoryStream;
 
         public CacheClient(string key)
         {
             _key = key;
             _tasks = new List<Task>();
+            _memoryStream = null;
 
             if (this.ContainsKey())
             {
                 if (inMemoryCache.TryGetValue(_key, out MemoryStream memoryStream))
                 {
                     memoryStream.Seek(0, SeekOrigin.Begin);
+                    _memoryStream = memoryStream;
+                }
+            }
+            else
+            {
+                if (_memoryStream == null)
+                {
+                    _memoryStream = new MemoryStream();
                 }
             }
 
@@ -45,7 +54,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             if (_tasks.TrueForAll(t => t.IsCompleted))
             {
-                commitedStreams.Add(_key);
+                if (!inMemoryCache.TryAdd(_key, _memoryStream))
+                {
+                    // TODO log error? (this can happen if key already there)
+                }
             }
             else
             {
@@ -56,45 +68,31 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public bool ContainsKey()
         {
-            return commitedStreams.Contains(_key);
+            return inMemoryCache.ContainsKey(_key);
         }
 
         public Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
         {
             if (!this.ContainsKey())
             {
-                inMemoryCache.TryAdd(_key, new MemoryStream());
-            }
-
-            if (inMemoryCache.TryGetValue(_key, out MemoryStream memoryStream))
-            {
-                Task baseTask = memoryStream.CopyToAsync(destination, bufferSize, cancellationToken);
-                return baseTask;
-            }
-            else
-            {
-                // TODO fix me
+                // TODO error out
                 return null;
             }
+
+            Task baseTask = _memoryStream.CopyToAsync(destination, bufferSize, cancellationToken);
+            return baseTask;
         }
         
         public Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             if (!this.ContainsKey())
             {
-                inMemoryCache.TryAdd(_key, new MemoryStream());
-            }
-
-            if (inMemoryCache.TryGetValue(_key, out MemoryStream memoryStream))
-            {
-                Task<int> baseTask = memoryStream.ReadAsync(buffer, offset, count, cancellationToken);
-                return baseTask;
-            }
-            else
-            {
-                // TODO fix me
+                // TODO error out
                 return null;
             }
+
+            Task<int> baseTask = _memoryStream.ReadAsync(buffer, offset, count, cancellationToken);
+            return baseTask;
         }
         
         // TODO only difference is cancellation token
@@ -103,18 +101,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             if (!this.ContainsKey())
             {
                 // TODO error out
-            }
-
-            if (inMemoryCache.TryGetValue(_key, out MemoryStream memoryStream))
-            {
-                Task<int> baseTask = memoryStream.ReadAsync(buffer, offset, count);
-                return baseTask;
-            }
-            else
-            {
-                // TODO fix me
                 return null;
             }
+
+            Task<int> baseTask = _memoryStream.ReadAsync(buffer, offset, count);
+            return baseTask;
         }
         
         public int ReadByte()
@@ -137,38 +128,24 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         
         public void StartWriteTask(byte[] buffer, int offset, int count)
         {
-            if (!inMemoryCache.ContainsKey(_key))
+            if (this.ContainsKey())
             {
-                inMemoryCache.TryAdd(_key, new MemoryStream());
+                // TODO invalidate the previous stream if we are attempting to write to it again
             }
 
-            if (inMemoryCache.TryGetValue(_key, out MemoryStream memoryStream))
-            {
-                Task writeAsyncTask = memoryStream.WriteAsync(buffer, offset, count, _cancellationTokenSource.Token);
-                _tasks.Add(writeAsyncTask);
-            }
-            else
-            {
-                // TODO problem
-            }
+            Task writeAsyncTask = _memoryStream.WriteAsync(buffer, offset, count, _cancellationTokenSource.Token);
+            _tasks.Add(writeAsyncTask);
         }
 
         // TODO wrap the checks and pass the core job as lambda so we can reuse the checks in above function too
         public void WriteByte(byte value)
         {
-            if (!inMemoryCache.ContainsKey(_key))
+            if (this.ContainsKey())
             {
-                inMemoryCache.TryAdd(_key, new MemoryStream());
+                // TODO invalidate the previous stream if we are attempting to write to it again
             }
 
-            if (inMemoryCache.TryGetValue(_key, out MemoryStream memoryStream))
-            {
-                memoryStream.WriteByte(value);
-            }
-            else
-            {
-                // TODO problem
-            }
+            _memoryStream.WriteByte(value);
         }
     }
 }

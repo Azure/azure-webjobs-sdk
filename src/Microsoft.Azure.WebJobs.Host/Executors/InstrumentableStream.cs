@@ -34,7 +34,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _timeWrite = new Stopwatch();
             _countRead = 0;
             _countWrite = 0;
-            if (metadata.TryGetValue("Name", out string name))
+            if (metadata.TryGetValue("Uri", out string name))
             {
                 _cacheClient = new CacheClient(name);
             }
