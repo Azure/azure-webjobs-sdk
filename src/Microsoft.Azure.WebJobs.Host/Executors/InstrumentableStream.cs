@@ -14,11 +14,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 {
     public class InstrumentableStream : Stream
     {
+        private static readonly bool _cacheEnabled = true;
         private readonly ILogger _logger;
         private readonly Stream _inner;
         private readonly InstrumentableObjectMetadata _metadata;
         private readonly Stopwatch _timeRead;
         private readonly Stopwatch _timeWrite;
+        private readonly CacheClient _cacheClient;
         private long _countRead;
         // TODO check if counting of written bytes is correct (count variable is *max* bytes to write, not those actually written)
         private long _countWrite;
@@ -32,6 +34,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _timeWrite = new Stopwatch();
             _countRead = 0;
             _countWrite = 0;
+            if (metadata.TryGetValue("Name", out string name))
+            {
+                _cacheClient = new CacheClient(name);
+            }
         }
 
         ~InstrumentableStream()
@@ -39,6 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             LogStatus();
         }
 
+        // TODO need to also sync setting/getting of properties with cached stream instead of inner 
         public override bool CanRead
         {
             get { return _inner.CanRead; }
@@ -111,7 +118,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
         {
-            return _inner.CopyToAsync(destination, bufferSize, cancellationToken);
+            if (_cacheEnabled && _cacheClient.ContainsKey())
+            {
+                return _cacheClient.CopyToAsync(destination, bufferSize, cancellationToken);
+            }
+            else
+            {
+                return _inner.CopyToAsync(destination, bufferSize, cancellationToken);
+            }
         }
 
         public override void Flush()
@@ -148,6 +162,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             try
             {
+                //_cacheClient.StartWriteTask(buffer, offset, count);
                 _timeWrite.Start();
                 _inner.Write(buffer, offset, count);
                 _countWrite += count;
@@ -162,6 +177,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             try
             {
+                //_cacheClient.StartWriteTask(buffer, offset, count);
                 Task baseTask = _inner.WriteAsync(buffer, offset, count, cancellationToken);
                 return WriteAsyncCore(baseTask);
             }
@@ -186,6 +202,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         
         public override void WriteByte(byte value)
         {
+            _cacheClient.WriteByte(value);
             _inner.WriteByte(value);
             _countWrite++;
         }
@@ -194,10 +211,21 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             try
             {
-                _timeRead.Start();
-                var bytesRead = _inner.Read(buffer, offset, count);
-                _countRead += bytesRead;
-                return bytesRead;
+                if (_cacheEnabled && _cacheClient.ContainsKey())
+                {
+                    _timeRead.Start();
+                    var bytesRead = _cacheClient.ReadAsync(buffer, offset, count).Result;
+                    _countRead += bytesRead;
+                    return bytesRead;
+                }
+                else
+                {
+                    _timeRead.Start();
+                    var bytesRead = _inner.Read(buffer, offset, count);
+                    _cacheClient.StartWriteTask(buffer, offset, bytesRead);
+                    _countRead += bytesRead;
+                    return bytesRead;
+                }
             }
             finally
             {
@@ -207,28 +235,36 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            Task<int> baseTask = _inner.ReadAsync(buffer, offset, count, cancellationToken);
-            return ReadAsyncCore(baseTask);
-        }
-
-        private async Task<int> ReadAsyncCore(Task<int> baseTask)
-        {
-            try
+            if (_cacheEnabled && _cacheClient.ContainsKey())
             {
-                _timeRead.Start();
-                int bytesRead = await baseTask;
-                _countRead += bytesRead;
-                return bytesRead;
+                return _cacheClient.ReadAsync(buffer, offset, count, cancellationToken);
             }
-            finally
+            else
             {
-                _timeRead.Stop();
+                try
+                {
+                    return _inner.ReadAsync(buffer, offset, count, cancellationToken);
+                }
+                finally
+                {
+                    _cacheClient.StartWriteTask(buffer, offset, count);
+                }
             }
         }
 
         public override int ReadByte()
         {
-            int read = base.ReadByte();
+            int read;
+
+            if (_cacheEnabled && _cacheClient.ContainsKey())
+            {
+                read = _cacheClient.ReadByte();
+            }
+            else
+            {
+                read = base.ReadByte();
+                _cacheClient.WriteByte(Convert.ToByte(read));
+            }
 
             if (read != -1)
             {

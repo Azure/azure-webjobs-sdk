@@ -37,5 +37,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _properties.RemoveIfContainsKey(key);
             _properties.Add(key, value);
         }
+        
+        public bool TryGetValue(string key, out string value)
+        {
+            return _properties.TryGetValue(key, out value);
+        }
     }
 }
