@@ -114,12 +114,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         public override void Close()
         {
             _inner.Close();
+            _cacheClient.FlushToCache();
         }
 
         public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
         {
             if (_cacheEnabled && _cacheClient.ContainsKey())
             {
+                _cacheClient.CacheHit = true;
                 return _cacheClient.CopyToAsync(destination, bufferSize, cancellationToken);
             }
             else
@@ -162,7 +164,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             try
             {
-                //_cacheClient.StartWriteTask(buffer, offset, count);
+                _cacheClient.StartWriteTask(buffer, offset, count);
                 _timeWrite.Start();
                 _inner.Write(buffer, offset, count);
                 _countWrite += count;
@@ -177,7 +179,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             try
             {
-                //_cacheClient.StartWriteTask(buffer, offset, count);
+                _cacheClient.StartWriteTask(buffer, offset, count);
                 Task baseTask = _inner.WriteAsync(buffer, offset, count, cancellationToken);
                 return WriteAsyncCore(baseTask);
             }
@@ -213,6 +215,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 if (_cacheEnabled && _cacheClient.ContainsKey())
                 {
+                    _cacheClient.CacheHit = true;
                     _timeRead.Start();
                     var bytesRead = _cacheClient.ReadAsync(buffer, offset, count).Result;
                     _countRead += bytesRead;
@@ -237,6 +240,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             if (_cacheEnabled && _cacheClient.ContainsKey())
             {
+                _cacheClient.CacheHit = true;
                 return _cacheClient.ReadAsync(buffer, offset, count, cancellationToken);
             }
             else
@@ -258,6 +262,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             if (_cacheEnabled && _cacheClient.ContainsKey())
             {
+                _cacheClient.CacheHit = true;
                 read = _cacheClient.ReadByte();
             }
             else
@@ -285,6 +290,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             stringBuilder.Append(_countRead);
             stringBuilder.Append(", WriteBytes: ");
             stringBuilder.Append(_countWrite);
+            stringBuilder.Append(", CacheHit: ");
+            stringBuilder.Append(_cacheClient.CacheHit);
             stringBuilder.Append(", Metadata: {");
             stringBuilder.Append(_metadata);
             stringBuilder.Append("}");

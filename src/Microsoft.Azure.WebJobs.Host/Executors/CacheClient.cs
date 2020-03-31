@@ -24,12 +24,22 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly List<Task> _tasks;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly MemoryStream _memoryStream;
+        private bool _isFlushedToCache;
+        private bool _cacheHit;
+
+        public bool CacheHit
+        {
+            get { return _cacheHit; }
+            set { _cacheHit = value; }
+        }
 
         public CacheClient(string key)
         {
             _key = key;
             _tasks = new List<Task>();
             _memoryStream = null;
+            _isFlushedToCache = false;
+            _cacheHit = false;
 
             if (this.ContainsKey())
             {
@@ -50,7 +60,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _cancellationTokenSource = new CancellationTokenSource();
         }
 
-        ~CacheClient()
+        public bool FlushToCache()
         {
             if (_tasks.TrueForAll(t => t.IsCompleted))
             {
@@ -58,11 +68,25 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 {
                     // TODO log error? (this can happen if key already there)
                 }
+
+                _isFlushedToCache = true;
+                return true;
             }
             else
             {
-                _cancellationTokenSource.Cancel();
-                inMemoryCache.RemoveIfContainsKey(_key);
+                return false;
+            }
+        }
+
+        ~CacheClient()
+        {
+            if (!_isFlushedToCache)
+            {
+                if (!FlushToCache())
+                {
+                    _cancellationTokenSource.Cancel();
+                    inMemoryCache.RemoveIfContainsKey(_key);
+                }
             }
         }
 
