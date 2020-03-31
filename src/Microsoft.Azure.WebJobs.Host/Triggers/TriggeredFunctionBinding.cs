@@ -75,6 +75,9 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             IValueBinder triggerReturnValueProvider= null;
             try
             {
+                // TODO For objects that we already have in the cache, we can check here and not do the binding call
+                // Also we can instrument time taken to bind here - so for objects (like Python inputStream) which we don't 
+                // wrap in the InstrumentableStream, we can gethe time it took to bind them (which includes fetching from blob storage)
                 ITriggerData triggerData = await _triggerBinding.BindAsync(value, context);
                 triggerProvider = triggerData.ValueProvider;
                 bindingData = triggerData.BindingData;

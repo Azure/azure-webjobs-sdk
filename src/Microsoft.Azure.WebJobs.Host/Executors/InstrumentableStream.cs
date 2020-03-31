@@ -34,7 +34,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _timeWrite = new Stopwatch();
             _countRead = 0;
             _countWrite = 0;
-            if (metadata.TryGetValue("Uri", out string name))
+            if (metadata.TryGetValue("Uri", out string name) && _cacheEnabled)
             {
                 _cacheClient = new CacheClient(name);
             }
@@ -114,7 +114,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         public override void Close()
         {
             _inner.Close();
-            _cacheClient.FlushToCache();
+            if (_cacheEnabled)
+            {
+                _cacheClient.FlushToCache();
+            }
         }
 
         public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
@@ -164,7 +167,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             try
             {
-                _cacheClient.StartWriteTask(buffer, offset, count);
+                if (_cacheEnabled)
+                {
+                    _cacheClient.StartWriteTask(buffer, offset, count);
+                }
                 _timeWrite.Start();
                 _inner.Write(buffer, offset, count);
                 _countWrite += count;
@@ -179,7 +185,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             try
             {
-                _cacheClient.StartWriteTask(buffer, offset, count);
+                if (_cacheEnabled)
+                {
+                    _cacheClient.StartWriteTask(buffer, offset, count);
+                }
                 Task baseTask = _inner.WriteAsync(buffer, offset, count, cancellationToken);
                 return WriteAsyncCore(baseTask);
             }
@@ -204,7 +213,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         
         public override void WriteByte(byte value)
         {
-            _cacheClient.WriteByte(value);
+            if (_cacheEnabled)
+            {
+                _cacheClient.WriteByte(value);
+            }
             _inner.WriteByte(value);
             _countWrite++;
         }
@@ -225,7 +237,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 {
                     _timeRead.Start();
                     var bytesRead = _inner.Read(buffer, offset, count);
-                    _cacheClient.StartWriteTask(buffer, offset, bytesRead);
+                    if (_cacheEnabled)
+                    {
+                        _cacheClient.StartWriteTask(buffer, offset, bytesRead);
+                    }
                     _countRead += bytesRead;
                     return bytesRead;
                 }
@@ -251,7 +266,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
                 finally
                 {
-                    _cacheClient.StartWriteTask(buffer, offset, count);
+                    if (_cacheEnabled)
+                    {
+                        _cacheClient.StartWriteTask(buffer, offset, count);
+                    }
                 }
             }
         }
@@ -268,7 +286,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             else
             {
                 read = base.ReadByte();
-                _cacheClient.WriteByte(Convert.ToByte(read));
+                if (_cacheEnabled)
+                {
+                    _cacheClient.WriteByte(Convert.ToByte(read));
+                }
             }
 
             if (read != -1)
@@ -291,7 +312,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             stringBuilder.Append(", WriteBytes: ");
             stringBuilder.Append(_countWrite);
             stringBuilder.Append(", CacheHit: ");
-            stringBuilder.Append(_cacheClient.CacheHit);
+            stringBuilder.Append(_cacheEnabled ? _cacheClient.CacheHit : false);
             stringBuilder.Append(", Metadata: {");
             stringBuilder.Append(_metadata);
             stringBuilder.Append("}");
