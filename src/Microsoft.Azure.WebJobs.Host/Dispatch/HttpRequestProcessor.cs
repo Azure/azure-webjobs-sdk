@@ -89,11 +89,12 @@ namespace Microsoft.Azure.WebJobs.Host.Dispatch
                     };
                 }
 
-                foreach (JObject jo in events)
+                // Send messages using parallel as Azure Storage Queue does not support batch send
+                // Limit sending MaxDegreeOfParallelism to 16 for one request
+                Parallel.ForEach(events, new ParallelOptions() { MaxDegreeOfParallelism = 16 }, async (jo) =>
                 {
-                    // TODO ALROD - Azure Queues do not suport batch sending. Sending in parallel? ServiceBus?
-                    await _sharedQueue.EnqueueAsync(jo, functionId, cancellationToken);
-                }
+                    await _sharedQueue.EnqueueAsync((JObject)jo, functionId, cancellationToken);
+                });
 
                 return new HttpResponseMessage(HttpStatusCode.Accepted);
             }
