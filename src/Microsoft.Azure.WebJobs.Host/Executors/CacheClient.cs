@@ -136,13 +136,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             return baseTask;
         }
         
-        // TODO TEMP FUNCTION
-        public Task<int> ReadBackAsync(byte[] buffer, int offset, int count)
-        {
-            Task<int> baseTask = _memoryStream.ReadAsync(buffer, offset, count);
-            return baseTask;
-        }
-        
         public int ReadByte()
         {
             if (!this.ContainsKey())
@@ -160,19 +153,24 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 return -1;
             }
         }
-        
-        //public void StartWriteTask(byte[] buffer, int offset, int count)
-        public Task StartWriteTask(byte[] buffer, int offset, int count)
+
+        public void StartWriteTask(long startPosition, byte[] buffer, int offset, int count)
         {
             if (this.ContainsKey())
             {
                 // TODO invalidate the previous stream if we are attempting to write to it again
             }
 
-            Task writeAsyncTask = _memoryStream.WriteAsync(buffer, offset, count, _cancellationTokenSource.Token);
-            // TODO temp
+            Task writeAsyncTask = StartWriteTaskCore(startPosition, buffer, offset, count);
             _tasks.Add(writeAsyncTask);
-            return writeAsyncTask;
+        }
+
+        private async Task StartWriteTaskCore(long startPosition, byte[] buffer, int offset, int count)
+        {
+            // TODO The reason we need to set the position explicitly is because for some weird reason, the position wobbles around 
+            // For example when running the model.zip file
+            _memoryStream.Position = startPosition;
+            await _memoryStream.WriteAsync(buffer, offset, count, _cancellationTokenSource.Token);
         }
 
         // TODO wrap the checks and pass the core job as lambda so we can reuse the checks in above function too

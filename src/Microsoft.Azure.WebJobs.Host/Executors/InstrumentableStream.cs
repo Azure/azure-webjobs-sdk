@@ -102,7 +102,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             set
             {
                 _inner.Position = value;
-                _cacheClient.SetPosition(value);
+                if (_cacheEnabled)
+                {
+                    _cacheClient.SetPosition(value);
+                }
             }
         }
 
@@ -148,6 +151,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 _cacheClient.FlushToCache();
             }
+            LogStatus();
         }
 
         public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
@@ -175,14 +179,20 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public override long Seek(long offset, SeekOrigin origin)
         {
-            _cacheClient.Seek(offset, origin);
+            if (_cacheEnabled)
+            {
+                _cacheClient.Seek(offset, origin);
+            }
             return _inner.Seek(offset, origin);
         }
 
         public override void SetLength(long value)
         {
             _inner.SetLength(value);
-            _cacheClient.SetLength(value);
+            if (_cacheEnabled)
+            {
+                _cacheClient.SetLength(value);
+            }
         }
 
         public new void CopyTo(Stream destination)
@@ -201,7 +211,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 if (_cacheEnabled)
                 {
-                    _cacheClient.StartWriteTask(buffer, offset, count);
+                    _cacheClient.StartWriteTask(_inner.Position, buffer, offset, count);
                 }
                 _timeWrite.Start();
                 _inner.Write(buffer, offset, count);
@@ -219,7 +229,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 if (_cacheEnabled)
                 {
-                    _cacheClient.StartWriteTask(buffer, offset, count);
+                    _cacheClient.StartWriteTask(_inner.Position, buffer, offset, count);
                 }
                 Task baseTask = _inner.WriteAsync(buffer, offset, count, cancellationToken);
                 return WriteAsyncCore(baseTask);
@@ -260,55 +270,20 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 if (_cacheEnabled && _cacheClient.ContainsKey())
                 {
-                    _logger?.LogInformation($"Read count: {readCount}, Position: {_cacheClient.GetPosition()}, Offset: {offset}, Count: {count}");
                     _cacheClient.CacheHit = true;
                     _timeRead.Start();
                     var bytesRead = _cacheClient.ReadAsync(buffer, offset, count).Result;
-                    string bytesStr = BitConverter.ToString(buffer);
-                    _logger?.LogInformation($"{bytesStr}");
                     _countRead += bytesRead;
                     return bytesRead;
                 }
                 else
                 {
-                    long prevPosition = _cacheClient.GetPosition();
-                    if (prevPosition != this.Position)
-                    {
-                        _cacheClient.SetPosition(this.Position);
-                        prevPosition = _cacheClient.GetPosition();
-                        if (prevPosition != this.Position)
-                        {
-                            throw new Exception("bad");
-                        }
-                    }
-                    _logger?.LogInformation($"Read count: {readCount}, Position: {this.Position}, Offset: {offset}, Count: {count}");
                     _timeRead.Start();
+                    long startPosition = _inner.Position;
                     var bytesRead = _inner.Read(buffer, offset, count);
-                    string bytesStr = BitConverter.ToString(buffer);
-                    if (readCount < 100)
-                    {
-                        _logger?.LogInformation($"{bytesStr}");
-                    }
-
                     if (_cacheEnabled)
                     {
-                        _cacheClient.StartWriteTask(buffer, offset, bytesRead).Wait();
-                        long curPosition = _cacheClient.GetPosition();
-                        _cacheClient.Seek(prevPosition, SeekOrigin.Begin);
-                        if (_cacheClient.GetPosition() != prevPosition)
-                        {
-                            throw new Exception("badbad");
-                        }
-                        byte[] buffer2 = new byte[count];
-                        _cacheClient.ReadBackAsync(buffer2, offset, count).Wait();
-                        for (int i = 0; i < bytesRead; i++)
-                        {
-                            if (buffer2[i] != buffer[i])
-                            {
-                                throw new Exception("sooooper bad");
-                            }
-                        }
-                        _cacheClient.Seek(curPosition, SeekOrigin.Begin);
+                        _cacheClient.StartWriteTask(startPosition, buffer, offset, bytesRead);
                     }
                     _countRead += bytesRead;
                     return bytesRead;
@@ -329,6 +304,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
             else
             {
+                long startPosition = _inner.Position;
                 try
                 {
                     return _inner.ReadAsync(buffer, offset, count, cancellationToken);
@@ -337,7 +313,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 {
                     if (_cacheEnabled)
                     {
-                        _cacheClient.StartWriteTask(buffer, offset, count);
+                        _cacheClient.StartWriteTask(startPosition, buffer, offset, count);
                     }
                 }
             }
