@@ -33,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             set { _cacheHit = value; }
         }
 
-        public CacheClient(string key)
+        public CacheClient(string key, long length = -1)
         {
             _key = key;
             _tasks = new List<Task>();
@@ -54,6 +54,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 if (_memoryStream == null)
                 {
                     _memoryStream = new MemoryStream();
+                    if (length != -1)
+                    {
+                        _memoryStream.SetLength(length);
+                    }
                 }
             }
 
@@ -132,6 +136,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             return baseTask;
         }
         
+        // TODO TEMP FUNCTION
+        public Task<int> ReadBackAsync(byte[] buffer, int offset, int count)
+        {
+            Task<int> baseTask = _memoryStream.ReadAsync(buffer, offset, count);
+            return baseTask;
+        }
+        
         public int ReadByte()
         {
             if (!this.ContainsKey())
@@ -150,7 +161,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
         }
         
-        public void StartWriteTask(byte[] buffer, int offset, int count)
+        //public void StartWriteTask(byte[] buffer, int offset, int count)
+        public Task StartWriteTask(byte[] buffer, int offset, int count)
         {
             if (this.ContainsKey())
             {
@@ -158,7 +170,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
 
             Task writeAsyncTask = _memoryStream.WriteAsync(buffer, offset, count, _cancellationTokenSource.Token);
+            // TODO temp
             _tasks.Add(writeAsyncTask);
+            return writeAsyncTask;
         }
 
         // TODO wrap the checks and pass the core job as lambda so we can reuse the checks in above function too
@@ -170,6 +184,26 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
 
             _memoryStream.WriteByte(value);
+        }
+
+        public void SetPosition(long position)
+        {
+            _memoryStream.Position = position;
+        }
+
+        public long Seek(long offset, SeekOrigin origin)
+        {
+            return _memoryStream.Seek(offset, origin);
+        }
+
+        public void SetLength(long length)
+        {
+            _memoryStream.SetLength(length);
+        }
+
+        public long GetPosition()
+        {
+            return _memoryStream.Position;
         }
     }
 }

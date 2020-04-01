@@ -24,6 +24,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private long _countRead;
         // TODO check if counting of written bytes is correct (count variable is *max* bytes to write, not those actually written)
         private long _countWrite;
+        // TODO TEMP
+        private static long readCount = 0;
+        private bool _foundInCache;
 
         public InstrumentableStream(InstrumentableObjectMetadata metadata, Stream inner, ILogger logger)
         {
@@ -34,9 +37,20 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _timeWrite = new Stopwatch();
             _countRead = 0;
             _countWrite = 0;
+            _foundInCache = false;
             if (metadata.TryGetValue("Uri", out string name) && _cacheEnabled)
             {
-                _cacheClient = new CacheClient(name);
+                try
+                {
+                    long length = _inner.Length;
+                    _cacheClient = new CacheClient(name, length);
+                }
+                // TODO catch NotSupportedException
+                catch 
+                {
+                    _cacheClient = new CacheClient(name);
+                }
+                _foundInCache = _cacheClient.ContainsKey();
             }
         }
 
@@ -73,8 +87,23 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public override long Position
         {
-            get { return _inner.Position; }
-            set { _inner.Position = value; }
+            get
+            {
+                if (_foundInCache)
+                {
+                    return _cacheClient.GetPosition();
+                }
+                else
+                {
+                    return _inner.Position;
+                }
+            }
+
+            set
+            {
+                _inner.Position = value;
+                _cacheClient.SetPosition(value);
+            }
         }
 
         public override int ReadTimeout
@@ -113,6 +142,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public override void Close()
         {
+            readCount = 0;
             _inner.Close();
             if (_cacheEnabled)
             {
@@ -145,12 +175,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public override long Seek(long offset, SeekOrigin origin)
         {
+            _cacheClient.Seek(offset, origin);
             return _inner.Seek(offset, origin);
         }
 
         public override void SetLength(long value)
         {
             _inner.SetLength(value);
+            _cacheClient.SetLength(value);
         }
 
         public new void CopyTo(Stream destination)
@@ -223,23 +255,60 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public override int Read(byte[] buffer, int offset, int count)
         {
+            readCount++;
             try
             {
                 if (_cacheEnabled && _cacheClient.ContainsKey())
                 {
+                    _logger?.LogInformation($"Read count: {readCount}, Position: {_cacheClient.GetPosition()}, Offset: {offset}, Count: {count}");
                     _cacheClient.CacheHit = true;
                     _timeRead.Start();
                     var bytesRead = _cacheClient.ReadAsync(buffer, offset, count).Result;
+                    string bytesStr = BitConverter.ToString(buffer);
+                    _logger?.LogInformation($"{bytesStr}");
                     _countRead += bytesRead;
                     return bytesRead;
                 }
                 else
                 {
+                    long prevPosition = _cacheClient.GetPosition();
+                    if (prevPosition != this.Position)
+                    {
+                        _cacheClient.SetPosition(this.Position);
+                        prevPosition = _cacheClient.GetPosition();
+                        if (prevPosition != this.Position)
+                        {
+                            throw new Exception("bad");
+                        }
+                    }
+                    _logger?.LogInformation($"Read count: {readCount}, Position: {this.Position}, Offset: {offset}, Count: {count}");
                     _timeRead.Start();
                     var bytesRead = _inner.Read(buffer, offset, count);
+                    string bytesStr = BitConverter.ToString(buffer);
+                    if (readCount < 100)
+                    {
+                        _logger?.LogInformation($"{bytesStr}");
+                    }
+
                     if (_cacheEnabled)
                     {
-                        _cacheClient.StartWriteTask(buffer, offset, bytesRead);
+                        _cacheClient.StartWriteTask(buffer, offset, bytesRead).Wait();
+                        long curPosition = _cacheClient.GetPosition();
+                        _cacheClient.Seek(prevPosition, SeekOrigin.Begin);
+                        if (_cacheClient.GetPosition() != prevPosition)
+                        {
+                            throw new Exception("badbad");
+                        }
+                        byte[] buffer2 = new byte[count];
+                        _cacheClient.ReadBackAsync(buffer2, offset, count).Wait();
+                        for (int i = 0; i < bytesRead; i++)
+                        {
+                            if (buffer2[i] != buffer[i])
+                            {
+                                throw new Exception("sooooper bad");
+                            }
+                        }
+                        _cacheClient.Seek(curPosition, SeekOrigin.Begin);
                     }
                     _countRead += bytesRead;
                     return bytesRead;
@@ -312,7 +381,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             stringBuilder.Append(", WriteBytes: ");
             stringBuilder.Append(_countWrite);
             stringBuilder.Append(", CacheHit: ");
-            stringBuilder.Append(_cacheEnabled ? _cacheClient.CacheHit : false);
+            stringBuilder.Append(_cacheEnabled ? _cacheClient?.CacheHit : false);
             stringBuilder.Append(", Metadata: {");
             stringBuilder.Append(_metadata);
             stringBuilder.Append("}");

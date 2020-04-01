@@ -977,21 +977,26 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         // For example, in the case of output streams, the name of the blob to which they are writing may be evaluated during binding
                         // Since the metadata we collect is before binding, we can check again if more information is available now
                         BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public;
-                        if (isWriteStream)
+                        try
                         {
-                            try
+                            object inner = reflectionParameters[index].GetType().BaseType.GetField("_inner", bindingFlags)?.GetValue(reflectionParameters[index]);
+                            object blob = null;
+                            if (isWriteStream)
                             {
-                                object inner = reflectionParameters[index].GetType().BaseType.GetField("_inner", bindingFlags)?.GetValue(reflectionParameters[index]);
-                                object blob = inner?.GetType().BaseType.GetProperty("Blob", bindingFlags)?.GetValue(inner);
-                                string uri = blob?.GetType().GetProperty("Uri", bindingFlags)?.GetValue(blob)?.ToString();
-                                _bindingData[name].Add("Uri", uri);
-                                string blobName = blob?.GetType().GetProperty("Name", bindingFlags)?.GetValue(blob)?.ToString();
-                                _bindingData[name].Add("Name", blobName);
+                                blob = inner?.GetType().BaseType.GetProperty("Blob", bindingFlags)?.GetValue(inner);
                             }
-                            catch (Exception exception)
+                            else
                             {
-                                _bindingData[name].Add("Exception", exception.Message);
+                                blob = inner?.GetType().BaseType.GetField("blob", bindingFlags)?.GetValue(inner);
                             }
+                            string uri = blob?.GetType().GetProperty("Uri", bindingFlags)?.GetValue(blob)?.ToString();
+                            _bindingData[name].Add("Uri", uri);
+                            string blobName = blob?.GetType().GetProperty("Name", bindingFlags)?.GetValue(blob)?.ToString();
+                            _bindingData[name].Add("Name", blobName);
+                        }
+                        catch (Exception exception)
+                        {
+                            _bindingData[name].Add("Exception", exception.Message);
                         }
 
                         InstrumentableStream instStr = new InstrumentableStream(_bindingData[name], (Stream)reflectionParameters[index], _logger);
