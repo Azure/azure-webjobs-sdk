@@ -762,6 +762,22 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         }
 
         [Fact]
+        public void ApplicationInsights_RequestIsNotTrackedIfIgnoreTrackingSpecified()
+        {
+            var result = CreateDefaultInstanceLogEntry();
+            var logger = CreateLogger(LogCategories.Results);
+            Activity parent = new Activity("foo").Start();
+            using (logger.BeginScope(new Dictionary<string, object> { ["MS_IgnoreActivity"] = null }))
+            using (logger.BeginScope(new Dictionary<string, object> { ["MS_IgnoreTracking"] = null }))
+            using (logger.BeginFunctionScope(CreateFunctionInstance(_invocationId), _hostInstanceId))
+            {
+                logger.LogFunctionResult(result);
+            }
+            // ApplicationInsights auto-tracks telemetry, functions do not track it.
+            Assert.Empty(_channel.Telemetries.OfType<RequestTelemetry>());
+        }
+
+        [Fact]
         public async Task ApplicationInsights_RequestHasSourceIfTriggerDetailsArePopulated()
         {
             var result = CreateDefaultInstanceLogEntry();

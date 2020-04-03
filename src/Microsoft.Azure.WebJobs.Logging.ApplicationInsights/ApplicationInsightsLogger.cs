@@ -16,7 +16,7 @@ using Microsoft.Extensions.Primitives;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
-    internal class ApplicationInsightsLogger : ILogger
+    public class ApplicationInsightsLogger : ILogger
     {
         private readonly TelemetryClient _telemetryClient;
         private readonly ApplicationInsightsLoggerOptions _loggerOptions;
@@ -454,13 +454,15 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             // created by SDK via Activity when function ends
 
             var currentActivity = Activity.Current;
-            if (currentActivity == null ||
+            // If we want to suppress the tracking, Add scope with "MS_IgnoreTracking"
+            if (!(stateValues.ContainsKey(LoggingConstants.IgnoreTracking) || allScopes.ContainsKey(LoggingConstants.IgnoreTracking)) && 
+                (currentActivity == null ||
                 // Activity is tracked, but Functions wants to ignore it:
-                allScopes.ContainsKey("MS_IgnoreActivity") ||
+                allScopes.ContainsKey(LoggingConstants.IgnoreActivity) ||
                 // Functions create another RequestTrackingTelemetryModule to make sure first request is tracked (as ASP.NET Core starts before web jobs)
                 // however at this point we may discover that RequestTrackingTelemetryModule is disabled by customer and even though Activity exists, request won't be tracked
                 // So, if we've got AspNetCore Activity and EnableHttpTriggerExtendedInfoCollection is false - track request here.
-                (!_loggerOptions.HttpAutoCollectionOptions.EnableHttpTriggerExtendedInfoCollection && IsHttpRequestActivity(currentActivity)))
+                (!_loggerOptions.HttpAutoCollectionOptions.EnableHttpTriggerExtendedInfoCollection && IsHttpRequestActivity(currentActivity))))
             {
                 string functionName = stateValues.GetValueOrDefault<string>(ScopeKeys.FunctionName);
                 string functionInvocationId = stateValues.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId);
