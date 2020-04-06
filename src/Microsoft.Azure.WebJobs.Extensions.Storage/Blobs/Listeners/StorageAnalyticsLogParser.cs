@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.Storage.Blob;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {
@@ -50,10 +51,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private readonly Version supportedVersion = new Version(1, 0);
 
         private readonly Regex _compiledRegex;
+        private readonly ILogger<BlobListener> _logger;
 
-        public StorageAnalyticsLogParser()
+        public StorageAnalyticsLogParser(ILogger<BlobListener> logger)
         {
             _compiledRegex = new Regex(FieldPattern, RegexOptions.Compiled);
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         /// <summary>
@@ -94,7 +97,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                         string message = String.Format(CultureInfo.CurrentCulture,
                             "Unable to detect a version of log entry on line {1} of Storage Analytics log file '{0}'.",
                             blob.Name, lineNumber);
-                        throw new FormatException(message);
+
+                        _logger.LogWarning(message);
                     }
 
                     if (version == supportedVersion)
@@ -105,7 +109,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                             string message = String.Format(CultureInfo.CurrentCulture,
                                 "Unable to parse the log entry on line {1} of Storage Analytics log file '{0}'.",
                                 blob.Name, lineNumber);
-                            throw new FormatException(message);
+
+                            _logger.LogWarning(message);
                         }
 
                         entries.Add(entry);
