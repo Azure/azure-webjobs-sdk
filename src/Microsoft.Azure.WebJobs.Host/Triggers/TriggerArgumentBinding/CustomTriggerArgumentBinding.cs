@@ -8,11 +8,17 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Triggers
 {
-    // Bind TMessage --> TUserType. Use IConverterManager for the conversion. 
-    // TUserType = the parameter type. 
+    /// <summary>
+    /// Bind TMessage --> TUserType. Use the specified custom converter for the conversion
+    /// to TUserType. Populate binding contract with TUserType members.
+    /// </summary>
+    /// <typeparam name="TMessage"></typeparam>
+    /// <typeparam name="TTriggerValue"></typeparam>
+    /// <typeparam name="TUserType"></typeparam>
     internal class CustomTriggerArgumentBinding<TMessage, TTriggerValue, TUserType> : 
         SimpleTriggerArgumentBinding<TMessage, TTriggerValue>
     {
+        private IBindingDataProvider _bindingDataProvider;
         private readonly FuncAsyncConverter<TMessage, TUserType> _converter;
 
         public CustomTriggerArgumentBinding(
@@ -23,10 +29,13 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
         {
             if (converter == null)
             {
-                throw new ArgumentNullException("converter");
+                throw new ArgumentNullException(nameof(converter));
             }
             this._converter = converter;
             this.ElementType = typeof(TUserType);
+
+            _bindingDataProvider = BindingDataProvider.FromType(ElementType);
+            AddToBindingContract(_bindingDataProvider);
         }
 
         internal override async Task<object> ConvertAsync(
@@ -35,6 +44,9 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             ValueBindingContext context)
         {
             var obj = await _converter(value, null, context);
+
+            AddToBindingData(_bindingDataProvider, bindingData, obj);
+
             return obj;
         }
     }

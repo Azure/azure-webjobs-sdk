@@ -31,7 +31,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 return Task.FromResult<ITriggerBinding>(null);
             }
 
-            var hooks = new FakeQueueTriggerBindingStrategy();
+            var triggerBindingStrategy = new FakeQueueTriggerBindingStrategy();
 
             Func<ListenerFactoryContext, bool, Task<IListener>> createListener =
                 (factoryContext, singleDispatch) =>
@@ -41,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 };
 
             ITriggerBinding binding = BindingFactory.GetTriggerBinding<FakeQueueData, FakeQueueDataBatch>(
-                hooks, parameter, _converterManager, createListener);
+                triggerBindingStrategy, parameter, _converterManager, createListener);
 
             return Task.FromResult<ITriggerBinding>(binding);
         }

@@ -18,6 +18,11 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="Singleton\**" />
+    <EmbeddedResource Remove="Singleton\**" />
+    <None Remove="Singleton\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <AdditionalFiles Include="..\..\stylecop.json" Link="stylecop.json" />
@@ -52,10 +57,6 @@
     <None Update="appsettings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Singleton\" />
   </ItemGroup>
 
 </Project>

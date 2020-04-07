@@ -10,34 +10,37 @@ using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Host.Triggers
 {
-    // Bind a Trigger to a Poco type using JSon deserialization. Populate the binding contract with the properties from the Poco. 
+    /// <summary>
+    /// Bind to a POCO Type using JSON deserialization. Populate binding contract with POCO members.
+    /// </summary>
+    /// <typeparam name="TMessage"></typeparam>
+    /// <typeparam name="TTriggerValue"></typeparam>
     internal class PocoTriggerArgumentBinding<TMessage, TTriggerValue> : StringTriggerArgumentBinding<TMessage, TTriggerValue>
     {
-        private IBindingDataProvider _provider;
+        private IBindingDataProvider _bindingDataProvider;
 
         public PocoTriggerArgumentBinding(ITriggerBindingStrategy<TMessage, TTriggerValue> bindingStrategy, IConverterManager converterManager, Type elementType) : 
             base(bindingStrategy, converterManager)
         {
             this.ElementType = elementType;
 
-            // Add properties ot binding data. Null if type doesn't expose it. 
-            _provider = BindingDataProvider.FromType(elementType);
-            if (_provider != null)
-            {
-                // Binding data from Poco properties takes precedence over builtins
-                foreach (var kv in _provider.Contract)
-                {
-                    string name = kv.Key;
-                    Type type = kv.Value;
-                    Contract[name] = type;
-                }
-            }
+            _bindingDataProvider = BindingDataProvider.FromType(elementType);
+            AddToBindingContract(_bindingDataProvider);
         }
 
         internal override async Task<object> ConvertAsync(
             TMessage value,
             Dictionary<string, object> bindingData,
             ValueBindingContext context)
+        {
+            var obj = await ReadObjectAsync(value);
+
+            AddToBindingData(_bindingDataProvider, bindingData, obj);
+
+            return obj;
+        }
+
+        private async Task<object> ReadObjectAsync(TMessage value)
         {
             string json = await this.ConvertToStringAsync(value);
 
@@ -55,18 +58,6 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
 2. Change the queue payload to be valid json. The JSON parser failed: {1}
 ", this.ElementType.Name, e.Message);
                 throw new InvalidOperationException(msg);
-            }
-
-            if (bindingData != null && _provider != null)
-            {
-                var pocoData = _provider.GetBindingData(obj);
-
-                foreach (var kv in pocoData)
-                {
-                    string propName = kv.Key;
-                    object propVal = kv.Value;
-                    bindingData[propName] = propVal;
-                }
             }
 
             return obj;
