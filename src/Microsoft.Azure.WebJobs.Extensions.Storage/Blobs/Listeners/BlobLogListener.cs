@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Shared.Protocol;
 
@@ -22,13 +23,19 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 
         private readonly CloudBlobClient _blobClient;
         private readonly HashSet<string> _scannedBlobNames = new HashSet<string>();
-        private readonly StorageAnalyticsLogParser _parser = new StorageAnalyticsLogParser();
+        private readonly StorageAnalyticsLogParser _parser;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
 
-        private BlobLogListener(CloudBlobClient blobClient, IWebJobsExceptionHandler exceptionHandler)
+        private BlobLogListener(CloudBlobClient blobClient, IWebJobsExceptionHandler exceptionHandler, ILogger<BlobListener> logger)
         {
             _blobClient = blobClient;
             _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
+
+            if (logger == null)
+            {
+                throw new ArgumentNullException(nameof(logger));
+            }
+            _parser = new StorageAnalyticsLogParser(logger);
         }
 
         public CloudBlobClient Client
@@ -38,10 +45,10 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 
         // This will throw if the client credentials are not valid. 
         public static async Task<BlobLogListener> CreateAsync(CloudBlobClient blobClient,
-           IWebJobsExceptionHandler exceptionHandler, CancellationToken cancellationToken)
+           IWebJobsExceptionHandler exceptionHandler, ILogger<BlobListener> logger, CancellationToken cancellationToken)
         {
             await EnableLoggingAsync(blobClient, cancellationToken);
-            return new BlobLogListener(blobClient, exceptionHandler);
+            return new BlobLogListener(blobClient, exceptionHandler, logger);
         }
 
         public async Task<IEnumerable<ICloudBlob>> GetRecentBlobWritesAsync(CancellationToken cancellationToken,
