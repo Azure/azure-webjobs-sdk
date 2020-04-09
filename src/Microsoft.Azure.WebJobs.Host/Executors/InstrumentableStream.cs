@@ -14,7 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 {
     public class InstrumentableStream : Stream
     {
-        private static readonly bool _cacheEnabled = true;
+        private static readonly bool _cacheEnabled = false;
         private readonly ILogger _logger;
         private readonly Stream _inner;
         private readonly InstrumentableObjectMetadata _metadata;
@@ -22,11 +22,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly Stopwatch _timeWrite;
         private readonly CacheClient _cacheClient;
         private long _countRead;
+        private bool _logged;
         // TODO check if counting of written bytes is correct (count variable is *max* bytes to write, not those actually written)
         private long _countWrite;
         // TODO TEMP
-        private static long readCount = 0;
-        private bool _foundInCache;
+        // TODO right now, if something is found from the cache, we assume (wrongly) that it will not be modified
+        // We need to work on invalidating cache and writing dirty data back to storage
+        private readonly bool _foundInCache;
 
         public InstrumentableStream(InstrumentableObjectMetadata metadata, Stream inner, ILogger logger)
         {
@@ -38,6 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _countRead = 0;
             _countWrite = 0;
             _foundInCache = false;
+            _logged = false;
             if (metadata.TryGetValue("Uri", out string name) && _cacheEnabled)
             {
                 try
@@ -145,7 +148,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public override void Close()
         {
-            readCount = 0;
             _inner.Close();
             if (_cacheEnabled)
             {
@@ -265,7 +267,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            readCount++;
             try
             {
                 if (_cacheEnabled && _cacheClient.ContainsKey())
@@ -347,6 +348,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         private void LogStatus()
         {
+            if (_logged)
+            {
+                return;
+            }
+
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.Append("ReadTime: ");
             stringBuilder.Append(_timeRead.ElapsedMilliseconds);
@@ -369,6 +375,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 _logger?.Log(LogLevel.Information, 0, logString, null, (s, e) => s);
             }
+
+            _logged = true;
         }
     }
 }
