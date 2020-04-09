@@ -14,7 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 {
     public class InstrumentableStream : Stream
     {
-        private static readonly bool _cacheEnabled = false;
+        private static readonly bool _cacheEnabled = true;
         private readonly ILogger _logger;
         private readonly Stream _inner;
         private readonly InstrumentableObjectMetadata _metadata;
@@ -25,10 +25,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private bool _logged;
         // TODO check if counting of written bytes is correct (count variable is *max* bytes to write, not those actually written)
         private long _countWrite;
-        // TODO TEMP
-        // TODO right now, if something is found from the cache, we assume (wrongly) that it will not be modified
-        // We need to work on invalidating cache and writing dirty data back to storage
-        private readonly bool _foundInCache;
 
         public InstrumentableStream(InstrumentableObjectMetadata metadata, Stream inner, ILogger logger)
         {
@@ -39,21 +35,20 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _timeWrite = new Stopwatch();
             _countRead = 0;
             _countWrite = 0;
-            _foundInCache = false;
             _logged = false;
             if (metadata.TryGetValue("Uri", out string name) && _cacheEnabled)
             {
+                // TODO redundant; will change when we pass length to the cacheclient
                 try
                 {
                     long length = _inner.Length;
-                    _cacheClient = new CacheClient(name, length);
+                    _cacheClient = new CacheClient(name);
                 }
                 // TODO catch NotSupportedException
                 catch 
                 {
                     _cacheClient = new CacheClient(name);
                 }
-                _foundInCache = _cacheClient.ContainsKey();
             }
         }
 
@@ -92,7 +87,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             get
             {
-                if (_foundInCache)
+                if (_cacheClient.ReadFromCache)
                 {
                     return _cacheClient.GetPosition();
                 }
@@ -151,14 +146,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _inner.Close();
             if (_cacheEnabled)
             {
-                _cacheClient.FlushToCache();
+                //_cacheClient.FlushToCache();
             }
             LogStatus();
         }
 
         public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
         {
-            if (_cacheEnabled && _cacheClient.ContainsKey())
+            if (_cacheEnabled && _cacheClient.ReadFromCache)
             {
                 _cacheClient.CacheHit = true;
                 return _cacheClient.CopyToAsync(destination, bufferSize, cancellationToken);
@@ -216,8 +211,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     _cacheClient.StartWriteTask(_inner.Position, buffer, offset, count);
                 }
                 _timeWrite.Start();
+                long startPosition = _inner.Position;
                 _inner.Write(buffer, offset, count);
-                _countWrite += count;
+                long written = _inner.Position - startPosition;
+                _countWrite += written;
             }
             finally
             {
@@ -227,6 +224,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
+            long startPosition = _inner.Position;
             try
             {
                 if (_cacheEnabled)
@@ -238,7 +236,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
             finally
             {
-                _countWrite += count;
+                long written = _inner.Position - startPosition;
+                _countWrite += written;
             }
         }
 
@@ -259,7 +258,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             if (_cacheEnabled)
             {
-                _cacheClient.WriteByte(value);
+                _cacheClient.WriteByte(_inner.Position, value);
             }
             _inner.WriteByte(value);
             _countWrite++;
@@ -269,11 +268,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             try
             {
-                if (_cacheEnabled && _cacheClient.ContainsKey())
+                if (_cacheEnabled && _cacheClient.ReadFromCache)
                 {
                     _cacheClient.CacheHit = true;
                     _timeRead.Start();
-                    var bytesRead = _cacheClient.ReadAsync(buffer, offset, count).Result;
+                    int bytesRead = _cacheClient.ReadAsync(buffer, offset, count).Result;
                     _countRead += bytesRead;
                     return bytesRead;
                 }
@@ -298,7 +297,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            if (_cacheEnabled && _cacheClient.ContainsKey())
+            if (_cacheEnabled && _cacheClient.ReadFromCache)
             {
                 _cacheClient.CacheHit = true;
                 return _cacheClient.ReadAsync(buffer, offset, count, cancellationToken);
@@ -324,17 +323,18 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             int read;
 
-            if (_cacheEnabled && _cacheClient.ContainsKey())
+            if (_cacheEnabled && _cacheClient.ReadFromCache)
             {
                 _cacheClient.CacheHit = true;
                 read = _cacheClient.ReadByte();
             }
             else
             {
-                read = base.ReadByte();
-                if (_cacheEnabled)
+                long startPosition = _inner.Position;
+                read = _inner.ReadByte();
+                if (_cacheEnabled && read != -1)
                 {
-                    _cacheClient.WriteByte(Convert.ToByte(read));
+                    _cacheClient.WriteByte(startPosition, Convert.ToByte(read));
                 }
             }
 

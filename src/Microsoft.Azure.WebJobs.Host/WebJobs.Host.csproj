@@ -22,6 +22,10 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
   </PropertyGroup>
+  
+  <ItemGroup>
+    <None Remove="Executors\NewFile1.txt" />
+  </ItemGroup>
 
   <ItemGroup>
     <AdditionalFiles Include="..\..\stylecop.json" Link="stylecop.json" />
@@ -97,6 +101,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Azure.WebJobs\WebJobs.csproj" />
+    <ProjectReference Include="..\RangeTree\RangeTree\RangeTree.csproj" />
   </ItemGroup>
 
   <ItemGroup>

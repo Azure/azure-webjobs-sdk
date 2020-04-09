@@ -51,6 +51,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TestProjects", "TestProject
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FSharpFunctions", "test\TestProjects\FSharpFunctions\FSharpFunctions.fsproj", "{11702A4B-8402-4082-BE38-4F0C2CBBF61D}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RangeTree", "src\RangeTree\RangeTree\RangeTree.csproj", "{58DDF7F2-632F-4935-A8A6-1E022F4B54A3}"
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.projitems*{32f7d43d-1dd6-46f3-90fe-99b914de8daa}*SharedItemsImports = 5
@@ -128,6 +130,10 @@ Global
 		{11702A4B-8402-4082-BE38-4F0C2CBBF61D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{11702A4B-8402-4082-BE38-4F0C2CBBF61D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{11702A4B-8402-4082-BE38-4F0C2CBBF61D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{58DDF7F2-632F-4935-A8A6-1E022F4B54A3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{58DDF7F2-632F-4935-A8A6-1E022F4B54A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{58DDF7F2-632F-4935-A8A6-1E022F4B54A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{58DDF7F2-632F-4935-A8A6-1E022F4B54A3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -2,73 +2,65 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using RangeTree;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    // TODO mark the stream as "ready to read" after all write tasks for it are done
-    // TODO make sure if someone is reading the same item from cache then write task blocks etc
-    //      or put all the operations into a global client-wide lock
-    // TODO check for all tasks in the _tasks list before destroying the client, should we wait? not a great idea 
+    // TODO right now, this cache is focused on reading from blob store
+    // When writing, easy case is, you write whatever app writes to your cached version
+    // What happens when multiple entities all write to same object?
+    // This includes SetLength operation too
+
     public class CacheClient
     {
-        // TODO check what guarantees we have about multiple readers reading from same stream (may change position) - not cool
-        private static readonly ConcurrentDictionary<string, MemoryStream> inMemoryCache = new ConcurrentDictionary<string, MemoryStream>();
+        private static readonly CacheServer CacheServer = new CacheServer();
 
         private readonly string _key;
-        private readonly List<Task> _tasks;
-        private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly RangeTree<long, bool> _byteRanges;
         private readonly MemoryStream _memoryStream;
-        private bool _isFlushedToCache;
-        private bool _cacheHit;
 
-        public bool CacheHit
-        {
-            get { return _cacheHit; }
-            set { _cacheHit = value; }
-        }
+        public bool CacheHit { get; set; }
 
-        public CacheClient(string key, long length = -1)
+        public bool ReadFromCache { get; private set; }
+
+        // public CacheClient(string key, long length = -1)
+        public CacheClient(string key)
         {
             _key = key;
-            _tasks = new List<Task>();
-            _memoryStream = null;
-            _isFlushedToCache = false;
-            _cacheHit = false;
 
-            if (this.ContainsKey())
+            // TODO fix usage of this if needed
+            CacheHit = true;
+
+            if (CacheServer.TryGetObjectByteRangesAndStream(_key, out _byteRanges, out _memoryStream))
             {
-                if (inMemoryCache.TryGetValue(_key, out MemoryStream memoryStream))
-                {
-                    memoryStream.Seek(0, SeekOrigin.Begin);
-                    _memoryStream = memoryStream;
-                }
+                ReadFromCache = true;
             }
             else
             {
-                if (_memoryStream == null)
-                {
-                    _memoryStream = new MemoryStream();
-                    if (length != -1)
-                    {
-                        _memoryStream.SetLength(length);
-                    }
-                }
-            }
+                ReadFromCache = false;
+                _memoryStream = null;
+                _byteRanges = null;
 
-            _cancellationTokenSource = new CancellationTokenSource();
+                // TODO length to cache object?
+                // TODO check return value? and log?
+                CacheServer.TryAddObject(_key);
+            }
         }
 
+        /*
+        // TODO put this in the cache object?
         public bool FlushToCache()
         {
             if (_tasks.TrueForAll(t => t.IsCompleted))
             {
-                if (!inMemoryCache.TryAdd(_key, _memoryStream))
+                if (!CacheServer.TryAdd(_key, _memoryStream))
                 {
                     // TODO log error? (this can happen if key already there)
                 }
@@ -81,27 +73,25 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 return false;
             }
         }
+        */
 
         ~CacheClient()
         {
+            /*
             if (!_isFlushedToCache)
             {
                 if (!FlushToCache())
                 {
                     _cancellationTokenSource.Cancel();
-                    inMemoryCache.RemoveIfContainsKey(_key);
+                    CacheServer.RemoveIfContainsKey(_key);
                 }
             }
-        }
-
-        public bool ContainsKey()
-        {
-            return inMemoryCache.ContainsKey(_key);
+            */
         }
 
         public Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
         {
-            if (!this.ContainsKey())
+            if (!ReadFromCache)
             {
                 // TODO error out
                 return null;
@@ -110,10 +100,15 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             Task baseTask = _memoryStream.CopyToAsync(destination, bufferSize, cancellationToken);
             return baseTask;
         }
+
+        public bool ByteRangeInCache(long start, long end)
+        {
+            return _byteRanges.Query(start, end).Count() > 0;
+        }
         
         public Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            if (!this.ContainsKey())
+            if (!ReadFromCache)
             {
                 // TODO error out
                 return null;
@@ -126,7 +121,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         // TODO only difference is cancellation token
         public Task<int> ReadAsync(byte[] buffer, int offset, int count)
         {
-            if (!this.ContainsKey())
+            if (!ReadFromCache)
             {
                 // TODO error out
                 return null;
@@ -138,70 +133,88 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         
         public int ReadByte()
         {
-            if (!this.ContainsKey())
+            if (!ReadFromCache)
             {
                 // TODO error out
-            }
-
-            if (inMemoryCache.TryGetValue(_key, out MemoryStream memoryStream))
-            {
-                return memoryStream.ReadByte();
-            }
-            else
-            {
-                // TODO fix me
                 return -1;
             }
+
+            return _memoryStream.ReadByte();
         }
 
         public void StartWriteTask(long startPosition, byte[] buffer, int offset, int count)
         {
-            if (this.ContainsKey())
-            {
-                // TODO invalidate the previous stream if we are attempting to write to it again
-            }
-
-            Task writeAsyncTask = StartWriteTaskCore(startPosition, buffer, offset, count);
-            _tasks.Add(writeAsyncTask);
-        }
-
-        private async Task StartWriteTaskCore(long startPosition, byte[] buffer, int offset, int count)
-        {
-            // TODO The reason we need to set the position explicitly is because for some weird reason, the position wobbles around 
-            // For example when running the model.zip file
-            _memoryStream.Position = startPosition;
-            await _memoryStream.WriteAsync(buffer, offset, count, _cancellationTokenSource.Token);
+            ReadFromCache = false;
+            CacheServer.WriteToCacheObject(_key, startPosition, buffer, offset, count);
         }
 
         // TODO wrap the checks and pass the core job as lambda so we can reuse the checks in above function too
-        public void WriteByte(byte value)
+        public void WriteByte(long startPosition, byte value)
         {
-            if (this.ContainsKey())
-            {
-                // TODO invalidate the previous stream if we are attempting to write to it again
-            }
-
-            _memoryStream.WriteByte(value);
+            ReadFromCache = false;
+            CacheServer.WriteToCacheObject(_key, startPosition, value);
         }
 
         public void SetPosition(long position)
         {
-            _memoryStream.Position = position;
+            if (!ReadFromCache)
+            {
+                CacheServer.SetPosition(_key, position);
+            }
+            else
+            {
+                _memoryStream.Position = position;
+            }
         }
 
         public long Seek(long offset, SeekOrigin origin)
         {
-            return _memoryStream.Seek(offset, origin);
+            if (!ReadFromCache)
+            {
+                if (CacheServer.Seek(_key, offset, origin, out long position))
+                {
+                    return position;
+                }
+                else
+                {
+                    // TODO log failure
+                    return -1;
+                }
+            }
+            else
+            {
+                return _memoryStream.Seek(offset, origin);
+            }
         }
 
         public void SetLength(long length)
         {
-            _memoryStream.SetLength(length);
+            // If length is being set, then this operation will change the cached entity
+            // So no operation can be performed on the cached stream
+            // Server will invalidate all clients here
+            CacheServer.SetLength(_key, length);
         }
 
         public long GetPosition()
         {
-            return _memoryStream.Position;
+            if (!ReadFromCache)
+            {
+                if (CacheServer.GetPosition(_key, out long position))
+                {
+                    return position;
+                }
+                else
+                {
+                    // TODO log failure
+                    return -1;
+                }
+            }
+            else
+            {
+                return _memoryStream.Position;
+            }
         }
+
+        // TODO as soon as we invalidate the cache stream from here, we need to make sure the actual stream's position (azure) is same as the cached one until now
     }
 }
