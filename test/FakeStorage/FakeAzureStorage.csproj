@@ -1,9 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\build\common.props" />
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-  </PropertyGroup>
-  <ItemGroup>
+	<PropertyGroup>
+		<TargetFramework>netcoreapp2.0</TargetFramework>
+		<IsPackable>true</IsPackable>
+		<AssemblyName>FakeAzureStorage</AssemblyName>
+		<RootNamespace>FakeAzureStorage</RootNamespace>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<WarningsAsErrors />
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<WarningsAsErrors />
+	</PropertyGroup>
+
+	<ItemGroup>
     <AdditionalFiles Include="..\..\stylecop.json" Link="stylecop.json" />
   </ItemGroup>
 
