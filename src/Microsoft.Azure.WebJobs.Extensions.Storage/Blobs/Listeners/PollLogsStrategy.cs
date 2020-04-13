@@ -77,7 +77,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 
             if (!_logListeners.ContainsKey(client))
             {
-                BlobLogListener logListener = await BlobLogListener.CreateAsync(client, _exceptionHandler, cancellationToken);
+                BlobLogListener logListener = await BlobLogListener.CreateAsync(client, _exceptionHandler, _logger, cancellationToken);
                 _logListeners.Add(client, logListener);
             }
         }
