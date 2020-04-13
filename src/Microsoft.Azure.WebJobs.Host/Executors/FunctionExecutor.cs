@@ -995,6 +995,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                                 _bindingData[name].Add("Uri", uri);
                                 string blobName = blob?.GetType().GetProperty("Name", bindingFlags)?.GetValue(blob)?.ToString();
                                 _bindingData[name].Add("Name", blobName);
+                                object properties = blob?.GetType().GetProperty("Properties", bindingFlags)?.GetValue(blob);
+                                string etag = properties?.GetType().GetProperty("ETag", bindingFlags)?.GetValue(properties)?.ToString();
+                                _bindingData[name].Add("ETag", etag);
                             }
                             catch (Exception exception)
                             {

@@ -36,18 +36,18 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _countRead = 0;
             _countWrite = 0;
             _logged = false;
-            if (metadata.TryGetValue("Uri", out string name) && _cacheEnabled)
+            if (metadata.TryGetValue("Uri", out string name) && metadata.TryGetValue("ETag", out string etag) && _cacheEnabled)
             {
                 // TODO redundant; will change when we pass length to the cacheclient
                 try
                 {
                     long length = _inner.Length;
-                    _cacheClient = new CacheClient(name);
+                    _cacheClient = new CacheClient(name, etag);
                 }
                 // TODO catch NotSupportedException
                 catch 
                 {
-                    _cacheClient = new CacheClient(name);
+                    _cacheClient = new CacheClient(name, etag);
                 }
             }
         }
@@ -87,7 +87,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             get
             {
-                if (_cacheClient.ReadFromCache)
+                if (_cacheEnabled && _cacheClient.ReadFromCache)
                 {
                     return _cacheClient.GetPosition();
                 }
@@ -208,7 +208,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 if (_cacheEnabled)
                 {
-                    _cacheClient.StartWriteTask(_inner.Position, buffer, offset, count);
+                    _cacheClient.StartWriteTask(_inner.Position, buffer, offset, count, -1);
                 }
                 _timeWrite.Start();
                 long startPosition = _inner.Position;
@@ -229,7 +229,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 if (_cacheEnabled)
                 {
-                    _cacheClient.StartWriteTask(_inner.Position, buffer, offset, count);
+                    _cacheClient.StartWriteTask(_inner.Position, buffer, offset, count, -1);
                 }
                 Task baseTask = _inner.WriteAsync(buffer, offset, count, cancellationToken);
                 return WriteAsyncCore(baseTask);
@@ -268,12 +268,17 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             try
             {
-                if (_cacheEnabled && _cacheClient.ReadFromCache)
+                if (_cacheEnabled && _cacheClient.ReadFromCache && _cacheClient.ContainsBytes(_cacheClient.GetPosition(), _cacheClient.GetPosition() + count))
                 {
                     _cacheClient.CacheHit = true;
                     _timeRead.Start();
                     int bytesRead = _cacheClient.ReadAsync(buffer, offset, count).Result;
                     _countRead += bytesRead;
+
+                    // Whenever reading from the cache, make sure to keep the position of the remote stream also in sync
+                    // This will ensure that if we get a cache miss at some point and start reading from the remote stream, we can resume reading from the same position
+                    _inner.Seek(_cacheClient.GetPosition(), SeekOrigin.Begin);
+
                     return bytesRead;
                 }
                 else
@@ -281,9 +286,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     _timeRead.Start();
                     long startPosition = _inner.Position;
                     var bytesRead = _inner.Read(buffer, offset, count);
-                    if (_cacheEnabled)
+                    if (_cacheEnabled && bytesRead > 0)
                     {
-                        _cacheClient.StartWriteTask(startPosition, buffer, offset, bytesRead);
+                        _cacheClient.StartWriteTask(startPosition, buffer, offset, count, bytesRead);
                     }
                     _countRead += bytesRead;
                     return bytesRead;
@@ -297,23 +302,34 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            if (_cacheEnabled && _cacheClient.ReadFromCache)
+            if (_cacheEnabled && _cacheClient.ReadFromCache && _cacheClient.ContainsBytes(_cacheClient.GetPosition(), _cacheClient.GetPosition() + count))
             {
-                _cacheClient.CacheHit = true;
-                return _cacheClient.ReadAsync(buffer, offset, count, cancellationToken);
+                try
+                {
+                    _cacheClient.CacheHit = true;
+                    return _cacheClient.ReadAsync(buffer, offset, count, cancellationToken);
+                }
+                finally
+                {
+                    // Whenever reading from the cache, make sure to keep the position of the remote stream also in sync
+                    // This will ensure that if we get a cache miss at some point and start reading from the remote stream, we can resume reading from the same position
+                    _inner.Seek(_cacheClient.GetPosition(), SeekOrigin.Begin);
+                }
             }
             else
             {
                 long startPosition = _inner.Position;
+                Task<int> readTask = null;
                 try
                 {
-                    return _inner.ReadAsync(buffer, offset, count, cancellationToken);
+                    readTask = _inner.ReadAsync(buffer, offset, count, cancellationToken);
+                    return readTask;
                 }
                 finally
                 {
                     if (_cacheEnabled)
                     {
-                        _cacheClient.StartWriteTask(startPosition, buffer, offset, count);
+                        _cacheClient.StartWriteTask(startPosition, buffer, offset, count, readTask.Result);
                     }
                 }
             }
@@ -323,7 +339,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             int read;
 
-            if (_cacheEnabled && _cacheClient.ReadFromCache)
+            if (_cacheEnabled && _cacheClient.ReadFromCache && _cacheClient.ContainsByte(_cacheClient.GetPosition()))
             {
                 _cacheClient.CacheHit = true;
                 read = _cacheClient.ReadByte();

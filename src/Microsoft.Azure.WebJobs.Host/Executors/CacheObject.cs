@@ -8,13 +8,14 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Converters;
 using RangeTree;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
     public class CacheObject
     {
-        private readonly string _uri;
+        private readonly CacheObjectMetadata _cacheObjectMetadata;
         private readonly RangeTree<long, bool> _byteRanges;
         // TODO may be worthwhile to start using BufferedStream in the future; faster?
         private readonly MemoryStream _memoryStream;
@@ -27,9 +28,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly CancellationTokenSource _cancellationTokenSource;
         private SemaphoreSlim _semaphore;
 
-        public CacheObject(string uri)
+        public CacheObject(CacheObjectMetadata uri)
         {
-            _uri = uri;
+            _cacheObjectMetadata = uri;
             _byteRanges = new RangeTree<long, bool>();
             _memoryStream = new MemoryStream();
             _tasks = new List<Task>();
@@ -39,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public override int GetHashCode()
         {
-            return _uri.GetHashCode();
+            return _cacheObjectMetadata.GetHashCode();
         }
 
         public override bool Equals(object obj)
@@ -49,12 +50,27 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 return false;
             }
 
-            return other._uri == this._uri;
+            return other._cacheObjectMetadata == this._cacheObjectMetadata;
         }
 
         public bool ContainsBytes(long start, long end)
         {
-            return _byteRanges.Query(start, end).Count() > 0;
+            //return _byteRanges.Query(start, end).Count() > 0;
+
+            // REDUNDANTLY PUT IN CACHECLIENT.CS TOO SO CLEAN UP LATER
+            // TODO this is really REALLY bad but keeping it here temporarily for correctness
+            // using the _byteRanges.Query option has some issues:
+            // e.g. if the range we have in the tree is 0-5, and we query for 0-10, it will come out to be true
+            // That is because there is at least some overlap but we want all points in our range to have overlap
+            // So might want to modify the rangetree data structure
+            for (long i = start; i < end; i++)
+            {
+                if (_byteRanges.Query(i).Count() == 0)
+                {
+                    return false;
+                }
+            }
+            return true;
         }
         
         public bool ContainsByte(long key)
@@ -67,7 +83,17 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             await _semaphore.WaitAsync();
             try
             {
-                return Tuple.Create(_byteRanges, _memoryStream.GetBuffer());
+                // TODO check if this is a good option
+                // MemoryStream uses a min buffer size of 256 most probably
+                // Problem is, if we have fewer than 256 bytes, this will give us a bigger than the real buffer and the readers of this stream (when doing something like ReadToEndAsync etc) will cause issues as they read more than what the *actual* stream would have read
+                if (_memoryStream.Length < 256)
+                {
+                    return Tuple.Create(_byteRanges, _memoryStream.ToArray());
+                }
+                else
+                {
+                    return Tuple.Create(_byteRanges, _memoryStream.GetBuffer());
+                }
             }
             finally
             {
@@ -78,20 +104,29 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         // TODO technically, we should not need to take startPosition as input and should just write from current position
         // The reason we need to set the position explicitly is because for some weird reason, the position wobbles around 
         // For example when running the model.zip file
-        public void StartWriteTask(long startPosition, byte[] buffer, int offset, int count)
+        public void StartWriteTask(long startPosition, byte[] buffer, int offset, int count, int bytesToWrite)
         {
-            Task writeAsyncTask = StartWriteTaskCore(startPosition, buffer, offset, count);
+            Task writeAsyncTask = StartWriteTaskCore(startPosition, buffer, offset, count, bytesToWrite);
             _tasks.Add(writeAsyncTask);
         }
 
-        private async Task StartWriteTaskCore(long startPosition, byte[] buffer, int offset, int count)
+        private async Task StartWriteTaskCore(long startPosition, byte[] buffer, int offset, int count, int bytesToWrite)
         {
             await _semaphore.WaitAsync();
             try
             {
                 _memoryStream.Position = startPosition;
-                await _memoryStream.WriteAsync(buffer, offset, count, _cancellationTokenSource.Token);
-                _byteRanges.Add(startPosition, _memoryStream.Position, true);
+                await _memoryStream.WriteAsync(buffer, offset, bytesToWrite, _cancellationTokenSource.Token);
+                //_byteRanges.Add(startPosition, _memoryStream.Position - 1, true);
+
+                // TODO right now we store the range for which a read call was made and not the bytes that were actually read
+                // e.g. when ReadToEnd is called, and let's say the stream is of size 10 bytes, the ReadToEnd will still call Read with count == 1024
+                // The bytes read will be from 0 to 10 but the next time we do ReadToEnd again (on the cached stream) it will still call with count == 1024 and will get a cache miss because we just track 0 to 10 in the rangetree 
+                // In fact, we should track the entire range for which the call was made regardless of how many bytes were read
+                // This will ensure that the same call (or a call with overlapping region) will find some data in the cache
+                // Approach B:
+                // We can also do partial cache hit - if we ask for 0 to 1024 we can server 0 to 10 from cache and remaining from actual stream
+                _byteRanges.Add(startPosition, startPosition + count - 1, true);
             }
             finally
             {
@@ -112,7 +147,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 _memoryStream.Position = startPosition;
                 _memoryStream.WriteByte(value);
-                _byteRanges.Add(startPosition, _memoryStream.Position, true);
+                _byteRanges.Add(startPosition, _memoryStream.Position - 1, true);
             }
             finally
             {
@@ -122,7 +157,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         
         public void SetPosition(long position)
         {
+            _semaphore.Wait();
             _memoryStream.Position = position;
+            _semaphore.Release();
         }
 
         public long Seek(long offset, SeekOrigin origin)

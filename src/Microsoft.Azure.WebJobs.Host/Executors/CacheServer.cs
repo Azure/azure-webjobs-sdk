@@ -11,19 +11,19 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 {
     public class CacheServer
     {
-        private readonly ConcurrentDictionary<string, CacheObject> inMemoryCache = new ConcurrentDictionary<string, CacheObject>();
+        private readonly ConcurrentDictionary<CacheObjectMetadata, CacheObject> inMemoryCache = new ConcurrentDictionary<CacheObjectMetadata, CacheObject>();
 
         // TODO make cacheclient register with this so that when a write happens to an object, invalidate all clients
         //      do that in a locked manner
 
-        public bool ContainsObject(string uri)
+        public bool ContainsObject(CacheObjectMetadata cacheObjectMetadata)
         {
-            return inMemoryCache.ContainsKey(uri);
+            return inMemoryCache.ContainsKey(cacheObjectMetadata);
         }
         
-        public bool ContainsObjectRange(string uri, long start, long end)
+        public bool ContainsObjectRange(CacheObjectMetadata cacheObjectMetadata, long start, long end)
         {
-            if (!inMemoryCache.TryGetValue(uri, out CacheObject cacheObject))
+            if (!inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 return false;
             }
@@ -32,29 +32,22 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             return cacheObject.ContainsBytes(start, end);
         }
         
-        public bool TryAddObject(string uri)
+        public bool TryAddObject(CacheObjectMetadata cacheObjectMetadata)
         {
-            return inMemoryCache.TryAdd(uri, new CacheObject(uri));
+            return inMemoryCache.TryAdd(cacheObjectMetadata, new CacheObject(cacheObjectMetadata));
         }
 
-        // TODO maybe we don't need this, don't let clients handle CacheObjects
-        // clients will just have memory stream
-        public bool TryGetObject(string uri, out CacheObject cacheObject)
+        public void RemoveObject(CacheObjectMetadata cacheObjectMetadata)
         {
-            return inMemoryCache.TryGetValue(uri, out cacheObject);
+            inMemoryCache.RemoveIfContainsKey(cacheObjectMetadata);
         }
 
-        public void RemoveObject(string uri)
-        {
-            inMemoryCache.RemoveIfContainsKey(uri);
-        }
-
-        public bool TryGetObjectByteRangesAndStream(string uri, out RangeTree<long, bool> byteRanges, out MemoryStream memoryStream)
+        public bool TryGetObjectByteRangesAndStream(CacheObjectMetadata cacheObjectMetadata, out RangeTree<long, bool> byteRanges, out MemoryStream memoryStream)
         {
             byteRanges = null;
             memoryStream = null;
 
-            if (!inMemoryCache.TryGetValue(uri, out CacheObject cacheObject))
+            if (!inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 return false;
             }
@@ -67,35 +60,35 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         }
 
         // TODO do we need to copy this buffer before returning? what if this buffer, which is owned by app, changes or something?
-        public void WriteToCacheObject(string uri, long startPosition, byte[] buffer, int offset, int count)
+        public void WriteToCacheObject(CacheObjectMetadata cacheObjectMetadata, long startPosition, byte[] buffer, int offset, int count, int bytesToWrite)
         {
-            if (inMemoryCache.TryGetValue(uri, out CacheObject cacheObject))
+            if (inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
-                cacheObject.StartWriteTask(startPosition, buffer, offset, count);
+                cacheObject.StartWriteTask(startPosition, buffer, offset, count, bytesToWrite);
             }
         }
         
-        public void WriteToCacheObject(string uri, long startPosition, byte value)
+        public void WriteToCacheObject(CacheObjectMetadata cacheObjectMetadata, long startPosition, byte value)
         {
-            if (inMemoryCache.TryGetValue(uri, out CacheObject cacheObject))
+            if (inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 cacheObject.StartWriteTask(startPosition, value);
             }
         }
 
-        public void SetPosition(string uri, long position)
+        public void SetPosition(CacheObjectMetadata cacheObjectMetadata, long position)
         {
-            if (inMemoryCache.TryGetValue(uri, out CacheObject cacheObject))
+            if (inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 cacheObject.SetPosition(position);
             }
         }
 
-        public bool Seek(string uri, long offset, SeekOrigin origin, out long position)
+        public bool Seek(CacheObjectMetadata cacheObjectMetadata, long offset, SeekOrigin origin, out long position)
         {
             position = -1;
 
-            if (!inMemoryCache.TryGetValue(uri, out CacheObject cacheObject))
+            if (!inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 return false;
             }
@@ -104,20 +97,20 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             return true;
         }
 
-        public void SetLength(string uri, long length)
+        public void SetLength(CacheObjectMetadata cacheObjectMetadata, long length)
         {
             // TODO invalidate all clients since this is dirtying the cached operation
-            if (inMemoryCache.TryGetValue(uri, out CacheObject cacheObject))
+            if (inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 cacheObject.SetLength(length);
             }
         }
 
-        public bool GetPosition(string uri, out long position)
+        public bool GetPosition(CacheObjectMetadata cacheObjectMetadata, out long position)
         {
             position = -1;
 
-            if (!inMemoryCache.TryGetValue(uri, out CacheObject cacheObject))
+            if (!inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 return false;
             }

@@ -180,6 +180,8 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                         triggerMetadata.Add("Created", created.ToString());
                         string lastModifed = properties.GetType().GetProperty("LastModified")?.GetValue(properties, null)?.ToString();
                         triggerMetadata.Add("LastModified", lastModifed.ToString());
+                        string etag = properties.GetType().GetProperty("ETag")?.GetValue(properties, null)?.ToString();
+                        triggerMetadata.Add("ETag", etag);
                     }
                     catch (Exception exception)
                     {
