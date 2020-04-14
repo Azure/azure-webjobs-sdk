@@ -13,11 +13,8 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    // TODO right now, this cache is focused on reading from blob store
-    // When writing, easy case is, you write whatever app writes to your cached version
-    // What happens when multiple entities all write to same object?
-    // This includes SetLength operation too
 
+    // TODO make the CacheServer invalidate all clients when a write is made (use callbacks)
     public class CacheClient
     {
         private static readonly CacheServer CacheServer = new CacheServer();
@@ -26,17 +23,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly RangeTree<long, bool> _byteRanges;
         private readonly MemoryStream _memoryStream;
 
-        public bool CacheHit { get; set; }
-
         public bool ReadFromCache { get; private set; }
 
-        // public CacheClient(string key, long length = -1)
         public CacheClient(string uri, string etag)
         {
             _cacheObjectMetadata = new CacheObjectMetadata(uri, etag);
 
             // TODO fix usage of this if needed
-            CacheHit = true;
 
             if (CacheServer.TryGetObjectByteRangesAndStream(_cacheObjectMetadata, out _byteRanges, out _memoryStream))
             {
@@ -52,41 +45,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 // TODO check return value? and log?
                 CacheServer.TryAddObject(_cacheObjectMetadata);
             }
-        }
-
-        /*
-        // TODO put this in the cache object?
-        public bool FlushToCache()
-        {
-            if (_tasks.TrueForAll(t => t.IsCompleted))
-            {
-                if (!CacheServer.TryAdd(_cacheObjectMetadata, _memoryStream))
-                {
-                    // TODO log error? (this can happen if key already there)
-                }
-
-                _isFlushedToCache = true;
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-        */
-
-        ~CacheClient()
-        {
-            /*
-            if (!_isFlushedToCache)
-            {
-                if (!FlushToCache())
-                {
-                    _cancellationTokenSource.Cancel();
-                    CacheServer.RemoveIfContainsKey(_cacheObjectMetadata);
-                }
-            }
-            */
         }
 
         public Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
@@ -129,12 +87,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             return _byteRanges.Query(key).Count() > 0;
         }
 
-        // TODO check for count > 0? or is that a perf hit?
         public Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            // TODO if bytes are not present, do we invalidate the cached object or what?
-            //if (!ReadFromCache || !ContainsBytes(_memoryStream.Position, _memoryStream.Position + count))
-            // TODO we don't need to check the bytes again - caller's responsibility to check if byte range is in cache
+            // Caller's responsibility to check if byte range is in cache
             if (!ReadFromCache)
             {
                 // TODO error out
@@ -146,11 +101,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             return baseTask;
         }
         
-        // TODO only difference is cancellation token
         public Task<int> ReadAsync(byte[] buffer, int offset, int count)
         {
-            // TODO we don't need to check the bytes again - caller's responsibility to check if byte range is in cache
-            //if (!ReadFromCache || !ContainsBytes(_memoryStream.Position, _memoryStream.Position + count - 1))
+            // Caller's responsibility to check if byte range is in cache
             if (!ReadFromCache)
             {
                 // TODO error out
@@ -163,7 +116,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         
         public int ReadByte()
         {
-            if (!ReadFromCache || !ContainsByte(_memoryStream.Position))
+            // Caller's responsibility to check if byte range is in cache
+            if (!ReadFromCache)
             {
                 // TODO error out
                 return -1;
@@ -174,7 +128,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public void StartWriteTask(long startPosition, byte[] buffer, int offset, int count, int bytesToWrite)
         {
+            // As soon as the cached object is written to, it will be invalidated and all subsequent reads will not be made from this cached object
+            // TODO think more about this policy
             ReadFromCache = false;
+
+            // Sometimes the bytes written by the actual stream are not known so we attempt to write count number of bytes
             if (bytesToWrite == -1)
             {
                 bytesToWrite = count;
@@ -186,10 +144,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             CacheServer.WriteToCacheObject(_cacheObjectMetadata, startPosition, bufferToWrite, offset, count, bytesToWrite);
         }
 
-        // TODO wrap the checks and pass the core job as lambda so we can reuse the checks in above function too
         public void WriteByte(long startPosition, byte value)
         {
             ReadFromCache = false;
+
             CacheServer.WriteToCacheObject(_cacheObjectMetadata, startPosition, value);
         }
 
@@ -254,6 +212,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
         }
 
-        // TODO as soon as we invalidate the cache stream from here, we need to make sure the actual stream's position (azure) is same as the cached one until now
+        public void Close()
+        {
+            _memoryStream?.Close();
+        }
     }
 }

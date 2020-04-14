@@ -9,6 +9,7 @@ using System.IO;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
+    // Note: The CacheServer relies on CacheObject being thread-safe
     public class CacheServer
     {
         private readonly ConcurrentDictionary<CacheObjectMetadata, CacheObject> inMemoryCache = new ConcurrentDictionary<CacheObjectMetadata, CacheObject>();
@@ -28,7 +29,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 return false;
             }
 
-            // TODO Need locking here?
             return cacheObject.ContainsBytes(start, end);
         }
         
@@ -99,7 +99,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public void SetLength(CacheObjectMetadata cacheObjectMetadata, long length)
         {
-            // TODO invalidate all clients since this is dirtying the cached operation
+            // TODO invalidate all clients since this is dirtying the cached object
             if (inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 cacheObject.SetLength(length);

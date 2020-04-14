@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,11 +14,11 @@ using RangeTree;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
+    [Serializable]
     public class CacheObject
     {
         private readonly CacheObjectMetadata _cacheObjectMetadata;
         private readonly RangeTree<long, bool> _byteRanges;
-        // TODO may be worthwhile to start using BufferedStream in the future; faster?
         private readonly MemoryStream _memoryStream;
         private readonly List<Task> _tasks;
         // TODO this cancellation source should be held by client, and when the client is dying, it cancels tasks
@@ -63,19 +64,27 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // e.g. if the range we have in the tree is 0-5, and we query for 0-10, it will come out to be true
             // That is because there is at least some overlap but we want all points in our range to have overlap
             // So might want to modify the rangetree data structure
+            _semaphore.Wait();
+            bool response = true;
             for (long i = start; i < end; i++)
             {
                 if (_byteRanges.Query(i).Count() == 0)
                 {
-                    return false;
+                    response = false;
+                    break;
                 }
             }
-            return true;
+            _semaphore.Release();
+
+            return response;
         }
         
         public bool ContainsByte(long key)
         {
-            return _byteRanges.Query(key).Count() > 0;
+            _semaphore.Wait();
+            bool response = _byteRanges.Query(key).Count() > 0;
+            _semaphore.Release();
+            return response;
         }
 
         public async Task<Tuple<RangeTree<long, bool>, byte[]>> GetByteRangesAndBuffer()
@@ -164,17 +173,25 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public long Seek(long offset, SeekOrigin origin)
         {
-            return _memoryStream.Seek(offset, origin);
+            _semaphore.Wait();
+            long response = _memoryStream.Seek(offset, origin);
+            _semaphore.Release();
+            return response;
         }
 
         public void SetLength(long length)
         {
+            _semaphore.Wait();
             _memoryStream.SetLength(length);
+            _semaphore.Release();
         }
 
         public long GetPosition()
         {
-            return _memoryStream.Position;
+            _semaphore.Wait();
+            long response = _memoryStream.Position;
+            _semaphore.Release();
+            return response;
         }
     }
 }

@@ -21,10 +21,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly Stopwatch _timeRead;
         private readonly Stopwatch _timeWrite;
         private readonly CacheClient _cacheClient;
-        private long _countRead;
-        private bool _logged;
-        // TODO check if counting of written bytes is correct (count variable is *max* bytes to write, not those actually written)
+        private long _countReadFromCache;
+        private long _countReadFromStorage;
         private long _countWrite;
+        private bool _logged;
 
         public InstrumentableStream(InstrumentableObjectMetadata metadata, Stream inner, ILogger logger)
         {
@@ -33,22 +33,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _metadata = metadata;
             _timeRead = new Stopwatch();
             _timeWrite = new Stopwatch();
-            _countRead = 0;
+            _countReadFromCache = 0;
+            _countReadFromStorage = 0;
             _countWrite = 0;
             _logged = false;
             if (metadata.TryGetValue("Uri", out string name) && metadata.TryGetValue("ETag", out string etag) && _cacheEnabled)
             {
-                // TODO redundant; will change when we pass length to the cacheclient
-                try
-                {
-                    long length = _inner.Length;
-                    _cacheClient = new CacheClient(name, etag);
-                }
-                // TODO catch NotSupportedException
-                catch 
-                {
-                    _cacheClient = new CacheClient(name, etag);
-                }
+                _cacheClient = new CacheClient(name, etag);
             }
         }
 
@@ -146,7 +137,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _inner.Close();
             if (_cacheEnabled)
             {
-                //_cacheClient.FlushToCache();
+                _cacheClient.Close();
             }
             LogStatus();
         }
@@ -155,7 +146,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             if (_cacheEnabled && _cacheClient.ReadFromCache)
             {
-                _cacheClient.CacheHit = true;
                 return _cacheClient.CopyToAsync(destination, bufferSize, cancellationToken);
             }
             else
@@ -270,14 +260,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 if (_cacheEnabled && _cacheClient.ReadFromCache && _cacheClient.ContainsBytes(_cacheClient.GetPosition(), _cacheClient.GetPosition() + count))
                 {
-                    _cacheClient.CacheHit = true;
                     _timeRead.Start();
                     int bytesRead = _cacheClient.ReadAsync(buffer, offset, count).Result;
-                    _countRead += bytesRead;
+                    _countReadFromCache += bytesRead;
 
                     // Whenever reading from the cache, make sure to keep the position of the remote stream also in sync
                     // This will ensure that if we get a cache miss at some point and start reading from the remote stream, we can resume reading from the same position
-                    _inner.Seek(_cacheClient.GetPosition(), SeekOrigin.Begin);
+                    _inner.Position = _cacheClient.GetPosition();
 
                     return bytesRead;
                 }
@@ -290,7 +279,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     {
                         _cacheClient.StartWriteTask(startPosition, buffer, offset, count, bytesRead);
                     }
-                    _countRead += bytesRead;
+                    _countReadFromStorage += bytesRead;
                     return bytesRead;
                 }
             }
@@ -302,24 +291,25 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
+            Task<int> readTask = null;
             if (_cacheEnabled && _cacheClient.ReadFromCache && _cacheClient.ContainsBytes(_cacheClient.GetPosition(), _cacheClient.GetPosition() + count))
             {
                 try
                 {
-                    _cacheClient.CacheHit = true;
-                    return _cacheClient.ReadAsync(buffer, offset, count, cancellationToken);
+                    readTask = _cacheClient.ReadAsync(buffer, offset, count, cancellationToken);
+                    return readTask;
                 }
                 finally
                 {
                     // Whenever reading from the cache, make sure to keep the position of the remote stream also in sync
                     // This will ensure that if we get a cache miss at some point and start reading from the remote stream, we can resume reading from the same position
-                    _inner.Seek(_cacheClient.GetPosition(), SeekOrigin.Begin);
+                    _inner.Position = _cacheClient.GetPosition();
+                    _countReadFromCache += readTask.Result;
                 }
             }
             else
             {
                 long startPosition = _inner.Position;
-                Task<int> readTask = null;
                 try
                 {
                     readTask = _inner.ReadAsync(buffer, offset, count, cancellationToken);
@@ -331,6 +321,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     {
                         _cacheClient.StartWriteTask(startPosition, buffer, offset, count, readTask.Result);
                     }
+                    _countReadFromStorage += readTask.Result;
                 }
             }
         }
@@ -341,8 +332,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             if (_cacheEnabled && _cacheClient.ReadFromCache && _cacheClient.ContainsByte(_cacheClient.GetPosition()))
             {
-                _cacheClient.CacheHit = true;
                 read = _cacheClient.ReadByte();
+                if (read != -1)
+                {
+                    _countReadFromCache++;
+                }
             }
             else
             {
@@ -352,11 +346,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 {
                     _cacheClient.WriteByte(startPosition, Convert.ToByte(read));
                 }
-            }
-
-            if (read != -1)
-            {
-                _countRead++;
+                if (read != -1)
+                {
+                    _countReadFromStorage++;
+                }
             }
 
             return read;
@@ -374,22 +367,21 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             stringBuilder.Append(_timeRead.ElapsedMilliseconds);
             stringBuilder.Append(", WriteTime: ");
             stringBuilder.Append(_timeWrite.ElapsedMilliseconds);
-            stringBuilder.Append(", ReadBytes: ");
-            stringBuilder.Append(_countRead);
+            stringBuilder.Append(", ReadBytesFromCache: ");
+            stringBuilder.Append(_countReadFromCache);
+            stringBuilder.Append(", ReadBytesFromStorage: ");
+            stringBuilder.Append(_countReadFromStorage);
             stringBuilder.Append(", WriteBytes: ");
             stringBuilder.Append(_countWrite);
-            stringBuilder.Append(", CacheHit: ");
-            stringBuilder.Append(_cacheEnabled ? _cacheClient?.CacheHit : false);
             stringBuilder.Append(", Metadata: {");
             stringBuilder.Append(_metadata);
             stringBuilder.Append("}");
             
             String logString = stringBuilder.ToString();
 
-            // TODO see what ? does and if we can get rid of null check
             if (_logger != null)
             {
-                _logger?.Log(LogLevel.Information, 0, logString, null, (s, e) => s);
+                _logger.Log(LogLevel.Information, 0, logString, null, (s, e) => s);
             }
 
             _logged = true;
