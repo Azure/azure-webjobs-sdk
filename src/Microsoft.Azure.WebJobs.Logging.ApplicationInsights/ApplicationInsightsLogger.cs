@@ -526,6 +526,11 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     // We'll need to store this operation context so we can stop it when the function completes
                     stateValues[OperationContext] = operation;
                 }
+            } // Track Activity if the key is the TrackActivity Scope is specified. 
+            else if (allScopes.ContainsKey("MS_TrackActivity"))
+            {
+                var operation = _telemetryClient.StartOperation<RequestTelemetry>(currentActivity);
+                stateValues[OperationContext] = operation;
             }
         }
 
