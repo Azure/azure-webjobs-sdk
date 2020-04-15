@@ -425,8 +425,20 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
             public async Task<IListener> CreateAsync(CancellationToken cancellationToken)
             {
+                List<IListener> listeners = new List<IListener>();
+
                 ListenerFactoryContext context = new ListenerFactoryContext(_descriptor, _executor, _sharedQueue, cancellationToken);
-                return await _binding.CreateListenerAsync(context);
+                IListener listener = await _binding.CreateListenerAsync(context);
+                listeners.Add(listener);
+
+                // TODO make this happen only for cache-able stuff (like blobs)
+                if (_descriptor.FullName == "cs_blob_app.WriteBlob.Run")
+                {
+                    IListener cacheListener = new CacheListener(_descriptor, _executor);
+                    listeners.Add(cacheListener);
+                }
+
+                return new CompositeListener(listeners);
             }
         }
 

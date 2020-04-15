@@ -2,8 +2,10 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 
@@ -32,6 +34,15 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public async Task<FunctionResult> TryExecuteAsync(TriggeredFunctionData input, CancellationToken cancellationToken)
         {
+            // TODO hack
+            if (input != null)
+            {
+                if (_descriptor.FullName == "cs_blob_app.WriteBlob.Run")
+                {
+                    Worker.StoreStuff(input);
+                }
+            }
+
             var context = new FunctionInstanceFactoryContext<TTriggerValue>()
             {
                 TriggerValue = (TTriggerValue)input.TriggerValue,
