@@ -18,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
     public class Worker
     {
         private ITriggeredFunctionExecutor _triggeredFunctionExecutor;
-        private static TriggeredFunctionData stuff = null;
+        public static TriggeredFunctionData Stuff = null;
 
         public Worker(ITriggeredFunctionExecutor triggeredFunctionExecutor)
         {
@@ -45,11 +45,11 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                 // Include the queue details here.
                 //IDictionary<string, string> details = new Dictionary<string, string>();
 
-                if (Worker.stuff != null)
+                if (Worker.Stuff != null)
                 {
-                    Thread.Sleep(10000);
-                    Microsoft.Azure.Storage.CloudBlockBlob c =
-                    await _triggeredFunctionExecutor.TryExecuteAsync(stuff, cancellationToken);
+                    Thread.Sleep(60000);
+                    Stuff.TriggerDetails.Add("cacheTrigger", "true");
+                    await _triggeredFunctionExecutor.TryExecuteAsync(Stuff, cancellationToken);
                 }
                 //else
                 //{
@@ -70,9 +70,9 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 
         public static void StoreStuff(TriggeredFunctionData tempInput)
         {
-            if (Worker.stuff == null)
+            if (Worker.Stuff == null)
             {
-                Worker.stuff = tempInput;
+                Worker.Stuff = tempInput;
             }
         }
     }

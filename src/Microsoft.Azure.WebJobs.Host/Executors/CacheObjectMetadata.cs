@@ -15,6 +15,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             _uri = uri;
             _etag = etag;
+            // TODO TEMP
+            _etag = null;
         }
         
         // TODO what to do when etag is null?

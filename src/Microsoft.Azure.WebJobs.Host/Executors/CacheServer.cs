@@ -17,6 +17,22 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         // TODO make cacheclient register with this so that when a write happens to an object, invalidate all clients
         //      do that in a locked manner
 
+        private CacheServer() { }
+
+        private static CacheServer instance = null;
+
+        public static CacheServer Instance
+        {
+            get
+            {
+                if (instance == null)
+                {
+                    instance = new CacheServer();
+                }
+                return instance;
+            }
+        }
+
         public bool ContainsObject(CacheObjectMetadata cacheObjectMetadata)
         {
             return inMemoryCache.ContainsKey(cacheObjectMetadata);

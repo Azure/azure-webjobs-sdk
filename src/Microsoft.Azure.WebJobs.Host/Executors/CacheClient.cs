@@ -17,11 +17,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     // TODO make the CacheServer invalidate all clients when a write is made (use callbacks)
     public class CacheClient
     {
-        private static readonly CacheServer CacheServer = new CacheServer();
-
         private readonly CacheObjectMetadata _cacheObjectMetadata;
         private readonly RangeTree<long, bool> _byteRanges;
         private readonly MemoryStream _memoryStream;
+        private readonly CacheServer _cacheServer = CacheServer.Instance;
 
         public bool ReadFromCache { get; private set; }
 
@@ -31,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             // TODO fix usage of this if needed
 
-            if (CacheServer.TryGetObjectByteRangesAndStream(_cacheObjectMetadata, out _byteRanges, out _memoryStream))
+            if (_cacheServer.TryGetObjectByteRangesAndStream(_cacheObjectMetadata, out _byteRanges, out _memoryStream))
             {
                 ReadFromCache = true;
             }
@@ -43,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                 // TODO length to cache object?
                 // TODO check return value? and log?
-                CacheServer.TryAddObject(_cacheObjectMetadata);
+                _cacheServer.TryAddObject(_cacheObjectMetadata);
             }
         }
 
@@ -141,21 +140,21 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // Deep copy the buffer before the caller can modify it
             byte[] bufferToWrite = buffer.ToArray();
 
-            CacheServer.WriteToCacheObject(_cacheObjectMetadata, startPosition, bufferToWrite, offset, count, bytesToWrite);
+            _cacheServer.WriteToCacheObject(_cacheObjectMetadata, startPosition, bufferToWrite, offset, count, bytesToWrite);
         }
 
         public void WriteByte(long startPosition, byte value)
         {
             ReadFromCache = false;
 
-            CacheServer.WriteToCacheObject(_cacheObjectMetadata, startPosition, value);
+            _cacheServer.WriteToCacheObject(_cacheObjectMetadata, startPosition, value);
         }
 
         public void SetPosition(long position)
         {
             if (!ReadFromCache)
             {
-                CacheServer.SetPosition(_cacheObjectMetadata, position);
+                _cacheServer.SetPosition(_cacheObjectMetadata, position);
             }
             else
             {
@@ -167,7 +166,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             if (!ReadFromCache)
             {
-                if (CacheServer.Seek(_cacheObjectMetadata, offset, origin, out long position))
+                if (_cacheServer.Seek(_cacheObjectMetadata, offset, origin, out long position))
                 {
                     return position;
                 }
@@ -189,14 +188,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // If length is being set, then this operation will change the cached entity
             // So no operation can be performed on the cached stream
             // Server will invalidate all clients here
-            CacheServer.SetLength(_cacheObjectMetadata, length);
+            _cacheServer.SetLength(_cacheObjectMetadata, length);
         }
 
         public long GetPosition()
         {
             if (!ReadFromCache)
             {
-                if (CacheServer.GetPosition(_cacheObjectMetadata, out long position))
+                if (_cacheServer.GetPosition(_cacheObjectMetadata, out long position))
                 {
                     return position;
                 }

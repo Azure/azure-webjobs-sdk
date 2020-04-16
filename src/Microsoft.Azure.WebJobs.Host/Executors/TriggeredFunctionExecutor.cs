@@ -37,7 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // TODO hack
             if (input != null)
             {
-                if (_descriptor.FullName == "cs_blob_app.WriteBlob.Run")
+                if (_descriptor.FullName == "cs_blob_app.WriteBlob.Run" && Worker.Stuff == null)
                 {
                     Worker.StoreStuff(input);
                 }

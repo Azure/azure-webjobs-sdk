@@ -10,11 +10,11 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
 {
     internal interface ITriggeredFunctionBinding<TTriggerValue> : IFunctionBindingData
     {
-        Task<IReadOnlyDictionary<string, IValueProvider>> BindAsync(ValueBindingContext context, TTriggerValue value);
+        Task<IReadOnlyDictionary<string, IValueProvider>> BindAsync(ValueBindingContext context, TTriggerValue value, bool cacheTrigger);
     }
 
     internal interface ITriggeredFunctionBindingData<TTriggerValue> : ITriggeredFunctionBinding<TTriggerValue>
     {
-        Task<IReadOnlyDictionary<string, InstrumentableObjectMetadata>> GetBindingDataAsync(ValueBindingContext context, TTriggerValue value);
+        Task<IReadOnlyDictionary<string, InstrumentableObjectMetadata>> GetBindingDataAsync(ValueBindingContext context, TTriggerValue value, bool cacheTrigger);
     }
 }

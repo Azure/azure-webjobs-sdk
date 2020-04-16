@@ -61,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             return bindingContext;
         }
 
-        public async Task<IReadOnlyDictionary<string, IValueProvider>> BindAsync(ValueBindingContext context, IDictionary<string, object> parameters)
+        public async Task<IReadOnlyDictionary<string, IValueProvider>> BindAsync(ValueBindingContext context, IDictionary<string, object> parameters, bool cacheTrigger)
         {
             Dictionary<string, IValueProvider> results = new Dictionary<string, IValueProvider>();
 
