@@ -26,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private long _countWrite;
         private bool _logged;
 
-        public InstrumentableStream(InstrumentableObjectMetadata metadata, Stream inner, ILogger logger, bool cacheTrigger)
+        public InstrumentableStream(InstrumentableObjectMetadata metadata, Stream inner, ILogger logger, bool isWriteStream, bool cacheTrigger)
         {
             _inner = inner;
             _logger = logger;
@@ -39,9 +39,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _logged = false;
             // TODO hack - if cachetrigger then we are not going to cache anything else for now - needs to be fixed for later
             _cacheEnabled = !cacheTrigger;
-            if (metadata.TryGetValue("Uri", out string name) && metadata.TryGetValue("ETag", out string etag) && _cacheEnabled && !cacheTrigger)
+            if (metadata.TryGetValue("Name", out string name) && metadata.TryGetValue("Uri", out string uri) && metadata.TryGetValue("ETag", out string etag) && _cacheEnabled && !cacheTrigger)
             {
-                _cacheClient = new CacheClient(name, etag);
+                _cacheClient = new CacheClient(uri, name, etag, isWriteStream);
             }
         }
 

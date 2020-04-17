@@ -100,18 +100,29 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             }
             else
             {
-                CacheServer cacheServer = CacheServer.Instance;
-                CacheObjectMetadata cm = new CacheObjectMetadata("https://gochaudhstorage001.blob.core.windows.net/samples-reads/ouo.txt", null);
-                if (cacheServer.ContainsObject(cm))
+                if (value.GetType() == typeof(CacheTriggeredStream))
                 {
-                    if (cacheServer.TryGetObjectByteRangesAndStream(cm, out _, out MemoryStream ms))
+                    CacheTriggeredStream cStream = (CacheTriggeredStream)value;
+                    // TODO put container here from the uri or such
+                    triggerProvider = new ConstantValueProvider(value, value.GetType(), "samples-reads/"+cStream.Metadata.Name);
+                    Dictionary<string, object> tempDictionary = new Dictionary<string, object>
                     {
-                        triggerProvider = new ConstantValueProvider(ms, ms.GetType(), "samples-reads/ouo.txt");
-                        Dictionary<string, object> tempDictionary = new Dictionary<string, object>();
-                        tempDictionary.Add("name", "ouo.txt");
-                        bindingData = new ReadOnlyDictionary<string, object>(tempDictionary);
-                    }
+                        { "name", cStream.Metadata.Name }
+                    };
+                    bindingData = new ReadOnlyDictionary<string, object>(tempDictionary);
                 }
+                //CacheServer cacheServer = CacheServer.Instance;
+                //CacheObjectMetadata cm = new CacheObjectMetadata("https://gochaudhstorage001.blob.core.windows.net/samples-reads/ouo.txt", null);
+                //if (cacheServer.ContainsObject(cm))
+                //{
+                //    if (cacheServer.TryGetObjectByteRangesAndStream(cm, out _, out MemoryStream ms))
+                //    {
+                //        triggerProvider = new ConstantValueProvider(ms, ms.GetType(), "samples-reads/ouo.txt");
+                //        Dictionary<string, object> tempDictionary = new Dictionary<string, object>();
+                //        tempDictionary.Add("name", "ouo.txt");
+                //        bindingData = new ReadOnlyDictionary<string, object>(tempDictionary);
+                //    }
+                //}
             }
             
             valueProviders.Add(_triggerParameterName, triggerProvider);

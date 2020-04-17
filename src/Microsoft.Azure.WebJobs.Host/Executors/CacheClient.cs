@@ -21,30 +21,33 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly RangeTree<long, bool> _byteRanges;
         private readonly MemoryStream _memoryStream;
         private readonly CacheServer _cacheServer = CacheServer.Instance;
+        private readonly bool _toCommit; // TODO pass in more metadata and commit only for output bindings (i.e. do this more cleanly)
 
-        public bool ReadFromCache { get; private set; }
-
-        public CacheClient(string uri, string etag)
+        public CacheClient(string uri, string name, string etag, bool isWriteObject)
         {
-            _cacheObjectMetadata = new CacheObjectMetadata(uri, etag);
+            _cacheObjectMetadata = new CacheObjectMetadata(uri, name, etag);
 
             // TODO fix usage of this if needed
 
-            if (_cacheServer.TryGetObjectByteRangesAndStream(_cacheObjectMetadata, out _byteRanges, out _memoryStream))
+            if (!isWriteObject && _cacheServer.TryGetObjectByteRangesAndStream(_cacheObjectMetadata, out _byteRanges, out _memoryStream))
             {
                 ReadFromCache = true;
+                _toCommit = false;
             }
             else
             {
                 ReadFromCache = false;
                 _memoryStream = null;
                 _byteRanges = null;
+                _toCommit = true;
 
                 // TODO length to cache object?
                 // TODO check return value? and log?
                 _cacheServer.TryAddObject(_cacheObjectMetadata);
             }
         }
+        
+        public bool ReadFromCache { get; private set; }
 
         public Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
         {
@@ -214,6 +217,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         public void Close()
         {
             _memoryStream?.Close();
+            if (_toCommit == true)
+            {
+                _cacheServer.CommitObjectToCache(_cacheObjectMetadata);
+            }
         }
     }
 }

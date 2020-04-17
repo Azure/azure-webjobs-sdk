@@ -21,22 +21,51 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly RangeTree<long, bool> _byteRanges;
         private readonly MemoryStream _memoryStream;
         private readonly List<Task> _tasks;
+        private bool _isCommitted;
         // TODO this cancellation source should be held by client, and when the client is dying, it cancels tasks
         // Then the cache object needs to invalidate itself and remove itself from cache
         // perhaps cancellation token should be with the cache server, and not cache client?
         // when cache client dies, it just infroms the cache server and dies - then asynchronously cache server 
         // will remove cache object after cancelling cache object's tasks
         private readonly CancellationTokenSource _cancellationTokenSource;
-        private SemaphoreSlim _semaphore;
-
-        public CacheObject(CacheObjectMetadata uri)
+        private readonly SemaphoreSlim _semaphore;
+        
+        public CacheObject(CacheObjectMetadata metadata)
         {
-            _cacheObjectMetadata = uri;
+            _cacheObjectMetadata = metadata;
             _byteRanges = new RangeTree<long, bool>();
             _memoryStream = new MemoryStream();
             _tasks = new List<Task>();
             _cancellationTokenSource = new CancellationTokenSource();
             _semaphore = new SemaphoreSlim(1, 1); // Allow only one write at a time
+            _isCommitted = false;
+        }
+
+        // TODO wrap all uses of the semaphore in this class inside try/finally
+        public bool IsCommitted()
+        {
+            try
+            {
+                _semaphore.Wait();
+                return _isCommitted;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+        
+        public void Commit()
+        {
+            try
+            {
+                _semaphore.Wait();
+                _isCommitted = true;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
 
         public override int GetHashCode()

@@ -52,7 +52,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             List<FunctionDefinition> functions = new List<FunctionDefinition>();
             var method = typeof(Functions1).GetMethod("TestJob", BindingFlags.Public | BindingFlags.Static);
             FunctionDescriptor descriptor = FunctionIndexer.FromMethod(method, _jobActivator);
-            FunctionDefinition definition = new FunctionDefinition(descriptor, mockInstanceFactory.Object, mockListenerFactory.Object);
+            FunctionDefinition definition = new FunctionDefinition(descriptor, mockInstanceFactory.Object, mockListenerFactory.Object, null);
             functions.Add(definition);
 
             var monitorManager = new ScaleMonitorManager();
@@ -124,7 +124,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             List<FunctionDefinition> functions = new List<FunctionDefinition>();
             var method = jobType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Static);
             FunctionDescriptor descriptor = FunctionIndexer.FromMethod(method, _jobActivator);
-            FunctionDefinition definition = new FunctionDefinition(descriptor, mockInstanceFactory.Object, mockListenerFactory.Object);
+            FunctionDefinition definition = new FunctionDefinition(descriptor, mockInstanceFactory.Object, mockListenerFactory.Object, null);
             functions.Add(definition);
 
             // Create the composite listener - this will fail if any of the

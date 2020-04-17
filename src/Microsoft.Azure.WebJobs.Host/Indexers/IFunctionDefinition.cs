@@ -14,5 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         IFunctionInstanceFactory InstanceFactory { get; }
 
         IListenerFactory ListenerFactory { get; }
+        
+        IListenerFactory CacheListenerFactory { get; }
     }
 }

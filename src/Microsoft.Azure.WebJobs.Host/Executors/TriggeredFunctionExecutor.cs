@@ -34,15 +34,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public async Task<FunctionResult> TryExecuteAsync(TriggeredFunctionData input, CancellationToken cancellationToken)
         {
-            // TODO hack
-            if (input != null)
-            {
-                if (_descriptor.FullName == "cs_blob_app.WriteBlob.Run" && Worker.Stuff == null)
-                {
-                    Worker.StoreStuff(input);
-                }
-            }
-
             var context = new FunctionInstanceFactoryContext<TTriggerValue>()
             {
                 TriggerValue = (TTriggerValue)input.TriggerValue,

@@ -18,11 +18,12 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
     public class Worker
     {
         private ITriggeredFunctionExecutor _triggeredFunctionExecutor;
-        public static TriggeredFunctionData Stuff = null;
+        private CacheServer _cacheServer;
 
         public Worker(ITriggeredFunctionExecutor triggeredFunctionExecutor)
         {
             _triggeredFunctionExecutor = triggeredFunctionExecutor;
+            _cacheServer = CacheServer.Instance;
         }
 
         public static T ReadFromBinaryFile<T>(string filePath)
@@ -37,43 +38,35 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
         {
             await Task.Yield();
-            while (!cancellationToken.IsCancellationRequested)
+            bool done = true;
+            TriggeredFunctionData tData;
+            while (!cancellationToken.IsCancellationRequested && done)
             {
-
-                //return Task.FromResult(0);
-
-                // Include the queue details here.
-                //IDictionary<string, string> details = new Dictionary<string, string>();
-
-                if (Worker.Stuff != null)
+                Thread.Sleep(60000); // TODO remove this or lower this
+                if (_cacheServer.Triggers.Count > 0)
                 {
-                    Thread.Sleep(60000);
-                    Stuff.TriggerDetails.Add("cacheTrigger", "true");
-                    await _triggeredFunctionExecutor.TryExecuteAsync(Stuff, cancellationToken);
+                    if (_cacheServer.Triggers.TryDequeue(out CacheObjectMetadata metadata))
+                    {
+                        tData = new TriggeredFunctionData();
+                        done = false;
+                        tData.TriggerDetails = new Dictionary<string, string>
+                        {
+                            { "name", metadata.Name },
+                            { "CacheTrigger", true.ToString() }
+                        };
+
+                        if (_cacheServer.TryGetObjectByteRangesAndStream(metadata, out _, out MemoryStream mStream))
+                        {
+                            CacheTriggeredStream cStream = new CacheTriggeredStream(mStream, metadata);
+                            tData.TriggerValue = cStream;
+                            await _triggeredFunctionExecutor.TryExecuteAsync(tData, cancellationToken);
+                            done = true;
+                        }
+                    }
                 }
-                //else
-                //{
-                //    try
-                //    {
-                //        Worker.stuff = ReadFromBinaryFile<TriggeredFunctionData>("D:\\home\\funcdata.obj");
-                //    }
-                //    catch
-                //    {
-                //        Worker.stuff = null;
-                //    }
-                //}
-                Thread.Sleep(10000);
             }
 
             return 0;
-        }
-
-        public static void StoreStuff(TriggeredFunctionData tempInput)
-        {
-            if (Worker.Stuff == null)
-            {
-                Worker.Stuff = tempInput;
-            }
         }
     }
 
@@ -86,7 +79,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 
         public CacheListener(FunctionDescriptor functionDescriptor, ITriggeredFunctionExecutor triggerExecutor)
         {
-            _functionDescriptor = functionDescriptor;
+            _functionDescriptor = functionDescriptor; // TODO might not need it 
             _triggeredFunctionExecutor = triggerExecutor;
             _worker = new Worker(_triggeredFunctionExecutor);
             _tasks = new List<Task>();

@@ -974,8 +974,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         bool isWriteStream = reflectionParameters[index].GetType().ToString().IndexOf("Microsoft.Azure.WebJobs.Host.Blobs.Bindings.WatchableCloudBlobStream", StringComparison.OrdinalIgnoreCase) >= 0;
                         bool isWatchable = isReadStream || isWriteStream;
                         // TODO use a better way to determine cache triggered object
-                        bool isMemoryStream = reflectionParameters[index].GetType().ToString().IndexOf("System.IO.MemoryStream", StringComparison.OrdinalIgnoreCase) >= 0;
-                        bool isCacheTrigger = isMemoryStream;
+                        bool isCacheTrigger = reflectionParameters[index].GetType().ToString().IndexOf("CacheTriggeredStream", StringComparison.OrdinalIgnoreCase) >= 0;
                         if (_bindingData != null && _bindingData.ContainsKey(name))
                         {
                             if (isWatchable)
@@ -1009,9 +1008,19 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                                     _bindingData[name].Add("Exception", exception.Message);
                                 }
                             }
-                            if (isWatchable || isMemoryStream)
+                            if (isWatchable || isCacheTrigger)
                             {
-                                InstrumentableStream instStr = new InstrumentableStream(_bindingData[name], (Stream)reflectionParameters[index], _logger, isCacheTrigger);
+                                Stream stream = null;
+                                if (isCacheTrigger)
+                                {
+                                    CacheTriggeredStream cstream = (CacheTriggeredStream)reflectionParameters[index];
+                                    stream = cstream.Stream;
+                                }
+                                else
+                                {
+                                    stream = (Stream)reflectionParameters[index];
+                                }
+                                InstrumentableStream instStr = new InstrumentableStream(_bindingData[name], stream, _logger, isWriteStream, isCacheTrigger);
                                 reflectionParameters[index] = instStr;
                             }
                         }

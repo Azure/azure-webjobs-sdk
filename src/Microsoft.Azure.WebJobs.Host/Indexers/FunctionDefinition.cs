@@ -4,6 +4,7 @@
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using System.Collections;
 
 namespace Microsoft.Azure.WebJobs.Host.Indexers
 {
@@ -12,12 +13,14 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly FunctionDescriptor _descriptor;
         private readonly IFunctionInstanceFactory _instanceFactory;
         private readonly IListenerFactory _listenerFactory;
+        private readonly IListenerFactory _cacheListenerFactory;
 
-        public FunctionDefinition(FunctionDescriptor descriptor, IFunctionInstanceFactory instanceFactory, IListenerFactory listenerFactory)
+        public FunctionDefinition(FunctionDescriptor descriptor, IFunctionInstanceFactory instanceFactory, IListenerFactory listenerFactory, IListenerFactory cacheListenerFactory)
         {
             _descriptor = descriptor;
             _instanceFactory = instanceFactory;
             _listenerFactory = listenerFactory;
+            _cacheListenerFactory = cacheListenerFactory;
         }
 
         public FunctionDescriptor Descriptor
@@ -36,6 +39,11 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         public IListenerFactory ListenerFactory
         {
             get { return _listenerFactory; }
+        }
+        
+        public IListenerFactory CacheListenerFactory
+        {
+            get { return _cacheListenerFactory; }
         }
     }
 }

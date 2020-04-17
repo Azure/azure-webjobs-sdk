@@ -209,7 +209,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 IsDisabled = true
             };
             var mockFunctionIndex = new Mock<IFunctionIndex>();
-            mockFunctionIndex.Setup(i => i.LookupByName("testMethod")).Returns(new FunctionDefinition(functionDescriptor, null, null));
+            mockFunctionIndex.Setup(i => i.LookupByName("testMethod")).Returns(new FunctionDefinition(functionDescriptor, null, null, null));
             var token = new CancellationToken();
             mockFunctionIndexProvider.Setup(p => p.GetAsync(token)).Returns(Task.FromResult(mockFunctionIndex.Object));
 

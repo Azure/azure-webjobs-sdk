@@ -298,7 +298,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
 
             string triggerParameterName = triggerParameter != null ? triggerParameter.Name : null;
-            FunctionDescriptor functionDescriptor = CreateFunctionDescriptor(method, triggerParameterName, triggerBinding, nonTriggerBindings);
+            FunctionDescriptor functionDescriptor = CreateFunctionDescriptor(method, triggerParameterName, triggerBinding, nonTriggerBindings); // TODO put a bool for cachetrigger here
             ILogger logger = _loggerFactory?.CreateLogger("Host." + LogCategories.CreateFunctionCategory(functionDescriptor.LogName));
             IFunctionInvoker invoker = FunctionInvokerFactory.Create(method, _activator, logger);
             IFunctionDefinition functionDefinition;
@@ -307,17 +307,22 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             {
                 Type triggerValueType = triggerBinding.TriggerValueType;
                 var methodInfo = typeof(FunctionIndexer).GetMethod("CreateTriggeredFunctionDefinition", BindingFlags.Instance | BindingFlags.NonPublic).MakeGenericMethod(triggerValueType);
-                functionDefinition = (FunctionDefinition)methodInfo.Invoke(this, new object[] { triggerBinding, triggerParameterName, functionDescriptor, nonTriggerBindings, invoker });
+                bool cacheTrigger = false;
+                if (functionDescriptor.FullName == "cs_blob_app.WriteBlob.Run")
+                {
+                    cacheTrigger = true;
+                }
+                functionDefinition = (FunctionDefinition)methodInfo.Invoke(this, new object[] { triggerBinding, triggerParameterName, functionDescriptor, nonTriggerBindings, invoker, cacheTrigger });
 
                 if (hasNoAutomaticTriggerAttribute && functionDefinition != null)
                 {
-                    functionDefinition = new FunctionDefinition(functionDescriptor, functionDefinition.InstanceFactory, listenerFactory: null);
+                    functionDefinition = new FunctionDefinition(functionDescriptor, functionDefinition.InstanceFactory, listenerFactory: null, null);
                 }
             }
             else
             {
                 IFunctionInstanceFactory instanceFactory = new FunctionInstanceFactory(new FunctionBinding(functionDescriptor, nonTriggerBindings, _singletonManager), invoker, functionDescriptor);
-                functionDefinition = new FunctionDefinition(functionDescriptor, instanceFactory, listenerFactory: null);
+                functionDefinition = new FunctionDefinition(functionDescriptor, instanceFactory, listenerFactory: null, null);
             }
 
             index.Add(functionDefinition, functionDescriptor, method);
@@ -332,14 +337,24 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
         private FunctionDefinition CreateTriggeredFunctionDefinition<TTriggerValue>(
             ITriggerBinding triggerBinding, string parameterName, FunctionDescriptor descriptor,
-            IReadOnlyDictionary<string, IBinding> nonTriggerBindings, IFunctionInvokerEx invoker)
+            IReadOnlyDictionary<string, IBinding> nonTriggerBindings, IFunctionInvokerEx invoker, bool cacheTrigger)
         {
             ITriggeredFunctionBinding<TTriggerValue> functionBinding = new TriggeredFunctionBinding<TTriggerValue>(descriptor, parameterName, triggerBinding, nonTriggerBindings, _singletonManager);
             ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory = new TriggeredFunctionInstanceFactory<TTriggerValue>(functionBinding, invoker, descriptor);
             ITriggeredFunctionExecutor triggerExecutor = new TriggeredFunctionExecutor<TTriggerValue>(descriptor, _executor, instanceFactory);
-            IListenerFactory listenerFactory = new ListenerFactory(descriptor, triggerExecutor, triggerBinding, _sharedQueue);
+            IListenerFactory listenerFactory = new ListenerFactory(descriptor, triggerExecutor, triggerBinding, _sharedQueue, false);
 
-            return new FunctionDefinition(descriptor, instanceFactory, listenerFactory);
+            IListenerFactory cacheListenerFactory = null;
+
+            if (cacheTrigger)
+            {
+                ITriggeredFunctionBinding<CacheTriggeredStream> cacheFunctionBinding = new TriggeredFunctionBinding<CacheTriggeredStream>(descriptor, parameterName, triggerBinding, nonTriggerBindings, _singletonManager);
+                ITriggeredFunctionInstanceFactory<CacheTriggeredStream> cacheInstanceFactory = new TriggeredFunctionInstanceFactory<CacheTriggeredStream>(cacheFunctionBinding, invoker, descriptor);
+                ITriggeredFunctionExecutor cacheTriggerExecutor = new TriggeredFunctionExecutor<CacheTriggeredStream>(descriptor, _executor, cacheInstanceFactory);
+                cacheListenerFactory = new ListenerFactory(descriptor, cacheTriggerExecutor, triggerBinding, _sharedQueue, cacheTrigger);
+            }
+
+            return new FunctionDefinition(descriptor, instanceFactory, listenerFactory, cacheListenerFactory);
         }
 
         // Expose internally for testing purposes 
@@ -414,31 +429,36 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             private readonly ITriggeredFunctionExecutor _executor;
             private readonly ITriggerBinding _binding;
             private readonly SharedQueueHandler _sharedQueue;
+            private readonly bool _isCacheTrigger;
 
-            public ListenerFactory(FunctionDescriptor descriptor, ITriggeredFunctionExecutor executor, ITriggerBinding binding, SharedQueueHandler sharedQueue)
+            public ListenerFactory(FunctionDescriptor descriptor, ITriggeredFunctionExecutor executor, ITriggerBinding binding, SharedQueueHandler sharedQueue, bool cacheTrigger)
             {
                 _descriptor = descriptor;
                 _executor = executor;
                 _binding = binding;
                 _sharedQueue = sharedQueue;
+                _isCacheTrigger = cacheTrigger;
             }
 
             public async Task<IListener> CreateAsync(CancellationToken cancellationToken)
             {
-                List<IListener> listeners = new List<IListener>();
-
-                ListenerFactoryContext context = new ListenerFactoryContext(_descriptor, _executor, _sharedQueue, cancellationToken);
-                IListener listener = await _binding.CreateListenerAsync(context);
-                listeners.Add(listener);
+                //List<IListener> listeners = new List<IListener>();
 
                 // TODO make this happen only for cache-able stuff (like blobs)
-                if (_descriptor.FullName == "cs_blob_app.WriteBlob.Run")
+                IListener listener;
+                if (_isCacheTrigger)
                 {
-                    IListener cacheListener = new CacheListener(_descriptor, _executor);
-                    listeners.Add(cacheListener);
+                    listener = new CacheListener(_descriptor, _executor);
                 }
+                else
+                {
+                    ListenerFactoryContext context = new ListenerFactoryContext(_descriptor, _executor, _sharedQueue, cancellationToken);
+                    listener = await _binding.CreateListenerAsync(context);
+                }
+                //listeners.Add(listener);
 
-                return new CompositeListener(listeners);
+                //return new CompositeListener(listeners);
+                return listener;
             }
         }
 

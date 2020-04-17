@@ -78,6 +78,15 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                 // wrap the listener with a function listener to handle exceptions
                 listener = new FunctionListener(listener, functionDefinition.Descriptor, _loggerFactory, _allowPartialHostStartup);
                 listeners.Add(listener);
+
+                IListenerFactory cacheListenerFactory = functionDefinition.CacheListenerFactory;
+                if (cacheListenerFactory != null)
+                {
+                    IListener cacheListener = await cacheListenerFactory.CreateAsync(cancellationToken);
+                    // wrap the listener with a function listener to handle exceptions
+                    cacheListener = new FunctionListener(cacheListener, functionDefinition.Descriptor, _loggerFactory, _allowPartialHostStartup);
+                    listeners.Add(cacheListener);
+                }
             }
 
             _listenersCreatedCallback?.Invoke();

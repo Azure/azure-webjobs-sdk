@@ -32,11 +32,11 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             }
 
             bool cacheTrigger = false;
-            if (context.TriggerDetails.ContainsKey("cacheTrigger"))
+            if (context.TriggerDetails.ContainsKey("CacheTrigger"))
             {
-                if (context.TriggerDetails.TryGetValue("cacheTrigger", out string cacheTriggerStr))
+                if (context.TriggerDetails.TryGetValue("CacheTrigger", out string cacheTriggerStr))
                 {
-                    cacheTrigger = true ? cacheTriggerStr == "true" : false;
+                    cacheTrigger = true ? cacheTriggerStr == true.ToString() : false;
                 }
             }
             IBindingSource bindingSource = new TriggerBindingSource<TTriggerValue>(_binding, context.TriggerValue, cacheTrigger);
