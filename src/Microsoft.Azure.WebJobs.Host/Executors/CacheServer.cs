@@ -13,7 +13,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     public class CacheServer
     {
         private readonly ConcurrentDictionary<CacheObjectMetadata, CacheObject> _inMemoryCache;
-        public readonly ConcurrentQueue<CacheObjectMetadata> Triggers;
+        public readonly ConcurrentQueue<CacheObjectMetadata> Triggers; // TODO call this something like processingtriggers
+        public readonly ConcurrentBag<string> TriggersProcessedFromCache; // TODO call this something line processedtriggers and when to clean this periodically??
 
         // TODO make cacheclient register with this so that when a write happens to an object, invalidate all clients
         //      do that in a locked manner
@@ -21,6 +22,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private CacheServer()
         {
             Triggers = new ConcurrentQueue<CacheObjectMetadata>();
+            TriggersProcessedFromCache = new ConcurrentBag<string>();
             _inMemoryCache = new ConcurrentDictionary<CacheObjectMetadata, CacheObject>();
         }
 
@@ -148,7 +150,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
 
             cacheObject.Commit();
-            Triggers.Enqueue(cacheObjectMetadata);
+
+            // TODO another humungous hack... since we are not storing container name and not listening for specific container outputs for the cache
+            bool shoudlWePutThisInCacheTriggers = cacheObjectMetadata.Uri.IndexOf("/cascade-output", StringComparison.OrdinalIgnoreCase) >= 0;
+            if (shoudlWePutThisInCacheTriggers)
+            {
+                Triggers.Enqueue(cacheObjectMetadata);
+            }
         }
     }
 }

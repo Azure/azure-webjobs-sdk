@@ -39,7 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 ReadFromCache = false;
                 _memoryStream = null;
                 _byteRanges = null;
-                _toCommit = true;
+                _toCommit = isWriteObject;
 
                 // TODO length to cache object?
                 // TODO check return value? and log?
@@ -81,6 +81,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     return false;
                 }
             }
+
             return true;
         }
         
@@ -217,7 +218,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         public void Close()
         {
             _memoryStream?.Close();
-            if (_toCommit == true)
+            if (_toCommit)
             {
                 _cacheServer.CommitObjectToCache(_cacheObjectMetadata);
             }

@@ -136,6 +136,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public override void Close()
         {
+            // TODO make sure close is not called twice (just like on original streams)
             _inner.Close();
             if (_cacheEnabled)
             {

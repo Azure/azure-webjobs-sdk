@@ -8,19 +8,20 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     [Serializable]
     public class CacheObjectMetadata
     {
-        private readonly string _uri;
         private readonly string _etag;
         
 
         public CacheObjectMetadata(string uri, string name, string etag)
         {
-            _uri = uri;
-            _etag = etag;
+            Uri = uri;
             Name = name;
-            // TODO TEMP
+            _etag = etag;
+            // TODO TEMP, we need to retain the etag and check against it
             _etag = null;
         }
         
+        public string Uri { get; private set; }
+
         public string Name { get; private set; }
         
         public string Container { get; private set; }
@@ -30,10 +31,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             if (_etag != null)
             {
-                return _uri.GetHashCode() ^ _etag.GetHashCode();
+                return Uri.GetHashCode() ^ _etag.GetHashCode();
             }
 
-            return _uri.GetHashCode();
+            return Uri.GetHashCode();
         }
         
         // TODO what to do when etag is null?
@@ -44,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 return false;
             }
 
-            return other._uri == this._uri && other._etag == this._etag;
+            return other.Uri == this.Uri && other._etag == this._etag;
         }
     }
 }

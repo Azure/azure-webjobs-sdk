@@ -308,7 +308,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 Type triggerValueType = triggerBinding.TriggerValueType;
                 var methodInfo = typeof(FunctionIndexer).GetMethod("CreateTriggeredFunctionDefinition", BindingFlags.Instance | BindingFlags.NonPublic).MakeGenericMethod(triggerValueType);
                 bool cacheTrigger = false;
-                if (functionDescriptor.FullName == "cs_blob_app.WriteBlob.Run")
+                if (functionDescriptor.FullName == "cs_blob_app.ConsumeCascade.Run")
                 {
                     cacheTrigger = true;
                 }

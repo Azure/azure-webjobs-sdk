@@ -26,29 +26,20 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             _cacheServer = CacheServer.Instance;
         }
 
-        public static T ReadFromBinaryFile<T>(string filePath)
-        {
-            using (Stream stream = File.Open(filePath, FileMode.Open))
-            {
-                var binaryFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                return (T)binaryFormatter.Deserialize(stream);
-            }
-        }
-
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
         {
             await Task.Yield();
-            bool done = true;
             TriggeredFunctionData tData;
-            while (!cancellationToken.IsCancellationRequested && done)
+            while (!cancellationToken.IsCancellationRequested)
             {
-                Thread.Sleep(60000); // TODO remove this or lower this
+                // TODO this is a very tight loop; put some sleep here or make the queue in cachserver use callbacks to come here
                 if (_cacheServer.Triggers.Count > 0)
                 {
-                    if (_cacheServer.Triggers.TryDequeue(out CacheObjectMetadata metadata))
+                    if (_cacheServer.Triggers.TryDequeue(out CacheObjectMetadata metadata)) // TODO Don't dequeue, just peek or something or put to another queue as one atomic operation so we don't drop messages
                     {
+                        _cacheServer.TriggersProcessedFromCache.Add(metadata.Uri); // TODO right now putting it as processed immediately but this is bad... we need to ensure failed functions don't just ghost the message
+                        // TODO how do we ensure that the blobs with same name don't just keep skipping execution just because we have processed a similar named blob once? should there be a time limit thingy?
                         tData = new TriggeredFunctionData();
-                        done = false;
                         tData.TriggerDetails = new Dictionary<string, string>
                         {
                             { "name", metadata.Name },
@@ -60,7 +51,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                             CacheTriggeredStream cStream = new CacheTriggeredStream(mStream, metadata);
                             tData.TriggerValue = cStream;
                             await _triggeredFunctionExecutor.TryExecuteAsync(tData, cancellationToken);
-                            done = true;
+                            // TODO check if we ever get here... seems like this thread dies after one execution or something :/
                         }
                     }
                 }

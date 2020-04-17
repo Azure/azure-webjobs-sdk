@@ -12,11 +12,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     {
         public CacheTriggeredStream(Stream stream, CacheObjectMetadata metadata)
         {
+            // TODO this class does not need to hold the stream, we just use it to signal the use of cached object - the instrumentable stream can just use the regular cache client logic to get the desired object from the cache
             Stream = stream;
             Metadata = metadata;
         }
         
         public Stream Stream { get; private set; }
+
         public CacheObjectMetadata Metadata { get; private set; }
     }
 }

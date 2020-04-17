@@ -104,7 +104,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                 {
                     CacheTriggeredStream cStream = (CacheTriggeredStream)value;
                     // TODO put container here from the uri or such
-                    triggerProvider = new ConstantValueProvider(value, value.GetType(), "samples-reads/"+cStream.Metadata.Name);
+                    triggerProvider = new ConstantValueProvider(value, value.GetType(), "cascade-output/"+cStream.Metadata.Name);
                     Dictionary<string, object> tempDictionary = new Dictionary<string, object>
                     {
                         { "name", cStream.Metadata.Name }

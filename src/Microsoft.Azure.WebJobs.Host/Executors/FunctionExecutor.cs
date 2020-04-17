@@ -500,6 +500,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             IFunctionInvokerEx invoker = instance.GetFunctionInvoker();
             IDelayedException delayedBindingException = await parameterHelper.PrepareParametersAsync();
 
+            // TODO this logic to prevent double execution if something has already executed from cache can happen wayyy early in the call stack... but for now we keep it here
+            if (parameterHelper.AlreadyExecuted)
+            {
+                return;
+            }
+
             if (delayedBindingException != null)
             {
                 // This is done inside a watcher context so that each binding error is publish next to the binding in
@@ -814,6 +820,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // This litererally matches the ParameterInfo[] and does not include return value. 
             private IReadOnlyList<string> _parameterNames;
 
+            public bool AlreadyExecuted;
+
+            private CacheServer _cacheServer;
+
             // state bag passed to all function filters
             private readonly IDictionary<string, object> _filterContextProperties = new Dictionary<string, object>();
 
@@ -839,6 +849,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 _functionInstance = functionInstance;
                 _parameterNames = functionInstance.Invoker.ParameterNames;
                 _logger = logger;
+                _cacheServer = CacheServer.Instance;
+                AlreadyExecuted = false;
             }
 
             // Phsyical objects to pass to the underlying method Info. These will get updated for out-parameters. 
@@ -971,57 +983,71 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     if (reflectionParameters[index] != null)
                     {
                         bool isReadStream = reflectionParameters[index].GetType().ToString().IndexOf("Microsoft.Azure.WebJobs.Host.Blobs.WatchableReadStream", StringComparison.OrdinalIgnoreCase) >= 0;
-                        bool isWriteStream = reflectionParameters[index].GetType().ToString().IndexOf("Microsoft.Azure.WebJobs.Host.Blobs.Bindings.WatchableCloudBlobStream", StringComparison.OrdinalIgnoreCase) >= 0;
-                        bool isWatchable = isReadStream || isWriteStream;
-                        // TODO use a better way to determine cache triggered object
-                        bool isCacheTrigger = reflectionParameters[index].GetType().ToString().IndexOf("CacheTriggeredStream", StringComparison.OrdinalIgnoreCase) >= 0;
-                        if (_bindingData != null && _bindingData.ContainsKey(name))
+                        if (isReadStream)
                         {
-                            if (isWatchable)
+                            if (_bindingData[name].TryGetValue("Uri", out string uri))
                             {
-                                // Check if we want to collect some information from the parameter after it was bound
-                                // For example, in the case of output streams, the name of the blob to which they are writing may be evaluated during binding
-                                // Since the metadata we collect is before binding, we can check again if more information is available now
-                                BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public;
-                                try
+                                if (_cacheServer.TriggersProcessedFromCache.Contains(uri))
                                 {
-                                    object inner = reflectionParameters[index].GetType().BaseType.GetField("_inner", bindingFlags)?.GetValue(reflectionParameters[index]);
-                                    object blob = null;
-                                    if (isWriteStream)
+                                    AlreadyExecuted = true;
+                                }
+                            }
+                        }
+
+                        if (!AlreadyExecuted)
+                        {
+                            bool isWriteStream = reflectionParameters[index].GetType().ToString().IndexOf("Microsoft.Azure.WebJobs.Host.Blobs.Bindings.WatchableCloudBlobStream", StringComparison.OrdinalIgnoreCase) >= 0;
+                            bool isWatchable = isReadStream || isWriteStream;
+                            // TODO use a better way to determine cache triggered object
+                            bool isCacheTrigger = reflectionParameters[index].GetType().ToString().IndexOf("CacheTriggeredStream", StringComparison.OrdinalIgnoreCase) >= 0;
+                            if (_bindingData != null && _bindingData.ContainsKey(name))
+                            {
+                                if (isWatchable)
+                                {
+                                    // Check if we want to collect some information from the parameter after it was bound
+                                    // For example, in the case of output streams, the name of the blob to which they are writing may be evaluated during binding
+                                    // Since the metadata we collect is before binding, we can check again if more information is available now
+                                    BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public;
+                                    try
                                     {
-                                        blob = inner?.GetType().BaseType.GetProperty("Blob", bindingFlags)?.GetValue(inner);
+                                        object inner = reflectionParameters[index].GetType().BaseType.GetField("_inner", bindingFlags)?.GetValue(reflectionParameters[index]);
+                                        object blob = null;
+                                        if (isWriteStream)
+                                        {
+                                            blob = inner?.GetType().BaseType.GetProperty("Blob", bindingFlags)?.GetValue(inner);
+                                        }
+                                        else
+                                        {
+                                            blob = inner?.GetType().BaseType.GetField("blob", bindingFlags)?.GetValue(inner);
+                                        }
+                                        string uri = blob?.GetType().GetProperty("Uri", bindingFlags)?.GetValue(blob)?.ToString();
+                                        _bindingData[name].Add("Uri", uri);
+                                        string blobName = blob?.GetType().GetProperty("Name", bindingFlags)?.GetValue(blob)?.ToString();
+                                        _bindingData[name].Add("Name", blobName);
+                                        object properties = blob?.GetType().GetProperty("Properties", bindingFlags)?.GetValue(blob);
+                                        string etag = properties?.GetType().GetProperty("ETag", bindingFlags)?.GetValue(properties)?.ToString();
+                                        _bindingData[name].Add("ETag", etag);
+                                    }
+                                    catch (Exception exception)
+                                    {
+                                        _bindingData[name].Add("Exception", exception.Message);
+                                    }
+                                }
+                                if (isWatchable || isCacheTrigger)
+                                {
+                                    Stream stream = null;
+                                    if (isCacheTrigger)
+                                    {
+                                        CacheTriggeredStream cstream = (CacheTriggeredStream)reflectionParameters[index];
+                                        stream = cstream.Stream;
                                     }
                                     else
                                     {
-                                        blob = inner?.GetType().BaseType.GetField("blob", bindingFlags)?.GetValue(inner);
+                                        stream = (Stream)reflectionParameters[index];
                                     }
-                                    string uri = blob?.GetType().GetProperty("Uri", bindingFlags)?.GetValue(blob)?.ToString();
-                                    _bindingData[name].Add("Uri", uri);
-                                    string blobName = blob?.GetType().GetProperty("Name", bindingFlags)?.GetValue(blob)?.ToString();
-                                    _bindingData[name].Add("Name", blobName);
-                                    object properties = blob?.GetType().GetProperty("Properties", bindingFlags)?.GetValue(blob);
-                                    string etag = properties?.GetType().GetProperty("ETag", bindingFlags)?.GetValue(properties)?.ToString();
-                                    _bindingData[name].Add("ETag", etag);
+                                    InstrumentableStream instStr = new InstrumentableStream(_bindingData[name], stream, _logger, isWriteStream, isCacheTrigger);
+                                    reflectionParameters[index] = instStr;
                                 }
-                                catch (Exception exception)
-                                {
-                                    _bindingData[name].Add("Exception", exception.Message);
-                                }
-                            }
-                            if (isWatchable || isCacheTrigger)
-                            {
-                                Stream stream = null;
-                                if (isCacheTrigger)
-                                {
-                                    CacheTriggeredStream cstream = (CacheTriggeredStream)reflectionParameters[index];
-                                    stream = cstream.Stream;
-                                }
-                                else
-                                {
-                                    stream = (Stream)reflectionParameters[index];
-                                }
-                                InstrumentableStream instStr = new InstrumentableStream(_bindingData[name], stream, _logger, isWriteStream, isCacheTrigger);
-                                reflectionParameters[index] = instStr;
                             }
                         }
                     }
