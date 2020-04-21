@@ -348,9 +348,9 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
             if (cacheTrigger)
             {
-                ITriggeredFunctionBinding<CacheTriggeredStream> cacheFunctionBinding = new TriggeredFunctionBinding<CacheTriggeredStream>(descriptor, parameterName, triggerBinding, nonTriggerBindings, _singletonManager);
-                ITriggeredFunctionInstanceFactory<CacheTriggeredStream> cacheInstanceFactory = new TriggeredFunctionInstanceFactory<CacheTriggeredStream>(cacheFunctionBinding, invoker, descriptor);
-                ITriggeredFunctionExecutor cacheTriggerExecutor = new TriggeredFunctionExecutor<CacheTriggeredStream>(descriptor, _executor, cacheInstanceFactory);
+                ITriggeredFunctionBinding<CacheTriggeredInput> cacheFunctionBinding = new TriggeredFunctionBinding<CacheTriggeredInput>(descriptor, parameterName, triggerBinding, nonTriggerBindings, _singletonManager);
+                ITriggeredFunctionInstanceFactory<CacheTriggeredInput> cacheInstanceFactory = new TriggeredFunctionInstanceFactory<CacheTriggeredInput>(cacheFunctionBinding, invoker, descriptor);
+                ITriggeredFunctionExecutor cacheTriggerExecutor = new TriggeredFunctionExecutor<CacheTriggeredInput>(descriptor, _executor, cacheInstanceFactory);
                 cacheListenerFactory = new ListenerFactory(descriptor, cacheTriggerExecutor, triggerBinding, _sharedQueue, cacheTrigger);
             }
 
@@ -448,6 +448,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 IListener listener;
                 if (_isCacheTrigger)
                 {
+                    // Make this Singleton and make functions register with it so it can call appropriate ones (see what blob does)
                     listener = new CacheListener(_descriptor, _executor);
                 }
                 else

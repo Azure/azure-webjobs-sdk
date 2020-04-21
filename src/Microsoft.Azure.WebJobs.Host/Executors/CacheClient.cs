@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-
     // TODO make the CacheServer invalidate all clients when a write is made (use callbacks)
     public class CacheClient
     {
@@ -23,11 +22,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly CacheServer _cacheServer = CacheServer.Instance;
         private readonly bool _toCommit; // TODO pass in more metadata and commit only for output bindings (i.e. do this more cleanly)
 
-        public CacheClient(string uri, string name, string etag, bool isWriteObject)
+        public CacheClient(CacheObjectMetadata cacheObjectMetadata, bool isWriteObject)
         {
-            _cacheObjectMetadata = new CacheObjectMetadata(uri, name, etag);
-
-            // TODO fix usage of this if needed
+            _cacheObjectMetadata = cacheObjectMetadata;
 
             if (!isWriteObject && _cacheServer.TryGetObjectByteRangesAndStream(_cacheObjectMetadata, out _byteRanges, out _memoryStream))
             {
@@ -43,11 +40,36 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                 // TODO length to cache object?
                 // TODO check return value? and log?
-                _cacheServer.TryAddObject(_cacheObjectMetadata);
+                _cacheServer.TryAddObjectStream(_cacheObjectMetadata);
             }
         }
         
         public bool ReadFromCache { get; private set; }
+
+        public bool CanRead()
+        {
+            return _memoryStream.CanRead;
+        }
+        
+        public bool CanSeek()
+        {
+            return _memoryStream.CanSeek;
+        }
+        
+        public bool CanTimeout()
+        {
+            return _memoryStream.CanTimeout;
+        }
+        
+        public bool CanWrite()
+        {
+            return _memoryStream.CanWrite;
+        }
+        
+        public long GetLength()
+        {
+            return _memoryStream.Length;
+        }
 
         public Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
         {
@@ -74,20 +96,21 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // e.g. if the range we have in the tree is 0-5, and we query for 0-10, it will come out to be true
             // That is because there is at least some overlap but we want all points in our range to have overlap
             // So might want to modify the rangetree data structure
-            for (long i = start; i < end; i++)
-            {
-                if (_byteRanges.Query(i).Count() == 0)
-                {
-                    return false;
-                }
-            }
+            //for (long i = start; i < end; i++)
+            //{
+            //    if (_byteRanges.Query(i).Count() == 0)
+            //    {
+            //        return false;
+            //    }
+            //}
 
-            return true;
+            return true; // TODO HACKKKK
         }
         
         public bool ContainsByte(long key)
         {
-            return _byteRanges.Query(key).Count() > 0;
+            //return _byteRanges.Query(key).Count() > 0;
+            return true; // TODO HACKKKK
         }
 
         public Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)

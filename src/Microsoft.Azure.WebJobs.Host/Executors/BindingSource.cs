@@ -12,18 +12,16 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     {
         private readonly IFunctionBinding _binding;
         private readonly IDictionary<string, object> _parameters;
-        private readonly bool _cacheTrigger;
 
-        public BindingSource(IFunctionBinding binding, IDictionary<string, object> parameters, bool cacheTrigger = false)
+        public BindingSource(IFunctionBinding binding, IDictionary<string, object> parameters)
         {
             _binding = binding;
             _parameters = parameters;
-            _cacheTrigger = cacheTrigger;
         }
 
         public Task<IReadOnlyDictionary<string, IValueProvider>> BindAsync(ValueBindingContext context)
         {
-            return _binding.BindAsync(context, _parameters, _cacheTrigger);
+            return _binding.BindAsync(context, _parameters);
         }
 
         public Task<IReadOnlyDictionary<string, InstrumentableObjectMetadata>> GetBindingDataAsync(ValueBindingContext context)
@@ -31,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             if (_binding is IFunctionBindingData)
             {
                 IFunctionBindingData functionBindingData = (IFunctionBindingData)_binding;
-                return functionBindingData.GetBindingDataAsync(context, _parameters, _cacheTrigger);
+                return functionBindingData.GetBindingDataAsync(context, _parameters);
             }
             else
             {

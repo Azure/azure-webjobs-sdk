@@ -12,21 +12,36 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     {
         private Dictionary<string, string> _properties;
 
-        public InstrumentableObjectMetadata()
+        public InstrumentableObjectMetadata(bool isTriggerParameter, bool isCacheTriggered)
         {
             _properties = new Dictionary<string, string>();
+            IsTriggerParameter = isTriggerParameter;
+            IsCacheTriggered = isCacheTriggered;
+            if (!IsTriggerParameter && IsCacheTriggered)
+            {
+                throw new Exception("Cannot be cache triggered if it is not a trigger parameter");
+            }
         }
+
+        public bool IsTriggerParameter { get; private set; }
+        
+        public bool IsCacheTriggered { get; private set; }
 
         public override string ToString()
         {
             StringBuilder stringBuilder = new StringBuilder();
 
+            stringBuilder.Append("IsTriggerParameter: ");
+            stringBuilder.Append(IsTriggerParameter);
+            stringBuilder.Append(", IsCacheTriggered: ");
+            stringBuilder.Append(IsCacheTriggered);
+
             foreach (KeyValuePair<string, string> entry in _properties)
             {
+                stringBuilder.Append(", ");
                 stringBuilder.Append(entry.Key);
                 stringBuilder.Append(": ");
                 stringBuilder.Append(entry.Value);
-                stringBuilder.Append(", ");
             }
 
             return stringBuilder.ToString();

@@ -34,18 +34,18 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             _singletonManager = singletonManager;
         }
 
-        public async Task<IReadOnlyDictionary<string, IValueProvider>> BindAsync(ValueBindingContext context, TTriggerValue value, bool cacheTrigger)
+        public async Task<IReadOnlyDictionary<string, IValueProvider>> BindAsync(ValueBindingContext context, TTriggerValue value)
         {
-            return await BindCoreAsync(context, value, null, cacheTrigger);
+            return await BindCoreAsync(context, value, null);
         }
         
-        public async Task<IReadOnlyDictionary<string, InstrumentableObjectMetadata>> GetBindingDataAsync(ValueBindingContext context, TTriggerValue value, bool cacheTrigger)
+        public async Task<IReadOnlyDictionary<string, InstrumentableObjectMetadata>> GetBindingDataAsync(ValueBindingContext context, TTriggerValue value)
         {
-            return await GetBindingDataCoreAsync(context, value, null, cacheTrigger);
+            return await GetBindingDataCoreAsync(context, value, null);
         }
 
         public async Task<IReadOnlyDictionary<string, IValueProvider>> BindAsync(ValueBindingContext context,
-            IDictionary<string, object> parameters, bool cacheTrigger)
+            IDictionary<string, object> parameters)
         {
             if (parameters == null || !parameters.ContainsKey(_triggerParameterName))
             {
@@ -53,11 +53,11 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             }
 
             object value = parameters[_triggerParameterName];
-            return await BindCoreAsync(context, value, parameters, cacheTrigger);
+            return await BindCoreAsync(context, value, parameters);
         }
         
         public async Task<IReadOnlyDictionary<string, InstrumentableObjectMetadata>> GetBindingDataAsync(ValueBindingContext context,
-            IDictionary<string, object> parameters, bool cacheTrigger)
+            IDictionary<string, object> parameters)
         {
             if (parameters == null || !parameters.ContainsKey(_triggerParameterName))
             {
@@ -65,24 +65,55 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             }
 
             object value = parameters[_triggerParameterName];
-            return await GetBindingDataCoreAsync(context, value, parameters, cacheTrigger);
+            return await GetBindingDataCoreAsync(context, value, parameters);
         }
 
-        private async Task<IReadOnlyDictionary<string, IValueProvider>> BindCoreAsync(ValueBindingContext context, object value, IDictionary<string, object> parameters, bool cacheTrigger)
+        private async Task<IReadOnlyDictionary<string, IValueProvider>> BindCoreAsync(ValueBindingContext context, object value, IDictionary<string, object> parameters)
         {
             Dictionary<string, IValueProvider> valueProviders = new Dictionary<string, IValueProvider>();
             IValueProvider triggerProvider = null;
-            IReadOnlyDictionary<string, object> bindingData = null; // TODO revert no initialize
+            IReadOnlyDictionary<string, object> bindingData;
+            bool isCacheTrigger = value.GetType() == typeof(CacheTriggeredInput);
 
             IValueBinder triggerReturnValueProvider= null;
 
-            if (!cacheTrigger)
+            if (isCacheTrigger)
+            {
+                CacheTriggeredInput triggeredInput = (CacheTriggeredInput)value;
+
+                // If it is a byte array for out-of-proc languages, then we get the buffer from the cache and use that
+                if (triggeredInput.Metadata.CacheObjectType == CacheObjectType.ByteArray)
+                {
+                    CacheServer cacheServer = CacheServer.Instance;
+                    if (cacheServer.TryGetObjectByteArray(triggeredInput.Metadata, out byte[] buffer))
+                    {
+                        triggerProvider = new ConstantValueProvider(buffer, buffer.GetType(), triggeredInput.Metadata.ContainerName);
+                    }
+                    else
+                    {
+                        Exception exception = new Exception("Unable to get byte array for cached object");
+                        triggerProvider = new BindingExceptionValueProvider(_triggerParameterName, exception);
+                    }
+                }
+                // Otherwise, we will later get the associated stream from the cache
+                else
+                {
+                    triggerProvider = new ConstantValueProvider(value, value.GetType(), triggeredInput.Metadata.ContainerName + triggeredInput.Metadata.Name);
+                }
+
+                Dictionary<string, object> bindingDataDictionary = new Dictionary<string, object>
+                {
+                    { "name", triggeredInput.Metadata.Name }
+                };
+                bindingData = new ReadOnlyDictionary<string, object>(bindingDataDictionary);
+            }
+            else
             {
                 try
                 {
                     // TODO For objects that we already have in the cache, we can check here and not do the binding call
-                    // Also we can instrument time taken to bind here - so for objects (like Python inputStream) which we don't 
-                    // wrap in the InstrumentableStream, we can gethe time it took to bind them (which includes fetching from blob storage)
+                    // Also we can instrument time taken to bind here - so for objects (like JavaScript byte[]) which we don't 
+                    // wrap in the InstrumentableStream, we can get the time it took to bind them (which includes fetching from blob storage)
                     ITriggerData triggerData = await _triggerBinding.BindAsync(value, context);
                     triggerProvider = triggerData.ValueProvider;
                     bindingData = triggerData.BindingData;
@@ -97,32 +128,6 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                     triggerProvider = new BindingExceptionValueProvider(_triggerParameterName, exception);
                     bindingData = null;
                 }
-            }
-            else
-            {
-                if (value.GetType() == typeof(CacheTriggeredStream))
-                {
-                    CacheTriggeredStream cStream = (CacheTriggeredStream)value;
-                    // TODO put container here from the uri or such
-                    triggerProvider = new ConstantValueProvider(value, value.GetType(), "cascade-output/"+cStream.Metadata.Name);
-                    Dictionary<string, object> tempDictionary = new Dictionary<string, object>
-                    {
-                        { "name", cStream.Metadata.Name }
-                    };
-                    bindingData = new ReadOnlyDictionary<string, object>(tempDictionary);
-                }
-                //CacheServer cacheServer = CacheServer.Instance;
-                //CacheObjectMetadata cm = new CacheObjectMetadata("https://gochaudhstorage001.blob.core.windows.net/samples-reads/ouo.txt", null);
-                //if (cacheServer.ContainsObject(cm))
-                //{
-                //    if (cacheServer.TryGetObjectByteRangesAndStream(cm, out _, out MemoryStream ms))
-                //    {
-                //        triggerProvider = new ConstantValueProvider(ms, ms.GetType(), "samples-reads/ouo.txt");
-                //        Dictionary<string, object> tempDictionary = new Dictionary<string, object>();
-                //        tempDictionary.Add("name", "ouo.txt");
-                //        bindingData = new ReadOnlyDictionary<string, object>(tempDictionary);
-                //    }
-                //}
             }
             
             valueProviders.Add(_triggerParameterName, triggerProvider);
@@ -180,24 +185,34 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             return valueProviders;
         }      
         
-        private async Task<IReadOnlyDictionary<string, InstrumentableObjectMetadata>> GetBindingDataCoreAsync(ValueBindingContext context, object value, IDictionary<string, object> parameters, bool cacheTrigger)
+        private async Task<IReadOnlyDictionary<string, InstrumentableObjectMetadata>> GetBindingDataCoreAsync(ValueBindingContext context, object value, IDictionary<string, object> parameters)
         {
             Dictionary<string, InstrumentableObjectMetadata> valueProviders = new Dictionary<string, InstrumentableObjectMetadata>();
             IReadOnlyDictionary<string, object> bindingData;
-            InstrumentableObjectMetadata triggerMetadata = new InstrumentableObjectMetadata();
-            triggerMetadata.Add("Type", "Trigger");
-            triggerMetadata.Add("CacheTrigger", cacheTrigger.ToString());
+            
+            bool isCacheTriggered = value.GetType() == typeof(CacheTriggeredInput);
+            InstrumentableObjectMetadata triggerMetadata = new InstrumentableObjectMetadata(isTriggerParameter: true, isCacheTriggered: isCacheTriggered);
 
-            if (!cacheTrigger)
+            if (isCacheTriggered)
+            {
+                CacheTriggeredInput cacheTriggeredInput = (CacheTriggeredInput)value;
+                triggerMetadata.Add("Uri", cacheTriggeredInput.Metadata.Uri);
+                triggerMetadata.Add("Name", cacheTriggeredInput.Metadata.Name);
+                triggerMetadata.Add("ContainerName", cacheTriggeredInput.Metadata.ContainerName);
+                triggerMetadata.Add("ETag", cacheTriggeredInput.Metadata.Etag);
+            }
+            else
             {
                 try
                 {
                     ITriggerData triggerData = await _triggerBinding.BindAsync(value, context);
                     bindingData = triggerData.BindingData;
                     
-                    if (bindingData.TryGetValue("Uri", out object uri))
+                    if (bindingData.TryGetValue("Uri", out object rawUri))
                     {
-                        triggerMetadata.Add("Uri", ((Uri)uri).ToString());
+                        Uri uri = (Uri)rawUri;
+                        triggerMetadata.Add("Uri", uri.ToString());
+                        triggerMetadata.Add("ContainerName", uri.Segments[1]);
                     }
                     if (bindingData.TryGetValue("Name", out object name))
                     {
@@ -241,8 +256,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             {
                 string name = item.Key;
                 IBinding binding = item.Value;
-                InstrumentableObjectMetadata nontriggerMetadata = new InstrumentableObjectMetadata();
-                nontriggerMetadata.Add("Type", "NonTrigger");
+                InstrumentableObjectMetadata nonTriggerMetadata = new InstrumentableObjectMetadata(isTriggerParameter: false, isCacheTriggered: false);
 
                 try
                 {
@@ -250,22 +264,21 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                     if (param.GetType().ToString() == "Microsoft.Azure.WebJobs.Host.Protocols.BlobParameterDescriptor")
                     {
                         string access = param.GetType().GetProperty("Access")?.GetValue(param)?.ToString();
-                        nontriggerMetadata.Add("Access", access);
+                        nonTriggerMetadata.Add("Access", access);
                         string accountName = param.GetType().GetProperty("AccountName")?.GetValue(param)?.ToString();
-                        nontriggerMetadata.Add("AccountName", accountName);
+                        nonTriggerMetadata.Add("AccountName", accountName);
                         string blobName = param.GetType().GetProperty("BlobName")?.GetValue(param)?.ToString();
-                        nontriggerMetadata.Add("Name", blobName);
+                        nonTriggerMetadata.Add("Name", blobName);
                         string containerName = param.GetType().GetProperty("ContainerName")?.GetValue(param)?.ToString();
-                        nontriggerMetadata.Add("ContainerName", containerName);
+                        nonTriggerMetadata.Add("ContainerName", containerName);
                     }
                 }
                 catch (Exception exception)
                 {
-                    // TODO may need to clean this, making the compiler happy :)
-                    nontriggerMetadata.Add("Exception", exception.Message);
+                    nonTriggerMetadata.Add("Exception", exception.Message);
                 }
 
-                valueProviders.Add(name, nontriggerMetadata);
+                valueProviders.Add(name, nonTriggerMetadata);
             }
 
             // TODO singleton and return value details are not yet captured

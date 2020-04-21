@@ -14,6 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 {
     public class InstrumentableStream : Stream
     {
+        // TODO whenever _inner is null and tried to be accessed, then perform the lazy binding and proceed
         private readonly bool _cacheEnabled;
         private readonly ILogger _logger;
         private readonly Stream _inner;
@@ -26,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private long _countWrite;
         private bool _logged;
 
-        public InstrumentableStream(InstrumentableObjectMetadata metadata, Stream inner, ILogger logger, bool isWriteStream, bool cacheTrigger)
+        public InstrumentableStream(InstrumentableObjectMetadata metadata, Stream inner, ILogger logger, bool isWriteStream)
         {
             _inner = inner;
             _logger = logger;
@@ -37,11 +38,16 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _countReadFromStorage = 0;
             _countWrite = 0;
             _logged = false;
-            // TODO hack - if cachetrigger then we are not going to cache anything else for now - needs to be fixed for later
-            _cacheEnabled = !cacheTrigger;
-            if (metadata.TryGetValue("Name", out string name) && metadata.TryGetValue("Uri", out string uri) && metadata.TryGetValue("ETag", out string etag) && _cacheEnabled && !cacheTrigger)
+            _cacheEnabled = true;
+
+            if (_cacheEnabled)
             {
-                _cacheClient = new CacheClient(uri, name, etag, isWriteStream);
+                if (metadata.TryGetValue("Name", out string name) && metadata.TryGetValue("Uri", out string uri) && metadata.TryGetValue("ETag", out string etag) && metadata.TryGetValue("ContainerName", out string containerName))
+                {
+                    CacheObjectMetadata cacheObjectMetadata = new CacheObjectMetadata(uri, name, containerName, etag, CacheObjectType.Stream);
+                    _cacheClient = new CacheClient(cacheObjectMetadata, isWriteStream);
+                    // TODO when creating a new object in the cache corresponding to this _inner stream, we should also cache the properties like CanRead, CanSeek, CanTimeout etc. so that when triggering from the cache next time, we respond with the correct values
+                }
             }
         }
 
@@ -53,27 +59,77 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         // TODO need to also sync setting/getting of properties with cached stream instead of inner 
         public override bool CanRead
         {
-            get { return _inner.CanRead; }
+            get
+            {
+                if (_inner != null)
+                {
+                    return _inner.CanRead;
+                }
+                else
+                {
+                    return _cacheClient.CanRead();
+                }
+            }
         }
 
         public override bool CanSeek
         {
-            get { return _inner.CanSeek; }
+            get
+            {
+                if (_inner != null)
+                {
+                    return _inner.CanSeek;
+                }
+                else
+                {
+                    return _cacheClient.CanSeek();
+                }
+            }
         }
 
         public override bool CanTimeout
         {
-            get { return _inner.CanTimeout; }
+            get
+            {
+                if (_inner != null)
+                {
+                    return _inner.CanTimeout;
+                }
+                else
+                {
+                    return _cacheClient.CanTimeout();
+                }
+            }
         }
 
         public override bool CanWrite
         {
-            get { return _inner.CanWrite; }
+            get
+            {
+                if (_inner != null)
+                {
+                    return _inner.CanWrite;
+                }
+                else
+                {
+                    return _cacheClient.CanWrite();
+                }
+            }
         }
 
         public override long Length
         {
-            get { return _inner.Length; }
+            get
+            {
+                if (_inner != null)
+                {
+                    return _inner.Length;
+                }
+                else
+                {
+                    return _cacheClient.GetLength();
+                }
+            }
         }
 
         public override long Position
@@ -137,7 +193,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         public override void Close()
         {
             // TODO make sure close is not called twice (just like on original streams)
-            _inner.Close();
+            if (_inner != null)
+            {
+                _inner.Close();
+            }
+
             if (_cacheEnabled)
             {
                 _cacheClient.Close();
@@ -159,12 +219,22 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public override void Flush()
         {
-            _inner.Flush();
+            if (_inner != null)
+            {
+                _inner.Flush();
+            }
         }
 
         public override Task FlushAsync(CancellationToken cancellationToken)
         {
-            return _inner.FlushAsync(cancellationToken);
+            if (_inner != null)
+            {
+                return _inner.FlushAsync(cancellationToken);
+            }
+            else
+            {
+                return Task.FromResult(0);
+            }
         }
 
         public override long Seek(long offset, SeekOrigin origin)
@@ -187,12 +257,18 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public new void CopyTo(Stream destination)
         {
-            _inner.CopyTo(destination);
+            if (_inner != null)
+            {
+                _inner.CopyTo(destination);
+            }
         }
 
         public new void CopyTo(Stream destination, int bufferSize)
         {
-            _inner.CopyTo(destination, bufferSize);
+            if (_inner != null)
+            {
+                _inner.CopyTo(destination, bufferSize);
+            }
         }
         
         public override void Write(byte[] buffer, int offset, int count)
@@ -269,7 +345,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                     // Whenever reading from the cache, make sure to keep the position of the remote stream also in sync
                     // This will ensure that if we get a cache miss at some point and start reading from the remote stream, we can resume reading from the same position
-                    _inner.Position = _cacheClient.GetPosition();
+                    if (_inner != null)
+                    {
+                        _inner.Position = _cacheClient.GetPosition();
+                    }
 
                     return bytesRead;
                 }
@@ -306,7 +385,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 {
                     // Whenever reading from the cache, make sure to keep the position of the remote stream also in sync
                     // This will ensure that if we get a cache miss at some point and start reading from the remote stream, we can resume reading from the same position
-                    _inner.Position = _cacheClient.GetPosition();
+                    if (_inner != null)
+                    {
+                        _inner.Position = _cacheClient.GetPosition();
+                    }
                     _countReadFromCache += readTask.Result;
                 }
             }

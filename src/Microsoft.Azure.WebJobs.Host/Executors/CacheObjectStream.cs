@@ -14,33 +14,28 @@ using RangeTree;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    [Serializable]
     public class CacheObject
     {
-        private readonly CacheObjectMetadata _cacheObjectMetadata;
-        private readonly RangeTree<long, bool> _byteRanges;
-        private readonly MemoryStream _memoryStream;
-        private readonly List<Task> _tasks;
-        private bool _isCommitted;
+        protected readonly CacheObjectMetadata _cacheObjectMetadata;
+        protected readonly List<Task> _tasks;
+        protected bool _isCommitted;
         // TODO this cancellation source should be held by client, and when the client is dying, it cancels tasks
         // Then the cache object needs to invalidate itself and remove itself from cache
         // perhaps cancellation token should be with the cache server, and not cache client?
         // when cache client dies, it just infroms the cache server and dies - then asynchronously cache server 
         // will remove cache object after cancelling cache object's tasks
-        private readonly CancellationTokenSource _cancellationTokenSource;
-        private readonly SemaphoreSlim _semaphore;
-        
+        protected readonly CancellationTokenSource _cancellationTokenSource;
+        protected readonly SemaphoreSlim _semaphore;
+
         public CacheObject(CacheObjectMetadata metadata)
         {
             _cacheObjectMetadata = metadata;
-            _byteRanges = new RangeTree<long, bool>();
-            _memoryStream = new MemoryStream();
             _tasks = new List<Task>();
             _cancellationTokenSource = new CancellationTokenSource();
             _semaphore = new SemaphoreSlim(1, 1); // Allow only one write at a time
             _isCommitted = false;
         }
-
+        
         // TODO wrap all uses of the semaphore in this class inside try/finally
         public bool IsCommitted()
         {
@@ -75,13 +70,65 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public override bool Equals(object obj)
         {
-            if (!(obj is CacheObject other))
+            if (!(obj is CacheObjectStream other))
             {
                 return false;
             }
 
             return other._cacheObjectMetadata == this._cacheObjectMetadata;
         }
+    }
+
+    public class CacheObjectByteArray : CacheObject
+    {
+        private byte[] _buffer;
+
+        public CacheObjectByteArray(CacheObjectMetadata metadata, byte[] buffer) : base(metadata)
+        {
+            if (metadata.CacheObjectType != CacheObjectType.ByteArray)
+            {
+                throw new NotSupportedException();
+            }
+            
+            // TODO do we need a deep copy here or would assigning _buffer = buffer work? Not sure who cleans up array so better to copy.
+            // TODO would it make sense to do this async? This might be happening when the app is shutting down and since we are deep copying the buffer, might have to wait for the copy to finish (which is what the entire task is)
+            // Once the buffer is set, it cannot be modified
+            _buffer = buffer.ToArray();
+        }
+
+        public byte[] GetBuffer()
+        {
+            try
+            {
+                _semaphore.Wait();
+
+                // TODO we copy the buffer again for the caller
+                // We don't need to do this as long as we ensure that the buffer can be read only
+                return _buffer.ToArray();
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+    }
+
+    public class CacheObjectStream : CacheObject
+    {
+        private readonly RangeTree<long, bool> _byteRanges;
+        private readonly MemoryStream _memoryStream;
+        
+        public CacheObjectStream(CacheObjectMetadata metadata) : base(metadata)
+        {
+            if (metadata.CacheObjectType != CacheObjectType.Stream)
+            {
+                throw new NotSupportedException();
+            }
+
+            _byteRanges = new RangeTree<long, bool>();
+            _memoryStream = new MemoryStream();
+        }
+
 
         public bool ContainsBytes(long start, long end)
         {

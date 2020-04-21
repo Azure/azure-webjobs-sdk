@@ -31,15 +31,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                 throw new ArgumentNullException(nameof(context));
             }
 
-            bool cacheTrigger = false;
-            if (context.TriggerDetails.ContainsKey("CacheTrigger"))
-            {
-                if (context.TriggerDetails.TryGetValue("CacheTrigger", out string cacheTriggerStr))
-                {
-                    cacheTrigger = true ? cacheTriggerStr == true.ToString() : false;
-                }
-            }
-            IBindingSource bindingSource = new TriggerBindingSource<TTriggerValue>(_binding, context.TriggerValue, cacheTrigger);
+            IBindingSource bindingSource = new TriggerBindingSource<TTriggerValue>(_binding, context.TriggerValue);
             var invoker = CreateInvoker(context);
 
             return new FunctionInstance(Guid.NewGuid(), context.TriggerDetails, context.ParentId, ExecutionReason.AutomaticTrigger, bindingSource, invoker, _descriptor);

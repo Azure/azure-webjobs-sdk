@@ -9,11 +9,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
     internal interface IFunctionBinding
     {
-        Task<IReadOnlyDictionary<string, IValueProvider>> BindAsync(ValueBindingContext context, IDictionary<string, object> parameters, bool cacheTrigger);
+        Task<IReadOnlyDictionary<string, IValueProvider>> BindAsync(ValueBindingContext context, IDictionary<string, object> parameters);
     }
 
     internal interface IFunctionBindingData : IFunctionBinding
     {
-        Task<IReadOnlyDictionary<string, InstrumentableObjectMetadata>> GetBindingDataAsync(ValueBindingContext context, IDictionary<string, object> parameters, bool cacheTrigger);
+        Task<IReadOnlyDictionary<string, InstrumentableObjectMetadata>> GetBindingDataAsync(ValueBindingContext context, IDictionary<string, object> parameters);
     }
 }

@@ -47,17 +47,37 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         
         public bool ContainsObjectRange(CacheObjectMetadata cacheObjectMetadata, long start, long end)
         {
+            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.Stream)
+            {
+                throw new NotSupportedException();
+            }
+
             if (!_inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 return false;
             }
 
-            return cacheObject.ContainsBytes(start, end);
+            return ((CacheObjectStream)cacheObject).ContainsBytes(start, end);
         }
         
-        public bool TryAddObject(CacheObjectMetadata cacheObjectMetadata)
+        public bool TryAddObjectStream(CacheObjectMetadata cacheObjectMetadata)
         {
-            return _inMemoryCache.TryAdd(cacheObjectMetadata, new CacheObject(cacheObjectMetadata));
+            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.Stream)
+            {
+                throw new NotSupportedException();
+            }
+            
+            return _inMemoryCache.TryAdd(cacheObjectMetadata, new CacheObjectStream(cacheObjectMetadata));
+        }
+        
+        public bool TryAddObjectByteArray(CacheObjectMetadata cacheObjectMetadata, byte[] buffer)
+        {
+            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.ByteArray)
+            {
+                throw new NotSupportedException();
+            }
+            
+            return _inMemoryCache.TryAdd(cacheObjectMetadata, new CacheObjectByteArray(cacheObjectMetadata, buffer));
         }
 
         public void RemoveObject(CacheObjectMetadata cacheObjectMetadata)
@@ -69,76 +89,130 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             byteRanges = null;
             memoryStream = null;
+            
+            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.Stream)
+            {
+                throw new NotSupportedException();
+            }
 
             if (!_inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 return false;
             }
 
-            var data = cacheObject.GetByteRangesAndBuffer().Result;
+            var data = ((CacheObjectStream)cacheObject).GetByteRangesAndBuffer().Result;
             byteRanges = data.Item1;
             // A read-only stream for the caller
             memoryStream = new MemoryStream(data.Item2, false);
             return true;
         }
 
+        public bool TryGetObjectByteArray(CacheObjectMetadata cacheObjectMetadata, out byte[] buffer)
+        {
+            buffer = null;
+            
+            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.ByteArray)
+            {
+                throw new NotSupportedException();
+            }
+
+            if (!_inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
+            {
+                return false;
+            }
+
+            buffer = ((CacheObjectByteArray)cacheObject).GetBuffer();
+
+            return true;
+        }
+
         // TODO do we need to copy this buffer before returning? what if this buffer, which is owned by app, changes or something?
         public void WriteToCacheObject(CacheObjectMetadata cacheObjectMetadata, long startPosition, byte[] buffer, int offset, int count, int bytesToWrite)
         {
+            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.Stream)
+            {
+                throw new NotSupportedException();
+            }
+
             if (_inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
-                cacheObject.StartWriteTask(startPosition, buffer, offset, count, bytesToWrite);
+                ((CacheObjectStream)cacheObject).StartWriteTask(startPosition, buffer, offset, count, bytesToWrite);
             }
         }
         
         public void WriteToCacheObject(CacheObjectMetadata cacheObjectMetadata, long startPosition, byte value)
         {
+            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.Stream)
+            {
+                throw new NotSupportedException();
+            }
+
             if (_inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
-                cacheObject.StartWriteTask(startPosition, value);
+                ((CacheObjectStream)cacheObject).StartWriteTask(startPosition, value);
             }
         }
 
         public void SetPosition(CacheObjectMetadata cacheObjectMetadata, long position)
         {
+            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.Stream)
+            {
+                throw new NotSupportedException();
+            }
+
             if (_inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
-                cacheObject.SetPosition(position);
+                ((CacheObjectStream)cacheObject).SetPosition(position);
             }
         }
 
         public bool Seek(CacheObjectMetadata cacheObjectMetadata, long offset, SeekOrigin origin, out long position)
         {
             position = -1;
+            
+            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.Stream)
+            {
+                throw new NotSupportedException();
+            }
 
             if (!_inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 return false;
             }
 
-            position = cacheObject.Seek(offset, origin);
+            position = ((CacheObjectStream)cacheObject).Seek(offset, origin);
             return true;
         }
 
         public void SetLength(CacheObjectMetadata cacheObjectMetadata, long length)
         {
             // TODO invalidate all clients since this is dirtying the cached object
+            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.Stream)
+            {
+                throw new NotSupportedException();
+            }
+            
             if (_inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
-                cacheObject.SetLength(length);
+                ((CacheObjectStream)cacheObject).SetLength(length);
             }
         }
 
         public bool GetPosition(CacheObjectMetadata cacheObjectMetadata, out long position)
         {
             position = -1;
+            
+            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.Stream)
+            {
+                throw new NotSupportedException();
+            }
 
             if (!_inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 return false;
             }
 
-            position = cacheObject.GetPosition();
+            position = ((CacheObjectStream)cacheObject).GetPosition();
             return true;
         }
 
@@ -152,7 +226,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             cacheObject.Commit();
 
             // TODO another humungous hack... since we are not storing container name and not listening for specific container outputs for the cache
+            // TODO check which containers the cache listener is listening on and only enqueue those
             bool shoudlWePutThisInCacheTriggers = cacheObjectMetadata.Uri.IndexOf("/cascade-output", StringComparison.OrdinalIgnoreCase) >= 0;
+            //bool shoudlWePutThisInCacheTriggers = false;
             if (shoudlWePutThisInCacheTriggers)
             {
                 Triggers.Enqueue(cacheObjectMetadata);

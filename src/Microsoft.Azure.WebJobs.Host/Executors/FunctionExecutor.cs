@@ -982,6 +982,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     
                     if (reflectionParameters[index] != null)
                     {
+                        // TODO make sure to do this only for trigger params
                         bool isReadStream = reflectionParameters[index].GetType().ToString().IndexOf("Microsoft.Azure.WebJobs.Host.Blobs.WatchableReadStream", StringComparison.OrdinalIgnoreCase) >= 0;
                         if (isReadStream)
                         {
@@ -998,8 +999,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         {
                             bool isWriteStream = reflectionParameters[index].GetType().ToString().IndexOf("Microsoft.Azure.WebJobs.Host.Blobs.Bindings.WatchableCloudBlobStream", StringComparison.OrdinalIgnoreCase) >= 0;
                             bool isWatchable = isReadStream || isWriteStream;
-                            // TODO use a better way to determine cache triggered object
-                            bool isCacheTrigger = reflectionParameters[index].GetType().ToString().IndexOf("CacheTriggeredStream", StringComparison.OrdinalIgnoreCase) >= 0;
+                            bool isCacheTrigger = reflectionParameters[index].GetType() == typeof(CacheTriggeredInput);
                             if (_bindingData != null && _bindingData.ContainsKey(name))
                             {
                                 if (isWatchable)
@@ -1033,19 +1033,20 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                                         _bindingData[name].Add("Exception", exception.Message);
                                     }
                                 }
+
                                 if (isWatchable || isCacheTrigger)
                                 {
                                     Stream stream = null;
                                     if (isCacheTrigger)
                                     {
-                                        CacheTriggeredStream cstream = (CacheTriggeredStream)reflectionParameters[index];
-                                        stream = cstream.Stream;
+                                        // TODO get all info needed for lazily binding into a stream later if some section of the cached stream is a cache miss and we need to fetch from storage
                                     }
                                     else
                                     {
                                         stream = (Stream)reflectionParameters[index];
                                     }
-                                    InstrumentableStream instStr = new InstrumentableStream(_bindingData[name], stream, _logger, isWriteStream, isCacheTrigger);
+
+                                    InstrumentableStream instStr = new InstrumentableStream(_bindingData[name], stream, _logger, isWriteStream);
                                     reflectionParameters[index] = instStr;
                                 }
                             }

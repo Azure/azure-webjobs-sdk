@@ -12,18 +12,16 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
     {
         private readonly ITriggeredFunctionBinding<TTriggerValue> _functionBinding;
         private readonly TTriggerValue _value;
-        private readonly bool _cacheTrigger;
 
-        public TriggerBindingSource(ITriggeredFunctionBinding<TTriggerValue> functionBinding, TTriggerValue value, bool cacheTrigger = false)
+        public TriggerBindingSource(ITriggeredFunctionBinding<TTriggerValue> functionBinding, TTriggerValue value)
         {
             _functionBinding = functionBinding;
             _value = value;
-            _cacheTrigger = cacheTrigger;
         }
 
         public Task<IReadOnlyDictionary<string, IValueProvider>> BindAsync(ValueBindingContext context)
         {
-            return _functionBinding.BindAsync(context, _value, _cacheTrigger);
+            return _functionBinding.BindAsync(context, _value);
         }
         
         public Task<IReadOnlyDictionary<string, InstrumentableObjectMetadata>> GetBindingDataAsync(ValueBindingContext context)
@@ -31,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             if (_functionBinding is ITriggeredFunctionBindingData<TTriggerValue>)
             {
                 ITriggeredFunctionBindingData<TTriggerValue> functionBindingData = (ITriggeredFunctionBindingData<TTriggerValue>)_functionBinding;
-                return functionBindingData.GetBindingDataAsync(context, _value, _cacheTrigger);
+                return functionBindingData.GetBindingDataAsync(context, _value);
             }
             else
             {
