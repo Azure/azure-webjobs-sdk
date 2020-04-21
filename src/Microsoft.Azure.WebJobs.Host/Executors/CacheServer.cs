@@ -12,6 +12,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     // Note: The CacheServer relies on CacheObject being thread-safe
     public class CacheServer
     {
+        public static readonly bool CacheEnabled = true; // Switch to enable/disable cache usage
+        public static readonly bool CacheTriggersEnabled = CacheEnabled && true; // Switch to enable/disable cache trigger usage
+
         private readonly ConcurrentDictionary<CacheObjectMetadata, CacheObject> _inMemoryCache;
         public readonly ConcurrentQueue<CacheObjectMetadata> Triggers; // TODO call this something like processingtriggers
         public readonly ConcurrentBag<string> TriggersProcessedFromCache; // TODO call this something line processedtriggers and when to clean this periodically??
@@ -225,11 +228,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             cacheObject.Commit();
 
-            // TODO another humungous hack... since we are not storing container name and not listening for specific container outputs for the cache
-            // TODO check which containers the cache listener is listening on and only enqueue those
-            bool shoudlWePutThisInCacheTriggers = cacheObjectMetadata.Uri.IndexOf("/cascade-output", StringComparison.OrdinalIgnoreCase) >= 0;
-            //bool shoudlWePutThisInCacheTriggers = false;
-            if (shoudlWePutThisInCacheTriggers)
+            if (CacheTriggersEnabled)
             {
                 Triggers.Enqueue(cacheObjectMetadata);
             }

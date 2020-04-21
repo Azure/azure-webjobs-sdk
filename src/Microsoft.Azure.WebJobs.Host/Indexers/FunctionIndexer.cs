@@ -307,12 +307,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             {
                 Type triggerValueType = triggerBinding.TriggerValueType;
                 var methodInfo = typeof(FunctionIndexer).GetMethod("CreateTriggeredFunctionDefinition", BindingFlags.Instance | BindingFlags.NonPublic).MakeGenericMethod(triggerValueType);
-                bool cacheTrigger = false;
-                if (functionDescriptor.FullName == "cs_blob_app.ConsumeCascade.Run")
-                {
-                    cacheTrigger = true;
-                }
-                functionDefinition = (FunctionDefinition)methodInfo.Invoke(this, new object[] { triggerBinding, triggerParameterName, functionDescriptor, nonTriggerBindings, invoker, cacheTrigger });
+                bool needsCacheListener = functionDescriptor.TriggerParameterDescriptor.GetType().ToString().IndexOf("Microsoft.Azure.WebJobs.Host.Protocols.BlobTriggerParameterDescriptor", StringComparison.OrdinalIgnoreCase) >= 0;
+                functionDefinition = (FunctionDefinition)methodInfo.Invoke(this, new object[] { triggerBinding, triggerParameterName, functionDescriptor, nonTriggerBindings, invoker, needsCacheListener });
 
                 if (hasNoAutomaticTriggerAttribute && functionDefinition != null)
                 {
@@ -337,7 +333,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
         private FunctionDefinition CreateTriggeredFunctionDefinition<TTriggerValue>(
             ITriggerBinding triggerBinding, string parameterName, FunctionDescriptor descriptor,
-            IReadOnlyDictionary<string, IBinding> nonTriggerBindings, IFunctionInvokerEx invoker, bool cacheTrigger)
+            IReadOnlyDictionary<string, IBinding> nonTriggerBindings, IFunctionInvokerEx invoker, bool needsCacheListener)
         {
             ITriggeredFunctionBinding<TTriggerValue> functionBinding = new TriggeredFunctionBinding<TTriggerValue>(descriptor, parameterName, triggerBinding, nonTriggerBindings, _singletonManager);
             ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory = new TriggeredFunctionInstanceFactory<TTriggerValue>(functionBinding, invoker, descriptor);
@@ -346,12 +342,12 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
             IListenerFactory cacheListenerFactory = null;
 
-            if (cacheTrigger)
+            if (needsCacheListener)
             {
                 ITriggeredFunctionBinding<CacheTriggeredInput> cacheFunctionBinding = new TriggeredFunctionBinding<CacheTriggeredInput>(descriptor, parameterName, triggerBinding, nonTriggerBindings, _singletonManager);
                 ITriggeredFunctionInstanceFactory<CacheTriggeredInput> cacheInstanceFactory = new TriggeredFunctionInstanceFactory<CacheTriggeredInput>(cacheFunctionBinding, invoker, descriptor);
                 ITriggeredFunctionExecutor cacheTriggerExecutor = new TriggeredFunctionExecutor<CacheTriggeredInput>(descriptor, _executor, cacheInstanceFactory);
-                cacheListenerFactory = new ListenerFactory(descriptor, cacheTriggerExecutor, triggerBinding, _sharedQueue, cacheTrigger);
+                cacheListenerFactory = new ListenerFactory(descriptor, cacheTriggerExecutor, triggerBinding, _sharedQueue, needsCacheListener);
             }
 
             return new FunctionDefinition(descriptor, instanceFactory, listenerFactory, cacheListenerFactory);
@@ -442,23 +438,31 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
             public async Task<IListener> CreateAsync(CancellationToken cancellationToken)
             {
-                //List<IListener> listeners = new List<IListener>();
+                IListener listener = null;
 
-                // TODO make this happen only for cache-able stuff (like blobs)
-                IListener listener;
-                if (_isCacheTrigger)
+                if (CacheServer.CacheEnabled && _isCacheTrigger)
                 {
-                    // Make this Singleton and make functions register with it so it can call appropriate ones (see what blob does)
-                    listener = new CacheListener(_descriptor, _executor);
+                    CacheListener cacheListener = CacheListener.Instance;
+
+                    bool isBlobTrigger = _descriptor.TriggerParameterDescriptor.GetType().ToString().IndexOf("Microsoft.Azure.WebJobs.Host.Protocols.BlobTriggerParameterDescriptor", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                    if (isBlobTrigger)
+                    {
+                        BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public;
+                        string containerName = _descriptor.TriggerParameterDescriptor.GetType().GetProperty("ContainerName", bindingFlags).GetValue(_descriptor.TriggerParameterDescriptor)?.ToString();
+                        if (containerName != null)
+                        {
+                            cacheListener.Register(containerName, _executor);
+                            listener = cacheListener;
+                        }
+                    }
                 }
                 else
                 {
                     ListenerFactoryContext context = new ListenerFactoryContext(_descriptor, _executor, _sharedQueue, cancellationToken);
                     listener = await _binding.CreateListenerAsync(context);
                 }
-                //listeners.Add(listener);
 
-                //return new CompositeListener(listeners);
                 return listener;
             }
         }

@@ -38,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _countReadFromStorage = 0;
             _countWrite = 0;
             _logged = false;
-            _cacheEnabled = true;
+            _cacheEnabled = CacheServer.CacheEnabled;
 
             if (_cacheEnabled)
             {

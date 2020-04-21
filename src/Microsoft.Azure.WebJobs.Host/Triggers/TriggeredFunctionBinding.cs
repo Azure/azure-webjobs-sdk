@@ -80,6 +80,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             if (isCacheTrigger)
             {
                 CacheTriggeredInput triggeredInput = (CacheTriggeredInput)value;
+                string invokeString = triggeredInput.Metadata.ContainerName + "/" + triggeredInput.Metadata.Name;
 
                 // If it is a byte array for out-of-proc languages, then we get the buffer from the cache and use that
                 if (triggeredInput.Metadata.CacheObjectType == CacheObjectType.ByteArray)
@@ -87,7 +88,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                     CacheServer cacheServer = CacheServer.Instance;
                     if (cacheServer.TryGetObjectByteArray(triggeredInput.Metadata, out byte[] buffer))
                     {
-                        triggerProvider = new ConstantValueProvider(buffer, buffer.GetType(), triggeredInput.Metadata.ContainerName);
+                        triggerProvider = new ConstantValueProvider(buffer, buffer.GetType(), invokeString);
                     }
                     else
                     {
@@ -98,7 +99,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                 // Otherwise, we will later get the associated stream from the cache
                 else
                 {
-                    triggerProvider = new ConstantValueProvider(value, value.GetType(), triggeredInput.Metadata.ContainerName + triggeredInput.Metadata.Name);
+                    triggerProvider = new ConstantValueProvider(value, value.GetType(), invokeString);
                 }
 
                 Dictionary<string, object> bindingDataDictionary = new Dictionary<string, object>
@@ -212,7 +213,12 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                     {
                         Uri uri = (Uri)rawUri;
                         triggerMetadata.Add("Uri", uri.ToString());
-                        triggerMetadata.Add("ContainerName", uri.Segments[1]);
+                        string containerName = uri.Segments[1];
+                        if (containerName.EndsWith("/"))
+                        {
+                            containerName = containerName.Remove(containerName.Length - 1);
+                        }
+                        triggerMetadata.Add("ContainerName", containerName);
                     }
                     if (bindingData.TryGetValue("Name", out object name))
                     {

@@ -7,7 +7,9 @@ using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Runtime.ExceptionServices;
 using System.Threading;
@@ -15,15 +17,72 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Listeners
 {
-    public class Worker
-    {
-        private ITriggeredFunctionExecutor _triggeredFunctionExecutor;
-        private CacheServer _cacheServer;
 
-        public Worker(ITriggeredFunctionExecutor triggeredFunctionExecutor)
+    public class CacheListener : IListener
+    {
+        private CacheServer _cacheServer;
+        private Task _task;
+        private ConcurrentDictionary<string, List<ITriggeredFunctionExecutor>> _executors;
+
+        private CacheListener()
         {
-            _triggeredFunctionExecutor = triggeredFunctionExecutor;
             _cacheServer = CacheServer.Instance;
+            _task = null;
+            _executors = new ConcurrentDictionary<string, List<ITriggeredFunctionExecutor>>();
+        }
+
+        private static CacheListener instance = null;
+
+        public static CacheListener Instance
+        {
+            get
+            {
+                if (instance == null)
+                {
+                    instance = new CacheListener();
+                }
+                return instance;
+            }
+        }
+
+        public void Register(string containerName, ITriggeredFunctionExecutor executor)
+        {
+            if (!_executors.ContainsKey(containerName))
+            {
+                if (!_executors.TryAdd(containerName, new List<ITriggeredFunctionExecutor>()))
+                {
+                    throw new Exception("Unable to add function executor to dictionary of executors");
+                }
+            }
+            
+            _executors[containerName].Add(executor);
+        }
+
+        void IListener.Cancel()
+        {
+            // nop
+        }
+
+        void IDisposable.Dispose()
+        {
+            // nop
+        }
+
+        Task IListener.StartAsync(CancellationToken cancellationToken)
+        {
+            // Only start once
+            if (_task == null)
+            {
+                _task = ExecuteAsync(cancellationToken);
+            }
+
+            return Task.FromResult(0);
+        }
+
+        Task IListener.StopAsync(CancellationToken cancellationToken)
+        {
+            // nop
+            return Task.FromResult(0);
         }
 
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
@@ -39,63 +98,37 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                     // TODO Don't dequeue, just peek or something or put to another queue as one atomic operation so we don't drop messages
                     if (_cacheServer.Triggers.TryDequeue(out CacheObjectMetadata metadata))
                     {
-                        // TODO right now putting it as processed immediately but this is bad... we need to ensure failed functions don't just ghost the message
-                        // TODO how do we ensure that the blobs with same name don't just keep skipping execution just because we have processed a similar named blob once? should there be a time limit thingy?
-                        _cacheServer.TriggersProcessedFromCache.Add(metadata.Uri);
+                        string containerName = metadata.ContainerName;
 
-                        tData = new TriggeredFunctionData();
-                        tData.TriggerDetails = new Dictionary<string, string>
+                        if (_executors.ContainsKey(containerName))
                         {
-                            { "name", metadata.Name }
-                        };
+                            if (_executors.TryGetValue(containerName, out List<ITriggeredFunctionExecutor> executors))
+                            {
+                                // TODO do this asynchronously for all executors? Not sure what the semantics are if more than one function in the application is listening on the same blob
+                                foreach (ITriggeredFunctionExecutor executor in executors)
+                                {
+                                    tData = new TriggeredFunctionData();
+                                    tData.TriggerDetails = new Dictionary<string, string>
+                                    {
+                                        { "name", metadata.Name }
+                                    };
 
-                        CacheTriggeredInput cStream = new CacheTriggeredInput(metadata);
-                        tData.TriggerValue = cStream;
+                                    CacheTriggeredInput cacheTriggeredInput = new CacheTriggeredInput(metadata);
+                                    tData.TriggerValue = cacheTriggeredInput;
 
-                        await _triggeredFunctionExecutor.TryExecuteAsync(tData, cancellationToken);
+                                    await executor.TryExecuteAsync(tData, cancellationToken);
+
+                                    // TODO how do we ensure that the blobs with same name don't just keep skipping execution just because we have processed a similar named blob once? should there be a time limit thingy?
+                                    // Also, this may result in double processing if by the time the *actual* invocation from blob comes, the cache trigger is still not done processing
+                                    _cacheServer.TriggersProcessedFromCache.Add(metadata.Uri);
+                                }
+                            }
+                        }
                     }
                 }
             }
 
             return 0;
-        }
-    }
-
-    public class CacheListener : IListener
-    {
-        private Worker _worker;
-        private FunctionDescriptor _functionDescriptor;
-        private ITriggeredFunctionExecutor _triggeredFunctionExecutor;
-        private Task _task;
-
-        public CacheListener(FunctionDescriptor functionDescriptor, ITriggeredFunctionExecutor triggerExecutor)
-        {
-            _functionDescriptor = functionDescriptor; // TODO might not need it 
-            _triggeredFunctionExecutor = triggerExecutor;
-            _worker = new Worker(_triggeredFunctionExecutor);
-            _task = null;
-        }
-
-        void IListener.Cancel()
-        {
-            // nop
-        }
-
-        void IDisposable.Dispose()
-        {
-            // nop
-        }
-
-        Task IListener.StartAsync(CancellationToken cancellationToken)
-        {
-            _task = _worker.ExecuteAsync(cancellationToken);
-            return Task.FromResult(0);
-        }
-
-        Task IListener.StopAsync(CancellationToken cancellationToken)
-        {
-            // nop
-            return Task.FromResult(0);
         }
     }
 }
