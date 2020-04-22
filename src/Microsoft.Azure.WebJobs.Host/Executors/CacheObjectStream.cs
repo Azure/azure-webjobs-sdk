@@ -118,15 +118,22 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly RangeTree<long, bool> _byteRanges;
         private readonly MemoryStream _memoryStream;
         
-        public CacheObjectStream(CacheObjectMetadata metadata) : base(metadata)
+        public CacheObjectStream(CacheObjectMetadata metadata, MemoryStream memoryStream = null) : base(metadata)
         {
-            if (metadata.CacheObjectType != CacheObjectType.Stream)
-            {
-                throw new NotSupportedException();
-            }
+            //if (metadata.CacheObjectType != CacheObjectType.Stream)
+            //{
+            //    throw new NotSupportedException();
+            //}
 
             _byteRanges = new RangeTree<long, bool>();
-            _memoryStream = new MemoryStream();
+            if (memoryStream == null)
+            {
+                _memoryStream = new MemoryStream();
+            }
+            else
+            {
+                _memoryStream = memoryStream;
+            }
         }
 
 

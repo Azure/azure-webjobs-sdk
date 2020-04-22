@@ -50,11 +50,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         
         public bool ContainsObjectRange(CacheObjectMetadata cacheObjectMetadata, long start, long end)
         {
-            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.Stream)
-            {
-                throw new NotSupportedException();
-            }
-
             if (!_inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 return false;
@@ -65,24 +60,26 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         
         public bool TryAddObjectStream(CacheObjectMetadata cacheObjectMetadata)
         {
-            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.Stream)
-            {
-                throw new NotSupportedException();
-            }
-            
             return _inMemoryCache.TryAdd(cacheObjectMetadata, new CacheObjectStream(cacheObjectMetadata));
         }
         
-        public bool TryAddObjectByteArray(CacheObjectMetadata cacheObjectMetadata, byte[] buffer)
+        public bool TryAddObjectStream(CacheObjectMetadata cacheObjectMetadata, MemoryStream memoryStream, bool commit)
         {
-            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.ByteArray)
+            if (_inMemoryCache.TryAdd(cacheObjectMetadata, new CacheObjectStream(cacheObjectMetadata, memoryStream)))
             {
-                throw new NotSupportedException();
-            }
-            
-            return _inMemoryCache.TryAdd(cacheObjectMetadata, new CacheObjectByteArray(cacheObjectMetadata, buffer));
-        }
+                if (commit)
+                {
+                    this.CommitObjectToCache(cacheObjectMetadata);
+                }
 
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        
         public void RemoveObject(CacheObjectMetadata cacheObjectMetadata)
         {
             _inMemoryCache.RemoveIfContainsKey(cacheObjectMetadata);
@@ -93,11 +90,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             byteRanges = null;
             memoryStream = null;
             
-            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.Stream)
-            {
-                throw new NotSupportedException();
-            }
-
             if (!_inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 return false;
@@ -114,17 +106,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             buffer = null;
             
-            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.ByteArray)
-            {
-                throw new NotSupportedException();
-            }
-
             if (!_inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 return false;
             }
 
-            buffer = ((CacheObjectByteArray)cacheObject).GetBuffer();
+            var data = ((CacheObjectStream)cacheObject).GetByteRangesAndBuffer().Result;
+            buffer = data.Item2;
 
             return true;
         }
@@ -132,11 +120,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         // TODO do we need to copy this buffer before returning? what if this buffer, which is owned by app, changes or something?
         public void WriteToCacheObject(CacheObjectMetadata cacheObjectMetadata, long startPosition, byte[] buffer, int offset, int count, int bytesToWrite)
         {
-            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.Stream)
-            {
-                throw new NotSupportedException();
-            }
-
             if (_inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 ((CacheObjectStream)cacheObject).StartWriteTask(startPosition, buffer, offset, count, bytesToWrite);
@@ -145,11 +128,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         
         public void WriteToCacheObject(CacheObjectMetadata cacheObjectMetadata, long startPosition, byte value)
         {
-            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.Stream)
-            {
-                throw new NotSupportedException();
-            }
-
             if (_inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 ((CacheObjectStream)cacheObject).StartWriteTask(startPosition, value);
@@ -158,11 +136,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public void SetPosition(CacheObjectMetadata cacheObjectMetadata, long position)
         {
-            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.Stream)
-            {
-                throw new NotSupportedException();
-            }
-
             if (_inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 ((CacheObjectStream)cacheObject).SetPosition(position);
@@ -173,11 +146,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             position = -1;
             
-            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.Stream)
-            {
-                throw new NotSupportedException();
-            }
-
             if (!_inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 return false;
@@ -190,11 +158,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         public void SetLength(CacheObjectMetadata cacheObjectMetadata, long length)
         {
             // TODO invalidate all clients since this is dirtying the cached object
-            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.Stream)
-            {
-                throw new NotSupportedException();
-            }
-            
             if (_inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 ((CacheObjectStream)cacheObject).SetLength(length);
@@ -205,11 +168,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             position = -1;
             
-            if (cacheObjectMetadata.CacheObjectType != CacheObjectType.Stream)
-            {
-                throw new NotSupportedException();
-            }
-
             if (!_inMemoryCache.TryGetValue(cacheObjectMetadata, out CacheObject cacheObject))
             {
                 return false;

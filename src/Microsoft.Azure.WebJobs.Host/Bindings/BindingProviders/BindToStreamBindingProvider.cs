@@ -11,6 +11,8 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Azure.WebJobs.Host.Properties;
+using Microsoft.Azure.WebJobs.Host.Executors;
+using System.Diagnostics.Contracts;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
@@ -462,6 +464,40 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
             public virtual async Task SetValueAsync(object value, CancellationToken cancellationToken)
             {
+                // TODO copy to the cache before closing (we have watchablecloudstream here)
+                bool isWriteStream = _userValue.GetType().ToString().IndexOf("Microsoft.Azure.WebJobs.Host.Blobs.Bindings.WatchableCloudBlobStream", StringComparison.OrdinalIgnoreCase) >= 0;
+                if (isWriteStream)
+                {
+                    BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public;
+                    try
+                    {
+                        object inner = _userValue.GetType().BaseType.GetField("_inner", bindingFlags)?.GetValue(_userValue);
+                        object blob = inner?.GetType().BaseType.GetProperty("Blob", bindingFlags)?.GetValue(inner);
+                        string uri = blob?.GetType().GetProperty("Uri", bindingFlags)?.GetValue(blob)?.ToString();
+                        string blobName = blob?.GetType().GetProperty("Name", bindingFlags)?.GetValue(blob)?.ToString();
+                        // TODO things like {name}.jpg in the input/output bindings aren't properly handled; need to fix
+                        object properties = blob?.GetType().GetProperty("Properties", bindingFlags)?.GetValue(blob);
+                        string etag = properties?.GetType().GetProperty("ETag", bindingFlags)?.GetValue(properties)?.ToString();
+                        object container = blob?.GetType().GetProperty("Container", bindingFlags)?.GetValue(blob);
+                        string containerName = container?.GetType().GetProperty("Name", bindingFlags)?.GetValue(container)?.ToString();
+
+                        // TODO also store this as a stream and remove distinction from the CacheServer - just at time of retrieving specify what you need
+                        CacheObjectMetadata cacheObjectMetadata = new CacheObjectMetadata(uri, blobName, containerName, etag, CacheObjectType.ByteArray);
+                        MemoryStream memoryStream = new MemoryStream();
+                        Stream stream = (Stream)inner?.GetType().BaseType.GetField("internalBuffer", bindingFlags).GetValue(inner);
+                        long prevPosition = stream.Position;
+                        stream.Position = 0;
+                        await (stream).CopyToAsync(memoryStream);
+                        stream.Position = prevPosition;
+                        CacheServer cacheServer = CacheServer.Instance;
+                        cacheServer.TryAddObjectStream(cacheObjectMetadata, memoryStream, commit: true);
+                    }
+                    catch
+                    {
+                        isWriteStream = false; // TODO Just making the compiler happy here :)
+                    }
+                }
+
                 // 'Out T' parameters override this method; so this case only needs to handle normal input parameters. 
 
                 // value may be null (such as in an IBinder.Bind case). 

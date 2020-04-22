@@ -241,7 +241,6 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                         }
                         catch (Exception exception)
                         {
-                            // TODO may need to clean this
                             triggerMetadata.Add("Exception", exception.Message);
                         }
                     }

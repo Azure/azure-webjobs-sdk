@@ -980,23 +980,21 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                     reflectionParameters[index] = await _parameters[name].GetValueAsync();
                     
-                    if (reflectionParameters[index] != null)
+                    if (CacheServer.CacheEnabled && reflectionParameters[index] != null)
                     {
                         // TODO make sure to do this only for trigger params
-                        bool isReadStream = reflectionParameters[index].GetType().ToString().IndexOf("Microsoft.Azure.WebJobs.Host.Blobs.WatchableReadStream", StringComparison.OrdinalIgnoreCase) >= 0;
-                        if (isReadStream)
+                        if (_bindingData[name].TryGetValue("Uri", out string checkUri))
                         {
-                            if (_bindingData[name].TryGetValue("Uri", out string uri))
+                            if (_cacheServer.TriggersProcessedFromCache.Contains(checkUri))
                             {
-                                if (_cacheServer.TriggersProcessedFromCache.Contains(uri))
-                                {
-                                    AlreadyExecuted = true;
-                                }
+                                _logger.LogWarning("Already executed");
+                                AlreadyExecuted = true;
                             }
                         }
 
                         if (!AlreadyExecuted)
                         {
+                            bool isReadStream = reflectionParameters[index].GetType().ToString().IndexOf("Microsoft.Azure.WebJobs.Host.Blobs.WatchableReadStream", StringComparison.OrdinalIgnoreCase) >= 0;
                             bool isWriteStream = reflectionParameters[index].GetType().ToString().IndexOf("Microsoft.Azure.WebJobs.Host.Blobs.Bindings.WatchableCloudBlobStream", StringComparison.OrdinalIgnoreCase) >= 0;
                             bool isWatchable = isReadStream || isWriteStream;
                             bool isCacheTrigger = reflectionParameters[index].GetType() == typeof(CacheTriggeredInput);
