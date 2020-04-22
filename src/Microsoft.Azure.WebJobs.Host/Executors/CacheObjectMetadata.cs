@@ -22,9 +22,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             ContainerName = containerName;
             Etag = etag;
             CacheObjectType = cacheObjectType;
-
-            // TODO TEMP, we need to retain the etag and check against it
-            Etag = null;
         }
         
         public string Uri { get; private set; }

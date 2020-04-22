@@ -9,6 +9,35 @@ using System.IO;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
+    public class CallbackConcurrentQueue<T>
+    {
+        public readonly ConcurrentQueue<T> Queue;
+        public event EventHandler OnEnqueue;
+
+        public CallbackConcurrentQueue()
+        {
+            Queue = new ConcurrentQueue<T>();
+        }
+
+        public void Enqueue(T value)
+        {
+            Queue.Enqueue(value);
+            OnEnqueue(this, EventArgs.Empty);
+        }
+
+        public int Count
+        {
+            get
+            {
+                return Queue.Count;
+            }
+        }
+        
+        public bool TryDequeue(out T value)
+        {
+            return Queue.TryDequeue(out value);
+        }
+    }
     // Note: The CacheServer relies on CacheObject being thread-safe
     public class CacheServer
     {
@@ -16,16 +45,16 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         public static readonly bool CacheTriggersEnabled = CacheEnabled && true; // Switch to enable/disable cache trigger usage
 
         private readonly ConcurrentDictionary<CacheObjectMetadata, CacheObject> _inMemoryCache;
-        public readonly ConcurrentQueue<CacheObjectMetadata> Triggers; // TODO call this something like processingtriggers
-        public readonly ConcurrentBag<string> TriggersProcessedFromCache; // TODO call this something line processedtriggers and when to clean this periodically??
+        public readonly CallbackConcurrentQueue<CacheObjectMetadata> Triggers;
+        public ConcurrentBag<string> TriggersProcessedFromCache; // TODO call this something line processedtriggers and when to clean this periodically??
 
         // TODO make cacheclient register with this so that when a write happens to an object, invalidate all clients
         //      do that in a locked manner
 
         private CacheServer()
         {
-            Triggers = new ConcurrentQueue<CacheObjectMetadata>();
             TriggersProcessedFromCache = new ConcurrentBag<string>();
+            Triggers = new CallbackConcurrentQueue<CacheObjectMetadata>();
             _inMemoryCache = new ConcurrentDictionary<CacheObjectMetadata, CacheObject>();
         }
 
@@ -63,12 +92,24 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             return _inMemoryCache.TryAdd(cacheObjectMetadata, new CacheObjectStream(cacheObjectMetadata));
         }
         
-        public bool TryAddObjectStream(CacheObjectMetadata cacheObjectMetadata, MemoryStream memoryStream, bool commit)
+        public bool TryAddObjectStream(CacheObjectMetadata cacheObjectMetadata, MemoryStream memoryStream, bool triggerCache)
         {
+            // If we already have the object in the cache but are asked to trigger, then we trigger and return false as we did not add anything
+            if (_inMemoryCache.ContainsKey(cacheObjectMetadata))
+            {
+                if (triggerCache)
+                {
+                    this.TriggerCache(cacheObjectMetadata);
+                }
+
+                return false;
+            }
+
             if (_inMemoryCache.TryAdd(cacheObjectMetadata, new CacheObjectStream(cacheObjectMetadata, memoryStream)))
             {
-                if (commit)
+                if (triggerCache)
                 {
+                    // If asked to trigger, and this was a new object we added, then commit (which will result in trigger too)
                     this.CommitObjectToCache(cacheObjectMetadata);
                 }
 
@@ -185,7 +226,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
 
             cacheObject.Commit();
+            TriggerCache(cacheObjectMetadata);
+        }
 
+        private void TriggerCache(CacheObjectMetadata cacheObjectMetadata)
+        {
             if (CacheTriggersEnabled)
             {
                 Triggers.Enqueue(cacheObjectMetadata);

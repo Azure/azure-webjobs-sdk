@@ -490,7 +490,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                         await (stream).CopyToAsync(memoryStream);
                         stream.Position = prevPosition;
                         CacheServer cacheServer = CacheServer.Instance;
-                        cacheServer.TryAddObjectStream(cacheObjectMetadata, memoryStream, commit: true);
+                        cacheServer.TryAddObjectStream(cacheObjectMetadata, memoryStream, triggerCache: true);
                     }
                     catch
                     {

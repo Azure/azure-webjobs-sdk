@@ -6,6 +6,7 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -22,6 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
     {
         private CacheServer _cacheServer;
         private Task _task;
+        private CancellationToken _cancellationToken;
         private ConcurrentDictionary<string, List<ITriggeredFunctionExecutor>> _executors;
 
         private CacheListener()
@@ -73,10 +75,18 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             // Only start once
             if (_task == null)
             {
-                _task = ExecuteAsync(cancellationToken);
+                _cancellationToken = cancellationToken;
+                _cacheServer.Triggers.OnEnqueue += Triggers_OnEnqueue;
+                _task = ExecuteAsync();
             }
 
             return Task.FromResult(0);
+        }
+
+        private async void Triggers_OnEnqueue(object sender, EventArgs e)
+        {
+            CacheListener cacheListener = CacheListener.instance;
+            await cacheListener.HandleCacheEvent();
         }
 
         Task IListener.StopAsync(CancellationToken cancellationToken)
@@ -85,47 +95,59 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             return Task.FromResult(0);
         }
 
-        public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
+        private void ResetProcessedList()
         {
-            await Task.Yield();
+            // There is no Clear() method for ConcurrentBag so we create a new one and atomically replace the one in CacheServer with it
+            ConcurrentBag<string> newBag = new ConcurrentBag<string>();
+            _cacheServer.TriggersProcessedFromCache = newBag; // Assignment is atomic
+        }
 
-            TriggeredFunctionData tData;
-            while (!cancellationToken.IsCancellationRequested)
+        private async Task HandleCacheEvent()
+        {
+            // TODO this is a very tight loop; put some sleep here or make the queue in cachserver use callbacks to come here
+            if (_cacheServer.Triggers.Count > 0)
             {
-                // TODO this is a very tight loop; put some sleep here or make the queue in cachserver use callbacks to come here
-                if (_cacheServer.Triggers.Count > 0)
+                // TODO Don't dequeue, just peek or something or put to another queue as one atomic operation so we don't drop messages
+                if (_cacheServer.Triggers.TryDequeue(out CacheObjectMetadata metadata))
                 {
-                    // TODO Don't dequeue, just peek or something or put to another queue as one atomic operation so we don't drop messages
-                    if (_cacheServer.Triggers.TryDequeue(out CacheObjectMetadata metadata))
+                    string containerName = metadata.ContainerName;
+
+                    if (_executors.ContainsKey(containerName))
                     {
-                        string containerName = metadata.ContainerName;
-
-                        if (_executors.ContainsKey(containerName))
+                        if (_executors.TryGetValue(containerName, out List<ITriggeredFunctionExecutor> executors))
                         {
-                            if (_executors.TryGetValue(containerName, out List<ITriggeredFunctionExecutor> executors))
+                            // TODO do this asynchronously for all executors? Not sure what the semantics are if more than one function in the application is listening on the same blob
+                            foreach (ITriggeredFunctionExecutor executor in executors)
                             {
-                                // TODO do this asynchronously for all executors? Not sure what the semantics are if more than one function in the application is listening on the same blob
-                                foreach (ITriggeredFunctionExecutor executor in executors)
+                                TriggeredFunctionData tData = new TriggeredFunctionData();
+                                tData.TriggerDetails = new Dictionary<string, string>
                                 {
-                                    tData = new TriggeredFunctionData();
-                                    tData.TriggerDetails = new Dictionary<string, string>
-                                    {
-                                        { "name", metadata.Name }
-                                    };
+                                    { "name", metadata.Name }
+                                };
 
-                                    CacheTriggeredInput cacheTriggeredInput = new CacheTriggeredInput(metadata);
-                                    tData.TriggerValue = cacheTriggeredInput;
+                                CacheTriggeredInput cacheTriggeredInput = new CacheTriggeredInput(metadata);
+                                tData.TriggerValue = cacheTriggeredInput;
 
-                                    await executor.TryExecuteAsync(tData, cancellationToken);
+                                await executor.TryExecuteAsync(tData, _cancellationToken);
 
-                                    // TODO how do we ensure that the blobs with same name don't just keep skipping execution just because we have processed a similar named blob once? should there be a time limit thingy?
-                                    // Also, this may result in double processing if by the time the *actual* invocation from blob comes, the cache trigger is still not done processing
-                                    _cacheServer.TriggersProcessedFromCache.Add(metadata.Uri);
-                                }
+                                // TODO how do we ensure that the blobs with same name don't just keep skipping execution just because we have processed a similar named blob once? should there be a time limit thingy?
+                                // Also, this may result in double processing if by the time the *actual* invocation from blob comes, the cache trigger is still not done processing
+                                _cacheServer.TriggersProcessedFromCache.Add(metadata.Uri);
                             }
                         }
                     }
                 }
+            }
+        }
+
+        public async Task<int> ExecuteAsync()
+        {
+            await Task.Yield();
+
+            while (!_cancellationToken.IsCancellationRequested)
+            {
+                Thread.Sleep(60 * 1000); // Sleep for 1 min
+                ResetProcessedList();
             }
 
             return 0;
