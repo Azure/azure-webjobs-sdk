@@ -23,6 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
         private readonly ITriggerBinding _triggerBinding;
         private readonly IReadOnlyDictionary<string, IBinding> _nonTriggerBindings;
         private readonly SingletonManager _singletonManager;
+        private readonly CacheServer _cacheServer;
 
         public TriggeredFunctionBinding(FunctionDescriptor descriptor, string triggerParameterName, ITriggerBinding triggerBinding,
             IReadOnlyDictionary<string, IBinding> nonTriggerBindings, SingletonManager singletonManager)
@@ -32,6 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             _triggerBinding = triggerBinding;
             _nonTriggerBindings = nonTriggerBindings;
             _singletonManager = singletonManager;
+            _cacheServer = CacheServer.Instance;
         }
 
         public async Task<IReadOnlyDictionary<string, IValueProvider>> BindAsync(ValueBindingContext context, TTriggerValue value)
@@ -85,8 +87,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                 // If it is a byte array for out-of-proc languages, then we get the buffer from the cache and use that
                 if (triggeredInput.Metadata.CacheObjectType == CacheObjectType.ByteArray)
                 {
-                    CacheServer cacheServer = CacheServer.Instance;
-                    if (cacheServer.TryGetObjectByteArray(triggeredInput.Metadata, out byte[] buffer))
+                    if (_cacheServer.TryGetObjectByteArray(triggeredInput.Metadata, out byte[] buffer))
                     {
                         triggerProvider = new ConstantValueProvider(buffer, buffer.GetType(), invokeString);
                     }
@@ -104,7 +105,8 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
 
                 Dictionary<string, object> bindingDataDictionary = new Dictionary<string, object>
                 {
-                    { "name", triggeredInput.Metadata.Name }
+                    { "name", triggeredInput.Metadata.Name },
+                    { "Uri", new Uri(triggeredInput.Metadata.Uri) }
                 };
                 bindingData = new ReadOnlyDictionary<string, object>(bindingDataDictionary);
             }

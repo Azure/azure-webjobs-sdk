@@ -4,11 +4,14 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Bindings.Runtime;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 
 namespace Microsoft.Azure.WebJobs
@@ -134,7 +137,50 @@ namespace Microsoft.Azure.WebJobs
             }
 
             object result = await provider.GetValueAsync();
-            return (TValue)result;
+
+            // Wrap into an instrumentable stream so we can use the cache
+            bool isReadStream = result.GetType().ToString().IndexOf("Microsoft.Azure.WebJobs.Host.Blobs.WatchableReadStream", StringComparison.OrdinalIgnoreCase) >= 0;
+            
+            if (isReadStream)
+            {
+                InstrumentableObjectMetadata metadata = new InstrumentableObjectMetadata(isTriggerParameter: false, isCacheTriggered: false);
+                try
+                {
+                    BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public;
+                    object inner = result.GetType().BaseType.GetField("_inner", bindingFlags)?.GetValue(result);
+                    object blob = inner?.GetType().BaseType.GetField("blob", bindingFlags)?.GetValue(inner);
+                    object uriObj = blob?.GetType().GetProperty("Uri", bindingFlags)?.GetValue(blob);
+                    if (uriObj != null)
+                    {
+                        Uri uri = (Uri)uriObj;
+                        metadata.Add("Uri", uri.ToString());
+                        string containerName = uri.Segments[1];
+                        if (containerName.EndsWith("/"))
+                        {
+                            containerName = containerName.Remove(containerName.Length - 1);
+                        }
+                        metadata.Add("ContainerName", containerName);
+                    }
+                    string blobName = blob?.GetType().GetProperty("Name", bindingFlags)?.GetValue(blob)?.ToString();
+                    metadata.Add("Name", blobName);
+                    object properties = blob?.GetType().GetProperty("Properties", bindingFlags)?.GetValue(blob);
+                    string etag = properties?.GetType().GetProperty("ETag", bindingFlags)?.GetValue(properties)?.ToString();
+                    metadata.Add("ETag", etag);
+                }
+                catch (Exception exception)
+                {
+                    metadata.Add("Exception", exception.Message);
+                }
+
+                InstrumentableStream instStr = new InstrumentableStream(metadata, (Stream)result, null, isWriteStream: false);
+                Object instStrObject = (object)instStr;
+
+                return (TValue)instStrObject;
+            }
+            else
+            {
+                return (TValue)result;
+            }
         }
 
         /// <summary>

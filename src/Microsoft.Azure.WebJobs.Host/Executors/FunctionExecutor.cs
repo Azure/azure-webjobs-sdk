@@ -996,6 +996,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         {
                             bool isReadStream = reflectionParameters[index].GetType().ToString().IndexOf("Microsoft.Azure.WebJobs.Host.Blobs.WatchableReadStream", StringComparison.OrdinalIgnoreCase) >= 0;
                             bool isWriteStream = reflectionParameters[index].GetType().ToString().IndexOf("Microsoft.Azure.WebJobs.Host.Blobs.Bindings.WatchableCloudBlobStream", StringComparison.OrdinalIgnoreCase) >= 0;
+                            // TODO for writeStream, after the stream is closed, check if the etag has changed; if so, use that to put the object in cache
                             bool isWatchable = isReadStream || isWriteStream;
                             bool isCacheTrigger = reflectionParameters[index].GetType() == typeof(CacheTriggeredInput);
                             if (_bindingData != null && _bindingData.ContainsKey(name))

@@ -16,7 +16,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     {
         // TODO whenever _inner is null and tried to be accessed, then perform the lazy binding and proceed
         private readonly bool _cacheEnabled;
-        private readonly ILogger _logger;
+        private static ILogger _logger;
         private readonly Stream _inner;
         private readonly InstrumentableObjectMetadata _metadata;
         private readonly Stopwatch _timeRead;

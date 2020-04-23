@@ -464,37 +464,29 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
             public virtual async Task SetValueAsync(object value, CancellationToken cancellationToken)
             {
-                // TODO copy to the cache before closing (we have watchablecloudstream here)
+                // TODO we may be able to do this entire operation after _stream.Close()
+                // The Etag is updated after the Close operation, so we will use that one
                 bool isWriteStream = _userValue.GetType().ToString().IndexOf("Microsoft.Azure.WebJobs.Host.Blobs.Bindings.WatchableCloudBlobStream", StringComparison.OrdinalIgnoreCase) >= 0;
+                CacheObjectMetadata cacheObjectMetadata;
+                MemoryStream memoryStream = null;
+                BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public;
                 if (isWriteStream)
                 {
-                    BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public;
                     try
                     {
-                        object inner = _userValue.GetType().BaseType.GetField("_inner", bindingFlags)?.GetValue(_userValue);
-                        object blob = inner?.GetType().BaseType.GetProperty("Blob", bindingFlags)?.GetValue(inner);
-                        string uri = blob?.GetType().GetProperty("Uri", bindingFlags)?.GetValue(blob)?.ToString();
-                        string blobName = blob?.GetType().GetProperty("Name", bindingFlags)?.GetValue(blob)?.ToString();
-                        // TODO things like {name}.jpg in the input/output bindings aren't properly handled; need to fix
-                        object properties = blob?.GetType().GetProperty("Properties", bindingFlags)?.GetValue(blob);
-                        string etag = properties?.GetType().GetProperty("ETag", bindingFlags)?.GetValue(properties)?.ToString();
-                        object container = blob?.GetType().GetProperty("Container", bindingFlags)?.GetValue(blob);
-                        string containerName = container?.GetType().GetProperty("Name", bindingFlags)?.GetValue(container)?.ToString();
-
                         // TODO also store this as a stream and remove distinction from the CacheServer - just at time of retrieving specify what you need
-                        CacheObjectMetadata cacheObjectMetadata = new CacheObjectMetadata(uri, blobName, containerName, etag, CacheObjectType.ByteArray);
-                        MemoryStream memoryStream = new MemoryStream();
+                        // TODO this whole business of using the internalBuffer does not seem cool, let's do this somewhere else where we have the whole buffer as it is
+                        object inner = _userValue.GetType().BaseType.GetField("_inner", bindingFlags)?.GetValue(_userValue);
+                        memoryStream = new MemoryStream();
                         Stream stream = (Stream)inner?.GetType().BaseType.GetField("internalBuffer", bindingFlags).GetValue(inner);
                         long prevPosition = stream.Position;
                         stream.Position = 0;
-                        await (stream).CopyToAsync(memoryStream);
+                        await stream.CopyToAsync(memoryStream);
                         stream.Position = prevPosition;
-                        CacheServer cacheServer = CacheServer.Instance;
-                        cacheServer.TryAddObjectStream(cacheObjectMetadata, memoryStream, triggerCache: true);
                     }
                     catch
                     {
-                        isWriteStream = false; // TODO Just making the compiler happy here :)
+                        isWriteStream = false;
                     }
                 }
 
@@ -523,6 +515,26 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                         await _stream.FlushAsync();
                     }
                     _stream.Close();
+
+                    // Do the final adding to cache after _stream is closed since we have the updated ETag now
+                    if (isWriteStream)
+                    {
+                        object inner = _userValue.GetType().BaseType.GetField("_inner", bindingFlags)?.GetValue(_userValue);
+                        object blob = inner?.GetType().BaseType.GetProperty("Blob", bindingFlags)?.GetValue(inner);
+                        string uri = blob?.GetType().GetProperty("Uri", bindingFlags)?.GetValue(blob)?.ToString();
+                        string blobName = blob?.GetType().GetProperty("Name", bindingFlags)?.GetValue(blob)?.ToString();
+                        // TODO things like {name}.jpg in the input/output bindings aren't properly handled; need to fix
+                        object properties = blob?.GetType().GetProperty("Properties", bindingFlags)?.GetValue(blob);
+                        string etag = properties?.GetType().GetProperty("ETag", bindingFlags)?.GetValue(properties)?.ToString();
+                        object container = blob?.GetType().GetProperty("Container", bindingFlags)?.GetValue(blob);
+                        string containerName = container?.GetType().GetProperty("Name", bindingFlags)?.GetValue(container)?.ToString();
+
+                        cacheObjectMetadata = new CacheObjectMetadata(uri, blobName, containerName, etag, CacheObjectType.ByteArray);
+                        
+                        // TODO since we are "writing" manually and not through the InstrumentableStream, make sure to update the rangetree in this cacheobject from 0 -> memoryStream.Length 
+                        CacheServer cacheServer = CacheServer.Instance;
+                        cacheServer.TryAddObjectStream(cacheObjectMetadata, memoryStream, triggerCache: true);
+                    }
                 }
             }
 

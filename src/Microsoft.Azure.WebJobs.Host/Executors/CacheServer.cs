@@ -22,7 +22,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         public void Enqueue(T value)
         {
             Queue.Enqueue(value);
-            OnEnqueue(this, EventArgs.Empty);
+            if (OnEnqueue != null)
+            {
+                OnEnqueue(this, EventArgs.Empty);
+            }
         }
 
         public int Count
