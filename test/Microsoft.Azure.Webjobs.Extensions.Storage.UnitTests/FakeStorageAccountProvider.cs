@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
@@ -13,9 +14,9 @@ namespace Microsoft.Azure.WebJobs
         private readonly StorageAccount _account;
 
         public FakeStorageAccountProvider(StorageAccount account)
-            : base(null)
+            : base(null, NullLogger<StorageAccountProvider>.Instance)
         {
-            this._account = account;
+            _account = account;
         }
         public override StorageAccount Get(string name)
         {

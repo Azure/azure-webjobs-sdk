@@ -9,6 +9,7 @@ using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.WindowsAzure.Storage;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
@@ -18,7 +19,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         public class FakeStorageAccountProvider : StorageAccountProvider
         {
             public FakeStorageAccountProvider()
-                : base(null)
+                : base(null, NullLogger<StorageAccountProvider>.Instance)
             {
             }
 

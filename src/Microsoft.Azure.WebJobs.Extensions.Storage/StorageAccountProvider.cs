@@ -2,8 +2,10 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using Microsoft.Azure.WebJobs.Extensions.Storage;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 
 namespace Microsoft.Azure.WebJobs
@@ -18,15 +20,17 @@ namespace Microsoft.Azure.WebJobs
     {
         private readonly IConfiguration _configuration;
 
-        public StorageAccountProvider(IConfiguration configuration)
+        public StorageAccountProvider(IConfiguration configuration, ILogger<StorageAccountProvider> logger)
         {
             _configuration = configuration;
+
+            MaxConnectionHelper.SetMaxConnectionsPerServer(logger);
         }
 
         public StorageAccount Get(string name, INameResolver resolver)
         {
             var resolvedName = resolver.ResolveWholeString(name);
-            return this.Get(resolvedName);
+            return Get(resolvedName);
         }
 
         public virtual StorageAccount Get(string name)
@@ -58,7 +62,7 @@ namespace Microsoft.Azure.WebJobs
         /// <returns></returns>
         public virtual StorageAccount GetHost()
         {
-            return this.Get(null);
+            return Get(null);
         }
     }
 }
