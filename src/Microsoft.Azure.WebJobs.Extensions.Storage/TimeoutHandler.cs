@@ -36,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Storage
                             // Just in case the operation cancellation doesn't work, cancel the whole thing and restart.
                             await HandleDeadlockExceptionAsync(operationName, clientRequestId, exceptionHandler);
 
-                            return default;
+                            return default(T);
                         }
 
                         return await operationTask;
@@ -47,6 +47,8 @@ namespace Microsoft.Azure.WebJobs.Extensions.Storage
                         if (operationCts.IsCancellationRequested)
                         {
                             logger.LogDebug($"The operation '{operationName}' with id '{clientRequestId}' was canceled after '{OperationTimeout}'. Version: '{Version}'");
+
+                            return default(T);
                         }
                         else
                         {
@@ -59,8 +61,6 @@ namespace Microsoft.Azure.WebJobs.Extensions.Storage
                     }
                 }
             }
-
-            return default;
         }
 
         private static Task HandleDeadlockExceptionAsync(string operationName, string clientRequestId, IWebJobsExceptionHandler exceptionHandler)
