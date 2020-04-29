@@ -13,15 +13,10 @@ namespace Microsoft.Azure.WebJobs.Extensions.Storage
     {
         private static readonly AsyncLocal<HttpResponseMessage> _capturedResponse = new AsyncLocal<HttpResponseMessage>();
 
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            HttpResponseMessage response = null;
-
-            response = await base.SendAsync(request, cancellationToken);
-
-            _capturedResponse.Value = response;
-
-            return response;
+            return base.SendAsync(request, cancellationToken)
+                .ContinueWith(t => _capturedResponse.Value = t.Result, TaskContinuationOptions.ExecuteSynchronously);
         }
 
         internal static IDisposable CreateTimeoutScope(ILogger logger)
