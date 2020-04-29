@@ -7,18 +7,16 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.Cosmos.Table;
+using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.Storage.Queue;
 using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
-using Microsoft.Azure.Storage.Queue;
-using Microsoft.Azure.Cosmos.Table;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Xunit;
-
 using CloudStorageAccount = Microsoft.Azure.Storage.CloudStorageAccount;
 using TableStorageAccount = Microsoft.Azure.Cosmos.Table.CloudStorageAccount;
 
@@ -328,7 +326,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // Stop the host and wait for it to finish
             await host.StopAsync();
 
-            Assert.True(signaled, $"[{DateTime.UtcNow.ToString("HH:mm:ss.fff")}] Function chain did not complete in {waitTime}. Logs:{Environment.NewLine}{host.GetTestLoggerProvider().GetLogString()}");
+            Assert.True(signaled, $"[{DateTime.UtcNow.ToString("HH:mm:ss.fff")}] Function chain did not complete in {waitTime}. Logs:{Environment.NewLine}{host.GetTestLoggerProvider().GetLogString().TakeLast(2000)}");
 
             // Verify
             await VerifyTableResultsAsync();
@@ -367,9 +365,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // Construct a bad message:
             // - use a GUID as the content, which is not a valid base64 string
             // - pass 'true', to indicate that it is a base64 string
-            string messageContent = Guid.NewGuid().ToString();            
+            string messageContent = Guid.NewGuid().ToString();
             var message = new CloudQueueMessage(messageContent, true);
-            
+
             var queueClient = _storageAccount.CreateCloudQueueClient();
             var queue = queueClient.GetQueueReference(_resolver.ResolveInString(BadMessageQueue1));
             await queue.CreateIfNotExistsAsync();
