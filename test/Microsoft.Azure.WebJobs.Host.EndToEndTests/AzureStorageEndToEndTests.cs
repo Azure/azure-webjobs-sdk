@@ -326,7 +326,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // Stop the host and wait for it to finish
             await host.StopAsync();
 
-            Assert.True(signaled, $"[{DateTime.UtcNow.ToString("HH:mm:ss.fff")}] Function chain did not complete in {waitTime}. Logs:{Environment.NewLine}{host.GetTestLoggerProvider().GetLogString().TakeLast(2000)}");
+            Assert.True(signaled, $"[{DateTime.UtcNow.ToString("HH:mm:ss.fff")}] Function chain did not complete in {waitTime}. Logs:{Environment.NewLine}{host.GetTestLoggerProvider().GetTrimmedLogString()}");
 
             // Verify
             await VerifyTableResultsAsync();

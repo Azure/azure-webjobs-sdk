@@ -37,6 +37,16 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 
         public string GetLogString() => string.Join(Environment.NewLine, GetAllLogMessages());
 
+        public string GetTrimmedLogString(int maxLength = 4096)
+        {
+            string fullString = GetLogString();
+
+            // return the last 4096, which is all Appveyor can handle.
+            int trimmedLength = fullString.Length - maxLength;
+
+            return trimmedLength <= 0 ? fullString : fullString.Substring(maxLength);
+        }
+
         public void ClearAllLogMessages()
         {
             foreach (TestLogger logger in CreatedLoggers)
