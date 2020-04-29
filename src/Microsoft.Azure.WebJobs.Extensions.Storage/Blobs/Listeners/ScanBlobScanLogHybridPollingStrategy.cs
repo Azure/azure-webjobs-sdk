@@ -8,12 +8,12 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.WebJobs.Extensions.Storage;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Timers;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
@@ -33,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private int _scanBlobLimitPerPoll = 10000;
         private PollLogsStrategy _pollLogStrategy;
         private bool _disposed;
-        
+
         public ScanBlobScanLogHybridPollingStrategy(IBlobScanInfoManager blobScanInfoManager, IWebJobsExceptionHandler exceptionHandler, ILogger<BlobListener> logger) : base()
         {
             _blobScanInfoManager = blobScanInfoManager;
@@ -221,7 +221,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             try
             {
                 OperationContext operationContext = new OperationContext { ClientRequestID = clientRequestId };
-                blobSegment = await TimeoutHandler.ExecuteWithTimeout("ScanContainer", operationContext.ClientRequestID, _exceptionHandler, () =>
+                blobSegment = await TimeoutHandler.ExecuteWithTimeout("ScanContainer", operationContext.ClientRequestID, _logger, () =>
                 {
                     return container.ListBlobsSegmentedAsync(prefix: null, useFlatBlobListing: true,
                         blobListingDetails: BlobListingDetails.None, maxResults: blobPollLimitPerContainer, currentToken: continuationToken,

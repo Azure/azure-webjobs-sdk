@@ -25,17 +25,14 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private readonly HashSet<string> _scannedBlobNames = new HashSet<string>();
         private readonly StorageAnalyticsLogParser _parser;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
+        private readonly ILogger<BlobListener> _logger;
 
         private BlobLogListener(CloudBlobClient blobClient, IWebJobsExceptionHandler exceptionHandler, ILogger<BlobListener> logger)
         {
             _blobClient = blobClient;
             _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
-
-            if (logger == null)
-            {
-                throw new ArgumentNullException(nameof(logger));
-            }
-            _parser = new StorageAnalyticsLogParser(logger);
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _parser = new StorageAnalyticsLogParser(_logger);
         }
 
         public CloudBlobClient Client
@@ -57,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             List<ICloudBlob> blobs = new List<ICloudBlob>();
 
             var time = DateTime.UtcNow; // will scan back 2 hours, which is enough to deal with clock sqew
-            foreach (var blob in await ListRecentLogFilesAsync(_blobClient, time, cancellationToken, hoursWindow, _exceptionHandler))
+            foreach (var blob in await ListRecentLogFilesAsync(_blobClient, time, cancellationToken, hoursWindow, _logger))
             {
                 bool isAdded = _scannedBlobNames.Add(blob.Name);
                 if (!isAdded)
@@ -145,7 +142,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         // Logs are about 6 an hour, so we're only scanning about 12 logs total. 
         // $$$ If logs are large, we can even have a cache of "already scanned" logs that we skip. 
         private static async Task<List<ICloudBlob>> ListRecentLogFilesAsync(CloudBlobClient blobClient,
-            DateTime startTimeForSearch, CancellationToken cancellationToken, int hoursWindow, IWebJobsExceptionHandler exceptionHandler)
+            DateTime startTimeForSearch, CancellationToken cancellationToken, int hoursWindow, ILogger<BlobListener> logger)
         {
             string serviceName = "blob";
 
@@ -155,7 +152,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             for (int i = 0; i < hoursWindow; i++)
             {
                 var prefix = GetSearchPrefix(serviceName, lastHour, lastHour);
-                await GetLogsWithPrefixAsync(selectedLogs, blobClient, prefix, exceptionHandler, cancellationToken);
+                await GetLogsWithPrefixAsync(selectedLogs, blobClient, prefix, logger, cancellationToken);
                 lastHour = lastHour.AddHours(-1);
             }
 
@@ -165,12 +162,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         // Populate the List<> with blob logs for the given prefix. 
         // http://blogs.msdn.com/b/windowsazurestorage/archive/2011/08/03/windows-azure-storage-logging-using-logs-to-track-storage-requests.aspx
         private static async Task GetLogsWithPrefixAsync(List<ICloudBlob> selectedLogs, CloudBlobClient blobClient,
-            string prefix, IWebJobsExceptionHandler exceptionHandler, CancellationToken cancellationToken)
+            string prefix, ILogger<BlobListener> logger, CancellationToken cancellationToken)
         {
             // List the blobs using the prefix            
             IEnumerable<IListBlobItem> blobs = await blobClient.ListBlobsAsync(prefix,
                     useFlatBlobListing: true, blobListingDetails: BlobListingDetails.Metadata,
-                    operationName: "ScanLogs", exceptionHandler: exceptionHandler, cancellationToken: cancellationToken);
+                    operationName: "ScanLogs", logger: logger, cancellationToken: cancellationToken);
 
             if (blobs == null)
             {
