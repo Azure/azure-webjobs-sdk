@@ -7,18 +7,16 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.Cosmos.Table;
+using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.Storage.Queue;
 using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
-using Microsoft.Azure.Storage.Queue;
-using Microsoft.Azure.Cosmos.Table;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Xunit;
-
 using CloudStorageAccount = Microsoft.Azure.Storage.CloudStorageAccount;
 using TableStorageAccount = Microsoft.Azure.Cosmos.Table.CloudStorageAccount;
 
@@ -367,9 +365,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // Construct a bad message:
             // - use a GUID as the content, which is not a valid base64 string
             // - pass 'true', to indicate that it is a base64 string
-            string messageContent = Guid.NewGuid().ToString();            
+            string messageContent = Guid.NewGuid().ToString();
             var message = new CloudQueueMessage(messageContent, true);
-            
+
             var queueClient = _storageAccount.CreateCloudQueueClient();
             var queue = queueClient.GetQueueReference(_resolver.ResolveInString(BadMessageQueue1));
             await queue.CreateIfNotExistsAsync();
@@ -399,7 +397,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         // The message is in the second queue
                         var queue2 = queueClient.GetQueueReference(_resolver.ResolveInString(BadMessageQueue2));
 
-                        Storage.StorageException ex = await Assert.ThrowsAsync<Storage.StorageException>(
+                        Azure.Storage.StorageException ex = await Assert.ThrowsAsync<Azure.Storage.StorageException>(
                             () => queue2.DeleteMessageAsync(_lastMessageId, _lastMessagePopReceipt));
                         Assert.Equal("MessageNotFound", ex.RequestInformation.ExtendedErrorInformation.ErrorCode);
                     }

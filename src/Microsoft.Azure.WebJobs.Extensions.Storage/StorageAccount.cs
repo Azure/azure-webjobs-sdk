@@ -3,16 +3,14 @@
 
 using System;
 using Microsoft.Azure.Cosmos.Table;
-using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.Storage.Queue;
-
+using Microsoft.Azure.WebJobs.Extensions.Storage;
 using CloudStorageAccount = Microsoft.Azure.Storage.CloudStorageAccount;
 using TableStorageAccount = Microsoft.Azure.Cosmos.Table.CloudStorageAccount;
 
 namespace Microsoft.Azure.WebJobs
 {
-
     /// <summary>
     /// Wrapper around a CloudStorageAccount for abstractions and unit testing. 
     /// This is handed out by <see cref="StorageAccountProvider"/>.
@@ -20,12 +18,23 @@ namespace Microsoft.Azure.WebJobs
     /// </summary>
     public class StorageAccount
     {
+        private readonly IDelegatingHandlerProvider _delegatingHandlerProvider;
+
         /// <summary>
         /// Get the real azure storage account. Only use this if you explicitly need to bind to the <see cref="CloudStorageAccount"/>, 
         /// else use the virtuals. 
         /// </summary>
         public CloudStorageAccount SdkObject { get; protected set; }
         public TableStorageAccount TableSdkObject { get; protected set; }
+
+        public StorageAccount()
+        {
+        }
+
+        public StorageAccount(IDelegatingHandlerProvider delegatingHandlerProvider)
+        {
+            _delegatingHandlerProvider = delegatingHandlerProvider;
+        }
 
         public static StorageAccount NewFromConnectionString(string accountConnectionString)
         {
@@ -34,9 +43,9 @@ namespace Microsoft.Azure.WebJobs
             return New(account, tableAccount);
         }
 
-        public static StorageAccount New(CloudStorageAccount account, TableStorageAccount tableAccount = null)
+        public static StorageAccount New(CloudStorageAccount account, TableStorageAccount tableAccount = null, IDelegatingHandlerProvider delegatingHandlerFactory = null)
         {
-            return new StorageAccount { SdkObject = account, TableSdkObject = tableAccount };
+            return new StorageAccount(delegatingHandlerFactory) { SdkObject = account, TableSdkObject = tableAccount };
         }
 
         public virtual bool IsDevelopmentStorageAccount()
@@ -57,16 +66,26 @@ namespace Microsoft.Azure.WebJobs
 
         public virtual CloudBlobClient CreateCloudBlobClient()
         {
-            return SdkObject.CreateCloudBlobClient();
+            return new CloudBlobClient(SdkObject.BlobStorageUri, SdkObject.Credentials, _delegatingHandlerProvider?.Create());
         }
         public virtual CloudQueueClient CreateCloudQueueClient()
         {
-            return SdkObject.CreateCloudQueueClient();
+            return new CloudQueueClient(SdkObject.QueueStorageUri, SdkObject.Credentials, _delegatingHandlerProvider?.Create());
         }
 
         public virtual CloudTableClient CreateCloudTableClient()
         {
-            return CloudStorageAccountExtensions.CreateCloudTableClient(TableSdkObject);            
+            var restConfiguration = new RestExecutorConfiguration()
+            {
+                DelegatingHandler = _delegatingHandlerProvider?.Create()
+            };
+
+            var configuration = new TableClientConfiguration
+            {
+                RestExecutorConfiguration = restConfiguration
+            };
+
+            return new CloudTableClient(TableSdkObject.TableStorageUri, TableSdkObject.Credentials, configuration);
         }
     }
 }
