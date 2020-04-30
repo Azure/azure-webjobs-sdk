@@ -44,7 +44,7 @@ namespace Microsoft.Extensions.Hosting
             builder.Services.TryAddSingleton<ISharedContextProvider, SharedContextProvider>();
 
             builder.Services.TryAddSingleton<StorageAccountProvider>();
-            builder.Services.TryAddSingleton<IDelegatingHandlerFactory, DefaultDelegatingHandlerFactory>();
+            builder.Services.TryAddSingleton<IDelegatingHandlerProvider, DefaultDelegatingHandlerProvider>();
 
             builder.Services.TryAddSingleton<IContextSetter<IBlobWrittenWatcher>>((p) => new ContextAccessor<IBlobWrittenWatcher>());
             builder.Services.TryAddSingleton((p) => p.GetService<IContextSetter<IBlobWrittenWatcher>>() as IContextGetter<IBlobWrittenWatcher>);

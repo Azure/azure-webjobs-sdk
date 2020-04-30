@@ -18,7 +18,7 @@ namespace Microsoft.Azure.WebJobs
     /// </summary>
     public class StorageAccount
     {
-        private readonly IDelegatingHandlerFactory _delegatingHandlerFactory;
+        private readonly IDelegatingHandlerProvider _delegatingHandlerProvider;
 
         /// <summary>
         /// Get the real azure storage account. Only use this if you explicitly need to bind to the <see cref="CloudStorageAccount"/>, 
@@ -31,9 +31,9 @@ namespace Microsoft.Azure.WebJobs
         {
         }
 
-        internal StorageAccount(IDelegatingHandlerFactory delegatingHandlerFactory)
+        public StorageAccount(IDelegatingHandlerProvider delegatingHandlerProvider)
         {
-            _delegatingHandlerFactory = delegatingHandlerFactory;
+            _delegatingHandlerProvider = delegatingHandlerProvider;
         }
 
         public static StorageAccount NewFromConnectionString(string accountConnectionString)
@@ -43,7 +43,7 @@ namespace Microsoft.Azure.WebJobs
             return New(account, tableAccount);
         }
 
-        public static StorageAccount New(CloudStorageAccount account, TableStorageAccount tableAccount = null, IDelegatingHandlerFactory delegatingHandlerFactory = null)
+        public static StorageAccount New(CloudStorageAccount account, TableStorageAccount tableAccount = null, IDelegatingHandlerProvider delegatingHandlerFactory = null)
         {
             return new StorageAccount(delegatingHandlerFactory) { SdkObject = account, TableSdkObject = tableAccount };
         }
@@ -66,18 +66,18 @@ namespace Microsoft.Azure.WebJobs
 
         public virtual CloudBlobClient CreateCloudBlobClient()
         {
-            return new CloudBlobClient(SdkObject.BlobStorageUri, SdkObject.Credentials, _delegatingHandlerFactory?.Create());
+            return new CloudBlobClient(SdkObject.BlobStorageUri, SdkObject.Credentials, _delegatingHandlerProvider?.Create());
         }
         public virtual CloudQueueClient CreateCloudQueueClient()
         {
-            return new CloudQueueClient(SdkObject.QueueStorageUri, SdkObject.Credentials, _delegatingHandlerFactory?.Create());
+            return new CloudQueueClient(SdkObject.QueueStorageUri, SdkObject.Credentials, _delegatingHandlerProvider?.Create());
         }
 
         public virtual CloudTableClient CreateCloudTableClient()
         {
             var restConfiguration = new RestExecutorConfiguration()
             {
-                DelegatingHandler = _delegatingHandlerFactory?.Create()
+                DelegatingHandler = _delegatingHandlerProvider?.Create()
             };
 
             var configuration = new TableClientConfiguration

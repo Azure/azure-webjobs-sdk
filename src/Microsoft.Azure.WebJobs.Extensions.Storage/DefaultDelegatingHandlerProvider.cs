@@ -5,7 +5,7 @@ using System.Net.Http;
 
 namespace Microsoft.Azure.WebJobs.Extensions.Storage
 {
-    internal class DefaultDelegatingHandlerFactory : IDelegatingHandlerFactory
+    internal class DefaultDelegatingHandlerProvider : IDelegatingHandlerProvider
     {
         public DelegatingHandler Create()
         {

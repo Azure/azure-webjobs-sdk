@@ -19,12 +19,17 @@ namespace Microsoft.Azure.WebJobs
     public class StorageAccountProvider
     {
         private readonly IConfiguration _configuration;
-        private readonly IDelegatingHandlerFactory _delegatingHandlerFactory;
+        private readonly IDelegatingHandlerProvider _delegatingHandlerProvider;
 
         public StorageAccountProvider(IConfiguration configuration)
         {
             _configuration = configuration;
-            _delegatingHandlerFactory = new DefaultDelegatingHandlerFactory();
+        }
+
+        public StorageAccountProvider(IConfiguration configuration, IDelegatingHandlerProvider delegatingHandlerProvider)
+            : this(configuration)
+        {
+            _delegatingHandlerProvider = delegatingHandlerProvider;
         }
 
         public StorageAccount Get(string name, INameResolver resolver)
@@ -58,7 +63,7 @@ namespace Microsoft.Azure.WebJobs
                 throw new InvalidOperationException($"Storage account connection string for '{IConfigurationExtensions.GetPrefixedConnectionStringName(name)}' is invalid");
             }
 
-            return StorageAccount.New(cloudStorageAccount, tableStorageAccount, _delegatingHandlerFactory);
+            return StorageAccount.New(cloudStorageAccount, tableStorageAccount, _delegatingHandlerProvider);
         }
 
         /// <summary>
