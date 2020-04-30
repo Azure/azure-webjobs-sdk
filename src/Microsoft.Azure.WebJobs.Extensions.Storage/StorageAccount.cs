@@ -43,9 +43,9 @@ namespace Microsoft.Azure.WebJobs
             return New(account, tableAccount);
         }
 
-        public static StorageAccount New(CloudStorageAccount account, TableStorageAccount tableAccount = null, IDelegatingHandlerProvider delegatingHandlerFactory = null)
+        public static StorageAccount New(CloudStorageAccount account, TableStorageAccount tableAccount = null, IDelegatingHandlerProvider delegatingHandlerProvider = null)
         {
-            return new StorageAccount(delegatingHandlerFactory) { SdkObject = account, TableSdkObject = tableAccount };
+            return new StorageAccount(delegatingHandlerProvider) { SdkObject = account, TableSdkObject = tableAccount };
         }
 
         public virtual bool IsDevelopmentStorageAccount()
