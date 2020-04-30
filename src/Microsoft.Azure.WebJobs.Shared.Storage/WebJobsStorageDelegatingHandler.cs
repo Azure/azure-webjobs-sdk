@@ -3,6 +3,7 @@
 
 using System;
 using System.Net.Http;
+using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,15 +11,11 @@ namespace Microsoft.Azure.WebJobs.Storage.Common
 {
     internal class WebJobsStorageDelegatingHandler : DelegatingHandler
     {
-        private const string AzureWebsiteSku = "WEBSITE_SKU";
-        private const string DynamicSku = "Dynamic";
-        private readonly Lazy<bool> _isDynamicSku = new Lazy<bool>(IsDynamicSku);
-        
-        private bool _isInnerHandlerConfigured = false;        
+        private bool _isInnerHandlerConfigured = false;
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            if (!_isInnerHandlerConfigured && _isDynamicSku.Value)
+            if (!_isInnerHandlerConfigured)
             {
                 InitializeInnerHandler();
 
@@ -44,12 +41,6 @@ namespace Microsoft.Azure.WebJobs.Storage.Common
             {
                 // This exception is thrown if there's a race and this was set by another thread.
             }
-        }
-
-        private static bool IsDynamicSku()
-        {
-            string sku = Environment.GetEnvironmentVariable(AzureWebsiteSku);
-            return sku != null && sku == DynamicSku;
         }
     }
 }
