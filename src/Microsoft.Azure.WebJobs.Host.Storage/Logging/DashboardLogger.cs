@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Reflection;
 using System.Threading;
 using Microsoft.Azure.Storage.Blob;
@@ -52,12 +53,12 @@ namespace WebJobs.Host.Storage.Logging
         }
 
         public bool Setup(
-            IFunctionIndex functions, 
-            IListenerFactory functionsListenerFactory, 
-            out IFunctionExecutor hostCallExecutor, 
-            out IListener listener, 
-            out HostOutputMessage hostOutputMessage, 
-            string hostId, 
+            IFunctionIndex functions,
+            IListenerFactory functionsListenerFactory,
+            out IFunctionExecutor hostCallExecutor,
+            out IListener listener,
+            out HostOutputMessage hostOutputMessage,
+            string hostId,
             CancellationToken shutdownToken)
         {
             string sharedQueueName = HostQueueNames.GetHostQueueName(hostId);
@@ -83,8 +84,9 @@ namespace WebJobs.Host.Storage.Logging
             };
 
             var dashboardAccount = _storageAccountOptions.GetDashboardStorageAccount();
+            DelegatingHandler delegatingHandler = _storageAccountOptions.DelegatingHandlerProvider?.Create();
 
-            var blob = dashboardAccount.CreateCloudBlobClient()
+            var blob = new CloudBlobClient(dashboardAccount.BlobStorageUri, dashboardAccount.Credentials, delegatingHandler)
                 .GetContainerReference(heartbeatDescriptor.SharedContainerName)
                 .GetBlockBlobReference(heartbeatDescriptor.SharedDirectoryName + "/" + heartbeatDescriptor.InstanceBlobName);
             IRecurrentCommand heartbeatCommand = new UpdateHostHeartbeatCommand(new HeartbeatCommand(blob));

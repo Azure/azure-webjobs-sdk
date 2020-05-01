@@ -72,7 +72,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "TableParameterDescriptor",
                 "StorageAccount",
                 "StorageAccountProvider",
-                "AzureStorageWebJobsStartup"
+                "AzureStorageWebJobsStartup",
+                "IDelegatingHandlerProvider"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);

@@ -9,7 +9,9 @@
     <Import_RootNamespace>Microsoft.Azure.WebJobs.Shared.Storage</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)Extensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BlobStorageExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)StorageExceptionsExtensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CommonUtility.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)WebJobsStorageDelegatingHandler.cs" />
   </ItemGroup>
 </Project>

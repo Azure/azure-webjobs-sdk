@@ -1,19 +1,18 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
-using Microsoft.Azure.Storage.Queue;
-using Microsoft.Azure.Storage.Shared.Protocol;
 using System;
 using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.Storage.Shared.Protocol;
 
-internal static class StroageExtensions
+internal static class BlobStorageExtensions
 {
-    public static Task SetServicePropertiesAsync(this CloudBlobClient sdk,  ServiceProperties properties, CancellationToken cancellationToken)
+    public static Task SetServicePropertiesAsync(this CloudBlobClient sdk, ServiceProperties properties, CancellationToken cancellationToken)
     {
         return sdk.SetServicePropertiesAsync(properties, requestOptions: null, operationContext: null, cancellationToken: cancellationToken);
     }
@@ -70,5 +69,5 @@ internal static class StroageExtensions
     public static Task<ICloudBlob> GetBlobReferenceFromServerAsync(this CloudBlobContainer sdk, string blobName, CancellationToken cancellationToken)
     {
         return sdk.GetBlobReferenceFromServerAsync(blobName, accessCondition: null, options: null, operationContext: null, cancellationToken: cancellationToken);
-    }    
+    }
 }
