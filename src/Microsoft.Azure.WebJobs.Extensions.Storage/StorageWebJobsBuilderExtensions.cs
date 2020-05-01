@@ -17,7 +17,6 @@ using Microsoft.Azure.WebJobs.Host.Queues.Config;
 using Microsoft.Azure.WebJobs.Host.Queues.Listeners;
 using Microsoft.Azure.WebJobs.Host.Queues.Triggers;
 using Microsoft.Azure.WebJobs.Host.Tables.Config;
-using Microsoft.Azure.WebJobs.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using WebJobs.Extensions.Storage;
@@ -45,11 +44,7 @@ namespace Microsoft.Extensions.Hosting
             builder.Services.TryAddSingleton<ISharedContextProvider, SharedContextProvider>();
 
             builder.Services.TryAddSingleton<StorageAccountProvider>();
-
-            if (CommonUtility.IsDynamicSku)
-            {
-                builder.Services.TryAddSingleton<IDelegatingHandlerProvider, DefaultDelegatingHandlerProvider>();
-            }
+            builder.Services.TryAddSingleton<IDelegatingHandlerProvider, DefaultDelegatingHandlerProvider>();
 
             builder.Services.TryAddSingleton<IContextSetter<IBlobWrittenWatcher>>((p) => new ContextAccessor<IBlobWrittenWatcher>());
             builder.Services.TryAddSingleton((p) => p.GetService<IContextSetter<IBlobWrittenWatcher>>() as IContextGetter<IBlobWrittenWatcher>);

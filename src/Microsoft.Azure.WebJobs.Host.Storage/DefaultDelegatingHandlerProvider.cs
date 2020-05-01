@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Net.Http;
+using Microsoft.Azure.WebJobs.Storage;
 using Microsoft.Azure.WebJobs.Storage.Common;
 
 namespace Microsoft.Azure.WebJobs.Host.Storage
@@ -10,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
     {
         public DelegatingHandler Create()
         {
-            return new WebJobsStorageDelegatingHandler();
+            return CommonUtility.IsDynamicSku ? new WebJobsStorageDelegatingHandler() : null;
         }
     }
 }
