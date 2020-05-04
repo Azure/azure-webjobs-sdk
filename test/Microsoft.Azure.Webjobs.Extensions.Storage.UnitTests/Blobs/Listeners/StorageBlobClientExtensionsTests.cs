@@ -6,13 +6,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
-using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
-
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
 {
@@ -61,9 +61,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             // Mock the List function to return the correct blob page
             HashSet<BlobContinuationToken> seenTokens = new HashSet<BlobContinuationToken>();
             BlobResultSegment resultSegment = null;
-            mockClient.Setup(p => p.ListBlobsSegmentedAsync("test", true, BlobListingDetails.None, null, It.IsAny<BlobContinuationToken>(), null, It.IsAny<OperationContext>()))
-                .Callback<string, bool, BlobListingDetails, int?, BlobContinuationToken, BlobRequestOptions, OperationContext>(
-                    (prefix, useFlatBlobListing, blobListingDetails, maxResultsValue, currentToken, options, operationContext) =>
+            mockClient.Setup(p => p.ListBlobsSegmentedAsync("test", true, BlobListingDetails.None, null, It.IsAny<BlobContinuationToken>(), null, It.IsAny<OperationContext>(), It.IsAny<CancellationToken>()))
+                .Callback<string, bool, BlobListingDetails, int?, BlobContinuationToken, BlobRequestOptions, OperationContext, CancellationToken>(
+                    (prefix, useFlatBlobListing, blobListingDetails, maxResultsValue, currentToken, options, operationContext, cancellationToken) =>
                     {
                         // Previously this is where a bug existed - ListBlobsAsync wasn't handling
                         // continuation tokens properly and kept sending the same initial token
@@ -82,7 +82,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
                     })
                 .Returns(() => { return Task.FromResult(resultSegment); });
 
-            IEnumerable<IListBlobItem> results = await mockClient.Object.ListBlobsAsync("test", true, BlobListingDetails.None, "test", new TestExceptionHandler(), CancellationToken.None);
+            IEnumerable<IListBlobItem> results = await mockClient.Object.ListBlobsAsync("test", true, BlobListingDetails.None, "test", new TestExceptionHandler(), NullLogger<BlobListener>.Instance, CancellationToken.None);
 
             Assert.Equal(blobCount, results.Count());
         }
