@@ -61,9 +61,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
             // Mock the List function to return the correct blob page
             HashSet<BlobContinuationToken> seenTokens = new HashSet<BlobContinuationToken>();
             BlobResultSegment resultSegment = null;
-            mockClient.Setup(p => p.ListBlobsSegmentedAsync("test", true, BlobListingDetails.None, null, It.IsAny<BlobContinuationToken>(), null, It.IsAny<OperationContext>()))
-                .Callback<string, bool, BlobListingDetails, int?, BlobContinuationToken, BlobRequestOptions, OperationContext>(
-                    (prefix, useFlatBlobListing, blobListingDetails, maxResultsValue, currentToken, options, operationContext) =>
+            mockClient.Setup(p => p.ListBlobsSegmentedAsync("test", true, BlobListingDetails.None, null, It.IsAny<BlobContinuationToken>(), null, It.IsAny<OperationContext>(), It.IsAny<CancellationToken>()))
+                .Callback<string, bool, BlobListingDetails, int?, BlobContinuationToken, BlobRequestOptions, OperationContext, CancellationToken>(
+                    (prefix, useFlatBlobListing, blobListingDetails, maxResultsValue, currentToken, options, operationContext, cancellationToken) =>
                     {
                         // Previously this is where a bug existed - ListBlobsAsync wasn't handling
                         // continuation tokens properly and kept sending the same initial token
