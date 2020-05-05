@@ -105,7 +105,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             var builder = new HostBuilder()
                 .ConfigureWebJobs((c, b) => { }, o => { }, (context, configBuilder) =>
                     {
-                        // This will find ExternalTestStartup in WebJobsStartupTests
+                        // This will find ExternalTestStartupWithConfig in WebJobsStartupTests
                         configBuilder.UseExternalConfigurationStartup(new DefaultStartupTypeLocator(GetType().Assembly), NullLoggerFactory.Instance);
                         configBuilder.UseExternalConfigurationStartup(new DefaultStartupTypeLocator(GetType().Assembly), loggerFactory);
                         configBuilder.UseExternalConfigurationStartup(new DefaultStartupTypeLocator(GetType().Assembly), loggerFactory);

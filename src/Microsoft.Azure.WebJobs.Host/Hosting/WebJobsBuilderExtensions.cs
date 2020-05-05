@@ -169,7 +169,7 @@ namespace Microsoft.Azure.WebJobs
         public static IWebJobsBuilder UseExternalStartup(this IWebJobsBuilder builder, IWebJobsStartupTypeLocator startupTypeLocator, ILoggerFactory loggerFactory)
         {
             IEnumerable<Type> types = startupTypeLocator.GetStartupTypes()
-                .Where(t => typeof(IWebJobsConfigurationStartup).IsAssignableFrom(t));
+                .Where(t => typeof(IWebJobsStartup).IsAssignableFrom(t));
 
             foreach (var type in types)
             {

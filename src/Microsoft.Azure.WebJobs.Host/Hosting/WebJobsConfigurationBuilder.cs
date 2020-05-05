@@ -16,7 +16,7 @@ namespace Microsoft.Azure.WebJobs.Hosting
                 throw new ArgumentNullException(nameof(builder));
             }
 
-            ConfigurationBuilder = new TrackedConfigurationBuilder(builder);
+            ConfigurationBuilder = new TrackedConfigurationBuilder(builder ?? throw new ArgumentNullException(nameof(builder)));
         }
 
         public IConfigurationBuilder ConfigurationBuilder { get; private set; }

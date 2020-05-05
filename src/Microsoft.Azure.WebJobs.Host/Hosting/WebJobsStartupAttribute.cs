@@ -6,7 +6,7 @@ using System;
 namespace Microsoft.Azure.WebJobs.Hosting
 {
     /// <summary>
-    /// Attribute used to declare <see cref="IWebJobsConfigurationStartup"/> Types that should be registered and invoked
+    /// Attribute used to declare <see cref="IWebJobsStartup"/> and <see cref="IWebJobsConfigurationStartup"/> Types that should be registered and invoked
     /// as part of host startup.
     /// </summary>
     [AttributeUsage(AttributeTargets.Assembly, Inherited = false, AllowMultiple = true)]
@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.Hosting
         /// <summary>
         /// Constructs a new instance.
         /// </summary>
-        /// <param name="startupType">The Type of the <see cref="IWebJobsConfigurationStartup"/> class to register.</param>
+        /// <param name="startupType">The Type of the <see cref="IWebJobsStartup"/> or <see cref="IWebJobsConfigurationStartup"/> class to register.</param>
         /// <param name="name">The friendly human readable name for the startup action. If null, the name will be
         /// defaulted based on naming convention.</param>
         public WebJobsStartupAttribute(Type startupType, string name = null)
@@ -50,7 +50,7 @@ namespace Microsoft.Azure.WebJobs.Hosting
         }
 
         /// <summary>
-        /// Gets the Type of the <see cref="IWebJobsConfigurationStartup"/> class to register.
+        /// Gets the Type of the <see cref="IWebJobsStartup"/> or <see cref="IWebJobsConfigurationStartup"/> class to register.
         /// </summary>
         public Type WebJobsStartupType { get; }
 
