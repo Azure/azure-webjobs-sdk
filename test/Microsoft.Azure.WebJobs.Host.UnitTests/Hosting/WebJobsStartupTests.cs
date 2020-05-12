@@ -4,9 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Authentication.ExtendedProtection;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 [assembly: WebJobsStartup(typeof(Microsoft.Azure.WebJobs.Host.UnitTests.Hosting.WebJobsStartupTests.ExternalTestStartup))]
+[assembly: WebJobsStartup(typeof(Microsoft.Azure.WebJobs.Host.UnitTests.Hosting.WebJobsStartupTests.ExternalTestStartupWithConfig))]
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
 {
@@ -123,11 +124,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
 
             IHost host = builder.Build();
 
-            var service = host.Services.GetService<TestExternalService>();
-            Assert.NotNull(service);
+            Assert.NotNull(host.Services.GetService<TestExternalService>());
+            Assert.NotNull(host.Services.GetService<TestExternalServiceWithConfig>());
 
             var messages = provider.GetAllLogMessages();
-            Assert.NotEmpty(messages.Where(m => m.FormattedMessage.Contains("TestExternalService")));
+            Assert.NotEmpty(messages.Where(m => m.FormattedMessage.Contains("TestExternalService:")));
+            Assert.NotEmpty(messages.Where(m => m.FormattedMessage.Contains("TestExternalServiceWithConfig:")));
         }
 
         [Fact]
@@ -141,9 +143,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
 
             IHost host = builder.Build();
 
-            var service = host.Services.GetService<TestExternalService>();
-
-            Assert.NotNull(service);
+            Assert.NotNull(host.Services.GetService<TestExternalService>());
+            Assert.NotNull(host.Services.GetService<TestExternalServiceWithConfig>());
         }
 
         private class StartupScope : IDisposable
@@ -195,6 +196,26 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             }
         }
 
+        public class ExternalTestStartupWithConfig : IWebJobsStartup, IWebJobsConfigurationStartup
+        {
+            public void Configure(IWebJobsBuilder builder)
+            {
+                builder.Services.AddSingleton<TestExternalServiceWithConfig>();
+            }
+
+            public void Configure(IWebJobsConfigurationBuilder builder)
+            {
+                IDictionary<string, string> data = new Dictionary<string, string>
+                {
+                    { "abc", "123" }
+                };
+
+                builder.ConfigurationBuilder.AddInMemoryCollection(data);
+                builder.ConfigurationBuilder.AddEnvironmentVariables();
+                builder.ConfigurationBuilder.AddTestSettings();
+            }
+        }
+
         public class FooStartup : IWebJobsStartup
         {
             public void Configure(IWebJobsBuilder builder)
@@ -223,5 +244,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
         }
 
         private class TestExternalService { }
+
+        private class TestExternalServiceWithConfig { } // use when also registering config
     }
 }

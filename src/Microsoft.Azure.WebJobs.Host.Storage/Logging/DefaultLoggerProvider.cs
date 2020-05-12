@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.Storage.Blob;
@@ -53,13 +54,13 @@ namespace WebJobs.Host.Storage.Logging
 
             IFunctionInstanceLogger functionLogger = new FunctionInstanceLogger(_loggerFactory);
 
-
             if (_storageAccountOptions.Dashboard != null)
             {
                 var dashboardAccount = _storageAccountOptions.GetDashboardStorageAccount();
+                DelegatingHandler delegatingHandler = _storageAccountOptions.DelegatingHandlerProvider?.Create();
 
                 // Create logging against a live Azure account.
-                var dashboardBlobClient = dashboardAccount.CreateCloudBlobClient();
+                var dashboardBlobClient = new CloudBlobClient(dashboardAccount.BlobStorageUri, dashboardAccount.Credentials, delegatingHandler);
                 IPersistentQueueWriter<PersistentQueueMessage> queueWriter = new PersistentQueueWriter<PersistentQueueMessage>(dashboardBlobClient);
                 PersistentQueueLogger queueLogger = new PersistentQueueLogger(queueWriter);
                 _hostInstanceLogger = queueLogger;

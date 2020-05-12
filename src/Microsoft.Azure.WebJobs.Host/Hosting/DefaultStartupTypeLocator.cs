@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
@@ -15,22 +14,28 @@ namespace Microsoft.Azure.WebJobs.Hosting
     internal class DefaultStartupTypeLocator : IWebJobsStartupTypeLocator
     {
         private readonly Assembly _entryAssembly;
+        private readonly Lazy<Type[]> _startupTypes;
 
         public DefaultStartupTypeLocator()
         {
+            _startupTypes = new Lazy<Type[]>(GetTypes);
         }
 
         internal DefaultStartupTypeLocator(Assembly entryAssembly)
+            : this()
         {
             _entryAssembly = entryAssembly;
         }
 
         public Type[] GetStartupTypes()
         {
-            Assembly assembly = _entryAssembly ?? Assembly.GetEntryAssembly();
-            IEnumerable<WebJobsStartupAttribute> startupAttributes = assembly.GetCustomAttributes<WebJobsStartupAttribute>();
+            return _startupTypes.Value;
+        }
 
-            return startupAttributes.Select(a => a.WebJobsStartupType).ToArray();
+        private Type[] GetTypes()
+        {
+            Assembly entryAssembly = _entryAssembly ?? Assembly.GetEntryAssembly();
+            return entryAssembly.GetCustomAttributes<WebJobsStartupAttribute>().Select(a => a.WebJobsStartupType).ToArray();
         }
     }
 }
