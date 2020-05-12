@@ -9,12 +9,12 @@ using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.WebJobs.Extensions.Storage;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Timers;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
@@ -34,7 +34,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private int _scanBlobLimitPerPoll = 10000;
         private PollLogsStrategy _pollLogStrategy;
         private bool _disposed;
-        
+
         public ScanBlobScanLogHybridPollingStrategy(IBlobScanInfoManager blobScanInfoManager, IWebJobsExceptionHandler exceptionHandler, ILogger<BlobListener> logger) : base()
         {
             _blobScanInfoManager = blobScanInfoManager;
@@ -222,12 +222,13 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             try
             {
                 OperationContext operationContext = new OperationContext { ClientRequestID = clientRequestId };
-                blobSegment = await TimeoutHandler.ExecuteWithTimeout("ScanContainer", operationContext.ClientRequestID, _exceptionHandler, () =>
-                {
-                    return container.ListBlobsSegmentedAsync(prefix: null, useFlatBlobListing: true,
-                        blobListingDetails: BlobListingDetails.None, maxResults: blobPollLimitPerContainer, currentToken: continuationToken,
-                        options: null, operationContext: operationContext, cancellationToken: cancellationToken);
-                });
+                blobSegment = await TimeoutHandler.ExecuteWithTimeout("ScanContainer", operationContext.ClientRequestID, _exceptionHandler,
+                    _logger, cancellationToken, () =>
+                    {
+                        return container.ListBlobsSegmentedAsync(prefix: null, useFlatBlobListing: true,
+                            blobListingDetails: BlobListingDetails.None, maxResults: blobPollLimitPerContainer, currentToken: continuationToken,
+                            options: null, operationContext: operationContext, cancellationToken: cancellationToken);
+                    });
 
                 if (blobSegment == null)
                 {

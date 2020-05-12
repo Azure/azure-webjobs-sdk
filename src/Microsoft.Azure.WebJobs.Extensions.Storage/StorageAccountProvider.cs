@@ -2,9 +2,9 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using Microsoft.Azure.WebJobs.Extensions.Storage;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Configuration;
-
 using CloudStorageAccount = Microsoft.Azure.Storage.CloudStorageAccount;
 using TableStorageAccount = Microsoft.Azure.Cosmos.Table.CloudStorageAccount;
 
@@ -19,10 +19,17 @@ namespace Microsoft.Azure.WebJobs
     public class StorageAccountProvider
     {
         private readonly IConfiguration _configuration;
+        private readonly IDelegatingHandlerProvider _delegatingHandlerProvider;
 
         public StorageAccountProvider(IConfiguration configuration)
         {
             _configuration = configuration;
+        }
+
+        public StorageAccountProvider(IConfiguration configuration, IDelegatingHandlerProvider delegatingHandlerProvider)
+            : this(configuration)
+        {
+            _delegatingHandlerProvider = delegatingHandlerProvider;
         }
 
         public StorageAccount Get(string name, INameResolver resolver)
@@ -47,7 +54,7 @@ namespace Microsoft.Azure.WebJobs
             }
 
             if (!CloudStorageAccount.TryParse(connectionString, out CloudStorageAccount cloudStorageAccount))
-            {   
+            {
                 throw new InvalidOperationException($"Storage account connection string for '{IConfigurationExtensions.GetPrefixedConnectionStringName(name)}' is invalid");
             }
 
@@ -56,7 +63,7 @@ namespace Microsoft.Azure.WebJobs
                 throw new InvalidOperationException($"Storage account connection string for '{IConfigurationExtensions.GetPrefixedConnectionStringName(name)}' is invalid");
             }
 
-            return StorageAccount.New(cloudStorageAccount, tableStorageAccount);
+            return StorageAccount.New(cloudStorageAccount, tableStorageAccount, _delegatingHandlerProvider);
         }
 
         /// <summary>

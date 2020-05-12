@@ -8,6 +8,8 @@ using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Queue;
 using Microsoft.Azure.WebJobs.Extensions.Storage;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
@@ -15,8 +17,6 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Queue;
 
 namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
 {
@@ -196,14 +196,15 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
                     sw = Stopwatch.StartNew();
                     OperationContext context = new OperationContext { ClientRequestID = clientRequestId };
 
-                    batch = await TimeoutHandler.ExecuteWithTimeout("GetMessages", context.ClientRequestID, _exceptionHandler, () =>
-                    {
-                        return _queue.GetMessagesAsync(_queueProcessor.BatchSize,
-                            _visibilityTimeout,
-                            options: null,
-                            operationContext: context,
-                            cancellationToken: cancellationToken);
-                    });
+                    batch = await TimeoutHandler.ExecuteWithTimeout(nameof(CloudQueue.GetMessageAsync), context.ClientRequestID,
+                        _exceptionHandler, _logger, cancellationToken, () =>
+                        {
+                            return _queue.GetMessagesAsync(_queueProcessor.BatchSize,
+                                _visibilityTimeout,
+                                options: null,
+                                operationContext: context,
+                                cancellationToken: cancellationToken);
+                        });
 
                     int count = batch?.Count() ?? -1;
                     Logger.GetMessages(_logger, _functionDescriptor.LogName, _queue.Name, context.ClientRequestID, count, sw.ElapsedMilliseconds);

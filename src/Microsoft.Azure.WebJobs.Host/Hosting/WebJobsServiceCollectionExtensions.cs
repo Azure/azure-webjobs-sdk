@@ -44,7 +44,10 @@ namespace Microsoft.Azure.WebJobs
                 throw new ArgumentNullException(nameof(services));
             }
 
-            services.Configure(configure);
+            if (configure != null)
+            {
+                services.Configure(configure);
+            }
 
             // A LOT of the service registrations below need to be cleaned up
             // maintaining some of the existing dependencies and model we previously had, 

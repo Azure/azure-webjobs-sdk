@@ -206,6 +206,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IWatchable",
                 "IWatcher",
                 "IWebHookProvider",
+                "IWebJobsConfigurationBuilder",
+                "IWebJobsConfigurationStartup",
                 "IWebJobsExceptionHandler",
                 "IWebJobsExceptionHandlerFactory",
                 "IWebJobsExtensionBuilder",

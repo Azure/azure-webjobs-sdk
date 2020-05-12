@@ -147,9 +147,9 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
                         TaskSeriesCommandResult result = await _command.ExecuteAsync(cancellationToken);
                         wait = result.Wait;
                     }
-                    catch (Exception ex) when (ex.InnerException is TaskCanceledException)
+                    catch (Exception ex) when (ex.InnerException is OperationCanceledException)
                     {
-                        // TaskCanceledExceptions coming from storage are wrapped in a StorageException.
+                        // OperationCanceledExceptions coming from storage are wrapped in a StorageException.
                         // We'll handle them all here so they don't have to be managed for every call.
                     }
                     catch (OperationCanceledException)

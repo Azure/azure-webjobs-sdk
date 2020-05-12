@@ -2,15 +2,16 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
 
 namespace Microsoft.Extensions.Hosting
 {
@@ -39,6 +40,8 @@ namespace Microsoft.Extensions.Hosting
             builder.Services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<StorageAccountOptions>, StorageAccountOptionsSetup>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, CoreWebJobsOptionsSetup<JobHostInternalStorageOptions>>());
 
+            builder.Services.TryAddSingleton<IDelegatingHandlerProvider, DefaultDelegatingHandlerProvider>();
+
             return builder;
         }
 
@@ -49,7 +52,7 @@ namespace Microsoft.Extensions.Hosting
             var opts = provider.GetRequiredService<IOptions<StorageAccountOptions>>();
 
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
-            
+
             var sas = provider.GetService<DistributedLockManagerContainerProvider>();
 
             CloudBlobContainer container;
@@ -67,11 +70,11 @@ namespace Microsoft.Extensions.Hosting
                     return new InMemoryDistributedLockManager();
                 }
 
-                var blobClient = account.CreateCloudBlobClient();
+                var blobClient = new CloudBlobClient(account.BlobStorageUri, account.Credentials, config.DelegatingHandlerProvider?.Create());
                 container = blobClient.GetContainerReference(HostContainerNames.Hosts);
             }
 
-            var lockManager = new CloudBlobContainerDistributedLockManager(container, loggerFactory);            
+            var lockManager = new CloudBlobContainerDistributedLockManager(container, loggerFactory);
             return lockManager;
         }
     }
