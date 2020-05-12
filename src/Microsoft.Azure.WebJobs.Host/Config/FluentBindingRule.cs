@@ -265,25 +265,45 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         #endregion
 
 
+        #region BindToValueProvider
+
         /// <summary>
         /// Rule to provide an IValueBinder from a resolved attribute. 
-        /// IValueBinder will let you have an OnCompleted hook that is invoked after the user function completes. 
+        /// IValueBinder will let you have an SetValueAsync(..) hook that is invoked after the user function completes.
         /// </summary>
-        /// <param name="builder">Builder function to create a IValueBinder given a resolved attribute and the user parameter type. </param>
+        /// <remarks>This currently works only with .Net-base (in-proc) functions.</remarks>
+        /// <param name="builder">Builder function to create a IValueBinder given a resolved attribute and the user parameter type.</param>
         /// <returns>A binding provider that applies these semantics.</returns>
         public FluentBinder BindToValueProvider(Func<TAttribute, Type, Task<IValueBinder>> builder)
         {
-            return BindToValueProvider<object>(builder);
+            Func<TAttribute, Type, ValueBindingContext, Task<IValueBinder>> valueBuilder = ItemBindingProvider<TAttribute>.CreateBuilderIgnoringContext(builder);
+            return BindToValueProvider<object>(valueBuilder);
         }
 
         /// <summary>
         /// Rule to provide an IValueBinder from a resolved attribute. 
-        /// IValueBinder will let you have an OnCompleted hook that is invoked after the user function completes. 
+        /// IValueBinder will let you have an SetValueAsync(..) hook that is invoked after the user function completes.
         /// </summary>
+        /// <remarks>This currently works only with .Net-base (in-proc) functions.</remarks>
         /// <typeparam name="TType">An Open Type. This rule is only applied if the parameter type matches the open type</typeparam>
-        /// <param name="builder">Builder function to create a IValueBinder given a resolved attribute and the user parameter type. </param>
+        /// <param name="builder">Builder function to create a IValueBinder given a resolved attribute and the user parameter type</param>
         /// <returns>A binding provider that applies these semantics.</returns>
         public FluentBinder BindToValueProvider<TType>(Func<TAttribute, Type, Task<IValueBinder>> builder)
+        {
+            Func<TAttribute, Type, ValueBindingContext, Task<IValueBinder>> valueBuilder = ItemBindingProvider<TAttribute>.CreateBuilderIgnoringContext(builder);
+            return BindToValueProvider<TType>(valueBuilder);
+        }
+
+        /// <summary>
+        /// Rule to provide an IValueBinder from a resolved attribute. 
+        /// IValueBinder will let you have an SetValueAsync(..) hook that is invoked after the user function completes.
+        /// </summary>
+        /// <remarks>This currently works only with .Net-base (in-proc) functions.</remarks>
+        /// <typeparam name="TType">An Open Type. This rule is only applied if the parameter type matches the open type</typeparam>
+        /// <param name="builder">Builder function to create a IValueBinder given a resolved attribute, the user parameter type,
+        /// and the value binding Context.</param>
+        /// <returns>A binding provider that applies these semantics.</returns>
+        public FluentBinder BindToValueProvider<TType>(Func<TAttribute, Type, ValueBindingContext, Task<IValueBinder>> builder)
         {
             var ot = OpenType.FromType<TType>();
             var nameResolver = _nameResolver;
@@ -291,39 +311,10 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             return Bind(binder);
         }
 
-
-        /// <summary>
-        /// Add a general binder.
-        /// </summary>
-        /// <param name="binder"></param>
-        /// <returns></returns>
-        public FluentBinder Bind(IBindingProvider binder)
-        {
-            if (this._hook != null)
-            {
-                var fluidBinder = (FluentBindingProvider<TAttribute>)binder;
-                fluidBinder.BuildParameterDescriptor = _hook;
-                _hook = null;
-            }
-
-            // Apply filters
-            if (this._filterDescription.Count > 0)
-            {
-                binder = new FilteringBindingProvider<TAttribute>(
-                    _configuration,
-                    this._nameResolver,
-                    binder,
-                    FilterNode.And(this._filterDescription));
-
-                this._filterDescription.Clear();
-            }
-
-            var opts = new FluentBinder(_configuration, _nameResolver, binder);
-            _binders.Add(opts);
-            return opts;
-        }
+        #endregion BindToValueProvider
 
         #region BindToCollector
+
         /// <summary>
         /// Bind to a collector 
         /// </summary>
@@ -332,6 +323,19 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         /// <returns></returns>
         public void BindToCollector<TMessage>(
             Func<TAttribute, IAsyncCollector<TMessage>> buildFromAttribute)
+        {
+            var pm = PatternMatcher.New(buildFromAttribute);
+            BindToCollector<TMessage>(pm);
+        }
+
+        /// <summary>
+        /// Bind to a collector 
+        /// </summary>
+        /// <typeparam name="TMessage"></typeparam>
+        /// <param name="buildFromAttribute"></param>
+        /// <returns></returns>
+        public void BindToCollector<TMessage>(
+            Func<TAttribute, ValueBindingContext, Task<IAsyncCollector<TMessage>>> buildFromAttribute)
         {
             var pm = PatternMatcher.New(buildFromAttribute);
             BindToCollector<TMessage>(pm);
@@ -384,7 +388,9 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             Bind(rule);
         }
 
-        #endregion // BindToCollector
+        #endregion BindToCollector
+
+        #region BindToTrigger
 
         /// <summary>
         /// Setup a trigger binding for this attribute
@@ -412,6 +418,39 @@ namespace Microsoft.Azure.WebJobs.Host.Config
                 this._nameResolver,
                 _converterManager);
             Bind(triggerBinder);
+        }
+
+        #endregion BindToTrigger
+
+        /// <summary>
+        /// Add a general binder.
+        /// </summary>
+        /// <param name="binder"></param>
+        /// <returns></returns>
+        public FluentBinder Bind(IBindingProvider binder)
+        {
+            if (this._hook != null)
+            {
+                var fluidBinder = (FluentBindingProvider<TAttribute>)binder;
+                fluidBinder.BuildParameterDescriptor = _hook;
+                _hook = null;
+            }
+
+            // Apply filters
+            if (this._filterDescription.Count > 0)
+            {
+                binder = new FilteringBindingProvider<TAttribute>(
+                    _configuration,
+                    this._nameResolver,
+                    binder,
+                    FilterNode.And(this._filterDescription));
+
+                this._filterDescription.Clear();
+            }
+
+            var opts = new FluentBinder(_configuration, _nameResolver, binder);
+            _binders.Add(opts);
+            return opts;
         }
 
         /// <summary>

@@ -15,15 +15,21 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     internal class ItemBindingProvider<TAttribute> : IBindingProvider
         where TAttribute : Attribute
     {
+        internal static Func<TAttribute, Type, ValueBindingContext, Task<IValueBinder>> CreateBuilderIgnoringContext(Func<TAttribute, Type, Task<IValueBinder>> valueBinderBuilder)
+        {
+            Func<TAttribute, Type, ValueBindingContext, Task<IValueBinder>> ctxIgnoringBuilder = (attribute, valueType, _) => valueBinderBuilder(attribute, valueType);
+            return ctxIgnoringBuilder;
+        }
+
         private readonly IConfiguration _configuration;
         private readonly INameResolver _nameResolver;
-        private readonly Func<TAttribute, Type, Task<IValueBinder>> _builder;
+        private readonly Func<TAttribute, Type, ValueBindingContext, Task<IValueBinder>> _builder;
         private readonly OpenType _filter; // Filter to only apply to types that match this open type. 
 
         public ItemBindingProvider(
             IConfiguration configuration,
             INameResolver nameResolver,
-            Func<TAttribute, Type, Task<IValueBinder>> builder,
+            Func<TAttribute, Type, ValueBindingContext, Task<IValueBinder>> builder,
             OpenType filter)
         {
             _configuration = configuration;
@@ -61,12 +67,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
         private class Binding : BindingBase<TAttribute>
         {
-            private readonly Func<TAttribute, Type, Task<IValueBinder>> _builder;
+            private readonly Func<TAttribute, Type, ValueBindingContext, Task<IValueBinder>> _builder;
             private readonly ParameterInfo _parameter;
 
             public Binding(
                     AttributeCloner<TAttribute> cloner,
-                    Func<TAttribute, Type, Task<IValueBinder>> builder,
+                    Func<TAttribute, Type, ValueBindingContext, Task<IValueBinder>> builder,
                     ParameterInfo parameter)
                 : base(cloner, parameter)
             {
@@ -77,7 +83,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             protected override async Task<IValueProvider> BuildAsync(TAttribute attrResolved, ValueBindingContext context)
             {
                 string invokeString = Cloner.GetInvokeString(attrResolved);
-                IValueBinder valueBinder = await _builder(attrResolved, _parameter.ParameterType);
+                IValueBinder valueBinder = await _builder(attrResolved, _parameter.ParameterType, context);
 
                 return new Wrapper(valueBinder, invokeString);
             }
