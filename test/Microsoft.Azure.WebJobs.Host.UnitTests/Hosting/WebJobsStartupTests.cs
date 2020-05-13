@@ -216,26 +216,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             }
         }
 
-        public class ExternalTestStartupWithConfig : IWebJobsStartup, IWebJobsConfigurationStartup
-        {
-            public void Configure(IWebJobsBuilder builder)
-            {
-                builder.Services.AddSingleton<TestExternalServiceWithConfig>();
-            }
-
-            public void Configure(IWebJobsConfigurationBuilder builder)
-            {
-                IDictionary<string, string> data = new Dictionary<string, string>
-                {
-                    { "abc", "123" }
-                };
-
-                builder.ConfigurationBuilder.AddInMemoryCollection(data);
-                builder.ConfigurationBuilder.AddEnvironmentVariables();
-                builder.ConfigurationBuilder.AddTestSettings();
-            }
-        }
-
         public class FooStartup : IWebJobsStartup
         {
             public void Configure(IWebJobsBuilder builder)
