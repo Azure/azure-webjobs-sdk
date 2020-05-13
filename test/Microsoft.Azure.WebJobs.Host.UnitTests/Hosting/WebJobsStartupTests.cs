@@ -203,7 +203,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
                 builder.Services.AddSingleton<TestExternalServiceWithConfig>();
             }
 
-            public void Configure(IWebJobsConfigurationBuilder builder)
+            public void Configure(WebJobsBuilderContext context, IWebJobsConfigurationBuilder builder)
             {
                 IDictionary<string, string> data = new Dictionary<string, string>
                 {
