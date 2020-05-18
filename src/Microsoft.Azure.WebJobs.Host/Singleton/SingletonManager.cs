@@ -149,7 +149,7 @@ namespace Microsoft.Azure.WebJobs.Host
             TimeSpan normalUpdateInterval = new TimeSpan(leasePeriod.Ticks / 2);
 
             IDelayStrategy speedupStrategy = new LinearSpeedupStrategy(normalUpdateInterval, MinimumLeaseRenewalInterval);
-            ITaskSeriesCommand command = new RenewLeaseCommand(this._lockManager, lockHandle, speedupStrategy);
+            ITaskSeriesCommand command = new RenewLeaseCommand(_lockManager, lockHandle, speedupStrategy);
             return new TaskSeriesTimer(command, this._exceptionHandler, Task.Delay(normalUpdateInterval));
         }
 
@@ -317,21 +317,21 @@ namespace Microsoft.Azure.WebJobs.Host
         {
             private readonly IDistributedLockManager _lockManager;
             private readonly IDistributedLock _lock;
-            private readonly IDelayStrategy _speedupStrategy;
+            private readonly IDelayStrategy _delayStrategy;
 
-            public RenewLeaseCommand(IDistributedLockManager lockManager, IDistributedLock @lock, IDelayStrategy speedupStrategy)
+            public RenewLeaseCommand(IDistributedLockManager lockManager, IDistributedLock @lock, IDelayStrategy delayStrategy)
             {
                 _lock = @lock;
                 _lockManager = lockManager;
-                _speedupStrategy = speedupStrategy;
+                _delayStrategy = delayStrategy;
             }
 
             public async Task<TaskSeriesCommandResult> ExecuteAsync(CancellationToken cancellationToken)
             {
-                // Exceptions wil propagate 
-                bool executionSucceeded = await _lockManager.RenewAsync(_lock, cancellationToken);
+                // Exceptions will propagate 
+                bool renewalSucceeded = await _lockManager.RenewAsync(_lock, cancellationToken);
 
-                TimeSpan delay = _speedupStrategy.GetNextDelay(executionSucceeded: true);
+                TimeSpan delay = _delayStrategy.GetNextDelay(renewalSucceeded);
                 return new TaskSeriesCommandResult(wait: Task.Delay(delay));
             }
         }
