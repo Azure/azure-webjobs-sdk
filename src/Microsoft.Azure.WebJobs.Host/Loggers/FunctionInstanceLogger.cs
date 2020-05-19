@@ -2,8 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,54 +22,90 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
 
         public Task<string> LogFunctionStartedAsync(FunctionStartedMessage message, CancellationToken cancellationToken)
         {
-            string traceMessage = string.Format(CultureInfo.InvariantCulture, "Executing '{0}' (Reason='{1}', Id={2})", message.Function.ShortName, message.FormatReason(), message.FunctionInstanceId);
-            Log(LogLevel.Information, message.Function, message.FunctionInstanceId, traceMessage);
+            var logger = GetLogger(message.Function);
+            Log.FunctionStarted(
+                logger, 
+                message.Function.ShortName, 
+                message.ReasonDetails ?? message.FormatReason(), 
+                message.FunctionInstanceId);
+
             if (message.TriggerDetails != null && message.TriggerDetails.Count != 0)
             {
-                LogTemplatizedTriggerDetails(message);
+                LogTemplatizedTriggerDetails(logger, message);
             }
+
             return Task.FromResult<string>(null);
         }
 
-        private void LogTemplatizedTriggerDetails(FunctionStartedMessage message)
+        private void LogTemplatizedTriggerDetails(ILogger logger, FunctionStartedMessage message)
         {
             var templateKeys = message.TriggerDetails.Select(entry => $"{entry.Key}: {{{entry.Key}}}");
             string messageTemplate = "Trigger Details: " + string.Join(", ", templateKeys);
             string[] templateValues = message.TriggerDetails.Values.ToArray();
-            Log(LogLevel.Information, message.Function, messageTemplate, templateValues);
-        }
 
-        private void Log(LogLevel level, FunctionDescriptor descriptor, string message, params object[] args)
-        {
-            ILogger logger = _loggerFactory?.CreateLogger(LogCategories.CreateFunctionCategory(descriptor.LogName));
-            logger?.Log(level, 0, message, args);
+            logger.LogInformation(messageTemplate, templateValues);
         }
 
         public Task LogFunctionCompletedAsync(FunctionCompletedMessage message, CancellationToken cancellationToken)
         {
-            if (message.Succeeded)
-            {
-                string traceMessage = string.Format(CultureInfo.InvariantCulture, "Executed '{0}' (Succeeded, Id={1})", message.Function.ShortName, message.FunctionInstanceId);
-                Log(LogLevel.Information, message.Function, message.FunctionInstanceId, traceMessage);
-            }
-            else
-            {
-                string traceMessage = string.Format(CultureInfo.InvariantCulture, "Executed '{0}' (Failed, Id={1})", message.Function.ShortName, message.FunctionInstanceId);
-                Log(LogLevel.Error, message.Function, message.FunctionInstanceId, traceMessage, message.Failure.Exception);
-            }
+            var logger = GetLogger(message.Function);
+            Log.FunctionCompleted(
+                logger, 
+                message.Function.ShortName, 
+                message.FunctionInstanceId,
+                message.Succeeded,
+                message.Failure);
 
             return Task.CompletedTask;
-        }
-
-        private void Log(LogLevel level, FunctionDescriptor descriptor, Guid functionId, string message, Exception exception = null)
-        {
-            ILogger logger = _loggerFactory?.CreateLogger(LogCategories.CreateFunctionCategory(descriptor.LogName));
-            logger?.Log(level, 0, message, exception, (s, e) => s);
         }
 
         public Task DeleteLogFunctionStartedAsync(string startedMessageId, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
+        }
+
+        private ILogger GetLogger(FunctionDescriptor descriptor)
+        {
+            return _loggerFactory?.CreateLogger(LogCategories.CreateFunctionCategory(descriptor.LogName));
+        }
+
+        private static class Log
+        {
+            private static readonly Action<ILogger, string, string, Guid, Exception> _functionStarted =
+                LoggerMessage.Define<string, string, Guid>(
+                    LogLevel.Information,
+                    new EventId(1, nameof(FunctionStarted)),
+                    "Executing '{functionName}' (Reason='{reason}', Id={invocationId})");
+
+            private static readonly Action<ILogger, string, string, Guid, Exception> _functionSucceeded =
+                LoggerMessage.Define<string, string, Guid>(
+                    LogLevel.Information,
+                    new EventId(2, nameof(FunctionCompleted)),
+                    "Executed '{functionName}' ({status}, Id={invocationId})");
+
+            private static readonly Action<ILogger, string,  string, Guid, Exception> _functionFailed =
+                LoggerMessage.Define<string, string, Guid>(
+                    LogLevel.Error,
+                    new EventId(3, nameof(FunctionCompleted)),
+                    "Executed '{functionName}' ({status}, Id={invocationId})");
+
+            public static void FunctionStarted(ILogger logger, string functionName, string reason, Guid invocationId)
+            {
+                _functionStarted(logger, functionName, reason, invocationId, null);
+            }
+
+            public static void FunctionCompleted(ILogger logger, string functionName, Guid invocationId, bool succeeded, FunctionFailure failure)
+            {
+                string status = succeeded ? "Succeeded" : "Failed";
+                if (succeeded)
+                {
+                    _functionSucceeded(logger, functionName, status, invocationId, null);
+                }
+                else
+                {
+                    _functionFailed(logger, functionName, status, invocationId, failure?.Exception);
+                }
+            }
         }
     }
 }

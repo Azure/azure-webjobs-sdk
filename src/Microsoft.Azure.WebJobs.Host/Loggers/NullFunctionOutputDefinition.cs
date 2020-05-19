@@ -14,16 +14,24 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
 {
     internal sealed class NullFunctionOutputDefinition : IFunctionOutputDefinition
     {
+        private NullFunctionOutputDefinition() {}
+
+        public static IFunctionOutputDefinition Instance { get; } = new NullFunctionOutputDefinition();
+
         public LocalBlobDescriptor OutputBlob => null;
 
         public LocalBlobDescriptor ParameterLogBlob => null;
 
-        public IFunctionOutput CreateOutput() => new NullFunctionOutput();
+        public IFunctionOutput CreateOutput() => NullFunctionOutput.Instance;
 
         public IRecurrentCommand CreateParameterLogUpdateCommand(IReadOnlyDictionary<string, IWatcher> watches, ILogger logger) => null;
 
         private class NullFunctionOutput : IFunctionOutput
         {
+            private NullFunctionOutput() { }
+
+            public static IFunctionOutput Instance { get; } = new NullFunctionOutput();
+
             public IRecurrentCommand UpdateCommand => null;
 
             public TextWriter Output => TextWriter.Null;
