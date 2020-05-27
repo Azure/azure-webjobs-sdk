@@ -23,6 +23,8 @@ namespace Microsoft.Azure.WebJobs
 {
     public static class WebJobsBuilderExtensions
     {
+        private static readonly IDictionary<Type, object> _startupTypeMap = new Dictionary<Type, object>();
+
         public static IWebJobsExtensionBuilder AddExtension<TExtension>(this IWebJobsBuilder builder)
           where TExtension : class, IExtensionConfigProvider
         {
@@ -89,7 +91,20 @@ namespace Microsoft.Azure.WebJobs
                 throw new ArgumentException($"The {nameof(startupType)} argument must be an implementation of {typeof(IWebJobsStartup).FullName}");
             }
 
-            IWebJobsStartup startup = (IWebJobsStartup)Activator.CreateInstance(startupType);
+            IWebJobsStartup startup;
+
+            // Use the existing instance if it's already been created
+            if (_startupTypeMap.TryGetValue(startupType, out object startupObject))
+            {
+                startup = (IWebJobsStartup)startupObject;
+
+                // We no longer need this.
+                _startupTypeMap.Remove(startupType);
+            }
+            else
+            {
+                startup = (IWebJobsStartup)Activator.CreateInstance(startupType);
+            }
 
             if (loggerFactory == NullLoggerFactory.Instance)
             {
@@ -295,7 +310,13 @@ namespace Microsoft.Azure.WebJobs
                 throw new ArgumentException($"The {nameof(startupType)} argument must be an implementation of {typeof(IWebJobsConfigurationStartup).FullName}");
             }
 
-            IWebJobsConfigurationStartup startup = (IWebJobsConfigurationStartup)Activator.CreateInstance(startupType);
+            var startup = (IWebJobsConfigurationStartup)Activator.CreateInstance(startupType);
+
+            // Store this if it's needed for IWebJobsStartup as well. This will always be called before UseWebJobsStartup()
+            if (typeof(IWebJobsStartup).IsAssignableFrom(startupType))
+            {
+                _startupTypeMap[startupType] = startup;
+            }
 
             if (loggerFactory == NullLoggerFactory.Instance)
             {
