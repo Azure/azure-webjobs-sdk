@@ -894,11 +894,11 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
         {
             if (_tableClient == null)
             {
-                string storageString = "AzureWebJobsDashboard";
-                var acs = Environment.GetEnvironmentVariable(storageString);
+                // for these tests we just need a storage account - either will do
+                var acs = Environment.GetEnvironmentVariable("AzureWebJobsDashboard") ?? Environment.GetEnvironmentVariable("AzureWebJobsStorage");
                 if (acs == null)
                 {
-                    Assert.True(false, "Environment var " + storageString + " is not set. Should be set to an azure storage account connection string to use for testing.");
+                    Assert.True(false, "Storage connection string environment variable not set. Should be set to an azure storage account connection string to use for testing.");
                 }
 
                 CloudStorageAccount account = CloudStorageAccount.Parse(acs);

@@ -36,12 +36,11 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
         public async Task<IReadOnlyDictionary<string, IValueProvider>> BindAsync(ValueBindingContext context,
             IDictionary<string, object> parameters)
         {
-            if (parameters == null || !parameters.ContainsKey(_triggerParameterName))
+            if (parameters == null || !parameters.TryGetValue(_triggerParameterName, out object value))
             {
-                throw new InvalidOperationException("Missing value for trigger parameter '" + _triggerParameterName + "'.");
+                throw new InvalidOperationException($"Missing value for trigger parameter '{_triggerParameterName}'.");
             }
 
-            object value = parameters[_triggerParameterName];
             return await BindCoreAsync(context, value, parameters);
         }
 

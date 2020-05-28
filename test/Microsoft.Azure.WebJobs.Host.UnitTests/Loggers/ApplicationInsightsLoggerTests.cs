@@ -960,8 +960,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         {
             var method = GetType().GetMethod(nameof(TestFunction), BindingFlags.NonPublic | BindingFlags.Static);
             var descriptor = FunctionIndexer.FromMethod(method, new ConfigurationBuilder().Build());
+            var serviceScopeFactoryMock = new Mock<IServiceScopeFactory>(MockBehavior.Strict);
 
-            return new FunctionInstance(id, triggerDetails ?? new Dictionary<string, string>(), null, new ExecutionReason(), null, null, descriptor);
+            return new FunctionInstance(id, triggerDetails ?? new Dictionary<string, string>(), null, new ExecutionReason(), null, null, descriptor, serviceScopeFactoryMock.Object);
         }
 
         private static void TestFunction()

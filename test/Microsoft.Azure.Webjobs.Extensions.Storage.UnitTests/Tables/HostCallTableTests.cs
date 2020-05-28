@@ -541,7 +541,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Tables
         {
             // Arrange            
 
-            var acs = Environment.GetEnvironmentVariable("AzureWebJobsDashboard");
+            var acs = Environment.GetEnvironmentVariable("AzureWebJobsStorage");
             var account = StorageAccount.NewFromConnectionString(acs);
             return account;
         }

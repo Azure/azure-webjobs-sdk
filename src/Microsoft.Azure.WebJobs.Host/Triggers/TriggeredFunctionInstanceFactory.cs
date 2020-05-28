@@ -15,13 +15,15 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
         private readonly ITriggeredFunctionBinding<TTriggerValue> _binding;
         private readonly IFunctionInvokerEx _invoker;
         private readonly FunctionDescriptor _descriptor;
-        
+        private readonly IServiceScopeFactory _serviceScopeFactory;
+
         public TriggeredFunctionInstanceFactory(ITriggeredFunctionBinding<TTriggerValue> binding,
-            IFunctionInvokerEx invoker, FunctionDescriptor descriptor)
+            IFunctionInvokerEx invoker, FunctionDescriptor descriptor, IServiceScopeFactory serviceScopeFactory)
         {
             _binding = binding;
             _invoker = invoker;
             _descriptor = descriptor;
+            _serviceScopeFactory = serviceScopeFactory;
         }
 
         public IFunctionInstance Create(FunctionInstanceFactoryContext<TTriggerValue> context)
@@ -34,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             IBindingSource bindingSource = new TriggerBindingSource<TTriggerValue>(_binding, context.TriggerValue);
             var invoker = CreateInvoker(context);
 
-            return new FunctionInstance(Guid.NewGuid(), context.TriggerDetails, context.ParentId, ExecutionReason.AutomaticTrigger, bindingSource, invoker, _descriptor);
+            return new FunctionInstance(Guid.NewGuid(), context.TriggerDetails, context.ParentId, ExecutionReason.AutomaticTrigger, bindingSource, invoker, _descriptor, _serviceScopeFactory);
         }
 
         public IFunctionInstance Create(FunctionInstanceFactoryContext context)
@@ -42,7 +44,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             IBindingSource bindingSource = new BindingSource(_binding, context.Parameters);
             var invoker = CreateInvoker(context);
 
-            return new FunctionInstance(context.Id, context.TriggerDetails, context.ParentId, context.ExecutionReason, bindingSource, invoker, _descriptor);
+            return new FunctionInstance(context.Id, context.TriggerDetails, context.ParentId, context.ExecutionReason, bindingSource, invoker, _descriptor, _serviceScopeFactory);
         }
 
         private IFunctionInvokerEx CreateInvoker(FunctionInstanceFactoryContext context)

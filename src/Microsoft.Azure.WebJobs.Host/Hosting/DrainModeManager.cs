@@ -42,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
         public void UnRegisterTokenSource(Guid guid)
         {
-            _cancellationTokenSources.RemoveIfContainsKey(guid);
+            _cancellationTokenSources.TryRemove(guid, out CancellationTokenSource cts);
         }
 
         public async Task EnableDrainModeAsync(CancellationToken cancellationToken)

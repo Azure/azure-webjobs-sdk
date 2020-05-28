@@ -10,6 +10,7 @@ using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -28,6 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly TimeoutAttribute _defaultTimeout;
         private readonly bool _allowPartialHostStartup;
         private readonly IConfiguration _configuration;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
         private IFunctionIndex _index;
 
         public FunctionIndexProvider(ITypeLocator typeLocator,
@@ -40,7 +42,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             SharedQueueHandler sharedQueue,
             IOptions<JobHostFunctionTimeoutOptions> timeoutOptions,
             IOptions<JobHostOptions> hostOptions,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IServiceScopeFactory serviceScopeFactory)
         {
             _typeLocator = typeLocator ?? throw new ArgumentNullException(nameof(typeLocator));
             _triggerBindingProvider = triggerBindingProvider ?? throw new ArgumentNullException(nameof(triggerBindingProvider));
@@ -49,6 +52,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _executor = executor ?? throw new ArgumentNullException(nameof(executor));
             _singletonManager = singletonManager ?? throw new ArgumentNullException(nameof(singletonManager));
             _sharedQueue = sharedQueue ?? throw new ArgumentNullException(nameof(sharedQueue));
+            _serviceScopeFactory = serviceScopeFactory ?? throw new ArgumentNullException(nameof(serviceScopeFactory));
             _loggerFactory = loggerFactory;
             _defaultTimeout = timeoutOptions.Value.ToAttribute();
             _allowPartialHostStartup = hostOptions.Value.AllowPartialHostStartup;
@@ -69,7 +73,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         {
             FunctionIndex index = new FunctionIndex();
             IBindingProvider bindingProvider = _bindingProviderFactory;
-            FunctionIndexer indexer = new FunctionIndexer(_triggerBindingProvider, bindingProvider, _activator, _executor, _singletonManager, _loggerFactory, _configuration, null, _sharedQueue, _defaultTimeout, _allowPartialHostStartup);
+            FunctionIndexer indexer = new FunctionIndexer(_triggerBindingProvider, bindingProvider, _activator, _executor, _singletonManager, _loggerFactory, _configuration, _serviceScopeFactory, null, _sharedQueue, _defaultTimeout, _allowPartialHostStartup);
             IReadOnlyList<Type> types = _typeLocator.GetTypes();
 
             foreach (Type type in types)

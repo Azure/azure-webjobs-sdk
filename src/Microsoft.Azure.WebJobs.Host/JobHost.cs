@@ -43,7 +43,7 @@ namespace Microsoft.Azure.WebJobs
         // Null if we haven't yet started runtime initialization.
         // Points to an incomplete task during initialization. 
         // Points to a completed task after initialization. 
-        private Task _initializationRunning = null;
+        private Task _hostInitializationTask = null;
 
         private int _state;
         private Task _stopTask;
@@ -320,13 +320,16 @@ namespace Microsoft.Azure.WebJobs
 
             TaskCompletionSource<bool> tsc = null;
 
-            lock (_lock)
+            if (_hostInitializationTask == null)
             {
-                if (_initializationRunning == null)
+                lock (_lock)
                 {
-                    // This thread wins the race and owns initialing. 
-                    tsc = new TaskCompletionSource<bool>();
-                    _initializationRunning = tsc.Task;
+                    if (_hostInitializationTask == null)
+                    {
+                        // This thread wins the race and owns initialing. 
+                        tsc = new TaskCompletionSource<bool>();
+                        _hostInitializationTask = tsc.Task;
+                    }
                 }
             }
 
@@ -336,7 +339,7 @@ namespace Microsoft.Azure.WebJobs
                 Task ignore = InitializeHostAsync(cancellationToken, tsc);
             }
 
-            return _initializationRunning;
+            return _hostInitializationTask;
         }
 
         // Caller gaurantees this is single-threaded. 

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Xunit;
 
@@ -42,7 +43,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             var mockTriggerBinding = new Mock<ITriggeredFunctionBinding<int>>();
             var functionDescriptor = new FunctionDescriptor();
-            var instanceFactory = new TriggeredFunctionInstanceFactory<int>(mockTriggerBinding.Object, mockInvoker.Object, functionDescriptor);
+            var serviceScopeFactoryMock = new Mock<IServiceScopeFactory>(MockBehavior.Strict);
+            var instanceFactory = new TriggeredFunctionInstanceFactory<int>(mockTriggerBinding.Object, mockInvoker.Object, functionDescriptor, serviceScopeFactoryMock.Object);
             var triggerExecutor = new TriggeredFunctionExecutor<int>(functionDescriptor, mockExecutor.Object, instanceFactory);
 
             // specify a custom handler on the trigger data and
