@@ -50,9 +50,10 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
         {
             var logger = GetLogger(message.Function);
             Log.FunctionCompleted(
-                logger, 
-                message.Function.ShortName, 
+                logger,
+                message.Function.ShortName,
                 message.FunctionInstanceId,
+                message.EndTime.Subtract(message.StartTime),
                 message.Succeeded,
                 message.Failure);
 
@@ -75,35 +76,35 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
                 LoggerMessage.Define<string, string, Guid>(
                     LogLevel.Information,
                     new EventId(1, nameof(FunctionStarted)),
-                    "Executing '{functionName}' (Reason='{reason}', Id={invocationId})");
+                    "Executing '{FunctionName}' (Reason='{Reason}', Id={InvocationId})");
 
-            private static readonly Action<ILogger, string, string, Guid, Exception> _functionSucceeded =
-                LoggerMessage.Define<string, string, Guid>(
+            private static readonly Action<ILogger, string, string, Guid, int, Exception> _functionSucceeded =
+                LoggerMessage.Define<string, string, Guid, int>(
                     LogLevel.Information,
                     new EventId(2, nameof(FunctionCompleted)),
-                    "Executed '{functionName}' ({status}, Id={invocationId})");
+                    "Executed '{FunctionName}' ({Status}, Id={InvocationId}, Duration={ExecutionDuration}ms)");
 
-            private static readonly Action<ILogger, string,  string, Guid, Exception> _functionFailed =
-                LoggerMessage.Define<string, string, Guid>(
+            private static readonly Action<ILogger, string, string, Guid, int, Exception> _functionFailed =
+                LoggerMessage.Define<string, string, Guid, int>(
                     LogLevel.Error,
                     new EventId(3, nameof(FunctionCompleted)),
-                    "Executed '{functionName}' ({status}, Id={invocationId})");
+                    "Executed '{FunctionName}' ({Status}, Id={InvocationId}, Duration={ExecutionDuration}ms)");
 
             public static void FunctionStarted(ILogger logger, string functionName, string reason, Guid invocationId)
             {
                 _functionStarted(logger, functionName, reason, invocationId, null);
             }
 
-            public static void FunctionCompleted(ILogger logger, string functionName, Guid invocationId, bool succeeded, FunctionFailure failure)
+            public static void FunctionCompleted(ILogger logger, string functionName, Guid invocationId, TimeSpan executionDuration, bool succeeded, FunctionFailure failure)
             {
                 string status = succeeded ? "Succeeded" : "Failed";
                 if (succeeded)
                 {
-                    _functionSucceeded(logger, functionName, status, invocationId, null);
+                    _functionSucceeded(logger, functionName, status, invocationId, (int)executionDuration.TotalMilliseconds, null);
                 }
                 else
                 {
-                    _functionFailed(logger, functionName, status, invocationId, failure?.Exception);
+                    _functionFailed(logger, functionName, status, invocationId, (int)executionDuration.TotalMilliseconds, failure?.Exception);
                 }
             }
         }
