@@ -28,7 +28,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             using (new StartupScope())
             {
                 var builder = new HostBuilder()
-                    .ConfigureWebJobs((c, b) => { }, o => { }, (context, configBuilder) =>
+                    .ConfigureWebJobs((c, b) => { }, o => { }, (c, configBuilder) =>
                      {
                          configBuilder.UseWebJobsConfigurationStartup<TestStartup1>();
                      });
@@ -49,7 +49,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             using (new StartupScope())
             {
                 var builder = new HostBuilder()
-                    .ConfigureWebJobs((c, b) => { }, o => { }, (context, configBuilder) =>
+                    .ConfigureWebJobs((c, b) => { }, o => { }, (c, configBuilder) =>
                     {
                         configBuilder.UseWebJobsConfigurationStartup(typeof(TestStartup1));
                     });
@@ -75,9 +75,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             using (new StartupScope())
             {
                 var builder = new HostBuilder()
-                    .ConfigureWebJobs((c, b) => { }, o => { }, (context, configBuilder) =>
+                    .ConfigureWebJobs((c, b) => { }, o => { }, (c, configBuilder) =>
                     {
-                        configBuilder.UseWebJobsConfigurationStartup(typeof(TestStartup1), loggerFactory);
+                        configBuilder.UseWebJobsConfigurationStartup(typeof(TestStartup1), new WebJobsBuilderContext(), loggerFactory);
                         configBuilder.UseWebJobsConfigurationStartup(typeof(TestStartup2));
                     });
 
@@ -103,12 +103,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             loggerFactory.AddProvider(provider);
 
             var builder = new HostBuilder()
-                .ConfigureWebJobs((c, b) => { }, o => { }, (context, configBuilder) =>
+                .ConfigureWebJobs((c, b) => { }, o => { }, (c, configBuilder) =>
                     {
+                        var context = new WebJobsBuilderContext();
+
                         // This will find ExternalTestStartupWithConfig in WebJobsStartupTests
-                        configBuilder.UseExternalConfigurationStartup(new DefaultStartupTypeLocator(GetType().Assembly), NullLoggerFactory.Instance);
-                        configBuilder.UseExternalConfigurationStartup(new DefaultStartupTypeLocator(GetType().Assembly), loggerFactory);
-                        configBuilder.UseExternalConfigurationStartup(new DefaultStartupTypeLocator(GetType().Assembly), loggerFactory);
+                        configBuilder.UseExternalConfigurationStartup(new DefaultStartupTypeLocator(GetType().Assembly), context, NullLoggerFactory.Instance);
+                        configBuilder.UseExternalConfigurationStartup(new DefaultStartupTypeLocator(GetType().Assembly), context, loggerFactory);
+                        configBuilder.UseExternalConfigurationStartup(new DefaultStartupTypeLocator(GetType().Assembly), context, loggerFactory);
                     });
 
             IHost host = builder.Build();
@@ -148,7 +150,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
 
             public static int ConfigureInvoked => _configureInvoked;
 
-            public void Configure(IWebJobsConfigurationBuilder builder)
+            public void Configure(WebJobsBuilderContext context, IWebJobsConfigurationBuilder builder)
             {
                 IDictionary<string, string> data = new Dictionary<string, string>
                 {
@@ -173,7 +175,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
 
             public static int ConfigureInvoked => _configureInvoked;
 
-            public void Configure(IWebJobsConfigurationBuilder builder)
+            internal static void Reset()
+            {
+                _configureInvoked = 0;
+            }
+
+            public void Configure(WebJobsBuilderContext context, IWebJobsConfigurationBuilder builder)
             {
                 IDictionary<string, string> data = new Dictionary<string, string>
                 {
@@ -184,11 +191,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
                 builder.ConfigurationBuilder.AddInMemoryCollection(data);
 
                 _configureInvoked++;
-            }
-
-            internal static void Reset()
-            {
-                _configureInvoked = 0;
             }
         }
     }

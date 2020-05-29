@@ -42,6 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         {
             private readonly ParameterInfo _parameter;
             private readonly IOptions<ExecutionContextOptions> _options;
+            private static ParameterDisplayHints _displayHints = new ParameterDisplayHints { Description = "Function ExecutionContext" };
 
             public ExecutionContextBinding(ParameterInfo parameter, IOptions<ExecutionContextOptions> options)
             {
@@ -61,7 +62,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     throw new ArgumentNullException("context");
                 }
 
-                return BindInternalAsync(CreateContext(context.ValueContext));
+                return Task.FromResult<IValueProvider>(new ExecutionContextValueProvider(context.ValueContext, _options));
             }
 
             public Task<IValueProvider> BindAsync(object value, ValueBindingContext context)
@@ -71,29 +72,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     throw new ArgumentNullException("context");
                 }
 
-                return BindInternalAsync(CreateContext(context));
-            }
-
-            private ExecutionContext CreateContext(ValueBindingContext context)
-            {
-                var result = new ExecutionContext
-                {
-                    InvocationId = context.FunctionInstanceId,
-                    FunctionName = context.FunctionContext.MethodName,
-                    FunctionDirectory = Environment.CurrentDirectory,
-                    FunctionAppDirectory = _options.Value.AppDirectory
-                };
-
-                if (result.FunctionAppDirectory != null)
-                {
-                    result.FunctionDirectory = System.IO.Path.Combine(result.FunctionAppDirectory, result.FunctionName);
-                }
-                return result;
-            }
-
-            private static Task<IValueProvider> BindInternalAsync(ExecutionContext executionContext)
-            {
-                return Task.FromResult<IValueProvider>(new ExecutionContextValueProvider(executionContext));
+                return Task.FromResult<IValueProvider>(new ExecutionContextValueProvider(context, _options));
             }
 
             public ParameterDescriptor ToParameterDescriptor()
@@ -101,20 +80,19 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return new ParameterDescriptor
                 {
                     Name = _parameter.Name,
-                    DisplayHints = new ParameterDisplayHints
-                    {
-                        Description = "Function ExecutionContext"
-                    }
+                    DisplayHints = _displayHints
                 };
             }
 
             private class ExecutionContextValueProvider : IValueProvider
             {
-                private readonly ExecutionContext _context;
+                private readonly ValueBindingContext _context;
+                private readonly IOptions<ExecutionContextOptions> _options;
 
-                public ExecutionContextValueProvider(ExecutionContext context)
+                public ExecutionContextValueProvider(ValueBindingContext context, IOptions<ExecutionContextOptions> options)
                 {
                     _context = context;
+                    _options = options;
                 }
 
                 public Type Type
@@ -124,12 +102,30 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                 public Task<object> GetValueAsync()
                 {
-                    return Task.FromResult<object>(_context);
+                    return Task.FromResult<object>(CreateContext());
                 }
 
                 public string ToInvokeString()
                 {
-                    return _context.InvocationId.ToString();
+                    return _context.FunctionInstanceId.ToString();
+                }
+
+                private ExecutionContext CreateContext()
+                {
+                    var result = new ExecutionContext
+                    {
+                        InvocationId = _context.FunctionInstanceId,
+                        FunctionName = _context.FunctionContext.MethodName,
+                        FunctionDirectory = Environment.CurrentDirectory,
+                        FunctionAppDirectory = _options.Value.AppDirectory
+                    };
+
+                    if (result.FunctionAppDirectory != null)
+                    {
+                        result.FunctionDirectory = System.IO.Path.Combine(result.FunctionAppDirectory, result.FunctionName);
+                    }
+
+                    return result;
                 }
             }
         }

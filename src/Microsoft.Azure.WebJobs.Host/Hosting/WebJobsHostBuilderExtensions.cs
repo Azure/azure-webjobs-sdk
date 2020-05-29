@@ -51,7 +51,7 @@ namespace Microsoft.Extensions.Hosting
             builder.ConfigureServices((context, services) =>
             {
                 IWebJobsBuilder webJobsBuilder = services.AddWebJobs(configureOptions);
-                configure(context, webJobsBuilder);
+                configure?.Invoke(context, webJobsBuilder);
 
                 services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, JobHostService>());
             });
