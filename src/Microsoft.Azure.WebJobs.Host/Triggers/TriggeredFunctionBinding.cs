@@ -89,9 +89,9 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
 
                 try
                 {
-                    if (parameters != null && parameters.ContainsKey(name))
+                    if (parameters != null && parameters.TryGetValue(name, out object parameterValue))
                     {
-                        valueProvider = await binding.BindAsync(parameters[name], context);
+                        valueProvider = await binding.BindAsync(parameterValue, context);
                     }
                     else
                     {

@@ -203,7 +203,7 @@ namespace Microsoft.Azure.WebJobs
 
             await EnsureHostInitializedAsync(cancellationToken);
 
-            IFunctionDefinition function = _context.FunctionLookup.Lookup(method);
+            var function = _context.FunctionLookup.Lookup(method);
 
             await CallAsyncCore(function, method, arguments, cancellationToken);
         }
@@ -232,13 +232,13 @@ namespace Microsoft.Azure.WebJobs
 
         private async Task CallAsyncCore(IFunctionDefinition function, object functionKey, IDictionary<string, object> arguments, CancellationToken cancellationToken)
         {
-            Validate(function, functionKey);
+            if (function == null)
+            {
+                throw new InvalidOperationException($"'{functionKey}' can't be invoked from Azure WebJobs SDK. Is it missing Azure WebJobs SDK attributes?");
+            }
 
-            IFunctionInstance instance = CreateFunctionInstance(function, arguments);
-
-            IDelayedException exception = null;
-
-            exception = await _context.Executor.TryExecuteAsync(instance, cancellationToken);
+            var instance = CreateFunctionInstance(function, arguments);
+            var exception = await _context.Executor.TryExecuteAsync(instance, cancellationToken);
 
             if (exception != null)
             {
@@ -295,15 +295,6 @@ namespace Microsoft.Azure.WebJobs
                 Parameters = parameters
             };
             return func.InstanceFactory.Create(context);
-        }
-
-        private static void Validate(IFunctionDefinition function, object key)
-        {
-            if (function == null)
-            {
-                string msg = String.Format(CultureInfo.CurrentCulture, "'{0}' can't be invoked from Azure WebJobs SDK. Is it missing Azure WebJobs SDK attributes?", key);
-                throw new InvalidOperationException(msg);
-            }
         }
 
         private void ThrowIfDisposed()

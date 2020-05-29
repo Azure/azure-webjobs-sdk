@@ -41,6 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             {
                 Function = new FunctionDescriptor
                 {
+                    FullName = "Host.Function.TestJob",
                     ShortName = "Function.TestJob",
                     LogName = "TestJob"
                 },
@@ -56,7 +57,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             await _instanceLogger.LogFunctionStartedAsync(message, CancellationToken.None);
 
-            string expectedCategory = LogCategories.CreateFunctionCategory("TestJob");
+            string expectedCategory = LogCategories.CreateFunctionCategory(message.Function.LogName);
 
             LogMessage[] logMessages = _provider.GetAllLogMessages().ToArray();
 
@@ -65,9 +66,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             LogMessage invocationLogMessage = logMessages[0];
             Assert.Equal(LogLevel.Information, invocationLogMessage.Level);
             Assert.Equal(expectedCategory, invocationLogMessage.Category);
-            Assert.Null(invocationLogMessage.State);
             Assert.Equal($"Executing 'Function.TestJob' (Reason='TestReason', Id={message.FunctionInstanceId})", 
                 invocationLogMessage.FormattedMessage);
+
+            var state = invocationLogMessage.State.ToDictionary(p => p.Key, p => p.Value);
+            Assert.Equal(4, state.Count);
+            Assert.Equal(state["functionName"], message.Function.ShortName);
+            Assert.Equal(state["reason"], message.ReasonDetails);
+            Assert.Equal(state["invocationId"], message.FunctionInstanceId);
 
             LogMessage triggerDetailsLogMessage = logMessages[1];
             Assert.Equal(LogLevel.Information, triggerDetailsLogMessage.Level);
@@ -82,6 +88,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         {
             FunctionDescriptor descriptor = new FunctionDescriptor
             {
+                FullName = "Host.Function.TestJob",
                 ShortName = "Function.TestJob",
                 LogName = "TestJob"
             };
@@ -108,21 +115,30 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             Assert.Equal(2, logMessages.Length);
 
-            string expectedCategory = LogCategories.CreateFunctionCategory("TestJob");
+            string expectedCategory = LogCategories.CreateFunctionCategory(descriptor.LogName);
 
             LogMessage logMessage = logMessages[0];
             Assert.Equal(LogLevel.Information, logMessage.Level);
             Assert.Equal(expectedCategory, logMessage.Category);
-            Assert.Equal($"Executed 'Function.TestJob' (Succeeded, Id={successMessage.FunctionInstanceId})", 
-                logMessage.FormattedMessage);
-            Assert.Null(logMessage.State);
+            Assert.Equal($"Executed 'Function.TestJob' (Succeeded, Id={successMessage.FunctionInstanceId})", logMessage.FormattedMessage);
+
+            var state = logMessage.State.ToDictionary(p => p.Key, p => p.Value);
+            Assert.Equal(4, state.Count);
+            Assert.Equal(state["functionName"], descriptor.ShortName);
+            Assert.Equal(state["invocationId"], successMessage.FunctionInstanceId);
+            Assert.Equal(state["status"], "Succeeded");
 
             logMessage = logMessages[1];
             Assert.Equal(LogLevel.Error, logMessage.Level);
             Assert.Equal(expectedCategory, logMessage.Category);
             Assert.Equal($"Executed 'Function.TestJob' (Failed, Id={failureMessage.FunctionInstanceId})", logMessage.FormattedMessage);
             Assert.Same(ex, logMessage.Exception);
-            Assert.Null(logMessage.State);
+
+            state = logMessage.State.ToDictionary(p => p.Key, p => p.Value);
+            Assert.Equal(4, state.Count);
+            Assert.Equal(state["functionName"], descriptor.ShortName);
+            Assert.Equal(state["invocationId"], failureMessage.FunctionInstanceId);
+            Assert.Equal(state["status"], "Failed");
         }
     }
 }

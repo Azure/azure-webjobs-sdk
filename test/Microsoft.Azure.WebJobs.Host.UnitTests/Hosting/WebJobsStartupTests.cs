@@ -20,8 +20,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
 {
     public class WebJobsStartupTests
     {
-        public WebJobsStartupTests() { }
-
         [Fact]
         public void WebJobsStartupAttribute_Constructor_InitializesAlias()
         {
@@ -66,7 +64,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
                     {
                         webJobsBuilder.UseWebJobsStartup(typeof(TestStartup));
                     });
-
 
                 IHost host = builder.Build();
 
@@ -147,6 +144,70 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             Assert.NotNull(host.Services.GetService<TestExternalServiceWithConfig>());
         }
 
+        [Fact]
+        public void StartupType_ImplementsBothInterfaces_CreatedOnce()
+        {
+            // We should only see one instance created.
+            var builder = new HostBuilder()
+                .ConfigureWebJobs(
+                (hostBuilderContext, webJobsBuilder) =>
+                {
+                    webJobsBuilder.UseWebJobsStartup<TestStartupCreation>(NullLoggerFactory.Instance);
+                },
+                null,
+                (hostBuilderContext, webJobsConfigurationBuilder) =>
+                {
+                    webJobsConfigurationBuilder.UseWebJobsConfigurationStartup<TestStartupCreation>(null, NullLoggerFactory.Instance);
+                });
+
+            TestStartupCreation.Reset();
+            IHost host = builder.Build();
+
+            Assert.Equal(1, TestStartupCreation.Instances);
+            Assert.Equal(1, TestStartupCreation.ConfigureCalls);
+            Assert.Equal(1, TestStartupCreation.ConfigureAppConfigCalls);
+        }
+
+        [Fact]
+        public void StartupType_ImplementsBothInterfaces_OnlyStartupCalled()
+        {
+            // We should only see one instance created.
+            var builder = new HostBuilder()
+                .ConfigureWebJobs(
+                (hostBuilderContext, webJobsBuilder) =>
+                {
+                    webJobsBuilder.UseWebJobsStartup<TestStartupCreation>(NullLoggerFactory.Instance);
+                },
+                null, null);
+
+            TestStartupCreation.Reset();
+            IHost host = builder.Build();
+
+            Assert.Equal(1, TestStartupCreation.Instances);
+            Assert.Equal(1, TestStartupCreation.ConfigureCalls);
+            Assert.Equal(0, TestStartupCreation.ConfigureAppConfigCalls);
+        }
+
+        [Fact]
+        public void StartupType_ImplementsBothInterfaces_OnlyConfigurationStartupCalled()
+        {
+            // We should only see one instance created.
+            var builder = new HostBuilder()
+                .ConfigureWebJobs(null, null,
+                (hostBuilderContext, webJobsConfigurationBuilder) =>
+                {
+                    webJobsConfigurationBuilder.UseWebJobsConfigurationStartup<TestStartupCreation>(null, NullLoggerFactory.Instance);
+                });
+
+            TestStartupCreation.Reset();
+            IHost host = builder.Build();
+
+            Assert.Equal(1, TestStartupCreation.Instances);
+            Assert.Equal(0, TestStartupCreation.ConfigureCalls);
+            Assert.Equal(1, TestStartupCreation.ConfigureAppConfigCalls);
+        }
+
+
         private class StartupScope : IDisposable
         {
             public StartupScope()
@@ -196,14 +257,19 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             }
         }
 
-        public class ExternalTestStartupWithConfig : IWebJobsStartup, IWebJobsConfigurationStartup
+        public class ExternalTestStartupWithConfig : IWebJobsStartup2, IWebJobsConfigurationStartup
         {
             public void Configure(IWebJobsBuilder builder)
+            {
+                throw new NotImplementedException("This should never be called.");
+            }
+
+            public void Configure(WebJobsBuilderContext context, IWebJobsBuilder builder)
             {
                 builder.Services.AddSingleton<TestExternalServiceWithConfig>();
             }
 
-            public void Configure(IWebJobsConfigurationBuilder builder)
+            public void Configure(WebJobsBuilderContext context, IWebJobsConfigurationBuilder builder)
             {
                 IDictionary<string, string> data = new Dictionary<string, string>
                 {
@@ -246,5 +312,40 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
         private class TestExternalService { }
 
         private class TestExternalServiceWithConfig { } // use when also registering config
+
+        // Used just to test how often we call Activator.CreateInstance.
+        public class TestStartupCreation : IWebJobsStartup2, IWebJobsConfigurationStartup
+        {
+            public static int Instances = 0;
+            public static int ConfigureCalls = 0;
+            public static int ConfigureAppConfigCalls = 0;
+
+            public TestStartupCreation()
+            {
+                Instances++;
+            }
+
+            public static void Reset()
+            {
+                Instances = 0;
+                ConfigureCalls = 0;
+                ConfigureAppConfigCalls = 0;
+            }
+
+            public void Configure(IWebJobsBuilder builder)
+            {
+                throw new NotImplementedException("This should never be called.");
+            }
+
+            public void Configure(WebJobsBuilderContext context, IWebJobsBuilder builder)
+            {
+                ConfigureCalls++;
+            }
+
+            public void Configure(WebJobsBuilderContext context, IWebJobsConfigurationBuilder builder)
+            {
+                ConfigureAppConfigCalls++;
+            }
+        }
     }
 }

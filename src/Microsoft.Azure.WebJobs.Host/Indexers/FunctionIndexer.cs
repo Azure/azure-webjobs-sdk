@@ -373,9 +373,9 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 IsDisabled = disabled,
                 HasCancellationToken = hasCancellationToken,
                 TimeoutAttribute = TypeUtility.GetHierarchicalAttributeOrNull<TimeoutAttribute>(method) ?? defaultTimeout,
-                SingletonAttributes = method.GetCustomAttributes<SingletonAttribute>(),
-                MethodLevelFilters = method.GetCustomAttributes().OfType<IFunctionFilter>(),
-                ClassLevelFilters = method.DeclaringType.GetCustomAttributes().OfType<IFunctionFilter>()
+                SingletonAttributes = method.GetCustomAttributes<SingletonAttribute>().ToArray(),
+                MethodLevelFilters = method.GetCustomAttributes().OfType<IFunctionFilter>().ToArray(),
+                ClassLevelFilters = method.DeclaringType.GetCustomAttributes().OfType<IFunctionFilter>().ToArray()
             };
         }
 
@@ -480,6 +480,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                     var valueProvider = await _binding.BindAsync(value, context);
                     data = new TriggerData(valueProvider, data.BindingData);
                 }
+
                 return data;
             }
 

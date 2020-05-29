@@ -89,13 +89,15 @@ namespace Microsoft.Azure.WebJobs.Logging
             }
         }
 
-        public async Task AddAsync(FunctionInstanceLogEntry result, CancellationToken cancellationToken = default(CancellationToken))
+        public Task AddAsync(FunctionInstanceLogEntry result, CancellationToken cancellationToken = default(CancellationToken))
         {
             // We only care about completed events.
             if (result.IsCompleted)
             {
-                await _buffer.SendAsync(result, cancellationToken);
+                return _buffer.SendAsync(result, cancellationToken);
             }
+
+            return Task.CompletedTask;
         }
 
         internal static IEnumerable<FunctionResultAggregate> Aggregate(IEnumerable<FunctionInstanceLogEntry> evts)
