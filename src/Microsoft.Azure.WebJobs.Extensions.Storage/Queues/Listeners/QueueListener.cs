@@ -24,6 +24,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
     {
         const int NumberOfSamplesToConsider = 5;
 
+        private static readonly QueueRequestOptions _defaultQueueRequestOptions = new QueueRequestOptions { NetworkTimeout = TimeSpan.FromSeconds(100) };
+
         private readonly ITaskSeriesTimer _timer;
         private readonly IDelayStrategy _delayStrategy;
         private readonly CloudQueue _queue;
@@ -201,7 +203,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
                         {
                             return _queue.GetMessagesAsync(_queueProcessor.BatchSize,
                                 _visibilityTimeout,
-                                options: null,
+                                options: _defaultQueueRequestOptions,
                                 operationContext: context,
                                 cancellationToken: cancellationToken);
                         });
