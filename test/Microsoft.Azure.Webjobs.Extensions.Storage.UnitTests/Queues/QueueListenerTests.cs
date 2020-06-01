@@ -558,7 +558,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             var cancellationToken = new CancellationToken();
             bool queueExists = false;
             _mockQueue.Setup(p => p.ExistsAsync()).ReturnsAsync(() => queueExists);
-            _mockQueue.Setup(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), null, It.IsAny<OperationContext>(), cancellationToken)).ReturnsAsync(Enumerable.Empty<CloudQueueMessage>());
+            _mockQueue.Setup(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), QueueListener.DefaultQueueRequestOptions, It.IsAny<OperationContext>(), cancellationToken)).ReturnsAsync(Enumerable.Empty<CloudQueueMessage>());
 
             int numIterations = 5;
             int numFailedExistenceChecks = 2;
@@ -576,7 +576,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             }
 
             _mockQueue.Verify(p => p.ExistsAsync(), Times.Exactly(numIterations - numFailedExistenceChecks));
-            _mockQueue.Verify(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), null, It.IsAny<OperationContext>(), cancellationToken), Times.Exactly(numIterations - numFailedExistenceChecks));
+            _mockQueue.Verify(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), QueueListener.DefaultQueueRequestOptions, It.IsAny<OperationContext>(), cancellationToken), Times.Exactly(numIterations - numFailedExistenceChecks));
         }
 
         [Fact]
@@ -590,7 +590,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
                     HttpStatusCode = 503
                 },
                 string.Empty, new Exception());
-            _mockQueue.Setup(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), null, It.IsAny<OperationContext>(), cancellationToken)).Throws(exception);
+            _mockQueue.Setup(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), QueueListener.DefaultQueueRequestOptions, It.IsAny<OperationContext>(), cancellationToken)).Throws(exception);
 
             for (int i = 0; i < 5; i++)
             {
@@ -599,7 +599,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             }
 
             _mockQueue.Verify(p => p.ExistsAsync(), Times.Exactly(5));
-            _mockQueue.Verify(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), null, It.IsAny<OperationContext>(), cancellationToken), Times.Exactly(5));
+            _mockQueue.Verify(p => p.GetMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), QueueListener.DefaultQueueRequestOptions, It.IsAny<OperationContext>(), cancellationToken), Times.Exactly(5));
         }
 
         [Fact]
