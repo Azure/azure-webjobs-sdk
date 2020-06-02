@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.ApplicationInsights.Extensibility.W3C;
 using Microsoft.ApplicationInsights.SnapshotCollector;
 using Microsoft.ApplicationInsights.WindowsServer.Channel.Implementation;
 using Microsoft.AspNetCore.Http;
@@ -759,6 +760,30 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             // ApplicationInsights auto-tracks telemetry, functions do not track it.
             Assert.Empty(_channel.Telemetries.OfType<RequestTelemetry>());
+        }
+
+        [Fact]
+        public void ApplicationInsights_RequestIsTrackedIfTrackActivityIsSpecified()
+        {
+            var result = CreateDefaultInstanceLogEntry();
+            var logger = CreateLogger(LogCategories.Results);
+
+            Activity current = new Activity("foo");
+            current.Start();
+            using (logger.BeginScope(new Dictionary<string, object> { ["MS_TrackActivity"] = null }))
+            using (logger.BeginFunctionScope(CreateFunctionInstance(_invocationId), _hostInstanceId))
+            {
+                logger.LogFunctionResult(result);
+            }
+
+            Assert.Single(_channel.Telemetries.OfType<RequestTelemetry>());
+            RequestTelemetry telemetry = _channel.Telemetries.OfType<RequestTelemetry>().Single();
+            Assert.Equal(FormatTelemetryId(current), telemetry.Id);
+        }
+
+        private static string FormatTelemetryId(Activity activity)
+        {
+            return "|" + activity.TraceId.ToHexString() + "." + activity.SpanId.ToHexString() + ".";
         }
 
         [Fact]
