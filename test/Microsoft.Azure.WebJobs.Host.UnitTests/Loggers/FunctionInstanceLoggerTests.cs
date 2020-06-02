@@ -96,7 +96,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             {
                 Function = descriptor,
                 FunctionInstanceId = Guid.NewGuid(),
-                HostInstanceId = Guid.NewGuid()
+                HostInstanceId = Guid.NewGuid(),
+                StartTime = DateTime.UtcNow,
+                EndTime = DateTime.UtcNow + new TimeSpan(0, 0, 0, 0, 80)
             };
 
             Exception ex = new Exception("Kaboom!");
@@ -105,7 +107,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Function = descriptor,
                 Failure = new FunctionFailure { Exception = ex },
                 FunctionInstanceId = new Guid("8d71c9e3-e809-4cfb-bb78-48ae25c7d26d"),
-                HostInstanceId = Guid.NewGuid()
+                HostInstanceId = Guid.NewGuid(),
+                StartTime = DateTime.UtcNow,
+                EndTime = DateTime.UtcNow + new TimeSpan(0, 0, 0, 0, 20)
             };
 
             await _instanceLogger.LogFunctionCompletedAsync(successMessage, CancellationToken.None);
@@ -117,28 +121,34 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             string expectedCategory = LogCategories.CreateFunctionCategory(descriptor.LogName);
 
+            // Success validation
+            int expectedSuccessDurationMills = (int)successMessage.EndTime.Subtract(successMessage.StartTime).TotalMilliseconds;
             LogMessage logMessage = logMessages[0];
             Assert.Equal(LogLevel.Information, logMessage.Level);
             Assert.Equal(expectedCategory, logMessage.Category);
-            Assert.Equal($"Executed 'Function.TestJob' (Succeeded, Id={successMessage.FunctionInstanceId})", logMessage.FormattedMessage);
+            Assert.Equal($"Executed 'Function.TestJob' (Succeeded, Id={successMessage.FunctionInstanceId}, Duration={expectedSuccessDurationMills}ms)", logMessage.FormattedMessage);
 
             var state = logMessage.State.ToDictionary(p => p.Key, p => p.Value);
-            Assert.Equal(4, state.Count);
+            Assert.Equal(5, state.Count);
             Assert.Equal(state["functionName"], descriptor.ShortName);
             Assert.Equal(state["invocationId"], successMessage.FunctionInstanceId);
             Assert.Equal(state["status"], "Succeeded");
+            Assert.Equal(state["executionDuration"], expectedSuccessDurationMills);
 
+            // Failure validation
+            int expectedFailureDurationMills = (int)failureMessage.EndTime.Subtract(failureMessage.StartTime).TotalMilliseconds;
             logMessage = logMessages[1];
             Assert.Equal(LogLevel.Error, logMessage.Level);
             Assert.Equal(expectedCategory, logMessage.Category);
-            Assert.Equal($"Executed 'Function.TestJob' (Failed, Id={failureMessage.FunctionInstanceId})", logMessage.FormattedMessage);
+            Assert.Equal($"Executed 'Function.TestJob' (Failed, Id={failureMessage.FunctionInstanceId}, Duration={expectedFailureDurationMills}ms)", logMessage.FormattedMessage);
             Assert.Same(ex, logMessage.Exception);
 
             state = logMessage.State.ToDictionary(p => p.Key, p => p.Value);
-            Assert.Equal(4, state.Count);
+            Assert.Equal(5, state.Count);
             Assert.Equal(state["functionName"], descriptor.ShortName);
             Assert.Equal(state["invocationId"], failureMessage.FunctionInstanceId);
             Assert.Equal(state["status"], "Failed");
+            Assert.Equal(state["executionDuration"], expectedFailureDurationMills);
         }
     }
 }
