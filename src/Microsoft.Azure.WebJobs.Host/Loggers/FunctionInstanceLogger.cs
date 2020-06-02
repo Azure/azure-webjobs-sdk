@@ -76,19 +76,19 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
                 LoggerMessage.Define<string, string, Guid>(
                     LogLevel.Information,
                     new EventId(1, nameof(FunctionStarted)),
-                    "Executing '{FunctionName}' (Reason='{Reason}', Id={InvocationId})");
+                    "Executing '{functionName}' (Reason='{reason}', Id={invocationId})");
 
             private static readonly Action<ILogger, string, string, Guid, int, Exception> _functionSucceeded =
                 LoggerMessage.Define<string, string, Guid, int>(
                     LogLevel.Information,
                     new EventId(2, nameof(FunctionCompleted)),
-                    "Executed '{FunctionName}' ({Status}, Id={InvocationId}, Duration={ExecutionDuration}ms)");
+                    "Executed '{functionName}' ({status}, Id={invocationId}, Duration={executionDuration}ms)");
 
             private static readonly Action<ILogger, string, string, Guid, int, Exception> _functionFailed =
                 LoggerMessage.Define<string, string, Guid, int>(
                     LogLevel.Error,
                     new EventId(3, nameof(FunctionCompleted)),
-                    "Executed '{FunctionName}' ({Status}, Id={InvocationId}, Duration={ExecutionDuration}ms)");
+                    "Executed '{functionName}' ({status}, Id={invocationId}, Duration={executionDuration}ms)");
 
             public static void FunctionStarted(ILogger logger, string functionName, string reason, Guid invocationId)
             {
