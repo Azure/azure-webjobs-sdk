@@ -526,7 +526,10 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     // We'll need to store this operation context so we can stop it when the function completes
                     stateValues[OperationContext] = operation;
                 }
-            } // Track Activity if the key is the TrackActivity Scope is specified. 
+            } 
+            // If there is a current activity, it is assumed that Application Insights will track it so we do not start an operation. 
+            // However, in some cases (such as Durable functions), this is not the case. This allows the scope to decide whether
+            // an operation should be started, even when the current activity is not null. 
             else if (allScopes.ContainsKey("MS_TrackActivity"))
             {
                 var operation = _telemetryClient.StartOperation<RequestTelemetry>(currentActivity);
