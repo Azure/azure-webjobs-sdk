@@ -27,34 +27,46 @@ namespace Microsoft.Azure.WebJobs.Host.Diagnostics
         /// <returns>A string representation of the exception with a sanitized stack trace.</returns>
         public static string GetFormattedException(Exception exception)
         {
+            var sb = new StringBuilder();
+            GetFormattedException(sb, exception);
+            return sb.ToString();
+        }
+
+        static void GetFormattedException(StringBuilder sb, Exception exception)
+        {
             try
             {
-                var aggregate = exception as AggregateException;
-                if (aggregate != null)
+                if (exception is AggregateException aggregate)
                 {
-                    return GetStackForAggregateException(exception, aggregate);
+                    GetStackForAggregateException(sb, exception, aggregate);
                 }
-
-                return GetStackForException(exception, includeMessageOnly: false);
+                else
+                {
+                    GetStackForException(sb, exception, includeMessageOnly: false);
+                }
             }
             catch (Exception)
             {
-                return exception?.ToString();
+                if (exception != null)
+                {
+                    sb.Append(exception);
+                }
             }
         }
 
-        private static string GetStackForAggregateException(Exception exception, AggregateException aggregate)
+        private static void GetStackForAggregateException(StringBuilder sb, Exception exception, AggregateException aggregate)
         {
-            var text = GetStackForException(exception, includeMessageOnly: true);
+            GetStackForException(sb, exception, includeMessageOnly: true);
             for (int i = 0; i < aggregate.InnerExceptions.Count; i++)
             {
-                text = $"{text}{Environment.NewLine}---> (Inner Exception #{i}) {GetFormattedException(aggregate.InnerExceptions[i])}<---{Environment.NewLine}";
+                sb.AppendLine();
+                sb.Append($"---> (Inner Exception #{i}) ");
+                GetFormattedException(sb, aggregate.InnerExceptions[i]);
+                sb.AppendLine("<---");
             }
-
-            return text;
         }
 
-        private static string GetStackForException(Exception exception, bool includeMessageOnly)
+        private static void GetStackForException(StringBuilder sb, Exception exception, bool includeMessageOnly)
         {
             var message = exception.Message;
             var className = exception.GetType().ToString();
@@ -85,7 +97,7 @@ namespace Microsoft.Azure.WebJobs.Host.Diagnostics
                 stackText += Environment.NewLine + stackTrace;
             }
 
-            return stackText;
+            sb.Append(stackText);
         }
 
         private static string GetAsyncStackTrace(Exception exception)
