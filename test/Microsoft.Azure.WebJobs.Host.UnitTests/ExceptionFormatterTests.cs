@@ -5,23 +5,12 @@ using Microsoft.Azure.WebJobs.Host.Diagnostics;
 using System;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using JetBrains.dotMemoryUnit;
-using JetBrains.dotMemoryUnit.Kernel;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
-    [DotMemoryUnit(CollectAllocations = true)]
     public class ExceptionFormatterTests
     {
-        readonly ITestOutputHelper _output;
-
-        public ExceptionFormatterTests(ITestOutputHelper output)
-        {
-            _output = output; DotMemoryUnitTestOutput.SetOutputMethod(output.WriteLine);
-        }
-
         [Fact]
         public void FormatException_RemovesAsyncFrames()
         {
@@ -32,7 +21,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
             catch (Exception exc)
             {
-                string formattedException = GetFormattedException(exc);
+                string formattedException = ExceptionFormatter.GetFormattedException(exc);
 
                 Assert.DoesNotMatch("d__.\\.MoveNext()", formattedException);
                 Assert.DoesNotContain("TaskAwaiter", formattedException);
@@ -49,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
             catch (Exception exc)
             {
-                string formattedException = GetFormattedException(exc);
+                string formattedException = ExceptionFormatter.GetFormattedException(exc);
 
                 string typeName = $"{typeof(TestClass).DeclaringType.FullName}.{ nameof(TestClass)}";
                 Assert.Contains($"async {typeName}.{nameof(TestClass.Run1Async)}()", formattedException);
@@ -68,7 +57,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
             catch (Exception exc)
             {
-                string formattedException = GetFormattedException(exc);
+                string formattedException = ExceptionFormatter.GetFormattedException(exc);
 
                 Assert.Contains($"{nameof(TestClass.Run)}(String arg)", formattedException);
             }
@@ -84,34 +73,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
             catch (Exception exc)
             {
-                string formattedException = GetFormattedException(exc);
+                string formattedException = ExceptionFormatter.GetFormattedException(exc);
 
                 Assert.Contains($"{nameof(TestClass.Run4Async)}(String arg)", formattedException);
 
                 // When unable to resolve, the '??' token is used
                 
                 Assert.Contains($"{nameof(TestClass.Run5Async)}(??)", formattedException);
-            }
-        }
-
-        string GetFormattedException(Exception exc)
-        {
-            if (dotMemoryApi.IsEnabled)
-            {
-                var checkpoint = dotMemory.Check();
-                var result = ExceptionFormatter.GetFormattedException(exc);
-                long allocated = 0;
-                dotMemory.Check(memory =>
-                {
-                    var traffic = memory.GetTrafficFrom(checkpoint);
-                    allocated = traffic.AllocatedMemory.SizeInBytes;
-                });
-                _output.WriteLine("Allocated: " + allocated);
-                return result;
-            }
-            else
-            {
-                return ExceptionFormatter.GetFormattedException(exc);
             }
         }
 
