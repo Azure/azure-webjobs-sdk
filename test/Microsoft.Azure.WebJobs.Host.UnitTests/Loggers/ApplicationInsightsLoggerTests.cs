@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.ApplicationInsights.Extensibility.W3C;
 using Microsoft.ApplicationInsights.SnapshotCollector;
 using Microsoft.ApplicationInsights.WindowsServer.Channel.Implementation;
 using Microsoft.AspNetCore.Http;
@@ -88,7 +87,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             string expectedOperationId, expectedRequestId;
             using (logger.BeginFunctionScope(CreateFunctionInstance(_invocationId), _hostInstanceId))
             {
-                expectedRequestId = $"|{Activity.Current.TraceId.ToHexString()}.{Activity.Current.SpanId.ToHexString()}.";
+                expectedRequestId = Activity.Current.SpanId.ToHexString();
                 expectedOperationId = Activity.Current.TraceId.ToHexString();
 
                 // sleep briefly to provide a non-zero Duration
@@ -124,7 +123,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             string expectedOperationId, expectedRequestId;
             using (logger.BeginFunctionScope(CreateFunctionInstance(_invocationId), _hostInstanceId))
             {
-                expectedRequestId = $"|{Activity.Current.TraceId.ToHexString()}.{Activity.Current.SpanId.ToHexString()}.";
+                expectedRequestId = Activity.Current.SpanId.ToHexString();
                 expectedOperationId = Activity.Current.TraceId.ToHexString();
 
                 logger.LogFunctionResult(result);
@@ -217,7 +216,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 logger.LogTrace("Trace");
                 logger.LogWarning("Warning");
 
-                expectedRequestId = $"|{Activity.Current.TraceId.ToHexString()}.{Activity.Current.SpanId.ToHexString()}.";
+                expectedRequestId = Activity.Current.SpanId.ToHexString();
                 expectedOperationId = Activity.Current.TraceId.ToHexString();
             }
 
@@ -285,7 +284,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             {
                 logger.LogError(0, ex, "Error with customer: {customer}.", "John Doe");
 
-                expectedRequestId = $"|{Activity.Current.TraceId.ToHexString()}.{Activity.Current.SpanId.ToHexString()}.";
+                expectedRequestId = Activity.Current.SpanId.ToHexString();
                 expectedOperationId = Activity.Current.TraceId.ToHexString();
             }
 
@@ -336,7 +335,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             {
                 logger.LogMetric("CustomMetric", 44.9);
 
-                expectedRequestId = $"|{Activity.Current.TraceId.ToHexString()}.{Activity.Current.SpanId.ToHexString()}.";
+                expectedRequestId = Activity.Current.SpanId.ToHexString();
                 expectedOperationId = Activity.Current.TraceId.ToHexString();
             }
 
@@ -402,7 +401,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             string expectedOperationId, expectedRequestId;
             using (logger.BeginFunctionScope(CreateFunctionInstance(scopeGuid), _hostInstanceId))
             {
-                expectedRequestId = $"|{Activity.Current.TraceId.ToHexString()}.{Activity.Current.SpanId.ToHexString()}.";
+                expectedRequestId = Activity.Current.SpanId.ToHexString();
                 expectedOperationId = Activity.Current.TraceId.ToHexString();
 
                 var props = new Dictionary<string, object>
@@ -462,7 +461,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 };
                 logger.LogMetric("CustomMetric", 1.1, props);
 
-                expectedRequestId = $"|{Activity.Current.TraceId.ToHexString()}.{Activity.Current.SpanId.ToHexString()}.";
+                expectedRequestId = Activity.Current.SpanId.ToHexString();
                 expectedOperationId = Activity.Current.TraceId.ToHexString();
             }
 
@@ -734,7 +733,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             var logger = CreateLogger(LogCategories.Results);
 
             Activity parent = new Activity("foo").Start();
-            using (logger.BeginScope(new Dictionary<string, object> { ["MS_IgnoreActivity"] = null} ))
+            using (logger.BeginScope(new Dictionary<string, object> { ["MS_IgnoreActivity"] = null }))
             using (logger.BeginFunctionScope(CreateFunctionInstance(_invocationId), _hostInstanceId))
             {
                 logger.LogFunctionResult(result);
@@ -778,12 +777,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             Assert.Single(_channel.Telemetries.OfType<RequestTelemetry>());
             RequestTelemetry telemetry = _channel.Telemetries.OfType<RequestTelemetry>().Single();
-            Assert.Equal(FormatTelemetryId(current), telemetry.Id);
-        }
-
-        private static string FormatTelemetryId(Activity activity)
-        {
-            return "|" + activity.TraceId.ToHexString() + "." + activity.SpanId.ToHexString() + ".";
+            Assert.Equal(current.SpanId.ToHexString(), telemetry.Id);
         }
 
         [Fact]

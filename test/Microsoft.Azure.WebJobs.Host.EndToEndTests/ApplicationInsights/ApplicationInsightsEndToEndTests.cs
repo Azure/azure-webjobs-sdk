@@ -661,7 +661,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     true,
                     "0",
                     traceId,
-                    $"|{traceId}.{parentSpanId}.");
+                    parentSpanId);
 
                 Assert.Equal(sampledIn ? SamplingDecision.SampledIn : SamplingDecision.None, functionRequest.ProactiveSamplingDecision);                    
 
@@ -945,7 +945,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     success,
                     "204",
                     "4bf92f3577b34da6a3ce929d0e0e4736",
-                    "|4bf92f3577b34da6a3ce929d0e0e4736.00f067aa0ba902b7.");
+                    "00f067aa0ba902b7");
 
                 Assert.DoesNotContain("MS_HttpRequest", functionRequest.Properties.Keys);
                 // Make sure operation ids match
@@ -1105,7 +1105,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         true,
                         "204",
                         "4bf92f3577b34da6a3ce929d0e0e4736",
-                        "|4bf92f3577b34da6a3ce929d0e0e4736.00f067aa0ba902b7.");
+                        "00f067aa0ba902b7");
 
                     Assert.Equal(_expectedResponseCode.ToString(), functionRequest.ResponseCode);
                 }
