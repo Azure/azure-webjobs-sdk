@@ -70,9 +70,9 @@ namespace Microsoft.Azure.WebJobs.Host.Diagnostics
         {
             var message = exception.Message;
             var className = exception.GetType().ToString();
-            var stackText = message.Length <= 0
+            sb.Append(message.Length <= 0
                 ? className
-                : className + " : " + message;
+                : className + " : " + message);
             var innerException = exception.InnerException;
             if (innerException != null)
             {
@@ -80,50 +80,52 @@ namespace Microsoft.Azure.WebJobs.Host.Diagnostics
                 {
                     do
                     {
-                        stackText += " ---> " + innerException.Message;
+                        sb.Append(" ---> ");
+                        sb.Append(innerException.Message);
                         innerException = innerException.InnerException;
                     }
                     while (innerException != null);
                 }
                 else
                 {
-                    stackText += $" ---> {GetFormattedException(innerException)} {Environment.NewLine}   End of inner exception";
+                    sb.Append(" ---> ");
+                    GetFormattedException(sb, innerException);
+                    sb.AppendLine();
+                    sb.Append("   End of inner exception");
                 }
             }
 
-            string stackTrace = GetAsyncStackTrace(exception);
-            if (!string.IsNullOrEmpty(stackTrace))
-            {
-                stackText += Environment.NewLine + stackTrace;
-            }
-
-            sb.Append(stackText);
+            AddAsyncStackTrace(sb, exception);
         }
 
-        private static string GetAsyncStackTrace(Exception exception)
+        private static void AddAsyncStackTrace(StringBuilder sb, Exception exception)
         {
             var stackTrace = new StackTrace(exception, fNeedFileInfo: true);
             var stackFrames = stackTrace.GetFrames();
             if (stackFrames == null)
             {
-                return string.Empty;
+                return;
             }
 
-            var stackFrameLines = from frame in stackFrames
+            var toProcess = from frame in stackFrames
                                   let method = frame.GetMethod()
                                   let declaringType = method?.DeclaringType
                                   where ShouldShowFrame(declaringType)
-                                  select FormatFrame(method, declaringType, frame);
+                                  select (method, declaringType, frame);
 
-            return string.Join(Environment.NewLine, stackFrameLines);
+            foreach (var frame in toProcess)
+            {
+                FormatFrame(sb, frame.method, frame.declaringType, frame.frame);
+            }
         }
 
         private static bool ShouldShowFrame(Type declaringType) =>
             !(declaringType != null && typeof(INotifyCompletion).IsAssignableFrom(declaringType));
 
-        private static string FormatFrame(MethodBase method, Type declaringType, StackFrame frame)
+        private static void FormatFrame(StringBuilder stringBuilder, MethodBase method, Type declaringType, StackFrame frame)
         {
-            var stringBuilder = new StringBuilder();
+            stringBuilder.AppendLine();
+
             stringBuilder.Append("   at ");
             bool isAsync;
             FormatMethodName(stringBuilder, declaringType, out isAsync);
@@ -171,8 +173,6 @@ namespace Microsoft.Azure.WebJobs.Host.Diagnostics
             stringBuilder.Append(")");
 
             FormatFileName(stringBuilder, frame);
-
-            return stringBuilder.ToString();
         }
 
         private static void FormatFileName(StringBuilder stringBuilder, StackFrame frame)
@@ -244,7 +244,9 @@ namespace Microsoft.Azure.WebJobs.Host.Diagnostics
                 return;
             }
 
-            stringBuilder.Append("[" + String.Join(",", genericTypeArguments.Select(args => args.Name)) + "]");
+            stringBuilder.Append("[");
+            stringBuilder.Append(string.Join(",", genericTypeArguments.Select(args => args.Name)));
+            stringBuilder.Append("]");
         }
 
         private static void FormatParameters(StringBuilder stringBuilder, MethodBase method) =>
