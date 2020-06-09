@@ -42,5 +42,20 @@ namespace Microsoft.Azure.WebJobs.Host
 
             return Environment.GetEnvironmentVariable(connectionName) ?? configValue;
         }
+
+        public static bool IsSettingEnabled(string settingName)
+        {
+            // check the target setting and return false (disabled) if the value exists
+            // and is "falsey"
+            string value = GetSettingFromConfigOrEnvironment(settingName);
+            if (!string.IsNullOrEmpty(value) &&
+                (string.Compare(value, "1", StringComparison.OrdinalIgnoreCase) == 0 ||
+                 string.Compare(value, "true", StringComparison.OrdinalIgnoreCase) == 0))
+            {
+                return true;
+            }
+
+            return false;
+        }
     }
 }
