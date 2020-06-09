@@ -2,53 +2,20 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
-    public class ConfigurationUtilityTests
+    public class ConfigurationExtensionsTests
     {
-        [Fact]
-        public void GetSettingFromConfigOrEnvironment_NotFound_ReturnsEmpty()
+        private readonly IConfiguration _configuration;
+
+        public ConfigurationExtensionsTests()
         {
-            string value = ConfigurationUtility.GetSetting("DNE");
-            Assert.Equal(null, value);
-        }
-
-        [Fact]
-        public void GetSettingFromConfigOrEnvironment_NameNull_ReturnsEmpty()
-        {
-            string value = ConfigurationUtility.GetSetting(null);
-            Assert.Equal(null, value);
-        }
-
-        [Fact]
-        public void GetSettingFromConfigOrEnvironment_ConfigSetting_NoEnvironmentSetting()
-        {
-            string value = ConfigurationUtility.GetSetting("DisableSetting0");
-            Assert.Equal("0", value);
-        }
-
-        [Fact]
-        public void GetSettingFromConfigOrEnvironment_EnvironmentSetting_NoConfigSetting()
-        {
-            Environment.SetEnvironmentVariable("EnvironmentSetting", "1");
-
-            string value = ConfigurationUtility.GetSetting("EnvironmentSetting");
-            Assert.Equal("1", value);
-
-            Environment.SetEnvironmentVariable("EnvironmentSetting", null);
-        }
-
-        [Fact]
-        public void GetSettingFromConfigOrEnvironment_ConfigAndEnvironment_EnvironmentWins()
-        {
-            Environment.SetEnvironmentVariable("DisableSetting0", "1");
-
-            string value = ConfigurationUtility.GetSetting("DisableSetting0");
-            Assert.Equal("1", value);
-
-            Environment.SetEnvironmentVariable("DisableSetting0", null);
+            _configuration = new ConfigurationBuilder()
+                .Add(new WebJobsEnvironmentVariablesConfigurationSource())
+                .Build();
         }
 
         [Theory]
@@ -69,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 string value = Guid.NewGuid().ToString();
                 Environment.SetEnvironmentVariable(key, value);
 
-                string result = ConfigurationUtility.GetSetting(lookup);
+                string result = _configuration[lookup];
                 Assert.Equal(value, result);
             }
             finally
@@ -90,12 +57,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             // Arrange
             string settingName = "SettingEnabledTest";
-            Environment.SetEnvironmentVariable(settingName, settingValue);            
+            Environment.SetEnvironmentVariable(settingName, settingValue);
 
             try
             {
                 // Act
-                bool isDisabled = ConfigurationUtility.IsSettingEnabled(settingName);
+                bool isDisabled = _configuration.IsSettingEnabled(settingName);
 
                 // Assert
                 Assert.True(isDisabled == expectedResult);

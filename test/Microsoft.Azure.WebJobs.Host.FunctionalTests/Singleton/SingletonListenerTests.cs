@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -24,11 +25,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         private readonly SingletonListener _listener;
         private readonly SingletonAttribute _attribute;
         private readonly string _lockId;
+        private readonly IConfiguration _configuration = new ConfigurationBuilder().Build();
 
         public SingletonListenerTests()
         {
             MethodInfo methodInfo = this.GetType().GetMethod("TestJob", BindingFlags.Static | BindingFlags.NonPublic);
-            var descriptor = FunctionIndexer.FromMethod(methodInfo);
+            var descriptor = FunctionIndexer.FromMethod(methodInfo, _configuration);
             _attribute = new SingletonAttribute();
             _options = new SingletonOptions
             {

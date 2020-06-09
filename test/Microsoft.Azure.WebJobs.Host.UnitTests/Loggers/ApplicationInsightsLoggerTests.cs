@@ -20,6 +20,7 @@ using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -957,7 +958,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         private IFunctionInstance CreateFunctionInstance(Guid id, Dictionary<string, string> triggerDetails = null)
         {
             var method = GetType().GetMethod(nameof(TestFunction), BindingFlags.NonPublic | BindingFlags.Static);
-            var descriptor = FunctionIndexer.FromMethod(method);
+            var descriptor = FunctionIndexer.FromMethod(method, new ConfigurationBuilder().Build());
 
             return new FunctionInstance(id, triggerDetails ?? new Dictionary<string, string>(), null, new ExecutionReason(), null, null, descriptor);
         }

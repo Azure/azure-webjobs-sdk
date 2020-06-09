@@ -13,6 +13,7 @@ using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -23,6 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
     public class HostListenerFactoryTests
     {
         private readonly IJobActivator _jobActivator;
+        private readonly IConfiguration _configuration;
 
         public HostListenerFactoryTests()
         {
@@ -33,6 +35,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
 
             DisableProvider_Static.Method = null;
             DisableProvider_Instance.Method = null;
+
+            _configuration = new ConfigurationBuilder()
+                .Add(new WebJobsEnvironmentVariablesConfigurationSource())
+                .Build();
         }
 
         [Fact]
@@ -51,12 +57,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
 
             List<FunctionDefinition> functions = new List<FunctionDefinition>();
             var method = typeof(Functions1).GetMethod("TestJob", BindingFlags.Public | BindingFlags.Static);
-            FunctionDescriptor descriptor = FunctionIndexer.FromMethod(method, _jobActivator);
+            FunctionDescriptor descriptor = FunctionIndexer.FromMethod(method, _configuration, _jobActivator);
             FunctionDefinition definition = new FunctionDefinition(descriptor, mockInstanceFactory.Object, mockListenerFactory.Object);
             functions.Add(definition);
 
             var monitorManager = new ScaleMonitorManager();
-            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManager, () => {});
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManager, () => { });
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 
             var innerListeners = ((IEnumerable<IListener>)listener).ToArray();
@@ -123,7 +129,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             // create a bunch of function definitions that are disabled
             List<FunctionDefinition> functions = new List<FunctionDefinition>();
             var method = jobType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Static);
-            FunctionDescriptor descriptor = FunctionIndexer.FromMethod(method, _jobActivator);
+            FunctionDescriptor descriptor = FunctionIndexer.FromMethod(method, _configuration, _jobActivator);
             FunctionDefinition definition = new FunctionDefinition(descriptor, mockInstanceFactory.Object, mockListenerFactory.Object);
             functions.Add(definition);
 
@@ -188,7 +194,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
 
             MethodInfo method = typeof(Functions1).GetMethod("TestJob", BindingFlags.Public | BindingFlags.Static);
 
-            bool result = HostListenerFactory.IsDisabledBySetting(settingName, method, mockNameResolver.Object);
+            bool result = HostListenerFactory.IsDisabledBySetting(settingName, method, mockNameResolver.Object, _configuration);
             Assert.Equal(result, disabled);
 
             Environment.SetEnvironmentVariable("Disable_Functions1.TestJob_TestValue", null);
