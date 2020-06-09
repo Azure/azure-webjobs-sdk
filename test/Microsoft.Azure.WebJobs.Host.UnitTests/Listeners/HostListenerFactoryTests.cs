@@ -34,6 +34,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
         [InlineData(typeof(Functions1), "DisabledAtMethodLevel_CustomType_Static")]
         [InlineData(typeof(Functions1), "DisabledAtMethodLevel_CustomType_Instance")]
         [InlineData(typeof(Functions1), "DisabledByEnvironmentSetting")]
+        [InlineData(typeof(Functions1), "DisabledByAppSetting_NoAttribute")]
         [InlineData(typeof(Functions2), "DisabledAtClassLevel")]
         public async Task CreateAsync_SkipsDisabledFunctions(Type jobType, string methodName)
         {
@@ -169,6 +170,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
 
             [Disable("Disable_{MethodName}_%Test%")]
             public static void DisabledByAppSetting_BindingData(
+                [QueueTrigger("test")] string message)
+            {
+            }
+
+            public static void DisabledByAppSetting_NoAttribute(
                 [QueueTrigger("test")] string message)
             {
             }
