@@ -88,6 +88,11 @@ namespace Microsoft.Azure.WebJobs.Description
             {
                 return true;
             }
+            
+            if (containerName.Equals("$web"))
+            {
+                return true;
+            }
 
             return Regex.IsMatch(containerName, @"^[a-z0-9](([a-z0-9\-[^\-])){1,61}[a-z0-9]$");
         }
