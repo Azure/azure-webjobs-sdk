@@ -1,15 +1,16 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using Microsoft.Azure.Storage;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Azure.Storage;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
@@ -60,9 +61,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             SingletonManager singletonManager = host.Services.GetService<SingletonManager>();
 
             IFunctionExecutor executor = host.Services.GetService<IFunctionExecutor>();
+            IConfiguration configuration = host.Services.GetService<IConfiguration>();
 
             // TODO: This should be using DI internally and not be so complicated to construct
-            return new FunctionIndexer(triggerBindingProvider, bindingProvider, activator, executor, singletonManager, loggerFactory);
+            return new FunctionIndexer(triggerBindingProvider, bindingProvider, activator, executor, singletonManager, loggerFactory, configuration);
         }
     }
 }

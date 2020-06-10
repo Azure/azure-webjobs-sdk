@@ -18,7 +18,7 @@ using Microsoft.Azure.WebJobs.Host.Properties;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.Logging;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Indexers
@@ -39,6 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly SharedQueueHandler _sharedQueue;
         private readonly TimeoutAttribute _defaultTimeout;
         private readonly bool _allowPartialHostStartup;
+        private readonly IConfiguration _configuration;
 
         public FunctionIndexer(
             ITriggerBindingProvider triggerBindingProvider,
@@ -47,6 +48,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             IFunctionExecutor executor,
             SingletonManager singletonManager,
             ILoggerFactory loggerFactory,
+            IConfiguration configuration,
             INameResolver nameResolver = null,
             SharedQueueHandler sharedQueue = null,
             TimeoutAttribute defaultTimeout = null,
@@ -62,6 +64,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _sharedQueue = sharedQueue;
             _defaultTimeout = defaultTimeout;
             _allowPartialHostStartup = allowPartialHostStartup;
+            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }
 
         public async Task IndexTypeAsync(Type type, IFunctionIndexCollector index, CancellationToken cancellationToken)
@@ -342,11 +345,12 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         // Expose internally for testing purposes 
         internal static FunctionDescriptor FromMethod(
             MethodInfo method,
+            IConfiguration configuration,
             IJobActivator jobActivator = null,
             INameResolver nameResolver = null,
             TimeoutAttribute defaultTimeout = null)
         {
-            var disabled = HostListenerFactory.IsDisabled(method, nameResolver, jobActivator);
+            var disabled = HostListenerFactory.IsDisabled(method, nameResolver, jobActivator, configuration);
 
             bool hasCancellationToken = method.GetParameters().Any(p => p.ParameterType == typeof(CancellationToken));
 
@@ -381,7 +385,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private FunctionDescriptor CreateFunctionDescriptor(MethodInfo method, string triggerParameterName,
             ITriggerBinding triggerBinding, IReadOnlyDictionary<string, IBinding> nonTriggerBindings)
         {
-            var descr = FromMethod(method, this._activator, _nameResolver, _defaultTimeout);
+            var descr = FromMethod(method, _configuration, this._activator, _nameResolver, _defaultTimeout);
 
             List<ParameterDescriptor> parameters = new List<ParameterDescriptor>();
 

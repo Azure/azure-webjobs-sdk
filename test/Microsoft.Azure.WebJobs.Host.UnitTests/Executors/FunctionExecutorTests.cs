@@ -10,6 +10,7 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -22,6 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly Mock<IFunctionInstance> _mockFunctionInstance;
         private readonly TimeSpan _functionTimeout = TimeSpan.FromMinutes(3);
+        private readonly IConfiguration _configuration = new ConfigurationBuilder().Build();
 
         public FunctionExecutorTests()
         {
@@ -35,7 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         public void StartFunctionTimeout_MethodLevelTimeout_CreatesExpectedTimer()
         {
             MethodInfo method = typeof(Functions).GetMethod("MethodLevel", BindingFlags.Static | BindingFlags.Public);
-            _descriptor = FunctionIndexer.FromMethod(method);
+            _descriptor = FunctionIndexer.FromMethod(method, _configuration);
 
             // we need to set up the Id so that when the timer fires it doesn't throw, but since this is Strict, we need to access it first.
             _mockFunctionInstance.SetupGet(p => p.Id).Returns(Guid.Empty);
@@ -55,7 +57,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         public void StartFunctionTimeout_ClassLevelTimeout_CreatesExpectedTimer()
         {
             MethodInfo method = typeof(Functions).GetMethod("ClassLevel", BindingFlags.Static | BindingFlags.Public);
-            _descriptor = FunctionIndexer.FromMethod(method);
+            _descriptor = FunctionIndexer.FromMethod(method, _configuration);
 
             // we need to set up the Id so that when the timer fires it doesn't throw, but since this is Strict, we need to access it first.
             _mockFunctionInstance.SetupGet(p => p.Id).Returns(Guid.Empty);
@@ -84,7 +86,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         public void StartFunctionTimeout_NoCancellationTokenParameter_ThrowOnTimeoutFalse_ReturnsNull()
         {
             MethodInfo method = typeof(Functions).GetMethod("NoCancellationTokenParameter", BindingFlags.Static | BindingFlags.Public);
-            _descriptor = FunctionIndexer.FromMethod(method);
+            _descriptor = FunctionIndexer.FromMethod(method, _configuration);
 
             TimeoutAttribute attribute = typeof(Functions).GetCustomAttribute<TimeoutAttribute>();
             attribute.ThrowOnTimeout = false;
@@ -100,7 +102,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         public void StartFunctionTimeout_NoCancellationTokenParameter_ThrowOnTimeoutTrue_CreatesExpectedTimer()
         {
             MethodInfo method = typeof(Functions).GetMethod("NoCancellationTokenParameter", BindingFlags.Static | BindingFlags.Public);
-            _descriptor = FunctionIndexer.FromMethod(method);
+            _descriptor = FunctionIndexer.FromMethod(method, _configuration);
 
             // we need to set up the Id so that when the timer fires it doesn't throw, but since this is Strict, we need to access it first.
             _mockFunctionInstance.SetupGet(p => p.Id).Returns(Guid.Empty);
@@ -185,7 +187,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             // setup the instance details for the exception message
             MethodInfo method = typeof(Functions).GetMethod("ClassLevel", BindingFlags.Static | BindingFlags.Public);
-            _descriptor = FunctionIndexer.FromMethod(method);
+            _descriptor = FunctionIndexer.FromMethod(method, _configuration);
             _mockFunctionInstance.SetupGet(p => p.Id).Returns(Guid.Empty);
 
             var timeoutSource = new CancellationTokenSource();
@@ -279,7 +281,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             // setup the instance details for the exception message
             MethodInfo method = typeof(Functions).GetMethod("ClassLevel", BindingFlags.Static | BindingFlags.Public);
-            _descriptor = FunctionIndexer.FromMethod(method);
+            _descriptor = FunctionIndexer.FromMethod(method, _configuration);
             _mockFunctionInstance.SetupGet(p => p.Id).Returns(Guid.Empty);
 
             var timeoutSource = new CancellationTokenSource();
@@ -319,7 +321,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             MethodInfo method = typeof(Functions).GetMethod("MethodLevel", BindingFlags.Static | BindingFlags.Public);
             TimeoutAttribute attribute = method.GetCustomAttribute<TimeoutAttribute>();
-            _descriptor = FunctionIndexer.FromMethod(method);
+            _descriptor = FunctionIndexer.FromMethod(method, _configuration);
             Guid instanceId = Guid.Parse("B2D1DD72-80E2-412B-A22E-3B4558F378B4");
             bool timeoutWhileDebugging = false;
 

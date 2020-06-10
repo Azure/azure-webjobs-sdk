@@ -12,6 +12,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings.Path;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Listeners
@@ -117,13 +118,13 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             }
         }
 
-        internal static bool IsDisabled(MethodInfo method, INameResolver nameResolver, IJobActivator activator)
+        internal static bool IsDisabled(MethodInfo method, INameResolver nameResolver, IJobActivator activator, IConfiguration configuration)
         {
             // First try to resolve disabled state by setting
             string settingName = string.Format(CultureInfo.InvariantCulture, "AzureWebJobs.{0}.Disabled", Utility.GetFunctionName(method));
             // Linux does not support dots in env variable name. So we replace dots with underscores.
             string settingNameLinux = string.Format(CultureInfo.InvariantCulture, "AzureWebJobs_{0}_Disabled", Utility.GetFunctionName(method));
-            if (ConfigurationUtility.IsSettingEnabled(settingName) || ConfigurationUtility.IsSettingEnabled(settingNameLinux))
+            if (configuration.IsSettingEnabled(settingName) || configuration.IsSettingEnabled(settingNameLinux))
             {
                 return true;
             }
@@ -139,7 +140,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                     {
                         if (!string.IsNullOrEmpty(disableAttribute.SettingName))
                         {
-                            return IsDisabledBySetting(disableAttribute.SettingName, method, nameResolver);
+                            return IsDisabledBySetting(disableAttribute.SettingName, method, nameResolver, configuration);
                         }
                         else if (disableAttribute.ProviderType != null)
                         {
@@ -158,7 +159,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             }
         }
 
-        internal static bool IsDisabledBySetting(string settingName, MethodInfo method, INameResolver nameResolver)
+        internal static bool IsDisabledBySetting(string settingName, MethodInfo method, INameResolver nameResolver, IConfiguration configuration)
         {
             if (nameResolver != null)
             {
@@ -171,7 +172,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             bindingData.Add("MethodShortName", method.Name);
             settingName = bindingTemplate.Bind(bindingData);
 
-            return ConfigurationUtility.IsSettingEnabled(settingName);
+            return configuration.IsSettingEnabled(settingName);
         }
 
         internal static bool IsDisabledByProvider(Type providerType, MethodInfo jobFunction, IJobActivator activator)
