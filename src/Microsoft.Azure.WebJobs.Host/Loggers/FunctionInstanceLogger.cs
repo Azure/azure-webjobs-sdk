@@ -3,6 +3,7 @@
 
 using System;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Protocols;
@@ -37,12 +38,23 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             return Task.FromResult<string>(null);
         }
 
-        private void LogTemplatizedTriggerDetails(ILogger logger, FunctionStartedMessage message)
+        private static void LogTemplatizedTriggerDetails(ILogger logger, FunctionStartedMessage message)
         {
-            var templateKeys = message.TriggerDetails.Select(entry => $"{entry.Key}: {{{entry.Key}}}");
-            string messageTemplate = "Trigger Details: " + string.Join(", ", templateKeys);
-            string[] templateValues = message.TriggerDetails.Values.ToArray();
+            var sb = new StringBuilder("Trigger Details: ");
 
+            foreach (var entry in message.TriggerDetails)
+            {
+                sb.Append(entry.Key);
+                sb.Append(": {");
+                sb.Append(entry.Key);
+                sb.Append("}, ");
+            }
+
+            // remove last 2 chars, which are ", "
+            sb.Remove(sb.Length - 2, 2);
+            var messageTemplate = sb.ToString();
+
+            var templateValues = message.TriggerDetails.Values.ToArray();
             logger.LogInformation(messageTemplate, templateValues);
         }
 
