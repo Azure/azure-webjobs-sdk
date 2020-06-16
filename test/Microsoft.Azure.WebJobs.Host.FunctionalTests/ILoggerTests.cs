@@ -35,7 +35,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             // Six loggers are the startup, singleton, results, function and function.user
             // Note: We currently have 3 additional Logger<T> categories that need to be renamed
-            Assert.Equal(7, loggerProvider.CreatedLoggers.Count); // $$$ was 9?
+            Assert.Equal(8, loggerProvider.CreatedLoggers.Count); // $$$ was 9?
 
             var functionLogger = loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.CreateFunctionUserCategory(functionName)).Single();
             var resultsLogger = loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Results).Single();
@@ -68,7 +68,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
 
             // Five loggers are the startup, singleton, results, function and function.user
-            Assert.Equal(7, loggerProvider.CreatedLoggers.Count); // $$$ was 9? 
+            Assert.Equal(8, loggerProvider.CreatedLoggers.Count); // $$$ was 9? 
             var functionLogger = loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.CreateFunctionUserCategory(functionName)).Single();
             Assert.Equal(2, functionLogger.GetLogMessages().Count);
             var infoMessage = functionLogger.GetLogMessages()[0];

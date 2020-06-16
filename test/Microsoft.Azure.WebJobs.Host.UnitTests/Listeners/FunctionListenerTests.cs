@@ -148,6 +148,26 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
         }
 
         [Fact]
+        public async Task FunctionListener_StopAsync_LogStopStatements()
+        {
+            Mock<IListener> goodListener = new Mock<IListener>(MockBehavior.Strict);
+            goodListener.Setup(bl => bl.StartAsync(It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(false));
+            goodListener.Setup(bl => bl.StopAsync(It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(false));
+            var listener = new FunctionListener(goodListener.Object, fd, _loggerFactory);
+
+            await listener.StartAsync(ct);
+            await listener.StopAsync(ct);
+
+            goodListener.VerifyAll();
+
+            Assert.Collection(_loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage),
+            p => Assert.Equal("Stopping the listener for function 'testfunc'", p),
+            p => Assert.Equal("Stopped the listener for function 'testfunc'", p));
+        }
+
+        [Fact]
         public async Task FunctionListener_ConcurrentStartStop_ListenerIsStopped()
         {
             Mock<IListener> badListener = new Mock<IListener>(MockBehavior.Strict);
@@ -195,6 +215,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
                 p => Assert.Equal("The listener for function 'testfunc' was unable to start.", p),
                 p => Assert.Equal("Retrying to start listener for function 'testfunc' (Attempt 1)", p),
                 p => Assert.Equal("Listener successfully started for function 'testfunc' after 1 retries.", p),
+                p => Assert.Equal("Stopping the listener for function 'testfunc'", p),
+                p => Assert.Equal("Stopped the listener for function 'testfunc'", p),
                 p => Assert.Equal("Listener for function 'testfunc' stopped. A stop was initiated while starting.", p));
 
             // make sure the retry loop is not running
@@ -303,7 +325,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             await listener.StartAsync(ct);
             await listener.StopAsync(ct);
 
-            Assert.Empty(_loggerProvider.CreatedLoggers.Single().GetLogMessages());
+            Assert.Collection(_loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage),
+                            p => Assert.Equal("Stopping the listener for function 'testfunc'", p),
+                            p => Assert.Equal("Stopped the listener for function 'testfunc'", p));
 
             goodListener.VerifyAll();
         }

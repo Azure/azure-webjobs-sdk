@@ -1,0 +1,21 @@
+﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the MIT License. See License.txt in the project root for license information.
+
+using Microsoft.Azure.WebJobs.Host.Listeners;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Microsoft.Azure.WebJobs.Host
+{
+    public interface IDrainModeManager
+    {
+        bool DrainModeEnabled { get; }
+
+        ICollection<IListener> Listeners { get; }
+
+        void RegisterListener(IListener listener);
+
+        Task EnableDrainModeAsync();
+    }
+}

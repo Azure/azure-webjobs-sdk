@@ -45,6 +45,11 @@ namespace Microsoft.Azure.WebJobs.Logging
         public const string Bindings = "Host.Bindings";
 
         /// <summary>
+        /// The category for all logs written by the function host during drain mode operations.
+        /// </summary>
+        public const string Drain = "Host.Drain";
+
+        /// <summary>
         /// The category for logs written for a specific function invocation.
         /// </summary>
         public static string CreateFunctionCategory(string functionName) => $"Function.{functionName}";

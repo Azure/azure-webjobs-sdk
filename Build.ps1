@@ -5,7 +5,8 @@
 )
 
 if ($isLocal){
-  $packageSuffix = "dev" + [datetime]::UtcNow.Ticks.ToString()
+  $dstring = Get-Date -Format "ddHHmmss"
+  $packageSuffix = "dev" + $dstring
   Write-Host "Local build - setting package suffixes to $packageSuffix" -ForegroundColor Yellow
 }
 dotnet --version

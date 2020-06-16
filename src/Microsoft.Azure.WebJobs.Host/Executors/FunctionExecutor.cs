@@ -32,6 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger _resultsLogger;
         private readonly IEnumerable<IFunctionFilter> _globalFunctionFilters;
+        private readonly IDrainModeManager _drainModeManager;
 
         private readonly Dictionary<string, object> _inputBindingScope = new Dictionary<string, object>
         {
@@ -55,7 +56,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 IAsyncCollector<FunctionInstanceLogEntry> functionEventCollector,
                 IServiceScopeFactory serviceScopeFactory,
                 ILoggerFactory loggerFactory = null,
-                IEnumerable<IFunctionFilter> globalFunctionFilters = null)
+                IEnumerable<IFunctionFilter> globalFunctionFilters = null,
+                IDrainModeManager drainModeManager = null)
         {
             _functionInstanceLogger = functionInstanceLogger ?? throw new ArgumentNullException(nameof(functionInstanceLogger));
             _functionOutputLogger = functionOutputLogger;
@@ -65,6 +67,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _loggerFactory = loggerFactory;
             _resultsLogger = _loggerFactory?.CreateLogger(LogCategories.Results);
             _globalFunctionFilters = globalFunctionFilters ?? Enumerable.Empty<IFunctionFilter>();
+            _drainModeManager = drainModeManager;
         }
 
         public HostOutputMessage HostOutputMessage
@@ -236,6 +239,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 // Create a linked token source that will allow us to signal function cancellation
                 // (e.g. Based on TimeoutAttribute, etc.)                
                 CancellationTokenSource functionCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+                if (_drainModeManager.DrainModeEnabled)
+                {
+                    functionCancellationTokenSource.Cancel();
+                    logger?.LogInformation($"Requesting cancellation for function invocation:{instance.Id}");
+                }
+
                 using (functionCancellationTokenSource)
                 {
                     // This allows the FunctionOutputLogger to grab the TextWriter created by the IFunctionOutput. This enables user ILogger
