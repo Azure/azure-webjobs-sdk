@@ -47,7 +47,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         private bool? _queueExists;
         private bool _foundMessageSinceLastDelay;
         private bool _disposed;
-        private TaskCompletionSource<object> _stopWaitingTaskSource;
+        private volatile TaskCompletionSource<object> _stopWaitingTaskSource;
+        private volatile CancellationTokenSource _stopWaitingDelayCancellationTokenSource = new CancellationTokenSource();
 
         // for mock testing only
         internal QueueListener()
@@ -175,6 +176,11 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
                 }
 
                 _stopWaitingTaskSource = new TaskCompletionSource<object>();
+                _stopWaitingDelayCancellationTokenSource = new CancellationTokenSource();
+
+#pragma warning disable 4014
+                _stopWaitingTaskSource.Task.ContinueWith((t, state) => ((CancellationTokenSource) state).Cancel(), _stopWaitingDelayCancellationTokenSource);
+#pragma warning restore 4014
             }
 
             IEnumerable<CloudQueueMessage> batch = null;
@@ -287,7 +293,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         private Task CreateDelayWithNotificationTask()
         {
             TimeSpan nextDelay = _delayStrategy.GetNextDelay(executionSucceeded: _foundMessageSinceLastDelay);
-            Task normalDelay = Task.Delay(nextDelay);
+            Task normalDelay = Task.Delay(nextDelay, _stopWaitingDelayCancellationTokenSource.Token);
             _foundMessageSinceLastDelay = false;
 
             Logger.BackoffDelay(_logger, _functionDescriptor.LogName, _queue.Name, nextDelay.TotalMilliseconds);
