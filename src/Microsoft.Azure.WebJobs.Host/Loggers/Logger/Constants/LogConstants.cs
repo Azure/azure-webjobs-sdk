@@ -123,7 +123,12 @@ namespace Microsoft.Azure.WebJobs.Logging
         /// Gets the name of the key used to store the EventId of the log message.
         /// </summary>
         public const string EventIdKey = "EventId";
-
+        
+        /// <summary>
+        /// Gets the name of the event name of the  log message.
+        /// </summary>
+        public const string EventName = "EventName";
+        
         /// <summary>
         /// Gets the function start event name.
         /// </summary>
