@@ -76,7 +76,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             {
                 [LogConstants.CategoryNameKey] = _categoryName,
                 [LogConstants.LogLevelKey] = (LogLevel?)logLevel,
-                [LogConstants.EventIdKey] = eventId.Id
+                [LogConstants.EventIdKey] = eventId.Id,
+                [LogConstants.EventName] = eventId.Name
             }))
             {
                 // Log a metric from user logs only
