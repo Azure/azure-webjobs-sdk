@@ -37,11 +37,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             if (_retryManagerProvider != null)
             {
                 IRetryManager retryManager = _retryManagerProvider.Create(_descriptor.RetryAttribute);
-                return await retryManager.ExecuteWithRetriesAsync(TryExecuteCoreAsync, input, cancellationToken);
-            } else
-            {
-                return await TryExecuteCoreAsync(input, cancellationToken);
+                if (retryManager != null)
+                {
+                    return await retryManager.ExecuteWithRetriesAsync(TryExecuteCoreAsync, input, cancellationToken);
+                }
             }
+
+            return await TryExecuteCoreAsync(input, cancellationToken);
         }
 
         private async Task<FunctionResult> TryExecuteCoreAsync(TriggeredFunctionData input, CancellationToken cancellationToken)
