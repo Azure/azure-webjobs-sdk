@@ -77,6 +77,72 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         }
 
         [Fact]
+        public void GetFunctionFixedDelayRery_ReturnsExpected()
+        {
+            // Arrange
+            var collector = new TestIndexCollector();
+            FunctionIndexer product = CreateProductUnderTest();
+
+            // Act & Assert
+            product.IndexMethodAsync(typeof(FunctionIndexerTests).GetMethod("FixedDelayRetry_Test"),
+                collector, CancellationToken.None).GetAwaiter().GetResult();
+
+            var retryStrategy = collector.Functions.First().RetryStrategy;
+            Assert.Equal(4, retryStrategy.MaxRetryCount);
+            Assert.True(retryStrategy is FixedDelayRetryAttribute);
+        }
+
+        [Fact]
+        public void GetFunctionCustomRery_ReturnsExpected()
+        {
+            // Arrange
+            var collector = new TestIndexCollector();
+            FunctionIndexer product = CreateProductUnderTest();
+
+            // Act & Assert
+            product.IndexMethodAsync(typeof(FunctionIndexerTests).GetMethod("CustomRetry_Test"),
+                collector, CancellationToken.None).GetAwaiter().GetResult();
+            var retryStrategy = collector.Functions.First().RetryStrategy;
+            Assert.Equal(40, retryStrategy.MaxRetryCount);
+            var nextDelay = retryStrategy.GetNextDelay(new RetryContext());
+            Assert.Equal(TimeSpan.FromSeconds(2), nextDelay);
+            Assert.True(retryStrategy is MyCustomRetryAttribute);
+        }
+
+        [Fact]
+        public void GetFunction_MethodLevel_ReturnsExpected()
+        {
+            // Arrange
+            var collector = new TestIndexCollector();
+            FunctionIndexer product = CreateProductUnderTest();
+
+            // Act & Assert
+            product.IndexMethodAsync(typeof(RetryFunctions).GetMethod("RetryAtMethodLevel"),
+                collector, CancellationToken.None).GetAwaiter().GetResult();
+
+            var retryStrategy = collector.Functions.First().RetryStrategy;
+            Assert.Equal(5, retryStrategy.MaxRetryCount);
+            Assert.True(retryStrategy is ExponentialBackoffRetryAttribute);
+        }
+
+        [Fact]
+        public void GetFunction_ClassLevel_ReturnsExpected()
+        {
+            // Arrange
+            var collector = new TestIndexCollector();
+            FunctionIndexer product = CreateProductUnderTest();
+
+            // Act & Assert
+            product.IndexMethodAsync(typeof(RetryFunctions).GetMethod("RetryAtClassLevel"),
+                collector, CancellationToken.None).GetAwaiter().GetResult();
+
+            var retryStrategy = collector.Functions.First().RetryStrategy;
+            Assert.Equal(40, retryStrategy.MaxRetryCount);
+            var nextDelay = retryStrategy.GetNextDelay(new RetryContext());
+            Assert.Equal(TimeSpan.FromSeconds(2), nextDelay);
+        }
+
+        [Fact]
         public void IndexMethod_IfMethodReturnsVoid_DoesNotThrow()
         {
             // Arrange
@@ -343,6 +409,46 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         public static void Timeout_Set()
         {
         }
+
+        [NoAutomaticTrigger]
+        [MyCustomRetryAttribute(40)]
+        public static void CustomRetry_Test()
+        {
+        }
+
+        [NoAutomaticTrigger]
+        [FixedDelayRetry(4, "00:30:00")]
+        public static void FixedDelayRetry_Test()
+        {
+        }
+
+        public class MyCustomRetryAttribute : RetryAttribute
+        {
+            public MyCustomRetryAttribute(int maxRetryCount) : base(maxRetryCount)
+            {
+            }
+
+            public override TimeSpan GetNextDelay(RetryContext context)
+            {
+                return TimeSpan.FromSeconds(2);
+            }
+        }
+
+        [MyCustomRetryAttribute(40)]
+        public static class RetryFunctions
+        {
+            [NoAutomaticTrigger]
+            public static void RetryAtClassLevel()
+            {
+            }
+
+            [NoAutomaticTrigger]
+            [ExponentialBackoffRetry(5, "00:00:30", "00:00:50")]
+            public static void RetryAtMethodLevel()
+            {
+            }
+        }
+
 
         [Fact]
         public async Task FSharpTasks_AreCorrectlyIndexed()

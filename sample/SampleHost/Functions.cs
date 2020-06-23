@@ -4,6 +4,7 @@
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using SampleHost.Filters;
@@ -61,6 +62,12 @@ namespace SampleHost
             log.LogInformation($"Message complete (Id={messageId})");
         }
 
+        /// <summary>
+        /// If there is an error during function invocation, function execution will be retried up to 3 times waiting for "00:00:20" between each retry
+        /// </summary>
+        /// <param name="events"></param>
+        /// <param name="log"></param>
+        [FixedDelayRetryAttribute(3, "00:00:20")]
         public void ProcessEvents([EventHubTrigger("testhub2", Connection = "TestEventHubConnection")] EventData[] events,
             ILogger log)
         {
