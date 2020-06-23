@@ -73,7 +73,45 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         public async Task<IDelayedException> TryExecuteAsync(IFunctionInstance functionInstance, CancellationToken cancellationToken)
         {
             var functionInstanceEx = (IFunctionInstanceEx)functionInstance;
-            var logger = _loggerFactory?.CreateLogger(LogCategories.CreateFunctionCategory(functionInstance.FunctionDescriptor.LogName));
+
+            if (functionInstance.FunctionDescriptor.RetryStrategy != null)
+            {
+                return await ExecuteWithRetriesAsync(TryExecuteAsyncCore, functionInstanceEx, cancellationToken, functionInstance.FunctionDescriptor.RetryStrategy);
+            }
+            return await TryExecuteAsyncCore(functionInstanceEx, cancellationToken);
+        }
+
+        private async Task<IDelayedException> ExecuteWithRetriesAsync(Func<IFunctionInstanceEx, CancellationToken, Task<IDelayedException>> executeFunc, IFunctionInstanceEx functionInstance, CancellationToken token, IRetryStrategy retryStrategy)
+        {
+            var attempts = 0;
+            IDelayedException functionResult = null;
+            TimeSpan nextDelay = TimeSpan.Zero;
+            do
+            {
+                if (token.IsCancellationRequested)
+                {
+                    // Log("Retries were canceled");
+                }
+                functionResult = await executeFunc(functionInstance, token);
+                if (functionResult != null && functionResult.Exception != null)
+                {
+                    ++attempts;
+                    nextDelay = retryStrategy.GetNextDelay(attempts);
+                    if (nextDelay == TimeSpan.Zero)
+                    {
+                        break;
+                    }
+                    await Task.Delay(nextDelay);
+                    continue;
+                }
+                break;
+            } while (nextDelay != TimeSpan.Zero);
+            return functionResult;
+        }
+
+        private async Task<IDelayedException> TryExecuteAsyncCore(IFunctionInstanceEx functionInstanceEx, CancellationToken cancellationToken)
+        {
+            var logger = _loggerFactory?.CreateLogger(LogCategories.CreateFunctionCategory(functionInstanceEx.FunctionDescriptor.LogName));
             var functionStartedMessage = CreateStartedMessage(functionInstanceEx);
             var parameterHelper = new ParameterHelper(functionInstanceEx);
             ExceptionDispatchInfo exceptionInfo = null;
@@ -133,7 +171,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
             finally
             {
-                ((IDisposable)functionInstance)?.Dispose();
+                ((IDisposable)functionInstanceEx)?.Dispose();
             }
 
             return exceptionInfo != null ? new ExceptionDispatchInfoDelayedException(exceptionInfo) : null;
@@ -221,6 +259,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         functionCancellationTokenSource.Token,
                         instance.InstanceServices,
                         instance.FunctionDescriptor);
+
                     var valueBindingContext = new ValueBindingContext(functionContext, cancellationToken);
 
                     using (logger.BeginScope(_inputBindingScope))

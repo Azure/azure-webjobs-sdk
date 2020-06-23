@@ -61,13 +61,11 @@
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\StructPropertyAccessorFactory.cs" Link="Shared\StructPropertyAccessorFactory.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\StructPropertyGetter.cs" Link="Shared\StructPropertyGetter.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\StructPropertySetter.cs" Link="Shared\StructPropertySetter.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Host\Timers\IDelayStrategy.cs" Link="Shared\IDelayStrategy.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Timers\IRecurrentCommand.cs" Link="Shared\IRecurrentCommand.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Timers\ITaskSeriesCommand.cs" Link="Shared\ITaskSeriesCommand.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Timers\ITaskSeriesTimer.cs" Link="Shared\ITaskSeriesTimer.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Timers\LinearSpeedupStrategy.cs" Link="Shared\LinearSpeedupStrategy.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Timers\RandomExtensions.cs" Link="Shared\RandomExtensions.cs" />
-    <Compile Include="..\Microsoft.Azure.WebJobs.Host\Timers\RandomizedExponentialBackoffStrategy.cs" Link="Shared\RandomizedExponentialBackoffStrategy.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Timers\RecurrentTaskSeriesCommand.cs" Link="Shared\RecurrentTaskSeriesCommand.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Timers\TaskSeriesCommandResult.cs" Link="Shared\TaskSeriesCommandResult.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Host\Timers\TaskSeriesTimer.cs" Link="Shared\TaskSeriesTimer.cs" />
@@ -86,6 +84,8 @@
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\TableParameterDescriptor.cs" Link="Shared\TableParameterDescriptor.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\TableParameterLog.cs" Link="Shared\TableParameterLog.cs" />
     <Compile Include="..\Microsoft.Azure.WebJobs.Protocols\WriteBlobParameterLog.cs" Link="Shared\WriteBlobParameterLog.cs" />
+    <Compile Include="..\Microsoft.Azure.WebJobs.Host\Timers\IDelayStrategy.cs" Link="Shared\IDelayStrategy.cs" />
+    <Compile Include="..\Microsoft.Azure.WebJobs.Host\Timers\RandomizedExponentialBackoffStrategy.cs" Link="Shared\RandomizedExponentialBackoffStrategy.cs" />
   </ItemGroup>  
   
   <ItemGroup>

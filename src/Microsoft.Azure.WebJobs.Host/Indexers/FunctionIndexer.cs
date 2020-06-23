@@ -39,6 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly ILogger _logger;
         private readonly SharedQueueHandler _sharedQueue;
         private readonly TimeoutAttribute _defaultTimeout;
+        private readonly IRetryStrategy _retryStrategy;
         private readonly bool _allowPartialHostStartup;
         private readonly IConfiguration _configuration;
         private readonly IServiceScopeFactory _serviceScopeFactory;
@@ -56,7 +57,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             INameResolver nameResolver = null,
             SharedQueueHandler sharedQueue = null,
             TimeoutAttribute defaultTimeout = null,
-            bool allowPartialHostStartup = false)
+            bool allowPartialHostStartup = false,
+            IRetryStrategy retryStrategy = null)
         {
             _triggerBindingProvider = triggerBindingProvider ?? throw new ArgumentNullException(nameof(triggerBindingProvider));
             _bindingProvider = bindingProvider ?? throw new ArgumentNullException(nameof(bindingProvider));
@@ -68,6 +70,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _sharedQueue = sharedQueue;
             _defaultTimeout = defaultTimeout;
             _allowPartialHostStartup = allowPartialHostStartup;
+            _retryStrategy = retryStrategy;
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _serviceScopeFactory = serviceScopeFactory;
             _loggerFactory = loggerFactory;
@@ -354,7 +357,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             IConfiguration configuration,
             IJobActivator jobActivator = null,
             INameResolver nameResolver = null,
-            TimeoutAttribute defaultTimeout = null)
+            TimeoutAttribute defaultTimeout = null,
+            IRetryStrategy retryStrategy = null)
         {
             var disabled = HostListenerFactory.IsDisabled(method, nameResolver, jobActivator, configuration);
 
@@ -382,16 +386,34 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 IsDisabled = disabled,
                 HasCancellationToken = hasCancellationToken,
                 TimeoutAttribute = TypeUtility.GetHierarchicalAttributeOrNull<TimeoutAttribute>(method) ?? defaultTimeout,
+                RetryStrategy = GetRetryStategyFromAttribute(TypeUtility.GetHierarchicalAttributeOrNull<RetryAttribute>(method)),
                 SingletonAttributes = method.GetCustomAttributes<SingletonAttribute>().ToArray(),
                 MethodLevelFilters = method.GetCustomAttributes().OfType<IFunctionFilter>().ToArray(),
                 ClassLevelFilters = method.DeclaringType.GetCustomAttributes().OfType<IFunctionFilter>().ToArray()
             };
         }
 
+        private static IRetryStrategy GetRetryStategyFromAttribute(RetryAttribute retryAttribute)
+        {
+            if (retryAttribute == null)
+            {
+                return null;
+            }
+            if (retryAttribute.MaxRetryCount == 0)
+            {
+                return null;
+            }
+            if (!string.IsNullOrEmpty(retryAttribute.DelayInterval))
+            {
+                return new FixedDelayRetryStrategy(retryAttribute.MaxRetryCount, TimeSpan.Parse(retryAttribute.DelayInterval));
+            }
+            return new ExponentialBackoffRetryStrategy(retryAttribute.MaxRetryCount, TimeSpan.Parse(retryAttribute.MinimumInterval), TimeSpan.Parse(retryAttribute.MinimumInterval));
+        }
+
         private FunctionDescriptor CreateFunctionDescriptor(MethodInfo method, string triggerParameterName,
             ITriggerBinding triggerBinding, IReadOnlyDictionary<string, IBinding> nonTriggerBindings)
         {
-            var descr = FromMethod(method, _configuration, this._activator, _nameResolver, _defaultTimeout);
+            var descr = FromMethod(method, _configuration, this._activator, _nameResolver, _defaultTimeout, _retryStrategy);
 
             List<ParameterDescriptor> parameters = new List<ParameterDescriptor>();
 

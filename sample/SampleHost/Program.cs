@@ -29,7 +29,6 @@ namespace SampleHost
                 })
                 .ConfigureLogging((context, b) =>
                 {
-                    b.SetMinimumLevel(LogLevel.Debug);
                     b.AddConsole();
 
                     // If this key exists in any config, use it to enable App Insights

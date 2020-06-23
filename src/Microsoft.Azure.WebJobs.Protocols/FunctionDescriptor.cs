@@ -73,6 +73,8 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
         /// </summary>
         [JsonIgnore]
         internal IEnumerable<IFunctionFilter> ClassLevelFilters { get; set; }
+
+        internal IRetryStrategy RetryStrategy { get; set; }
 #endif
     }
 }

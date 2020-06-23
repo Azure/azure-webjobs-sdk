@@ -26,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
         }
 
         public static ITaskSeriesTimer CreateTimer(IRecurrentCommand command, TimeSpan initialInterval,
-            TimeSpan delayInterval, IWebJobsExceptionHandler exceptionHandler)
+           TimeSpan delayInterval, IWebJobsExceptionHandler exceptionHandler)
         {
             IDelayStrategy delayStrategy = new FixedDelayStrategy(delayInterval);
             ITaskSeriesCommand timerCommand = new RecurrentTaskSeriesCommand(command, delayStrategy);

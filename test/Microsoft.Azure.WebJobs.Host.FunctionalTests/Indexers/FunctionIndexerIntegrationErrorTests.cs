@@ -30,14 +30,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                 IConfiguration configuration = new ConfigurationBuilder().Build();
 
                 FunctionIndexer indexer = new FunctionIndexer(
-                    new Mock<ITriggerBindingProvider>(MockBehavior.Strict).Object,
-                    new Mock<IBindingProvider>(MockBehavior.Strict).Object,
-                    new Mock<IJobActivator>(MockBehavior.Strict).Object,
-                    executorMock.Object,
-                    new SingletonManager(),
-                    null,
-                    configuration,
-                    scopeFactoryMock.Object);
+                   new Mock<ITriggerBindingProvider>(MockBehavior.Strict).Object,
+                   new Mock<IBindingProvider>(MockBehavior.Strict).Object,
+                   new Mock<IJobActivator>(MockBehavior.Strict).Object,
+                   executorMock.Object,
+                   new SingletonManager(),
+                   null,
+                   configuration,
+                   scopeFactoryMock.Object);
 
                 Assert.Throws<FunctionIndexingException>(() => indexer.IndexMethodAsync(method, stubIndex, CancellationToken.None).GetAwaiter().GetResult());
             }
