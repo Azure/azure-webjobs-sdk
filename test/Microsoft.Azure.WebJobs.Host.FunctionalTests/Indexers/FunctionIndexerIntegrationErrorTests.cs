@@ -28,6 +28,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                 IFunctionIndexCollector stubIndex = new Mock<IFunctionIndexCollector>().Object;
                 IConfiguration configuration = new ConfigurationBuilder().Build();
 
+                Mock<IRetryManagerProvider> retryManagerProvider = new Mock<IRetryManagerProvider>(MockBehavior.Strict);
                 FunctionIndexer indexer = new FunctionIndexer(
                     new Mock<ITriggerBindingProvider>(MockBehavior.Strict).Object,
                     new Mock<IBindingProvider>(MockBehavior.Strict).Object,
@@ -35,7 +36,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                     executorMock.Object,
                     new SingletonManager(),
                     null,
-                    configuration);
+                    configuration,
+                    retryManagerProvider.Object);
 
                 Assert.Throws<FunctionIndexingException>(() => indexer.IndexMethodAsync(method, stubIndex, CancellationToken.None).GetAwaiter().GetResult());
             }

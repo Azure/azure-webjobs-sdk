@@ -43,7 +43,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             var mockTriggerBinding = new Mock<ITriggeredFunctionBinding<int>>();
             var functionDescriptor = new FunctionDescriptor();
             var instanceFactory = new TriggeredFunctionInstanceFactory<int>(mockTriggerBinding.Object, mockInvoker.Object, functionDescriptor);
-            var triggerExecutor = new TriggeredFunctionExecutor<int>(functionDescriptor, mockExecutor.Object, instanceFactory);
+
+            var mockRetryManagerProvider = new Mock<IRetryManagerProvider>();
+
+            var triggerExecutor = new TriggeredFunctionExecutor<int>(functionDescriptor, mockExecutor.Object, instanceFactory, mockRetryManagerProvider.Object);
 
             // specify a custom handler on the trigger data and
             // verify it is invoked when the trigger executes

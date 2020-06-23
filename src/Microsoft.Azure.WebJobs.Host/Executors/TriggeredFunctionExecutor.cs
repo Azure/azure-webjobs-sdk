@@ -14,12 +14,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private FunctionDescriptor _descriptor;
         private ITriggeredFunctionInstanceFactory<TTriggerValue> _instanceFactory;
         private IFunctionExecutor _executor;
+        private readonly IRetryManagerProvider _retryManagerProvider;
 
-        public TriggeredFunctionExecutor(FunctionDescriptor descriptor, IFunctionExecutor executor, ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory)
+        public TriggeredFunctionExecutor(FunctionDescriptor descriptor, IFunctionExecutor executor, ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory, IRetryManagerProvider retryManagerProvider)
         {
             _descriptor = descriptor;
             _executor = executor;
             _instanceFactory = instanceFactory;
+            _retryManagerProvider = retryManagerProvider;
         }
 
         public FunctionDescriptor Function
@@ -31,6 +33,18 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         }
 
         public async Task<FunctionResult> TryExecuteAsync(TriggeredFunctionData input, CancellationToken cancellationToken)
+        {
+            if (_retryManagerProvider != null)
+            {
+                IRetryManager retryManager = _retryManagerProvider.Create(_descriptor.RetryAttribute);
+                return await retryManager.ExecuteWithRetriesAsync(TryExecuteCoreAsync, input, cancellationToken);
+            } else
+            {
+                return await TryExecuteCoreAsync(input, cancellationToken);
+            }
+        }
+
+        private async Task<FunctionResult> TryExecuteCoreAsync(TriggeredFunctionData input, CancellationToken cancellationToken)
         {
             var context = new FunctionInstanceFactoryContext<TTriggerValue>()
             {

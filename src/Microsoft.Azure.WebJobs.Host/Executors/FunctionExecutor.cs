@@ -175,6 +175,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 await HandleExceptionAsync(functionInstance.FunctionDescriptor.TimeoutAttribute, exceptionInfo, _exceptionHandler);
             }
 
+            if (parameterHelper.ReturnValue is RetryResult retry)
+            {
+                // Set RetryException here so the execution is not logged as failed
+                exceptionInfo = ExceptionDispatchInfo.Capture(new RetryException(retry));
+            }
+
             return exceptionInfo != null ? new ExceptionDispatchInfoDelayedException(exceptionInfo) : null;
         }
 
@@ -243,12 +249,21 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     // TODO: Refactor all of this logging to be implemented as a separate ILogger.
                     FunctionOutputLogger.SetOutput(outputLog);
 
+                    //Getting retry count from TriggerDetails
+                    int retryCount = 0;
+                    if (instance.TriggerDetails != null && instance.TriggerDetails.TryGetValue("retryCount", out string retryCountAsString))
+                    {
+                        int.TryParse(retryCountAsString, out retryCount);
+                    }
+
                     // Must bind before logging (bound invoke string is included in log message).
                     var functionContext = new FunctionBindingContext(
                         instance.Id,
                         functionCancellationTokenSource.Token,
                         instance.InstanceServices,
-                        instance.FunctionDescriptor);
+                        instance.FunctionDescriptor,
+                        retryCount);
+
                     var valueBindingContext = new ValueBindingContext(functionContext, cancellationToken);
 
                     using (logger.BeginScope(_inputBindingScope))

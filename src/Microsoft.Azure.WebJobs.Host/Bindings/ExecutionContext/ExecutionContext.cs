@@ -32,5 +32,13 @@ namespace Microsoft.Azure.WebJobs
         /// A host can set this via <see cref="CoreJobHostConfigurationExtensions.UseCore(JobHostConfiguration, string)"/>
         /// </remarks>
         public string FunctionAppDirectory { get; set; }
+
+        /// <summary>
+        /// Gets the function current retry count.
+        /// 0 - first function execution. 
+        /// 1 - first retry attempt.
+        /// (n) - (n) retry attempt.
+        /// </summary>
+        public int RetryCount { get; internal set; }
     }
 }

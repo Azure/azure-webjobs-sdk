@@ -73,6 +73,12 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
         /// </summary>
         [JsonIgnore]
         internal IEnumerable<IFunctionFilter> ClassLevelFilters { get; set; }
+
+        [JsonIgnore]
+        /// <summary>
+        /// Gets the <see cref="WebJobs.RetryAttribute"/> for this function
+        /// </summary>
+        internal RetryAttribute RetryAttribute { get; set; }
 #endif
     }
 }

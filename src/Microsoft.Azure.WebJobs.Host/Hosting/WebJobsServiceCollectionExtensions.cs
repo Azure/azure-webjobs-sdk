@@ -64,6 +64,7 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<SharedQueueHandler>();
             services.TryAddSingleton<IFunctionExecutor, FunctionExecutor>();
             services.TryAddSingleton<IJobHostContextFactory, JobHostContextFactory>();
+            services.TryAddSingleton<IRetryManagerProvider, DefautRetryManagerProvider>();
 
             services.TryAddSingleton<ILoadBalancerQueue, InMemoryLoadBalancerQueue>();
 

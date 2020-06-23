@@ -18,6 +18,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         private readonly CancellationToken _functionCancellationToken;
         private readonly IServiceProvider _functionInvocationServices;
         private static Lazy<IServiceProvider> _emptyServiceProvider = new Lazy<IServiceProvider>(CreateEmptyServiceProvider);
+        private readonly int _retryCount;
 
         /// <summary>
         /// Creates a new instance.
@@ -29,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             Guid functionInstanceId,
             CancellationToken functionCancellationToken,
             FunctionDescriptor functionDescriptor = null)
-            : this(functionInstanceId, functionCancellationToken, null, functionDescriptor)
+            : this(functionInstanceId, functionCancellationToken, null, functionDescriptor, 0)
         {
         }
 
@@ -45,10 +46,29 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             CancellationToken functionCancellationToken,
             IServiceProvider functionInvocationServices,
             FunctionDescriptor functionDescriptor)
+            : this(functionInstanceId, functionCancellationToken, functionInvocationServices, functionDescriptor, 0)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new instance.
+        /// </summary>
+        /// <param name="functionInstanceId">The instance ID of the function being bound to.</param>
+        /// <param name="functionCancellationToken">The <see cref="CancellationToken"/> to use.</param>
+        /// <param name="functionInvocationServices">The user logger.</param>
+        /// <param name="functionDescriptor">Current function being executed. </param>
+        /// <param name="retryCount">The retry count.</param>
+        public FunctionBindingContext(
+            Guid functionInstanceId,
+            CancellationToken functionCancellationToken,
+            IServiceProvider functionInvocationServices,
+            FunctionDescriptor functionDescriptor,
+            int retryCount)
         {
             _functionInstanceId = functionInstanceId;
             _functionCancellationToken = functionCancellationToken;
             _functionInvocationServices = functionInvocationServices ?? _emptyServiceProvider.Value;
+            _retryCount = retryCount;
             MethodName = functionDescriptor?.LogName;
         }
 
@@ -71,6 +91,14 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// The service provider for the current function invocation scope.
         /// </summary>
         public IServiceProvider InstanceServices { get; set; }
+
+        /// <summary>
+        /// Gets the function retry count.
+        /// </summary>
+        public int RetryCount
+        {
+            get { return _retryCount; }
+        }
 
         /// <summary>
         /// Creates an object instance with constructor arguments provided in the

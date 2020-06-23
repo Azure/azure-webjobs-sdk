@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Triggers;
@@ -88,7 +89,10 @@ namespace Microsoft.Azure.WebJobs.Host
             string invokeString = await ConvertToStringAsync(eventData);
             var valueProvider = new ConstantValueProvider(userValue, this.ElementType, invokeString);
 
-            return new TriggerData(valueProvider, bindingData);
+            return new TriggerData(valueProvider, bindingData)
+            {
+                ReturnValueProvider = new ReturnValueProvider() { Value = "return" }
+            };
         }
 
         /// <summary>
@@ -123,6 +127,27 @@ namespace Microsoft.Azure.WebJobs.Host
                 {
                     bindingData[kv.Key] = kv.Value;
                 }
+            }
+        }
+
+        private class ReturnValueProvider : IValueProvider, IValueBinder
+        {
+            public Type Type => typeof(RetryResult);
+
+            public object Value;
+
+            public Task<object> GetValueAsync()
+            {
+                return Task.FromResult(Value);
+            }
+            public string ToInvokeString()
+            {
+                return Value.ToString();
+            }
+            public Task SetValueAsync(object value, CancellationToken cancellationToken)
+            {
+                Value = value;
+                return Task.CompletedTask;
             }
         }
     }

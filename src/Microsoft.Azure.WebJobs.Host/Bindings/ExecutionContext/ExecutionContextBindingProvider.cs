@@ -117,7 +117,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                         InvocationId = _context.FunctionInstanceId,
                         FunctionName = _context.FunctionContext.MethodName,
                         FunctionDirectory = Environment.CurrentDirectory,
-                        FunctionAppDirectory = _options.Value.AppDirectory
+                        FunctionAppDirectory = _options.Value.AppDirectory,
+                        RetryCount = _context.FunctionContext.RetryCount
                     };
 
                     if (result.FunctionAppDirectory != null)
