@@ -163,8 +163,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             goodListener.VerifyAll();
 
             Assert.Collection(_loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage),
-            p => Assert.Equal("Stopping the listener for function 'testfunc'", p),
-            p => Assert.Equal("Stopped the listener for function 'testfunc'", p));
+            p => Assert.StartsWith("Stopping the listener", p),
+            p => Assert.StartsWith("Stopped the listener", p));
         }
 
         [Fact]
@@ -215,8 +215,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
                 p => Assert.Equal("The listener for function 'testfunc' was unable to start.", p),
                 p => Assert.Equal("Retrying to start listener for function 'testfunc' (Attempt 1)", p),
                 p => Assert.Equal("Listener successfully started for function 'testfunc' after 1 retries.", p),
-                p => Assert.Equal("Stopping the listener for function 'testfunc'", p),
-                p => Assert.Equal("Stopped the listener for function 'testfunc'", p),
+                p => Assert.StartsWith("Stopping the listener", p),
+                p => Assert.StartsWith("Stopped the listener", p),
                 p => Assert.Equal("Listener for function 'testfunc' stopped. A stop was initiated while starting.", p));
 
             // make sure the retry loop is not running
@@ -326,8 +326,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             await listener.StopAsync(ct);
 
             Assert.Collection(_loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage),
-                            p => Assert.Equal("Stopping the listener for function 'testfunc'", p),
-                            p => Assert.Equal("Stopped the listener for function 'testfunc'", p));
+                            p => Assert.StartsWith("Stopping the listener", p),
+                            p => Assert.StartsWith("Stopped the listener", p));
 
             goodListener.VerifyAll();
         }

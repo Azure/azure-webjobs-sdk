@@ -138,11 +138,11 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                 {
                     if (_started)
                     {
-                        _logger?.LogInformation($"Stopping the listener for function '{_descriptor.ShortName}'");
+                        _logger?.LogInformation($"Stopping the listener {_listener.GetType().FullName} for function '{_descriptor.LogName}'");
 
                         await _listener.StopAsync(cancellationToken);
 
-                        _logger?.LogInformation($"Stopped the listener for function '{_descriptor.ShortName}'");
+                        _logger?.LogInformation($"Stopped the listener {_listener.GetType().FullName}  for function '{_descriptor.LogName}'");
                         _started = false;
                     }
                 }

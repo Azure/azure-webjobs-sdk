@@ -146,13 +146,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "User TraceWriter log 1",
                     "User TraceWriter log 2",
                     "Starting JobHost",
-                    "Stopped the listener for function 'AsyncChainEndToEndTests.BlobToBlobAsync'",
-                    "Stopped the listener for function 'AsyncChainEndToEndTests.QueueToBlobAsync'",
-                    "Stopped the listener for function 'AsyncChainEndToEndTests.QueueToQueueAsync'",
+                    "Stopped the listener Microsoft.Azure.WebJobs.Host.Listeners.CompositeListener  for function 'BlobToBlobAsync'",
+                    "Stopped the listener Microsoft.Azure.WebJobs.Host.Queues.Listeners.QueueListener  for function 'QueueToBlobAsync'",
+                    "Stopped the listener Microsoft.Azure.WebJobs.Host.Queues.Listeners.QueueListener  for function 'QueueToQueueAsync'",
                     "Stopping JobHost",
-                    "Stopping the listener for function 'AsyncChainEndToEndTests.BlobToBlobAsync'",
-                    "Stopping the listener for function 'AsyncChainEndToEndTests.QueueToBlobAsync'",
-                    "Stopping the listener for function 'AsyncChainEndToEndTests.QueueToQueueAsync'",
+                    "Stopping the listener Microsoft.Azure.WebJobs.Host.Listeners.CompositeListener for function 'BlobToBlobAsync'",
+                    "Stopping the listener Microsoft.Azure.WebJobs.Host.Queues.Listeners.QueueListener for function 'QueueToBlobAsync'",
+                    "Stopping the listener Microsoft.Azure.WebJobs.Host.Queues.Listeners.QueueListener for function 'QueueToQueueAsync'",
                     "QueuesOptions",
                     "{",
                     "  \"BatchSize\": 16",
@@ -185,6 +185,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "  \"LockPeriod\": \"00:00:15\"",
                     "}",
                 }.OrderBy(p => p).ToArray();
+
+
 
                 bool hasError = loggerOutputLines.Any(p => p.Contains("Function had errors"));
                 Assert.False(hasError);

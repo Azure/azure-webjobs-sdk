@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host
         public DrainModeManager(ILoggerFactory loggerFactory = null)
         {
             _loggerFactory = loggerFactory;
-            _logger = _loggerFactory?.CreateLogger(LogCategories.Drain);
+            _logger = _loggerFactory.CreateLogger<DrainModeManager>();
         }
 
         public bool DrainModeEnabled { get; private set; } = false;
