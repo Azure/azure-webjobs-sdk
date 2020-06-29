@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host
             _logger = _loggerFactory.CreateLogger<DrainModeManager>();
         }
 
-        public bool DrainModeEnabled { get; private set; } = false;
+        public bool IsDrainModeEnabled { get; private set; } = false;
 
         public ICollection<IListener> Listeners { get; private set; } = new Collection<IListener>();
 
@@ -34,10 +34,10 @@ namespace Microsoft.Azure.WebJobs.Host
 
         public async Task EnableDrainModeAsync()
         {
-            if (!DrainModeEnabled)
+            if (!IsDrainModeEnabled)
             {
-                DrainModeEnabled = true;
-                _logger.LogInformation($"DrainMode is set to {DrainModeEnabled}");
+                IsDrainModeEnabled = true;
+                _logger.LogInformation($"DrainMode is set to {IsDrainModeEnabled}");
 
                 List<Task> tasks = new List<Task>();
 

@@ -51,7 +51,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             await drainModeManager.EnableDrainModeAsync();
             listener.VerifyAll();
 
-            Assert.Equal(drainModeManager.DrainModeEnabled, true);
+            Assert.Equal(drainModeManager.IsDrainModeEnabled, true);
 
             Assert.Collection(_loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage),
                p => Assert.Equal("DrainMode is set to True", p),

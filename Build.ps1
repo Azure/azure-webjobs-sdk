@@ -5,7 +5,7 @@
 )
 
 if ($isLocal){
-  $dstring = Get-Date -Format "ddHHmmss"
+  $dstring = Get-Date -Format "yyMMddHHmmss"
   $packageSuffix = "dev" + $dstring
   Write-Host "Local build - setting package suffixes to $packageSuffix" -ForegroundColor Yellow
 }

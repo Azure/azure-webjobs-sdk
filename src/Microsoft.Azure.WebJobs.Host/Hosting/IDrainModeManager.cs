@@ -10,9 +10,7 @@ namespace Microsoft.Azure.WebJobs.Host
 {
     public interface IDrainModeManager
     {
-        bool DrainModeEnabled { get; }
-
-        ICollection<IListener> Listeners { get; }
+        bool IsDrainModeEnabled { get; }
 
         void RegisterListener(IListener listener);
 

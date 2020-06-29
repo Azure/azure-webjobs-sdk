@@ -186,8 +186,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "}",
                 }.OrderBy(p => p).ToArray();
 
-
-
                 bool hasError = loggerOutputLines.Any(p => p.Contains("Function had errors"));
                 Assert.False(hasError);
 
