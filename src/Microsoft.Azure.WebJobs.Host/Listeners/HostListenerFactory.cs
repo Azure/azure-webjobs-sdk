@@ -87,7 +87,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             _listenersCreatedCallback?.Invoke();
 
             var compositeListener = new CompositeListener(listeners);
-            _drainModeManager.RegisterListener(compositeListener);
+            _drainModeManager?.RegisterListener(compositeListener);
             return compositeListener;
         }
 

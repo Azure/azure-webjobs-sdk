@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -33,6 +34,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly ILogger _resultsLogger;
         private readonly IEnumerable<IFunctionFilter> _globalFunctionFilters;
         private readonly IDrainModeManager _drainModeManager;
+        private ConcurrentDictionary<Guid, CancellationTokenSource> _cancellationTokenSources;
 
         private readonly Dictionary<string, object> _inputBindingScope = new Dictionary<string, object>
         {
@@ -68,6 +70,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _resultsLogger = _loggerFactory?.CreateLogger(LogCategories.Results);
             _globalFunctionFilters = globalFunctionFilters ?? Enumerable.Empty<IFunctionFilter>();
             _drainModeManager = drainModeManager;
+            _cancellationTokenSources = new ConcurrentDictionary<Guid, CancellationTokenSource>();
         }
 
         public HostOutputMessage HostOutputMessage
@@ -240,10 +243,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 // (e.g. Based on TimeoutAttribute, etc.)                
                 CancellationTokenSource functionCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-                if (_drainModeManager.IsDrainModeEnabled)
+                if (_drainModeManager?.IsDrainModeEnabled == true)
                 {
                     functionCancellationTokenSource.Cancel();
                     logger?.LogInformation($"Requesting cancellation for function invocation:{instance.Id}");
+                }
+                else
+                {
+                    _drainModeManager.RegisterTokenSource(instance.Id, functionCancellationTokenSource);
                 }
 
                 using (functionCancellationTokenSource)
@@ -324,6 +331,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         exceptionInfo.Throw();
                     }
 
+                    _drainModeManager.UnRegisterTokenSource(instance.Id);
                     return startedMessageId;
                 }
             }
