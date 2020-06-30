@@ -98,7 +98,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             using (_functionCompletedEvent = new ManualResetEvent(initialState: false))
             {
                 TestLoggerProvider loggerProvider = await AsyncChainEndToEndInternal(_hostBuilder);
-
+                
                 string firstQueueName = _resolver.ResolveInString(Queue1Name);
                 string secondQueueName = _resolver.ResolveInString(Queue2Name);
                 string blobContainerName = _resolver.ResolveInString(ContainerName);
@@ -146,13 +146,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "User TraceWriter log 1",
                     "User TraceWriter log 2",
                     "Starting JobHost",
-                    "Stopped the listener Microsoft.Azure.WebJobs.Host.Listeners.CompositeListener for function:BlobToBlobAsync",
-                    "Stopped the listener Microsoft.Azure.WebJobs.Host.Queues.Listeners.QueueListener for function:QueueToBlobAsync",
-                    "Stopped the listener Microsoft.Azure.WebJobs.Host.Queues.Listeners.QueueListener for function:QueueToQueueAsync",
+                    "Stopped the listener 'Microsoft.Azure.WebJobs.Host.Listeners.CompositeListener' for function 'BlobToBlobAsync'",
+                    "Stopped the listener 'Microsoft.Azure.WebJobs.Host.Queues.Listeners.QueueListener' for function 'QueueToBlobAsync'",
+                    "Stopped the listener 'Microsoft.Azure.WebJobs.Host.Queues.Listeners.QueueListener' for function 'QueueToQueueAsync'",
                     "Stopping JobHost",
-                    "Stopping the listener:Microsoft.Azure.WebJobs.Host.Listeners.CompositeListener for function:BlobToBlobAsync",
-                    "Stopping the listener:Microsoft.Azure.WebJobs.Host.Queues.Listeners.QueueListener for function:QueueToBlobAsync",
-                    "Stopping the listener:Microsoft.Azure.WebJobs.Host.Queues.Listeners.QueueListener for function:QueueToQueueAsync",
+                    "Stopping the listener 'Microsoft.Azure.WebJobs.Host.Listeners.CompositeListener' for function 'BlobToBlobAsync'",
+                    "Stopping the listener 'Microsoft.Azure.WebJobs.Host.Queues.Listeners.QueueListener' for function 'QueueToBlobAsync'",
+                    "Stopping the listener 'Microsoft.Azure.WebJobs.Host.Queues.Listeners.QueueListener' for function 'QueueToQueueAsync'",
                     "QueuesOptions",
                     "{",
                     "  \"BatchSize\": 16",

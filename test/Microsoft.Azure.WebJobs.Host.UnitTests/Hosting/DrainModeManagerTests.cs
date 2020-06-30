@@ -82,7 +82,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
 
             Assert.Collection(_loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage),
                p => Assert.Equal("DrainMode is set to True", p),
-               p => Assert.Equal($"Requesting cancellation for function invocation:{guid}", p),
+               p => Assert.Equal($"Requesting cancellation for function invocation '{guid}'", p),
                p => Assert.Equal("Calling StopAsync on the registered listeners", p),
                p => Assert.Equal("Call to StopAsync complete, registered listeners are now stopped", p));
         }

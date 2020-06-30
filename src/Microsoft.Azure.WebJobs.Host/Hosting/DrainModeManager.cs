@@ -77,16 +77,16 @@ namespace Microsoft.Azure.WebJobs.Host
                 string invocationId = keyValuePair.Key.ToString();
                 try
                 {
-                    _logger?.LogInformation($"Requesting cancellation for function invocation:{invocationId}");
+                    _logger?.LogInformation("Requesting cancellation for function invocation '{invocationId}'", invocationId);
                     keyValuePair.Value.Cancel();
                 }
                 catch (ObjectDisposedException)
                 {
-                    _logger?.LogInformation($"Cancellation token for function invocation:{invocationId} already disposed. No action required");
+                    _logger?.LogInformation("Cancellation token for function invocation '{invocationId}' already disposed. No action required", invocationId);
                 }
                 catch (Exception e)
                 {
-                    _logger?.LogInformation($"Exception occured when attempting to request cancellation for function invocation:{invocationId}, {e.GetType().Name}:{e.Message}");
+                    _logger?.LogInformation("Exception occured when attempting to request cancellation for function invocation '{invocationId}', '{e.GetType().Name}:{e.Message}'", invocationId, e.GetType().Name, e.Message);
                 }
             }
         }
