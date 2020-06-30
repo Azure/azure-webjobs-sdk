@@ -54,23 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host
                 IsDrainModeEnabled = true;
                 _logger.LogInformation($"DrainMode is set to {IsDrainModeEnabled}");
 
-                foreach (var keyValuePair in _cancellationTokenSources)
-                {
-                    string invocationId = keyValuePair.Key.ToString();
-                    try
-                    {
-                        _logger?.LogInformation($"Requesting cancellation for function invocation:{invocationId}");
-                        keyValuePair.Value.Cancel();
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        _logger?.LogInformation($"Cancellation token for function invocation:{invocationId} already disposed. No action required");
-                    }
-                    catch (Exception e)
-                    {
-                        _logger?.LogInformation($"Unable to cancel invocation for {invocationId}, {e.Message}");
-                    }
-                }
+                CancelFunctionInvocations();
 
                 List<Task> tasks = new List<Task>();
 
@@ -83,6 +67,27 @@ namespace Microsoft.Azure.WebJobs.Host
                 await Task.WhenAll(tasks);
 
                 _logger.LogInformation("Call to StopAsync complete, registered listeners are now stopped");
+            }
+        }
+
+        public void CancelFunctionInvocations()
+        {
+            foreach (var keyValuePair in _cancellationTokenSources)
+            {
+                string invocationId = keyValuePair.Key.ToString();
+                try
+                {
+                    _logger?.LogInformation($"Requesting cancellation for function invocation:{invocationId}");
+                    keyValuePair.Value.Cancel();
+                }
+                catch (ObjectDisposedException)
+                {
+                    _logger?.LogInformation($"Cancellation token for function invocation:{invocationId} already disposed. No action required");
+                }
+                catch (Exception e)
+                {
+                    _logger?.LogInformation($"Exception occured when attempting to request cancellation for function invocation:{invocationId}, {e.GetType().Name}:{e.Message}");
+                }
             }
         }
     }
