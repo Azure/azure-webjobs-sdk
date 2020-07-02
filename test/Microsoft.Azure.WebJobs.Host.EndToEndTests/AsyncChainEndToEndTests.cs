@@ -98,7 +98,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             using (_functionCompletedEvent = new ManualResetEvent(initialState: false))
             {
                 TestLoggerProvider loggerProvider = await AsyncChainEndToEndInternal(_hostBuilder);
-                
+
                 string firstQueueName = _resolver.ResolveInString(Queue1Name);
                 string secondQueueName = _resolver.ResolveInString(Queue2Name);
                 string blobContainerName = _resolver.ResolveInString(ContainerName);

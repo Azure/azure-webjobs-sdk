@@ -243,14 +243,17 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 // (e.g. Based on TimeoutAttribute, etc.)                
                 CancellationTokenSource functionCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-                if (_drainModeManager?.IsDrainModeEnabled == true)
+                if (_drainModeManager != null)
                 {
-                    functionCancellationTokenSource.Cancel();
-                    logger?.LogInformation($"Requesting cancellation for function invocation:{instance.Id}");
-                }
-                else
-                {
-                    _drainModeManager.RegisterTokenSource(instance.Id, functionCancellationTokenSource);
+                    if (_drainModeManager.IsDrainModeEnabled == true)
+                    {
+                        functionCancellationTokenSource.Cancel();
+                        logger?.LogInformation($"Requesting cancellation for function invocation:{instance.Id}");
+                    }
+                    else
+                    {
+                        _drainModeManager?.RegisterTokenSource(instance.Id, functionCancellationTokenSource);
+                    }
                 }
 
                 using (functionCancellationTokenSource)
@@ -331,7 +334,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         exceptionInfo.Throw();
                     }
 
-                    _drainModeManager.UnRegisterTokenSource(instance.Id);
+                    _drainModeManager?.UnRegisterTokenSource(instance.Id);
                     return startedMessageId;
                 }
             }

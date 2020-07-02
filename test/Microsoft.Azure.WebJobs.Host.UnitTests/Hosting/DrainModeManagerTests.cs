@@ -18,20 +18,21 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
     public class DrainModeManagerTests
     {
         private readonly ILoggerFactory _loggerFactory;
+        private readonly ILogger<DrainModeManager> _logger;
         private readonly TestLoggerProvider _loggerProvider;
 
         public DrainModeManagerTests()
         {
             _loggerFactory = new LoggerFactory();
             _loggerProvider = new TestLoggerProvider();
-            _loggerFactory.AddProvider(_loggerProvider);
+            _logger = _loggerFactory.CreateLogger<DrainModeManager>();
         }
 
         [Fact]
         public void RegisterListener_AddsToListenerCollection()
         {
             Mock<IListener> listener = new Mock<IListener>(MockBehavior.Strict);
-            var drainModeManager = new DrainModeManager(_loggerFactory);
+            var drainModeManager = new DrainModeManager(_logger);
             drainModeManager.RegisterListener(listener.Object);
 
             Assert.Equal(drainModeManager.Listeners.ElementAt(0), listener.Object);
@@ -45,7 +46,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             listener.Setup(bl => bl.StopAsync(It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(false));
 
-            var drainModeManager = new DrainModeManager(_loggerFactory);
+            var drainModeManager = new DrainModeManager(_logger);
             drainModeManager.RegisterListener(listener.Object);
 
             await drainModeManager.EnableDrainModeAsync(CancellationToken.None);
@@ -67,7 +68,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             listener.Setup(bl => bl.StopAsync(It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(false));
 
-            var drainModeManager = new DrainModeManager(_loggerFactory);
+            var drainModeManager = new DrainModeManager(_logger);
             drainModeManager.RegisterListener(listener.Object);
 
             var tokenSource = new CancellationTokenSource();

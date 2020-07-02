@@ -17,14 +17,12 @@ namespace Microsoft.Azure.WebJobs.Host
 {
     internal class DrainModeManager : IDrainModeManager
     {
-        private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger _logger;
         private ConcurrentDictionary<Guid, CancellationTokenSource> _cancellationTokenSources;
 
-        public DrainModeManager(ILoggerFactory loggerFactory = null)
+        public DrainModeManager(ILogger<DrainModeManager> logger)
         {
-            _loggerFactory = loggerFactory;
-            _logger = _loggerFactory.CreateLogger<DrainModeManager>();
+            _logger = logger;
             _cancellationTokenSources = new ConcurrentDictionary<Guid, CancellationTokenSource>();
         }
 
@@ -52,7 +50,7 @@ namespace Microsoft.Azure.WebJobs.Host
             if (!IsDrainModeEnabled)
             {
                 IsDrainModeEnabled = true;
-                _logger.LogInformation($"DrainMode is set to {IsDrainModeEnabled}");
+                _logger.LogInformation($"DrainMode mode enabled");
 
                 CancelFunctionInvocations();
 
@@ -84,9 +82,9 @@ namespace Microsoft.Azure.WebJobs.Host
                 {
                     _logger?.LogInformation("Cancellation token for function invocation '{invocationId}' already disposed. No action required", invocationId);
                 }
-                catch (Exception e)
+                catch (Exception exception)
                 {
-                    _logger?.LogInformation("Exception occured when attempting to request cancellation for function invocation '{invocationId}', '{e.GetType().Name}:{e.Message}'", invocationId, e.GetType().Name, e.Message);
+                    _logger?.LogError(exception, "Exception occured when attempting to request cancellation for function invocation '{invocationId}'", invocationId);
                 }
             }
         }
