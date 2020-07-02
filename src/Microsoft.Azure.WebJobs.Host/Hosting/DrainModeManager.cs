@@ -50,7 +50,7 @@ namespace Microsoft.Azure.WebJobs.Host
             if (!IsDrainModeEnabled)
             {
                 IsDrainModeEnabled = true;
-                _logger.LogInformation($"DrainMode mode enabled");
+                _logger.LogInformation("DrainMode mode enabled");
 
                 CancelFunctionInvocations();
 
