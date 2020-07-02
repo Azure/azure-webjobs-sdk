@@ -230,7 +230,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
         }
 
-        private async Task<string> ExecuteWithLoggingAsync(IFunctionInstanceEx instance, FunctionStartedMessage message,
+        internal async Task<string> ExecuteWithLoggingAsync(IFunctionInstanceEx instance, FunctionStartedMessage message,
             FunctionInstanceLogEntry instanceLogEntry, ParameterHelper parameterHelper, ILogger logger, CancellationToken cancellationToken)
         {
             var outputDefinition = await _functionOutputLogger.CreateAsync(instance, cancellationToken);
@@ -248,7 +248,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     if (_drainModeManager.IsDrainModeEnabled == true)
                     {
                         functionCancellationTokenSource.Cancel();
-                        logger?.LogInformation($"Requesting cancellation for function invocation:{instance.Id}");
+                        logger?.LogInformation("Requesting cancellation for function invocation '{invocationId}'", instance.Id);
                     }
                     else
                     {
@@ -293,6 +293,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         {
                             invocationException = ex;
                         }
+                        finally
+                        {
+                            _drainModeManager?.UnRegisterTokenSource(instance.Id);
+                        }
                     }
 
                     if (invocationException != null)
@@ -333,8 +337,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                         exceptionInfo.Throw();
                     }
-
-                    _drainModeManager?.UnRegisterTokenSource(instance.Id);
                     return startedMessageId;
                 }
             }

@@ -196,7 +196,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
                     { "Disable_TestJob", "False" },
                 })
                 .Build();
-
+            
             Mock<INameResolver> mockNameResolver = new Mock<INameResolver>(MockBehavior.Strict);
             mockNameResolver.Setup(p => p.Resolve("Test")).Returns("TestValue");
 

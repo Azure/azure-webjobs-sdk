@@ -39,7 +39,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             Assert.Equal(drainModeManager.Listeners.ElementAt(0), listener.Object);
         }
 
-
         [Fact]
         public async Task RegisterListener_EnableDrainModeAsync_CallsStopAsyncAndEnablesDrainMode()
         {
@@ -60,7 +59,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
                p => Assert.Equal("Calling StopAsync on the registered listeners", p),
                p => Assert.Equal("Call to StopAsync complete, registered listeners are now stopped", p));
         }
-
 
         [Fact]
         public async Task RegisterListener_EnableDrainModeAsync_CancelAllRegisteredTokens()
