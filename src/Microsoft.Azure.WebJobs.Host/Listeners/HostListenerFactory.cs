@@ -30,9 +30,11 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         private readonly bool _allowPartialHostStartup;
         private readonly Action _listenersCreatedCallback;
         private readonly IScaleMonitorManager _monitorManager;
+        private readonly IDrainModeManager _drainModeManager;
+
 
         public HostListenerFactory(IEnumerable<IFunctionDefinition> functionDefinitions, SingletonManager singletonManager, IJobActivator activator,
-            INameResolver nameResolver, ILoggerFactory loggerFactory, IScaleMonitorManager monitorManager, Action listenersCreatedCallback, bool allowPartialHostStartup = false)
+            INameResolver nameResolver, ILoggerFactory loggerFactory, IScaleMonitorManager monitorManager, Action listenersCreatedCallback, bool allowPartialHostStartup = false, IDrainModeManager drainModeManager = null)
         {
             _functionDefinitions = functionDefinitions;
             _singletonManager = singletonManager;
@@ -43,6 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             _allowPartialHostStartup = allowPartialHostStartup;
             _monitorManager = monitorManager;
             _listenersCreatedCallback = listenersCreatedCallback;
+            _drainModeManager = drainModeManager;
         }
 
         public async Task<IListener> CreateAsync(CancellationToken cancellationToken)
@@ -83,7 +86,9 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 
             _listenersCreatedCallback?.Invoke();
 
-            return new CompositeListener(listeners);
+            var compositeListener = new CompositeListener(listeners);
+            _drainModeManager?.RegisterListener(compositeListener);
+            return compositeListener;
         }
 
         /// <summary>

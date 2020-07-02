@@ -2,15 +2,22 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
+using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -297,6 +304,98 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             var expectedMessage = string.Format("Timeout value of {0} was exceeded by function: {1}", timeoutInterval, _mockFunctionInstance.Object.FunctionDescriptor.ShortName);
             Assert.Equal(expectedMessage, ex.Message);
+        }
+
+        private FunctionExecutor GetTestFunctionExecutor(DrainModeManager drainModeManager = null)
+        {
+            var mockFunctionInstanceLogger = new Mock<IFunctionInstanceLogger>();
+            var mockFunctionOutputLogger = new NullFunctionOutputLogger();
+            var mockExceptionHandler = new Mock<IWebJobsExceptionHandler>();
+            var mockFunctionEventCollector = new Mock<IAsyncCollector<FunctionInstanceLogEntry>>();
+            var mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
+
+            var functionExecutor = new FunctionExecutor(
+                mockFunctionInstanceLogger.Object,
+                mockFunctionOutputLogger,
+                mockExceptionHandler.Object,
+                mockFunctionEventCollector.Object,
+                mockServiceScopeFactory.Object,
+                null,
+                null,
+                drainModeManager);
+
+            return functionExecutor;
+        }
+
+        private IFunctionInstanceEx GetFunctionInstanceExMockInstance()
+        {
+            var mockBindingSource = new Mock<IBindingSource>();
+            var valueProviders = Task.Run(() =>
+            {
+                IDictionary<string, IValueProvider> d = new Dictionary<string, IValueProvider>();
+                IReadOnlyDictionary<string, IValueProvider> red = new ReadOnlyDictionary<string, IValueProvider>(d);
+                return red;
+            });
+            mockBindingSource.Setup(p => p.BindAsync(It.IsAny<ValueBindingContext>())).Returns(valueProviders);
+
+            MethodInfo method = typeof(Functions).GetMethod("MethodLevel", BindingFlags.Static | BindingFlags.Public);
+            TimeoutAttribute attribute = method.GetCustomAttribute<TimeoutAttribute>();
+            FunctionDescriptor descriptor = new FunctionDescriptor();
+            descriptor.TimeoutAttribute = attribute;
+
+            var mockfunctionInstance = new Mock<IFunctionInstanceEx>();
+            mockfunctionInstance.Setup(p => p.BindingSource).Returns(mockBindingSource.Object);
+            mockfunctionInstance.Setup(p => p.Invoker.ParameterNames).Returns(new System.Collections.Generic.List<string>());
+            mockfunctionInstance.Setup(p => p.FunctionDescriptor).Returns(descriptor);
+            return mockfunctionInstance.Object;
+        }
+
+        [Fact]
+        public async Task ExecuteLoggingAsync_WithDrainModeManagerNull_SkipsDrainModeOperations()
+        {
+            var mockFunctionInstanceEx = GetFunctionInstanceExMockInstance();
+            var parameterHelper = new FunctionExecutor.ParameterHelper(mockFunctionInstanceEx);
+            var logger = new TestLogger("Tests.FunctionExecutor");
+            var functionExecutor = GetTestFunctionExecutor();
+            try
+            {
+                await functionExecutor.ExecuteWithLoggingAsync(mockFunctionInstanceEx, new FunctionStartedMessage(), new FunctionInstanceLogEntry(), parameterHelper, logger, CancellationToken.None);
+            }
+            // Function Invocation Exception is expected
+            catch (FunctionInvocationException)
+            {
+            }
+        }
+
+        [Fact]
+        public async Task ExecuteLoggingAsync_WithDrainModeManagerEnabled_RequestsCancellation()
+        {
+            var loggerFactory = new LoggerFactory();
+            var loggerProvider = new TestLoggerProvider();
+            loggerFactory.AddProvider(loggerProvider);
+            var drainModeLogger = loggerFactory.CreateLogger<DrainModeManager>();
+
+            var logger = new TestLogger("Tests.FunctionExecutor");
+            var mockFunctionInstanceEx = GetFunctionInstanceExMockInstance();
+            var parameterHelper = new FunctionExecutor.ParameterHelper(mockFunctionInstanceEx);
+
+            var drainModeManager = new DrainModeManager(drainModeLogger);
+            await drainModeManager.EnableDrainModeAsync(CancellationToken.None);
+            var functionExecutor = GetTestFunctionExecutor(drainModeManager);
+
+            try
+            {
+                await functionExecutor.ExecuteWithLoggingAsync(mockFunctionInstanceEx, new FunctionStartedMessage(), new FunctionInstanceLogEntry(), parameterHelper, logger, CancellationToken.None);
+            }
+            // Function Invocation Exception is expected
+            catch (FunctionInvocationException)
+            {
+            }
+            finally
+            {
+                var messages = logger.GetLogMessages().Select(p => p.FormattedMessage);
+                Assert.Equal(messages.ElementAt(0), "Requesting cancellation for function invocation '00000000-0000-0000-0000-000000000000'");
+            }
         }
 
         [Fact]

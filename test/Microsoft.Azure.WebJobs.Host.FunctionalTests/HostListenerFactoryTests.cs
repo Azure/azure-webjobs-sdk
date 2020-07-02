@@ -58,7 +58,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             functions.Add(definition);
 
             var monitorManager = new ScaleMonitorManager();
-            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManager, () => { });
+            var drainModeManagerMock = new Mock<IDrainModeManager>();
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManager, () => { }, false, drainModeManagerMock.Object);
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 
             var innerListeners = ((IEnumerable<IListener>)listener).ToArray();
@@ -137,7 +138,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             // Create the composite listener - this will fail if any of the
             // function definitions indicate that they are not disabled
             var monitorManagerMock = new Mock<IScaleMonitorManager>(MockBehavior.Strict);
-            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManagerMock.Object, () => { });
+            var drainModeManagerMock = new Mock<IDrainModeManager>();
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManagerMock.Object, () => { }, false, drainModeManagerMock.Object);
 
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 

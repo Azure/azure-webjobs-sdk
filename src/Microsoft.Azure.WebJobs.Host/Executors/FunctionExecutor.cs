@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -32,6 +33,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger _resultsLogger;
         private readonly IEnumerable<IFunctionFilter> _globalFunctionFilters;
+        private readonly IDrainModeManager _drainModeManager;
+        private ConcurrentDictionary<Guid, CancellationTokenSource> _cancellationTokenSources;
 
         private readonly Dictionary<string, object> _inputBindingScope = new Dictionary<string, object>
         {
@@ -55,7 +58,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 IAsyncCollector<FunctionInstanceLogEntry> functionEventCollector,
                 IServiceScopeFactory serviceScopeFactory,
                 ILoggerFactory loggerFactory = null,
-                IEnumerable<IFunctionFilter> globalFunctionFilters = null)
+                IEnumerable<IFunctionFilter> globalFunctionFilters = null,
+                IDrainModeManager drainModeManager = null)
         {
             _functionInstanceLogger = functionInstanceLogger ?? throw new ArgumentNullException(nameof(functionInstanceLogger));
             _functionOutputLogger = functionOutputLogger;
@@ -65,6 +69,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _loggerFactory = loggerFactory;
             _resultsLogger = _loggerFactory?.CreateLogger(LogCategories.Results);
             _globalFunctionFilters = globalFunctionFilters ?? Enumerable.Empty<IFunctionFilter>();
+            _drainModeManager = drainModeManager;
+            _cancellationTokenSources = new ConcurrentDictionary<Guid, CancellationTokenSource>();
         }
 
         public HostOutputMessage HostOutputMessage
@@ -224,7 +230,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
         }
 
-        private async Task<string> ExecuteWithLoggingAsync(IFunctionInstanceEx instance, FunctionStartedMessage message,
+        internal async Task<string> ExecuteWithLoggingAsync(IFunctionInstanceEx instance, FunctionStartedMessage message,
             FunctionInstanceLogEntry instanceLogEntry, ParameterHelper parameterHelper, ILogger logger, CancellationToken cancellationToken)
         {
             var outputDefinition = await _functionOutputLogger.CreateAsync(instance, cancellationToken);
@@ -236,6 +242,20 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 // Create a linked token source that will allow us to signal function cancellation
                 // (e.g. Based on TimeoutAttribute, etc.)                
                 CancellationTokenSource functionCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+                if (_drainModeManager != null)
+                {
+                    if (_drainModeManager.IsDrainModeEnabled == true)
+                    {
+                        functionCancellationTokenSource.Cancel();
+                        logger?.LogInformation("Requesting cancellation for function invocation '{invocationId}'", instance.Id);
+                    }
+                    else
+                    {
+                        _drainModeManager?.RegisterTokenSource(instance.Id, functionCancellationTokenSource);
+                    }
+                }
+
                 using (functionCancellationTokenSource)
                 {
                     // This allows the FunctionOutputLogger to grab the TextWriter created by the IFunctionOutput. This enables user ILogger
@@ -272,6 +292,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         catch (Exception ex)
                         {
                             invocationException = ex;
+                        }
+                        finally
+                        {
+                            _drainModeManager?.UnRegisterTokenSource(instance.Id);
                         }
                     }
 
@@ -313,7 +337,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                         exceptionInfo.Throw();
                     }
-
                     return startedMessageId;
                 }
             }
