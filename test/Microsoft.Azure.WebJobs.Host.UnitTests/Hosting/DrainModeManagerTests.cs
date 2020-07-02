@@ -25,6 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
         {
             _loggerFactory = new LoggerFactory();
             _loggerProvider = new TestLoggerProvider();
+            _loggerFactory.AddProvider(_loggerProvider);
             _logger = _loggerFactory.CreateLogger<DrainModeManager>();
         }
 
@@ -82,7 +83,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             Assert.Equal(tokenSource.Token.IsCancellationRequested, true);
 
             Assert.Collection(_loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage),
-               p => Assert.Equal("DrainMode is set to True", p),
+               p => Assert.Equal("DrainMode mode enabled", p),
                p => Assert.Equal($"Requesting cancellation for function invocation '{guid}'", p),
                p => Assert.Equal("Calling StopAsync on the registered listeners", p),
                p => Assert.Equal("Call to StopAsync complete, registered listeners are now stopped", p));
