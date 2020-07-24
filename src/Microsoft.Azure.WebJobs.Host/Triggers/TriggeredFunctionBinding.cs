@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Triggers
 {
@@ -17,15 +19,17 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
         private readonly ITriggerBinding _triggerBinding;
         private readonly IReadOnlyDictionary<string, IBinding> _nonTriggerBindings;
         private readonly SingletonManager _singletonManager;
+        private readonly ILogger _logger;
 
         public TriggeredFunctionBinding(FunctionDescriptor descriptor, string triggerParameterName, ITriggerBinding triggerBinding,
-            IReadOnlyDictionary<string, IBinding> nonTriggerBindings, SingletonManager singletonManager)
+            IReadOnlyDictionary<string, IBinding> nonTriggerBindings, SingletonManager singletonManager, ILoggerFactory loggerFactory)
         {
             _descriptor = descriptor;
             _triggerParameterName = triggerParameterName;
             _triggerBinding = triggerBinding;
             _nonTriggerBindings = nonTriggerBindings;
             _singletonManager = singletonManager;
+            _logger = loggerFactory?.CreateLogger(LogCategories.Bindings);
         }
 
         public async Task<IReadOnlyDictionary<string, IValueProvider>> BindAsync(ValueBindingContext context, TTriggerValue value)
@@ -81,6 +85,8 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             }
 
             BindingContext bindingContext = FunctionBinding.NewBindingContext(context, bindingData, parameters);
+            LogResourceAccess(bindingContext);
+
             foreach (KeyValuePair<string, IBinding> item in _nonTriggerBindings)
             {
                 string name = item.Key;
@@ -107,6 +113,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                     valueProvider = new BindingExceptionValueProvider(name, exception);
                 }
 
+                LogResourceAccess(valueProvider);
                 valueProviders.Add(name, valueProvider);
             }
 
@@ -123,5 +130,40 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
 
             return valueProviders;
         }      
+
+        /// <summary>
+        /// Logs the resource accessed by the value provider.
+        /// </summary>
+        /// <param name="valueProvider"></param>
+        private void LogResourceAccess(IValueProvider valueProvider)
+        {
+            LogResourceAccess(valueProvider.ToInvokeString());
+        }
+
+        /// <summary>
+        /// Logs the resource accessed by the binding context.
+        /// </summary>
+        /// <param name="bindingContext"></param>
+        private void LogResourceAccess(BindingContext bindingContext)
+        {
+            IReadOnlyDictionary<string, object> bindingData = bindingContext.BindingData;
+            if (bindingData.TryGetValue("BlobTrigger", out object blobTrigger))
+            {
+                string blobTriggerString = blobTrigger as string;
+                if (blobTriggerString != null)
+                {
+                    LogResourceAccess(blobTriggerString);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Logs a given resource string.
+        /// </summary>
+        /// <param name="resourceString"></param>
+        private void LogResourceAccess(string resourceString)
+        {
+            _logger.LogInformation($"Resource Access: {resourceString}");
+        }
     }
 }

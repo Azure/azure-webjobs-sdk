@@ -35,6 +35,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly INameResolver _nameResolver;
         private readonly IFunctionExecutor _executor;
         private readonly SingletonManager _singletonManager;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger _logger;
         private readonly SharedQueueHandler _sharedQueue;
         private readonly TimeoutAttribute _defaultTimeout;
@@ -60,6 +61,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _executor = executor ?? throw new ArgumentNullException(nameof(executor));
             _singletonManager = singletonManager ?? throw new ArgumentNullException(nameof(singletonManager));
             _nameResolver = nameResolver;
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
             _logger = loggerFactory?.CreateLogger(LogCategories.Startup);
             _sharedQueue = sharedQueue;
             _defaultTimeout = defaultTimeout;
@@ -334,7 +336,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             ITriggerBinding triggerBinding, string parameterName, FunctionDescriptor descriptor,
             IReadOnlyDictionary<string, IBinding> nonTriggerBindings, IFunctionInvokerEx invoker)
         {
-            ITriggeredFunctionBinding<TTriggerValue> functionBinding = new TriggeredFunctionBinding<TTriggerValue>(descriptor, parameterName, triggerBinding, nonTriggerBindings, _singletonManager);
+            ITriggeredFunctionBinding<TTriggerValue> functionBinding = new TriggeredFunctionBinding<TTriggerValue>(descriptor, parameterName, triggerBinding, nonTriggerBindings, _singletonManager, _loggerFactory);
             ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory = new TriggeredFunctionInstanceFactory<TTriggerValue>(functionBinding, invoker, descriptor);
             ITriggeredFunctionExecutor triggerExecutor = new TriggeredFunctionExecutor<TTriggerValue>(descriptor, _executor, instanceFactory);
             IListenerFactory listenerFactory = new ListenerFactory(descriptor, triggerExecutor, triggerBinding, _sharedQueue);
