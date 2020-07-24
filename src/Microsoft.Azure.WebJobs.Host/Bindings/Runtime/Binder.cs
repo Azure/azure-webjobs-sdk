@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
@@ -24,6 +25,17 @@ namespace Microsoft.Azure.WebJobs
         private readonly CollectingDisposable _disposable = new CollectingDisposable();
         private readonly Dictionary<string, object> _bindingData;
         private bool _disposed;
+
+        public static string GetValueProviderInformation(IValueProvider binder)
+        {
+            string invokeString = binder.ToInvokeString();
+            Type valueType = binder.Type;
+            string valueTypeString = valueType?.ToString();
+            Type binderType = binder.GetType();
+            string binderTypeString = binderType?.ToString();
+            string info = $"InvokeString: {invokeString}, ValueType: {valueTypeString}, BinderType: {binderTypeString}";
+            return info;
+        }
 
         /// <summary>
         /// For testing only.
@@ -51,6 +63,22 @@ namespace Microsoft.Azure.WebJobs
                     _bindingData[pair.Key] = pair.Value;
                 }
             }
+        }
+
+        /// <summary>
+        /// Get information about the binders and the values they bind to.
+        /// This is used for logging resource accesses by the function.
+        /// </summary>
+        /// <returns></returns>
+        public string GetInformation()
+        {
+            StringBuilder stringBuilder = new StringBuilder();
+            foreach (var binder in _binders)
+            {
+                stringBuilder.AppendLine(GetValueProviderInformation(binder));
+            }
+            string binderInfo = stringBuilder.ToString();
+            return binderInfo;
         }
 
         /// <summary>

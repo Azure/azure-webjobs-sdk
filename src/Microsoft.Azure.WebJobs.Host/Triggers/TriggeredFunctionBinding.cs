@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Indexers;
@@ -85,8 +86,6 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             }
 
             BindingContext bindingContext = FunctionBinding.NewBindingContext(context, bindingData, parameters);
-            LogResourceAccess(bindingContext);
-
             foreach (KeyValuePair<string, IBinding> item in _nonTriggerBindings)
             {
                 string name = item.Key;
@@ -113,7 +112,6 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                     valueProvider = new BindingExceptionValueProvider(name, exception);
                 }
 
-                LogResourceAccess(valueProvider);
                 valueProviders.Add(name, valueProvider);
             }
 
@@ -128,42 +126,42 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                 }
             }
 
+            LogBindingInformation(bindingContext, valueProviders);
             return valueProviders;
         }      
 
-        /// <summary>
-        /// Logs the resource accessed by the value provider.
-        /// </summary>
-        /// <param name="valueProvider"></param>
-        private void LogResourceAccess(IValueProvider valueProvider)
+        private void LogBindingInformation(BindingContext context, IReadOnlyDictionary<string, IValueProvider> valueProviders)
         {
-            LogResourceAccess(valueProvider.ToInvokeString());
-        }
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.AppendLine("Binding Information:");
 
-        /// <summary>
-        /// Logs the resource accessed by the binding context.
-        /// </summary>
-        /// <param name="bindingContext"></param>
-        private void LogResourceAccess(BindingContext bindingContext)
-        {
-            IReadOnlyDictionary<string, object> bindingData = bindingContext.BindingData;
-            if (bindingData.TryGetValue("BlobTrigger", out object blobTrigger))
+            stringBuilder.AppendLine("BindingData:");
+            foreach (var item in context.BindingData)
             {
-                string blobTriggerString = blobTrigger as string;
-                if (blobTriggerString != null)
+                string key = item.Key;
+                object value = item.Value;
+                try
                 {
-                    LogResourceAccess(blobTriggerString);
+                    string valueStr = value.ToString();
+                    if (valueStr != null)
+                    {
+                        stringBuilder.AppendLine($"{key}: {valueStr}");
+                    }
+                }
+                catch (Exception)
+                {
+                    // no-op
                 }
             }
-        }
 
-        /// <summary>
-        /// Logs a given resource string.
-        /// </summary>
-        /// <param name="resourceString"></param>
-        private void LogResourceAccess(string resourceString)
-        {
-            _logger.LogInformation($"Resource Access: {resourceString}");
+            stringBuilder.AppendLine("ValueProviders:");
+            foreach (var item in valueProviders)
+            {
+                stringBuilder.AppendLine(Binder.GetValueProviderInformation(item.Value));
+            }
+
+            string logMessage = stringBuilder.ToString();
+            _logger.LogInformation(logMessage);
         }
     }
 }
