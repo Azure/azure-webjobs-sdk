@@ -26,6 +26,12 @@ namespace Microsoft.Azure.WebJobs
         private readonly Dictionary<string, object> _bindingData;
         private bool _disposed;
 
+        /// <summary>
+        /// Get information about a <see cref="IValueProvider"/>.
+        /// This is used for logging resource accesses by the function.
+        /// </summary>
+        /// <param name="binder"></param>
+        /// <returns></returns>
         public static string GetValueProviderInformation(IValueProvider binder)
         {
             string invokeString = binder.ToInvokeString();
