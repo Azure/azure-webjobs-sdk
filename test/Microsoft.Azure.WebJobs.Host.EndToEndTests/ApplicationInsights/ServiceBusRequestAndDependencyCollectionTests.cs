@@ -112,13 +112,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
             var triggerFunctionTraces = traces.Where(t => t.Context.Operation.Id == sbTriggerRequest.Context.Operation.Id &&
                                                           t.Context.Operation.ParentId == sbTriggerRequest.Id).ToList();
-            Assert.Equal(success ? 6 : 8, allFunctionTraces.Count);
+            Assert.Equal(success ? 7 : 9, allFunctionTraces.Count);
 
             // manual function only writes 'executing' and 'executed'
             Assert.Equal(2, manualFunctionTraces.Count);
 
             // trigger writes 'executing', 'executed', trigger and log inside function + 2 errors on exception
-            Assert.Equal(success ? 4 : 6, triggerFunctionTraces.Count);
+            Assert.Equal(success ? 5 : 7, triggerFunctionTraces.Count);
         }
 
         [Fact]
@@ -147,7 +147,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
             Assert.Single(requests);
             Assert.Single(dependencies);
-            Assert.Equal(4, traces.Count);
+            Assert.Equal(5, traces.Count);
         }
 
         [Fact]
@@ -195,7 +195,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
             // Make sure that the trigger traces are correlated
             traces = _channel.Telemetries.OfType<TraceTelemetry>().Where(t => t.Context.Operation.Id == request.Context.Operation.Id).ToList();
-            Assert.Equal(4, traces.Count());
+            Assert.Equal(5, traces.Count());
 
             foreach (var trace in traces)
             {
@@ -259,7 +259,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
             // Make sure that the trigger traces are correlated
             traces = _channel.Telemetries.OfType<TraceTelemetry>().Where(t => t.Context.Operation.Id == request.Context.Operation.Id).ToList();
-            Assert.Equal(4, traces.Count());
+            Assert.Equal(5, traces.Count());
 
             foreach (var trace in traces)
             {
@@ -324,7 +324,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
             // Make sure that the trigger traces are correlated
             traces = _channel.Telemetries.OfType<TraceTelemetry>().Where(t => t.Context.Operation.Id == request.Context.Operation.Id).ToList();
-            Assert.Equal(4, traces.Count());
+            Assert.Equal(5, traces.Count());
 
             foreach (var trace in traces)
             {

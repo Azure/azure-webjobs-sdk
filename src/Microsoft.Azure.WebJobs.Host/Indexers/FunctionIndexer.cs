@@ -61,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _executor = executor ?? throw new ArgumentNullException(nameof(executor));
             _singletonManager = singletonManager ?? throw new ArgumentNullException(nameof(singletonManager));
             _nameResolver = nameResolver;
-            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+            _loggerFactory = loggerFactory;
             _logger = loggerFactory?.CreateLogger(LogCategories.Startup);
             _sharedQueue = sharedQueue;
             _defaultTimeout = defaultTimeout;
