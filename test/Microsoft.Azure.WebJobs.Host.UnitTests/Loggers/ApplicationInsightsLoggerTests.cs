@@ -368,15 +368,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         public void Log_IncludesEventId()
         {
             ILogger logger = CreateLogger(_functionCategoryName);
-            logger.Log(LogLevel.Information, 100, "Test", null, (s, e) => s);
+            logger.Log(LogLevel.Information, new EventId(100, "TestEvent"), "Test", null, (s, e) => s);
 
             var telemetry = _channel.Telemetries.Single() as ISupportProperties;
 
-            Assert.Equal(4, telemetry.Properties.Count);
+            Assert.Equal(5, telemetry.Properties.Count);
             Assert.Equal(Process.GetCurrentProcess().Id.ToString(), telemetry.Properties[LogConstants.ProcessIdKey]);
             Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
             Assert.Equal(LogLevel.Information.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
             Assert.Equal("100", telemetry.Properties[LogConstants.EventIdKey]);
+            Assert.Equal("TestEvent", telemetry.Properties[LogConstants.EventNameKey]);
         }
 
         [Fact]

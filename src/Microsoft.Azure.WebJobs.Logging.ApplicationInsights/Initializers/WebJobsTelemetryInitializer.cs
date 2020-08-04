@@ -96,6 +96,12 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 {
                     telemetryProps[LogConstants.EventIdKey] = eventId.Value.ToString();
                 }
+
+                string eventName = scopeProps.GetValueOrDefault<string>(LogConstants.EventNameKey);
+                if (eventName != null)
+                {
+                    telemetryProps[LogConstants.EventNameKey] = eventName;
+                }
             }
             
             // we may track traces/dependencies after function scope ends - we don't want to update those
