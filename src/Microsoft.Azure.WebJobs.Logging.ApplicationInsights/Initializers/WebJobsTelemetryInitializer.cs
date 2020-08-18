@@ -43,21 +43,12 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             }
 
             telemetry.Context.Cloud.RoleInstance = _roleInstanceName;
-
-            RequestTelemetry request = telemetry as RequestTelemetry;
-
-            // Zero out all IP addresses other than Requests
-            if (request == null)
+            if (telemetry.Context.Location.Ip == null)
             {
                 telemetry.Context.Location.Ip = LoggingConstants.ZeroIpAddress;
             }
-            else
-            {
-                if (request.Context.Location.Ip == null)
-                {
-                    request.Context.Location.Ip = LoggingConstants.ZeroIpAddress;
-                }
-            }
+
+            RequestTelemetry request = telemetry as RequestTelemetry;
 
             IDictionary<string, string> telemetryProps = telemetry.Context.Properties;
             telemetryProps[LogConstants.ProcessIdKey] = _currentProcessId;

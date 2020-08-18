@@ -8,6 +8,7 @@ using System.Linq;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.AspNetCore;
 using Microsoft.ApplicationInsights.AspNetCore.Extensions;
+using Microsoft.ApplicationInsights.AspNetCore.TelemetryInitializers;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DependencyCollector;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -18,6 +19,7 @@ using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPuls
 using Microsoft.ApplicationInsights.SnapshotCollector;
 using Microsoft.ApplicationInsights.WindowsServer;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -52,6 +54,21 @@ namespace Microsoft.Extensions.DependencyInjection
                 });
 
             services.AddSingleton<ITelemetryInitializer, HttpDependenciesParsingTelemetryInitializer>();
+            services.AddSingleton<ITelemetryInitializer>(provider =>
+            {
+                ApplicationInsightsLoggerOptions options = provider.GetService<IOptions<ApplicationInsightsLoggerOptions>>().Value;
+                if (options.HttpAutoCollectionOptions.EnableHttpTriggerExtendedInfoCollection)
+                {
+                    var httpContextAccessor = provider.GetService<IHttpContextAccessor>();
+                    if (httpContextAccessor != null)
+                    {
+                        return new ClientIpHeaderTelemetryInitializer(httpContextAccessor);
+                    }
+                }
+
+                return NullTelemetryInitializer.Instance;
+            });
+
             services.AddSingleton<ITelemetryInitializer, WebJobsRoleEnvironmentTelemetryInitializer>();
             services.AddSingleton<ITelemetryInitializer, WebJobsSanitizingInitializer>();
             services.AddSingleton<ITelemetryInitializer, WebJobsTelemetryInitializer>();
@@ -262,7 +279,10 @@ namespace Microsoft.Extensions.DependencyInjection
 
             foreach (ITelemetryInitializer initializer in telemetryInitializers)
             {
-                configuration.TelemetryInitializers.Add(initializer);
+                if (!(initializer is NullTelemetryInitializer))
+                {
+                    configuration.TelemetryInitializers.Add(initializer);
+                }
             }
 
             (channel as ServerTelemetryChannel)?.Initialize(configuration);

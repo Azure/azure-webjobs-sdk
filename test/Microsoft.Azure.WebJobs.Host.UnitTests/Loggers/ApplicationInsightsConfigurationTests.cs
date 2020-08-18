@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.AspNetCore;
+using Microsoft.ApplicationInsights.AspNetCore.TelemetryInitializers;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DependencyCollector;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -252,6 +253,63 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Assert.False(requestModule.CollectionOptions.TrackExceptions);
                 Assert.Equal(ActivityIdFormat.W3C, Activity.DefaultIdFormat);
                 Assert.True(Activity.ForceDefaultIdFormat);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_NoClientIpInitializerWithoutContextAccessor()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsightsWebJobs(o => { o.InstrumentationKey = "some key"; });
+                })
+                .Build())
+            {
+                var config = host.Services.GetServices<TelemetryConfiguration>().Single();
+                Assert.DoesNotContain(config.TelemetryInitializers, ti => ti is ClientIpHeaderTelemetryInitializer);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_NoClientIpInitializerWithoutExtendedHttpOptions()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureServices(b => 
+                    b.AddHttpContextAccessor())
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsightsWebJobs(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                        o.HttpAutoCollectionOptions.EnableHttpTriggerExtendedInfoCollection = false;
+                    });
+                })
+                .Build())
+            {
+                var config = host.Services.GetServices<TelemetryConfiguration>().Single();
+                Assert.DoesNotContain(config.TelemetryInitializers, ti => ti is ClientIpHeaderTelemetryInitializer);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_ConfiguresClientIpInitializer()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureServices(b => 
+                    b.AddHttpContextAccessor())
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsightsWebJobs(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                    });
+                })
+                .Build())
+            {
+                var config = host.Services.GetServices<TelemetryConfiguration>().Single();
+                
+                Assert.Contains(config.TelemetryInitializers, ti => ti is ClientIpHeaderTelemetryInitializer);
             }
         }
 
