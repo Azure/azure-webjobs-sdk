@@ -7,17 +7,18 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.Storage;
 using System.Threading;
 using Microsoft.Azure.Storage.Blob;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs
 {
     internal static class ReadBlobArgumentBinding
     {
-        public static Task<WatchableReadStream> TryBindStreamAsync(ICloudBlob blob, ValueBindingContext context)
+        public static Task<WatchableReadStream> TryBindStreamAsync(ICloudBlob blob, ValueBindingContext context, ILogger logger)
         {
-            return TryBindStreamAsync(blob, context.CancellationToken);
+            return TryBindStreamAsync(blob, context.CancellationToken, logger);
         }
 
-        public static async Task<WatchableReadStream> TryBindStreamAsync(ICloudBlob blob, CancellationToken cancellationToken)
+        public static async Task<WatchableReadStream> TryBindStreamAsync(ICloudBlob blob, CancellationToken cancellationToken, ILogger logger)
         {
             Stream rawStream;
             try
@@ -36,7 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
                 return null;
             }
             
-            return new WatchableReadStream(rawStream);
+            return new WatchableReadStream(rawStream, blob, logger);
         }
 
         public static TextReader CreateTextReader(WatchableReadStream watchableStream)

@@ -5,13 +5,14 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.Storage.Blob;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 {
     internal static class WriteBlobArgumentBinding
     {
         public static async Task<WatchableCloudBlobStream> BindStreamAsync(ICloudBlob blob,
-            ValueBindingContext context, IBlobWrittenWatcher blobWrittenWatcher)
+            ValueBindingContext context, IBlobWrittenWatcher blobWrittenWatcher, ILogger logger)
         {
             var blockBlob = blob as CloudBlockBlob;
 
@@ -24,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
             CloudBlobStream rawStream = await blockBlob.OpenWriteAsync(context.CancellationToken);
             IBlobCommitedAction committedAction = new BlobCommittedAction(blob, blobWrittenWatcher);
-            return new WatchableCloudBlobStream(rawStream, committedAction);
+            return new WatchableCloudBlobStream(rawStream, committedAction, blob, logger);
         }
     }
 }

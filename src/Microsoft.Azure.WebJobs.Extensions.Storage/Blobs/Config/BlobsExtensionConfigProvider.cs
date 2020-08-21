@@ -15,6 +15,8 @@ using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.Storage.Blob;
+using Microsoft.Extensions.Logging;
+using Microsoft.Azure.WebJobs.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 {
@@ -29,18 +31,21 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         private IContextGetter<IBlobWrittenWatcher> _blobWrittenWatcherGetter;
         private readonly INameResolver _nameResolver;
         private IConverterManager _converterManager;
+        private readonly ILogger _bindingStatsLogger;
 
         public BlobsExtensionConfigProvider(StorageAccountProvider accountProvider,
             BlobTriggerAttributeBindingProvider triggerBinder,
             IContextGetter<IBlobWrittenWatcher> contextAccessor,
             INameResolver nameResolver,
-            IConverterManager converterManager)
+            IConverterManager converterManager,
+            ILoggerFactory loggerFactory)
         {
             _accountProvider = accountProvider;
             _triggerBinder = triggerBinder;
             _blobWrittenWatcherGetter = contextAccessor;
             _nameResolver = nameResolver;
             _converterManager = converterManager;
+            _bindingStatsLogger = loggerFactory.CreateLogger(LogCategories.BindingsAccessStats);
         }
 
         public void Initialize(ExtensionConfigContext context)
@@ -244,7 +249,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
         private async Task<Stream> ConvertToStreamAsync(ICloudBlob input, CancellationToken cancellationToken)
         {
-            WatchableReadStream watchableStream = await ReadBlobArgumentBinding.TryBindStreamAsync(input, cancellationToken);
+            WatchableReadStream watchableStream = await ReadBlobArgumentBinding.TryBindStreamAsync(input, cancellationToken, _bindingStatsLogger);
             return watchableStream;
         }
 
@@ -272,12 +277,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             switch (blobAttribute.Access)
             {
                 case FileAccess.Read:
-                    var readStream = await ReadBlobArgumentBinding.TryBindStreamAsync(blob, context);
+                    var readStream = await ReadBlobArgumentBinding.TryBindStreamAsync(blob, context, _bindingStatsLogger);
                     return readStream;
 
                 case FileAccess.Write:
                     var writeStream = await WriteBlobArgumentBinding.BindStreamAsync(blob,
-                    context, _blobWrittenWatcherGetter.Value);
+                    context, _blobWrittenWatcherGetter.Value, _bindingStatsLogger);
                     return writeStream;
 
                 default:
@@ -325,6 +330,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
             return blob;
         }
+
         private ParameterDescriptor ToBlobDescr(BlobAttribute attr, ParameterInfo parameter, INameResolver nameResolver)
         {
             // Resolve the connection string to get an account name.
