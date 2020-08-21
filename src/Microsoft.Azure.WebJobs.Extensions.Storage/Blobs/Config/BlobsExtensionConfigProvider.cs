@@ -249,7 +249,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
         private async Task<Stream> ConvertToStreamAsync(ICloudBlob input, CancellationToken cancellationToken)
         {
-            WatchableReadStream watchableStream = await ReadBlobArgumentBinding.TryBindStreamAsync(input, cancellationToken);
+            WatchableReadStream watchableStream = await ReadBlobArgumentBinding.TryBindStreamAsync(input, cancellationToken, _logger);
             return watchableStream;
         }
 
@@ -277,12 +277,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             switch (blobAttribute.Access)
             {
                 case FileAccess.Read:
-                    var readStream = await ReadBlobArgumentBinding.TryBindStreamAsync(blob, context);
+                    var readStream = await ReadBlobArgumentBinding.TryBindStreamAsync(blob, context, _logger);
                     return readStream;
 
                 case FileAccess.Write:
                     var writeStream = await WriteBlobArgumentBinding.BindStreamAsync(blob,
-                    context, _blobWrittenWatcherGetter.Value);
+                    context, _blobWrittenWatcherGetter.Value, _logger);
                     return writeStream;
 
                 default:
@@ -328,7 +328,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             var blob = await container.GetBlobReferenceForArgumentTypeAsync(
                 boundPath.BlobName, requestedType, cancellationToken);
 
-            LogBlob(blob, blobAttribute);
             return blob;
         }
 
@@ -376,35 +375,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
                 BlobName = blobName,
                 Access = access
             };
-        }
-
-        private void LogBlob(ICloudBlob blob, BlobAttribute blobAttribute)
-        {
-            if (blob == null || blobAttribute == null)
-            {
-                return;
-            }
-
-            try
-            {
-                List<string> propertiesList = new List<string>
-                {
-                    $"BlobName: {blob.Name}",
-                    $"ContainerName: {blob.Container.Name}",
-                    $"Length: {blob.Properties.Length}",
-                    $"ETag: {blob.Properties.ETag}",
-                    $"BlobType: {blob.BlobType}",
-                    $"Access: {blobAttribute.Access}",
-                };
-
-                string properties = string.Join(", ", propertiesList);
-                string logMessage = $"BlobAccessed ({properties})";
-                _logger.LogInformation(logMessage);
-            }
-            catch
-            {
-                return;
-            }
         }
     }
 }

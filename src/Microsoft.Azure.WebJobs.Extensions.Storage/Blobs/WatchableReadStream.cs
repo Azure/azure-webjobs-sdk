@@ -2,27 +2,43 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs
 {
     internal class WatchableReadStream : DelegatingStream, IWatcher
     {
+        private readonly ILogger _logger;
+        private readonly ICloudBlob _blob;
         private readonly Stopwatch _timeRead = new Stopwatch();
         private readonly long _totalLength;
 
         private long _countRead;
+        private bool _logged;
 
         public WatchableReadStream(Stream inner)
             : base(inner)
         {
             _totalLength = inner.Length;
+            _logged = false;
+        }
+
+        public WatchableReadStream(Stream inner, ICloudBlob blob, ILogger logger)
+            : base(inner)
+        {
+            _totalLength = inner.Length;
+            _logged = false;
+            _logger = logger;
+            _blob = blob;
         }
 
         public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
@@ -104,6 +120,48 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
             }
 
             return read;
+        }
+
+        public override void Close()
+        {
+            base.Close();
+            Log();
+        }
+
+        private void Log()
+        {
+            if (_logged)
+            {
+                return;
+            }
+
+            if (_blob == null || _logger == null)
+            {
+                return;
+            }
+
+            try
+            {
+                List<string> statisticsList = new List<string>
+                {
+                    $"BlobName: {_blob.Name}",
+                    $"ContainerName: {_blob.Container.Name}",
+                    $"Length: {_blob.Properties.Length}",
+                    $"ETag: {_blob.Properties.ETag}",
+                    $"BlobType: {_blob.BlobType}",
+                    $"BytesRead: {_countRead}",
+                    $"ElapsedTime: {_timeRead.Elapsed}",
+                };
+
+                string statistics = string.Join(", ", statisticsList);
+                string logMessage = $"ReadStream ({statistics})";
+                _logger.LogInformation(logMessage);
+                _logged = true;
+            }
+            catch
+            {
+                return;
+            }
         }
 
         public ParameterLog GetStatus()

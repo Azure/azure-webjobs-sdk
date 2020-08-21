@@ -8,23 +8,40 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.Storage.Blob;
+using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 {
     internal class WatchableCloudBlobStream : DelegatingCloudBlobStream, IWatcher
     {
+        private readonly ILogger _logger;
+        private readonly ICloudBlob _blob;
+        private readonly Stopwatch _timeWrite = new Stopwatch();
         private readonly IBlobCommitedAction _committedAction;
 
         private bool _committed;
         private bool _completed;
         private long _countWritten;
         private bool _flushed;
+        private bool _logged;
 
         public WatchableCloudBlobStream(CloudBlobStream inner, IBlobCommitedAction committedAction)
             : base(inner)
         {
             _committedAction = committedAction;
         }
+
+        public WatchableCloudBlobStream(CloudBlobStream inner, IBlobCommitedAction committedAction, ICloudBlob blob, ILogger logger)
+            : base(inner)
+        {
+            _committedAction = committedAction;
+            _logged = false;
+            _blob = blob;
+            _logger = logger;
+        }
+
 
         public override bool CanWrite
         {
@@ -62,6 +79,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             }
 
             base.Close();
+            Log();
         }
 
         public override void Flush()
@@ -84,8 +102,16 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            base.Write(buffer, offset, count);
-            _countWritten += count;
+            try
+            {
+                _timeWrite.Start();
+                base.Write(buffer, offset, count);
+                _countWritten += count;
+            }
+            finally
+            {
+                _timeWrite.Stop();
+            }
         }
 
         public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
@@ -96,8 +122,16 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
         private async Task WriteAsyncCore(Task task, int count)
         {
-            await task;
-            _countWritten += count;
+            try
+            {
+                _timeWrite.Start();
+                await task;
+                _countWritten += count;
+            }
+            finally
+            {
+                _timeWrite.Stop();
+            }
         }
 
         public override void WriteByte(byte value)
@@ -151,6 +185,41 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             else
             {
                 return null;
+            }
+        }
+
+        private void Log()
+        {
+            if (_logged)
+            {
+                return;
+            }
+
+            if (_blob == null || _logger == null)
+            {
+                return;
+            }
+
+            try
+            {
+                List<string> statisticsList = new List<string>
+                {
+                    $"BlobName: {_blob.Name}",
+                    $"ContainerName: {_blob.Container.Name}",
+                    $"ETag: {_blob.Properties.ETag}",
+                    $"BlobType: {_blob.BlobType}",
+                    $"BytesWritten: {_countWritten}",
+                    $"ElapsedTime: {_timeWrite.Elapsed}",
+                };
+
+                string statistics = string.Join(", ", statisticsList);
+                string logMessage = $"WriteStream ({statistics})";
+                _logger.LogInformation(logMessage);
+                _logged = true;
+            }
+            catch
+            {
+                return;
             }
         }
     }
