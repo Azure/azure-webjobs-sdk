@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
@@ -111,6 +110,36 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             Assert.Equal(TaskStatus.Faulted, task.Status);
             Assert.NotNull(task.Exception);
             Assert.Same(expectedException, task.Exception.InnerException);
+        }
+
+        [Fact]
+        public async Task InvokeAsync_IfLambdaReturnsNestedTask_ThrowsException()
+        {
+            // Arrange
+            Func<object, object[], Task<Task<string>>> lambda = async (i1, i2) =>
+            {
+                var innerTask = Task.Factory.StartNew(() => DoWorkAsync());
+                return await innerTask;
+            };
+
+            IMethodInvoker<object, Task<string>> invoker = new TaskMethodInvoker<object, Task<string>>(lambda);
+            object instance = null;
+            object[] arguments = null;
+
+            // Act
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => invoker.InvokeAsync(instance, arguments));
+
+            // Assert
+            Assert.NotNull(ex);
+            Assert.Equal("Returning a nested Task is not supported. Did you mean to await or Unwrap the Task instead of returning it?", ex.Message);
+        }
+
+        static Task<string> DoWorkAsync()
+        {
+            return Task<String>.Factory.StartNew(() =>
+            {
+                return "Work completed.";
+            });
         }
 
         [Fact]

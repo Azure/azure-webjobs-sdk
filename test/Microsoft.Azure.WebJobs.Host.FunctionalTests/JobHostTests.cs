@@ -327,14 +327,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.Equal(value, ProgramSimple._value);
         }
 
-        [Fact]
-        public async Task CallAsync_WithObject()
+        [Theory]
+        [InlineData("Test")]
+        [InlineData("test")]
+        public async Task CallAsync_WithObject(string methodName)
         {
             var host = JobHostFactory.Create<ProgramSimple>(null);
 
             var x = "abc";
             ProgramSimple._value = null;
-            await host.CallAsync("Test", new { value = x });
+            await host.CallAsync(methodName, new { value = x });
 
             // Ensure test method was invoked properly.
             Assert.Equal(x, ProgramSimple._value);

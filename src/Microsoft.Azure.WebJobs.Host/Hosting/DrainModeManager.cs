@@ -1,17 +1,14 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host.Listeners;
-using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.Azure.WebJobs.Logging;
-using Microsoft.Extensions.Logging;
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Listeners;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
@@ -42,7 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
         public void UnRegisterTokenSource(Guid guid)
         {
-            _cancellationTokenSources.RemoveIfContainsKey(guid);
+            _cancellationTokenSources.TryRemove(guid, out CancellationTokenSource cts);
         }
 
         public async Task EnableDrainModeAsync(CancellationToken cancellationToken)
