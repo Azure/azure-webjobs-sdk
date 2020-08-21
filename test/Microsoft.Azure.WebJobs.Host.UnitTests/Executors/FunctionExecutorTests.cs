@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
@@ -17,7 +16,6 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -29,7 +27,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         private FunctionDescriptor _descriptor;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly Mock<IFunctionInstance> _mockFunctionInstance;
-        private readonly TimeSpan _functionTimeout = TimeSpan.FromMinutes(3);
         private readonly IConfiguration _configuration = new ConfigurationBuilder().Build();
 
         public FunctionExecutorTests()
@@ -171,7 +168,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             timeoutSource.CancelAfter(500);
             await FunctionExecutor.InvokeAsync(mockInvoker.Object, NewArgs(parameters), timeoutSource, shutdownSource,
-                throwOnTimeout, TimeSpan.MinValue, null);
+                throwOnTimeout, TimeSpan.FromMilliseconds(1), null);
 
             Assert.True(called);
         }
@@ -312,14 +309,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             var mockFunctionOutputLogger = new NullFunctionOutputLogger();
             var mockExceptionHandler = new Mock<IWebJobsExceptionHandler>();
             var mockFunctionEventCollector = new Mock<IAsyncCollector<FunctionInstanceLogEntry>>();
-            var mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
 
             var functionExecutor = new FunctionExecutor(
                 mockFunctionInstanceLogger.Object,
                 mockFunctionOutputLogger,
                 mockExceptionHandler.Object,
                 mockFunctionEventCollector.Object,
-                mockServiceScopeFactory.Object,
                 null,
                 null,
                 drainModeManager);

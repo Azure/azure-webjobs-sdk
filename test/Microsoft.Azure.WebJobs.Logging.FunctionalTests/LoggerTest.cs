@@ -732,7 +732,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
             mockTable
                 .SetupSequence(t => t.ExecuteBatchAsync(It.IsAny<TableBatchOperation>()))
                 // First background flush
-                .ReturnsAsync(new TableBatchResult())                
+                .ReturnsAsync(new TableBatchResult())
                 .ThrowsAsync(exToThrow1)
                 // Second background flush
                 .ReturnsAsync(new TableBatchResult())
@@ -745,9 +745,9 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
 
             List<Exception> caughtExceptions = new List<Exception>();
             LogWriter writer = (LogWriter)LogFactory.NewWriter(defaultHost, "exceptions", mockProvider.Object, (ex) =>
-           {
-               caughtExceptions.Add(ex);
-           });
+            {
+                caughtExceptions.Add(ex);
+            });
             writer.FlushInterval = TimeSpan.FromMilliseconds(500);
 
             FunctionInstanceLogItem item1 = new FunctionInstanceLogItem
@@ -894,11 +894,11 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
         {
             if (_tableClient == null)
             {
-                string storageString = "AzureWebJobsDashboard";
-                var acs = Environment.GetEnvironmentVariable(storageString);
+                // for these tests we just need a storage account - either will do
+                var acs = Environment.GetEnvironmentVariable("AzureWebJobsDashboard") ?? Environment.GetEnvironmentVariable("AzureWebJobsStorage");
                 if (acs == null)
                 {
-                    Assert.True(false, "Environment var " + storageString + " is not set. Should be set to an azure storage account connection string to use for testing.");
+                    Assert.True(false, "Storage connection string environment variable not set. Should be set to an azure storage account connection string to use for testing.");
                 }
 
                 CloudStorageAccount account = CloudStorageAccount.Parse(acs);

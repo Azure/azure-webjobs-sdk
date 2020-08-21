@@ -10,6 +10,7 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Xunit;
 
@@ -24,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             foreach (var method in this.GetType().GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
             {
                 Mock<IFunctionExecutor> executorMock = new Mock<IFunctionExecutor>(MockBehavior.Strict);
-
+                Mock<IServiceScopeFactory> scopeFactoryMock = new Mock<IServiceScopeFactory>(MockBehavior.Strict);
                 IFunctionIndexCollector stubIndex = new Mock<IFunctionIndexCollector>().Object;
                 IConfiguration configuration = new ConfigurationBuilder().Build();
 
@@ -35,7 +36,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                     executorMock.Object,
                     new SingletonManager(),
                     null,
-                    configuration);
+                    configuration,
+                    scopeFactoryMock.Object);
 
                 Assert.Throws<FunctionIndexingException>(() => indexer.IndexMethodAsync(method, stubIndex, CancellationToken.None).GetAwaiter().GetResult());
             }
