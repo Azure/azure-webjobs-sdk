@@ -15,6 +15,8 @@ using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.Storage.Blob;
+using Microsoft.Extensions.Logging;
+using Microsoft.Azure.WebJobs.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 {
@@ -29,18 +31,21 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         private IContextGetter<IBlobWrittenWatcher> _blobWrittenWatcherGetter;
         private readonly INameResolver _nameResolver;
         private IConverterManager _converterManager;
+        private readonly ILogger _logger;
 
         public BlobsExtensionConfigProvider(StorageAccountProvider accountProvider,
             BlobTriggerAttributeBindingProvider triggerBinder,
             IContextGetter<IBlobWrittenWatcher> contextAccessor,
             INameResolver nameResolver,
-            IConverterManager converterManager)
+            IConverterManager converterManager,
+            ILoggerFactory loggerFactory)
         {
             _accountProvider = accountProvider;
             _triggerBinder = triggerBinder;
             _blobWrittenWatcherGetter = contextAccessor;
             _nameResolver = nameResolver;
             _converterManager = converterManager;
+            _logger = loggerFactory?.CreateLogger(LogCategories.Bindings);
         }
 
         public void Initialize(ExtensionConfigContext context)
@@ -323,8 +328,10 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             var blob = await container.GetBlobReferenceForArgumentTypeAsync(
                 boundPath.BlobName, requestedType, cancellationToken);
 
+            LogBlob(blob, blobAttribute);
             return blob;
         }
+
         private ParameterDescriptor ToBlobDescr(BlobAttribute attr, ParameterInfo parameter, INameResolver nameResolver)
         {
             // Resolve the connection string to get an account name.
@@ -369,6 +376,35 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
                 BlobName = blobName,
                 Access = access
             };
+        }
+
+        private void LogBlob(ICloudBlob blob, BlobAttribute blobAttribute)
+        {
+            if (blob == null || blobAttribute == null)
+            {
+                return;
+            }
+
+            try
+            {
+                List<string> propertiesList = new List<string>
+                {
+                    $"BlobName: {blob.Name}",
+                    $"ContainerName: {blob.Container.Name}",
+                    $"Length: {blob.Properties.Length}",
+                    $"ETag: {blob.Properties.ETag}",
+                    $"BlobType: {blob.BlobType}",
+                    $"Access: {blobAttribute.Access}",
+                };
+
+                string properties = string.Join(", ", propertiesList);
+                string logMessage = $"BlobAccessed ({properties})";
+                _logger.LogInformation(logMessage);
+            }
+            catch
+            {
+                return;
+            }
         }
     }
 }
