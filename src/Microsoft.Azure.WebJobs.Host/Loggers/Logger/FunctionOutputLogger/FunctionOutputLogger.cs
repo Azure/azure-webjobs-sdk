@@ -31,6 +31,9 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         public static void SetOutput(IFunctionOutput output)
         {
+            // This allows the FunctionOutputLogger to grab the TextWriter created by the IFunctionOutput. This enables user ILogger
+            // output to be forwarded to the dashboard logs.
+            // TODO: Refactor all of this logging to be implemented as a separate ILogger.
             _asyncLocalOutput.Value = output;
         }
 

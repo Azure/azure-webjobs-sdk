@@ -37,8 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             if (innerTaskType != null && typeof(Task).IsAssignableFrom(innerTaskType))
             {
-                throw new InvalidOperationException("Returning a nested Task is not supported. Did you mean to await " +
-                    "or Unwrap the task instead of returning it?");
+                throw new InvalidOperationException("Returning a nested Task is not supported. Did you mean to await or Unwrap the Task instead of returning it?");
             }
         }
 
