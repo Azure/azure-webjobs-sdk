@@ -10,8 +10,21 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal static class MethodInvokerFactory
+    /// <summary>
+    /// Factory for creating <see cref="IMethodInvoker{TReflected, TReturnValue}"s/> for target methods.
+    /// The invoker returned is implemented by a compiled lambda.
+    /// </summary>
+    public static class MethodInvokerFactory
     {
+        /// <summary>
+        /// Creates an <see cref="IMethodInvoker{TReflected, TReturnValue}"/> for the specified method.
+        /// </summary>
+        /// <typeparam name="TReflected">The Type the method is defined on.</typeparam>
+        /// <typeparam name="TReturnValue">The return type of the method. If the type returns a <see cref="Task{TResult}"/> the
+        /// Type specified should be the inner type. If the method returns <see cref="void"/> or <see cref="Task"/> the
+        /// Type specified should be <see cref="object"/>.</typeparam>
+        /// <param name="method">The method to return an invoker for.</param>
+        /// <returns>The created invoker.</returns>
         public static IMethodInvoker<TReflected, TReturnValue> Create<TReflected, TReturnValue>(MethodInfo method)
         {
             if (method == null)
