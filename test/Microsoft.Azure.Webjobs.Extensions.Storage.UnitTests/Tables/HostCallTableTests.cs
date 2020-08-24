@@ -438,7 +438,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Tables
         private class BindTableEntityToConcurrentlyUpdatedSdkTableEntity
         {
             public static void Call([Table(TableName, PartitionKey, RowKey)] SdkTableEntity entity,
-                [Table(TableName)]CloudTable table)
+                [Table(TableName)] CloudTable table)
             {
                 Assert.NotNull(entity);
                 Assert.Equal("Foo", entity.Value);
@@ -466,7 +466,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Tables
         private class BindTableEntityToConcurrentlyUpdatedPocoTableEntity
         {
             public static void Call([Table(TableName, PartitionKey, RowKey)] PocoTableEntity entity,
-                [Table(TableName)]CloudTable table)
+                [Table(TableName)] CloudTable table)
             {
                 Assert.NotNull(entity);
                 Assert.Equal("Foo", entity.Value);
@@ -541,7 +541,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Tables
         {
             // Arrange            
 
-            var acs = Environment.GetEnvironmentVariable("AzureWebJobsDashboard");
+            var acs = Environment.GetEnvironmentVariable("AzureWebJobsStorage");
             var account = StorageAccount.NewFromConnectionString(acs);
             return account;
         }
