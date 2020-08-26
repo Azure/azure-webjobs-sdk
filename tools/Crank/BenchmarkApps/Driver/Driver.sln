@@ -1,0 +1,56 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30413.136
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Driver", "Driver.csproj", "{DC5526B2-1C39-49EC-A843-A783D11CD9B6}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.Host", "..\..\..\..\src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj", "{80D6D054-39ED-4C2E-9B1A-F6A54D611A4D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.Extensions.Storage", "..\..\..\..\src\Microsoft.Azure.WebJobs.Extensions.Storage\WebJobs.Extensions.Storage.csproj", "{8FA36590-EC54-40AD-92AD-A4567CB906BD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.Host.Storage", "..\..\..\..\src\Microsoft.Azure.WebJobs.Host.Storage\WebJobs.Host.Storage.csproj", "{AB83B981-0738-4FCC-AB2E-6E987E173223}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs", "..\..\..\..\src\Microsoft.Azure.WebJobs\WebJobs.csproj", "{AED4CF27-E9F0-4BF2-8D2B-26F35F51E75E}"
+EndProject
+Global
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		..\..\..\..\src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.projitems*{80d6d054-39ed-4c2e-9b1a-f6a54d611a4d}*SharedItemsImports = 5
+		..\..\..\..\src\Microsoft.Azure.WebJobs.Shared.Storage\Microsoft.Azure.WebJobs.Shared.Storage.projitems*{8fa36590-ec54-40ad-92ad-a4567cb906bd}*SharedItemsImports = 5
+		..\..\..\..\src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.projitems*{8fa36590-ec54-40ad-92ad-a4567cb906bd}*SharedItemsImports = 5
+		..\..\..\..\src\Microsoft.Azure.WebJobs.Shared.Storage\Microsoft.Azure.WebJobs.Shared.Storage.projitems*{ab83b981-0738-4fcc-ab2e-6e987e173223}*SharedItemsImports = 5
+		..\..\..\..\src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.projitems*{ab83b981-0738-4fcc-ab2e-6e987e173223}*SharedItemsImports = 5
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DC5526B2-1C39-49EC-A843-A783D11CD9B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DC5526B2-1C39-49EC-A843-A783D11CD9B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DC5526B2-1C39-49EC-A843-A783D11CD9B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DC5526B2-1C39-49EC-A843-A783D11CD9B6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{80D6D054-39ED-4C2E-9B1A-F6A54D611A4D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{80D6D054-39ED-4C2E-9B1A-F6A54D611A4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{80D6D054-39ED-4C2E-9B1A-F6A54D611A4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{80D6D054-39ED-4C2E-9B1A-F6A54D611A4D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8FA36590-EC54-40AD-92AD-A4567CB906BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8FA36590-EC54-40AD-92AD-A4567CB906BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8FA36590-EC54-40AD-92AD-A4567CB906BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8FA36590-EC54-40AD-92AD-A4567CB906BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AB83B981-0738-4FCC-AB2E-6E987E173223}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AB83B981-0738-4FCC-AB2E-6E987E173223}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AB83B981-0738-4FCC-AB2E-6E987E173223}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AB83B981-0738-4FCC-AB2E-6E987E173223}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AED4CF27-E9F0-4BF2-8D2B-26F35F51E75E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AED4CF27-E9F0-4BF2-8D2B-26F35F51E75E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AED4CF27-E9F0-4BF2-8D2B-26F35F51E75E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AED4CF27-E9F0-4BF2-8D2B-26F35F51E75E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {CBBF3A6F-8A43-4295-9F00-0926946CC68B}
+	EndGlobalSection
+EndGlobal

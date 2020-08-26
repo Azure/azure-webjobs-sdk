@@ -1,0 +1,46 @@
+imports:
+  - https://raw.githubusercontent.com/dotnet/crank/master/src/Microsoft.Crank.Jobs.Bombardier/bombardier.yml
+
+jobs:
+  server:
+    source:
+      repository: https://github.com/Azure/azure-webjobs-sdk
+      branchOrCommit: "{{ BranchOrCommit }}"
+      project: tools/Crank/BenchmarkApps/Driver/Driver.csproj
+    readyStateText: Application started.
+
+scenarios:
+  simple:
+    application:
+      job: server
+      environmentVariables:
+        ASPNETCORE_URLS: "http://localhost:5000;https://localhost:5001"
+    load:
+      job: bombardier
+      variables:
+        path: /api/invoke?scenario=simple
+        duration: 180
+
+  http:
+    application:
+      job: server
+      environmentVariables:
+        ASPNETCORE_URLS: "http://localhost:5000;https://localhost:5001"
+    load:
+      job: bombardier
+      variables:
+        path: /api/invoke?scenario=http
+        duration: 180
+
+profiles:
+  local:
+    variables:
+      serverUri: https://localhost
+      serverPort: 5001
+    jobs: 
+      application:
+        endpoints: 
+          - "http://{{ CrankAgentVm }}:5010"
+      load:
+        endpoints: 
+          - "http://{{ CrankAgentVm }}:5010"
