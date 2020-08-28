@@ -203,7 +203,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             _blobAccessLog["ETag"] = _blob.Properties.ETag;
             _blobAccessLog["ElapsedTimeOnWrite"] = _timeWrite.Elapsed;
             _blobAccessLog["BytesWritten"] = _countWritten;
-            _logger.LogInformation($"WriteStream: {_blobAccessLog}");
+            _logger.LogDebug($"WriteStream: {_blobAccessLog}");
             _logged = true;
         }
     }

@@ -142,7 +142,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
                 return;
             }
 
-            _logger.LogInformation($"ReadStream: {_blobAccessLog}");
+            _logger.LogDebug($"ReadStream: {_blobAccessLog}");
             _blobAccessLog["ElapsedTimeOnRead"] = _timeRead.Elapsed;
             _blobAccessLog["BytesRead"] = _countRead;
             _logged = true;

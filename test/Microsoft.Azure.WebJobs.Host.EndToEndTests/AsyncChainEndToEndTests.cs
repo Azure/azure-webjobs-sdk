@@ -183,11 +183,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "  \"LockAcquisitionPollingInterval\": \"00:00:05\"",
                     "  \"LockAcquisitionTimeout\": \"",
                     "  \"LockPeriod\": \"00:00:15\"",
-                    "}",
-                    $"ReadStream (BlobName: {Blob2Name}, ContainerName: {blobContainerName}, ",
-                    $"WriteStream (BlobName: {Blob1Name}, ContainerName: {blobContainerName}, ",
-                    $"WriteStream (BlobName: {Blob2Name}, ContainerName: {blobContainerName}, ",
-                    $"WriteStream (BlobName: {NonWebJobsBlobName}, ContainerName: {blobContainerName}, ",
+                    "}"
                 }.OrderBy(p => p).ToArray();
 
                 bool hasError = loggerOutputLines.Any(p => p.Contains("Function had errors"));
