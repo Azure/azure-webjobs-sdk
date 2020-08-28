@@ -10,7 +10,7 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.Storage.Blob;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 {
@@ -18,6 +18,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
     {
         private readonly ILogger _logger;
         private readonly ICloudBlob _blob;
+        private readonly JObject _blobAccessLog = new JObject();
         private readonly Stopwatch _timeWrite = new Stopwatch();
         private readonly IBlobCommitedAction _committedAction;
 
@@ -38,8 +39,11 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         {
             _committedAction = committedAction;
             _logged = false;
-            _blob = blob;
-            _logger = logger;
+            _logger = logger ?? throw new ArgumentNullException("logger");
+            _blob = blob ?? throw new ArgumentNullException("blob");
+            _blobAccessLog["Name"] = blob.Name;
+            _blobAccessLog["ContainerName"] = blob.Container.Name;
+            _blobAccessLog["Type"] = blob.BlobType.ToString();
         }
 
 
@@ -190,37 +194,17 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
         private void Log()
         {
-            if (_logged)
+            if (_logged || _logger == null || _blob == null)
             {
                 return;
             }
 
-            if (_blob == null || _logger == null)
-            {
-                return;
-            }
-
-            try
-            {
-                List<string> statisticsList = new List<string>
-                {
-                    $"BlobName: {_blob.Name}",
-                    $"ContainerName: {_blob.Container.Name}",
-                    $"ETag: {_blob.Properties.ETag}",
-                    $"BlobType: {_blob.BlobType}",
-                    $"BytesWritten: {_countWritten}",
-                    $"ElapsedTime: {_timeWrite.Elapsed}",
-                };
-
-                string statistics = string.Join(", ", statisticsList);
-                string logMessage = $"WriteStream ({statistics})";
-                _logger.LogInformation(logMessage);
-                _logged = true;
-            }
-            catch
-            {
-                return;
-            }
+            // The ETag may have been created/updated after the Stream is committed, so we read it now
+            _blobAccessLog["ETag"] = _blob.Properties.ETag;
+            _blobAccessLog["ElapsedTimeOnWrite"] = _timeWrite.Elapsed;
+            _blobAccessLog["BytesWritten"] = _countWritten;
+            _logger.LogInformation($"WriteStream: {_blobAccessLog}");
+            _logged = true;
         }
     }
 }

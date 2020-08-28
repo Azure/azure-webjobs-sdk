@@ -12,6 +12,7 @@ using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs
 {
@@ -19,6 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
     {
         private readonly ILogger _logger;
         private readonly ICloudBlob _blob;
+        private readonly JObject _blobAccessLog = new JObject();
         private readonly Stopwatch _timeRead = new Stopwatch();
         private readonly long _totalLength;
 
@@ -37,8 +39,13 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
         {
             _totalLength = inner.Length;
             _logged = false;
-            _logger = logger;
-            _blob = blob;
+            _logger = logger ?? throw new ArgumentNullException("logger");
+            _blob = blob ?? throw new ArgumentNullException("blob");
+            _blobAccessLog["Name"] = blob.Name;
+            _blobAccessLog["ContainerName"] = blob.Container.Name;
+            _blobAccessLog["Type"] = blob.BlobType.ToString();
+            _blobAccessLog["Length"] = blob.Properties.Length;
+            _blobAccessLog["ETag"] = blob.Properties.ETag;
         }
 
         public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
@@ -130,38 +137,15 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
 
         private void Log()
         {
-            if (_logged)
+            if (_logged || _logger == null || _blob == null)
             {
                 return;
             }
 
-            if (_blob == null || _logger == null)
-            {
-                return;
-            }
-
-            try
-            {
-                List<string> statisticsList = new List<string>
-                {
-                    $"BlobName: {_blob.Name}",
-                    $"ContainerName: {_blob.Container.Name}",
-                    $"Length: {_blob.Properties.Length}",
-                    $"ETag: {_blob.Properties.ETag}",
-                    $"BlobType: {_blob.BlobType}",
-                    $"BytesRead: {_countRead}",
-                    $"ElapsedTime: {_timeRead.Elapsed}",
-                };
-
-                string statistics = string.Join(", ", statisticsList);
-                string logMessage = $"ReadStream ({statistics})";
-                _logger.LogInformation(logMessage);
-                _logged = true;
-            }
-            catch
-            {
-                return;
-            }
+            _logger.LogInformation($"ReadStream: {_blobAccessLog}");
+            _blobAccessLog["ElapsedTimeOnRead"] = _timeRead.Elapsed;
+            _blobAccessLog["BytesRead"] = _countRead;
+            _logged = true;
         }
 
         public ParameterLog GetStatus()

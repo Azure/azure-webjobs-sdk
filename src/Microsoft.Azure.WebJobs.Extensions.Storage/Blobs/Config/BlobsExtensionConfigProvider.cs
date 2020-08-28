@@ -45,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             _blobWrittenWatcherGetter = contextAccessor;
             _nameResolver = nameResolver;
             _converterManager = converterManager;
-            _logger = loggerFactory?.CreateLogger(LogCategories.Bindings);
+            _logger = loggerFactory?.CreateLogger(LogCategories.BindingsAccessStats);
         }
 
         public void Initialize(ExtensionConfigContext context)
