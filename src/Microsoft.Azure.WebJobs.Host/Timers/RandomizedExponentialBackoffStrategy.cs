@@ -65,7 +65,7 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
                         _random = new Random();
                     }
 
-                    double incrementMsec = _random.Next((1.0 - RandomizationFactor), (int)(1.0 + RandomizationFactor)) *
+                    double incrementMsec = _random.Next(1.0 - RandomizationFactor, 1.0 + RandomizationFactor) *
                         Math.Pow(2.0, _backoffExponent - 1) *
                         _deltaBackoff.TotalMilliseconds;
                     backoffInterval += TimeSpan.FromMilliseconds(incrementMsec);
