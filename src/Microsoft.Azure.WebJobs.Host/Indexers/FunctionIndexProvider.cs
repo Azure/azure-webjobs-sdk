@@ -47,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             IOptions<JobHostOptions> hostOptions,
             IConfiguration configuration,
             IServiceScopeFactory serviceScopeFactory,
-            IOptions<JobHostLinearBackoffRetryOptions> fixedDelayRetryOptions,
+            IOptions<JobHostFixedDelayRetryOptions> fixedDelayRetryOptions,
             IOptions<JobHostExponentialBackoffRetryOptions> exponentialRetryOptions)
         {
             _typeLocator = typeLocator ?? throw new ArgumentNullException(nameof(typeLocator));
@@ -56,7 +56,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _retryStrategyProvider = retryStrategyProvider ?? throw new ArgumentException(nameof(retryStrategyProvider));
             if (fixedDelayRetryOptions.Value.MaxRetryCount != 0 && exponentialRetryOptions.Value.MaxRetryCount != 0)
             {
-                throw new InvalidOperationException($"{nameof(JobHostLinearBackoffRetryOptions)} and {nameof(JobHostExponentialBackoffRetryOptions)} specified. Provide only one of them.");
+                throw new InvalidOperationException($"{nameof(JobHostFixedDelayRetryOptions)} and {nameof(JobHostExponentialBackoffRetryOptions)} specified. Provide only one of them.");
             }
             _activator = activator ?? throw new ArgumentNullException(nameof(activator));
             _executor = executor ?? throw new ArgumentNullException(nameof(executor));

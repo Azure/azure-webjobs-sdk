@@ -5,7 +5,7 @@ using System;
 
 namespace Microsoft.Azure.WebJobs
 {
-    public class JobHostLinearBackoffRetryOptions : JobHostRetryOptions
+    public class JobHostFixedDelayRetryOptions : JobHostRetryOptions
     {
         public TimeSpan Delay;
 
