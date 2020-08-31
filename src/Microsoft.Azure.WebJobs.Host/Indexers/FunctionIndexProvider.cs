@@ -27,7 +27,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly ILoggerFactory _loggerFactory;
         private readonly SharedQueueHandler _sharedQueue;
         private readonly TimeoutAttribute _defaultTimeout;
-        private readonly IRetryStrategy _retryStrategy;
+        private readonly RetryAttribute _defaultRetry;
+        private readonly RetryStrategyProvider _retryStrategyProvider;
         private readonly bool _allowPartialHostStartup;
         private readonly IConfiguration _configuration;
         private readonly IServiceScopeFactory _serviceScopeFactory;
@@ -39,6 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             IJobActivator activator,
             IFunctionExecutor executor,
             SingletonManager singletonManager,
+            RetryStrategyProvider retryStrategyProvider,
             ILoggerFactory loggerFactory,
             SharedQueueHandler sharedQueue,
             IOptions<JobHostFunctionTimeoutOptions> timeoutOptions,
@@ -51,6 +53,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _typeLocator = typeLocator ?? throw new ArgumentNullException(nameof(typeLocator));
             _triggerBindingProvider = triggerBindingProvider ?? throw new ArgumentNullException(nameof(triggerBindingProvider));
             _bindingProviderFactory = bindingProviderFactory ?? throw new ArgumentNullException(nameof(bindingProviderFactory));
+            _retryStrategyProvider = retryStrategyProvider ?? throw new ArgumentException(nameof(retryStrategyProvider));
             if (fixedDelayRetryOptions.Value.MaxRetryCount != 0 && exponentialRetryOptions.Value.MaxRetryCount != 0)
             {
                 throw new InvalidOperationException($"{nameof(JobHostLinearBackoffRetryOptions)} and {nameof(JobHostExponentialBackoffRetryOptions)} specified. Provide only one of them.");
@@ -63,7 +66,14 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _loggerFactory = loggerFactory;
             _defaultTimeout = timeoutOptions.Value.ToAttribute();
             _allowPartialHostStartup = hostOptions.Value.AllowPartialHostStartup;
-            _retryStrategy = fixedDelayRetryOptions.Value.MaxRetryCount != 0 ? (IRetryStrategy) new FixedDelayRetryStrategy(fixedDelayRetryOptions.Value.MaxRetryCount, fixedDelayRetryOptions.Value.Delay) : new ExponentialBackoffRetryStrategy(exponentialRetryOptions.Value.MaxRetryCount, exponentialRetryOptions.Value.MinimumDelay, exponentialRetryOptions.Value.MaximumDelay);
+            if (fixedDelayRetryOptions.Value.MaxRetryCount != 0)
+            {
+                _defaultRetry = fixedDelayRetryOptions.Value.ToAttribute();
+            }
+            else if (exponentialRetryOptions.Value.MaxRetryCount != 0)
+            {
+                _defaultRetry = exponentialRetryOptions.Value.ToAttribute();
+            }
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }
 
@@ -89,11 +99,12 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 _loggerFactory, 
                 _configuration, 
                 _serviceScopeFactory, 
+                _retryStrategyProvider,
                 null, 
                 _sharedQueue, 
                 _defaultTimeout, 
                 _allowPartialHostStartup,
-                _retryStrategy); 
+                _defaultRetry); 
 
             IReadOnlyList<Type> types = _typeLocator.GetTypes();
 

@@ -61,6 +61,7 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IConverterManager, ConverterManager>();
             services.TryAddSingleton<IFunctionIndexProvider, FunctionIndexProvider>();
             services.TryAddSingleton<SingletonManager>();
+            services.TryAddSingleton<RetryStrategyProvider>();
             services.TryAddSingleton<IHostSingletonManager>(provider => provider.GetRequiredService<SingletonManager>());
             services.TryAddSingleton<SharedQueueHandler>();
             services.TryAddSingleton<IFunctionExecutor, FunctionExecutor>();

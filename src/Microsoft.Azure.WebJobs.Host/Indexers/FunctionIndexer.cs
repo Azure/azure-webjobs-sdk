@@ -39,7 +39,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly ILogger _logger;
         private readonly SharedQueueHandler _sharedQueue;
         private readonly TimeoutAttribute _defaultTimeout;
-        private readonly IRetryStrategy _retryStrategy;
+        private readonly RetryStrategyProvider _retryStrategyProvider;
+        private readonly RetryAttribute _defaultRetry;
         private readonly bool _allowPartialHostStartup;
         private readonly IConfiguration _configuration;
         private readonly IServiceScopeFactory _serviceScopeFactory;
@@ -54,23 +55,25 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             ILoggerFactory loggerFactory,
             IConfiguration configuration,
             IServiceScopeFactory serviceScopeFactory,
+            RetryStrategyProvider retryStrategyProvider,
             INameResolver nameResolver = null,
             SharedQueueHandler sharedQueue = null,
             TimeoutAttribute defaultTimeout = null,
             bool allowPartialHostStartup = false,
-            IRetryStrategy retryStrategy = null)
+            RetryAttribute defaultRetry = null)
         {
             _triggerBindingProvider = triggerBindingProvider ?? throw new ArgumentNullException(nameof(triggerBindingProvider));
             _bindingProvider = bindingProvider ?? throw new ArgumentNullException(nameof(bindingProvider));
             _activator = activator ?? throw new ArgumentNullException(nameof(activator));
             _executor = executor ?? throw new ArgumentNullException(nameof(executor));
             _singletonManager = singletonManager ?? throw new ArgumentNullException(nameof(singletonManager));
+            _retryStrategyProvider = retryStrategyProvider ?? throw new ArgumentException(nameof(retryStrategyProvider));
             _nameResolver = nameResolver;
             _logger = loggerFactory?.CreateLogger(LogCategories.Startup);
             _sharedQueue = sharedQueue;
             _defaultTimeout = defaultTimeout;
             _allowPartialHostStartup = allowPartialHostStartup;
-            _retryStrategy = retryStrategy;
+            _defaultRetry = defaultRetry;
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _serviceScopeFactory = serviceScopeFactory;
             _loggerFactory = loggerFactory;
@@ -358,7 +361,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             IJobActivator jobActivator = null,
             INameResolver nameResolver = null,
             TimeoutAttribute defaultTimeout = null,
-            IRetryStrategy retryStrategy = null)
+            RetryStrategyProvider retryStrategyProvider = null,
+            RetryAttribute defaultRetry = null)
         {
             var disabled = HostListenerFactory.IsDisabled(method, nameResolver, jobActivator, configuration);
 
@@ -377,6 +381,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 }
             }
 
+            var retryAttribute = TypeUtility.GetHierarchicalAttributeOrNull<RetryAttribute>(method) ?? defaultRetry;
+
             return new FunctionDescriptor
             {
                 Id = method.GetFullName(),
@@ -386,34 +392,17 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 IsDisabled = disabled,
                 HasCancellationToken = hasCancellationToken,
                 TimeoutAttribute = TypeUtility.GetHierarchicalAttributeOrNull<TimeoutAttribute>(method) ?? defaultTimeout,
-                RetryStrategy = GetRetryStategyFromAttribute(TypeUtility.GetHierarchicalAttributeOrNull<RetryAttribute>(method)),
+                RetryStrategy = retryStrategyProvider.Create(retryAttribute),
                 SingletonAttributes = method.GetCustomAttributes<SingletonAttribute>().ToArray(),
                 MethodLevelFilters = method.GetCustomAttributes().OfType<IFunctionFilter>().ToArray(),
                 ClassLevelFilters = method.DeclaringType.GetCustomAttributes().OfType<IFunctionFilter>().ToArray()
             };
         }
 
-        private static IRetryStrategy GetRetryStategyFromAttribute(RetryAttribute retryAttribute)
-        {
-            if (retryAttribute == null)
-            {
-                return null;
-            }
-            if (retryAttribute.MaxRetryCount == 0)
-            {
-                return null;
-            }
-            if (!string.IsNullOrEmpty(retryAttribute.DelayInterval))
-            {
-                return new FixedDelayRetryStrategy(retryAttribute.MaxRetryCount, TimeSpan.Parse(retryAttribute.DelayInterval));
-            }
-            return new ExponentialBackoffRetryStrategy(retryAttribute.MaxRetryCount, TimeSpan.Parse(retryAttribute.MinimumInterval), TimeSpan.Parse(retryAttribute.MinimumInterval));
-        }
-
         private FunctionDescriptor CreateFunctionDescriptor(MethodInfo method, string triggerParameterName,
             ITriggerBinding triggerBinding, IReadOnlyDictionary<string, IBinding> nonTriggerBindings)
         {
-            var descr = FromMethod(method, _configuration, this._activator, _nameResolver, _defaultTimeout, _retryStrategy);
+            var descr = FromMethod(method, _configuration, this._activator, _nameResolver, _defaultTimeout, _retryStrategyProvider, _defaultRetry);
 
             List<ParameterDescriptor> parameters = new List<ParameterDescriptor>();
 

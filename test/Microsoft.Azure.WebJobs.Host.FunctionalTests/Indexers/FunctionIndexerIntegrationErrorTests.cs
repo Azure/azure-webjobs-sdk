@@ -37,7 +37,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                    new SingletonManager(),
                    null,
                    configuration,
-                   scopeFactoryMock.Object);
+                   scopeFactoryMock.Object, 
+                   new RetryStrategyProvider());
 
                 Assert.Throws<FunctionIndexingException>(() => indexer.IndexMethodAsync(method, stubIndex, CancellationToken.None).GetAwaiter().GetResult());
             }
