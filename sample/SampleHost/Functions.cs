@@ -1,9 +1,11 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using SampleHost.Filters;
@@ -11,7 +13,20 @@ using SampleHost.Models;
 
 namespace SampleHost
 {
+    public class MyCustomRetryAttribute : RetryAttribute
+    {
+        public MyCustomRetryAttribute(int maxRetryCount) : base(maxRetryCount)
+        {
+        }
+
+        public override TimeSpan GetNextDelay(RetryContext context)
+        {
+            return TimeSpan.FromSeconds(2);
+        }
+    }
+
     [ErrorHandler]
+    [MyCustomRetry(2)]
     public class Functions
     {
         private readonly ISampleServiceA _sampleServiceA;
@@ -23,10 +38,12 @@ namespace SampleHost
             _sampleServiceB = sampleServiceB;
         }
 
-        [Singleton]
+        //[FixedDelayRetry(3, "00:00:03")]
         public void BlobTrigger(
             [BlobTrigger("test")] string blob, ILogger logger)
         {
+            throw new System.Exception("Kaboom!");
+
             _sampleServiceB.DoIt();
             logger.LogInformation("Processed blob: " + blob);
         }
@@ -48,26 +65,26 @@ namespace SampleHost
             logger.LogInformation($"Processed work item {workItem.ID}");
         }
 
-        public async Task ProcessWorkItem_ServiceBus(
-            [ServiceBusTrigger("test-items")] WorkItem item,
-            string messageId,
-            int deliveryCount,
-            ILogger log)
-        {
-            log.LogInformation($"Processing ServiceBus message (Id={messageId}, DeliveryCount={deliveryCount})");
+        //public async Task ProcessWorkItem_ServiceBus(
+        //    [ServiceBusTrigger("test-items")] WorkItem item,
+        //    string messageId,
+        //    int deliveryCount,
+        //    ILogger log)
+        //{
+        //    log.LogInformation($"Processing ServiceBus message (Id={messageId}, DeliveryCount={deliveryCount})");
 
-            await Task.Delay(1000);
+        //    await Task.Delay(1000);
 
-            log.LogInformation($"Message complete (Id={messageId})");
-        }
+        //    log.LogInformation($"Message complete (Id={messageId})");
+        //}
 
-        public void ProcessEvents([EventHubTrigger("testhub2", Connection = "TestEventHubConnection")] EventData[] events,
-            ILogger log)
-        {
-            foreach (var evt in events)
-            {
-                log.LogInformation($"Event processed (Offset={evt.SystemProperties.Offset}, SequenceNumber={evt.SystemProperties.SequenceNumber})");
-            }
-        }
+        //public void ProcessEvents([EventHubTrigger("testhub2", Connection = "TestEventHubConnection")] EventData[] events,
+        //    ILogger log)
+        //{
+        //    foreach (var evt in events)
+        //    {
+        //        log.LogInformation($"Event processed (Offset={evt.SystemProperties.Offset}, SequenceNumber={evt.SystemProperties.SequenceNumber})");
+        //    }
+        //}
     }
 }

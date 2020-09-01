@@ -9,14 +9,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
     public class RetryAttributeTests
     {
         [Fact]
-        public void Constructor_Expected()
+        public void FixedDelay_Constructor_Expected()
         {
-            var retry = new RetryAttribute(5, "01:02:25");
+            var retry = new FixedDelayRetryAttribute(5, "01:02:25");
             Assert.Equal(5, retry.MaxRetryCount);
 
-            Assert.Equal(5, retry.MaxRetryCount);
-
-            retry = new RetryAttribute(-1, "00:00:10");
+            retry = new FixedDelayRetryAttribute(-1, "00:00:10");
             Assert.Equal(-1, retry.MaxRetryCount);
         }
     }

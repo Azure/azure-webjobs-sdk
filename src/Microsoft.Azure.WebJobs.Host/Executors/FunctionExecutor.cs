@@ -76,36 +76,52 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             if (functionInstance.FunctionDescriptor.RetryStrategy != null)
             {
-                return await ExecuteWithRetriesAsync(TryExecuteAsyncCore, functionInstanceEx, cancellationToken, functionInstance.FunctionDescriptor.RetryStrategy);
+                return await ExecuteWithRetriesAsync(functionInstanceEx, cancellationToken, functionInstance.FunctionDescriptor.RetryStrategy);
             }
+
             return await TryExecuteAsyncCore(functionInstanceEx, cancellationToken);
         }
 
-        private async Task<IDelayedException> ExecuteWithRetriesAsync(Func<IFunctionInstanceEx, CancellationToken, Task<IDelayedException>> executeFunc, IFunctionInstanceEx functionInstance, CancellationToken token, IRetryStrategy retryStrategy)
+        private async Task<IDelayedException> ExecuteWithRetriesAsync(IFunctionInstanceEx functionInstance, CancellationToken token, IRetryStrategy retryStrategy)
         {
             var attempts = 0;
             IDelayedException functionResult = null;
             TimeSpan nextDelay = TimeSpan.Zero;
+
             do
             {
                 if (token.IsCancellationRequested)
                 {
-                    // Log("Retries were canceled");
+                    // TODO: log this?
+                    break;
                 }
-                functionResult = await executeFunc(functionInstance, token);
-                if (functionResult != null && functionResult.Exception != null)
+
+                functionResult = await TryExecuteAsyncCore(functionInstance, token);
+
+                if (functionResult.Exception != null)
                 {
-                    ++attempts;
-                    nextDelay = retryStrategy.GetNextDelay(attempts);
+                    var retryContext = new RetryContext
+                    {
+                        RetryCount = ++attempts,
+                        Exception = functionResult.Exception,
+                        Instance = functionInstance
+                    };
+                    nextDelay = retryStrategy.GetNextDelay(retryContext);
+
                     if (nextDelay == TimeSpan.Zero)
                     {
                         break;
                     }
+
                     await Task.Delay(nextDelay);
-                    continue;
                 }
-                break;
+                else
+                {
+                    // function succeeded so break out of retry loop
+                    break;
+                }
             } while (nextDelay != TimeSpan.Zero);
+
             return functionResult;
         }
 

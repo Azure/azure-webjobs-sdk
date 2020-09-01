@@ -1,7 +1,11 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -44,10 +48,23 @@ namespace SampleHost
                     // add some sample services to demonstrate job class DI
                     services.AddSingleton<ISampleServiceA, SampleServiceA>();
                     services.AddSingleton<ISampleServiceB, SampleServiceB>();
+
+                    // Add a default stragegy. Any strategies applied via attribute at the
+                    // class/method level will override this
+                    var retryStrategy = new FixedDelayRetryAttribute(3, "00:00:10");
+                    services.AddSingleton<IRetryStrategy>(retryStrategy);
                 })
                 .UseConsoleLifetime();
 
             var host = builder.Build();
+
+            var jobHost = host.Services.GetRequiredService<IJobHost>();
+            var arguments = new Dictionary<string, object>
+            {
+                { "blob", "test/test" }
+            };
+            await jobHost.CallAsync("BlobTrigger", arguments);
+
             using (host)
             {
                 await host.RunAsync();

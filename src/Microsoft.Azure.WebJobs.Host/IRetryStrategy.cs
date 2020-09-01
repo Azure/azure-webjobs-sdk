@@ -5,8 +5,16 @@ using System;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
-    internal interface IRetryStrategy
+    /// <summary>
+    /// Defines a retry delay strategy for failed function invocations.
+    /// </summary>
+    public interface IRetryStrategy
     {
-        TimeSpan GetNextDelay(int currentRetryCout);
+        /// <summary>
+        /// Gets the next delay that should be used before the next retry.
+        /// </summary>
+        /// <param name="context">Context for the failed invocation.</param>
+        /// <returns>A <see cref="TimeSpan"/> representing the delay.</returns>
+        TimeSpan GetNextDelay(RetryContext context);
     }
 }
