@@ -183,7 +183,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "  \"LockAcquisitionPollingInterval\": \"00:00:05\"",
                     "  \"LockAcquisitionTimeout\": \"",
                     "  \"LockPeriod\": \"00:00:15\"",
-                    "}"
+                    "}",
                 }.OrderBy(p => p).ToArray();
 
                 bool hasError = loggerOutputLines.Any(p => p.Contains("Function had errors"));
