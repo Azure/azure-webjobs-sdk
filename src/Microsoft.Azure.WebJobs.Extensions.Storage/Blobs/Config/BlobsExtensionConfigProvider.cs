@@ -31,7 +31,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         private IContextGetter<IBlobWrittenWatcher> _blobWrittenWatcherGetter;
         private readonly INameResolver _nameResolver;
         private IConverterManager _converterManager;
-        private readonly ILogger _logger;
+        private readonly ILogger _bindingStatsLogger;
 
         public BlobsExtensionConfigProvider(StorageAccountProvider accountProvider,
             BlobTriggerAttributeBindingProvider triggerBinder,
@@ -45,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             _blobWrittenWatcherGetter = contextAccessor;
             _nameResolver = nameResolver;
             _converterManager = converterManager;
-            _logger = loggerFactory?.CreateLogger(LogCategories.BindingsAccessStats);
+            _bindingStatsLogger = loggerFactory.CreateLogger(LogCategories.BindingsAccessStats);
         }
 
         public void Initialize(ExtensionConfigContext context)
@@ -249,7 +249,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
         private async Task<Stream> ConvertToStreamAsync(ICloudBlob input, CancellationToken cancellationToken)
         {
-            WatchableReadStream watchableStream = await ReadBlobArgumentBinding.TryBindStreamAsync(input, cancellationToken, _logger);
+            WatchableReadStream watchableStream = await ReadBlobArgumentBinding.TryBindStreamAsync(input, cancellationToken, _bindingStatsLogger);
             return watchableStream;
         }
 
@@ -277,12 +277,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             switch (blobAttribute.Access)
             {
                 case FileAccess.Read:
-                    var readStream = await ReadBlobArgumentBinding.TryBindStreamAsync(blob, context, _logger);
+                    var readStream = await ReadBlobArgumentBinding.TryBindStreamAsync(blob, context, _bindingStatsLogger);
                     return readStream;
 
                 case FileAccess.Write:
                     var writeStream = await WriteBlobArgumentBinding.BindStreamAsync(blob,
-                    context, _blobWrittenWatcherGetter.Value, _logger);
+                    context, _blobWrittenWatcherGetter.Value, _bindingStatsLogger);
                     return writeStream;
 
                 default:

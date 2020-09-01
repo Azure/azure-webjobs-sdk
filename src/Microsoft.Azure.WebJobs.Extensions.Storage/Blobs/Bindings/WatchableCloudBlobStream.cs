@@ -10,15 +10,13 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.Storage.Blob;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 {
-    internal class WatchableCloudBlobStream : DelegatingCloudBlobStream, IWatcher
+    internal partial class WatchableCloudBlobStream : DelegatingCloudBlobStream, IWatcher
     {
         private readonly ILogger _logger;
         private readonly ICloudBlob _blob;
-        private readonly JObject _blobAccessLog = new JObject();
         private readonly Stopwatch _timeWrite = new Stopwatch();
         private readonly IBlobCommitedAction _committedAction;
 
@@ -41,11 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             _logged = false;
             _logger = logger ?? throw new ArgumentNullException("logger");
             _blob = blob ?? throw new ArgumentNullException("blob");
-            _blobAccessLog["Name"] = blob.Name;
-            _blobAccessLog["ContainerName"] = blob.Container.Name;
-            _blobAccessLog["Type"] = blob.BlobType.ToString();
         }
-
 
         public override bool CanWrite
         {
@@ -199,11 +193,9 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
                 return;
             }
 
-            // The ETag may have been created/updated after the Stream is committed, so we read it now
-            _blobAccessLog["ETag"] = _blob.Properties.ETag;
-            _blobAccessLog["ElapsedTimeOnWrite"] = _timeWrite.Elapsed;
-            _blobAccessLog["BytesWritten"] = _countWritten;
-            _logger.LogDebug($"WriteStream: {_blobAccessLog}");
+            string name = $"{_blob.Container.Name}/{_blob.Name}";
+            string type = $"{_blob.Properties.BlobType}/{_blob.Properties.ContentType}";
+            Logger.BlobWriteAccess(_logger, name, type, _blob.Properties.ETag, _timeWrite.Elapsed, _countWritten);
             _logged = true;
         }
     }

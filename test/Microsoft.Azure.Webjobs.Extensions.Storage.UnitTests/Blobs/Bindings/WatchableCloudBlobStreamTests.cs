@@ -11,6 +11,10 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.Storage.Blob;
 using Moq;
 using Xunit;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Logging;
+using System.Linq;
+using Microsoft.Azure.WebJobs.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Bindings
 {
@@ -2121,6 +2125,59 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Bindings
             }
         }
 
+        [Fact]
+        public async Task CheckLogs_AfterWrite_ReturnsBlobWriteAccessLog()
+        {
+            // Arrange
+            string contents = "abc";
+
+            // Create logger
+            TestLoggerProvider loggerProvider = new TestLoggerProvider();
+            var loggerFactory = new LoggerFactory();
+            loggerFactory.AddProvider(loggerProvider);
+            ILogger logger = loggerFactory.CreateLogger(LogCategories.BindingsAccessStats);
+
+            // Create blob container and blob
+            const string containerName = "container";
+            const string blobName = "blob";
+            var account = CreateFakeStorageAccount();
+            CloudBlobContainer container = GetContainerReference(account, containerName);
+            await container.CreateIfNotExistsAsync();
+            Assert.True(await container.ExistsAsync());
+            // Since the test is using a fake blob, the properties would not reflect the content we are writing
+            // e.g. length, etag etc. are fixed to default values
+            ICloudBlob blob = container.GetBlockBlobReference(blobName);
+
+            using (CloudBlobStream innerStream = CreateInnerStream())
+            using (WatchableCloudBlobStream product = CreateProductUnderTest(innerStream, blob, logger))
+            {
+                byte[] buffer = Encoding.UTF8.GetBytes(contents);
+                product.WriteAsync(buffer, 0, buffer.Length).GetAwaiter().GetResult();
+            }
+
+            // Act
+            var logMessage = loggerProvider.GetAllLogMessages().Single();
+            Assert.Equal("BlobWriteAccess", logMessage.EventId.Name);
+            Assert.Equal(LogLevel.Debug, logMessage.Level);
+            Assert.Equal(6, logMessage.State.Count());
+            Assert.Equal($"{containerName}/{blobName}", logMessage.GetStateValue<string>("name"));
+            Assert.Equal($"{blob.Properties.BlobType}/{blob.Properties.ContentType}", logMessage.GetStateValue<string>("type"));
+            Assert.Equal(blob.Properties.ETag, logMessage.GetStateValue<string>("etag"));
+            Assert.True(logMessage.GetStateValue<TimeSpan>("writeTime") >= TimeSpan.Zero);
+            Assert.Equal(contents.Length, logMessage.GetStateValue<long>("bytesWritten"));
+        }
+
+        private static StorageAccount CreateFakeStorageAccount()
+        {
+            return new FakeStorageAccount();         
+        }
+
+        private static CloudBlobContainer GetContainerReference(StorageAccount account, string containerName)
+        {
+            var client = account.CreateCloudBlobClient();
+            return client.GetContainerReference(containerName);
+        }
+
         private static void AssertEqual(ExpectedAsyncResult expected, IAsyncResult actual,
             bool disposeActual = false)
         {
@@ -2182,6 +2239,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Bindings
             IBlobCommitedAction committedAction)
         {
             return new WatchableCloudBlobStream(inner, committedAction);
+        }
+
+        private static WatchableCloudBlobStream CreateProductUnderTest(CloudBlobStream inner, ICloudBlob blob, ILogger logger)
+        {
+            return new WatchableCloudBlobStream(inner, NullBlobCommittedAction.Instance, blob, logger);
         }
 
         private struct ExpectedAsyncResult

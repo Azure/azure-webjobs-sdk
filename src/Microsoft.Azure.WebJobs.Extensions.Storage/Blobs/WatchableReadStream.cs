@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -12,15 +11,13 @@ using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs
 {
-    internal class WatchableReadStream : DelegatingStream, IWatcher
+    internal partial class WatchableReadStream : DelegatingStream, IWatcher
     {
         private readonly ILogger _logger;
         private readonly ICloudBlob _blob;
-        private readonly JObject _blobAccessLog = new JObject();
         private readonly Stopwatch _timeRead = new Stopwatch();
         private readonly long _totalLength;
 
@@ -41,11 +38,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
             _logged = false;
             _logger = logger ?? throw new ArgumentNullException("logger");
             _blob = blob ?? throw new ArgumentNullException("blob");
-            _blobAccessLog["Name"] = blob.Name;
-            _blobAccessLog["ContainerName"] = blob.Container.Name;
-            _blobAccessLog["Type"] = blob.BlobType.ToString();
-            _blobAccessLog["Length"] = blob.Properties.Length;
-            _blobAccessLog["ETag"] = blob.Properties.ETag;
         }
 
         public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
@@ -142,9 +134,9 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
                 return;
             }
 
-            _blobAccessLog["ElapsedTimeOnRead"] = _timeRead.Elapsed;
-            _blobAccessLog["BytesRead"] = _countRead;
-            _logger.LogDebug($"ReadStream: {_blobAccessLog}");
+            string name = $"{_blob.Container.Name}/{_blob.Name}";
+            string type = $"{_blob.Properties.BlobType}/{_blob.Properties.ContentType}";
+            Logger.BlobReadAccess(_logger, name, type, _blob.Properties.Length, _blob.Properties.ETag, _timeRead.Elapsed, _countRead);
             _logged = true;
         }
 
