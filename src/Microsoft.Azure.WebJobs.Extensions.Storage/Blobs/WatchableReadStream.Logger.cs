@@ -10,8 +10,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
     {
         private static class Logger
         {
-            // Keep these events in 1-100 range.
-
             private static readonly Action<ILogger, string, string, long, string, TimeSpan, long, Exception> _blobReadAccess =
               LoggerMessage.Define<string, string, long, string, TimeSpan, long>(
                   LogLevel.Debug,
