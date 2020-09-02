@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 {
-    internal partial class WatchableCloudBlobStream : DelegatingCloudBlobStream, IWatcher
+    internal class WatchableCloudBlobStream : DelegatingCloudBlobStream, IWatcher
     {
         private readonly ILogger _logger;
         private readonly ICloudBlob _blob;
@@ -36,7 +36,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             : base(inner)
         {
             _committedAction = committedAction;
-            _logged = false;
             _logger = logger ?? throw new ArgumentNullException("logger");
             _blob = blob ?? throw new ArgumentNullException("blob");
         }
@@ -195,7 +194,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
             string name = $"{_blob.Container.Name}/{_blob.Name}";
             string type = $"{_blob.Properties.BlobType}/{_blob.Properties.ContentType}";
-            Logger.BlobWriteAccess(_logger, name, type, _blob.Properties.ETag, _timeWrite.Elapsed, _countWritten);
+            _logger.BlobWriteAccess(name, type, _blob.Properties.ETag, _timeWrite.Elapsed, _countWritten);
             _logged = true;
         }
     }

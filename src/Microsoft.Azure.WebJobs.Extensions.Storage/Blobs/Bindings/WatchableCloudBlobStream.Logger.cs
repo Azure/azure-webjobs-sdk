@@ -6,19 +6,19 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 {
-    internal partial class WatchableCloudBlobStream
+    public static class WatchableCloudBlobStreamLoggerExtension
     {
-        private static class Logger
-        {
-            private static readonly Action<ILogger, string, string, string, TimeSpan, long, Exception> _blobWriteAccess =
-              LoggerMessage.Define<string, string, string, TimeSpan, long>(
-                  LogLevel.Debug,
-                  new EventId(2, nameof(BlobWriteAccess)),
-                  "BlobWriteAccess - Name: {name}, Type: {type}, ETag: {etag}, WriteTime: {writeTime}, BytesWritten: {bytesWritten}");
+        private static readonly Action<ILogger, string, string, string, TimeSpan, long, Exception> _blobWriteAccess =
+          LoggerMessage.Define<string, string, string, TimeSpan, long>(
+              LogLevel.Debug,
+              new EventId(2, nameof(BlobWriteAccess)),
+              "BlobWriteAccess - Name: {name}, Type: {type}, ETag: {etag}, WriteTime: {writeTime}, BytesWritten: {bytesWritten}");
 
-            // Name is of the format <ContainerName>/<BlobName>
-            // Type is of the format <BlobType>/<ContentType>
-            public static void BlobWriteAccess(ILogger logger, string name, string type, string etag, TimeSpan writeTime, long bytesWritten) => _blobWriteAccess(logger, name, type, etag, writeTime, bytesWritten, null);
+        // Name is of the format <ContainerName>/<BlobName>
+        // Type is of the format <BlobType>/<ContentType>
+        public static void BlobWriteAccess(this ILogger logger, string name, string type, string etag, TimeSpan writeTime, long bytesWritten)
+        {
+            _blobWriteAccess(logger, name, type, etag, writeTime, bytesWritten, null);
         }
     }
 }

@@ -6,19 +6,19 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs
 {
-    internal partial class WatchableReadStream
+    public static class WatchableReadStreamLoggerExtension
     {
-        private static class Logger
-        {
-            private static readonly Action<ILogger, string, string, long, string, TimeSpan, long, Exception> _blobReadAccess =
-              LoggerMessage.Define<string, string, long, string, TimeSpan, long>(
-                  LogLevel.Debug,
-                  new EventId(1, nameof(BlobReadAccess)),
-                  "BlobReadAccess - Name: {name}, Type: {type}, Length: {length}, ETag: {etag}, ReadTime: {readTime}, BytesRead: {bytesRead}");
+        private static readonly Action<ILogger, string, string, long, string, TimeSpan, long, Exception> _blobReadAccess =
+          LoggerMessage.Define<string, string, long, string, TimeSpan, long>(
+              LogLevel.Debug,
+              new EventId(1, nameof(BlobReadAccess)),
+              "BlobReadAccess - Name: {name}, Type: {type}, Length: {length}, ETag: {etag}, ReadTime: {readTime}, BytesRead: {bytesRead}");
 
-            // Name is of the format <ContainerName>/<BlobName>
-            // Type is of the format <BlobType>/<ContentType>
-            public static void BlobReadAccess(ILogger logger, string name, string type, long length, string etag, TimeSpan readTime, long bytesRead) => _blobReadAccess(logger, name, type, length, etag, readTime, bytesRead, null);
+        // Name is of the format <ContainerName>/<BlobName>
+        // Type is of the format <BlobType>/<ContentType>
+        public static void BlobReadAccess(this ILogger logger, string name, string type, long length, string etag, TimeSpan readTime, long bytesRead)
+        {
+            _blobReadAccess(logger, name, type, length, etag, readTime, bytesRead, null);
         }
     }
 }

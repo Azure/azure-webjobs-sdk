@@ -28,7 +28,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
             : base(inner)
         {
             _totalLength = inner.Length;
-            _logged = false;
         }
 
         public WatchableReadStream(Stream inner, ICloudBlob blob, ILogger logger)
@@ -136,7 +135,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
 
             string name = $"{_blob.Container.Name}/{_blob.Name}";
             string type = $"{_blob.Properties.BlobType}/{_blob.Properties.ContentType}";
-            Logger.BlobReadAccess(_logger, name, type, _blob.Properties.Length, _blob.Properties.ETag, _timeRead.Elapsed, _countRead);
+            _logger.BlobReadAccess(name, type, _blob.Properties.Length, _blob.Properties.ETag, _timeRead.Elapsed, _countRead);
             _logged = true;
         }
 
