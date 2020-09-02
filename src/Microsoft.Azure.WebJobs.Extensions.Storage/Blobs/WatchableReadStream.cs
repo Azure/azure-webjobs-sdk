@@ -34,7 +34,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
             : base(inner)
         {
             _totalLength = inner.Length;
-            _logged = false;
             _logger = logger ?? throw new ArgumentNullException("logger");
             _blob = blob ?? throw new ArgumentNullException("blob");
         }
