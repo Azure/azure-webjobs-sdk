@@ -81,6 +81,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 .ConfigureDefaultTestHost<ApplicationInsightsEndToEndTests>()
                 .ConfigureServices(services =>
                 {
+                    services.AddHttpContextAccessor();
                     services.Configure<FunctionResultAggregatorOptions>(o =>
                     {
                         o.IsEnabled = false;
@@ -848,7 +849,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.True(functionRequest.Metrics.TryGetValue("timeSinceEnqueued", out var timeSinceEnqueued));
 
                 var expectedTimeInQueue = functionRequest.Timestamp.ToUnixTimeMilliseconds() - link0EnqueuedTime;
-                Assert.Equal(expectedTimeInQueue, timeSinceEnqueued, 0);
+                expectedTimeInQueue += Math.Max(functionRequest.Timestamp.ToUnixTimeMilliseconds() - link1EnqueuedTime, 0); // it's always 0 since link1EnqueuedTime is in the future
+
+                expectedTimeInQueue /= 2; // there are two links
+                Assert.Equal(expectedTimeInQueue, timeSinceEnqueued, 1);
             }
         }
 
@@ -908,10 +912,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 var logger = loggerProvider.CreateLogger(LogCategories.Results);
 
                 var request = new HttpRequestMessage(HttpMethod.Get, $"/some/path?name={testName}");
+                request.Headers.Add("X-Forwarded-For", "1.2.3.4");
                 request.Headers.Add("traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01");
 
                 var mockHttpContext = new DefaultHttpContext();
-                mockHttpContext.Connection.RemoteIpAddress = new IPAddress(new byte[] { 1, 2, 3, 4 });
 
                 // simulate functions behavior to set request on the scope
                 using (var _ = logger.BeginScope(new Dictionary<string, object> { ["MS_HttpRequest"] = mockHttpContext.Request }))
@@ -950,8 +954,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.DoesNotContain("MS_HttpRequest", functionRequest.Properties.Keys);
                 // Make sure operation ids match
                 var traces = _channel.Telemetries.OfType<TraceTelemetry>()
-                    .Where(t => t.Context.Operation.Id == functionRequest.Context.Operation.Id);
-                Assert.Equal(success ? 4 : 5, traces.Count());
+                    .Where(t => t.Context.Operation.Id == functionRequest.Context.Operation.Id).ToList();
+                Assert.Equal(success ? 4 : 5, traces.Count);
+
+                foreach (var trace in traces.Where(t => t.Context.Operation.ParentId == functionRequest.Id))
+                {
+                    Assert.Equal("1.2.3.4", trace.Context.Location.Ip);
+                }
             }
         }
 
@@ -1562,6 +1571,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             public void ConfigureServices(IServiceCollection services)
             {
+                services.AddHttpContextAccessor();
             }
 
             public void Configure(IApplicationBuilder app, AspNetCore.Hosting.IHostingEnvironment env)

@@ -355,7 +355,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// </summary>
         /// <param name="state"></param>
         /// <param name="scope"></param>
-        private static void ApplyFunctionResultActivityTags(IEnumerable<KeyValuePair<string, object>> state, IDictionary<string, object> scope)
+        private void ApplyFunctionResultActivityTags(IEnumerable<KeyValuePair<string, object>> state, IDictionary<string, object> scope)
         {
             // Activity carries tracing context. It is managed by instrumented library (e.g. ServiceBus or Asp.Net Core)
             // and consumed by ApplicationInsights.
@@ -416,7 +416,9 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     currentActivity.AddTag(LogConstants.LogLevelKey, logLevel.ToString());
                 }
 
-                if (scope.TryGetValue(ApplicationInsightsScopeKeys.HttpRequest, out var request) && request is HttpRequest httpRequest)
+                if (!_loggerOptions.HttpAutoCollectionOptions.EnableHttpTriggerExtendedInfoCollection && 
+                    scope.TryGetValue(ApplicationInsightsScopeKeys.HttpRequest, out var request) &&
+                    request is HttpRequest httpRequest)
                 {
                     currentActivity.AddTag(LoggingConstants.ClientIpKey, GetIpAddress(httpRequest));
                 }
