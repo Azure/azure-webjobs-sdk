@@ -620,13 +620,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
 
             // Next, any class level filters are added
-            foreach (var filter in functionDescriptor.ClassLevelFilters?.OfType<TFilter>())
+            foreach (var filter in functionDescriptor.ClassLevelFilters.OfType<TFilter>())
             {
                 yield return filter;
             }
 
             // Finally, any method level filters are added
-            foreach (var filter in functionDescriptor.MethodLevelFilters?.OfType<TFilter>())
+            foreach (var filter in functionDescriptor.MethodLevelFilters.OfType<TFilter>())
             {
                 yield return filter;
             }
