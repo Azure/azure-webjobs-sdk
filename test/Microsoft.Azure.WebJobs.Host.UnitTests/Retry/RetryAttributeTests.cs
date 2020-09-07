@@ -27,6 +27,23 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
+        public void FixedDelay_NextDelay_ReturnsExpected()
+        {
+            var retry = new FixedDelayRetryAttribute(5, "01:00:25");
+            RetryContext retryContext = new RetryContext
+            {
+                 RetryCount = 3
+            };
+            Assert.Equal(TimeSpan.Parse("01:00:25"), retry.GetNextDelay(retryContext));
+
+            RetryContext lastRetryContext = new RetryContext
+            {
+                RetryCount = 5
+            };
+            Assert.Equal(TimeSpan.Zero, retry.GetNextDelay(lastRetryContext));
+        }
+
+        [Fact]
         public void ExponentialBackOffDelay_Constructor_Expected()
         {
             var retry = new ExponentialBackoffRetryAttribute(5, "01:02:25", "02:00:10");
@@ -46,6 +63,23 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.Throws<ArgumentOutOfRangeException>(() => new ExponentialBackoffRetryAttribute(5, "01:020000000000:25", "00:00:10"));
             Assert.Throws<ArgumentOutOfRangeException>(() => new ExponentialBackoffRetryAttribute(5, "01:02:25", "100000000"));
             Assert.Throws<ArgumentException>(() => new ExponentialBackoffRetryAttribute(5, "05:02:25", "00:00:10"));
+        }
+
+        [Fact]
+        public void ExponentialBackOffDelay_NextDelay_ReturnsExpected()
+        {
+            var retry = new ExponentialBackoffRetryAttribute(5, "01:02:25", "02:00:10");
+            RetryContext retryContext = new RetryContext
+            {
+                RetryCount = 1
+            };
+            Assert.Equal(TimeSpan.Parse(retry.MinimumInterval), retry.GetNextDelay(retryContext));
+
+            RetryContext lastRetryContext = new RetryContext
+            {
+                RetryCount = 5
+            };
+            Assert.Equal(TimeSpan.Zero, retry.GetNextDelay(lastRetryContext));
         }
     }
 }
