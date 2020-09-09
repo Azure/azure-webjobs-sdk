@@ -103,6 +103,5 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj" />
-    <ProjectReference Include="..\Microsoft.Azure.WebJobs\WebJobs.csproj" />
   </ItemGroup>
 </Project>
