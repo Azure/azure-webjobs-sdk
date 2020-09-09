@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 {
-    public static class WatchableCloudBlobStreamLoggerExtension
+    internal static class WatchableCloudBlobStreamLoggerExtension
     {
         private static readonly Action<ILogger, string, string, string, TimeSpan, long, Exception> _blobWriteAccess =
           LoggerMessage.Define<string, string, string, TimeSpan, long>(
