@@ -7,22 +7,35 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs
 {
-    internal class WatchableReadStream : DelegatingStream, IWatcher
+    internal partial class WatchableReadStream : DelegatingStream, IWatcher
     {
+        private readonly ILogger _logger;
+        private readonly ICloudBlob _blob;
         private readonly Stopwatch _timeRead = new Stopwatch();
         private readonly long _totalLength;
 
         private long _countRead;
+        private bool _logged;
 
         public WatchableReadStream(Stream inner)
             : base(inner)
         {
             _totalLength = inner.Length;
+        }
+
+        public WatchableReadStream(Stream inner, ICloudBlob blob, ILogger logger)
+            : base(inner)
+        {
+            _totalLength = inner.Length;
+            _logger = logger ?? throw new ArgumentNullException("logger");
+            _blob = blob ?? throw new ArgumentNullException("blob");
         }
 
         public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
@@ -104,6 +117,25 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
             }
 
             return read;
+        }
+
+        public override void Close()
+        {
+            base.Close();
+            Log();
+        }
+
+        private void Log()
+        {
+            if (_logged || _logger == null || _blob == null)
+            {
+                return;
+            }
+
+            string name = $"{_blob.Container.Name}/{_blob.Name}";
+            string type = $"{_blob.Properties.BlobType}/{_blob.Properties.ContentType}";
+            _logger.BlobReadAccess(name, type, _blob.Properties.Length, _blob.Properties.ETag, _timeRead.Elapsed, _countRead);
+            _logged = true;
         }
 
         public ParameterLog GetStatus()
