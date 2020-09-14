@@ -18,8 +18,8 @@
     <RepositoryType>git</RepositoryType>
     <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-    <PackageLicenseUrl>https://go.microsoft.com/fwlink/?linkid=2028464</PackageLicenseUrl>
-    <PackageIconUrl>https://raw.githubusercontent.com/Azure/azure-webjobs-sdk/dev/webjobs.png</PackageIconUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Icon>../webjobs.png</Icon>
     <PackageTags>Microsoft Azure WebJobs AzureFunctions</PackageTags>
     <CodeAnalysisRuleSet>..\..\src.ruleset</CodeAnalysisRuleSet>
     <UseSourceLink Condition="$(UseSourceLink) == '' And $(CI) != ''">true</UseSourceLink>
