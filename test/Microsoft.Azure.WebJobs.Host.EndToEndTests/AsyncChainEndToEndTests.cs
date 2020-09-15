@@ -537,7 +537,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             // Results logs the exception with no message
             Assert.NotNull(resultLogger.GetLogMessages().Single().Exception);
-            Assert.Null(resultLogger.GetLogMessages().Single().FormattedMessage);
 
             // It logs Executed/Executing messages and the timeout message.
             Assert.Equal(3, executorLogger.GetLogMessages().Count());
