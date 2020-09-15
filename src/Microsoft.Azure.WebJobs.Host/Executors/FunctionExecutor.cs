@@ -117,7 +117,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     if (instanceLogEntry != null)
                     {
                         await NotifyCompleteAsync(instanceLogEntry, functionStartedMessage.Arguments, exceptionInfo);
-                        _resultsLogger?.LogFunctionResult(instanceLogEntry);
+                        _resultsLogger?.LogFunctionResult(instanceLogEntry, exceptionInfo?.SourceException.ToString());
                     }
 
                     if (loggedStartedEvent)

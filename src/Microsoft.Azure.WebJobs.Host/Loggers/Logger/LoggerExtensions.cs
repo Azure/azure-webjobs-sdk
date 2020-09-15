@@ -33,7 +33,7 @@ namespace Microsoft.Extensions.Logging
             logger?.Log(LogLevel.Information, LogConstants.MetricEventId, payload, null, (s, e) => null);
         }
 
-        internal static void LogFunctionResult(this ILogger logger, FunctionInstanceLogEntry logEntry)
+        internal static void LogFunctionResult(this ILogger logger, FunctionInstanceLogEntry logEntry, string exceptionStackAsString = null)
         {
             bool succeeded = logEntry.Exception == null;
 
@@ -50,7 +50,7 @@ namespace Microsoft.Extensions.Logging
             LogLevel level = succeeded ? LogLevel.Information : LogLevel.Error;
 
             // Only pass the state dictionary; no string message.
-            logger.Log(level, 0, payload, logEntry.Exception, (s, e) => null);
+            logger.Log(level, 0, payload, logEntry.Exception, (s, e) => exceptionStackAsString);
         }
 
         internal static void LogFunctionResultAggregate(this ILogger logger, FunctionResultAggregate resultAggregate)
