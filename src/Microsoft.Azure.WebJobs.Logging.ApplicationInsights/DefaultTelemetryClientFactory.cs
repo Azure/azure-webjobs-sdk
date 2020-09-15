@@ -22,6 +22,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
     {
         private readonly string _instrumentationKey;
         private readonly SamplingPercentageEstimatorSettings _samplingSettings;
+        private readonly string _ingestionEndpoint;
+        private readonly string _liveEndpoint;
 
         private QuickPulseTelemetryModule _quickPulseModule;
         private PerformanceCollectorModule _perfModule;
@@ -39,6 +41,28 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         {
             _instrumentationKey = instrumentationKey;
             _samplingSettings = samplingSettings;
+            _filter = filter;
+        }
+
+        /// <summary>
+        /// Instantiates an instance.
+        /// </summary>
+        /// <param name="instrumentationKey">The Application Insights instrumentation key.</param>
+        /// <param name="samplingSettings">The <see cref="SamplingPercentageEstimatorSettings"/> to use for configuring adaptive sampling. If null, sampling is disabled.</param>
+        /// <param name="ingestionEndpoint">The endpoint used for <see cref="ServerTelemetryChannel"/>. If null, the default is used.</param>
+        /// <param name="liveEndpoint">The endpoint used for <see cref="QuickPulseTelemetryModule"/>. If null, the default is used.</param>
+        /// <param name="filter"></param>
+        public DefaultTelemetryClientFactory(
+            string instrumentationKey,
+            SamplingPercentageEstimatorSettings samplingSettings,
+            string ingestionEndpoint,
+            string liveEndpoint,
+            Func<string, LogLevel, bool> filter)
+        {
+            _instrumentationKey = instrumentationKey;
+            _samplingSettings = samplingSettings;
+            _ingestionEndpoint = ingestionEndpoint;
+            _liveEndpoint = liveEndpoint;
             _filter = filter;
         }
 
@@ -96,7 +120,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
             builder.Build();
 
-            _quickPulseModule = CreateQuickPulseTelemetryModule();
+            _quickPulseModule = CreateQuickPulseTelemetryModule(_liveEndpoint);
             _quickPulseModule.Initialize(config);
             _quickPulseModule.RegisterTelemetryProcessor(processor);
 
@@ -105,7 +129,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             _perfModule.Initialize(config);
 
             // Configure the TelemetryChannel
-            ITelemetryChannel channel = CreateTelemetryChannel();
+            ITelemetryChannel channel = CreateTelemetryChannel(_ingestionEndpoint);
 
             // call Initialize if available
             if (channel is ITelemetryModule module)
@@ -122,19 +146,35 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// Creates the <see cref="ITelemetryChannel"/> to be used by the <see cref="TelemetryClient"/>. If this channel
         /// implements <see cref="ITelemetryModule"/> as well, <see cref="ITelemetryModule.Initialize(TelemetryConfiguration)"/> will
         /// automatically be called.
+        /// <param name="ingestionEndpoint">The endpoint to use for <see cref="ServerTelemetryChannel.EndpointAddress"/>. If null, the default is used.</param>
         /// </summary>
         /// <returns>The <see cref="ITelemetryChannel"/></returns>
-        protected virtual ITelemetryChannel CreateTelemetryChannel()
+        protected virtual ITelemetryChannel CreateTelemetryChannel(string ingestionEndpoint)
         {
+            if (!string.IsNullOrEmpty(ingestionEndpoint))
+            {
+                return new ServerTelemetryChannel
+                {
+                    EndpointAddress = ingestionEndpoint
+                };
+            }
             return new ServerTelemetryChannel();
         }
 
         /// <summary>
         /// Creates the <see cref="QuickPulseTelemetryModule"/> to be used by the <see cref="TelemetryClient"/>.
+        /// <param name="liveEndpoint">The endpoint to use for <see cref="QuickPulseTelemetryModule.QuickPulseServiceEndpoint"/>. If null, the default is used.</param>
         /// </summary>
         /// <returns>The <see cref="QuickPulseTelemetryModule"/>.</returns>
-        protected virtual QuickPulseTelemetryModule CreateQuickPulseTelemetryModule()
+        protected virtual QuickPulseTelemetryModule CreateQuickPulseTelemetryModule(string liveEndpoint)
         {
+            if (!string.IsNullOrEmpty(liveEndpoint))
+            {
+                return new QuickPulseTelemetryModule
+                {
+                    QuickPulseServiceEndpoint = liveEndpoint
+                };
+            }
             return new QuickPulseTelemetryModule();
         }
 

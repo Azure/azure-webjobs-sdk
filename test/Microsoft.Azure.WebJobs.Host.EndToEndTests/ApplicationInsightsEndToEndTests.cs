@@ -591,14 +591,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 _channel = channel;
             }
 
-            protected override QuickPulseTelemetryModule CreateQuickPulseTelemetryModule()
+            protected override QuickPulseTelemetryModule CreateQuickPulseTelemetryModule(string liveEndpoint)
             {
-                QuickPulseTelemetryModule module = base.CreateQuickPulseTelemetryModule();
+                QuickPulseTelemetryModule module = base.CreateQuickPulseTelemetryModule(liveEndpoint);
                 module.QuickPulseServiceEndpoint = _mockQuickPulseUrl;
                 return module;
             }
 
-            protected override ITelemetryChannel CreateTelemetryChannel()
+            protected override ITelemetryChannel CreateTelemetryChannel(string serviceEndpoint)
             {
                 return _channel;
             }
