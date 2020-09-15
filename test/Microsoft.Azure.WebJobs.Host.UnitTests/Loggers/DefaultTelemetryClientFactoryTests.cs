@@ -26,5 +26,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             // Verify Channel
             Assert.IsType<ServerTelemetryChannel>(config.TelemetryChannel);
         }
+
+        [Fact]
+        public void InitializeConfiguration_ConfiguresWithIngestionEndpoint()
+        {
+            var testIngestionEndpoint = "https://testIngestion.Endpoint/";
+            var factory = new DefaultTelemetryClientFactory(string.Empty, null, testIngestionEndpoint, null, null);
+            var config = factory.InitializeConfiguration();
+
+            Assert.Equal(testIngestionEndpoint.ToLower(), config.TelemetryChannel.EndpointAddress.ToLower());
+        }
     }
 }
