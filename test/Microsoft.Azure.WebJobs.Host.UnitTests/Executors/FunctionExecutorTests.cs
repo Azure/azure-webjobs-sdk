@@ -455,11 +455,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             {
                 mockRetryStrategy.Verify(p => p.GetNextDelay(It.IsAny<RetryContext>()), Times.Exactly(maxRetryCount - 1));
                 var messages = logger.GetLogMessages().Select(p => p.FormattedMessage);
-                Assert.Equal(8, messages.Count());
+                Assert.Equal(4, messages.Count());
                 var delayMessages = messages.Where(p => p.Contains($"Waiting for `{delay}`"));
                 Assert.Equal(4, delayMessages.Count());
-                var executeMessages = messages.Where(p => p.Contains("Function execution attempt"));
-                Assert.Equal(4, executeMessages.Count());
             }
             else
             {

@@ -115,11 +115,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     Instance = functionInstance
                 };
                 nextDelay = retryStrategy.GetNextDelay(retryContext);
-                logger.LogFunctionRetryDelay(nextDelay);
+                logger.LogFunctionRetryAttempt(nextDelay, attempt, retryStrategy.MaxRetryCount);
                 await Task.Delay(nextDelay);
-                logger.LogFunctionRetryAttempt(attempt, retryStrategy.MaxRetryCount);
             } while (attempt < retryStrategy.MaxRetryCount || retryStrategy.MaxRetryCount == -1);
-
             return functionResult;
         }
 

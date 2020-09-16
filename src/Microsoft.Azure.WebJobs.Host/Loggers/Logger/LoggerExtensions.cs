@@ -15,17 +15,11 @@ namespace Microsoft.Extensions.Logging
     /// </summary>
     public static class LoggerExtensions
     {
-        private static readonly Action<ILogger, int, int, Exception> _logFunctionRetryAttempt =
-           LoggerMessage.Define<int, int>(
+        private static readonly Action<ILogger, TimeSpan, int, int, Exception> _logFunctionRetryAttempt =
+           LoggerMessage.Define<TimeSpan, int, int>(
            LogLevel.Debug,
            new EventId(325, nameof(LogFunctionRetryAttempt)),
-           "Function execution attempt: '{attempt}'. Max retry count: '{retryStrategy.MaxRetryCount}'");
-
-        private static readonly Action<ILogger, TimeSpan, Exception> _logFunctionRetryDelay =
-          LoggerMessage.Define<TimeSpan>(
-          LogLevel.Debug,
-          new EventId(325, nameof(LogFunctionRetryDelay)),
-          "Waiting for `{nextDelay}` before retrying function execution.");
+           "Waiting for `{nextDelay}` before retrying function execution. Next attempt: '{attempt}'. Max retry count: '{retryStrategy.MaxRetryCount}'");
 
         /// <summary>
         /// Logs a metric value.
@@ -84,14 +78,9 @@ namespace Microsoft.Extensions.Logging
                 });
         }
 
-        public static void LogFunctionRetryAttempt(this ILogger logger, int attemptCount, int maxRetryCount)
+        public static void LogFunctionRetryAttempt(this ILogger logger, TimeSpan nextDelay, int attemptCount, int maxRetryCount)
         {
-            _logFunctionRetryAttempt(logger, attemptCount, maxRetryCount, null);
-        }
-
-        public static void LogFunctionRetryDelay(this ILogger logger, TimeSpan nextDelay)
-        {
-            _logFunctionRetryDelay(logger, nextDelay, null);
+            _logFunctionRetryAttempt(logger, nextDelay, attemptCount, maxRetryCount, null);
         }
     }
 }
