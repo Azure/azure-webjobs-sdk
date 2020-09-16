@@ -445,7 +445,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             functionExecutor.HostOutputMessage = testMessage;
 
             int maxRetryCount = 5;
-            TimeSpan delay = TimeSpan.FromSeconds(1);
+            TimeSpan delay = TimeSpan.FromMilliseconds(100);
             var mockRetryStrategy = new Mock<IRetryStrategy>();
             mockRetryStrategy.Setup(p => p.MaxRetryCount).Returns(maxRetryCount);
             mockRetryStrategy.Setup(p => p.GetNextDelay(It.IsAny<RetryContext>())).Returns(delay);
@@ -455,18 +455,17 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             {
                 mockRetryStrategy.Verify(p => p.GetNextDelay(It.IsAny<RetryContext>()), Times.Exactly(maxRetryCount - 1));
                 var messages = logger.GetLogMessages().Select(p => p.FormattedMessage);
-                Assert.Equal(9, messages.Count());
-                var delayMessages = messages.Where(p => p.Contains($"Waiting for {delay}"));
+                Assert.Equal(8, messages.Count());
+                var delayMessages = messages.Where(p => p.Contains($"Waiting for `{delay}`"));
                 Assert.Equal(4, delayMessages.Count());
                 var executeMessages = messages.Where(p => p.Contains("Function execution attempt"));
-                Assert.Equal(5, executeMessages.Count());
+                Assert.Equal(4, executeMessages.Count());
             }
             else
             {
                 mockRetryStrategy.Verify(p => p.GetNextDelay(It.IsAny<RetryContext>()), Times.Never);
                 var messages = logger.GetLogMessages().Select(p => p.FormattedMessage);
-                Assert.Single(messages);
-                Assert.Equal($"Function execution attempt: '0'. Max retry count: '{maxRetryCount}'", messages.ElementAt(0));
+                Assert.Empty(messages);
             }
         }
 

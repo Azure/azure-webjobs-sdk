@@ -95,7 +95,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     logger.LogDebug($"Function execution cancelled.");
                     break;
                 }
-                logger.LogFunctionRetryAttempt(attempt, retryStrategy.MaxRetryCount);
                 functionResult = await TryExecuteAsyncCore(functionInstance, token, logger);
                 if (functionResult == null)
                 {
@@ -103,22 +102,22 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     break;
                 }
 
-                // Build retry context
-                var retryContext = new RetryContext
-                {
-                    RetryCount = ++attempt,
-                    Exception = functionResult.Exception,
-                    Instance = functionInstance
-                };
-
-                if (attempt >= retryStrategy.MaxRetryCount)
+                if (++attempt >= retryStrategy.MaxRetryCount)
                 {
                     // no.of retries exceeded
                     break;
                 }
+                // Build retry context
+                var retryContext = new RetryContext
+                {
+                    RetryCount = attempt,
+                    Exception = functionResult.Exception,
+                    Instance = functionInstance
+                };
                 nextDelay = retryStrategy.GetNextDelay(retryContext);
-                logger.LogDebug($"Waiting for {nextDelay} before retrying function execution.");
+                logger.LogFunctionRetryDelay(nextDelay);
                 await Task.Delay(nextDelay);
+                logger.LogFunctionRetryAttempt(attempt, retryStrategy.MaxRetryCount);
             } while (attempt < retryStrategy.MaxRetryCount || retryStrategy.MaxRetryCount == -1);
 
             return functionResult;

@@ -27,6 +27,11 @@ namespace Microsoft.Azure.WebJobs
         /// </summary>
         public int MaxRetryCount { get; }
 
+        /// <summary>
+        /// Returns delay between function invocation retries. This is when number of retries < MaxRetryCount
+        /// </summary>
+        /// <param name="context"><see cref="RetryContext"/>)</param>
+        /// <returns></returns>
         public abstract TimeSpan GetNextDelay(RetryContext context);
     }
 }

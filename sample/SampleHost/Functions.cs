@@ -67,9 +67,8 @@ namespace SampleHost
         /// </summary>
         /// <param name="events"></param>
         /// <param name="log"></param>
-        [FixedDelayRetryAttribute(3, "00:00:20")]
-        public void ProcessEvents([EventHubTrigger("testhub2", Connection = "TestEventHubConnection")] EventData[] events,
-            ILogger log)
+        [FixedDelayRetry(3, "00:00:03")]
+        public void ProcessEvents([EventHubTrigger("testhub2", Connection = "TestEventHubConnection")] EventData[] events, ILogger log)
         {
             foreach (var evt in events)
             {

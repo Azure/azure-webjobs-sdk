@@ -63,29 +63,29 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         }
 
         [Fact]
-        public void GetFunctionTimeout_ReturnsExpected()
+        public async Task GetFunctionTimeout_ReturnsExpected()
         {
             // Arrange
             var collector = new TestIndexCollector();
             FunctionIndexer product = CreateProductUnderTest();
 
             // Act & Assert
-            product.IndexMethodAsync(typeof(FunctionIndexerTests).GetMethod("Timeout_Set"),
-                collector, CancellationToken.None).GetAwaiter().GetResult();
+            await product.IndexMethodAsync(typeof(FunctionIndexerTests).GetMethod("Timeout_Set"),
+                collector, CancellationToken.None);
 
             Assert.Equal(TimeSpan.FromMinutes(30), collector.Functions.First().TimeoutAttribute.Timeout);
         }
 
         [Fact]
-        public void GetFunctionFixedDelayRery_ReturnsExpected()
+        public async Task GetFunctionFixedDelayRery_ReturnsExpected()
         {
             // Arrange
             var collector = new TestIndexCollector();
             FunctionIndexer product = CreateProductUnderTest();
 
             // Act & Assert
-            product.IndexMethodAsync(typeof(FunctionIndexerTests).GetMethod("FixedDelayRetry_Test"),
-                collector, CancellationToken.None).GetAwaiter().GetResult();
+            await product.IndexMethodAsync(typeof(FunctionIndexerTests).GetMethod("FixedDelayRetry_Test"),
+                collector, CancellationToken.None);
 
             var retryStrategy = collector.Functions.First().RetryStrategy;
             Assert.Equal(4, retryStrategy.MaxRetryCount);
@@ -93,7 +93,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         }
 
         [Fact]
-        public void GetFunctionCustomRery_ReturnsExpected()
+        public void GetFunctionCustomRetry_ReturnsExpected()
         {
             // Arrange
             var collector = new TestIndexCollector();
@@ -110,15 +110,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         }
 
         [Fact]
-        public void GetFunction_MethodLevel_ReturnsExpected()
+        public async Task GetFunction_MethodLevel_ReturnsExpected()
         {
             // Arrange
             var collector = new TestIndexCollector();
             FunctionIndexer product = CreateProductUnderTest();
 
             // Act & Assert
-            product.IndexMethodAsync(typeof(RetryFunctions).GetMethod("RetryAtMethodLevel"),
-                collector, CancellationToken.None).GetAwaiter().GetResult();
+            await product.IndexMethodAsync(typeof(RetryFunctions).GetMethod("RetryAtMethodLevel"),
+                collector, CancellationToken.None);
 
             var retryStrategy = collector.Functions.First().RetryStrategy;
             Assert.Equal(5, retryStrategy.MaxRetryCount);
@@ -126,15 +126,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         }
 
         [Fact]
-        public void GetFunction_ClassLevel_ReturnsExpected()
+        public async Task GetFunction_ClassLevel_ReturnsExpected()
         {
             // Arrange
             var collector = new TestIndexCollector();
             FunctionIndexer product = CreateProductUnderTest();
 
             // Act & Assert
-            product.IndexMethodAsync(typeof(RetryFunctions).GetMethod("RetryAtClassLevel"),
-                collector, CancellationToken.None).GetAwaiter().GetResult();
+            await product.IndexMethodAsync(typeof(RetryFunctions).GetMethod("RetryAtClassLevel"),
+                collector, CancellationToken.None);
 
             var retryStrategy = collector.Functions.First().RetryStrategy;
             Assert.Equal(40, retryStrategy.MaxRetryCount);
