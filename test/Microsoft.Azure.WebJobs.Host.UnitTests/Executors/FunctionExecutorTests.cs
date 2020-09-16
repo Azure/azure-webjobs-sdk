@@ -16,7 +16,10 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.OData.UriParser;
 using Moq;
 using Xunit;
 
@@ -315,11 +318,45 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                 mockFunctionOutputLogger,
                 mockExceptionHandler.Object,
                 mockFunctionEventCollector.Object,
-                null,
+                NullLoggerFactory.Instance,
                 null,
                 drainModeManager);
 
             return functionExecutor;
+        }
+
+        private static void TestFunction()
+        {
+            // used for a FunctionDescriptor
+        }
+
+        private IFunctionInstance CreateFunctionInstance(Guid id, bool invocationThrows)
+        {
+            var method = GetType().GetMethod(nameof(TestFunction), BindingFlags.NonPublic | BindingFlags.Static);
+            var descriptor = FunctionIndexer.FromMethod(method, new ConfigurationBuilder().Build());
+            var serviceScopeFactoryMock = new Mock<IServiceScopeFactory>(MockBehavior.Strict);
+            var serviceScopeMock = new Mock<IServiceScope>();
+            serviceScopeFactoryMock.Setup(s => s.CreateScope()).Returns(serviceScopeMock.Object);
+            Mock<IFunctionInvoker> mockInvoker = new Mock<IFunctionInvoker>();
+            mockInvoker.Setup(i => i.InvokeAsync(It.IsAny<object>(), It.IsAny<object[]>()))
+                .Returns(() =>
+                {
+                    if (invocationThrows)
+                    {
+                        throw new Exception("Test retry exception");
+                    }
+                    return Task.FromResult<object>(null);
+                });
+            mockInvoker.Setup( m => m.ParameterNames).Returns(new List<string>());
+            var mockBindingSource = new Mock<IBindingSource>();
+            var valueProviders = Task.Run(() =>
+            {
+                IDictionary<string, IValueProvider> d = new Dictionary<string, IValueProvider>();
+                IReadOnlyDictionary<string, IValueProvider> red = new ReadOnlyDictionary<string, IValueProvider>(d);
+                return red;
+            });
+            mockBindingSource.Setup(p => p.BindAsync(It.IsAny<ValueBindingContext>())).Returns(valueProviders);
+            return new FunctionInstance(id, new Dictionary<string, string>(), null, new ExecutionReason(), mockBindingSource.Object, mockInvoker.Object, descriptor, serviceScopeFactoryMock.Object);
         }
 
         private IFunctionInstanceEx GetFunctionInstanceExMockInstance()
@@ -337,10 +374,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             TimeoutAttribute attribute = method.GetCustomAttribute<TimeoutAttribute>();
             FunctionDescriptor descriptor = new FunctionDescriptor();
             descriptor.TimeoutAttribute = attribute;
+            descriptor.ClassLevelFilters = new List<IFunctionFilter>();
+            descriptor.MethodLevelFilters = new List<IFunctionFilter>();
 
             var mockfunctionInstance = new Mock<IFunctionInstanceEx>();
             mockfunctionInstance.Setup(p => p.BindingSource).Returns(mockBindingSource.Object);
-            mockfunctionInstance.Setup(p => p.Invoker.ParameterNames).Returns(new System.Collections.Generic.List<string>());
+            mockfunctionInstance.Setup(p => p.Invoker.ParameterNames).Returns(new List<string>());
             mockfunctionInstance.Setup(p => p.FunctionDescriptor).Returns(descriptor);
             return mockfunctionInstance.Object;
         }
@@ -390,6 +429,41 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             {
                 var messages = logger.GetLogMessages().Select(p => p.FormattedMessage);
                 Assert.Equal(messages.ElementAt(0), "Requesting cancellation for function invocation '00000000-0000-0000-0000-000000000000'");
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task ExecuteWithRetries_Test(bool invocationThrows)
+        {
+            var functionInstanceEx = (IFunctionInstanceEx)CreateFunctionInstance(Guid.NewGuid(), invocationThrows);
+            var logger = new TestLogger("Tests.FunctionExecutor");
+            var functionExecutor = GetTestFunctionExecutor();
+            // Arrange
+            HostStartedMessage testMessage = new HostStartedMessage();
+            functionExecutor.HostOutputMessage = testMessage;
+
+            int maxRetryCount = 5;
+            TimeSpan delay = TimeSpan.FromMilliseconds(100);
+            var mockRetryStrategy = new Mock<IRetryStrategy>();
+            mockRetryStrategy.Setup(p => p.MaxRetryCount).Returns(maxRetryCount);
+            mockRetryStrategy.Setup(p => p.GetNextDelay(It.IsAny<RetryContext>())).Returns(delay);
+
+            await functionExecutor.ExecuteWithRetriesAsync(functionInstanceEx, CancellationToken.None, logger, mockRetryStrategy.Object);
+            if (invocationThrows)
+            {
+                mockRetryStrategy.Verify(p => p.GetNextDelay(It.IsAny<RetryContext>()), Times.Exactly(maxRetryCount - 1));
+                var messages = logger.GetLogMessages().Select(p => p.FormattedMessage);
+                Assert.Equal(4, messages.Count());
+                var delayMessages = messages.Where(p => p.Contains($"Waiting for `{delay}`"));
+                Assert.Equal(4, delayMessages.Count());
+            }
+            else
+            {
+                mockRetryStrategy.Verify(p => p.GetNextDelay(It.IsAny<RetryContext>()), Times.Never);
+                var messages = logger.GetLogMessages().Select(p => p.FormattedMessage);
+                Assert.Empty(messages);
             }
         }
 

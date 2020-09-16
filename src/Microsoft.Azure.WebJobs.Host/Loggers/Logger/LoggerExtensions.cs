@@ -15,6 +15,12 @@ namespace Microsoft.Extensions.Logging
     /// </summary>
     public static class LoggerExtensions
     {
+        private static readonly Action<ILogger, TimeSpan, int, int, Exception> _logFunctionRetryAttempt =
+           LoggerMessage.Define<TimeSpan, int, int>(
+           LogLevel.Debug,
+           new EventId(325, nameof(LogFunctionRetryAttempt)),
+           "Waiting for `{nextDelay}` before retrying function execution. Next attempt: '{attempt}'. Max retry count: '{retryStrategy.MaxRetryCount}'");
+
         /// <summary>
         /// Logs a metric value.
         /// </summary>
@@ -70,6 +76,11 @@ namespace Microsoft.Extensions.Logging
                     [ScopeKeys.HostInstanceId] = hostInstanceId.ToString(),
                     [ScopeKeys.TriggerDetails] = functionInstance?.TriggerDetails
                 });
+        }
+
+        public static void LogFunctionRetryAttempt(this ILogger logger, TimeSpan nextDelay, int attemptCount, int maxRetryCount)
+        {
+            _logFunctionRetryAttempt(logger, nextDelay, attemptCount, maxRetryCount, null);
         }
     }
 }

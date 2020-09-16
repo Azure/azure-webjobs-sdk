@@ -39,10 +39,10 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly ILogger _logger;
         private readonly SharedQueueHandler _sharedQueue;
         private readonly TimeoutAttribute _defaultTimeout;
+        private readonly IRetryStrategy _defaultRetryStrategy;
         private readonly bool _allowPartialHostStartup;
         private readonly IConfiguration _configuration;
         private readonly IServiceScopeFactory _serviceScopeFactory;
-        private readonly ILoggerFactory _loggerFactory;
 
         public FunctionIndexer(
             ITriggerBindingProvider triggerBindingProvider,
@@ -56,7 +56,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             INameResolver nameResolver = null,
             SharedQueueHandler sharedQueue = null,
             TimeoutAttribute defaultTimeout = null,
-            bool allowPartialHostStartup = false)
+            bool allowPartialHostStartup = false,
+            IRetryStrategy defaultRetryStrategy = null)
         {
             _triggerBindingProvider = triggerBindingProvider ?? throw new ArgumentNullException(nameof(triggerBindingProvider));
             _bindingProvider = bindingProvider ?? throw new ArgumentNullException(nameof(bindingProvider));
@@ -68,9 +69,9 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _sharedQueue = sharedQueue;
             _defaultTimeout = defaultTimeout;
             _allowPartialHostStartup = allowPartialHostStartup;
+            _defaultRetryStrategy = defaultRetryStrategy;
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _serviceScopeFactory = serviceScopeFactory;
-            _loggerFactory = loggerFactory;
         }
 
         public async Task IndexTypeAsync(Type type, IFunctionIndexCollector index, CancellationToken cancellationToken)
@@ -354,7 +355,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             IConfiguration configuration,
             IJobActivator jobActivator = null,
             INameResolver nameResolver = null,
-            TimeoutAttribute defaultTimeout = null)
+            TimeoutAttribute defaultTimeout = null,
+            IRetryStrategy defaultRetryStrategy = null)
         {
             var disabled = HostListenerFactory.IsDisabled(method, nameResolver, jobActivator, configuration);
 
@@ -373,6 +375,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 }
             }
 
+            IRetryStrategy retryStrategy = TypeUtility.GetHierarchicalAttributeOrNull<RetryAttribute>(method) ?? defaultRetryStrategy;
+
             return new FunctionDescriptor
             {
                 Id = method.GetFullName(),
@@ -382,6 +386,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 IsDisabled = disabled,
                 HasCancellationToken = hasCancellationToken,
                 TimeoutAttribute = TypeUtility.GetHierarchicalAttributeOrNull<TimeoutAttribute>(method) ?? defaultTimeout,
+                RetryStrategy = retryStrategy,
                 SingletonAttributes = method.GetCustomAttributes<SingletonAttribute>().ToArray(),
                 MethodLevelFilters = method.GetCustomAttributes().OfType<IFunctionFilter>().ToArray(),
                 ClassLevelFilters = method.DeclaringType.GetCustomAttributes().OfType<IFunctionFilter>().ToArray()
@@ -391,7 +396,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private FunctionDescriptor CreateFunctionDescriptor(MethodInfo method, string triggerParameterName,
             ITriggerBinding triggerBinding, IReadOnlyDictionary<string, IBinding> nonTriggerBindings)
         {
-            var descr = FromMethod(method, _configuration, this._activator, _nameResolver, _defaultTimeout);
+            var descr = FromMethod(method, _configuration, this._activator, _nameResolver, _defaultTimeout, _defaultRetryStrategy);
 
             List<ParameterDescriptor> parameters = new List<ParameterDescriptor>();
 

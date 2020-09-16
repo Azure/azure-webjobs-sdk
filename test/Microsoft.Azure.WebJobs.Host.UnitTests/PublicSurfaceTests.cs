@@ -88,7 +88,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "SingletonMode",
                 "SingletonScope",
                 "StorageAccountAttribute",
-                "TimeoutAttribute"
+                "TimeoutAttribute"               
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);
@@ -263,7 +263,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "ScaleMonitorDescriptor",
                 "IDrainModeManager",
                 "IMethodInvoker`2",
-                "MethodInvokerFactory"
+                "MethodInvokerFactory",
+                "IDrainModeManager",
+                "IRetryStrategy",
+                "RetryAttribute",
+                "FixedDelayRetryAttribute",
+                "ExponentialBackoffRetryAttribute",
+                "RetryContext"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);
