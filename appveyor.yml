@@ -19,6 +19,7 @@ install:
     $env:CommitHash = "$env:APPVEYOR_REPO_COMMIT"
 
     .\dotnet-install.ps1 -Version 2.1.300 -Architecture x86
+    .\dotnet-install.ps1 -Version 3.1.402 -Architecture x86
 build_script:
 - ps: |
     $buildNumber = 0
