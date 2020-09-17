@@ -453,11 +453,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             await functionExecutor.ExecuteWithRetriesAsync(functionInstanceEx, CancellationToken.None, logger, mockRetryStrategy.Object);
             if (invocationThrows)
             {
-                mockRetryStrategy.Verify(p => p.GetNextDelay(It.IsAny<RetryContext>()), Times.Exactly(maxRetryCount - 1));
+                mockRetryStrategy.Verify(p => p.GetNextDelay(It.IsAny<RetryContext>()), Times.Exactly(maxRetryCount));
                 var messages = logger.GetLogMessages().Select(p => p.FormattedMessage);
-                Assert.Equal(4, messages.Count());
-                var delayMessages = messages.Where(p => p.Contains($"Waiting for `{delay}`"));
-                Assert.Equal(4, delayMessages.Count());
+                Assert.Equal(5, messages.Count());
+                Assert.True(messages.All(p => p.Contains($"Waiting for `{delay}`")));
             }
             else
             {
