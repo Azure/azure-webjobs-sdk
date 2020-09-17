@@ -102,7 +102,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     break;
                 }
 
-                if (++attempt >= retryStrategy.MaxRetryCount)
+                if (++attempt > retryStrategy.MaxRetryCount)
                 {
                     // no.of retries exceeded
                     break;
@@ -117,7 +117,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 nextDelay = retryStrategy.GetNextDelay(retryContext);
                 logger.LogFunctionRetryAttempt(nextDelay, attempt, retryStrategy.MaxRetryCount);
                 await Task.Delay(nextDelay);
-            } while (attempt < retryStrategy.MaxRetryCount || retryStrategy.MaxRetryCount == -1);
+            } while (attempt <= retryStrategy.MaxRetryCount || retryStrategy.MaxRetryCount == -1);
             return functionResult;
         }
 
