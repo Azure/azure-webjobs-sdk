@@ -8,8 +8,6 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using FakeStorage;
 using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
-using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Azure.Storage.Queue;
 using Newtonsoft.Json;
 using Xunit;
@@ -109,7 +107,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Assert.Equal("Exception binding parameter 'message'", exception.Message);
             Exception innerException = exception.InnerException;
             Assert.IsType<DecoderFallbackException>(innerException);
-            Assert.Equal("Unable to translate bytes [FF] at index -1 from specified code page to Unicode.",
+            Assert.Equal("Unable to translate bytes [FF] at index 0 from specified code page to Unicode.",
                 innerException.Message);
         }
 
