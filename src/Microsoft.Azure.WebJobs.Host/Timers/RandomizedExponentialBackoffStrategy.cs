@@ -28,18 +28,18 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
         {
             if (minimumInterval.Ticks < 0)
             {
-                throw new ArgumentOutOfRangeException("minimumInterval", "The TimeSpan must not be negative.");
+                throw new ArgumentOutOfRangeException(nameof(minimumInterval), "The TimeSpan must not be negative.");
             }
 
             if (maximumInterval.Ticks < 0)
             {
-                throw new ArgumentOutOfRangeException("maximumInterval", "The TimeSpan must not be negative.");
+                throw new ArgumentOutOfRangeException(nameof(maximumInterval), "The TimeSpan must not be negative.");
             }
 
             if (minimumInterval.Ticks > maximumInterval.Ticks)
             {
-                throw new ArgumentException("The minimumInterval must not be greater than the maximumInterval.",
-                    "minimumInterval");
+                throw new ArgumentException($"The {nameof(minimumInterval)} must not be greater than the {nameof(maximumInterval)}.",
+                    nameof(minimumInterval));
             }
 
             _minimumInterval = minimumInterval;

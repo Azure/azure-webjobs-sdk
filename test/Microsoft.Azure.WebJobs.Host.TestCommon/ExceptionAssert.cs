@@ -70,8 +70,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             {
                 return message;
             }
-
-            return String.Format("{0}{1}Parameter name: {2}", message, Environment.NewLine, parameterName);
+            return $"{message} (Parameter '{parameterName}')";
         }
     }
 }
