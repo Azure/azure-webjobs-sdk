@@ -111,7 +111,7 @@ namespace Microsoft.Azure.WebJobs.Host.Diagnostics
                                   let method = frame.GetMethod()
                                   let declaringType = method?.DeclaringType
                                   where ShouldShowFrame(declaringType)
-                                  select (method, declaringType, frame);
+                                  select (method: method, declaringType: declaringType, frame: frame);
 
             foreach (var frame in toProcess)
             {
