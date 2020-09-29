@@ -107,23 +107,25 @@ namespace Microsoft.Azure.WebJobs.Host.Diagnostics
                 return;
             }
 
-            var toProcess = from frame in stackFrames
-                                  let method = frame.GetMethod()
-                                  let declaringType = method?.DeclaringType
-                                  where ShouldShowFrame(declaringType)
-                                  select (method: method, declaringType: declaringType, frame: frame);
-
-            foreach (var frame in toProcess)
+            foreach (var frame in stackFrames)
             {
-                FormatFrame(sb, frame.method, frame.declaringType, frame.frame);
+                FormatFrame(sb, frame);
             }
         }
 
         private static bool ShouldShowFrame(Type declaringType) =>
             !(declaringType != null && typeof(INotifyCompletion).IsAssignableFrom(declaringType));
 
-        private static void FormatFrame(StringBuilder stringBuilder, MethodBase method, Type declaringType, StackFrame frame)
+        private static void FormatFrame(StringBuilder stringBuilder, StackFrame frame)
         {
+            var method = frame.GetMethod();
+            var declaringType = method?.DeclaringType;
+            
+            if (ShouldShowFrame(declaringType) == false)
+            {
+                return;
+            }
+
             stringBuilder.AppendLine();
 
             stringBuilder.Append("   at ");
