@@ -58,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             catch (Exception exc)
             {
                 string formattedException = ExceptionFormatter.GetFormattedException(exc);
-                
+
                 Assert.Contains($"{nameof(TestClass.Run)}(String arg)", formattedException);
             }
         }

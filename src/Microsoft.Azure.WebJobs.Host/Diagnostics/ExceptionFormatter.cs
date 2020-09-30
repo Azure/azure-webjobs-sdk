@@ -27,40 +27,52 @@ namespace Microsoft.Azure.WebJobs.Host.Diagnostics
         /// <returns>A string representation of the exception with a sanitized stack trace.</returns>
         public static string GetFormattedException(Exception exception)
         {
+            var sb = new StringBuilder();
+            GetFormattedException(sb, exception);
+            return sb.ToString();
+        }
+
+        static void GetFormattedException(StringBuilder sb, Exception exception)
+        {
             try
             {
-                var aggregate = exception as AggregateException;
-                if (aggregate != null)
+                if (exception is AggregateException aggregate)
                 {
-                    return GetStackForAggregateException(exception, aggregate);
+                    GetStackForAggregateException(sb, exception, aggregate);
                 }
-
-                return GetStackForException(exception, includeMessageOnly: false);
+                else
+                {
+                    GetStackForException(sb, exception, includeMessageOnly: false);
+                }
             }
             catch (Exception)
             {
-                return exception?.ToString();
+                if (exception != null)
+                {
+                    sb.Append(exception);
+                }
             }
         }
 
-        private static string GetStackForAggregateException(Exception exception, AggregateException aggregate)
+        private static void GetStackForAggregateException(StringBuilder sb, Exception exception, AggregateException aggregate)
         {
-            var text = GetStackForException(exception, includeMessageOnly: true);
+            GetStackForException(sb, exception, includeMessageOnly: true);
             for (int i = 0; i < aggregate.InnerExceptions.Count; i++)
             {
-                text = $"{text}{Environment.NewLine}---> (Inner Exception #{i}) {GetFormattedException(aggregate.InnerExceptions[i])}<---{Environment.NewLine}";
+                sb.AppendLine();
+                sb.Append($"---> (Inner Exception #{i}) ");
+                GetFormattedException(sb, aggregate.InnerExceptions[i]);
+                sb.AppendLine("<---");
             }
-
-            return text;
         }
 
-        private static string GetStackForException(Exception exception, bool includeMessageOnly)
+        private static void GetStackForException(StringBuilder sb, Exception exception, bool includeMessageOnly)
         {
             var message = exception.Message;
             var className = exception.GetType().ToString();
-            var stackText = message.Length <= 0
+            sb.Append(message.Length <= 0
                 ? className
-                : className + " : " + message;
+                : className + " : " + message);
             var innerException = exception.InnerException;
             if (innerException != null)
             {
@@ -68,50 +80,54 @@ namespace Microsoft.Azure.WebJobs.Host.Diagnostics
                 {
                     do
                     {
-                        stackText += " ---> " + innerException.Message;
+                        sb.Append(" ---> ");
+                        sb.Append(innerException.Message);
                         innerException = innerException.InnerException;
                     }
                     while (innerException != null);
                 }
                 else
                 {
-                    stackText += $" ---> {GetFormattedException(innerException)} {Environment.NewLine}   End of inner exception";
+                    sb.Append(" ---> ");
+                    GetFormattedException(sb, innerException);
+                    sb.AppendLine();
+                    sb.Append("   End of inner exception");
                 }
             }
 
-            string stackTrace = GetAsyncStackTrace(exception);
-            if (!string.IsNullOrEmpty(stackTrace))
-            {
-                stackText += Environment.NewLine + stackTrace;
-            }
-
-            return stackText;
+            AddAsyncStackTrace(sb, exception);
         }
 
-        private static string GetAsyncStackTrace(Exception exception)
+        private static void AddAsyncStackTrace(StringBuilder sb, Exception exception)
         {
             var stackTrace = new StackTrace(exception, fNeedFileInfo: true);
             var stackFrames = stackTrace.GetFrames();
             if (stackFrames == null)
             {
-                return string.Empty;
+                return;
             }
 
-            var stackFrameLines = from frame in stackFrames
-                                  let method = frame.GetMethod()
-                                  let declaringType = method?.DeclaringType
-                                  where ShouldShowFrame(declaringType)
-                                  select FormatFrame(method, declaringType, frame);
-
-            return string.Join(Environment.NewLine, stackFrameLines);
+            foreach (var frame in stackFrames)
+            {
+                FormatFrame(sb, frame);
+            }
         }
 
         private static bool ShouldShowFrame(Type declaringType) =>
             !(declaringType != null && typeof(INotifyCompletion).IsAssignableFrom(declaringType));
 
-        private static string FormatFrame(MethodBase method, Type declaringType, StackFrame frame)
+        private static void FormatFrame(StringBuilder stringBuilder, StackFrame frame)
         {
-            var stringBuilder = new StringBuilder();
+            var method = frame.GetMethod();
+            var declaringType = method?.DeclaringType;
+            
+            if (!ShouldShowFrame(declaringType))
+            {
+                return;
+            }
+
+            stringBuilder.AppendLine();
+
             stringBuilder.Append("   at ");
             bool isAsync;
             FormatMethodName(stringBuilder, declaringType, out isAsync);
@@ -159,8 +175,6 @@ namespace Microsoft.Azure.WebJobs.Host.Diagnostics
             stringBuilder.Append(")");
 
             FormatFileName(stringBuilder, frame);
-
-            return stringBuilder.ToString();
         }
 
         private static void FormatFileName(StringBuilder stringBuilder, StackFrame frame)
@@ -195,7 +209,8 @@ namespace Microsoft.Azure.WebJobs.Host.Diagnostics
                 var end = fullName.LastIndexOf('>');
                 if (start >= 0 && end >= 0)
                 {
-                    stringBuilder.Append(fullName.Remove(start, 1).Substring(0, end - 1));
+                    stringBuilder.Append(fullName, 0, start);
+                    stringBuilder.Append(fullName, start + 1, end - start - 1);
                 }
                 else
                 {
@@ -232,7 +247,9 @@ namespace Microsoft.Azure.WebJobs.Host.Diagnostics
                 return;
             }
 
-            stringBuilder.Append("[" + String.Join(",", genericTypeArguments.Select(args => args.Name)) + "]");
+            stringBuilder.Append("[");
+            stringBuilder.Append(string.Join(",", genericTypeArguments.Select(args => args.Name)));
+            stringBuilder.Append("]");
         }
 
         private static void FormatParameters(StringBuilder stringBuilder, MethodBase method) =>
