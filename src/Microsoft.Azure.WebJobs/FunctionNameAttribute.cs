@@ -30,7 +30,8 @@ namespace Microsoft.Azure.WebJobs
 
         /// <summary>
         /// Validation for name. 
+        /// RegexOptions.Compiled is specifically removed as it impacts the cold start.
         /// </summary>
-        public static readonly Regex FunctionNameValidationRegex = new Regex(@"^[a-z][a-z0-9_\-]{0,127}$(?<!^host$)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        public static readonly Regex FunctionNameValidationRegex = new Regex(@"^[a-z][a-z0-9_\-]{0,127}$(?<!^host$)", RegexOptions.IgnoreCase);
     }
 }
