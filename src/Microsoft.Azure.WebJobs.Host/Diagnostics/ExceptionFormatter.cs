@@ -121,7 +121,7 @@ namespace Microsoft.Azure.WebJobs.Host.Diagnostics
             var method = frame.GetMethod();
             var declaringType = method?.DeclaringType;
             
-            if (ShouldShowFrame(declaringType) == false)
+            if (!ShouldShowFrame(declaringType))
             {
                 return;
             }
