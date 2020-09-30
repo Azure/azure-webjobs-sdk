@@ -209,7 +209,8 @@ namespace Microsoft.Azure.WebJobs.Host.Diagnostics
                 var end = fullName.LastIndexOf('>');
                 if (start >= 0 && end >= 0)
                 {
-                    stringBuilder.Append(fullName.Remove(start, 1).Substring(0, end - 1));
+                    stringBuilder.Append(fullName, 0, start);
+                    stringBuilder.Append(fullName, start + 1, end - start - 1);
                 }
                 else
                 {
