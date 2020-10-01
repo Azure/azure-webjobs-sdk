@@ -113,11 +113,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             if (invocationThrows)
             {
-                mockRetryStrategy.Verify(p => p.GetNextDelay(It.IsAny<RetryContext>()), Times.Exactly(maxRetryCount));
+                Assert.NotNull(result);
+                Assert.NotNull(result.Exception.InnerException);
+                Assert.Equal("Test retry exception. invocationCount:6", result.Exception.InnerException.Message);
             }
             else
             {
-                mockRetryStrategy.Verify(p => p.GetNextDelay(It.IsAny<RetryContext>()), Times.Never);
+                Assert.NotNull(result);
+                Assert.Null(result.Exception);
             }
         }
 
@@ -134,12 +137,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             var serviceScopeMock = new Mock<IServiceScope>();
             serviceScopeFactoryMock.Setup(s => s.CreateScope()).Returns(serviceScopeMock.Object);
             Mock<IFunctionInvoker> mockInvoker = new Mock<IFunctionInvoker>();
+            int invocationCount = 0;
             mockInvoker.Setup(i => i.InvokeAsync(It.IsAny<object>(), It.IsAny<object[]>()))
                 .Returns(() =>
                 {
+                    invocationCount++;
                     if (invocationThrows)
                     {
-                        throw new Exception("Test retry exception");
+                        throw new Exception($"Test retry exception. invocationCount:{invocationCount}");
                     }
                     return Task.FromResult<object>(null);
                 });
