@@ -43,6 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly bool _allowPartialHostStartup;
         private readonly IConfiguration _configuration;
         private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly ILoggerFactory _loggerFactory;
 
         public FunctionIndexer(
             ITriggerBindingProvider triggerBindingProvider,
@@ -66,6 +67,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _singletonManager = singletonManager ?? throw new ArgumentNullException(nameof(singletonManager));
             _nameResolver = nameResolver;
             _logger = loggerFactory?.CreateLogger(LogCategories.Startup);
+            _loggerFactory = loggerFactory;
             _sharedQueue = sharedQueue;
             _defaultTimeout = defaultTimeout;
             _allowPartialHostStartup = allowPartialHostStartup;
@@ -343,7 +345,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         {
             ITriggeredFunctionBinding<TTriggerValue> functionBinding = new TriggeredFunctionBinding<TTriggerValue>(descriptor, parameterName, triggerBinding, nonTriggerBindings, _singletonManager);
             ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory = new TriggeredFunctionInstanceFactory<TTriggerValue>(functionBinding, invoker, descriptor, _serviceScopeFactory);
-            ITriggeredFunctionExecutor triggerExecutor = new TriggeredFunctionExecutor<TTriggerValue>(descriptor, _executor, instanceFactory);
+            ITriggeredFunctionExecutor triggerExecutor = new TriggeredFunctionExecutor<TTriggerValue>(descriptor, _executor, instanceFactory, _loggerFactory);
             IListenerFactory listenerFactory = new ListenerFactory(descriptor, triggerExecutor, triggerBinding, _sharedQueue);
 
             return new FunctionDefinition(descriptor, instanceFactory, listenerFactory);

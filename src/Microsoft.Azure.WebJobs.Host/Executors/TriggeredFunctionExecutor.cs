@@ -6,20 +6,24 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
     internal class TriggeredFunctionExecutor<TTriggerValue> : ITriggeredFunctionExecutor
     {
+        private readonly ILoggerFactory _loggerFactory;
         private FunctionDescriptor _descriptor;
         private ITriggeredFunctionInstanceFactory<TTriggerValue> _instanceFactory;
         private IFunctionExecutor _executor;
 
-        public TriggeredFunctionExecutor(FunctionDescriptor descriptor, IFunctionExecutor executor, ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory)
+        public TriggeredFunctionExecutor(FunctionDescriptor descriptor, IFunctionExecutor executor, ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory, ILoggerFactory loggerFactory)
         {
             _descriptor = descriptor;
             _executor = executor;
             _instanceFactory = instanceFactory;
+            _loggerFactory = loggerFactory;
         }
 
         public FunctionDescriptor Function
@@ -51,9 +55,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 };
             }
 
-            IFunctionInstance instance = _instanceFactory.Create(context);
-
-            IDelayedException exception = await _executor.TryExecuteAsync(instance, cancellationToken);
+            Func<IFunctionInstance> instanceFactory = () => _instanceFactory.Create(context);
+            IDelayedException exception = await _executor.TryExecuteAsync(instanceFactory, _loggerFactory, cancellationToken);
 
             FunctionResult result = exception != null ?
                 new FunctionResult(exception.Exception)

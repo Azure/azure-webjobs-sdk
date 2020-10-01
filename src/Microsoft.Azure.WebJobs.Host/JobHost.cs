@@ -221,7 +221,7 @@ namespace Microsoft.Azure.WebJobs
             await EnsureHostInitializedAsync(cancellationToken);
 
             IFunctionDefinition function = _context.FunctionLookup.LookupByName(name);
-            
+
             await CallAsyncCore(function, name, arguments, cancellationToken);
         }
 
@@ -233,15 +233,14 @@ namespace Microsoft.Azure.WebJobs
                 throw new InvalidOperationException($"'{functionKey}' can't be invoked from Azure WebJobs SDK. Is it missing Azure WebJobs SDK attributes?");
             }
 
-            var instance = CreateFunctionInstance(function, arguments);
-            var exception = await _context.Executor.TryExecuteAsync(instance, cancellationToken);
+            Func<IFunctionInstance> instanceFactory = () => CreateFunctionInstance(function, arguments);
+            IDelayedException exception = await _context.Executor.TryExecuteAsync(instanceFactory, _context.LoggerFactory, cancellationToken);
 
             if (exception != null)
             {
                 exception.Throw();
             }
         }
-
 
         /// <summary>
         /// Dispose the instance

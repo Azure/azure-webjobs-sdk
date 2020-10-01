@@ -45,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         public Task<IListener> CreateAsync(CancellationToken cancellationToken)
         {
-            var triggerExecutor = new HostMessageExecutor(_executor, _functionLookup, _functionInstanceLogger);
+            var triggerExecutor = new HostMessageExecutor(_executor, _functionLookup, _functionInstanceLogger, _loggerFactory);
 
             IListener listener = _queueFactory.CreateQueueListenr(_queueName, null, triggerExecutor.ExecuteAsync);
     

@@ -11,6 +11,8 @@ using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
@@ -20,12 +22,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IFunctionExecutor _innerExecutor;
         private readonly IFunctionIndexLookup _functionLookup;
         private readonly IFunctionInstanceLogger _functionInstanceLogger;
+        private readonly ILoggerFactory _loggerFactory;
 
-        public HostMessageExecutor(IFunctionExecutor innerExecutor, IFunctionIndexLookup functionLookup, IFunctionInstanceLogger functionInstanceLogger)
+        public HostMessageExecutor(IFunctionExecutor innerExecutor, IFunctionIndexLookup functionLookup, IFunctionInstanceLogger functionInstanceLogger, ILoggerFactory loggerFactory)
         {
             _innerExecutor = innerExecutor;
             _functionLookup = functionLookup;
             _functionInstanceLogger = functionInstanceLogger;
+            _loggerFactory = loggerFactory;
         }
 
         public async Task<FunctionResult> ExecuteAsync(string value, CancellationToken cancellationToken)
@@ -88,15 +92,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             };
         }
 
-        private IFunctionInstance CreateFunctionInstance(CallAndOverrideMessage message)
+        private IFunctionInstance CreateFunctionInstance(CallAndOverrideMessage message, IFunctionDefinition function)
         {
-            IFunctionDefinition function = _functionLookup.Lookup(message.FunctionId);
-
-            if (function == null)
-            {
-                return null;
-            }
-
             IDictionary<string, object> objectParameters = new Dictionary<string, object>();
 
             if (message.Arguments != null)
@@ -120,11 +117,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         private async Task ProcessCallAndOverrideMessage(CallAndOverrideMessage message, CancellationToken cancellationToken)
         {
-            IFunctionInstance instance = CreateFunctionInstance(message);
+            IFunctionDefinition function = _functionLookup.Lookup(message.FunctionId);
 
-            if (instance != null)
+            if (function != null)
             {
-                await _innerExecutor.TryExecuteAsync(instance, cancellationToken);
+                Func<IFunctionInstance> instanceFactory = () => CreateFunctionInstance(message, function);
+                await _innerExecutor.TryExecuteAsync(instanceFactory, _loggerFactory, cancellationToken);
             }
             else
             {

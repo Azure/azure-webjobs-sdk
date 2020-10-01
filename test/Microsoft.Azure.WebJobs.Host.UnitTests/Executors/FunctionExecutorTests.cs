@@ -330,35 +330,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             // used for a FunctionDescriptor
         }
 
-        private IFunctionInstance CreateFunctionInstance(Guid id, bool invocationThrows)
-        {
-            var method = GetType().GetMethod(nameof(TestFunction), BindingFlags.NonPublic | BindingFlags.Static);
-            var descriptor = FunctionIndexer.FromMethod(method, new ConfigurationBuilder().Build());
-            var serviceScopeFactoryMock = new Mock<IServiceScopeFactory>(MockBehavior.Strict);
-            var serviceScopeMock = new Mock<IServiceScope>();
-            serviceScopeFactoryMock.Setup(s => s.CreateScope()).Returns(serviceScopeMock.Object);
-            Mock<IFunctionInvoker> mockInvoker = new Mock<IFunctionInvoker>();
-            mockInvoker.Setup(i => i.InvokeAsync(It.IsAny<object>(), It.IsAny<object[]>()))
-                .Returns(() =>
-                {
-                    if (invocationThrows)
-                    {
-                        throw new Exception("Test retry exception");
-                    }
-                    return Task.FromResult<object>(null);
-                });
-            mockInvoker.Setup( m => m.ParameterNames).Returns(new List<string>());
-            var mockBindingSource = new Mock<IBindingSource>();
-            var valueProviders = Task.Run(() =>
-            {
-                IDictionary<string, IValueProvider> d = new Dictionary<string, IValueProvider>();
-                IReadOnlyDictionary<string, IValueProvider> red = new ReadOnlyDictionary<string, IValueProvider>(d);
-                return red;
-            });
-            mockBindingSource.Setup(p => p.BindAsync(It.IsAny<ValueBindingContext>())).Returns(valueProviders);
-            return new FunctionInstance(id, new Dictionary<string, string>(), null, new ExecutionReason(), mockBindingSource.Object, mockInvoker.Object, descriptor, serviceScopeFactoryMock.Object);
-        }
-
         private IFunctionInstanceEx GetFunctionInstanceExMockInstance()
         {
             var mockBindingSource = new Mock<IBindingSource>();
@@ -429,40 +400,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             {
                 var messages = logger.GetLogMessages().Select(p => p.FormattedMessage);
                 Assert.Equal(messages.ElementAt(0), "Requesting cancellation for function invocation '00000000-0000-0000-0000-000000000000'");
-            }
-        }
-
-        [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task ExecuteWithRetries_Test(bool invocationThrows)
-        {
-            var functionInstanceEx = (IFunctionInstanceEx)CreateFunctionInstance(Guid.NewGuid(), invocationThrows);
-            var logger = new TestLogger("Tests.FunctionExecutor");
-            var functionExecutor = GetTestFunctionExecutor();
-            // Arrange
-            HostStartedMessage testMessage = new HostStartedMessage();
-            functionExecutor.HostOutputMessage = testMessage;
-
-            int maxRetryCount = 5;
-            TimeSpan delay = TimeSpan.FromMilliseconds(100);
-            var mockRetryStrategy = new Mock<IRetryStrategy>();
-            mockRetryStrategy.Setup(p => p.MaxRetryCount).Returns(maxRetryCount);
-            mockRetryStrategy.Setup(p => p.GetNextDelay(It.IsAny<RetryContext>())).Returns(delay);
-
-            await functionExecutor.ExecuteWithRetriesAsync(functionInstanceEx, CancellationToken.None, logger, mockRetryStrategy.Object);
-            if (invocationThrows)
-            {
-                mockRetryStrategy.Verify(p => p.GetNextDelay(It.IsAny<RetryContext>()), Times.Exactly(maxRetryCount));
-                var messages = logger.GetLogMessages().Select(p => p.FormattedMessage);
-                Assert.Equal(5, messages.Count());
-                Assert.True(messages.All(p => p.Contains($"Waiting for `{delay}`")));
-            }
-            else
-            {
-                mockRetryStrategy.Verify(p => p.GetNextDelay(It.IsAny<RetryContext>()), Times.Never);
-                var messages = logger.GetLogMessages().Select(p => p.FormattedMessage);
-                Assert.Empty(messages);
             }
         }
 
