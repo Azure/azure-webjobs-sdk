@@ -15,3 +15,5 @@ csx
 /buildoutput
 
 /tools/NuGet.exe
+
+BenchmarkDotNet.Artifacts/
