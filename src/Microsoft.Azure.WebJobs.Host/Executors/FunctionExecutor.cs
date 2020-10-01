@@ -74,53 +74,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             var functionInstanceEx = (IFunctionInstanceEx)functionInstance;
             var logger = _loggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(functionInstanceEx.FunctionDescriptor.LogName));
-
-            if (functionInstance.FunctionDescriptor.RetryStrategy != null)
-            {
-                return await ExecuteWithRetriesAsync(functionInstanceEx, cancellationToken, logger, functionInstance.FunctionDescriptor.RetryStrategy);
-            }
-
             return await TryExecuteAsyncCore(functionInstanceEx, cancellationToken, logger);
         }
-
-        internal async Task<IDelayedException> ExecuteWithRetriesAsync(IFunctionInstanceEx functionInstance, CancellationToken token, ILogger logger, IRetryStrategy retryStrategy)
-        {
-            var attempt = 0;
-            IDelayedException functionResult = null;
-            TimeSpan nextDelay;
-            do
-            {
-                if (token.IsCancellationRequested)
-                {
-                    logger.LogDebug($"Function execution cancelled.");
-                    break;
-                }
-                functionResult = await TryExecuteAsyncCore(functionInstance, token, logger);
-                if (functionResult == null)
-                {
-                    // function invocation succeeded.
-                    break;
-                }
-
-                if (++attempt > retryStrategy.MaxRetryCount)
-                {
-                    // no.of retries exceeded
-                    break;
-                }
-                // Build retry context
-                var retryContext = new RetryContext
-                {
-                    RetryCount = attempt,
-                    Exception = functionResult.Exception,
-                    Instance = functionInstance
-                };
-                nextDelay = retryStrategy.GetNextDelay(retryContext);
-                logger.LogFunctionRetryAttempt(nextDelay, attempt, retryStrategy.MaxRetryCount);
-                await Task.Delay(nextDelay);
-            } while (attempt <= retryStrategy.MaxRetryCount || retryStrategy.MaxRetryCount == -1);
-            return functionResult;
-        }
-
+        
         private async Task<IDelayedException> TryExecuteAsyncCore(IFunctionInstanceEx functionInstanceEx, CancellationToken cancellationToken, ILogger logger)
         {
             var functionStartedMessage = CreateStartedMessage(functionInstanceEx);

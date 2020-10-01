@@ -221,7 +221,7 @@ namespace Microsoft.Azure.WebJobs
             await EnsureHostInitializedAsync(cancellationToken);
 
             IFunctionDefinition function = _context.FunctionLookup.LookupByName(name);
-            
+
             await CallAsyncCore(function, name, arguments, cancellationToken);
         }
 
@@ -233,13 +233,41 @@ namespace Microsoft.Azure.WebJobs
                 throw new InvalidOperationException($"'{functionKey}' can't be invoked from Azure WebJobs SDK. Is it missing Azure WebJobs SDK attributes?");
             }
 
-            var instance = CreateFunctionInstance(function, arguments);
-            var exception = await _context.Executor.TryExecuteAsync(instance, cancellationToken);
+            // Initial attempt
+            IFunctionInstance instance = CreateFunctionInstance(function, arguments);
+            IDelayedException exception = await _context.Executor.TryExecuteAsync(instance, cancellationToken);
+
+            // Retry
+            if (instance.FunctionDescriptor.RetryStrategy != null && exception != null)
+            {
+                exception = await TryExecuteWithRetriesAsync(function, arguments, cancellationToken);
+            }
 
             if (exception != null)
             {
                 exception.Throw();
             }
+        }
+
+        internal async Task<IDelayedException> TryExecuteWithRetriesAsync(IFunctionDefinition function, IDictionary<string, object> arguments, CancellationToken cancellationToken)
+        {
+            IFunctionInstance functionInstance = CreateFunctionInstance(function, arguments);
+            FunctionDescriptor descriptor = functionInstance.FunctionDescriptor;
+            var attempt = 0;
+            IDelayedException functionResult = null;
+            var logger = _context.LoggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(descriptor.LogName));
+            bool retriesExceeded = false;
+            while (!retriesExceeded)
+            {
+                functionResult = await _context.Executor.TryExecuteAsync(functionInstance, cancellationToken);
+                retriesExceeded = await Utility.WaitForNextExecutionAttempt(functionInstance, functionResult, descriptor.RetryStrategy, logger, attempt);
+                if (retriesExceeded)
+                {
+                    break;
+                }
+                attempt++;
+            }
+            return functionResult;
         }
 
 

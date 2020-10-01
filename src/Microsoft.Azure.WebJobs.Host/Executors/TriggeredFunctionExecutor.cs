@@ -6,20 +6,24 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
     internal class TriggeredFunctionExecutor<TTriggerValue> : ITriggeredFunctionExecutor
     {
+        private readonly ILoggerFactory _loggerFactory;
         private FunctionDescriptor _descriptor;
         private ITriggeredFunctionInstanceFactory<TTriggerValue> _instanceFactory;
         private IFunctionExecutor _executor;
-
-        public TriggeredFunctionExecutor(FunctionDescriptor descriptor, IFunctionExecutor executor, ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory)
+        
+        public TriggeredFunctionExecutor(FunctionDescriptor descriptor, IFunctionExecutor executor, ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory,  ILoggerFactory loggerFactory)
         {
             _descriptor = descriptor;
             _executor = executor;
             _instanceFactory = instanceFactory;
+            _loggerFactory = loggerFactory;
         }
 
         public FunctionDescriptor Function
@@ -51,15 +55,41 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 };
             }
 
+            // initial attempt
             IFunctionInstance instance = _instanceFactory.Create(context);
-
             IDelayedException exception = await _executor.TryExecuteAsync(instance, cancellationToken);
+
+            // Retry
+            if (_descriptor.RetryStrategy != null && exception != null)
+            {
+                exception = await TryExecuteWithRetriesAsync(context, cancellationToken);
+            }
 
             FunctionResult result = exception != null ?
                 new FunctionResult(exception.Exception)
                 : new FunctionResult(true);
 
             return result;
+        }
+
+        internal async Task<IDelayedException> TryExecuteWithRetriesAsync(FunctionInstanceFactoryContext<TTriggerValue> context, CancellationToken cancellationToken)
+        {
+            IFunctionInstance functionInstance = _instanceFactory.Create(context);
+            var attempt = 0;
+            IDelayedException functionResult = null;
+            var logger = _loggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(_descriptor.LogName));
+            bool retriesExceeded = false;
+            while (!retriesExceeded)
+            {
+                functionResult = await _executor.TryExecuteAsync(functionInstance, cancellationToken);
+                retriesExceeded = await Utility.WaitForNextExecutionAttempt(functionInstance, functionResult, _descriptor.RetryStrategy, logger, attempt);
+                if (retriesExceeded)
+                {
+                    break;
+                }
+                attempt++;
+            }
+            return functionResult;
         }
     }
 }

@@ -1,12 +1,19 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
+using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs
 {
@@ -47,6 +54,33 @@ namespace Microsoft.Azure.WebJobs
             var attribute = type.GetCustomAttribute<ExtensionAttribute>(false);
 
             return attribute?.ConfigurationSection ?? GetExtensionAliasFromTypeName(type.Name);
+        }
+
+        internal static async Task<bool> WaitForNextExecutionAttempt(IFunctionInstance functionInstance, IDelayedException functionResult, IRetryStrategy retryStrategy, ILogger logger, int attempt)
+        {
+            if (functionResult == null)
+            {
+                // function invocation succeeded 
+                return true;
+            }
+            if (retryStrategy.MaxRetryCount != -1 && ++attempt >= retryStrategy.MaxRetryCount)
+            {
+                // no.of retries exceeded
+                return true;
+            }
+
+            // Build retry context
+            var retryContext = new RetryContext
+            {
+                RetryCount = attempt,
+                Exception = functionResult.Exception,
+                Instance = functionInstance
+            };
+
+            TimeSpan nextDelay = retryStrategy.GetNextDelay(retryContext);
+            logger.LogFunctionRetryAttempt(nextDelay, attempt, retryStrategy.MaxRetryCount);
+            await Task.Delay(nextDelay);
+            return false;
         }
     }
 }
