@@ -121,39 +121,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             }
         }
 
-        [Theory]
-        [InlineData(true, false, 5, 3)]
-        [InlineData(true, false, -1, 3)]
-        [InlineData(false, true, 5, 3)]
-        [InlineData(true, true, 5, 5)]
-        public async Task WaitForNextExecutionAttempt_Tests(bool functionResultException, bool expected, int maxRetryCount, int attempt)
-        {
-            IDelayedException functionResult = null;
-            TimeSpan delay = TimeSpan.FromMilliseconds(100);
-            var mockRetryStrategy = new Mock<IRetryStrategy>();
-            mockRetryStrategy.Setup(p => p.MaxRetryCount).Returns(maxRetryCount);
-            mockRetryStrategy.Setup(p => p.GetNextDelay(It.IsAny<RetryContext>())).Returns(delay);
-            var logger = new TestLogger("Tests.FunctionExecutor");
-
-            if (functionResultException)
-            {
-                functionResult = new DelayedException(new Exception("Test"));
-            }
-            bool retriesExceeded = await Utility.WaitForNextExecutionAttempt(null, functionResult, mockRetryStrategy.Object, logger, attempt);
-            Assert.Equal(expected, retriesExceeded);
-            if (retriesExceeded)
-            {
-                var messages = logger.GetLogMessages().Select(p => p.FormattedMessage);
-                Assert.Empty(messages);
-            }
-            else if (functionResultException)
-            {
-                var messages = logger.GetLogMessages().Select(p => p.FormattedMessage);
-                Assert.Single(messages);
-                Assert.True(messages.All(p => p.Contains($"Waiting for `{delay}`")));
-            }
-        }
-
         private FunctionDescriptor GetFunctionDescriptor()
         {
             var method = GetType().GetMethod(nameof(TestFunction), BindingFlags.NonPublic | BindingFlags.Static);

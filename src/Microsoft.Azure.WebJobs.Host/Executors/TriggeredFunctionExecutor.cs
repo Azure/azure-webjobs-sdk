@@ -55,17 +55,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 };
             }
 
-            // initial attempt
-            IFunctionInstance instance = _instanceFactory.Create(context);
-            IDelayedException exception = await _executor.TryExecuteAsync(instance, cancellationToken);
-
-            // Retry
-            if (_descriptor.RetryStrategy != null && exception != null)
-            {
-                Func<IFunctionInstance> instanceFactory = () => _instanceFactory.Create(context);
-                var logger = _loggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(_descriptor.LogName));
-                exception = await _executor.TryExecuteAsync(instanceFactory, _descriptor.RetryStrategy, logger, cancellationToken);
-            }
+            Func<IFunctionInstance> instanceFactory = () => _instanceFactory.Create(context);
+            var logger = _loggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(_descriptor.LogName));
+            IDelayedException exception = await _executor.TryExecuteAsync(instanceFactory, _loggerFactory, cancellationToken);
 
             FunctionResult result = exception != null ?
                 new FunctionResult(exception.Exception)

@@ -233,17 +233,8 @@ namespace Microsoft.Azure.WebJobs
                 throw new InvalidOperationException($"'{functionKey}' can't be invoked from Azure WebJobs SDK. Is it missing Azure WebJobs SDK attributes?");
             }
 
-            // Initial attempt
-            IFunctionInstance instance = CreateFunctionInstance(function, arguments);
-            IDelayedException exception = await _context.Executor.TryExecuteAsync(instance, cancellationToken);
-
-            // Retry
-            if (instance.FunctionDescriptor.RetryStrategy != null && exception != null)
-            {
-                Func<IFunctionInstance> instanceFactory = () => CreateFunctionInstance(function, arguments);
-                var logger = _context.LoggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(instance.FunctionDescriptor.LogName));
-                exception = await _context.Executor.TryExecuteAsync(instanceFactory, instance.FunctionDescriptor.RetryStrategy, logger, cancellationToken);
-            }
+            Func<IFunctionInstance> instanceFactory = () => CreateFunctionInstance(function, arguments);
+            IDelayedException exception = await _context.Executor.TryExecuteAsync(instanceFactory, _context.LoggerFactory, cancellationToken);
 
             if (exception != null)
             {

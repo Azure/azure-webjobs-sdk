@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -85,6 +86,9 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             var resultLogs = resultsLogger.GetLogMessages();
             Assert.Equal(4, resultLogs.Count);
+
+            // Verify each retry has a unique invocoation id
+            Assert.Equal(4, ILoggerFunctions.InvocationIds.Distinct().Count());
         }
 
         [Fact]
@@ -214,7 +218,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private IHostBuilder ConfigureHostBuilder()
         {
             return new HostBuilder()
-                .ConfigureDefaultTestHost<ILoggerFunctions>()
+                .ConfigureDefaultTestHost<ILoggerFunctions>(b =>
+                {
+                    b.AddExecutionContextBinding();
+                })
                 .ConfigureServices(services =>
                 {
                     services.Configure<FunctionResultAggregatorOptions>(o => o.IsEnabled = false);
@@ -223,6 +230,8 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
         private class ILoggerFunctions
         {
+            public static List<string> InvocationIds = new List<string>();
+
             [NoAutomaticTrigger]
             public void ILogger(ILogger log)
             {
@@ -233,9 +242,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
 
             [NoAutomaticTrigger]
-            [FixedDelayRetry(3, "00:00:01")]
-            public void ILogger_Retry(ILogger log)
+            [FixedDelayRetry(3, "00:00:00.100")]
+            public void ILogger_Retry(ExecutionContext context, ILogger log)
             {
+                InvocationIds.Add(context.InvocationId.ToString());
                 log.LogInformation("Log {some} keys and {values}", "1", "2");
 
                 var ex = new InvalidOperationException("Failure.");

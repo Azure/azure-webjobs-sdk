@@ -55,32 +55,5 @@ namespace Microsoft.Azure.WebJobs
 
             return attribute?.ConfigurationSection ?? GetExtensionAliasFromTypeName(type.Name);
         }
-
-        internal static async Task<bool> WaitForNextExecutionAttempt(IFunctionInstance functionInstance, IDelayedException functionResult, IRetryStrategy retryStrategy, ILogger logger, int attempt)
-        {
-            if (functionResult == null)
-            {
-                // function invocation succeeded 
-                return true;
-            }
-            if (retryStrategy.MaxRetryCount != -1 && ++attempt >= retryStrategy.MaxRetryCount)
-            {
-                // no.of retries exceeded
-                return true;
-            }
-
-            // Build retry context
-            var retryContext = new RetryContext
-            {
-                RetryCount = attempt,
-                Exception = functionResult.Exception,
-                Instance = functionInstance
-            };
-
-            TimeSpan nextDelay = retryStrategy.GetNextDelay(retryContext);
-            logger.LogFunctionRetryAttempt(nextDelay, attempt, retryStrategy.MaxRetryCount);
-            await Task.Delay(nextDelay);
-            return false;
-        }
     }
 }

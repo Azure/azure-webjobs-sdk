@@ -128,14 +128,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             if (instance != null)
             {
-                IDelayedException exception = await _innerExecutor.TryExecuteAsync(instance, cancellationToken);
-                // Retry
-                if (instance.FunctionDescriptor.RetryStrategy != null && exception != null)
-                {
-                    Func<IFunctionInstance> instanceFactory = () => CreateFunctionInstance(message);
-                    var logger = _loggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(instance.FunctionDescriptor.LogName));
-                    exception = await _innerExecutor.TryExecuteAsync(instanceFactory, instance.FunctionDescriptor.RetryStrategy, logger, cancellationToken);
-                }
+                Func<IFunctionInstance> instanceFactory = () => CreateFunctionInstance(message);
+                await _innerExecutor.TryExecuteAsync(instanceFactory, _loggerFactory, cancellationToken);
             }
             else
             {

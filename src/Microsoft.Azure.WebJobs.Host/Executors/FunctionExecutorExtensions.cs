@@ -8,27 +8,50 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using Microsoft.Azure.WebJobs.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
     /// <summary>Provides extension methods for the <see cref="IFunctionExecutor"/> interface.</summary>
-    public static class FunctionExecutorExtensions
+    internal static class FunctionExecutorExtensions
     {
-        internal static async Task<IDelayedException> TryExecuteAsync(this IFunctionExecutor executor, Func<IFunctionInstance> instanceFactory, IRetryStrategy retryStrategy, ILogger logger, CancellationToken cancellationToken)
+        public static async Task<IDelayedException> TryExecuteAsync(this IFunctionExecutor executor, Func<IFunctionInstance> instanceFactory, ILoggerFactory loggerFactory, CancellationToken cancellationToken)
         {
             var attempt = 0;
             IDelayedException functionResult = null;
-            bool retriesExceeded = false;
-            while (!retriesExceeded)
+            ILogger logger = null;
+            while (true)
             {
                 IFunctionInstance functionInstance = instanceFactory.Invoke();
-                functionResult = await executor.TryExecuteAsync(functionInstance, cancellationToken);
-                retriesExceeded = await Utility.WaitForNextExecutionAttempt(functionInstance, functionResult, retryStrategy, logger, attempt);
-                if (retriesExceeded)
+                if (logger == null)
                 {
+                    logger = loggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(functionInstance.FunctionDescriptor.LogName));
+                }
+                functionResult = await executor.TryExecuteAsync(functionInstance, cancellationToken);
+                if (functionResult == null || functionInstance.FunctionDescriptor.RetryStrategy == null)
+                {
+                    // function invocation succeeded 
                     break;
                 }
-                attempt++;
+
+                IRetryStrategy retryStrategy = functionInstance.FunctionDescriptor.RetryStrategy;
+                if (retryStrategy.MaxRetryCount != -1 && ++attempt >= retryStrategy.MaxRetryCount)
+                {
+                    // no.of retries exceeded
+                    break;
+                }
+
+                // Build retry context
+                var retryContext = new RetryContext
+                {
+                    RetryCount = attempt,
+                    Exception = functionResult.Exception,
+                    Instance = functionInstance
+                };
+
+                TimeSpan nextDelay = retryStrategy.GetNextDelay(retryContext);
+                logger.LogFunctionRetryAttempt(nextDelay, attempt, retryStrategy.MaxRetryCount);
+                await Task.Delay(nextDelay);
             }
             return functionResult;
         }
