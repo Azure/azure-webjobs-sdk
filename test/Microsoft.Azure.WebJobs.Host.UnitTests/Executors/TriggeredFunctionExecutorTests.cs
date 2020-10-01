@@ -113,7 +113,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             if (invocationThrows)
             {
-                mockRetryStrategy.Verify(p => p.GetNextDelay(It.IsAny<RetryContext>()), Times.Exactly(maxRetryCount - 1));
+                mockRetryStrategy.Verify(p => p.GetNextDelay(It.IsAny<RetryContext>()), Times.Exactly(maxRetryCount));
             }
             else
             {

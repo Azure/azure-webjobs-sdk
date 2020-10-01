@@ -35,7 +35,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
 
                 IRetryStrategy retryStrategy = functionInstance.FunctionDescriptor.RetryStrategy;
-                if (retryStrategy.MaxRetryCount != -1 && ++attempt >= retryStrategy.MaxRetryCount)
+                if (retryStrategy.MaxRetryCount != -1 && ++attempt > retryStrategy.MaxRetryCount)
                 {
                     // no.of retries exceeded
                     break;
