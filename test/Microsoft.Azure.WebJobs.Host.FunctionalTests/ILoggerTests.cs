@@ -54,6 +54,40 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
+        public async Task ILogger_Retry_Succeeds()
+        {
+            string functionName = nameof(ILoggerFunctions.ILogger_Retry);
+            IHost host = ConfigureHostBuilder().Build();
+            var loggerProvider = host.GetTestLoggerProvider();
+
+            using (host)
+            {
+                var method = typeof(ILoggerFunctions).GetMethod(functionName);
+                Exception exception = await Assert.ThrowsAsync<FunctionInvocationException>(() => host.GetJobHost().CallAsync(method));
+            }
+
+            // Six loggers are the startup, singleton, results, function and function.user
+            // Note: We currently have 3 additional Logger<T> categories that need to be renamed
+            Assert.Equal(8, loggerProvider.CreatedLoggers.Count); // $$$ was 9?
+
+            var functionLogger = loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.CreateFunctionUserCategory(functionName)).Single();
+            var resultsLogger = loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.Results).Single();
+
+            var allLogs = functionLogger.GetLogMessages();
+
+            // Total execution count - 4 = 1 initial + 3 retries. Each execution writes two logs. Total logs: 4 * 2 = 8
+            Assert.Equal(8, allLogs.Count);
+            var infoMessages = allLogs.Where(l => l.Level == LogLevel.Information);
+            var errorMessages = allLogs.Where(l => l.Level == LogLevel.Error);
+
+            Assert.Equal(4, infoMessages.Count());
+            Assert.Equal(4, errorMessages.Count());
+
+            var resultLogs = resultsLogger.GetLogMessages();
+            Assert.Equal(4, resultLogs.Count);
+        }
+
+        [Fact]
         public async Task TraceWriter_ForwardsTo_ILogger()
         {
             string functionName = nameof(ILoggerFunctions.TraceWriterWithILoggerFactory);
@@ -196,6 +230,18 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
                 var ex = new InvalidOperationException("Failure.");
                 log.LogError(0, ex, "Log {other} keys {and} values", "3", "4");
+            }
+
+            [NoAutomaticTrigger]
+            [FixedDelayRetry(3, "00:00:01")]
+            public void ILogger_Retry(ILogger log)
+            {
+                log.LogInformation("Log {some} keys and {values}", "1", "2");
+
+                var ex = new InvalidOperationException("Failure.");
+                log.LogError(0, ex, "Log {other} keys {and} values", "3", "4");
+
+                throw ex;
             }
 
             [NoAutomaticTrigger]
