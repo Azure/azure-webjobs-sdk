@@ -11,6 +11,8 @@ using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
@@ -20,12 +22,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IFunctionExecutor _innerExecutor;
         private readonly IFunctionIndexLookup _functionLookup;
         private readonly IFunctionInstanceLogger _functionInstanceLogger;
+        private readonly ILoggerFactory _loggerFactory;
 
-        public HostMessageExecutor(IFunctionExecutor innerExecutor, IFunctionIndexLookup functionLookup, IFunctionInstanceLogger functionInstanceLogger)
+        public HostMessageExecutor(IFunctionExecutor innerExecutor, IFunctionIndexLookup functionLookup, IFunctionInstanceLogger functionInstanceLogger, ILoggerFactory loggerFactory)
         {
             _innerExecutor = innerExecutor;
             _functionLookup = functionLookup;
             _functionInstanceLogger = functionInstanceLogger;
+            _loggerFactory = loggerFactory;
         }
 
         public async Task<FunctionResult> ExecuteAsync(string value, CancellationToken cancellationToken)
@@ -124,7 +128,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             if (instance != null)
             {
-                await _innerExecutor.TryExecuteAsync(instance, cancellationToken);
+                IDelayedException exception = await _innerExecutor.TryExecuteAsync(instance, cancellationToken);
+                // Retry
+                if (instance.FunctionDescriptor.RetryStrategy != null && exception != null)
+                {
+                    Func<IFunctionInstance> instanceFactory = () => CreateFunctionInstance(message);
+                    var logger = _loggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(instance.FunctionDescriptor.LogName));
+                    exception = await _innerExecutor.TryExecuteAsync(instanceFactory, instance.FunctionDescriptor.RetryStrategy, logger, cancellationToken);
+                }
             }
             else
             {

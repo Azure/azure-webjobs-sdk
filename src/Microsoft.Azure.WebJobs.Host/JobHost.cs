@@ -240,7 +240,9 @@ namespace Microsoft.Azure.WebJobs
             // Retry
             if (instance.FunctionDescriptor.RetryStrategy != null && exception != null)
             {
-                exception = await TryExecuteWithRetriesAsync(function, arguments, cancellationToken);
+                Func<IFunctionInstance> instanceFactory = () => CreateFunctionInstance(function, arguments);
+                var logger = _context.LoggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(instance.FunctionDescriptor.LogName));
+                exception = await _context.Executor.TryExecuteAsync(instanceFactory, instance.FunctionDescriptor.RetryStrategy, logger, cancellationToken);
             }
 
             if (exception != null)
@@ -248,28 +250,6 @@ namespace Microsoft.Azure.WebJobs
                 exception.Throw();
             }
         }
-
-        internal async Task<IDelayedException> TryExecuteWithRetriesAsync(IFunctionDefinition function, IDictionary<string, object> arguments, CancellationToken cancellationToken)
-        {
-            IFunctionInstance functionInstance = CreateFunctionInstance(function, arguments);
-            FunctionDescriptor descriptor = functionInstance.FunctionDescriptor;
-            var attempt = 0;
-            IDelayedException functionResult = null;
-            var logger = _context.LoggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(descriptor.LogName));
-            bool retriesExceeded = false;
-            while (!retriesExceeded)
-            {
-                functionResult = await _context.Executor.TryExecuteAsync(functionInstance, cancellationToken);
-                retriesExceeded = await Utility.WaitForNextExecutionAttempt(functionInstance, functionResult, descriptor.RetryStrategy, logger, attempt);
-                if (retriesExceeded)
-                {
-                    break;
-                }
-                attempt++;
-            }
-            return functionResult;
-        }
-
 
         /// <summary>
         /// Dispose the instance
