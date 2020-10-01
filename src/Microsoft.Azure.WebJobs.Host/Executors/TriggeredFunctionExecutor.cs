@@ -56,7 +56,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
 
             Func<IFunctionInstance> instanceFactory = () => _instanceFactory.Create(context);
-            var logger = _loggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(_descriptor.LogName));
             IDelayedException exception = await _executor.TryExecuteAsync(instanceFactory, _loggerFactory, cancellationToken);
 
             FunctionResult result = exception != null ?

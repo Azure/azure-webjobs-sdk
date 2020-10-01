@@ -92,15 +92,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             };
         }
 
-        private IFunctionInstance CreateFunctionInstance(CallAndOverrideMessage message)
+        private IFunctionInstance CreateFunctionInstance(CallAndOverrideMessage message, IFunctionDefinition function)
         {
-            IFunctionDefinition function = _functionLookup.Lookup(message.FunctionId);
-
-            if (function == null)
-            {
-                return null;
-            }
-
             IDictionary<string, object> objectParameters = new Dictionary<string, object>();
 
             if (message.Arguments != null)
@@ -124,11 +117,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         private async Task ProcessCallAndOverrideMessage(CallAndOverrideMessage message, CancellationToken cancellationToken)
         {
-            IFunctionInstance instance = CreateFunctionInstance(message);
+            IFunctionDefinition function = _functionLookup.Lookup(message.FunctionId);
 
-            if (instance != null)
+            if (function != null)
             {
-                Func<IFunctionInstance> instanceFactory = () => CreateFunctionInstance(message);
+                Func<IFunctionInstance> instanceFactory = () => CreateFunctionInstance(message, function);
                 await _innerExecutor.TryExecuteAsync(instanceFactory, _loggerFactory, cancellationToken);
             }
             else

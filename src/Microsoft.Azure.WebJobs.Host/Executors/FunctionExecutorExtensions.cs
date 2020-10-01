@@ -28,9 +28,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     logger = loggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(functionInstance.FunctionDescriptor.LogName));
                 }
                 functionResult = await executor.TryExecuteAsync(functionInstance, cancellationToken);
-                if (functionResult == null || functionInstance.FunctionDescriptor.RetryStrategy == null)
+                if (functionResult == null)
                 {
-                    // function invocation succeeded 
+                    // function invocation succeeded
+                    break;
+                }
+                if (functionInstance.FunctionDescriptor.RetryStrategy == null)
+                {
+                    //retry is not configured
                     break;
                 }
 
