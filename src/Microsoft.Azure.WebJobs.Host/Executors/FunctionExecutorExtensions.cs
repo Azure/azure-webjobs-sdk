@@ -16,12 +16,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     {
         internal static async Task<IDelayedException> TryExecuteAsync(this IFunctionExecutor executor, Func<IFunctionInstance> instanceFactory, IRetryStrategy retryStrategy, ILogger logger, CancellationToken cancellationToken)
         {
-            IFunctionInstance functionInstance = instanceFactory.Invoke();
             var attempt = 0;
             IDelayedException functionResult = null;
             bool retriesExceeded = false;
             while (!retriesExceeded)
             {
+                IFunctionInstance functionInstance = instanceFactory.Invoke();
                 functionResult = await executor.TryExecuteAsync(functionInstance, cancellationToken);
                 retriesExceeded = await Utility.WaitForNextExecutionAttempt(functionInstance, functionResult, retryStrategy, logger, attempt);
                 if (retriesExceeded)
