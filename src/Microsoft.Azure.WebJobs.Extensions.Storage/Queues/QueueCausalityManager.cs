@@ -5,8 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
+using System.IO;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.Storage.Queue;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Queues
@@ -44,33 +46,42 @@ namespace Microsoft.Azure.WebJobs.Host.Queues
         {
             string text = msg.TryGetAsString();
 
-            if (text == null)
+            if (text == null || !JsonSerialization.IsJsonObject(text))
             {
                 return null;
             }
 
-            IDictionary<string, JToken> json;
             try
             {
-                json = JsonSerialization.ParseJObject(text);
+                using (var stringReader = new StringReader(text))
+                {
+                    using (var reader = JsonSerialization.CreateJsonTextReader(stringReader))
+                    {
+                        while (reader.Read())
+                        {
+                            if (reader.TokenType == JsonToken.PropertyName && reader.Value.ToString() == ParentGuidFieldName)
+                            {
+                                if (reader.Read())
+                                {
+                                    if (reader.TokenType == JsonToken.String)
+                                    {
+                                        Guid guid;
+                                        if (Guid.TryParse(reader.Value.ToString(), out guid))
+                                        {
+                                            return guid;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
             catch (Exception)
             {
                 return null;
             }
 
-            if (json == null || !json.ContainsKey(ParentGuidFieldName) || json[ParentGuidFieldName].Type != JTokenType.String)
-            {
-                return null;
-            }
-
-            string val = (string)json[ParentGuidFieldName];
-
-            Guid guid;
-            if (Guid.TryParse(val, out guid))
-            {
-                return guid;
-            }
             return null;
         }
     }
