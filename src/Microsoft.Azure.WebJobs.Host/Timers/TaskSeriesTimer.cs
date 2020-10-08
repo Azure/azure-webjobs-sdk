@@ -120,12 +120,12 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
 
                 Task wait = _initialWait;
 
-                // Execute tasks one at a time (in a series) until stopped.
-                while (!cancellationToken.IsCancellationRequested)
-                {
-                    TaskCompletionSource<object> cancellationTaskSource = new TaskCompletionSource<object>();
+                TaskCompletionSource<object> cancellationTaskSource = new TaskCompletionSource<object>();
 
-                    using (cancellationToken.Register(() => cancellationTaskSource.SetCanceled()))
+                using (cancellationToken.Register(() => cancellationTaskSource.SetCanceled()))
+                {
+                    // Execute tasks one at a time (in a series) until stopped.
+                    while (!cancellationToken.IsCancellationRequested)
                     {
                         try
                         {
@@ -135,26 +135,26 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
                         {
                             // When Stop fires, don't make it wait for wait before it can return.
                         }
-                    }
 
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        break;
-                    }
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            break;
+                        }
 
-                    try
-                    {
-                        TaskSeriesCommandResult result = await _command.ExecuteAsync(cancellationToken);
-                        wait = result.Wait;
-                    }
-                    catch (Exception ex) when (ex.InnerException is OperationCanceledException)
-                    {
-                        // OperationCanceledExceptions coming from storage are wrapped in a StorageException.
-                        // We'll handle them all here so they don't have to be managed for every call.
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // Don't fail the task, throw a background exception, or stop looping when a task cancels.
+                        try
+                        {
+                            TaskSeriesCommandResult result = await _command.ExecuteAsync(cancellationToken);
+                            wait = result.Wait;
+                        }
+                        catch (Exception ex) when (ex.InnerException is OperationCanceledException)
+                        {
+                            // OperationCanceledExceptions coming from storage are wrapped in a StorageException.
+                            // We'll handle them all here so they don't have to be managed for every call.
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            // Don't fail the task, throw a background exception, or stop looping when a task cancels.
+                        }
                     }
                 }
             }
