@@ -8,17 +8,20 @@ using System.Threading;
 
 namespace Microsoft.Azure.WebJobs.Logging
 {
-    internal class DictionaryLoggerScope
+    internal class DictionaryLoggerScope : IDisposable
     {
         private static AsyncLocal<DictionaryLoggerScope> _value = new AsyncLocal<DictionaryLoggerScope>();
 
-        private DictionaryLoggerScope(IReadOnlyDictionary<string, object> state, DictionaryLoggerScope parent)
+        private DictionaryLoggerScope(IEnumerable<KeyValuePair<string, object>> state, DictionaryLoggerScope parent)
         {
-            State = state;
+            _state = state;
             Parent = parent;
         }
 
-        internal IReadOnlyDictionary<string, object> State { get; private set; }
+        private readonly IEnumerable<KeyValuePair<string, object>> _state;
+        private Dictionary<string, object> _cached;
+
+        private static readonly Dictionary<string, object> Empty = new Dictionary<string, object>();
 
         internal DictionaryLoggerScope Parent { get; private set; }
 
@@ -37,57 +40,50 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         public static IDisposable Push(object state)
         {
-            IDictionary<string, object> stateValues;
-
-            if (state is IEnumerable<KeyValuePair<string, object>> stateEnum)
-            {
-                // Convert this to a dictionary as we have scenarios where we cannot have duplicates. In this
-                // case, if there are dupes, the later entry wins.
-                stateValues = new Dictionary<string, object>();
-                foreach (var entry in stateEnum)
-                {
-                    stateValues[entry.Key] = entry.Value;
-                }
-            }
-            else
-            {
-                // There's nothing we can do with other states.
-                return null;
-            }
-
-            Current = new DictionaryLoggerScope(new ReadOnlyDictionary<string, object>(stateValues), Current);
-            return new DisposableScope();
+            return Current = new DictionaryLoggerScope(state as IEnumerable<KeyValuePair<string, object>>, Current);
         }
 
         // Builds a state dictionary of all scopes. If an inner scope
         // contains the same key as an outer scope, it overwrites the value.
         public static IDictionary<string, object> GetMergedStateDictionary()
         {
-            IDictionary<string, object> scopeInfo = new Dictionary<string, object>();
-
             var current = Current;
+            if (current == null)
+            {
+                // no scope, return empty
+                return Empty;
+            }
+
+            if (current._cached != null)
+            {
+                // already cached, return cached
+                return current._cached;
+            }
+            
+            var cached = current._cached = new Dictionary<string, object>();
+
             while (current != null)
             {
-                foreach (var entry in current.State)
+                if (current._state != null)
                 {
-                    // inner scopes win
-                    if (!scopeInfo.Keys.Contains(entry.Key))
+                    foreach (var entry in current._state)
                     {
-                        scopeInfo.Add(entry);
+                        // inner scopes win
+                        if (!cached.ContainsKey(entry.Key))
+                        {
+                            cached.Add(entry.Key, entry.Value);
+                        }
                     }
                 }
                 current = current.Parent;
             }
 
-            return scopeInfo;
+            return cached;
         }
 
-        private class DisposableScope : IDisposable
+        public void Dispose()
         {
-            public void Dispose()
-            {
-                Current = Current.Parent;
-            }
+            Current = Current.Parent;
         }
     }
 }
