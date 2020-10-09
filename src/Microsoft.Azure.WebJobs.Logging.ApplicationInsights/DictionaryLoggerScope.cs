@@ -45,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         // Builds a state dictionary of all scopes. If an inner scope
         // contains the same key as an outer scope, it overwrites the value.
-        public static IDictionary<string, object> GetMergedStateDictionary()
+        public static IReadOnlyDictionary<string, object> GetMergedStateDictionary()
         {
             var current = Current;
             if (current == null)

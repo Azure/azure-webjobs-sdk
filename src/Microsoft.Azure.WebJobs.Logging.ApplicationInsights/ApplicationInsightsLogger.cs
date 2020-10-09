@@ -324,7 +324,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
         private void LogFunctionResult(IEnumerable<KeyValuePair<string, object>> state, LogLevel logLevel, Exception exception)
         {
-            IDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionary() ?? new Dictionary<string, object>();
+            IReadOnlyDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionary();
             // log associated exception details
             KeyValuePair<string, object>[] stateProps = state as KeyValuePair<string, object>[] ?? state.ToArray();
             if (exception != null)
@@ -355,7 +355,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// </summary>
         /// <param name="state"></param>
         /// <param name="scope"></param>
-        private void ApplyFunctionResultActivityTags(IEnumerable<KeyValuePair<string, object>> state, IDictionary<string, object> scope)
+        private void ApplyFunctionResultActivityTags(IEnumerable<KeyValuePair<string, object>> state, IReadOnlyDictionary<string, object> scope)
         {
             // Activity carries tracing context. It is managed by instrumented library (e.g. ServiceBus or Asp.Net Core)
             // and consumed by ApplicationInsights.
