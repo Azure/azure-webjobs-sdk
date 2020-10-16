@@ -28,37 +28,42 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             IReadOnlyDictionary<string, object> existingBindingData,  
             IDictionary<string, object> parameters)
         {
-            // if bindingData was a mutable dictionary, we could just add it. 
-            // But since it's read-only, must create a new one. 
-            Dictionary<string, object> bindingData = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            Func<IReadOnlyDictionary<string, object>> bindingDataFactory = () =>
+            {
+                // if bindingData was a mutable dictionary, we could just add it. 
+                // But since it's read-only, must create a new one. 
+                Dictionary<string, object> bindingData = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
-            var funcContext = context.FunctionContext;
-            var methodName = funcContext.MethodName;
-            
-            if (existingBindingData != null)
-            {
-                foreach (var kv in existingBindingData)
-                {
-                    bindingData[kv.Key] = kv.Value;
-                }
-            }
-            if (parameters != null)
-            {
-                foreach (var kv in parameters)
-                {
-                    bindingData[kv.Key] = kv.Value;
-                }
-            }
+                var funcContext = context.FunctionContext;
+                var methodName = funcContext.MethodName;
 
-            // Add 'sys' binding data. 
-            var sysBindingData = new SystemBindingData
-            {
-                MethodName = methodName
+                if (existingBindingData != null)
+                {
+                    foreach (var kv in existingBindingData)
+                    {
+                        bindingData[kv.Key] = kv.Value;
+                    }
+                }
+                if (parameters != null)
+                {
+                    foreach (var kv in parameters)
+                    {
+                        bindingData[kv.Key] = kv.Value;
+                    }
+                }
+
+                // Add 'sys' binding data. 
+                var sysBindingData = new SystemBindingData
+                {
+                    MethodName = methodName
+                };
+                sysBindingData.AddToBindingData(bindingData);
+
+                return bindingData;
             };
-            sysBindingData.AddToBindingData(bindingData);
+            
 
-            BindingContext bindingContext = new BindingContext(context, bindingData);
-            return bindingContext;
+            return new BindingContext(context, bindingDataFactory);
         }
 
         public async Task<IReadOnlyDictionary<string, IValueProvider>> BindAsync(ValueBindingContext context, IDictionary<string, object> parameters)
