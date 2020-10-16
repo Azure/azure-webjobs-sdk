@@ -26,5 +26,15 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
 
         /// <summary>Gets or sets the details of the exception that occurred.</summary>
         public string ExceptionDetails { get; set; }
+
+        internal static FunctionFailure FromException(Exception ex)
+        {
+            return new FunctionFailure
+            {
+                Exception = ex,
+                ExceptionType = ex.GetType().FullName,
+                ExceptionDetails = ex.ToDetails()
+            };
+        }
     }
 }
