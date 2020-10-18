@@ -69,7 +69,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// can result in decreased application startup time. Default value is 15 seconds.
         /// </summary>
         [Obsolete("Use LiveMetricsInitializationDelay instead.")]
-        public TimeSpan QuickPulseInitializationDelay {
+        public TimeSpan QuickPulseInitializationDelay
+        {
             get
             {
                 return LiveMetricsInitializationDelay;
@@ -104,6 +105,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// Enabled by default.
         /// </summary>
         public bool EnableDependencyTracking { get; set; } = true;
+
+        public DependencyTrackingOptions DependencyTrackingOptions { get; set; }
 
         /// <summary>
         /// Gets or sets HTTP request collection options. 
@@ -159,6 +162,18 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(HttpAutoCollectionOptions.EnableResponseHeaderInjection), HttpAutoCollectionOptions.EnableResponseHeaderInjection }
             };
 
+            JObject dependencyTrackingOptions = new JObject
+            {
+                { nameof(DependencyTrackingOptions.DisableRuntimeInstrumentation), DependencyTrackingOptions.DisableRuntimeInstrumentation },
+                { nameof(DependencyTrackingOptions.DisableDiagnosticSourceInstrumentation), DependencyTrackingOptions.DisableDiagnosticSourceInstrumentation},
+                { nameof(DependencyTrackingOptions.EnableLegacyCorrelationHeadersInjection), DependencyTrackingOptions.EnableLegacyCorrelationHeadersInjection},
+                { nameof(DependencyTrackingOptions.EnableRequestIdHeaderInjectionInW3CMode), DependencyTrackingOptions.EnableRequestIdHeaderInjectionInW3CMode},
+                { nameof(DependencyTrackingOptions.EnableSqlCommandTextInstrumentation), DependencyTrackingOptions.EnableSqlCommandTextInstrumentation},
+                { nameof(DependencyTrackingOptions.SetComponentCorrelationHttpHeaders), DependencyTrackingOptions.SetComponentCorrelationHttpHeaders},
+                { nameof(DependencyTrackingOptions.EnableAzureSdkTelemetryListener), DependencyTrackingOptions.EnableAzureSdkTelemetryListener}
+            };
+
+
             JObject options = new JObject
             {
                 { nameof(SamplingSettings), sampling },
@@ -169,7 +184,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(HttpAutoCollectionOptions), httpOptions },
                 { nameof(LiveMetricsInitializationDelay), LiveMetricsInitializationDelay },
                 { nameof(EnableLiveMetrics), EnableLiveMetrics },
-                { nameof(EnableDependencyTracking), EnableDependencyTracking }
+                { nameof(EnableDependencyTracking), EnableDependencyTracking },
+                { nameof(DependencyTrackingOptions), dependencyTrackingOptions }
             };
 
             return options.ToString(Formatting.Indented);
