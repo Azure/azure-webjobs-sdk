@@ -275,7 +275,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         public void DependencyInjectionConfiguration_NoClientIpInitializerWithoutExtendedHttpOptions()
         {
             using (var host = new HostBuilder()
-                .ConfigureServices(b => 
+                .ConfigureServices(b =>
                     b.AddHttpContextAccessor())
                 .ConfigureLogging(b =>
                 {
@@ -296,7 +296,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         public void DependencyInjectionConfiguration_ConfiguresClientIpInitializer()
         {
             using (var host = new HostBuilder()
-                .ConfigureServices(b => 
+                .ConfigureServices(b =>
                     b.AddHttpContextAccessor())
                 .ConfigureLogging(b =>
                 {
@@ -308,7 +308,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 .Build())
             {
                 var config = host.Services.GetServices<TelemetryConfiguration>().Single();
-                
+
                 Assert.Contains(config.TelemetryInitializers, ti => ti is ClientIpHeaderTelemetryInitializer);
             }
         }
@@ -395,6 +395,50 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                     {
                         o.InstrumentationKey = "KI";
                         o.EnableDependencyTracking = false;
+                    });
+                })
+                .Build())
+            {
+                var modules = host.Services.GetServices<ITelemetryModule>();
+                Assert.True(modules.Count(m => m is DependencyTrackingTelemetryModule) == 0);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_EnableSqlCommandTextInstrumentation()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsights(o =>
+                    {
+                        o.InstrumentationKey = "KI";
+                        o.EnableDependencyTracking = true;
+                        o.DependencyTrackingOptions = new DependencyTrackingOptions() { EnableSqlCommandTextInstrumentation = true };
+                    });
+                })
+                .Build())
+            {
+                var modules = host.Services.GetServices<ITelemetryModule>();
+                var matchingModules = modules.Where(m => m is DependencyTrackingTelemetryModule);
+                Assert.True(matchingModules.Count() == 1);
+
+                var module = matchingModules.First() as DependencyTrackingTelemetryModule;
+                Assert.True(module.EnableSqlCommandTextInstrumentation);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_SqlCommandTextInstrumentation_DisabledByDefault()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsights(o =>
+                    {
+                        o.InstrumentationKey = "KI";
+                        o.EnableDependencyTracking = false;
+                        o.DependencyTrackingOptions = new DependencyTrackingOptions() { EnableSqlCommandTextInstrumentation = true };
                     });
                 })
                 .Build())

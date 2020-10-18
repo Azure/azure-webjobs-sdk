@@ -691,6 +691,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                     EnableResponseHeaderInjection = false,
                     EnableW3CDistributedTracing = false,
                     EnableHttpTriggerExtendedInfoCollection = true
+                },
+                DependencyTrackingOptions = new DependencyTrackingOptions()
+                {
+                    DisableDiagnosticSourceInstrumentation = true,
+                    DisableRuntimeInstrumentation = true,
+                    EnableSqlCommandTextInstrumentation = true,
+                    EnableAzureSdkTelemetryListener = true,
+                    EnableLegacyCorrelationHeadersInjection = true,
+                    EnableRequestIdHeaderInjectionInW3CMode = true,
+                    SetComponentCorrelationHttpHeaders = true
                 }
             };
 
@@ -726,6 +736,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(options.SnapshotConfiguration.SnapshotsPerTenMinutesLimit, deserializedOptions.SnapshotConfiguration.SnapshotsPerTenMinutesLimit);
             Assert.Equal(options.SnapshotConfiguration.TempFolder, deserializedOptions.SnapshotConfiguration.TempFolder);
             Assert.Equal(options.SnapshotConfiguration.ThresholdForSnapshotting, deserializedOptions.SnapshotConfiguration.ThresholdForSnapshotting);
+
+            Assert.Equal(options.DependencyTrackingOptions.SetComponentCorrelationHttpHeaders, deserializedOptions.DependencyTrackingOptions.SetComponentCorrelationHttpHeaders);
+            Assert.Equal(options.DependencyTrackingOptions.DisableDiagnosticSourceInstrumentation, deserializedOptions.DependencyTrackingOptions.DisableDiagnosticSourceInstrumentation);
+            Assert.Equal(options.DependencyTrackingOptions.DisableRuntimeInstrumentation, deserializedOptions.DependencyTrackingOptions.DisableRuntimeInstrumentation);
+            Assert.Equal(options.DependencyTrackingOptions.EnableAzureSdkTelemetryListener, deserializedOptions.DependencyTrackingOptions.EnableAzureSdkTelemetryListener);
+            Assert.Equal(options.DependencyTrackingOptions.EnableLegacyCorrelationHeadersInjection, deserializedOptions.DependencyTrackingOptions.EnableLegacyCorrelationHeadersInjection);
+            Assert.Equal(options.DependencyTrackingOptions.EnableRequestIdHeaderInjectionInW3CMode, deserializedOptions.DependencyTrackingOptions.EnableRequestIdHeaderInjectionInW3CMode);
+            Assert.Equal(options.DependencyTrackingOptions.EnableSqlCommandTextInstrumentation, deserializedOptions.DependencyTrackingOptions.EnableSqlCommandTextInstrumentation);
         }
 
         [Fact]

@@ -108,9 +108,10 @@ namespace Microsoft.Extensions.DependencyInjection
             {
                 var options = provider.GetService<IOptions<ApplicationInsightsLoggerOptions>>().Value;
 
+                DependencyTrackingTelemetryModule dependencyCollector = null;
                 if (options.EnableDependencyTracking)
                 {
-                    var dependencyCollector = new DependencyTrackingTelemetryModule();
+                    dependencyCollector = new DependencyTrackingTelemetryModule();
                     var excludedDomains = dependencyCollector.ExcludeComponentCorrelationHttpHeadersOnDomains;
                     excludedDomains.Add("core.windows.net");
                     excludedDomains.Add("core.chinacloudapi.cn");
@@ -122,6 +123,17 @@ namespace Microsoft.Extensions.DependencyInjection
                     var includedActivities = dependencyCollector.IncludeDiagnosticSourceActivities;
                     includedActivities.Add("Microsoft.Azure.ServiceBus");
                     includedActivities.Add("Microsoft.Azure.EventHubs");
+
+                    if (options.DependencyTrackingOptions != null)
+                    {
+                        dependencyCollector.DisableRuntimeInstrumentation = options.DependencyTrackingOptions.DisableRuntimeInstrumentation;
+                        dependencyCollector.DisableDiagnosticSourceInstrumentation = options.DependencyTrackingOptions.DisableDiagnosticSourceInstrumentation;
+                        dependencyCollector.EnableLegacyCorrelationHeadersInjection = options.DependencyTrackingOptions.EnableLegacyCorrelationHeadersInjection;
+                        dependencyCollector.EnableRequestIdHeaderInjectionInW3CMode = options.DependencyTrackingOptions.EnableRequestIdHeaderInjectionInW3CMode;
+                        dependencyCollector.EnableSqlCommandTextInstrumentation = options.DependencyTrackingOptions.EnableSqlCommandTextInstrumentation;
+                        dependencyCollector.SetComponentCorrelationHttpHeaders = options.DependencyTrackingOptions.SetComponentCorrelationHttpHeaders;
+                        dependencyCollector.EnableAzureSdkTelemetryListener = options.DependencyTrackingOptions.EnableAzureSdkTelemetryListener;
+                    }
 
                     return dependencyCollector;
                 }
