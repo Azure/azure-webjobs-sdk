@@ -16,10 +16,10 @@ namespace Microsoft.Extensions.Logging
     public static class LoggerExtensions
     {
         private static readonly Action<ILogger, TimeSpan, int, int, Exception> _logFunctionRetryAttempt =
-           LoggerMessage.Define<TimeSpan, int, int>(
-           LogLevel.Debug,
-           new EventId(325, nameof(LogFunctionRetryAttempt)),
-           "Waiting for `{nextDelay}` before retrying function execution. Next attempt: '{attempt}'. Max retry count: '{retryStrategy.MaxRetryCount}'");
+            LoggerMessage.Define<TimeSpan, int, int>(
+                LogLevel.Debug,
+                new EventId(325, nameof(LogFunctionRetryAttempt)),
+                "Waiting for `{nextDelay}` before retrying function execution. Next attempt: '{attempt}'. Max retry count: '{retryStrategy.MaxRetryCount}'");
 
         /// <summary>
         /// Logs a metric value.
@@ -28,9 +28,12 @@ namespace Microsoft.Extensions.Logging
         /// <param name="name">The name of the metric.</param>
         /// <param name="value">The value of the metric.</param>
         /// <param name="properties">Named string values for classifying and filtering metrics.</param>
-        public static void LogMetric(this ILogger logger, string name, double value, IDictionary<string, object> properties = null)
+        public static void LogMetric(this ILogger logger, string name, double value,
+            IDictionary<string, object> properties = null)
         {
-            IDictionary<string, object> state = properties == null ? new Dictionary<string, object>() : new Dictionary<string, object>(properties);
+            IDictionary<string, object> state = properties == null
+                ? new Dictionary<string, object>()
+                : new Dictionary<string, object>(properties);
 
             state[LogConstants.NameKey] = name;
             state[LogConstants.MetricValueKey] = value;
@@ -39,20 +42,34 @@ namespace Microsoft.Extensions.Logging
             logger?.Log(LogLevel.Information, LogConstants.MetricEventId, payload, null, (s, e) => null);
         }
 
+        private static readonly string[] FunctionResultKeys = 
+        {
+            LogConstants.FullNameKey,
+            LogConstants.InvocationIdKey,
+            LogConstants.NameKey,
+            LogConstants.TriggerReasonKey,
+            LogConstants.StartTimeKey,
+            LogConstants.EndTimeKey,
+            LogConstants.DurationKey,
+            LogConstants.SucceededKey,
+        };
+
         internal static void LogFunctionResult(this ILogger logger, FunctionInstanceLogEntry logEntry)
         {
             bool succeeded = logEntry.Exception == null;
 
-            IDictionary<string, object> payload = new Dictionary<string, object>();
-            payload.Add(LogConstants.FullNameKey, logEntry.FunctionName);
-            payload.Add(LogConstants.InvocationIdKey, logEntry.FunctionInstanceId);
-            payload.Add(LogConstants.NameKey, logEntry.LogName);
-            payload.Add(LogConstants.TriggerReasonKey, logEntry.TriggerReason);
-            payload.Add(LogConstants.StartTimeKey, logEntry.StartTime);
-            payload.Add(LogConstants.EndTimeKey, logEntry.EndTime);
-            payload.Add(LogConstants.DurationKey, logEntry.Duration);
-            payload.Add(LogConstants.SucceededKey, succeeded);
-
+            ReadOnlyScopeDictionary payload = new ReadOnlyScopeDictionary(FunctionResultKeys, new object[]
+            {
+                logEntry.FunctionName,
+                logEntry.FunctionInstanceId,
+                logEntry.LogName,
+                logEntry.TriggerReason,
+                logEntry.StartTime,
+                logEntry.EndTime,
+                logEntry.Duration,
+                succeeded
+            });
+            
             LogLevel level = succeeded ? LogLevel.Information : LogLevel.Error;
 
             // Only pass the state dictionary; no string message.
