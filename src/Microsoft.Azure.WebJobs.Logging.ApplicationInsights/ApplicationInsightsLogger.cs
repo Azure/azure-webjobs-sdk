@@ -48,6 +48,14 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 ScopeKeys.TriggerDetails
             };
 
+        static readonly string[] LogScopeKeys =
+        {
+            LogConstants.CategoryNameKey,
+            LogConstants.LogLevelKey,
+            LogConstants.EventIdKey,
+            LogConstants.EventNameKey
+        };
+
         public ApplicationInsightsLogger(TelemetryClient client, string categoryName, ApplicationInsightsLoggerOptions loggerOptions)
         {
             _telemetryClient = client;
@@ -73,13 +81,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
             // Add some well-known properties to the scope dictionary so the TelemetryInitializer can add them
             // for all telemetry.
-            using (BeginScope(new Dictionary<string, object>
-            {
-                [LogConstants.CategoryNameKey] = _categoryName,
-                [LogConstants.LogLevelKey] = (LogLevel?)logLevel,
-                [LogConstants.EventIdKey] = eventId.Id,
-                [LogConstants.EventNameKey] = eventId.Name,
-            }))
+            using (BeginScope(new ReadOnlyScopeDictionary(LogScopeKeys, new object[] {_categoryName, (LogLevel?)logLevel, eventId.Id, eventId.Name })
+            ))
             {
                 // Log a metric from user logs only
                 if (_isUserFunction && eventId.Id == LogConstants.MetricEventId)

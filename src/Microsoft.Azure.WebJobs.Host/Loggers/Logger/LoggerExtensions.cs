@@ -68,19 +68,28 @@ namespace Microsoft.Extensions.Logging
         internal static IDisposable BeginFunctionScope(this ILogger logger, IFunctionInstance functionInstance, Guid hostInstanceId)
         {
             return logger?.BeginScope(
-                new Dictionary<string, object>
+                new ReadOnlyScopeDictionary(BeginScopeKeys, new object[]
                 {
-                    [ScopeKeys.FunctionInvocationId] = functionInstance?.Id.ToString(),
-                    [ScopeKeys.FunctionName] = functionInstance?.FunctionDescriptor?.LogName,
-                    [ScopeKeys.Event] = LogConstants.FunctionStartEvent,
-                    [ScopeKeys.HostInstanceId] = hostInstanceId.ToString(),
-                    [ScopeKeys.TriggerDetails] = functionInstance?.TriggerDetails
-                });
+                    functionInstance?.Id.ToString(),
+                    functionInstance?.FunctionDescriptor?.LogName,
+                    LogConstants.FunctionStartEvent,
+                    hostInstanceId.ToString(),
+                    functionInstance?.TriggerDetails
+                }));
         }
 
         public static void LogFunctionRetryAttempt(this ILogger logger, TimeSpan nextDelay, int attemptCount, int maxRetryCount)
         {
             _logFunctionRetryAttempt(logger, nextDelay, attemptCount, maxRetryCount, null);
         }
+
+        private static readonly string[] BeginScopeKeys =
+        {
+            ScopeKeys.FunctionInvocationId,
+            ScopeKeys.FunctionName,
+            ScopeKeys.Event,
+            ScopeKeys.HostInstanceId,
+            ScopeKeys.TriggerDetails
+        };
     }
 }

@@ -45,6 +45,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IFunctionOutputLogger _functionOutputLogger;
         private HostOutputMessage _hostOutputMessage;
 
+        static readonly string[] ExecuteWatcherScopeKeys = new string[]
+        {
+            LogConstants.CategoryNameKey, 
+            LogConstants.LogLevelKey
+        };
+
         public FunctionExecutor(
                 IFunctionInstanceLogger functionInstanceLogger,
                 IFunctionOutputLogger functionOutputLogger,
@@ -481,11 +487,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                 try
                 {
-                    using (logger.BeginScope(new Dictionary<string, object>
-                    {
-                        [LogConstants.CategoryNameKey] = LogCategories.CreateFunctionCategory(instance.FunctionDescriptor.LogName),
-                        [LogConstants.LogLevelKey] = LogLevel.Information
-                    }))
+                    using (logger.BeginScope(new ReadOnlyScopeDictionary(ExecuteWatcherScopeKeys, 
+                        new object[] {LogCategories.CreateFunctionCategory(instance.FunctionDescriptor.LogName), LogLevel.Information})))
                     {
                         var filters = GetFilters<IFunctionInvocationFilter>(_globalFunctionFilters, instance.FunctionDescriptor, jobInstance);
                         var invoker = FunctionInvocationFilterInvoker.Create(parameterHelper.Invoker, filters, instance, parameterHelper, logger);
