@@ -106,6 +106,9 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// </summary>
         public bool EnableDependencyTracking { get; set; } = true;
 
+        /// <summary>
+        /// Configuration for dependency tracking. The dependecny tracking configuration only takes effect if EnableDependencyTracking is set to true
+        /// </summary>
         public DependencyTrackingOptions DependencyTrackingOptions { get; set; }
 
         /// <summary>
