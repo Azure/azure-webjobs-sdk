@@ -232,6 +232,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "ParameterLog",
                 "Poco",
                 "RecoverableException",
+                "ReadOnlyScopeDictionary",
                 "ScopeKeys",
                 "SingletonOptions",
                 "TraceEvent",

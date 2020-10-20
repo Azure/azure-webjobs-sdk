@@ -37,7 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         public void LogFunctionResult_Succeeded_CreatesCorrectState()
         {
             int logCount = 0;
-            ILogger logger = CreateMockLogger<IDictionary<string, object>>((l, e, o, ex, f) =>
+            ILogger logger = CreateMockLogger<IReadOnlyDictionary<string, object>>((l, e, o, ex, f) =>
              {
                  logCount++;
                  Assert.Equal(LogLevel.Information, l);
@@ -60,7 +60,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         public void LogFunctionResult_Failed_CreatesCorrectState()
         {
             int logCount = 0;
-            ILogger logger = CreateMockLogger<IDictionary<string, object>>((l, e, o, ex, f) =>
+            ILogger logger = CreateMockLogger<IReadOnlyDictionary<string, object>>((l, e, o, ex, f) =>
              {
                  logCount++;
                  Assert.Equal(LogLevel.Error, l);

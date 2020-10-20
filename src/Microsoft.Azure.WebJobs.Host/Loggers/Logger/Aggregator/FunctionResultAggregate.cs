@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Logging
 {
@@ -19,20 +20,35 @@ namespace Microsoft.Azure.WebJobs.Logging
         public int Count => Successes + Failures;
         public double SuccessRate => Math.Round((Successes / (double)Count) * 100, 2);
 
+        private static readonly string[] Keys = new[]
+        {
+            LogConstants.NameKey,
+            LogConstants.CountKey,
+            LogConstants.TimestampKey,
+            LogConstants.AverageDurationKey,
+            LogConstants.MaxDurationKey,
+            LogConstants.MinDurationKey,
+            LogConstants.SuccessesKey,
+            LogConstants.FailuresKey,
+            LogConstants.SuccessRateKey,
+        };
+
+
         public IReadOnlyDictionary<string, object> ToReadOnlyDictionary()
         {
-            return new ReadOnlyDictionary<string, object>(new Dictionary<string, object>
-            {
-                [LogConstants.NameKey] = Name,
-                [LogConstants.CountKey] = Count,
-                [LogConstants.TimestampKey] = Timestamp,
-                [LogConstants.AverageDurationKey] = AverageDuration,
-                [LogConstants.MaxDurationKey] = MaxDuration,
-                [LogConstants.MinDurationKey] = MinDuration,
-                [LogConstants.SuccessesKey] = Successes,
-                [LogConstants.FailuresKey] = Failures,
-                [LogConstants.SuccessRateKey] = SuccessRate
-            });
+            return new ReadOnlyScopeDictionary(Keys,
+                new object[]
+                {
+                    Name,
+                    Count,
+                    Timestamp,
+                    AverageDuration,
+                    MaxDuration,
+                    MinDuration,
+                    Successes,
+                    Failures,
+                    SuccessRate
+                });
         }
     }
 }

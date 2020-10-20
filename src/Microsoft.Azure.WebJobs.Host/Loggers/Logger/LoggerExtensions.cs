@@ -58,7 +58,7 @@ namespace Microsoft.Extensions.Logging
         {
             bool succeeded = logEntry.Exception == null;
 
-            ReadOnlyScopeDictionary payload = new ReadOnlyScopeDictionary(FunctionResultKeys, new object[]
+            IReadOnlyDictionary<string, object> payload = new ReadOnlyScopeDictionary(FunctionResultKeys, new object[]
             {
                 logEntry.FunctionName,
                 logEntry.FunctionInstanceId,
