@@ -25,24 +25,24 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// <summary>
         /// Gets or sets a value indicating whether to enable Request-Id correlation headers injection.
         /// </summary>
-        public bool EnableRequestIdHeaderInjectionInW3CMode { get; set; }
+        public bool EnableRequestIdHeaderInjectionInW3CMode { get; set; } = true;
 
         /// <summary>
         /// Gets or sets a value indicating whether to track the SQL command text in SQL
         /// dependencies.
         /// </summary>
-        public bool EnableSqlCommandTextInstrumentation { get; set; }
+        public bool EnableSqlCommandTextInstrumentation { get; set; } = false;
 
         /// <summary>
         /// Gets or sets a value indicating whether the correlation headers would be set
         /// on outgoing http requests.
         /// </summary>
-        public bool SetComponentCorrelationHttpHeaders { get; set; }
+        public bool SetComponentCorrelationHttpHeaders { get; set; } = true;
 
         /// <summary>
         /// Gets or sets a value indicating whether telemetry would be produced for Azure
         /// SDK methods calls and requests.
         /// </summary>
-        public bool EnableAzureSdkTelemetryListener { get; set; }
+        public bool EnableAzureSdkTelemetryListener { get; set; } = true;
     }
 }
