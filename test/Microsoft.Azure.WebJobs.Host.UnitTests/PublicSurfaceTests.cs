@@ -286,7 +286,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "HttpAutoCollectionOptions",
                 "ApplicationInsightsLoggerProvider",
                 "ApplicationInsightsLoggingBuilderExtensions",
-                "ISdkVersionProvider"
+                "ISdkVersionProvider",
+                "DependencyTrackingOptions"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);
