@@ -162,16 +162,21 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(HttpAutoCollectionOptions.EnableResponseHeaderInjection), HttpAutoCollectionOptions.EnableResponseHeaderInjection }
             };
 
-            JObject dependencyTrackingOptions = new JObject
+            JObject dependencyTrackingOptions = null;
+            if (DependencyTrackingOptions != null)
             {
-                { nameof(DependencyTrackingOptions.DisableRuntimeInstrumentation), DependencyTrackingOptions.DisableRuntimeInstrumentation },
-                { nameof(DependencyTrackingOptions.DisableDiagnosticSourceInstrumentation), DependencyTrackingOptions.DisableDiagnosticSourceInstrumentation},
-                { nameof(DependencyTrackingOptions.EnableLegacyCorrelationHeadersInjection), DependencyTrackingOptions.EnableLegacyCorrelationHeadersInjection},
-                { nameof(DependencyTrackingOptions.EnableRequestIdHeaderInjectionInW3CMode), DependencyTrackingOptions.EnableRequestIdHeaderInjectionInW3CMode},
-                { nameof(DependencyTrackingOptions.EnableSqlCommandTextInstrumentation), DependencyTrackingOptions.EnableSqlCommandTextInstrumentation},
-                { nameof(DependencyTrackingOptions.SetComponentCorrelationHttpHeaders), DependencyTrackingOptions.SetComponentCorrelationHttpHeaders},
-                { nameof(DependencyTrackingOptions.EnableAzureSdkTelemetryListener), DependencyTrackingOptions.EnableAzureSdkTelemetryListener}
-            };
+                dependencyTrackingOptions = new JObject
+                {
+                    { nameof(DependencyTrackingOptions.DisableRuntimeInstrumentation), DependencyTrackingOptions.DisableRuntimeInstrumentation },
+                    { nameof(DependencyTrackingOptions.DisableDiagnosticSourceInstrumentation), DependencyTrackingOptions.DisableDiagnosticSourceInstrumentation},
+                    { nameof(DependencyTrackingOptions.EnableLegacyCorrelationHeadersInjection), DependencyTrackingOptions.EnableLegacyCorrelationHeadersInjection},
+                    { nameof(DependencyTrackingOptions.EnableRequestIdHeaderInjectionInW3CMode), DependencyTrackingOptions.EnableRequestIdHeaderInjectionInW3CMode},
+                    { nameof(DependencyTrackingOptions.EnableSqlCommandTextInstrumentation), DependencyTrackingOptions.EnableSqlCommandTextInstrumentation},
+                    { nameof(DependencyTrackingOptions.SetComponentCorrelationHttpHeaders), DependencyTrackingOptions.SetComponentCorrelationHttpHeaders},
+                    { nameof(DependencyTrackingOptions.EnableAzureSdkTelemetryListener), DependencyTrackingOptions.EnableAzureSdkTelemetryListener}
+                };
+            }
+
 
 
             JObject options = new JObject
