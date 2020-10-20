@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading;
 
 namespace Microsoft.Azure.WebJobs.Logging
@@ -41,6 +42,29 @@ namespace Microsoft.Azure.WebJobs.Logging
         public static IDisposable Push(object state)
         {
             return Current = new DictionaryLoggerScope(state as IEnumerable<KeyValuePair<string, object>>, Current);
+        }
+
+        public static IDisposable Push(object inner, object outer)
+        {
+            var innerEnumerable = inner as IEnumerable<KeyValuePair<string, object>>;
+            var outerEnumerable = outer as IEnumerable<KeyValuePair<string, object>>;
+
+            IEnumerable<KeyValuePair<string, object>> enumerable;
+
+            if (innerEnumerable == null)
+            {
+                enumerable = outerEnumerable;
+            }
+            else if (outerEnumerable == null)
+            {
+                enumerable = innerEnumerable;
+            }
+            else
+            {
+                enumerable = innerEnumerable.Concat(outerEnumerable);
+            }
+
+            return Current = new DictionaryLoggerScope(enumerable, Current);
         }
 
         // Builds a state dictionary of all scopes. If an inner scope

@@ -26,6 +26,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         private const string DefaultCategoryName = "Default";
         private const string DateTimeFormatString = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffK";
         private const string OperationContext = "MS_OperationContext";
+        private static readonly string[] OperationContextKeys = {OperationContext};
 
         internal const string MetricCountKey = "count";
         internal const string MetricMinKey = "min";
@@ -442,16 +443,22 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 throw new ArgumentNullException(nameof(state));
             }
 
-            StartTelemetryIfFunctionInvocation(state as IDictionary<string, object>);
+            IOperationHolder<RequestTelemetry> telemetry = StartTelemetryIfFunctionInvocation(state as IReadOnlyDictionary<string, object>);
 
-            return DictionaryLoggerScope.Push(state);
+            if (telemetry == null)
+            {
+                return DictionaryLoggerScope.Push(state);
+            }
+
+            return DictionaryLoggerScope.Push(state,
+                new[] {new KeyValuePair<string, object>(OperationContext, telemetry)});
         }
 
-        private void StartTelemetryIfFunctionInvocation(IDictionary<string, object> stateValues)
+        private IOperationHolder<RequestTelemetry> StartTelemetryIfFunctionInvocation(IReadOnlyDictionary<string, object> stateValues)
         {
             if (stateValues == null)
             {
-                return;
+                return null;
             }
 
             var allScopes = DictionaryLoggerScope.GetMergedStateDictionary();
@@ -531,7 +538,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     }
 
                     // We'll need to store this operation context so we can stop it when the function completes
-                    stateValues[OperationContext] = operation;
+                    return operation;
                 }
             } 
             // If there is a current activity, it is assumed that Application Insights will track it so we do not start an operation. 
@@ -540,8 +547,10 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             else if (allScopes.ContainsKey("MS_TrackActivity"))
             {
                 var operation = _telemetryClient.StartOperation<RequestTelemetry>(currentActivity);
-                stateValues[OperationContext] = operation;
+                return operation;
             }
+
+            return null;
         }
 
         private IOperationHolder<RequestTelemetry> CreateRequestFromLinks(Activity[] activities, string functionName)
