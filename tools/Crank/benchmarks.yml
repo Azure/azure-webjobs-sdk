@@ -14,7 +14,7 @@ scenarios:
     application:
       job: server
       environmentVariables:
-        ASPNETCORE_URLS: "http://localhost:5000;https://localhost:5001"
+        ASPNETCORE_URLS: "{{ AspNetUrls }}"
     load:
       job: bombardier
       variables:
@@ -25,7 +25,7 @@ scenarios:
     application:
       job: server
       environmentVariables:
-        ASPNETCORE_URLS: "http://localhost:5000;https://localhost:5001"
+        ASPNETCORE_URLS: "{{ AspNetUrls }}"
     load:
       job: bombardier
       variables:
@@ -33,14 +33,14 @@ scenarios:
         duration: 180
 
 profiles:
-  local:
+  default:
     variables:
-      serverUri: https://localhost
-      serverPort: 5001
+      serverUri: http://{{ CrankAgentAppVm }}
+      serverPort: 5000
     jobs: 
       application:
         endpoints: 
-          - "http://{{ CrankAgentVm }}:5010"
+          - "http://{{ CrankAgentAppVm }}:5010"
       load:
         endpoints: 
-          - "http://{{ CrankAgentVm }}:5010"
+          - "http://{{ CrankAgentLoadVm }}:5010"
