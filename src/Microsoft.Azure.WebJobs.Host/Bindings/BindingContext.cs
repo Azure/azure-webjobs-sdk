@@ -13,9 +13,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     public class BindingContext
     {
         private readonly FunctionBindingContext _functionContext;
-        private readonly IReadOnlyDictionary<string, object> _bindingData;
+        private readonly Func<IReadOnlyDictionary<string, object>> _bindingDataFactory;
         private readonly CancellationToken _cancellationToken;
 
+        private IReadOnlyDictionary<string, object> _bindingData;
         private AmbientBindingContext _ambientContext;
         private ValueBindingContext _valueContext;
 
@@ -50,6 +51,19 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             _cancellationToken = cancellationToken;
         }
 
+        internal BindingContext(ValueBindingContext valueContext, Func<IReadOnlyDictionary<string, object>> bindingDataFactory)
+        {
+            if (valueContext == null)
+            {
+                throw new ArgumentNullException("valueContext");
+            }
+
+            _valueContext = valueContext;
+            _bindingDataFactory = bindingDataFactory;
+            _functionContext = valueContext.FunctionContext;
+            _cancellationToken = valueContext.CancellationToken;
+        }
+
         /// <summary>
         /// The instance ID of the function being bound to.
         /// </summary>
@@ -71,7 +85,15 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// </summary>
         public IReadOnlyDictionary<string, object> BindingData
         {
-            get { return _bindingData; }
+            get 
+            {   
+                if (_bindingData == null && _bindingDataFactory != null)
+                {
+                    _bindingData = _bindingDataFactory();
+                }
+
+                return _bindingData; 
+            }
         }
 
         /// <summary>
