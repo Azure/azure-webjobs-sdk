@@ -44,10 +44,9 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
-            string formattedMessage = formatter(state, exception);
-
             if (IsEnabled(logLevel))
             {
+                string formattedMessage = formatter?.Invoke(state, exception);
                 InvokeTextWriter(_asyncLocalOutput.Value?.Output, formattedMessage, exception);
             }
         }
