@@ -70,7 +70,6 @@ namespace Microsoft.Extensions.DependencyInjection
             });
 
             services.AddSingleton<ITelemetryInitializer, WebJobsRoleEnvironmentTelemetryInitializer>();
-            services.AddSingleton<ITelemetryInitializer, WebJobsSanitizingInitializer>();
             services.AddSingleton<ITelemetryInitializer, WebJobsTelemetryInitializer>();
             services.AddSingleton<ITelemetryInitializer, MetricSdkVersionTelemetryInitializer>();
             services.AddSingleton<QuickPulseInitializationScheduler>();

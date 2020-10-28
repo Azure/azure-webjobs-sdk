@@ -151,7 +151,6 @@ namespace Microsoft.Azure.WebJobs
             }
         }
 
-        /// <inheritdoc/>
         protected virtual void Dispose(bool disposing)
         {
             if (!_disposed)

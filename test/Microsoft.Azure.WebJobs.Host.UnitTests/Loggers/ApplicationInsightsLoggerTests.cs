@@ -966,7 +966,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
         private static void ValidateScope(IDictionary<string, object> expected)
         {
-            var scopeDict = DictionaryLoggerScope.GetMergedStateDictionary();
+            var scopeDict = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
             Assert.Equal(expected.Count, scopeDict.Count);
             foreach (var entry in expected)
             {
