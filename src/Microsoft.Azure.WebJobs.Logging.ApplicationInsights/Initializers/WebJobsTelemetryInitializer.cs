@@ -42,22 +42,20 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 return;
             }
 
-            telemetry.Context.Cloud.RoleInstance = _roleInstanceName;
-            if (telemetry.Context.Location.Ip == null)
+            var telemetryContext = telemetry.Context;
+            telemetryContext.Cloud.RoleInstance = _roleInstanceName;
+            if (telemetryContext.Location.Ip == null)
             {
-                telemetry.Context.Location.Ip = LoggingConstants.ZeroIpAddress;
+                telemetryContext.Location.Ip = LoggingConstants.ZeroIpAddress;
             }
 
-            RequestTelemetry request = telemetry as RequestTelemetry;
-
-            IDictionary<string, string> telemetryProps = telemetry.Context.Properties;
+            IDictionary<string, string> telemetryProps = telemetryContext.Properties;
             telemetryProps[LogConstants.ProcessIdKey] = _currentProcessId;
 
             // Apply our special scope properties
-            IDictionary<string, object> scopeProps =
-                DictionaryLoggerScope.GetMergedStateDictionary() ?? new Dictionary<string, object>();
+            IDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
 
-            string invocationId = scopeProps.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId);
+            string invocationId = scopeProps?.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId);
             if (invocationId != null)
             {
                 telemetryProps[LogConstants.InvocationIdKey] = invocationId;
@@ -65,9 +63,9 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
             // this could be telemetry tracked in scope of function call - then we should apply the logger scope
             // or RequestTelemetry tracked by the WebJobs SDK or AppInsight SDK - then we should apply Activity.Tags
-            if (scopeProps.Any())
+            if (scopeProps != null && scopeProps.Count > 0)
             {
-                telemetry.Context.Operation.Name = scopeProps.GetValueOrDefault<string>(ScopeKeys.FunctionName);
+                telemetryContext.Operation.Name = scopeProps.GetValueOrDefault<string>(ScopeKeys.FunctionName);
 
                 // Apply Category and LogLevel to all telemetry
                 string category = scopeProps.GetValueOrDefault<string>(LogConstants.CategoryNameKey);
@@ -94,8 +92,9 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     telemetryProps[LogConstants.EventNameKey] = eventName;
                 }
             }
-            
+
             // we may track traces/dependencies after function scope ends - we don't want to update those
+            RequestTelemetry request = telemetry as RequestTelemetry;
             if (request != null)
             {
                 UpdateRequestProperties(request);

@@ -49,7 +49,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 if (telemetry.Properties.TryGetValue(LogConstants.LogLevelKey, out string logLevelString) &&
                     Enum.TryParse(logLevelString, out LogLevel logLevel))
                 {
-                    LoggerFilterRule filterRule = _ruleMap.GetOrAdd(categoryName, SelectRule(categoryName));
+                    LoggerFilterRule filterRule = _ruleMap.GetOrAdd(categoryName, c => SelectRule(c));
 
                     if (filterRule.LogLevel != null && logLevel < filterRule.LogLevel)
                     {
