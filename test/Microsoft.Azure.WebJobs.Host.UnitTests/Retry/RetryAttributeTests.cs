@@ -49,12 +49,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var retry = new ExponentialBackoffRetryAttribute(5, "01:02:25", "02:00:10");
             Assert.Equal(5, retry.MaxRetryCount);
             Assert.Equal("01:02:25", retry.MinimumInterval);
-            Assert.Equal("02:00:10", retry.MaxmumInterval);
+            Assert.Equal("02:00:10", retry.MaximumInterval);
 
             retry = new ExponentialBackoffRetryAttribute(-1, "00:00:10", "00:00:30");
             Assert.Equal(-1, retry.MaxRetryCount);
             Assert.Equal("00:00:10", retry.MinimumInterval);
-            Assert.Equal("00:00:30", retry.MaxmumInterval);
+            Assert.Equal("00:00:30", retry.MaximumInterval);
         }
 
         [Fact]

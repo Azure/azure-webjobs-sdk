@@ -32,7 +32,7 @@ namespace Microsoft.Azure.WebJobs
                 throw new ArgumentOutOfRangeException(nameof(maximumInterval));
             }
             MinimumInterval = minimumInterval;
-            MaxmumInterval = maximumInterval;
+            MaximumInterval = maximumInterval;
 
             _delayStrategy = new RandomizedExponentialBackoffStrategy(parsedMinimumInterval, parsedMaximumInterval);
         }
@@ -45,7 +45,7 @@ namespace Microsoft.Azure.WebJobs
         /// <summary>
         /// Gets the maximum retry delay.
         /// </summary>
-        public string MaxmumInterval { get; }
+        public string MaximumInterval { get; }
 
         public override TimeSpan GetNextDelay(RetryContext context)
         {
