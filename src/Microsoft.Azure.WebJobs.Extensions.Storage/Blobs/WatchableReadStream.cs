@@ -132,9 +132,9 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs
                 return;
             }
 
-            string name = $"{_blob.Container.Name}/{_blob.Name}";
+            string blobName = $"{_blob.Container.Name}/{_blob.Name}";
             string type = $"{_blob.Properties.BlobType}/{_blob.Properties.ContentType}";
-            _logger.BlobReadAccess(name, type, _blob.Properties.Length, _blob.Properties.ETag, _timeRead.Elapsed, _countRead);
+            _logger.BlobReadAccess(blobName, type, _blob.Properties.Length, _blob.Properties.ETag, _timeRead.Elapsed, _countRead);
             _logged = true;
         }
 
