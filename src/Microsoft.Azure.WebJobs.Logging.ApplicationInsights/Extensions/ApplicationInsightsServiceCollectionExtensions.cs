@@ -358,7 +358,7 @@ namespace Microsoft.Extensions.DependencyInjection
             {
                 foreach (ITelemetryProcessorFactory telemetryProcessorFactory in telemetryProcessorFactories)
                 {
-                    configuration.DefaultTelemetrySink.TelemetryProcessorChainBuilder.Use(telemetryProcessorFactory.Create);
+                    configuration.TelemetryProcessorChainBuilder.Use(telemetryProcessorFactory.Create);
                 }
             }
 
