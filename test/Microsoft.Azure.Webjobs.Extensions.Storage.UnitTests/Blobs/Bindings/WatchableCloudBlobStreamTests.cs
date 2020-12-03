@@ -2160,7 +2160,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Bindings
             Assert.Equal("BlobWriteAccess", logMessage.EventId.Name);
             Assert.Equal(LogLevel.Debug, logMessage.Level);
             Assert.Equal(6, logMessage.State.Count());
-            Assert.Equal($"{containerName}/{blobName}", logMessage.GetStateValue<string>("name"));
+            Assert.Equal($"{containerName}/{blobName}", logMessage.GetStateValue<string>("blobName"));
             Assert.Equal($"{blob.Properties.BlobType}/{blob.Properties.ContentType}", logMessage.GetStateValue<string>("type"));
             Assert.Equal(blob.Properties.ETag, logMessage.GetStateValue<string>("etag"));
             Assert.True(logMessage.GetStateValue<TimeSpan>("writeTime") >= TimeSpan.Zero);
