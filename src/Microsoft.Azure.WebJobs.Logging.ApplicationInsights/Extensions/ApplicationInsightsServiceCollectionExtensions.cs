@@ -214,6 +214,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     channel,
                     provider.GetServices<ITelemetryInitializer>(),
                     provider.GetServices<ITelemetryModule>(),
+                    provider.GetServices<ITelemetryProcessorFactory>(),
                     appIdProvider,
                     filterOptions,
                     roleInstanceProvider,
@@ -272,6 +273,7 @@ namespace Microsoft.Extensions.DependencyInjection
             ITelemetryChannel channel,
             IEnumerable<ITelemetryInitializer> telemetryInitializers,
             IEnumerable<ITelemetryModule> telemetryModules,
+            IEnumerable<ITelemetryProcessorFactory> telemetryProcessorFactories,
             IApplicationIdProvider applicationIdProvider,
             LoggerFilterOptions filterOptions,
             IRoleInstanceProvider roleInstanceProvider,
@@ -350,6 +352,14 @@ namespace Microsoft.Extensions.DependencyInjection
             if (options.SnapshotConfiguration != null)
             {
                 configuration.TelemetryProcessorChainBuilder.UseSnapshotCollector(options.SnapshotConfiguration);
+            }
+
+            if (telemetryProcessorFactories.Any())
+            {
+                foreach (ITelemetryProcessorFactory telemetryProcessorFactory in telemetryProcessorFactories)
+                {
+                    configuration.DefaultTelemetrySink.TelemetryProcessorChainBuilder.Use(telemetryProcessorFactory.Create);
+                }
             }
 
             configuration.TelemetryProcessorChainBuilder.Build();
