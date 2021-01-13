@@ -22,6 +22,11 @@ namespace Microsoft.Azure.WebJobs.Host
         public Exception Exception { get; set; }
 
         /// <summary>
+        /// Gets or sets max retry stratagy.
+        /// </summary>
+        public IRetryStrategy RetryStrategy { get; set;}
+
+        /// <summary>
         /// Gets or sets the <see cref="IFunctionInstance"/> for the failed invocation.
         /// </summary>
         public IFunctionInstance Instance { get; set; }

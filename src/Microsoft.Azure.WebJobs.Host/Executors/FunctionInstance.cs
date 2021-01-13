@@ -41,6 +41,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public FunctionDescriptor FunctionDescriptor { get; }
 
+        public RetryContext RetryContext { get; set; }
+
         public IServiceProvider InstanceServices
         {
             get

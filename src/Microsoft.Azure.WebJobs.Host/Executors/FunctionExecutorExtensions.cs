@@ -22,6 +22,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             var attempt = 0;
             IDelayedException functionResult = null;
             ILogger logger = null;
+            RetryContext retryContext = null;
 
             while (true)
             {
@@ -31,7 +32,25 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     logger = loggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(functionInstance.FunctionDescriptor.LogName));
                 }
 
-                functionResult = await executor.TryExecuteAsync(functionInstance, cancellationToken);
+                if (functionInstance is FunctionInstance instance)
+                {
+                    // Build retry context
+                    retryContext = new RetryContext
+                    {
+                        RetryCount = attempt,
+                        Exception = retryContext == null ? null : retryContext.Exception, // Pass exception from previos attempt
+                        Instance = functionInstance,
+                        RetryStrategy = functionInstance.FunctionDescriptor.RetryStrategy
+                    };
+
+                    instance.RetryContext = retryContext;
+                    functionResult = await executor.TryExecuteAsync(instance, cancellationToken);
+                    retryContext.Exception = functionResult?.Exception;
+                }
+                else
+                {
+                    functionResult = await executor.TryExecuteAsync(functionInstance, cancellationToken);
+                }
 
                 if (functionResult == null)
                 {
@@ -50,14 +69,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     // retry count exceeded
                     break;
                 }
-
-                // Build retry context
-                var retryContext = new RetryContext
-                {
-                    RetryCount = attempt,
-                    Exception = functionResult.Exception,
-                    Instance = functionInstance
-                };
 
                 TimeSpan nextDelay = retryStrategy.GetNextDelay(retryContext);
                 logger.LogFunctionRetryAttempt(nextDelay, attempt, retryStrategy.MaxRetryCount);

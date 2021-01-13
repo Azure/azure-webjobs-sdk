@@ -27,5 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     public interface IFunctionInstanceEx : IFunctionInstance
     {
         IServiceProvider InstanceServices { get; }
+
+        RetryContext RetryContext { get; }
     }
 }
