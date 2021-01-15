@@ -110,7 +110,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
             {
                 Context = context;
 
-                Assert.Equal(context.RetryContext.RetryStrategy.MaxRetryCount, 3);
+                Assert.Equal(context.RetryContext.MaxRetryCount, 3);
 
                 if (context.RetryContext.RetryCount != 0)
                 {

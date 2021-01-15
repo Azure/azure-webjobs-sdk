@@ -57,17 +57,17 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// <summary>
         /// Creates a new instance.
         /// </summary>
-        /// <param name="functionInstanceId">The instance ID of the function being bound to.</param>
+        /// <param name="functionInstance">The function instance being bound to.</param>
         /// <param name="functionCancellationToken">The <see cref="CancellationToken"/> to use.</param>
-        /// <param name="functionInvocationServices">The user logger.</param>
-        /// <param name="functionDescriptor">Current function being executed. </param>
-        /// /// <param name="functionDescriptor">Current retry count. </param>
         public FunctionBindingContext(IFunctionInstanceEx functionInstance, CancellationToken functionCancellationToken)
         {
             _functionInstanceId = functionInstance.Id;
             _functionCancellationToken = functionCancellationToken;
             _functionInvocationServices = functionInstance.InstanceServices ?? _emptyServiceProvider.Value;
-            _retryContext = functionInstance.RetryContext;
+            if (functionInstance is FunctionInstance fi)
+            {
+                _retryContext = fi.RetryContext;
+            }
             MethodName = functionInstance.FunctionDescriptor?.LogName;
         }
 

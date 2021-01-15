@@ -17,14 +17,14 @@ namespace Microsoft.Azure.WebJobs.Host
         public int RetryCount { get; set; }
 
         /// <summary>
+        /// Gets or sets the max retry count.
+        /// </summary>
+        public int MaxRetryCount { get; set; }
+
+        /// <summary>
         /// Gets or sets the <see cref="Exception"/> for the failed invocation.
         /// </summary>
         public Exception Exception { get; set; }
-
-        /// <summary>
-        /// Gets or sets max retry stratagy.
-        /// </summary>
-        public IRetryStrategy RetryStrategy { get; set;}
 
         /// <summary>
         /// Gets or sets the <see cref="IFunctionInstance"/> for the failed invocation.

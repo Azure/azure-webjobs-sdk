@@ -38,9 +38,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     retryContext = new RetryContext
                     {
                         RetryCount = attempt,
-                        Exception = retryContext == null ? null : retryContext.Exception, // Pass exception from previos attempt
+                        Exception = retryContext == null ? null : retryContext.Exception, // Pass exception from previous attempt
                         Instance = functionInstance,
-                        RetryStrategy = functionInstance.FunctionDescriptor.RetryStrategy
+                        MaxRetryCount = (functionInstance.FunctionDescriptor.RetryStrategy == null) ? 0 : functionInstance.FunctionDescriptor.RetryStrategy.MaxRetryCount
                     };
 
                     instance.RetryContext = retryContext;
