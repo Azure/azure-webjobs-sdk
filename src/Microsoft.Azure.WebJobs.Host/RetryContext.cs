@@ -13,7 +13,7 @@ namespace Microsoft.Azure.WebJobs.Host
     /// </summary>
     public class RetryContext
     {
-        private Dictionary<string, object> _stateDictionary = new Dictionary<string, object>();
+        private Lazy<Dictionary<string, object>> _stateDictionary = new Lazy<Dictionary<string, object>>(() => new Dictionary<string, object>());
 
         /// <summary>
         /// Gets or sets the current retry count.
@@ -21,7 +21,7 @@ namespace Microsoft.Azure.WebJobs.Host
         public int RetryCount { get; set; }
 
         /// <summary>
-        /// Gets or sets the max retry count.
+        /// Gets the max retry count.
         /// </summary>
         public int MaxRetryCount { get; set; }
 
@@ -36,8 +36,8 @@ namespace Microsoft.Azure.WebJobs.Host
         public IFunctionInstance Instance { get; set; }
 
         /// <summary>
-        /// Gets the state dictionary.
+        /// Gets the state dictionary. This property can be used by retry strategies to store arbitrary state for a retried invocation.
         /// </summary>
-        internal IDictionary<string, object> StateDictionary => _stateDictionary;
+        public IDictionary<string, object> State => _stateDictionary.Value;
     }
 }

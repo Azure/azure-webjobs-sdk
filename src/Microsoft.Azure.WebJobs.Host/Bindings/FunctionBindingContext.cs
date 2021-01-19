@@ -92,7 +92,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         public IServiceProvider InstanceServices { get; set; }
 
         /// <summary>
-        /// Gets value for retry context.
+        /// Gets the retry context if this invocation is being retried.
         /// </summary>
         public RetryContext RetryContext => _retryContext;
 

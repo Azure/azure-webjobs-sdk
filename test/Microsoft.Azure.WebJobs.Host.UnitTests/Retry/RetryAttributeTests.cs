@@ -97,6 +97,19 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
+        public void ExponentialBackOffDelay_GetNextDelay_Is_Increased()
+        {
+            var retry = new ExponentialBackoffRetryAttribute(5, "01:02:25", "02:00:10");
+            RetryContext retryContext = new RetryContext
+            {
+                RetryCount = 1
+            };
+            var delay1 = retry.GetNextDelay(retryContext);
+            var delay2 = retry.GetNextDelay(retryContext);
+            Assert.True(delay2 > delay1);
+        }
+
+        [Fact]
         public void ExponentialBackOffDelay_GetNextDelay_Throws()
         {
             var attr = new ExponentialBackoffRetryAttribute(5, "05:02:25", "00:00:10");

@@ -15,6 +15,7 @@ namespace Microsoft.Azure.WebJobs
     {
         private TimeSpan _parsedMinimumInterval;
         private TimeSpan _parsedMaximumInterval;
+        private static string _delayStrategyKeyName = "MS_DelayStratagy";
 
         /// <summary>
         /// Constructs a new instance.
@@ -50,14 +51,14 @@ namespace Microsoft.Azure.WebJobs
         {
             IDelayStrategy delayStrategy;
 
-            if (context.StateDictionary.TryGetValue(nameof(RandomizedExponentialBackoffStrategy), out object stateObject))
+            if (context.State.TryGetValue(_delayStrategyKeyName, out object stateObject))
             {
                 delayStrategy = stateObject as IDelayStrategy;
             }
             else
             {
                 delayStrategy = new RandomizedExponentialBackoffStrategy(_parsedMinimumInterval, _parsedMaximumInterval);
-                context.StateDictionary.Add(nameof(RandomizedExponentialBackoffStrategy), new RandomizedExponentialBackoffStrategy(_parsedMinimumInterval, _parsedMaximumInterval));
+                context.State.Add(_delayStrategyKeyName, delayStrategy);
             }
 
             if (MaxRetryCount == -1 || context.RetryCount < MaxRetryCount)

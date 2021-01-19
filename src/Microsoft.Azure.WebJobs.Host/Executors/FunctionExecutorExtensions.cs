@@ -22,7 +22,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             var attempt = 0;
             IDelayedException functionResult = null;
             ILogger logger = null;
-            RetryContext retryContext = null;
+            // Build retry context
+            RetryContext retryContext = new RetryContext();
 
             while (true)
             {
@@ -34,23 +35,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                 if (functionInstance is FunctionInstance instance)
                 {
-                    // Build retry context
-                    retryContext = new RetryContext
-                    {
-                        RetryCount = attempt,
-                        Exception = retryContext == null ? null : retryContext.Exception, // Pass exception from previous attempt
-                        Instance = functionInstance,
-                        MaxRetryCount = (functionInstance.FunctionDescriptor.RetryStrategy == null) ? 0 : functionInstance.FunctionDescriptor.RetryStrategy.MaxRetryCount
-                    };
+                    retryContext.RetryCount = attempt;
+                    retryContext.Instance = instance;
+                    retryContext.MaxRetryCount = (functionInstance.FunctionDescriptor.RetryStrategy == null) ? 0 : functionInstance.FunctionDescriptor.RetryStrategy.MaxRetryCount;
 
                     instance.RetryContext = retryContext;
-                    functionResult = await executor.TryExecuteAsync(instance, cancellationToken);
-                    retryContext.Exception = functionResult?.Exception;
                 }
-                else
-                {
-                    functionResult = await executor.TryExecuteAsync(functionInstance, cancellationToken);
-                }
+                functionResult = await executor.TryExecuteAsync(functionInstance, cancellationToken);
+                retryContext.Exception = functionResult?.Exception;
 
                 if (functionResult == null)
                 {
