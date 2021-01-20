@@ -21,7 +21,7 @@ namespace Microsoft.Azure.WebJobs.Host
         public int RetryCount { get; set; }
 
         /// <summary>
-        /// Gets the max retry count.
+        /// Gets or sets the max retry count.
         /// </summary>
         public int MaxRetryCount { get; set; }
 

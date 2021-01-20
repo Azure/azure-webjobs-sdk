@@ -22,7 +22,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             var attempt = 0;
             IDelayedException functionResult = null;
             ILogger logger = null;
-            // Build retry context
             RetryContext retryContext = new RetryContext();
 
             while (true)
