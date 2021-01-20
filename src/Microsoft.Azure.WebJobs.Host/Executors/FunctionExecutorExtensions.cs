@@ -22,7 +22,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             var attempt = 0;
             IDelayedException functionResult = null;
             ILogger logger = null;
-            RetryContext retryContext = new RetryContext();
+            RetryContext retryContext = null;
+            Exception exceptionFromLastExecution = null;
 
             while (true)
             {
@@ -32,16 +33,18 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     logger = loggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(functionInstance.FunctionDescriptor.LogName));
                 }
 
-                if (functionInstance is FunctionInstance instance)
+                // Set retry context only if retry strategy exists and this is not first attempt
+                if (functionInstance.FunctionDescriptor.RetryStrategy != null && attempt > 0 && functionInstance is FunctionInstance instance)
                 {
+                    retryContext = retryContext ?? new RetryContext();
                     retryContext.RetryCount = attempt;
                     retryContext.Instance = instance;
-                    retryContext.MaxRetryCount = (functionInstance.FunctionDescriptor.RetryStrategy == null) ? 0 : functionInstance.FunctionDescriptor.RetryStrategy.MaxRetryCount;
+                    retryContext.MaxRetryCount = functionInstance.FunctionDescriptor.RetryStrategy.MaxRetryCount;
+                    retryContext.Exception = exceptionFromLastExecution;
 
                     instance.RetryContext = retryContext;
                 }
                 functionResult = await executor.TryExecuteAsync(functionInstance, cancellationToken);
-                retryContext.Exception = functionResult?.Exception;
 
                 if (functionResult == null)
                 {
@@ -53,6 +56,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     // retry is not configured
                     break;
                 }
+
+                exceptionFromLastExecution = functionResult?.Exception;
 
                 IRetryStrategy retryStrategy = functionInstance.FunctionDescriptor.RetryStrategy;
                 if (retryStrategy.MaxRetryCount != -1 && ++attempt > retryStrategy.MaxRetryCount)

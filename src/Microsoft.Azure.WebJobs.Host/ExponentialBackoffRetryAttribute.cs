@@ -33,6 +33,9 @@ namespace Microsoft.Azure.WebJobs
             {
                 throw new ArgumentOutOfRangeException(nameof(maximumInterval));
             }
+
+            RandomizedExponentialBackoffStrategy.ValidateIntervals(_parsedMinimumInterval, _parsedMaximumInterval);
+
             MinimumInterval = minimumInterval;
             MaximumInterval = maximumInterval;
         }

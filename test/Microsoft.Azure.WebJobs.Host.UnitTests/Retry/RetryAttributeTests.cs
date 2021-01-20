@@ -62,6 +62,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => new ExponentialBackoffRetryAttribute(5, "01:020000000000:25", "00:00:10"));
             Assert.Throws<ArgumentOutOfRangeException>(() => new ExponentialBackoffRetryAttribute(5, "01:02:25", "100000000"));
+            Assert.Throws<ArgumentException>(() => new ExponentialBackoffRetryAttribute(5, "05:02:25", "00:00:10"));
         }
 
         [Fact]
@@ -107,17 +108,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var delay1 = retry.GetNextDelay(retryContext);
             var delay2 = retry.GetNextDelay(retryContext);
             Assert.True(delay2 > delay1);
-        }
-
-        [Fact]
-        public void ExponentialBackOffDelay_GetNextDelay_Throws()
-        {
-            var attr = new ExponentialBackoffRetryAttribute(5, "05:02:25", "00:00:10");
-            RetryContext retryContext = new RetryContext
-            {
-                RetryCount = 1
-            };
-            Assert.Throws<ArgumentException>(() => attr.GetNextDelay(retryContext));
         }
     }
 }
