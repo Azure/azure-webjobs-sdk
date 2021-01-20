@@ -36,7 +36,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 // Set retry context only if retry strategy exists and this is not first attempt
                 if (functionInstance.FunctionDescriptor.RetryStrategy != null && attempt > 0 && functionInstance is FunctionInstance instance)
                 {
-                    retryContext = retryContext ?? new RetryContext();
                     retryContext.RetryCount = attempt;
                     retryContext.Instance = instance;
                     retryContext.MaxRetryCount = functionInstance.FunctionDescriptor.RetryStrategy.MaxRetryCount;
@@ -65,6 +64,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     // retry count exceeded
                     break;
                 }
+
+                retryContext = retryContext ?? new RetryContext();
 
                 TimeSpan nextDelay = retryStrategy.GetNextDelay(retryContext);
                 logger.LogFunctionRetryAttempt(nextDelay, attempt, retryStrategy.MaxRetryCount);

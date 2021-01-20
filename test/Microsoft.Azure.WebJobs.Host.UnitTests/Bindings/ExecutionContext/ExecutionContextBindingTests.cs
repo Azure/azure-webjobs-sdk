@@ -108,6 +108,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
             [FunctionName("myfunc")]
             public static void ExecutionContext(ExecutionContext context)
             {
+                if (context.RetryContext == null)
+                {
+                    throw new Exception("0");
+                }
+
                 Context = context;
 
                 Assert.Equal(context.RetryContext.MaxRetryCount, 3);
