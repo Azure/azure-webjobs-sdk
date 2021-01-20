@@ -33,8 +33,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     logger = loggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(functionInstance.FunctionDescriptor.LogName));
                 }
 
-                // Set retry context only if retry strategy exists and this is not first attempt
-                if (functionInstance.FunctionDescriptor.RetryStrategy != null && attempt > 0 && functionInstance is FunctionInstance instance)
+                // Set retry context if retryContext is already created
+                if (retryContext != null && functionInstance is FunctionInstance instance)
                 {
                     retryContext.RetryCount = attempt;
                     retryContext.Instance = instance;
