@@ -26,6 +26,15 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
         public RandomizedExponentialBackoffStrategy(TimeSpan minimumInterval, TimeSpan maximumInterval,
             TimeSpan deltaBackoff)
         {
+            ValidateIntervals(minimumInterval, maximumInterval);
+
+            _minimumInterval = minimumInterval;
+            _maximumInterval = maximumInterval;
+            _deltaBackoff = deltaBackoff;
+        }
+
+        public static void ValidateIntervals(TimeSpan minimumInterval, TimeSpan maximumInterval)
+        {
             if (minimumInterval.Ticks < 0)
             {
                 throw new ArgumentOutOfRangeException("minimumInterval", "The TimeSpan must not be negative.");
@@ -41,10 +50,6 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
                 throw new ArgumentException("The minimumInterval must not be greater than the maximumInterval.",
                     "minimumInterval");
             }
-
-            _minimumInterval = minimumInterval;
-            _maximumInterval = maximumInterval;
-            _deltaBackoff = deltaBackoff;
         }
 
         public TimeSpan GetNextDelay(bool executionSucceeded)

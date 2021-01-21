@@ -60,6 +60,27 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
             Assert.Equal(@"z:\home", result.FunctionAppDirectory);
         }
 
+        [Fact]
+        public async Task SetRetryContext()
+        {
+            IHost host = new HostBuilder()
+                .ConfigureDefaultTestHost<RetryTestJob>(b =>
+                {
+                    b.AddExecutionContextBinding(o =>
+                    {
+                        o.AppDirectory = @"z:\home";
+                    });
+                })
+                .Build();
+
+            var jobHost = host.GetJobHost<RetryTestJob>();
+
+            await jobHost.CallAsync("myfunc");
+            ExecutionContext result = RetryTestJob.Context;
+            Assert.NotNull(result);
+            Assert.Equal(result.RetryContext.RetryCount, 3);
+        }
+
         public class CoreTestJobs
         {
             public static ExecutionContext Context { get; set; }
@@ -75,6 +96,36 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
             public static void ExecutionContext2(ExecutionContext context)
             {
                 Context = context;
+            }
+        }
+
+        public class RetryTestJob
+        {
+            public static ExecutionContext Context { get; set; }
+
+            [FixedDelayRetry(3, "00:00:01")]
+            [NoAutomaticTrigger]
+            [FunctionName("myfunc")]
+            public static void ExecutionContext(ExecutionContext context)
+            {
+                if (context.RetryContext == null)
+                {
+                    throw new Exception("0");
+                }
+
+                Context = context;
+
+                Assert.Equal(context.RetryContext.MaxRetryCount, 3);
+
+                if (context.RetryContext.RetryCount != 0)
+                {
+                    Assert.Equal(context.RetryContext.RetryCount - 1, int.Parse(context.RetryContext.Exception.InnerException.Message));
+                }
+
+                if (context.RetryContext.RetryCount != 3)
+                {
+                    throw new Exception(context.RetryContext.RetryCount.ToString());
+                }
             }
         }
     }

@@ -81,5 +81,33 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             };
             Assert.Equal(TimeSpan.Zero, retry.GetNextDelay(lastRetryContext));
         }
+
+        [Fact]
+        public void ExponentialBackOffDelay_GetNextDelay_Is_Stateless()
+        {
+            var retry = new ExponentialBackoffRetryAttribute(5, "01:02:25", "02:00:10");
+            RetryContext retryContext1 = new RetryContext
+            {
+                RetryCount = 1
+            };
+            RetryContext retryContext2 = new RetryContext
+            {
+                RetryCount = 1
+            };
+            Assert.Equal(retry.GetNextDelay(retryContext1), retry.GetNextDelay(retryContext2));
+        }
+
+        [Fact]
+        public void ExponentialBackOffDelay_GetNextDelay_Is_Increased()
+        {
+            var retry = new ExponentialBackoffRetryAttribute(5, "01:02:25", "02:00:10");
+            RetryContext retryContext = new RetryContext
+            {
+                RetryCount = 1
+            };
+            var delay1 = retry.GetNextDelay(retryContext);
+            var delay2 = retry.GetNextDelay(retryContext);
+            Assert.True(delay2 > delay1);
+        }
     }
 }
