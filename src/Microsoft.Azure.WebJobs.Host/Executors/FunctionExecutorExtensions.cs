@@ -23,7 +23,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             IDelayedException functionResult = null;
             ILogger logger = null;
             RetryContext retryContext = null;
-            Exception exceptionFromLastExecution = null;
 
             while (true)
             {
@@ -33,14 +32,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     logger = loggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(functionInstance.FunctionDescriptor.LogName));
                 }
 
-                // Set retry context if retryContext is already created
                 if (retryContext != null && functionInstance is FunctionInstance instance)
                 {
-                    retryContext.RetryCount = attempt;
                     retryContext.Instance = instance;
-                    retryContext.MaxRetryCount = functionInstance.FunctionDescriptor.RetryStrategy.MaxRetryCount;
-                    retryContext.Exception = exceptionFromLastExecution;
-
                     instance.RetryContext = retryContext;
                 }
                 functionResult = await executor.TryExecuteAsync(functionInstance, cancellationToken);
@@ -56,8 +50,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     break;
                 }
 
-                exceptionFromLastExecution = functionResult?.Exception;
-
                 IRetryStrategy retryStrategy = functionInstance.FunctionDescriptor.RetryStrategy;
                 if (retryStrategy.MaxRetryCount != -1 && ++attempt > retryStrategy.MaxRetryCount)
                 {
@@ -66,6 +58,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
 
                 retryContext = retryContext ?? new RetryContext();
+                retryContext.RetryCount = attempt;
+                retryContext.MaxRetryCount = functionInstance.FunctionDescriptor.RetryStrategy.MaxRetryCount;
+                retryContext.Exception = functionResult?.Exception;
 
                 TimeSpan nextDelay = retryStrategy.GetNextDelay(retryContext);
                 logger.LogFunctionRetryAttempt(nextDelay, attempt, retryStrategy.MaxRetryCount);
