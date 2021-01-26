@@ -11,6 +11,11 @@ namespace Microsoft.Azure.WebJobs.Description
     [AttributeUsage(AttributeTargets.Class, Inherited = false)]
     public sealed class ExtensionAttribute : Attribute
     {
+        /// <summary>
+        /// Creates an instance of the <see cref="ExtensionAttribute"/>.
+        /// </summary>
+        /// <param name="name">The friendly, human readable, name of the extension.</param>
+        /// <param name="configurationSection">The name of the configuration section for this extension.</param>
         public ExtensionAttribute(string name, string configurationSection = null)
         {
             Name = name ?? throw new ArgumentNullException(nameof(name));
