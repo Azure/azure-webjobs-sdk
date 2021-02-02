@@ -262,6 +262,41 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             Assert.Equal(false, actual);
         }
 
+        [Fact]
+        public async Task IndexMethod_SameName_Succeeds()
+        {
+            FunctionIndex index = new FunctionIndex();
+            FunctionIndexer product = CreateProductUnderTest();
+
+            await product.IndexMethodAsync(typeof(ClassA).GetMethod("Test"), index, CancellationToken.None);
+            await product.IndexMethodAsync(typeof(ClassB).GetMethod("Test"), index, CancellationToken.None);
+
+            var functions = index.ReadAll().ToArray();
+            Assert.Equal(2, functions.Length);
+
+            Assert.Equal("ClassA.Test", index.LookupByName("Test").Descriptor.ShortName);
+            Assert.Equal("ClassA.Test", index.LookupByName("ClassA.Test").Descriptor.ShortName);
+            Assert.Equal("ClassB.Test", index.LookupByName("ClassB.Test").Descriptor.ShortName);
+        }
+
+        public class ClassA
+        {
+            [NoAutomaticTrigger]
+            public void Test(string test, ILogger logger)
+            {
+                logger.LogInformation("Test invoked!");
+            }
+        }
+
+        public class ClassB
+        {
+            [NoAutomaticTrigger]
+            public void Test(string test, ILogger logger)
+            {
+                logger.LogInformation("Test invoked!");
+            }
+        }
+
         private class TestExtensionBindingProvider : IBindingProvider
         {
             public Task<IBinding> TryCreateAsync(BindingProviderContext context)
