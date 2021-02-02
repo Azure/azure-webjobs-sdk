@@ -34,9 +34,17 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _functionsByMethod.Add(method, function);
 
             // For compat, accept either the short name ("Class.Name") or log name (just "Name")
-            _functionsByName.Add(descriptor.LogName, function);
-            if (descriptor.ShortName != descriptor.LogName)
+            if (!_functionsByName.ContainsKey(descriptor.LogName))
             {
+                // since there can be duplicate method names across job classes, it's first one
+                // wins for this cache
+                _functionsByName.Add(descriptor.LogName, function);
+            }
+            if (descriptor.ShortName != descriptor.LogName &&
+                !_functionsByName.ContainsKey(descriptor.ShortName))
+            {
+                // we do a duplicate check here as well for completeness, though a conflict here
+                // is much less likely (could only happen if functions are coming from multiple assemblies).
                 _functionsByName.Add(descriptor.ShortName, function);
             }
 
