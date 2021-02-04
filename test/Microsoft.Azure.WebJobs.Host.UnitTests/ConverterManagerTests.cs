@@ -47,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.Equal("*x*", x1);
         }
 
-        private T TestDefaultConverter<F, T>(F from, T to, ConverterManager cm = null, Action<T> assertion = default)
+        private T TestDefaultConverter<F, T>(F from, T to, ConverterManager cm = null, Action<T> assertion = null)
         {
             if (cm == null) {
                 cm = new ConverterManager();
