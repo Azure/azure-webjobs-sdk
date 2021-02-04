@@ -55,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var converter = cm.GetSyncConverter<F, T, Attribute>();
             Assert.NotNull(converter);
             var result = converter(from, null, null);
-            if (assertion == default)
+            if (assertion == null)
             {
                 Assert.Equal(to, result);
             } else
