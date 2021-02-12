@@ -583,6 +583,35 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         }
 
         [Fact]
+        public void Log_LogLevelNone_Succeeds()
+        {
+            Guid scopeGuid = Guid.NewGuid();
+
+            ILogger logger = CreateLogger(_functionCategoryName);
+
+            using (logger.BeginFunctionScope(CreateFunctionInstance(scopeGuid), _hostInstanceId))
+            {
+                logger.Log(LogLevel.None, "None");
+            }
+
+            Assert.Single(_channel.Telemetries);
+            Assert.Single(_channel.Telemetries.OfType<TraceTelemetry>());
+            foreach (var telemetry in _channel.Telemetries.Cast<TraceTelemetry>())
+            {
+                Enum.TryParse(telemetry.Message, out LogLevel expectedLogLevel);
+                Assert.Equal(expectedLogLevel.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
+                Assert.Null(telemetry.SeverityLevel);
+
+                Assert.Equal(5, telemetry.Properties.Count);
+                Assert.Equal(Process.GetCurrentProcess().Id.ToString(), telemetry.Properties[LogConstants.ProcessIdKey]);
+                Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
+                Assert.Equal(telemetry.Message, telemetry.Properties[LogConstants.CustomPropertyPrefix + LogConstants.OriginalFormatKey]);
+                Assert.Equal(scopeGuid.ToString(), telemetry.Properties[LogConstants.InvocationIdKey]);
+                Assert.Equal(telemetry.Message, telemetry.Properties[LogConstants.LogLevelKey]);
+            }
+        }
+
+        [Fact]
         public void DuplicateProperties_LastStateWins()
         {
             var logger = CreateLogger(_functionCategoryName);
