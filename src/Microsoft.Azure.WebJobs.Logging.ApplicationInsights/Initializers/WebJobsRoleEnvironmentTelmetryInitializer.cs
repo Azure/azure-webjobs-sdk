@@ -19,6 +19,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
     {
         internal const string AzureWebsiteName = "WEBSITE_SITE_NAME";
         internal const string AzureWebsiteSlotName = "WEBSITE_SLOT_NAME";
+        internal const string AzureWebsiteCloudRolename = "WEBSITE_CLOUD_ROLENAME";
         private const string DefaultProductionSlotName = "production";
         private const string WebAppSuffix = ".azurewebsites.net";
 
@@ -35,11 +36,21 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 return;
             }
 
+            Lazy<string> websiteCloudRoleName = new Lazy<string>(() =>
+            {
+                return Environment.GetEnvironmentVariable(AzureWebsiteCloudRolename);
+            });
+
             Lazy<string> siteSlotName = new Lazy<string>(() =>
             {
                 // We cannot cache these values as the environment variables can change on the fly.
                 return GetAzureWebsiteUniqueSlotName();
             });
+
+            if (!string.IsNullOrEmpty(websiteCloudRoleName.Value))
+            {
+                telemetry.Context.Cloud.RoleName = websiteCloudRoleName.Value;
+            }
 
             if (string.IsNullOrEmpty(telemetry.Context.Cloud.RoleName))
             {
