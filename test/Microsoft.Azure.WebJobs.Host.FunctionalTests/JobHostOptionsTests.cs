@@ -8,7 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.Storage.Blob;
+using Azure.Storage.Blobs;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Configuration;
@@ -160,7 +160,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
                 var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
 
-                var container = config.InternalContainer;
+                var container = config.InternalContainerClient;
                 Assert.NotNull(container);
                 Assert.Equal(container.Name, "myContainer"); // specified in sas. 
             }
@@ -186,7 +186,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 var uri2 = new Uri("https://contoso.blob.core.windows.net/myContainer2?signature=foo");
                 services.AddSingleton<DistributedLockManagerContainerProvider>(new DistributedLockManagerContainerProvider()
                 {
-                    InternalContainer = new CloudBlobContainer(uri2)
+                    InternalContainerClient = new BlobContainerClient(uri2)
                 });
             });
 
@@ -194,7 +194,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
 
-            var container = config.InternalContainer;
+            var container = config.InternalContainerClient;
             Assert.NotNull(container);
             Assert.Equal(container.Name, "myContainer2"); // specified in sas. 
         }
@@ -223,7 +223,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
 
-            var container = config.InternalContainer;
+            var container = config.InternalContainerClient;
             Assert.NotNull(container);
             Assert.Equal(container.Name, "myContainer3"); // specified in sas.             
         }

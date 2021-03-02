@@ -67,7 +67,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             var internalOptions = host.Services.GetService<DistributedLockManagerContainerProvider>();
             Assert.NotNull(internalOptions);
-            Assert.Equal(container.Name, internalOptions.InternalContainer.Name);
+            Assert.Equal(container.Name, internalOptions.InternalContainerClient.Name);
 
             await host.GetJobHost().CallAsync(nameof(BasicProg.Foo));
 

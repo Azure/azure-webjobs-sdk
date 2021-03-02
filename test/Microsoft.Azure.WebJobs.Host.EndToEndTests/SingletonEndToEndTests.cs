@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Storage.Blobs;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
@@ -25,6 +26,7 @@ using Microsoft.Azure.Storage.Queue;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Xunit;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
@@ -259,6 +261,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 hostBuilder.ConfigureServices((services) =>
                 {
                     services.AddSingleton<IDistributedLockManager, CustomLockManager>();
+                    services.AddSingleton<IConfigureOptions<HostStorageProvider>, HostStorageProviderOptions>();
                 });
             });
             await host.StartAsync();
@@ -278,18 +281,19 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         // Allow a host to override container resolution. 
         class CustomLockManager : StorageBaseDistributedLockManager
         {
-            private readonly StorageAccountProvider _storage;
+            private readonly IConfiguration _configuration;
+            private readonly HostStorageProvider _hostStorageProvider;
 
-            public CustomLockManager(ILoggerFactory logger, StorageAccountProvider storage) : base(logger)
+            public CustomLockManager(ILoggerFactory logger, IConfiguration configuration, IOptions<HostStorageProvider> hostStorageProvider) : base(logger)
             {
-                _storage = storage;
+                _configuration = configuration;
+                _hostStorageProvider = hostStorageProvider.Value;
             }
-            protected override CloudBlobContainer GetContainer(string accountName)
+            protected override BlobContainerClient GetContainerClient(string accountName)
             {
-                var account = _storage.Get(accountName);
-                var client = account.CreateCloudBlobClient();
-                var container = client.GetContainerReference(StorageBaseDistributedLockManager.DefaultContainerName);
-                return container;
+                string connectionString = _configuration.GetWebJobsConnectionString(accountName);
+                var blobServiceClient = _hostStorageProvider.GetBlobServiceClient(connectionString);
+                return blobServiceClient.GetBlobContainerClient(StorageBaseDistributedLockManager.DefaultContainerName);
             }
         }
 
