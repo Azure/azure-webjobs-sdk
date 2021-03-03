@@ -19,7 +19,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         {
             using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteName, null))
             using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteSlotName, null))
-            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteCloudRolename, null))
+            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteCloudRoleName, null))
             {
                 var initializer = new WebJobsRoleEnvironmentTelemetryInitializer();
 
@@ -36,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         {
             using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteName, "mytestsite"))
             using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteSlotName, "Staging"))
-            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteCloudRolename, null))
+            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteCloudRoleName, null))
             {
                 var initializer = new WebJobsRoleEnvironmentTelemetryInitializer();
 
@@ -53,7 +53,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         {
             using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteName, "mytestsite"))
             using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteSlotName, "Production"))
-            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteCloudRolename, null))
+            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteCloudRoleName, null))
             {
                 var initializer = new WebJobsRoleEnvironmentTelemetryInitializer();
 
@@ -70,7 +70,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         {
             var testCloudRoleName = "mycloudrolename";
 
-            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteCloudRolename, testCloudRoleName))
+            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteName, "mytestsite"))
+            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteSlotName, "Production"))
+            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteCloudRoleName, testCloudRoleName))
             {
                 var initializer = new WebJobsRoleEnvironmentTelemetryInitializer();
 
