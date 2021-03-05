@@ -18,9 +18,7 @@ namespace SampleHost
                 .ConfigureWebJobs(b =>
                 {
                     b.AddAzureStorageCoreServices()
-                    .AddAzureStorage()
-                    .AddServiceBus()
-                    .AddEventHubs();
+                    .AddAzureStorage();
                 })
                 .ConfigureAppConfiguration(b =>
                 {
@@ -29,7 +27,7 @@ namespace SampleHost
                 })
                 .ConfigureLogging((context, b) =>
                 {
-                    b.SetMinimumLevel(LogLevel.Debug);
+                    b.SetMinimumLevel(LogLevel.Information);
                     b.AddConsole();
 
                     // If this key exists in any config, use it to enable App Insights

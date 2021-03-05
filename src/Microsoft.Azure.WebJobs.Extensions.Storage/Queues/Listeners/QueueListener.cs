@@ -48,6 +48,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         private bool _foundMessageSinceLastDelay;
         private bool _disposed;
         private TaskCompletionSource<object> _stopWaitingTaskSource;
+        private ConcurrencyManager _concurrencyManager;
+        
 
         // for mock testing only
         internal QueueListener()
@@ -63,6 +65,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             QueuesOptions queueOptions,
             IQueueProcessorFactory queueProcessorFactory,
             FunctionDescriptor functionDescriptor,
+            ConcurrencyManager concurrencyManager,
             string functionId = null,
             TimeSpan? maxPollingInterval = null)
         {
@@ -126,6 +129,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
 
             _scaleMonitorDescriptor = new ScaleMonitorDescriptor($"{_functionId}-QueueTrigger-{_queue.Name}".ToLower());
             _shutdownCancellationTokenSource = new CancellationTokenSource();
+
+            _concurrencyManager = concurrencyManager;
         }
 
         // for testing
@@ -166,6 +171,133 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         }
 
         public async Task<TaskSeriesCommandResult> ExecuteAsync(CancellationToken cancellationToken)
+        {
+            return _concurrencyManager.Enabled ? 
+                await ExecuteWithDynamicConcurrencyAsync(cancellationToken) : 
+                await ExecuteWithConfiguredConcurrencyAsync(cancellationToken);
+        }
+
+        private async Task<TaskSeriesCommandResult> ExecuteWithDynamicConcurrencyAsync(CancellationToken cancellationToken)
+        {
+            lock (_stopWaitingTaskSourceLock)
+            {
+                if (_stopWaitingTaskSource != null)
+                {
+                    _stopWaitingTaskSource.TrySetResult(null);
+                }
+
+                _stopWaitingTaskSource = new TaskCompletionSource<object>();
+            }
+
+            // fetch another batch of messages
+            IEnumerable<CloudQueueMessage> batch = null;
+            string clientRequestId = Guid.NewGuid().ToString();
+            Stopwatch sw = null;
+            try
+            {
+                if (!_queueExists.HasValue || !_queueExists.Value)
+                {
+                    // Before querying the queue, determine if it exists. This
+                    // avoids generating unecessary exceptions (which pollute AppInsights logs)
+                    // Once we establish the queue exists, we won't do the existence
+                    // check anymore (steady state).
+                    // However the queue can always be deleted from underneath us, in which case
+                    // we need to recheck. That is handled below.
+                    _queueExists = await _queue.ExistsAsync();
+                }
+
+                if (_queueExists.Value)
+                {
+                    var concurrencyStatus = _concurrencyManager.Update(_functionId);
+                    if (concurrencyStatus.FetchCount == 0)
+                    {
+                        // if we're not healthy or we're at our limit, we want to wait for a bit before checking again
+                        var delay = TimeSpan.FromSeconds(1);
+                        return CreateDelayResult(delay);
+                    }
+
+                    sw = Stopwatch.StartNew();
+                    OperationContext context = new OperationContext { ClientRequestID = clientRequestId };
+
+                    // determine the number of messages to pull, based on the current degree of parallelism
+                    int currentBatchSize = Math.Min(concurrencyStatus.FetchCount, 32);
+
+                    batch = await TimeoutHandler.ExecuteWithTimeout(nameof(CloudQueue.GetMessageAsync), context.ClientRequestID,
+                        _exceptionHandler, _logger, cancellationToken, () =>
+                        {
+                            return _queue.GetMessagesAsync(currentBatchSize,
+                                _visibilityTimeout,
+                                options: DefaultQueueRequestOptions,
+                                operationContext: context,
+                                cancellationToken: cancellationToken);
+                        });
+
+                    int count = batch?.Count() ?? -1;
+                    Logger.GetMessages(_logger, _functionDescriptor.LogName, _queue.Name, context.ClientRequestID, count, sw.ElapsedMilliseconds);
+                }
+            }
+            catch (StorageException exception)
+            {
+                // if we get ANY errors querying the queue reset our existence check
+                // doing this on all errors rather than trying to special case not
+                // found, because correctness is the most important thing here
+                _queueExists = null;
+
+                if (exception.IsNotFoundQueueNotFound() ||
+                    exception.IsConflictQueueBeingDeletedOrDisabled() ||
+                    exception.IsServerSideError())
+                {
+                    long pollLatency = sw?.ElapsedMilliseconds ?? -1;
+                    Logger.HandlingStorageException(_logger, _functionDescriptor.LogName, _queue.Name, clientRequestId, pollLatency, exception);
+
+                    // Back off when no message is available, or when
+                    // transient errors occur
+                    return CreateBackoffResult();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            bool foundMessage = false;
+            if (batch != null)
+            {
+                foreach (var message in batch)
+                {
+                    if (message == null)
+                    {
+                        continue;
+                    }
+
+                    foundMessage = true;
+
+                    // Note: Capturing the cancellationToken passed here on a task that continues to run is a slight abuse
+                    // of the cancellation token contract. However, the timer implementation would not dispose of the
+                    // cancellation token source until it has stopped and perhaps also disposed, and we wait for all
+                    // outstanding tasks to complete before stopping the timer.
+                    Task task = ProcessMessageAsync(message, _visibilityTimeout, cancellationToken);
+ 
+                    // Having both WaitForNewBatchThreshold and this method mutate _processing is safe because the timer
+                    // contract is serial: it only calls ExecuteAsync once the wait expires (and the wait won't expire until
+                    // WaitForNewBatchThreshold has finished mutating _processing).
+                    _processing.Add(task);
+                }
+            }
+
+            // Back off when no message was found.
+            if (!foundMessage)
+            {
+                return CreateBackoffResult();
+            }
+
+            // we want the next invocation to run right away
+            // to ensure we quickly fetch to our max degree of concurrency (we know there were messages),
+            // when host is unhealthy
+            return CreateDelayResult(TimeSpan.Zero);
+        }
+
+        private async Task<TaskSeriesCommandResult> ExecuteWithConfiguredConcurrencyAsync(CancellationToken cancellationToken)
         {
             lock (_stopWaitingTaskSourceLock)
             {
@@ -300,6 +432,13 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             return new TaskSeriesCommandResult(wait: CreateDelayWithNotificationTask());
         }
 
+        private TaskSeriesCommandResult CreateDelayResult(TimeSpan delay)
+        {
+            Task aggregateTask = Task.WhenAny(_stopWaitingTaskSource.Task, Task.Delay(delay));
+
+            return new TaskSeriesCommandResult(wait: aggregateTask);
+        }
+
         private TaskSeriesCommandResult CreateSucceededResult()
         {
             Task wait = WaitForNewBatchThreshold();
@@ -319,6 +458,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         {
             try
             {
+                _concurrencyManager.FunctionStarted(_functionId);
+
                 if (!await _queueProcessor.BeginProcessingMessageAsync(message, cancellationToken))
                 {
                     return;
@@ -353,6 +494,10 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
                 // (Don't capture the exception as a fault of this Task; that would delay any exception reporting until
                 // Stop is called, which might never happen.)
                 _exceptionHandler.OnUnhandledExceptionAsync(ExceptionDispatchInfo.Capture(exception)).GetAwaiter().GetResult();
+            }
+            finally
+            {
+                _concurrencyManager.FunctionCompleted(_functionId);
             }
         }
 

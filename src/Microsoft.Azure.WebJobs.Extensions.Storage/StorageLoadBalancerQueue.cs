@@ -16,6 +16,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Azure.Storage.Queue;
 using Newtonsoft.Json;
+using Microsoft.Azure.WebJobs.Host.Scale;
 
 namespace WebJobs.Extensions.Storage
 {
@@ -32,6 +33,7 @@ namespace WebJobs.Extensions.Storage
         private readonly SharedQueueWatcher _sharedWatcher;
         private readonly StorageAccountProvider _storageAccountProvider;
         private readonly IQueueProcessorFactory _queueProcessorFactory;
+        private readonly ConcurrencyManager _concurrencyManager;
 
         public StorageLoadBalancerQueue(
             StorageAccountProvider storageAccountProvider,
@@ -39,7 +41,8 @@ namespace WebJobs.Extensions.Storage
                IWebJobsExceptionHandler exceptionHandler,
                SharedQueueWatcher sharedWatcher,
                ILoggerFactory loggerFactory,
-               IQueueProcessorFactory queueProcessorFactory)
+               IQueueProcessorFactory queueProcessorFactory,
+               ConcurrencyManager concurrencyManager)
         {
             _storageAccountProvider = storageAccountProvider;
             _queueOptions = queueOptions.Value;
@@ -47,6 +50,7 @@ namespace WebJobs.Extensions.Storage
             _sharedWatcher = sharedWatcher;
             _loggerFactory = loggerFactory;
             _queueProcessorFactory = queueProcessorFactory;
+            _concurrencyManager = concurrencyManager;
         }
 
         public IAsyncCollector<T> GetQueueWriter<T>(string queue)
@@ -116,6 +120,7 @@ namespace WebJobs.Extensions.Storage
                 queueOptions: _queueOptions,
                 queueProcessorFactory: _queueProcessorFactory,
                 functionDescriptor: new FunctionDescriptor { Id = SharedLoadBalancerQueueListenerFunctionId },
+                _concurrencyManager,
                 maxPollingInterval: maxPollingInterval);
 
             return listener;

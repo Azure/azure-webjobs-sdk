@@ -57,7 +57,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
 
             mockQueueProcessorFactory.Setup(p => p.Create(It.IsAny<QueueProcessorFactoryContext>())).Returns(_mockQueueProcessor.Object);
 
-            _listener = new QueueListener(_mockQueue.Object, null, _mockTriggerExecutor.Object, mockExceptionDispatcher.Object, _loggerFactory, null, queueConfig, mockQueueProcessorFactory.Object, new FunctionDescriptor { Id = "TestFunction" });
+            Mock<ConcurrencyManager> concurrencyManagerMock = new Mock<ConcurrencyManager>(MockBehavior.Strict);
+            _listener = new QueueListener(_mockQueue.Object, null, _mockTriggerExecutor.Object, mockExceptionDispatcher.Object, _loggerFactory, null, queueConfig, mockQueueProcessorFactory.Object, new FunctionDescriptor { Id = "TestFunction" }, concurrencyManagerMock.Object);
             _queueMessage = new CloudQueueMessage("TestMessage");
         }
 
@@ -74,9 +75,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
         {
             var queuesOptions = new QueuesOptions();
             Mock<ITriggerExecutor<CloudQueueMessage>> mockTriggerExecutor = new Mock<ITriggerExecutor<CloudQueueMessage>>(MockBehavior.Strict);
+            Mock<ConcurrencyManager> concurrencyManagerMock = new Mock<ConcurrencyManager>(MockBehavior.Strict);
             var queueProcessorFactory = new DefaultQueueProcessorFactory();
             QueueListener listener = new QueueListener(Fixture.Queue, null, mockTriggerExecutor.Object, new WebJobsExceptionHandler(null),
-                _loggerFactory, null, queuesOptions, queueProcessorFactory, new FunctionDescriptor { Id = "TestFunction" });
+                _loggerFactory, null, queuesOptions, queueProcessorFactory, new FunctionDescriptor { Id = "TestFunction" }, concurrencyManagerMock.Object);
 
             var metrics = await listener.GetMetricsAsync();
 
@@ -384,9 +386,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             await queue.AddMessageAsync(message, null, null, null, null, CancellationToken.None);
             CloudQueueMessage messageFromCloud = await queue.GetMessageAsync();
             var queueProcessorFactory = new DefaultQueueProcessorFactory();
+            Mock<ConcurrencyManager> concurrencyManagerMock = new Mock<ConcurrencyManager>(MockBehavior.Strict);
 
             QueueListener listener = new QueueListener(queue, poisonQueue, mockTriggerExecutor.Object, new WebJobsExceptionHandler(null),
-                NullLoggerFactory.Instance, null, queuesOptions, queueProcessorFactory, new FunctionDescriptor { Id = "TestFunction" });
+                NullLoggerFactory.Instance, null, queuesOptions, queueProcessorFactory, new FunctionDescriptor { Id = "TestFunction" }, concurrencyManagerMock.Object);
 
             mockTriggerExecutor
                 .Setup(m => m.ExecuteAsync(It.IsAny<CloudQueueMessage>(), CancellationToken.None))
@@ -422,9 +425,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
             CloudQueueMessage message = new CloudQueueMessage(messageContent);
             await queue.AddMessageAsync(message, null, null, null, null, CancellationToken.None);
             CloudQueueMessage messageFromCloud = await queue.GetMessageAsync();
+            Mock<ConcurrencyManager> concurrencyManagerMock = new Mock<ConcurrencyManager>(MockBehavior.Strict);
 
             QueueListener listener = new QueueListener(queue, null, mockTriggerExecutor.Object, new WebJobsExceptionHandler(null),
-                _loggerFactory, null, new QueuesOptions(), new DefaultQueueProcessorFactory(), new FunctionDescriptor { Id = "TestFunction" });
+                _loggerFactory, null, new QueuesOptions(), new DefaultQueueProcessorFactory(), new FunctionDescriptor { Id = "TestFunction" }, concurrencyManagerMock.Object);
 
             listener.MinimumVisibilityRenewalInterval = TimeSpan.FromSeconds(1);
 

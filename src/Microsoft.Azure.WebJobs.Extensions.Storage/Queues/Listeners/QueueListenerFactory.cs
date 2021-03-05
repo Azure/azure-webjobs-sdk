@@ -11,6 +11,7 @@ using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Storage.Queue;
+using Microsoft.Azure.WebJobs.Host.Scale;
 
 namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
 {
@@ -27,6 +28,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         private readonly ITriggeredFunctionExecutor _executor;
         private readonly FunctionDescriptor _descriptor;
         private readonly IQueueProcessorFactory _queueProcessorFactory;
+        private readonly ConcurrencyManager _concurrencyManager;
 
         public QueueListenerFactory(CloudQueue queue,
             QueuesOptions queueOptions,
@@ -35,7 +37,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             ILoggerFactory loggerFactory,
             ITriggeredFunctionExecutor executor,
             IQueueProcessorFactory queueProcessorFactory,
-            FunctionDescriptor descriptor)
+            FunctionDescriptor descriptor,
+            ConcurrencyManager concurrencyManager)
         {
             _queue = queue ?? throw new ArgumentNullException(nameof(queue));
             _queueOptions = queueOptions ?? throw new ArgumentNullException(nameof(queueOptions));
@@ -47,6 +50,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             _poisonQueue = CreatePoisonQueueReference(queue.ServiceClient, queue.Name);
             _loggerFactory = loggerFactory;
             _queueProcessorFactory = queueProcessorFactory;
+            _concurrencyManager = concurrencyManager;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
@@ -55,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             QueueTriggerExecutor triggerExecutor = new QueueTriggerExecutor(_executor);
 
             IListener listener = new QueueListener(_queue, _poisonQueue, triggerExecutor, _exceptionHandler, _loggerFactory,
-                _messageEnqueuedWatcherSetter, _queueOptions, _queueProcessorFactory, _descriptor);
+                _messageEnqueuedWatcherSetter, _queueOptions, _queueProcessorFactory, _descriptor, _concurrencyManager);
 
             return Task.FromResult(listener);
         }

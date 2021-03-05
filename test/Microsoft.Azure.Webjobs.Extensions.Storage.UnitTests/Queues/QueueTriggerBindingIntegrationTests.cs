@@ -14,6 +14,7 @@ using Microsoft.Azure.Storage.Queue;
 using Moq;
 using Newtonsoft.Json;
 using Xunit;
+using Microsoft.Azure.WebJobs.Host.Scale;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
 {
@@ -32,10 +33,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Queues
 
             IWebJobsExceptionHandler exceptionHandler = new WebJobsExceptionHandler(new Mock<IHost>().Object);
             var enqueueWatcher = new Host.Queues.Listeners.SharedQueueWatcher();
+            Mock<ConcurrencyManager> concurrencyManagerMock = new Mock<ConcurrencyManager>(MockBehavior.Strict);
             _binding = new QueueTriggerBinding("parameterName", queue, argumentBinding,
                 new QueuesOptions(), exceptionHandler,
                 enqueueWatcher,
-                null, null);
+                null, null, concurrencyManagerMock.Object);
         }
 
         [Theory]

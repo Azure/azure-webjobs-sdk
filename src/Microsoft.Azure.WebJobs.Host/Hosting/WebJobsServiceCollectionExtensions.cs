@@ -115,6 +115,10 @@ namespace Microsoft.Azure.WebJobs
             services.AddSingleton<IHostedService, OptionsLoggingService>();
             services.AddSingleton<IOptionsFormatter<LoggerFilterOptions>, LoggerFilterOptionsFormatter>();
 
+            services.AddSingleton<IHostHealthMonitor, DefaultHostHealthMonitor>();
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostThrottleProvider, HostProcessThrottleProvider>());
+            services.AddSingleton<ConcurrencyManager>();
+
             services.AddOptions<SingletonOptions>()
                 .Configure<IHostingEnvironment>((options, env) =>
                 {

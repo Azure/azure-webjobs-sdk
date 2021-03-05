@@ -17,6 +17,7 @@ using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.WebJobs.Host.Scale;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
 {
@@ -39,6 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
         private readonly IAsyncObjectToTypeConverter<ICloudBlob> _converter;
         private readonly IReadOnlyDictionary<string, Type> _bindingDataContract;
         private readonly IHostSingletonManager _singletonManager;
+        private readonly ConcurrencyManager _concurrencyManager;
 
         public BlobTriggerBinding(ParameterInfo parameter,
             StorageAccount hostAccount,
@@ -52,7 +54,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             SharedQueueWatcher messageEnqueuedWatcherSetter,
             ISharedContextProvider sharedContextProvider,
             IHostSingletonManager singletonManager,
-            ILoggerFactory loggerFactory)
+            ILoggerFactory loggerFactory,
+            ConcurrencyManager concurrencyManager)
         {
             _parameter = parameter ?? throw new ArgumentNullException(nameof(parameter));
             _hostAccount = hostAccount ?? throw new ArgumentNullException(nameof(hostAccount));
@@ -73,6 +76,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
             _loggerFactory = loggerFactory;
             _converter = CreateConverter(_blobClient);
             _bindingDataContract = CreateBindingDataContract(path);
+            _concurrencyManager = concurrencyManager;
         }
 
         public Type TriggerValueType
@@ -178,7 +182,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Triggers
 
             var factory = new BlobListenerFactory(_hostIdProvider, _queueOptions, _blobsOptions, _exceptionHandler,
                 _blobWrittenWatcherSetter, _messageEnqueuedWatcherSetter, _sharedContextProvider, _loggerFactory,
-                context.Descriptor, _hostAccount, _dataAccount, container, _path, context.Executor, _singletonManager);
+                context.Descriptor, _hostAccount, _dataAccount, container, _path, context.Executor, _singletonManager, _concurrencyManager);
 
             return factory.CreateAsync(context.CancellationToken);
         }

@@ -10,6 +10,7 @@ using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Azure.Storage.Queue;
+using Microsoft.Azure.WebJobs.Host.Scale;
 
 namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
 {
@@ -29,6 +30,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
         private readonly SharedQueueWatcher _messageEnqueuedWatcherSetter;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IQueueProcessorFactory _queueProcessorFactory;
+        private readonly ConcurrencyManager _concurrencyManager;
 
         public QueueTriggerAttributeBindingProvider(INameResolver nameResolver,
             StorageAccountProvider accountProvider,
@@ -36,7 +38,8 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             IWebJobsExceptionHandler exceptionHandler,
             SharedQueueWatcher messageEnqueuedWatcherSetter,
             ILoggerFactory loggerFactory,
-            IQueueProcessorFactory queueProcessorFactory)
+            IQueueProcessorFactory queueProcessorFactory,
+            ConcurrencyManager concurrencyManager)
         {
             _accountProvider = accountProvider ?? throw new ArgumentNullException(nameof(accountProvider));
             _queueOptions = (queueOptions ?? throw new ArgumentNullException(nameof(queueOptions))).Value;
@@ -46,6 +49,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
             _nameResolver = nameResolver;
             _loggerFactory = loggerFactory;
             _queueProcessorFactory = queueProcessorFactory;
+            _concurrencyManager = concurrencyManager;
         }
 
         public Task<ITriggerBinding> TryCreateAsync(TriggerBindingProviderContext context)
@@ -78,7 +82,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Triggers
 
             ITriggerBinding binding = new QueueTriggerBinding(parameter.Name, queue, argumentBinding,
                 _queueOptions, _exceptionHandler, _messageEnqueuedWatcherSetter,
-                _loggerFactory, _queueProcessorFactory);
+                _loggerFactory, _queueProcessorFactory, _concurrencyManager);
             return Task.FromResult(binding);
         }
 
