@@ -85,6 +85,28 @@ namespace Microsoft.Azure.WebJobs
                 // Default is UTF8, not write a BOM, close stream when done. 
                 return new StreamWriter(stream);
             });
+
+            this.AddExactConverter<Stream, BinaryData>(async (stream, cancellationToken) =>
+            {
+                return await BinaryData.FromStreamAsync(stream, cancellationToken);
+            });
+            this.AddExactConverter<ApplyConversion<BinaryData, Stream>, object>(async (pair, cancellationToken) =>
+            {
+                var data = pair.Value;
+                var stream = pair.Existing;
+
+                await data.ToStream().CopyToAsync(stream);
+                return null;
+            });
+
+            this.AddExactConverter<byte[], BinaryData>((bytes) =>
+            {
+                return BinaryData.FromBytes(bytes);
+            });
+            this.AddExactConverter<BinaryData, byte[]>((binaryData) =>
+            {
+                return binaryData.ToArray();
+            });
         }
 
         // If somebody registered a converter from Src-->Dest, then both those types can be used to 

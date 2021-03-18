@@ -203,7 +203,15 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             ApplyScopeAndStateProperties(properties, values);
 
             var severityLevel = GetSeverityLevel(logLevel);
-            _telemetryClient.TrackTrace(formattedMessage, severityLevel.Value, properties);
+            if (severityLevel.HasValue)
+            {
+                _telemetryClient.TrackTrace(formattedMessage, severityLevel.Value, properties);
+            }
+            else
+            {
+                // LogLevel.None maps to null, so we have to handle that specially
+                _telemetryClient.TrackTrace(formattedMessage, properties);
+            }
         }
 
         private static SeverityLevel? GetSeverityLevel(LogLevel logLevel)

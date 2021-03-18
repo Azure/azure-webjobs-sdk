@@ -19,6 +19,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
     {
         internal const string AzureWebsiteName = "WEBSITE_SITE_NAME";
         internal const string AzureWebsiteSlotName = "WEBSITE_SLOT_NAME";
+        internal const string AzureWebsiteCloudRoleName = "WEBSITE_CLOUD_ROLENAME";
         private const string DefaultProductionSlotName = "production";
         private const string WebAppSuffix = ".azurewebsites.net";
 
@@ -40,6 +41,13 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 // We cannot cache these values as the environment variables can change on the fly.
                 return GetAzureWebsiteUniqueSlotName();
             });
+
+            var websiteCloudRoleName = Environment.GetEnvironmentVariable(AzureWebsiteCloudRoleName);
+
+            if (!string.IsNullOrEmpty(websiteCloudRoleName))
+            {
+                telemetry.Context.Cloud.RoleName = websiteCloudRoleName;
+            }
 
             if (string.IsNullOrEmpty(telemetry.Context.Cloud.RoleName))
             {
