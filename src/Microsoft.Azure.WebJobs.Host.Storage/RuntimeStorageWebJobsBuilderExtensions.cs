@@ -7,7 +7,7 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Storage;
-using Microsoft.Extensions.Azure;
+using Microsoft.Azure.WebJobs.StorageProvider.Blobs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -40,7 +40,7 @@ namespace Microsoft.Extensions.Hosting
             builder.Services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<StorageAccountOptions>, StorageAccountOptionsSetup>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, CoreWebJobsOptionsSetup<JobHostInternalStorageOptions>>());
 
-            builder.AddAzureStorage();
+            builder.Services.AddHostStorageProvider();
 
             builder.Services.TryAddSingleton<IDelegatingHandlerProvider, DefaultDelegatingHandlerProvider>();
 
@@ -51,7 +51,7 @@ namespace Microsoft.Extensions.Hosting
         private static IDistributedLockManager Create(IServiceProvider provider)
         {
             // $$$ get rid of LegacyConfig
-            var opts = provider.GetRequiredService<IOptions<HostStorageProvider>>();
+            var hostStorageProvider = provider.GetRequiredService<HostStorageProvider>();
 
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
 
@@ -67,8 +67,7 @@ namespace Microsoft.Extensions.Hosting
             {
                 try
                 {
-                    var hostStorageProvider = opts.Value;
-                    BlobServiceClient blobServiceClient = hostStorageProvider.GetBlobServiceClient();
+                    hostStorageProvider.TryGetBlobServiceClientFromConnection(out BlobServiceClient blobServiceClient, ConnectionStringNames.Storage);
                     containerClient = blobServiceClient.GetBlobContainerClient(HostContainerNames.Hosts);
                 }
                 catch (Exception)
@@ -81,12 +80,10 @@ namespace Microsoft.Extensions.Hosting
             return lockManager;
         }
 
-        public static IWebJobsBuilder AddAzureStorage(this IWebJobsBuilder builder)
+        public static void AddHostStorageProvider(this IServiceCollection services)
         {
-            builder.Services.TryAddSingleton<IConfigureOptions<HostStorageProvider>, HostStorageProviderOptions>();
-            builder.Services.AddAzureClients(p => { });
-
-            return builder;
+            services.TryAddSingleton<HostStorageProvider>();
+            services.AddAzureStorageBlobs();
         }
     }
 }

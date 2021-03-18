@@ -6,16 +6,18 @@
   <Import Project="..\..\build\common.props" />  
   
   <PropertyGroup>
-    <Version>$(HostStorageVersion)</Version>
+    <Version>5.0.0</Version>
     <InformationalVersion>$(Version) Commit hash: $(CommitHash)</InformationalVersion>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>Microsoft.Azure.WebJobs.Host.Storage</AssemblyName>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>  
   
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <WarningsAsErrors />
+    <NoWarn>1701;1702; NU1603; NU1605; CS1705</NoWarn>
   </PropertyGroup>  
   
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -33,9 +35,9 @@
   <ItemGroup>
     <PackageReference Include="Azure.Core" Version="1.9.0" />
     <PackageReference Include="Azure.Identity" Version="1.3.0" />
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.8.0" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.9.0-alpha.20210317.1" />
     <PackageReference Include="Microsoft.Azure.Storage.Blob" Version="11.1.7" />
-    <PackageReference Include="Microsoft.Extensions.Azure" Version="1.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Azure" Version="1.1.0-beta.2" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.0-beta004">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
@@ -43,6 +45,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj" />
+    <ProjectReference Include="..\Microsoft.Azure.WebJobs.StorageProvider.Blobs\WebJobs.StorageProvider.Blobs.csproj" />
   </ItemGroup>
 
 </Project>

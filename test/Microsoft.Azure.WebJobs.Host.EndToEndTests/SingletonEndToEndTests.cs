@@ -261,7 +261,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 hostBuilder.ConfigureServices((services) =>
                 {
                     services.AddSingleton<IDistributedLockManager, CustomLockManager>();
-                    services.AddSingleton<IConfigureOptions<HostStorageProvider>, HostStorageProviderOptions>();
                 });
             });
             await host.StartAsync();
@@ -281,18 +280,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         // Allow a host to override container resolution. 
         class CustomLockManager : StorageBaseDistributedLockManager
         {
-            private readonly IConfiguration _configuration;
             private readonly HostStorageProvider _hostStorageProvider;
 
-            public CustomLockManager(ILoggerFactory logger, IConfiguration configuration, IOptions<HostStorageProvider> hostStorageProvider) : base(logger)
+            public CustomLockManager(ILoggerFactory logger, HostStorageProvider hostStorageProvider) : base(logger)
             {
-                _configuration = configuration;
-                _hostStorageProvider = hostStorageProvider.Value;
+                _hostStorageProvider = hostStorageProvider;
             }
             protected override BlobContainerClient GetContainerClient(string accountName)
             {
-                string connectionString = _configuration.GetWebJobsConnectionString(accountName);
-                var blobServiceClient = _hostStorageProvider.GetBlobServiceClient(connectionString);
+                _hostStorageProvider.TryGetBlobServiceClientFromConnection(out BlobServiceClient blobServiceClient, accountName);
                 return blobServiceClient.GetBlobContainerClient(StorageBaseDistributedLockManager.DefaultContainerName);
             }
         }

@@ -3,48 +3,32 @@
 
 using System;
 using Azure.Storage.Blobs;
+using Microsoft.Azure.WebJobs.StorageProvider.Blobs;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs
 {
-    public class HostStorageProviderOptions : IConfigureOptions<HostStorageProvider>
-    {
-        private readonly IConfiguration _configuration;
-
-        public HostStorageProviderOptions(IConfiguration configuration)
-        {
-            _configuration = configuration;
-        }
-
-        public void Configure(HostStorageProvider hostStorageProvider)
-        {
-            // TODO: Dashboard deprecated. Remove?
-            if (hostStorageProvider.DashboardConnectionString == null)
-            {
-                hostStorageProvider.DashboardConnectionString = _configuration.GetWebJobsConnectionString(ConnectionStringNames.Dashboard);
-            }
-
-            if (hostStorageProvider.DefaultStorageConnectionString == null)
-            {
-                hostStorageProvider.DefaultStorageConnectionString = _configuration.GetWebJobsConnectionString(ConnectionStringNames.Storage);
-            }
-
-            hostStorageProvider.Configuration = _configuration;
-        }
-    }
-
     public class HostStorageProvider
     {
-        // TODO: Dashboard deprecated. Remove?
-        public string DashboardConnectionString { get; set; }
-        public string DefaultStorageConnectionString { get; set; }
-        public IConfiguration Configuration { get; internal set; }
+        private IConfiguration _configuration;
+        private BlobServiceClientProvider _blobServiceClientProvider;
 
-        public BlobServiceClient GetBlobServiceClient(string connectionString = null)
+        public IConfiguration Configuration
         {
-            var connectionStringToUse = connectionString ?? DefaultStorageConnectionString;
-            return new BlobServiceClient(connectionStringToUse);
+            get
+            {
+                return _configuration;
+            }
+            set
+            {
+                _configuration = value;
+            }
+        }
+
+        public HostStorageProvider(IConfiguration configuration, BlobServiceClientProvider blobServiceClientProvider)
+        {
+            _configuration = configuration;
+            _blobServiceClientProvider = blobServiceClientProvider;
         }
 
         /// <summary>
@@ -54,15 +38,29 @@ namespace Microsoft.Azure.WebJobs
         /// <param name="client">client to instantiate</param>
         /// <param name="connectionString">connection string to use</param>
         /// <returns>successful client creation</returns>
-        public bool TryGetBlobServiceClient(out BlobServiceClient client, string connectionString = null)
+        public virtual bool TryGetBlobServiceClientFromConnectionString(out BlobServiceClient client, string connectionString = null)
         {
             try
             {
-                var connectionStringToUse = connectionString ?? DefaultStorageConnectionString;
+                var connectionStringToUse = connectionString ?? _configuration.GetWebJobsConnectionString(ConnectionStringNames.Storage);
                 client = new BlobServiceClient(connectionStringToUse);
                 return true;
             }
-            catch (Exception ex) when (ex is ArgumentException || ex is FormatException || ex is ArgumentNullException)
+            catch (Exception ex) when (ex is ArgumentException || ex is FormatException || ex is ArgumentNullException || ex is InvalidOperationException)
+            {
+                client = default;
+                return false;
+            }
+        }
+
+        public virtual bool TryGetBlobServiceClientFromConnection(out BlobServiceClient client, string connection = null)
+        {
+            try
+            {
+                client = _blobServiceClientProvider.Get(connection);
+                return true;
+            }
+            catch
             {
                 client = default;
                 return false;
