@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         private readonly ApplicationInsightsLoggerOptions _loggerOptions;
         private readonly string _categoryName;
         private readonly bool _isUserFunction = false;
-        private static readonly ConcurrentDictionary<string, string> _prefixedProperyNames = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        private static readonly ConcurrentDictionary<string, string> _prefixedProperyNames = new ConcurrentDictionary<string, string>();
 
         private const string DefaultCategoryName = "Default";
         private const string DateTimeFormatString = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffK";
@@ -242,7 +242,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             ApplyProperties(properties, state, true);
         }
 
-        private static void ApplyProperty(IDictionary<string, string> properties, string key, object value, bool applyPrefix = false)
+        internal static void ApplyProperty(IDictionary<string, string> properties, string key, object value, bool applyPrefix = false)
         {
             // do not apply null values
             if (value == null)
