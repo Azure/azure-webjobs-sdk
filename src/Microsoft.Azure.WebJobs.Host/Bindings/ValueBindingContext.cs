@@ -14,6 +14,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         private readonly FunctionBindingContext _functionContext;
         private readonly CancellationToken _cancellationToken;
 
+        // TODO make this private readonly
+        public SharedMemoryMetadata _sharedMemoryMetadata;
+
         /// <summary>
         /// Creates a new instance.
         /// </summary>
@@ -23,6 +26,20 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         {
             _functionContext = functionContext;
             _cancellationToken = cancellationToken;
+            _sharedMemoryMetadata = null;
+        }
+
+        /// <summary>
+        /// Creates a new instance.
+        /// </summary>
+        /// <param name="functionContext">The context for the parent function.</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to use.</param>
+        /// <param name="memoryMapName">The name of the shared memory map where the value is present.</param>
+        public ValueBindingContext(FunctionBindingContext functionContext, SharedMemoryMetadata memoryMapName, CancellationToken cancellationToken)
+        {
+            _functionContext = functionContext;
+            _cancellationToken = cancellationToken;
+            _sharedMemoryMetadata = memoryMapName;
         }
 
         /// <summary>
@@ -55,6 +72,16 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         public CancellationToken CancellationToken
         {
             get { return _cancellationToken; }
+        }
+
+        /// <summary>
+        /// Gets the informatino about where in the shared memory map the value is exists.
+        /// This can be used by the storage extension to create an entry for this object in the <see cref="IFunctionDataCache"/>.
+        /// </summary>
+        public SharedMemoryMetadata SharedMemoryMetadata
+        {
+            get { return _sharedMemoryMetadata; }
+            set { _sharedMemoryMetadata = value; } // TODO remove
         }
     }
 }
