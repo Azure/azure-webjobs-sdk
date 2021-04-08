@@ -58,31 +58,58 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
         public async Task CommitAsync(CancellationToken cancellationToken)
         {
-            _committed = true;
-
-            await base.CommitAsync();
-
-            if (_committedAction != null)
+            try
             {
-                await _committedAction.ExecuteAsync(cancellationToken);
+                _timeWrite.Start();
+
+                _committed = true;
+
+                await base.CommitAsync();
+
+                if (_committedAction != null)
+                {
+                    await _committedAction.ExecuteAsync(cancellationToken);
+                }
+            }
+            finally
+            {
+                _timeWrite.Stop();
             }
         }
 
         public override void Close()
         {
-            if (!_committed)
+            try
             {
-                Task.Run(async () => await CommitAsync()).GetAwaiter().GetResult();
-            }
+                _timeWrite.Start();
 
-            base.Close();
-            Log();
+                if (!_committed)
+                {
+                    Task.Run(async () => await CommitAsync()).GetAwaiter().GetResult();
+                }
+
+                base.Close();
+            }
+            finally
+            {                
+                _timeWrite.Stop();
+                Log();
+            }
         }
 
         public override void Flush()
         {
-            base.Flush();
-            _flushed = true;
+            try
+            {
+                _timeWrite.Start();
+
+                base.Flush();
+                _flushed = true;
+            }
+            finally
+            {
+                _timeWrite.Stop();
+            }
         }
 
         public override Task FlushAsync(CancellationToken cancellationToken)
@@ -93,8 +120,17 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
         private async Task FlushAsyncCore(Task task)
         {
-            await task;
-            _flushed = true;
+            try
+            {
+                _timeWrite.Start();
+
+                await task;
+                _flushed = true;
+            }
+            finally
+            {
+                _timeWrite.Stop();
+            }
         }
 
         public override void Write(byte[] buffer, int offset, int count)
@@ -102,6 +138,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             try
             {
                 _timeWrite.Start();
+
                 base.Write(buffer, offset, count);
                 _countWritten += count;
             }
@@ -122,6 +159,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
             try
             {
                 _timeWrite.Start();
+
                 await task;
                 _countWritten += count;
             }
@@ -133,8 +171,17 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
 
         public override void WriteByte(byte value)
         {
-            base.WriteByte(value);
-            _countWritten++;
+            try
+            {
+                _timeWrite.Start();
+    
+                base.WriteByte(value);
+                _countWritten++;
+            }
+            finally
+            {
+                _timeWrite.Stop();
+            }
         }
 
         [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
@@ -159,14 +206,23 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
         /// </returns>
         public async Task<bool> CompleteAsync(CancellationToken cancellationToken)
         {
-            if (!_committed && (_countWritten > 0 || _flushed))
+            try
             {
-                await CommitAsync(cancellationToken);
+                _timeWrite.Start();
+
+                if (!_committed && (_countWritten > 0 || _flushed))
+                {
+                    await CommitAsync(cancellationToken);
+                }
+
+                _completed = true;
+
+                return _committed;
             }
-
-            _completed = true;
-
-            return _committed;
+            finally
+            {
+                _timeWrite.Stop();
+            }
         }
 
         public ParameterLog GetStatus()
