@@ -5,8 +5,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Extensions.Storage;
@@ -28,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.Host
         internal const string FunctionInstanceMetadataKey = "FunctionInstance";
 
         // Convention for container name to use. 
-        public const string DefaultContainerName = HostContainerNames.Hosts;
+        public const string DefaultContainerName = HostContainerNames.Hosts; 
 
         private readonly ConcurrentDictionary<string, CloudBlobDirectory> _lockDirectoryMap = new ConcurrentDictionary<string, CloudBlobDirectory>(StringComparer.OrdinalIgnoreCase);
 
@@ -69,6 +67,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
             string owner = string.Empty;
             lockBlob.Metadata.TryGetValue(FunctionInstanceMetadataKey, out owner);
+
             return owner;
         }
 
@@ -162,7 +161,6 @@ namespace Microsoft.Azure.WebJobs.Host
 
                 try
                 {
-
                     return await blob.AcquireLeaseAsync(leasePeriod, null, accessCondition: null, options: null, operationContext: null, cancellationToken: cancellationToken);
                 }
                 catch (StorageException exception)

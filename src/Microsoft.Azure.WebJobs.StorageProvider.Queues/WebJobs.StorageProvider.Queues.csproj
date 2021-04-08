@@ -4,16 +4,15 @@
   <Import Project="..\Microsoft.Azure.WebJobs.Shared.StorageProvider\WebJobs.Shared.StorageProvider.projitems" Label="Shared" />
   <Import Project="..\..\build\common.props" />
   <PropertyGroup>
-    <Version>1.0.0</Version>
+    <Version>$(StorageProviderVersion)</Version>
     <InformationalVersion>$(Version) Commit hash: $(CommitHash)</InformationalVersion>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>Microsoft.Azure.WebJobs.StorageProvider.Queues</AssemblyName>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
   </PropertyGroup>
 
