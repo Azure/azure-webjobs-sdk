@@ -13,6 +13,7 @@ using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using Moq;
 using Xunit;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
@@ -20,7 +21,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
     {
         // End-2-end test that we can run a JobHost from purely a SAS connection string. 
         [Fact]
-        public async Task Test()
+        public async Task Test1()
         {
             var containerName = "test-internal1";
 
@@ -68,6 +69,90 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var internalOptions = host.Services.GetService<DistributedLockManagerContainerProvider>();
             Assert.NotNull(internalOptions);
             Assert.Equal(container.Name, internalOptions.InternalContainerClient.Name);
+
+            await host.GetJobHost().CallAsync(nameof(BasicProg.Foo));
+
+            Assert.Equal(1, prog._count); // Verify successfully called.
+
+            // Test Locking with GenericDistributedLockManager
+            host = new HostBuilder()
+                .ConfigureDefaultTestHost(prog, b =>
+                {
+                    b.AddAzureStorage();
+                    RuntimeStorageWebJobsBuilderExtensions.AddAzureStorageV12CoreServices(b);
+                })
+                .ConfigureAppConfiguration(config =>
+                {
+                    // Set env to the SAS container and clear out all other storage. 
+                    config.AddInMemoryCollection(new Dictionary<string, string>()
+                    {
+                            { "AzureWebJobs:InternalSasBlobContainer", fakeSasUri },
+                            { "AzureWebJobsStorage", null },
+                            { "AzureWebJobsDashboard", null }
+                    });
+                })
+                .Build();
+
+            var storageOptions = host.Services.GetService<IOptions<JobHostInternalStorageOptions>>();
+            Assert.NotNull(storageOptions);
+            Assert.Equal(fakeSasUri, storageOptions.Value.InternalSasBlobContainer);
+
+            await host.GetJobHost().CallAsync(nameof(BasicProg.Foo));
+
+            Assert.Equal(2, prog._count); // Verify successfully called.
+        }
+
+        // End-2-end test that we can run a JobHost from a container name
+        [Fact]
+        public async Task Test2()
+        {
+            var containerName = "test-internal2";
+
+            var acs = Environment.GetEnvironmentVariable("AzureWebJobsStorage");
+            if (acs == null)
+            {
+                Assert.False(true, "Missing AzureWebJobsStorage setting");
+            }
+
+            // Create a real Blob Container Sas URI
+            var account1 = CloudStorageAccount.Parse(acs);
+            var client = account1.CreateCloudBlobClient();
+            var container = client.GetContainerReference(containerName);
+            await container.CreateIfNotExistsAsync(); // this will throw if acs is bad
+
+            var now = DateTime.UtcNow;
+            var sig = container.GetSharedAccessSignature(new SharedAccessBlobPolicy
+            {
+                Permissions = SharedAccessBlobPermissions.Read | SharedAccessBlobPermissions.Write | SharedAccessBlobPermissions.List,
+                SharedAccessStartTime = now.AddDays(-10),
+                SharedAccessExpiryTime = now.AddDays(10)
+            });
+
+            var fakeSasUri = container.Uri + sig;
+            var prog = new BasicProg();
+
+            // Test Locking with GenericDistributedLockManager
+            var host = new HostBuilder()
+                .ConfigureDefaultTestHost(prog, b =>
+                {
+                    b.AddAzureStorage();
+                    RuntimeStorageWebJobsBuilderExtensions.AddAzureStorageV12CoreServices(b);
+                })
+                .ConfigureAppConfiguration(config =>
+                {
+                    // Set env to the SAS container and clear out all other storage. 
+                    config.AddInMemoryCollection(new Dictionary<string, string>()
+                    {
+                            { "AzureWebJobs:InternalContainerName", containerName },
+                            { "AzureWebJobsStorage", acs },
+                            { "AzureWebJobsDashboard", null }
+                    });
+                })
+                .Build();
+
+            var storageOptions = host.Services.GetService<IOptions<JobHostInternalStorageOptions>>();
+            Assert.NotNull(storageOptions);
+            Assert.Equal(container.Name, storageOptions.Value.InternalContainerName);
 
             await host.GetJobHost().CallAsync(nameof(BasicProg.Foo));
 

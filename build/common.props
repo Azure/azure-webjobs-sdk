@@ -1,9 +1,9 @@
 <Project>
   <PropertyGroup>
     <!-- Packages can have independent versions and only increment when released -->
-    <Version>3.0.27$(VersionSuffix)</Version>
+    <Version>3.1.0$(VersionSuffix)</Version>
     <ExtensionsStorageVersion>4.0.5$(VersionSuffix)</ExtensionsStorageVersion>
-    <HostStorageVersion>4.0.2$(VersionSuffix)</HostStorageVersion>
+    <HostStorageVersion>4.1.0$(VersionSuffix)</HostStorageVersion>
     <LoggingVersion>4.0.2$(VersionSuffix)</LoggingVersion>
     
     <TargetFramework>netstandard2.0</TargetFramework>

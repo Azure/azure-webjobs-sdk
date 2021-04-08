@@ -40,6 +40,53 @@ namespace Microsoft.Azure.WebJobs.Shared.StorageProvider
         }
 
         /// <summary>
+        /// Attempts to get a storage client
+        /// </summary>
+        /// <param name="name">Name of the connection to use</param>
+        /// <param name="client">client to be instantiated</param>
+        /// <returns>indicates a successful client creation</returns>
+        public virtual bool TryGet(string name, out TClient client)
+        {
+            try
+            {
+                client = Get(name);
+                return true;
+            }
+            catch
+            {
+                client = default;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to get a storage client
+        /// </summary>
+        /// <param name="name">Name of the connection string to use</param>
+        /// <param name="client">client to be instantiated</param>
+        /// <returns>indicates a successful client creation</returns>
+        public virtual bool TryGetFromConnectionString(string connectionString, out TClient client)
+        {
+            try
+            {
+                var configuration = new ConfigurationBuilder().AddInMemoryCollection(new[]
+                {
+                    new KeyValuePair<string, string>("connectionString", connectionString)
+                }).Build();
+
+                // AzureComponentFactory assumes IConfigurationSection with a value is a connection string
+                var configSection = configuration.GetSection("connectionString");
+                client = CreateClient(configSection, null, null);
+                return true;
+            }
+            catch
+            {
+                client = default;
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Gets a storage client
         /// </summary>
         /// <param name="name">Connection name to resolve</param>

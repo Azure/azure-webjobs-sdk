@@ -8,7 +8,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Azure.WebJobs
 {
-    public class HostStorageProvider
+    public class AzureStorageProvider
     {
         private IConfiguration _configuration;
         private BlobServiceClientProvider _blobServiceClientProvider;
@@ -25,7 +25,7 @@ namespace Microsoft.Azure.WebJobs
             }
         }
 
-        public HostStorageProvider(IConfiguration configuration, BlobServiceClientProvider blobServiceClientProvider)
+        public AzureStorageProvider(IConfiguration configuration, BlobServiceClientProvider blobServiceClientProvider)
         {
             _configuration = configuration;
             _blobServiceClientProvider = blobServiceClientProvider;

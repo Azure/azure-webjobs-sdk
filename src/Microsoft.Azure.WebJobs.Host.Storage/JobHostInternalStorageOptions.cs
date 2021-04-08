@@ -40,5 +40,7 @@ namespace Microsoft.Azure.WebJobs
     public class JobHostInternalStorageOptions
     {
         public string InternalSasBlobContainer { get; set; }
+
+        public string InternalContainerName { get; set; }
     }
 }

@@ -8,7 +8,6 @@
     <AssemblyName>Microsoft.Azure.WebJobs.Host</AssemblyName>
     <RootNamespace>Microsoft.Azure.WebJobs.Host</RootNamespace>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>5.0.0</Version>
   </PropertyGroup>
   
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

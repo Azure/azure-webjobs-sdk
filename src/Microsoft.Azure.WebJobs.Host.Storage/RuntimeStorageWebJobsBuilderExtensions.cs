@@ -40,9 +40,22 @@ namespace Microsoft.Extensions.Hosting
             builder.Services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<StorageAccountOptions>, StorageAccountOptionsSetup>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, CoreWebJobsOptionsSetup<JobHostInternalStorageOptions>>());
 
-            builder.Services.AddHostStorageProvider();
+            builder.Services.AddAzureStorageProvider();
 
             builder.Services.TryAddSingleton<IDelegatingHandlerProvider, DefaultDelegatingHandlerProvider>();
+
+            return builder;
+        }
+
+        public static IWebJobsBuilder AddAzureStorageV12CoreServices(this IWebJobsBuilder builder)
+        {
+            // For custom locking implementation; host can override
+            builder.Services.AddSingleton<IDistributedLockManager, GenericDistributedLockManager>();
+            builder.Services.TryAddSingleton<ILeaseProviderFactory, SingletonAzureBlobLeaseProviderFactory>();
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, CoreWebJobsOptionsSetup<JobHostInternalStorageOptions>>());
+
+            builder.Services.TryAddSingleton<AzureStorageProvider>();
+            builder.Services.AddAzureStorageBlobs();
 
             return builder;
         }
@@ -51,7 +64,7 @@ namespace Microsoft.Extensions.Hosting
         private static IDistributedLockManager Create(IServiceProvider provider)
         {
             // $$$ get rid of LegacyConfig
-            var hostStorageProvider = provider.GetRequiredService<HostStorageProvider>();
+            var azureStorageProvider = provider.GetRequiredService<AzureStorageProvider>();
 
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
 
@@ -67,7 +80,7 @@ namespace Microsoft.Extensions.Hosting
             {
                 try
                 {
-                    hostStorageProvider.TryGetBlobServiceClientFromConnection(out BlobServiceClient blobServiceClient, ConnectionStringNames.Storage);
+                    azureStorageProvider.TryGetBlobServiceClientFromConnection(out BlobServiceClient blobServiceClient, ConnectionStringNames.Storage);
                     containerClient = blobServiceClient.GetBlobContainerClient(HostContainerNames.Hosts);
                 }
                 catch (Exception)
@@ -80,9 +93,9 @@ namespace Microsoft.Extensions.Hosting
             return lockManager;
         }
 
-        public static void AddHostStorageProvider(this IServiceCollection services)
+        public static void AddAzureStorageProvider(this IServiceCollection services)
         {
-            services.TryAddSingleton<HostStorageProvider>();
+            services.TryAddSingleton<AzureStorageProvider>();
             services.AddAzureStorageBlobs();
         }
     }
