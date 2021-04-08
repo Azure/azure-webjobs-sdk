@@ -12,6 +12,7 @@ using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs.Specialized;
+using Microsoft.Azure.WebJobs.StorageProvider.Blobs;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Host
@@ -290,9 +291,9 @@ namespace Microsoft.Azure.WebJobs.Host
     {
         private BlobContainerClient _blobContainerClient;
 
-        public SingletonAzureBlobLeaseProviderFactory(AzureStorageProvider azureStorageProvider, IOptions<JobHostInternalStorageOptions> options)
+        public SingletonAzureBlobLeaseProviderFactory(BlobServiceClientProvider blobClientProvider, IOptions<JobHostInternalStorageOptions> options)
         {
-            azureStorageProvider.TryGetBlobServiceClientFromConnection(out BlobServiceClient blobServiceClient, ConnectionStringNames.Storage);
+            blobClientProvider.TryGet(ConnectionStringNames.Storage, out BlobServiceClient blobServiceClient);
 
             if (options.Value.InternalContainerName != null)
             {

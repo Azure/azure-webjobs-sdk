@@ -2,8 +2,8 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using Azure.Storage.Blobs;
 using Microsoft.Extensions.Logging;
+using Microsoft.Azure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
@@ -14,22 +14,22 @@ namespace Microsoft.Azure.WebJobs.Host
     /// </summary>
     public class CloudBlobContainerDistributedLockManager : StorageBaseDistributedLockManager
     {
-        private readonly BlobContainerClient _containerClient;
+        private readonly CloudBlobContainer _container;
 
         public CloudBlobContainerDistributedLockManager(
-            BlobContainerClient containerClient,
+            CloudBlobContainer container,
             ILoggerFactory logger) : base(logger)
         {
-            _containerClient = containerClient;
+            _container = container;
         }
 
-        protected override BlobContainerClient GetContainerClient(string accountName)
+        protected override CloudBlobContainer GetContainer(string accountName)
         {
             if (!string.IsNullOrWhiteSpace(accountName))
             {
                 throw new InvalidOperationException("Must replace singleton lease manager to support multiple accounts");
             }
-            return _containerClient;
+            return _container;
         }
     }
 }

@@ -8,6 +8,10 @@ using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Azure.WebJobs
 {
+    /// <summary>
+    /// This serves as a placeholder for a concrete implementation of a storage abstraction.
+    /// This StorageProvider provides a wrapper to align all uses of storage by the Functions Host
+    /// </summary>
     public class AzureStorageProvider
     {
         private IConfiguration _configuration;
@@ -43,16 +47,22 @@ namespace Microsoft.Azure.WebJobs
             try
             {
                 var connectionStringToUse = connectionString ?? _configuration.GetWebJobsConnectionString(ConnectionStringNames.Storage);
-                client = new BlobServiceClient(connectionStringToUse);
+                _blobServiceClientProvider.TryGetFromConnectionString(connectionString, out client);
                 return true;
             }
-            catch (Exception ex) when (ex is ArgumentException || ex is FormatException || ex is ArgumentNullException || ex is InvalidOperationException)
+            catch
             {
                 client = default;
                 return false;
             }
         }
 
+        /// <summary>
+        /// Try create BlobServiceClient
+        /// </summary>
+        /// <param name="client">client to instantiate</param>
+        /// <param name="connection">Name of the connection to use</param>
+        /// <returns>successful client creation</returns>
         public virtual bool TryGetBlobServiceClientFromConnection(out BlobServiceClient client, string connection = null)
         {
             try

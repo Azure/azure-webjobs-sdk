@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using Azure.Storage.Blobs;
+using Microsoft.Azure.Storage.Blob;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs
@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs
             if (sasBlobContainer != null)
             {
                 var uri = new Uri(sasBlobContainer);
-                this.InternalContainerClient = new BlobContainerClient(uri);
+                this.InternalContainer = new CloudBlobContainer(uri);
             }
         }
 
@@ -29,7 +29,7 @@ namespace Microsoft.Azure.WebJobs
         /// If this is set, <see cref="JobHostConfiguration.StorageConnectionString"/> and 
         /// <see cref="JobHostConfiguration.DashboardConnectionString"/> can be set to null and the runtime will use the container.
         /// </summary>
-        public BlobContainerClient InternalContainerClient { get; set; }
+        public CloudBlobContainer InternalContainer { get; set; }
     }
 
     /// <summary>

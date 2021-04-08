@@ -7,7 +7,6 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Azure.Storage.Blobs;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
@@ -26,7 +25,6 @@ using Microsoft.Azure.Storage.Queue;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Xunit;
-using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
@@ -41,7 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private static RandomNameResolver _resolver = new TestNameResolver();
         private static CloudBlobDirectory _lockDirectory;
-        private static CloudBlobDirectory _secondaryLockDirectory;
+        protected static CloudBlobDirectory _secondaryLockDirectory;
 
         public SingletonEndToEndTests()
         {
@@ -254,7 +252,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [Fact]
-        public async Task SingletonFunction_StorageAccountOverride()
+        public virtual async Task SingletonFunction_StorageAccountOverride()
         {
             IHost host = CreateTestJobHost<TestJobs1>(1, (hostBuilder) =>
             {
@@ -280,16 +278,18 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         // Allow a host to override container resolution. 
         class CustomLockManager : StorageBaseDistributedLockManager
         {
-            private readonly AzureStorageProvider _azureStorageProvider;
+            private readonly StorageAccountProvider _storage;
 
-            public CustomLockManager(ILoggerFactory logger, AzureStorageProvider azureStorageProvider) : base(logger)
+            public CustomLockManager(ILoggerFactory logger, StorageAccountProvider storage) : base(logger)
             {
-                _azureStorageProvider = azureStorageProvider;
+                _storage = storage;
             }
-            protected override BlobContainerClient GetContainerClient(string accountName)
+            protected override CloudBlobContainer GetContainer(string accountName)
             {
-                _azureStorageProvider.TryGetBlobServiceClientFromConnection(out BlobServiceClient blobServiceClient, accountName);
-                return blobServiceClient.GetBlobContainerClient(StorageBaseDistributedLockManager.DefaultContainerName);
+                var account = _storage.Get(accountName);
+                var client = account.CreateCloudBlobClient();
+                var container = client.GetContainerReference(StorageBaseDistributedLockManager.DefaultContainerName);
+                return container;
             }
         }
 
@@ -629,7 +629,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             return CreateTestJobHost<TestJobs>(hostId, extraConfig);
         }
 
-        private IHost CreateTestJobHost<TProg>(int hostId, Action<IHostBuilder> extraConfig = null)
+        protected virtual IHost CreateTestJobHost<TProg>(int hostId, Action<IHostBuilder> extraConfig = null)
         {
             TestJobActivator activator = new TestJobActivator(hostId);
 

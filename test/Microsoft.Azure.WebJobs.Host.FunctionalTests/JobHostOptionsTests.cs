@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Storage.Blobs;
+using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Configuration;
@@ -160,7 +161,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
                 var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
 
-                var container = config.InternalContainerClient;
+                var container = config.InternalContainer;
                 Assert.NotNull(container);
                 Assert.Equal(container.Name, "myContainer"); // specified in sas. 
             }
@@ -186,7 +187,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 var uri2 = new Uri("https://contoso.blob.core.windows.net/myContainer2?signature=foo");
                 services.AddSingleton<DistributedLockManagerContainerProvider>(new DistributedLockManagerContainerProvider()
                 {
-                    InternalContainerClient = new BlobContainerClient(uri2)
+                    InternalContainer = new CloudBlobContainer(uri2)
                 });
             });
 
@@ -194,7 +195,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
 
-            var container = config.InternalContainerClient;
+            var container = config.InternalContainer;
             Assert.NotNull(container);
             Assert.Equal(container.Name, "myContainer2"); // specified in sas. 
         }
@@ -223,7 +224,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
 
-            var container = config.InternalContainerClient;
+            var container = config.InternalContainer;
             Assert.NotNull(container);
             Assert.Equal(container.Name, "myContainer3"); // specified in sas.             
         }

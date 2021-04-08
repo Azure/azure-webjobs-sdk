@@ -28,6 +28,8 @@ using SingletonLockHandle = Microsoft.Azure.WebJobs.Host.GenericDistributedLockM
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 {
+    
+
     public class SingletonManagerTestsV2
     {
         private const string TestHostId = "testhost";
@@ -80,31 +82,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
                 return _blobLeaseClient;
             }
         }
-
-        //private class FakeLeaseProvider : StorageBaseDistributedLockManager
-        //{
-        //    // To set up testing
-        //    public BlobContainerClient _containerClient;
-        //    public BlobLeaseClient _blobLeaseClient;
-
-        //    public FakeLeaseProvider(ILoggerFactory logger) : base(logger) { }
-
-        //    protected override BlobContainerClient GetContainerClient(string accountName)
-        //    {
-        //        if (!string.IsNullOrWhiteSpace(accountName))
-        //        {
-        //            throw new InvalidOperationException("Must replace singleton lease manager to support multiple accounts");
-        //        }
-
-        //        return _containerClient;
-        //    }
-
-        //    // this will be mocked
-        //    protected override BlobLeaseClient GetBlobLeaseClient(BlobClient blobClient, string proposedLeaseId)
-        //    {
-        //        return _blobLeaseClient;
-        //    }
-        //}
 
         public SingletonManagerTestsV2()
         {

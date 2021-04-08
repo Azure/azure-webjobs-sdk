@@ -3,6 +3,8 @@
 
 using System;
 using Azure.Storage.Blobs;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Config;
@@ -40,8 +42,6 @@ namespace Microsoft.Extensions.Hosting
             builder.Services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<StorageAccountOptions>, StorageAccountOptionsSetup>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, CoreWebJobsOptionsSetup<JobHostInternalStorageOptions>>());
 
-            builder.Services.AddAzureStorageProvider();
-
             builder.Services.TryAddSingleton<IDelegatingHandlerProvider, DefaultDelegatingHandlerProvider>();
 
             return builder;
@@ -54,8 +54,7 @@ namespace Microsoft.Extensions.Hosting
             builder.Services.TryAddSingleton<ILeaseProviderFactory, SingletonAzureBlobLeaseProviderFactory>();
             builder.Services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, CoreWebJobsOptionsSetup<JobHostInternalStorageOptions>>());
 
-            builder.Services.TryAddSingleton<AzureStorageProvider>();
-            builder.Services.AddAzureStorageBlobs();
+            builder.Services.AddAzureStorageProvider();
 
             return builder;
         }
@@ -64,32 +63,32 @@ namespace Microsoft.Extensions.Hosting
         private static IDistributedLockManager Create(IServiceProvider provider)
         {
             // $$$ get rid of LegacyConfig
-            var azureStorageProvider = provider.GetRequiredService<AzureStorageProvider>();
+            var opts = provider.GetRequiredService<IOptions<StorageAccountOptions>>();
 
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
 
             var sas = provider.GetService<DistributedLockManagerContainerProvider>();
 
-            BlobContainerClient containerClient;
+            CloudBlobContainer container;
 
-            if (sas != null && sas.InternalContainerClient != null)
+            if (sas != null && sas.InternalContainer != null)
             {
-                containerClient = sas.InternalContainerClient;
+                container = sas.InternalContainer;
             }
             else
             {
-                try
-                {
-                    azureStorageProvider.TryGetBlobServiceClientFromConnection(out BlobServiceClient blobServiceClient, ConnectionStringNames.Storage);
-                    containerClient = blobServiceClient.GetBlobContainerClient(HostContainerNames.Hosts);
-                }
-                catch (Exception)
+                var config = opts.Value;
+                CloudStorageAccount account = config.GetStorageAccount();
+                if (account == null)
                 {
                     return new InMemoryDistributedLockManager();
                 }
+
+                var blobClient = new CloudBlobClient(account.BlobStorageUri, account.Credentials, config.DelegatingHandlerProvider?.Create());
+                container = blobClient.GetContainerReference(HostContainerNames.Hosts);
             }
 
-            var lockManager = new CloudBlobContainerDistributedLockManager(containerClient, loggerFactory);
+            var lockManager = new CloudBlobContainerDistributedLockManager(container, loggerFactory);
             return lockManager;
         }
 
