@@ -32,6 +32,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     logger = loggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(functionInstance.FunctionDescriptor.LogName));
                 }
 
+                if (retryContext == null && functionInstance.FunctionDescriptor.RetryStrategy != null)
+                {
+                    retryContext = new RetryContext();
+                    retryContext.MaxRetryCount = functionInstance.FunctionDescriptor.RetryStrategy.MaxRetryCount;
+                }
+
                 if (retryContext != null && functionInstance is FunctionInstance instance)
                 {
                     retryContext.Instance = instance;
@@ -57,9 +63,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     break;
                 }
 
-                retryContext = retryContext ?? new RetryContext();
                 retryContext.RetryCount = attempt;
-                retryContext.MaxRetryCount = functionInstance.FunctionDescriptor.RetryStrategy.MaxRetryCount;
                 retryContext.Exception = functionResult?.Exception;
 
                 TimeSpan nextDelay = retryStrategy.GetNextDelay(retryContext);

@@ -900,6 +900,32 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal("images", telemetry.Source);
         }
 
+        [Fact]
+        public static void ApplicationInsights_ApplyProperty_CaseSensitive()
+        {
+            Dictionary<string, string> properties = new Dictionary<string, string>();
+
+            // when applying prefixing, each different case pattern will be its own property
+            ApplicationInsightsLogger.ApplyProperty(properties, "Test", "1", applyPrefix: true);
+            ApplicationInsightsLogger.ApplyProperty(properties, "test", "2", applyPrefix: true);
+
+            // last one wins
+            ApplicationInsightsLogger.ApplyProperty(properties, "tEsT", "3", applyPrefix: true);
+            ApplicationInsightsLogger.ApplyProperty(properties, "tEsT", "4", applyPrefix: true);
+
+            // no prefixing - still case sensitive
+            ApplicationInsightsLogger.ApplyProperty(properties, "TEST", "5", applyPrefix: false);
+            ApplicationInsightsLogger.ApplyProperty(properties, "TESt", "6", applyPrefix: false);
+
+            Assert.Equal(5, properties.Count);
+
+            Assert.Equal("1", properties["prop__Test"]);
+            Assert.Equal("2", properties["prop__test"]);
+            Assert.Equal("4", properties["prop__tEsT"]);
+            Assert.Equal("5", properties["TEST"]);
+            Assert.Equal("6", properties["TESt"]);
+        }
+
         private async Task Level1(Guid asyncLocalSetting)
         {
             // Push and pop values onto the dictionary at various levels. Make sure they
