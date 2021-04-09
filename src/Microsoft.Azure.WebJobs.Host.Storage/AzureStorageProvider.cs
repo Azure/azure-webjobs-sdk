@@ -52,7 +52,7 @@ namespace Microsoft.Azure.WebJobs
             }
             catch
             {
-                client = default;
+                client = default(BlobServiceClient);
                 return false;
             }
         }
@@ -72,7 +72,7 @@ namespace Microsoft.Azure.WebJobs
             }
             catch
             {
-                client = default;
+                client = default(BlobServiceClient);
                 return false;
             }
         }

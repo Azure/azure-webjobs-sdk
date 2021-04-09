@@ -54,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Shared.StorageProvider
             }
             catch
             {
-                client = default;
+                client = default(TClient);
                 return false;
             }
         }
@@ -81,7 +81,7 @@ namespace Microsoft.Azure.WebJobs.Shared.StorageProvider
             }
             catch
             {
-                client = default;
+                client = default(TClient);
                 return false;
             }
         }
@@ -196,7 +196,7 @@ namespace Microsoft.Azure.WebJobs.Shared.StorageProvider
             }
             catch { }
 
-            serviceUri = default;
+            serviceUri = default(Uri);
             return false;
         }
 
@@ -239,7 +239,7 @@ namespace Microsoft.Azure.WebJobs.Shared.StorageProvider
                 catch { }
             }
 
-            serviceUri = default;
+            serviceUri = default(Uri);
             return false;
         }
 
