@@ -21,12 +21,22 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             var expected = new[]
             {
+                "AzureBlobLeaseProvider",
+                "AzureStorageProvider",
                 "CloudBlobContainerDistributedLockManager",
                 "DistributedLockManagerContainerProvider",
+                "GenericDistributedLockManager",
+                "ILeaseProvider",
+                "ILeaseProviderFactory",
                 "JobHostInternalStorageOptions",
+                "LeaseConflictException",
+                "LeaseException",
+                "LeaseNotCreatedException",
+                "LeaseNotObtainedException",
                 "RuntimeStorageWebJobsBuilderExtensions",
+                "SingletonAzureBlobLeaseProviderFactory",
                 "StorageBaseDistributedLockManager",
-                "StorageServiceCollectionExtensions"
+                "StorageServiceCollectionExtensions",
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);

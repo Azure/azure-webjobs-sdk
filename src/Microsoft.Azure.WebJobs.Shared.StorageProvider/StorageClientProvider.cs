@@ -133,7 +133,8 @@ namespace Microsoft.Azure.WebJobs.Shared.StorageProvider
         /// <returns></returns>
         protected virtual TClient CreateClient(IConfiguration configuration, TokenCredential tokenCredential, TClientOptions options)
         {
-            if (TryGetServiceUri(configuration, out Uri serviceUri) || IsModifiedConnectionString(configuration, ref tokenCredential, out serviceUri))
+            // Check for Modified connection string, or serviceUri configuration (Connection String cannot be present -- connection string will be honored first)
+            if (IsModifiedConnectionString(configuration, ref tokenCredential, out Uri serviceUri) || (!IsConnectionStringPresent(configuration) && TryGetServiceUri(configuration, out serviceUri)))
             {
                 var constructor = typeof(TClient).GetConstructor(new Type[] { typeof(Uri), typeof(TokenCredential), typeof(TClientOptions) });
                 return (TClient)constructor.Invoke(new object[] { serviceUri, tokenCredential, options });
@@ -270,6 +271,11 @@ namespace Microsoft.Azure.WebJobs.Shared.StorageProvider
             {
                 MaxConnectionsPerServer = 50
             }));
+        }
+
+        private bool IsConnectionStringPresent(IConfiguration configuration)
+        {
+            return configuration is IConfigurationSection section && section.Value != null;
         }
     }
 }
