@@ -23,10 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
         {
             IOptionsLoggingSource source = new OptionsLoggingSource();
 
-            IOptionsFactory<TestOptions> factory = new WebJobsOptionsFactory<TestOptions>(
-                Enumerable.Empty<IConfigureOptions<TestOptions>>(),
-                Enumerable.Empty<IPostConfigureOptions<TestOptions>>(),
-                source);
+            IOptionsFactory<TestOptions> factory = new WebJobsOptionsFactory<TestOptions>(GetOptionsFactory<TestOptions>(), source);
 
             TestOptions options = factory.Create(null);
 
@@ -56,8 +53,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             IOptionsLoggingSource source = new OptionsLoggingSource();
 
             IOptionsFactory<LoggerFilterOptions> factory = new WebJobsOptionsFactory<LoggerFilterOptions>(
-                Enumerable.Empty<IConfigureOptions<LoggerFilterOptions>>(),
-                Enumerable.Empty<IPostConfigureOptions<LoggerFilterOptions>>(),
+                GetOptionsFactory<LoggerFilterOptions>(),
                 source,
                 new LoggerFilterOptionsFormatter());
 
@@ -83,6 +79,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
 
             Assert.Equal(expected, log);
         }
+
+        private static OptionsFactory<T> GetOptionsFactory<T>() where T : class, new() =>
+            new OptionsFactory<T>(Enumerable.Empty<IConfigureOptions<T>>(), Enumerable.Empty<IPostConfigureOptions<T>>());
 
         private class TestOptions : IOptionsFormatter
         {
