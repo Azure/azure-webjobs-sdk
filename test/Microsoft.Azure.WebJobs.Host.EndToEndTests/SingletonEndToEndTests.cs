@@ -39,7 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private static RandomNameResolver _resolver = new TestNameResolver();
         private static CloudBlobDirectory _lockDirectory;
-        protected static CloudBlobDirectory _secondaryLockDirectory;
+        private static CloudBlobDirectory _secondaryLockDirectory;
 
         public SingletonEndToEndTests()
         {
@@ -252,7 +252,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [Fact]
-        public virtual async Task SingletonFunction_StorageAccountOverride()
+        public async Task SingletonFunction_StorageAccountOverride()
         {
             IHost host = CreateTestJobHost<TestJobs1>(1, (hostBuilder) =>
             {
@@ -629,7 +629,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             return CreateTestJobHost<TestJobs>(hostId, extraConfig);
         }
 
-        protected virtual IHost CreateTestJobHost<TProg>(int hostId, Action<IHostBuilder> extraConfig = null)
+        private IHost CreateTestJobHost<TProg>(int hostId, Action<IHostBuilder> extraConfig = null)
         {
             TestJobActivator activator = new TestJobActivator(hostId);
 
