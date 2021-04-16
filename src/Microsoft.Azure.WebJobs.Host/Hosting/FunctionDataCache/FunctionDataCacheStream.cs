@@ -10,60 +10,31 @@ namespace Microsoft.Azure.WebJobs
     /// </summary>
     public class FunctionDataCacheStream : Stream
     {
-        private readonly Stream _inner;
+        private readonly IFunctionDataCache _functionDataCache;
 
-        public FunctionDataCacheStream(SharedMemoryMetadata sharedMemoryMeta, Stream innerStream)
+        private bool _isDisposed;
+
+        public FunctionDataCacheStream(FunctionDataCacheKey cacheKey, SharedMemoryMetadata sharedMemoryMeta, IFunctionDataCache functionDataCache)
         {
+            CacheKey = cacheKey;
             SharedMemoryMetadata = sharedMemoryMeta;
-            _inner = innerStream;
+            _functionDataCache = functionDataCache;
+            _isDisposed = false;
         }
 
         public SharedMemoryMetadata SharedMemoryMetadata { get; private set; }
 
-        public override bool CanRead
-        {
-            get
-            {
-                return _inner.CanRead;
-            }
-        }
+        public FunctionDataCacheKey CacheKey { get; private set; }
 
-        public override bool CanSeek
-        {
-            get
-            {
-                return _inner.CanSeek;
-            }
-        }
+        public override bool CanRead => throw new System.NotImplementedException();
 
-        public override bool CanWrite
-        {
-            get
-            {
-                return false;
-            }
-        }
+        public override bool CanSeek => throw new System.NotImplementedException();
 
-        public override long Length
-        {
-            get
-            {
-                return SharedMemoryMetadata.Count;
-            }
-        }
+        public override bool CanWrite => throw new System.NotImplementedException();
 
-        public override long Position
-        {
-            get
-            {
-                return _inner.Position;
-            }
+        public override long Length => throw new System.NotImplementedException();
 
-            set
-            {
-                _inner.Position = value;
-            }
-        }
+        public override long Position { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
 
         public override void Flush()
         {
@@ -72,12 +43,12 @@ namespace Microsoft.Azure.WebJobs
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            return _inner.Read(buffer, offset, count);
+            throw new System.NotImplementedException();
         }
 
         public override long Seek(long offset, SeekOrigin origin)
         {
-            return _inner.Seek(offset, origin);
+            throw new System.NotImplementedException();
         }
 
         public override void SetLength(long value)
@@ -88,6 +59,15 @@ namespace Microsoft.Azure.WebJobs
         public override void Write(byte[] buffer, int offset, int count)
         {
             throw new System.NotImplementedException();
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            if (!_isDisposed)
+            {
+                _functionDataCache.DecrementActiveReference(CacheKey);
+                _isDisposed = true;
+            }
         }
     }
 }

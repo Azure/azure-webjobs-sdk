@@ -8,14 +8,20 @@ namespace Microsoft.Azure.WebJobs
     /// <summary>
     /// TODO
     /// </summary>
-    public class CachableObjectStream : Stream
+    public class CacheableObjectStream : Stream
     {
         private readonly Stream _inner;
 
-        public CachableObjectStream(FunctionDataCacheKey cacheKey, Stream innerStream)
+        private readonly IFunctionDataCache _functionDataCache;
+
+        private bool _isDisposed;
+
+        public CacheableObjectStream(FunctionDataCacheKey cacheKey, Stream innerStream, IFunctionDataCache functionDataCache)
         {
             CacheKey = cacheKey;
             _inner = innerStream;
+            _functionDataCache = functionDataCache;
+            _isDisposed = false;
         }
 
         public FunctionDataCacheKey CacheKey { get; private set; }
@@ -88,6 +94,15 @@ namespace Microsoft.Azure.WebJobs
         public override void Write(byte[] buffer, int offset, int count)
         {
             _inner.Write(buffer, offset, count);
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            if (!_isDisposed)
+            {
+                _functionDataCache.DecrementActiveReference(CacheKey);
+                _isDisposed = true;
+            }
         }
     }
 }

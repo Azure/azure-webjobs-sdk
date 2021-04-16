@@ -488,6 +488,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     }
                     _stream.Close();
                 }
+
+                if (_stream is ICacheAfterWriteStream cacheStream)
+                {
+                    await cacheStream.TryPutToFunctionDataCacheAsync();
+                }
             }
 
             public string ToInvokeString()

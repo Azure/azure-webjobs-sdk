@@ -7,10 +7,14 @@ namespace Microsoft.Azure.WebJobs
 {
     public interface IFunctionDataCache : IDisposable
     {
-        bool TryPut(FunctionDataCacheKey cacheKey, SharedMemoryMetadata sharedMemoryMeta);
+        bool IsEnabled { get; }
 
-        bool TryGet(FunctionDataCacheKey cacheKey, out SharedMemoryMetadata sharedMemoryMeta);
+        bool TryPut(FunctionDataCacheKey cacheKey, SharedMemoryMetadata sharedMemoryMeta, bool isIncrementActiveReference);
+
+        bool TryGet(FunctionDataCacheKey cacheKey, bool isIncrementActiveReference, out SharedMemoryMetadata sharedMemoryMeta);
 
         bool TryRemove(FunctionDataCacheKey cacheKey);
+
+        void DecrementActiveReference(FunctionDataCacheKey cacheKey);
     }
 }

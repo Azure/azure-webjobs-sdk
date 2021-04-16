@@ -112,7 +112,6 @@ namespace Microsoft.Azure.WebJobs
                 SharedMemoryAttribute sharedMemoryAttribute = attr as SharedMemoryAttribute;
                 if (sharedMemoryAttribute != null)
                 {
-                    // TODO don't assign, try to set this in ctor of ValueContext
                     bindingContext.ValueContext.SharedMemoryMetadata = new SharedMemoryMetadata(sharedMemoryAttribute.MemoryMapName, sharedMemoryAttribute.Count);
                 }
             }
