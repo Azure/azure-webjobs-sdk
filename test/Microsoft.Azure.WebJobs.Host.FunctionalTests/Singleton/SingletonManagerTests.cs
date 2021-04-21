@@ -28,19 +28,19 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
     internal static class Ext // $$$ move to better place
     {
         // Wrapper to get the internal class. 
-        public static async Task<IDistributedLock> TryLockInternalAsync(this SingletonManager manager, string lockId, string functionInstanceId, SingletonAttribute attribute, CancellationToken cancellationToken, bool retry = true)
+        public static async Task<SingletonLockHandle> TryLockInternalAsync(this SingletonManager manager, string lockId, string functionInstanceId, SingletonAttribute attribute, CancellationToken cancellationToken, bool retry = true)
         {
             var handle = await manager.TryLockAsync(lockId, functionInstanceId, attribute, cancellationToken, retry);
             return handle.GetInnerHandle();
         }
 
-        public static IDistributedLock GetInnerHandle(this RenewableLockHandle handle)
+        public static SingletonLockHandle GetInnerHandle(this RenewableLockHandle handle)
         {
             if (handle == null)
             {
                 return null;
             }
-            return handle.InnerLock;
+            return (SingletonLockHandle)handle.InnerLock;
         }
     }
 
@@ -176,7 +176,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             SingletonAttribute attribute = new SingletonAttribute();
             RenewableLockHandle lockHandle = await _singletonManager.TryLockAsync(TestLockId, TestInstanceId, attribute, cancellationToken);
-            var innerHandle = (SingletonLockHandle)lockHandle.GetInnerHandle();
+            var innerHandle = lockHandle.GetInnerHandle();
 
             Assert.Equal(_mockStorageBlob.Object, innerHandle.Blob);
             Assert.Equal(TestLeaseId, innerHandle.LeaseId);
@@ -205,7 +205,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             SingletonAttribute attribute = new SingletonAttribute();
             var lockHandle = await _singletonManager.TryLockAsync(TestLockId, TestInstanceId, attribute, cancellationToken);
-            var innerHandle = (SingletonLockHandle)lockHandle.GetInnerHandle();
+            var innerHandle = lockHandle.GetInnerHandle();
 
             Assert.Equal(_mockStorageBlob.Object, innerHandle.Blob);
             Assert.Equal(TestLeaseId, innerHandle.LeaseId);
@@ -256,7 +256,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             SingletonAttribute attribute = new SingletonAttribute();
             var lockHandle = await _singletonManager.TryLockAsync(TestLockId, TestInstanceId, attribute, cancellationToken);
-            var innerHandle = (SingletonLockHandle)lockHandle.GetInnerHandle();
+            var innerHandle = lockHandle.GetInnerHandle();
 
             Assert.NotNull(lockHandle);
             Assert.Equal(TestLeaseId, innerHandle.LeaseId);
@@ -280,7 +280,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             });
 
             SingletonAttribute attribute = new SingletonAttribute();
-            SingletonLockHandle lockHandle = (SingletonLockHandle)await _singletonManager.TryLockInternalAsync(TestLockId, TestInstanceId, attribute, cancellationToken, retry: false);
+            SingletonLockHandle lockHandle = await _singletonManager.TryLockInternalAsync(TestLockId, TestInstanceId, attribute, cancellationToken, retry: false);
 
             Assert.Null(lockHandle);
             Assert.Equal(1, count);

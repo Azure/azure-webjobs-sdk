@@ -5,6 +5,7 @@ using Azure.Storage.Queues;
 using Microsoft.Azure.WebJobs.Shared.StorageProvider;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.StorageProvider.Queues
 {
@@ -13,8 +14,8 @@ namespace Microsoft.Azure.WebJobs.StorageProvider.Queues
     /// </summary>
     public class QueueServiceClientProvider : StorageClientProvider<QueueServiceClient, QueueClientOptions>
     {
-        public QueueServiceClientProvider(IConfiguration configuration, AzureComponentFactory componentFactory, AzureEventSourceLogForwarder logForwarder)
-            : base(configuration, componentFactory, logForwarder) { }
+        public QueueServiceClientProvider(IConfiguration configuration, AzureComponentFactory componentFactory, AzureEventSourceLogForwarder logForwarder, ILogger<QueueServiceClient> logger)
+            : base(configuration, componentFactory, logForwarder, logger) { }
 
 
         /// <inheritdoc/>

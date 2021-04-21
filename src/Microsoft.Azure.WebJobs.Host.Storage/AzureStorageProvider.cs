@@ -1,10 +1,12 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
 using Azure.Storage.Blobs;
+using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.StorageProvider.Blobs;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
+using System;
 
 namespace Microsoft.Azure.WebJobs
 {
@@ -12,27 +14,17 @@ namespace Microsoft.Azure.WebJobs
     /// This serves as a placeholder for a concrete implementation of a storage abstraction.
     /// This StorageProvider provides a wrapper to align all uses of storage by the Functions Host
     /// </summary>
-    public class AzureStorageProvider
+    internal class AzureStorageProvider : IAzureStorageProvider
     {
-        private IConfiguration _configuration;
-        private BlobServiceClientProvider _blobServiceClientProvider;
+        private readonly BlobServiceClientProvider _blobServiceClientProvider;
+        private readonly IConfiguration _configuration;
+        private JobHostInternalStorageOptions _storageOptions;
 
-        public IConfiguration Configuration
+        public AzureStorageProvider(IConfiguration configuration, BlobServiceClientProvider blobServiceClientProvider, IOptions<JobHostInternalStorageOptions> options)
         {
-            get
-            {
-                return _configuration;
-            }
-            set
-            {
-                _configuration = value;
-            }
-        }
-
-        public AzureStorageProvider(IConfiguration configuration, BlobServiceClientProvider blobServiceClientProvider)
-        {
-            _configuration = configuration;
             _blobServiceClientProvider = blobServiceClientProvider;
+            _configuration = configuration;
+            _storageOptions = options?.Value;
         }
 
         /// <summary>
@@ -74,6 +66,28 @@ namespace Microsoft.Azure.WebJobs
             {
                 client = default(BlobServiceClient);
                 return false;
+            }
+        }
+
+        public virtual BlobContainerClient GetBlobContainerClient()
+        {
+            if (_storageOptions?.InternalSasBlobContainer != null)
+            {
+                return new BlobContainerClient(new Uri(_storageOptions.InternalSasBlobContainer));
+            }
+
+            if (!TryGetBlobServiceClientFromConnection(out BlobServiceClient blobServiceClient, ConnectionStringNames.Storage))
+            {
+                throw new InvalidOperationException("Could not create BlobServiceClient for the BlobLeaseDistributedLockManager");
+            }
+
+            if (_storageOptions?.InternalContainerName != null)
+            {
+                return blobServiceClient.GetBlobContainerClient(_storageOptions.InternalContainerName);
+            }
+            else
+            {
+                return blobServiceClient.GetBlobContainerClient(HostContainerNames.Hosts);
             }
         }
     }

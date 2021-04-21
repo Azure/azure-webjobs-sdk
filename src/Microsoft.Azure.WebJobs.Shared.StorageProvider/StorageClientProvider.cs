@@ -11,6 +11,7 @@ using Azure.Identity;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Shared.StorageProvider
 {
@@ -25,6 +26,7 @@ namespace Microsoft.Azure.WebJobs.Shared.StorageProvider
         private readonly IConfiguration _configuration;
         private readonly AzureComponentFactory _componentFactory;
         private readonly AzureEventSourceLogForwarder _logForwarder;
+        private readonly ILogger _logger;
 
         /// <summary>
         /// Generic StorageClientProvider
@@ -32,11 +34,12 @@ namespace Microsoft.Azure.WebJobs.Shared.StorageProvider
         /// <param name="configuration">Registered <see cref="IConfiguration"/></param>
         /// <param name="componentFactory">Registered <see cref="AzureComponentFactory"/></param>
         /// <param name="logForwarder">Registered <see cref="AzureEventSourceLogForwarder"/></param>
-        public StorageClientProvider(IConfiguration configuration, AzureComponentFactory componentFactory, AzureEventSourceLogForwarder logForwarder)
+        public StorageClientProvider(IConfiguration configuration, AzureComponentFactory componentFactory, AzureEventSourceLogForwarder logForwarder, ILogger<TClient> logger)
         {
             _configuration = configuration;
             _componentFactory = componentFactory;
             _logForwarder = logForwarder;
+            _logger = logger;
         }
 
         /// <summary>
@@ -52,9 +55,10 @@ namespace Microsoft.Azure.WebJobs.Shared.StorageProvider
                 client = Get(name);
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
                 client = default(TClient);
+                _logger.LogError(ex, "Could not create Storage Client");
                 return false;
             }
         }
@@ -79,9 +83,11 @@ namespace Microsoft.Azure.WebJobs.Shared.StorageProvider
                 client = CreateClient(configSection, null, null);
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+
                 client = default(TClient);
+                _logger.LogError(ex, "Could not create Storage Client from a connection string.");
                 return false;
             }
         }
@@ -195,7 +201,10 @@ namespace Microsoft.Azure.WebJobs.Shared.StorageProvider
                     return true;
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Could not parse serviceUri from the configuration.");
+            }
 
             serviceUri = default(Uri);
             return false;
@@ -237,7 +246,10 @@ namespace Microsoft.Azure.WebJobs.Shared.StorageProvider
                         return true;
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Could not parse Managed Identity configuration from connection string.");
+                }
             }
 
             serviceUri = default(Uri);

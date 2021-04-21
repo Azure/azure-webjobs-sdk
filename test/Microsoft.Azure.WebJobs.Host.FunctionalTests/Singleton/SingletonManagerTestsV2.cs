@@ -24,11 +24,28 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
-using SingletonLockHandle = Microsoft.Azure.WebJobs.Host.GenericDistributedLockManager.SingletonLockHandle;
+using SingletonLockHandle = Microsoft.Azure.WebJobs.Host.BlobLeaseDistributedLockManager.SingletonLockHandle;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 {
-    
+    internal static class ExtV2 // $$$ move to better place
+    {
+        // Wrapper to get the internal class. 
+        public static async Task<SingletonLockHandle> TryLockInternalAsyncV2(this SingletonManager manager, string lockId, string functionInstanceId, SingletonAttribute attribute, CancellationToken cancellationToken, bool retry = true)
+        {
+            var handle = await manager.TryLockAsync(lockId, functionInstanceId, attribute, cancellationToken, retry);
+            return handle.GetInnerHandleV2();
+        }
+
+        public static SingletonLockHandle GetInnerHandleV2(this RenewableLockHandle handle)
+        {
+            if (handle == null)
+            {
+                return null;
+            }
+            return (SingletonLockHandle)handle.InnerLock;
+        }
+    }
 
     public class SingletonManagerTestsV2
     {
@@ -40,7 +57,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
         private readonly IConfiguration _configuration = new ConfigurationBuilder().Build();
 
-        private GenericDistributedLockManager _core;
+        private BlobLeaseDistributedLockManager _core;
         private SingletonManager _singletonManager;
         private SingletonOptions _singletonConfig;
 
@@ -55,28 +72,25 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         private TestLoggerProvider _loggerProvider;
         private TestNameResolver _nameResolver;
 
-        private class TestLeaseProviderFactory : ILeaseProviderFactory
+        private class FakeLeaseProvider : BlobLeaseDistributedLockManager
         {
-            // mocked
-            public BlobContainerClient _blobContainerClient;
+            // To set up testing
+            public BlobContainerClient _containerClient;
             public BlobLeaseClient _blobLeaseClient;
 
-            public ILeaseProvider GetLeaseProvider(string lockId, string accountOverride = null)
-            {
-                return new TestLeaseProvider(lockId, _blobContainerClient, _blobLeaseClient);
-            }
-        }
+            public FakeLeaseProvider(ILoggerFactory logger, AzureStorageProvider azureStorageProvider) : base(logger, azureStorageProvider) { }
 
-        private class TestLeaseProvider : AzureBlobLeaseProvider
-        {
-            // mocked
-            public BlobLeaseClient _blobLeaseClient;
-
-            public TestLeaseProvider(string lockId, BlobContainerClient blobContainerClient, BlobLeaseClient blobLeaseClient) : base(lockId, blobContainerClient) 
+            protected override BlobContainerClient GetContainerClient(string accountName)
             {
-                _blobLeaseClient = blobLeaseClient;
+                if (!string.IsNullOrWhiteSpace(accountName))
+                {
+                    throw new InvalidOperationException("Must replace singleton lease manager to support multiple accounts");
+                }
+
+                return _containerClient;
             }
 
+            // this will be mocked
             protected override BlobLeaseClient GetBlobLeaseClient(BlobClient blobClient, string proposedLeaseId)
             {
                 return _blobLeaseClient;
@@ -91,7 +105,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             var logger = loggerFactory?.CreateLogger(LogCategories.Singleton);
 
-            var testLeaseProviderFactory = new TestLeaseProviderFactory();
+            var leaseProvider = new FakeLeaseProvider(loggerFactory, null);
 
             _mockExceptionDispatcher = new Mock<IWebJobsExceptionHandler>(MockBehavior.Strict);
 
@@ -106,11 +120,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             _mockBlobContainerClient = new Mock<BlobContainerClient>(MockBehavior.Strict, new Uri("https://fakeaccount.blob.core.windows.net/" + HostContainerNames.Hosts), null);
             _mockBlobContainerClient.Setup(p => p.GetBlobClient(HostDirectoryNames.SingletonLocks + "/" + TestLockId)).Returns(_mockStorageBlobClient.Object);
-            testLeaseProviderFactory._blobContainerClient = _mockBlobContainerClient.Object;
+            leaseProvider._containerClient = _mockBlobContainerClient.Object;
 
             // mockStorageBlobClient -> *has* mockBlobLeaseClient
             _mockBlobLeaseClient = new Mock<BlobLeaseClient>(MockBehavior.Strict, _mockStorageBlobClient.Object, null);
-            testLeaseProviderFactory._blobLeaseClient = _mockBlobLeaseClient.Object;
+            leaseProvider._blobLeaseClient = _mockBlobLeaseClient.Object;
             // End setting up Blob storage structure
 
             _singletonConfig = new SingletonOptions();
@@ -122,7 +136,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             _nameResolver = new TestNameResolver();
 
-            _core = new GenericDistributedLockManager(loggerFactory, testLeaseProviderFactory);
+            _core = leaseProvider;
 
             _singletonManager = new SingletonManager(_core, new OptionsWrapper<SingletonOptions>(_singletonConfig), _mockExceptionDispatcher.Object, loggerFactory, new FixedHostIdProvider(TestHostId), _nameResolver);
 
@@ -166,8 +180,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             SingletonAttribute attribute = new SingletonAttribute();
             RenewableLockHandle lockHandle = await _singletonManager.TryLockAsync(TestLockId, TestInstanceId, attribute, cancellationToken);
-            var innerHandle = (SingletonLockHandle)lockHandle.GetInnerHandle();
+            var innerHandle = lockHandle.GetInnerHandleV2();
 
+            Assert.Equal(_mockBlobLeaseClient.Object, innerHandle.BlobLeaseClient);
             Assert.Equal(TestLeaseId, innerHandle.LeaseId);
             Assert.Single(_mockBlobMetadata.Keys);
             Assert.Equal(_mockBlobMetadata[StorageBaseDistributedLockManager.FunctionInstanceMetadataKey], TestInstanceId);
@@ -197,8 +212,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             SingletonAttribute attribute = new SingletonAttribute();
             var lockHandle = await _singletonManager.TryLockAsync(TestLockId, TestInstanceId, attribute, cancellationToken);
-            var innerHandle = (SingletonLockHandle)lockHandle.GetInnerHandle();
+            var innerHandle = lockHandle.GetInnerHandleV2();
 
+            Assert.Equal(_mockBlobLeaseClient.Object, innerHandle.BlobLeaseClient);
             Assert.Equal(TestLeaseId, innerHandle.LeaseId);
             Assert.Single(_mockBlobMetadata.Keys);
             Assert.Equal(_mockBlobMetadata[StorageBaseDistributedLockManager.FunctionInstanceMetadataKey], TestInstanceId);
@@ -249,7 +265,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             SingletonAttribute attribute = new SingletonAttribute();
             var lockHandle = await _singletonManager.TryLockAsync(TestLockId, TestInstanceId, attribute, cancellationToken);
-            var innerHandle = (SingletonLockHandle)lockHandle.GetInnerHandle();
+            var innerHandle = lockHandle.GetInnerHandleV2();
 
             Assert.NotNull(lockHandle);
             Assert.Equal(TestLeaseId, innerHandle.LeaseId);
@@ -273,7 +289,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             });
 
             SingletonAttribute attribute = new SingletonAttribute();
-            SingletonLockHandle lockHandle = (SingletonLockHandle)await _singletonManager.TryLockInternalAsync(TestLockId, TestInstanceId, attribute, cancellationToken, retry: false);
+            SingletonLockHandle lockHandle = await _singletonManager.TryLockInternalAsyncV2(TestLockId, TestInstanceId, attribute, cancellationToken, retry: false);
 
             Assert.Null(lockHandle);
             Assert.Equal(1, count);
@@ -345,11 +361,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             _mockBlobLeaseClient.Setup(p => p.ReleaseAsync(It.IsAny<RequestConditions>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(new Mock<Response<ReleasedObjectInfo>>().Object));
 
-            var testLeaseProvider = new TestLeaseProvider(TestLockId, _mockBlobContainerClient.Object, _mockBlobLeaseClient.Object);
             var handle = new RenewableLockHandle(
                 new SingletonLockHandle
                 {
-                    LeaseProvider = testLeaseProvider,
+                    BlobLeaseClient = _mockBlobLeaseClient.Object,
                     LeaseId = TestLeaseId
                 },
                 mockRenewalTimer.Object

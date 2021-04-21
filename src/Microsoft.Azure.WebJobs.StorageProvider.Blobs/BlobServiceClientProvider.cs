@@ -5,6 +5,7 @@ using Azure.Storage.Blobs;
 using Microsoft.Azure.WebJobs.Shared.StorageProvider;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.StorageProvider.Blobs
 {
@@ -19,8 +20,8 @@ namespace Microsoft.Azure.WebJobs.StorageProvider.Blobs
         /// <param name="configuration">Registered <see cref="IConfiguration"/></param>
         /// <param name="componentFactory">Registered <see cref="AzureComponentFactory"/></param>
         /// <param name="logForwarder">Registered <see cref="AzureEventSourceLogForwarder"/></param>
-        public BlobServiceClientProvider(IConfiguration configuration, AzureComponentFactory componentFactory, AzureEventSourceLogForwarder logForwarder)
-            : base(configuration, componentFactory, logForwarder) { }
+        public BlobServiceClientProvider(IConfiguration configuration, AzureComponentFactory componentFactory, AzureEventSourceLogForwarder logForwarder, ILogger<BlobServiceClient> logger)
+            : base(configuration, componentFactory, logForwarder, logger) { }
 
         /// <inheritdoc/>
         protected override string ServiceUriSubDomain

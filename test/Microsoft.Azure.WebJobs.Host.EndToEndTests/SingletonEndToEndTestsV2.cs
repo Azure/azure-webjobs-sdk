@@ -8,21 +8,21 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Storage.Blobs;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
-using Microsoft.Azure.Storage.Queue;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Triggers;
-using Microsoft.Azure.WebJobs.StorageProvider.Blobs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.Storage.Queue;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Xunit;
@@ -32,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
     public partial class SingletonEndToEndTestsV2 : IClassFixture<SingletonEndToEndTestsV2.TestFixture>
     {
         private const string TestHostId = "e2etesthost";
-        private const string TestArtifactsPrefix = "singletone2eV2";
+        private const string TestArtifactsPrefix = "singletone2e";
         private const string Queue1Name = TestArtifactsPrefix + "q1%rnd%";
         private const string Queue2Name = TestArtifactsPrefix + "q2%rnd%";
         private const string Secondary = "SecondaryStorage";
@@ -259,7 +259,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 hostBuilder.ConfigureServices((services) =>
                 {
-                    services.AddSingleton<ILeaseProviderFactory, CustomLeaseProviderFactory>();
+                    services.AddSingleton<IDistributedLockManager, CustomLockManager>();
                 });
             });
             await host.StartAsync();
@@ -277,52 +277,18 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         // Allow a host to override container resolution. 
-        // Allow a host to override container resolution. 
-        class CustomLeaseProviderFactory : ILeaseProviderFactory
+        class CustomLockManager : BlobLeaseDistributedLockManager
         {
-            private BlobServiceClientProvider _blobClientProvider;
-            private BlobContainerClient _blobContainerClient;
-            private JobHostInternalStorageOptions _options;
+            private readonly IAzureStorageProvider _azureStorageProvider;
 
-            public CustomLeaseProviderFactory(BlobServiceClientProvider blobClientProvider, IOptions<JobHostInternalStorageOptions> options)
+            public CustomLockManager(ILoggerFactory logger, IAzureStorageProvider azureStorageProvider) : base(logger, azureStorageProvider)
             {
-                _blobClientProvider = blobClientProvider;
-                _options = options.Value;
-
-                blobClientProvider.TryGet(ConnectionStringNames.Storage, out BlobServiceClient blobServiceClient);
-
-                if (_options.InternalContainerName != null)
-                {
-                    _blobContainerClient = blobServiceClient.GetBlobContainerClient(_options.InternalContainerName);
-                }
-                else
-                {
-                    _blobContainerClient = blobServiceClient.GetBlobContainerClient(HostContainerNames.Hosts);
-                }
+                _azureStorageProvider = azureStorageProvider;
             }
-
-            public ILeaseProvider GetLeaseProvider(string lockId, string accountOverride = null)
+            protected override BlobContainerClient GetContainerClient(string accountName)
             {
-                BlobContainerClient blobContainerClient;
-                if (accountOverride != null)
-                {
-                    _blobClientProvider.TryGet(accountOverride, out BlobServiceClient blobServiceClient);
-
-                    if (_options.InternalContainerName != null)
-                    {
-                        blobContainerClient = blobServiceClient.GetBlobContainerClient(_options.InternalContainerName);
-                    }
-                    else
-                    {
-                        blobContainerClient = blobServiceClient.GetBlobContainerClient(HostContainerNames.Hosts);
-                    }
-                }
-                else
-                {
-                    blobContainerClient = _blobContainerClient;
-                }
-
-                return new AzureBlobLeaseProvider(lockId, blobContainerClient);
+                _azureStorageProvider.TryGetBlobServiceClientFromConnection(out BlobServiceClient blobServiceClient, accountName);
+                return blobServiceClient.GetBlobContainerClient(StorageBaseDistributedLockManager.DefaultContainerName);
             }
         }
 
@@ -444,7 +410,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         public class TestJobs
         {
             private const string Secondary = "SecondaryStorage";
-            public const string LeaseBlobRootPath = "Microsoft.Azure.WebJobs.Host.EndToEndTests.SingletonEndToEndTests+TestJobs";
+            public const string LeaseBlobRootPath = "Microsoft.Azure.WebJobs.Host.EndToEndTests.SingletonEndToEndTestsV2+TestJobs";
             public static int Queue1MessageCount = 0;
             public static int Queue2MessageCount = 0;
             public static bool FailureDetected = false;

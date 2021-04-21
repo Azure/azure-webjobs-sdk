@@ -47,18 +47,6 @@ namespace Microsoft.Extensions.Hosting
             return builder;
         }
 
-        public static IWebJobsBuilder AddAzureStorageV12CoreServices(this IWebJobsBuilder builder)
-        {
-            // For custom locking implementation; host can override
-            builder.Services.AddSingleton<IDistributedLockManager, GenericDistributedLockManager>();
-            builder.Services.TryAddSingleton<ILeaseProviderFactory, SingletonAzureBlobLeaseProviderFactory>();
-            builder.Services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, CoreWebJobsOptionsSetup<JobHostInternalStorageOptions>>());
-
-            builder.Services.AddAzureStorageProvider();
-
-            return builder;
-        }
-
         // This is only called if the host didn't already provide an implementation 
         private static IDistributedLockManager Create(IServiceProvider provider)
         {
@@ -94,7 +82,8 @@ namespace Microsoft.Extensions.Hosting
 
         public static void AddAzureStorageProvider(this IServiceCollection services)
         {
-            services.TryAddSingleton<AzureStorageProvider>();
+            services.TryAddSingleton<IAzureStorageProvider, AzureStorageProvider>();
+            services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, CoreWebJobsOptionsSetup<JobHostInternalStorageOptions>>());
             services.AddAzureStorageBlobs();
         }
     }
