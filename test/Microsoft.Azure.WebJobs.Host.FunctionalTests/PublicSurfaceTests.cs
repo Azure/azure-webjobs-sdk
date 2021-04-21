@@ -21,20 +21,11 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             var expected = new[]
             {
-                "AzureBlobLeaseProvider",
-                "AzureStorageProvider",
+                "IAzureStorageProvider",
                 "CloudBlobContainerDistributedLockManager",
                 "DistributedLockManagerContainerProvider",
-                "GenericDistributedLockManager",
-                "ILeaseProvider",
-                "ILeaseProviderFactory",
                 "JobHostInternalStorageOptions",
-                "LeaseConflictException",
-                "LeaseException",
-                "LeaseNotCreatedException",
-                "LeaseNotObtainedException",
                 "RuntimeStorageWebJobsBuilderExtensions",
-                "SingletonAzureBlobLeaseProviderFactory",
                 "StorageBaseDistributedLockManager",
                 "StorageServiceCollectionExtensions",
             };
