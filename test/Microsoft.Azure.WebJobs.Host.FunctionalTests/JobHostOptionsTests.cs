@@ -241,8 +241,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 var hostBuilder = new HostBuilder()
                  .ConfigureDefaultTestHost(b =>
                  {
-                     b.AddAzureStorage()
-                     .AddAzureStorageV12CoreServices();
+                     b.AddAzureStorage();
+                     b.Services.AddAzureStorageProvider();
                  })
                  .ConfigureAppConfiguration(c =>
                  {
@@ -268,8 +268,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var hostBuilder = new HostBuilder()
              .ConfigureDefaultTestHost(b =>
              {
-                 b.AddAzureStorage()
-                 .AddAzureStorageV12CoreServices();
+                 b.AddAzureStorage();
+                 b.Services.AddAzureStorageProvider();
              })
              .ConfigureAppConfiguration(c =>
              {
