@@ -41,11 +41,29 @@ namespace Microsoft.Azure.WebJobs
         /// </summary>
         public FunctionDataCacheKey CacheKey { get; private set; }
 
-        public override bool CanRead => throw new System.NotImplementedException();
+        public override bool CanRead
+        {
+            get
+            {
+                return true;
+            }
+        }
 
-        public override bool CanSeek => throw new System.NotImplementedException();
+        public override bool CanSeek
+        {
+            get
+            {
+                return false;
+            }
+        }
 
-        public override bool CanWrite => throw new System.NotImplementedException();
+        public override bool CanWrite
+        {
+            get
+            {
+                return false;
+            }
+        }
 
         public override long Length => throw new System.NotImplementedException();
 
