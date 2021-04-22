@@ -8,7 +8,6 @@ using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
-using System.Reflection;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 {
@@ -55,51 +54,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             return services.AddSingleton<XStorageAccountProvider>(new FakeStorageAccountProvider(account));
             */
-        }
-
-        public static T SetInternalProperty<T>(this T obj, string name, object value)
-        {
-            var t = obj.GetType();
-
-            var prop = t.GetProperty(name,
-              BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-
-            // Reflection has a quirk.  While a property is inherited, the setter may not be. 
-            // Need to request the property on the type it was declared. 
-            while (!prop.CanWrite)
-            {
-                t = t.BaseType;
-                prop = t.GetProperty(name,
-                    BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-            }
-
-            prop.SetValue(obj, value);
-            return obj;
-        }
-
-        public static T Construct<T>(Type[] paramTypes = null, object[] paramValues = null)
-        {
-            paramTypes = paramTypes ?? new Type[] { };
-            paramValues = paramValues ?? new object[] { };
-
-            Type t = typeof(T);
-
-            ConstructorInfo ci = t.GetConstructor(
-                BindingFlags.Instance | BindingFlags.NonPublic,
-                null, paramTypes, null);
-
-            return (T)ci.Invoke(paramValues);
-        }
-
-        public static O CallMethod<T, O>(string methodName, object obj, object[] paramValues = null)
-        {
-            paramValues = paramValues ?? new object[] { };
-
-            Type t = typeof(T);
-
-            MethodInfo mi = t.GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
-
-            return (O) mi.Invoke(obj, paramValues);
         }
     }
 }
