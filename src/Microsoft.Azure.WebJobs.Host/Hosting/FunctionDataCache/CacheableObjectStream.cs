@@ -31,12 +31,15 @@ namespace Microsoft.Azure.WebJobs
         // Indicates if this Stream has been disposed.
         private bool _isDisposed;
 
+        private bool _decrementRefCountOnDispose;
+
         public CacheableObjectStream(FunctionDataCacheKey cacheKey, Stream innerStream, IFunctionDataCache functionDataCache)
         {
             CacheKey = cacheKey;
             _inner = innerStream;
             _functionDataCache = functionDataCache;
             _isDisposed = false;
+            _decrementRefCountOnDispose = false;
         }
 
         /// <summary>
@@ -114,6 +117,17 @@ namespace Microsoft.Azure.WebJobs
             _inner.Write(buffer, offset, count);
         }
 
+        public bool TryCacheObject(SharedMemoryMetadata sharedMemoryMeta)
+        {
+            if (!_functionDataCache.TryPut(CacheKey, sharedMemoryMeta, isIncrementActiveReference: true, isDeleteOnFailure: false))
+            {
+                return false;
+            }
+
+            _decrementRefCountOnDispose = true;
+            return true;
+        }
+
         /// <summary>
         /// Decreases the ref-count of this object in the <see cref="IFunctionDataCache"/>.
         /// </summary>
@@ -122,7 +136,11 @@ namespace Microsoft.Azure.WebJobs
         {
             if (!_isDisposed)
             {
-                _functionDataCache.DecrementActiveReference(CacheKey);
+                if (_decrementRefCountOnDispose)
+                {
+                    _functionDataCache.DecrementActiveReference(CacheKey);
+                }
+
                 _isDisposed = true;
             }
         }
