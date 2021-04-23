@@ -139,8 +139,8 @@ namespace Microsoft.Azure.WebJobs.Shared.StorageProvider
         /// <returns></returns>
         protected virtual TClient CreateClient(IConfiguration configuration, TokenCredential tokenCredential, TClientOptions options)
         {
-            // Check for Modified connection string, or serviceUri configuration (Connection String cannot be present -- connection string will be honored first)
-            if (IsModifiedConnectionString(configuration, ref tokenCredential, out Uri serviceUri) || (!IsConnectionStringPresent(configuration) && TryGetServiceUri(configuration, out serviceUri)))
+            // If connection string is present, it will be honored first
+            if (!IsConnectionStringPresent(configuration) && TryGetServiceUri(configuration, out Uri serviceUri))
             {
                 var constructor = typeof(TClient).GetConstructor(new Type[] { typeof(Uri), typeof(TokenCredential), typeof(TClientOptions) });
                 return (TClient)constructor.Invoke(new object[] { serviceUri, tokenCredential, options });
@@ -204,52 +204,6 @@ namespace Microsoft.Azure.WebJobs.Shared.StorageProvider
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Could not parse serviceUri from the configuration.");
-            }
-
-            serviceUri = default(Uri);
-            return false;
-        }
-
-        /// <summary>
-        /// Checks if a connection string is provided with intent to use Managed Identity.
-        /// This will check if credential=managedidentity and AccountKey is not provided
-        /// </summary>
-        /// <param name="configuration">Registered <see cref="IConfiguration"/></param>
-        /// <param name="tokenCredential"><see cref="TokenCredential"/> to use for the client </param>
-        /// <param name="serviceUri">instantiates the serviceUri</param>
-        /// <returns></returns>
-        protected virtual bool IsModifiedConnectionString(IConfiguration configuration, ref TokenCredential tokenCredential, out Uri serviceUri)
-        {
-            if (configuration is IConfigurationSection section && section.Value != null)
-            {
-                var connectionString = section.Value;
-                var properties = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                try
-                {
-                    foreach (string detail in connectionString.Split(';'))
-                    {
-                        string[] keyValuePair = detail.Split('=');
-                        properties.Add(keyValuePair[0], keyValuePair[1]);
-                    }
-
-                    if (properties.ContainsKey("credential") &&
-                        string.Equals(properties["credential"], "managedidentity", StringComparison.OrdinalIgnoreCase) &&
-                        properties.ContainsKey("AccountName") &&
-                        properties.ContainsKey("DefaultEndpointsProtocol") &&
-                        properties.ContainsKey("EndpointSuffix") &&
-                        !properties.ContainsKey("AccountKey"))
-                    {
-                        properties.TryGetValue("clientId", out string clientId);
-                        tokenCredential = new ManagedIdentityCredential(clientId);
-
-                        serviceUri = FormatServiceUri(properties["AccountName"], properties["DefaultEndpointsProtocol"], properties["EndpointSuffix"]);
-                        return true;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Could not parse Managed Identity configuration from connection string.");
-                }
             }
 
             serviceUri = default(Uri);
