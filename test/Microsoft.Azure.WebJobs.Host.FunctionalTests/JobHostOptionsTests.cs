@@ -8,7 +8,6 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Azure.Storage.Blobs;
 using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
@@ -242,7 +241,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                  .ConfigureDefaultTestHost(b =>
                  {
                      b.AddAzureStorage();
-                     b.Services.AddAzureStorageProvider();
+                     b.AddAzureStorageCoreServices();
                  })
                  .ConfigureAppConfiguration(c =>
                  {
@@ -269,7 +268,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
              .ConfigureDefaultTestHost(b =>
              {
                  b.AddAzureStorage();
-                 b.Services.AddAzureStorageProvider();
+                 b.AddAzureStorageCoreServices();
              })
              .ConfigureAppConfiguration(c =>
              {

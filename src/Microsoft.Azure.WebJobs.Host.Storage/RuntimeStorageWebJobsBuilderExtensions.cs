@@ -2,14 +2,12 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using Azure.Storage.Blobs;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Storage;
-using Microsoft.Azure.WebJobs.StorageProvider.Blobs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -46,6 +44,13 @@ namespace Microsoft.Extensions.Hosting
 
             return builder;
         }
+        
+        // Helper to add storage services for internal operations
+        public static void AddAzureStorageCoreServices(this IServiceCollection services)
+        {
+            var tempBuilder = new WebJobsBuilder(services);
+            tempBuilder.AddAzureStorageCoreServices();
+        }
 
         // This is only called if the host didn't already provide an implementation 
         private static IDistributedLockManager Create(IServiceProvider provider)
@@ -78,13 +83,6 @@ namespace Microsoft.Extensions.Hosting
 
             var lockManager = new CloudBlobContainerDistributedLockManager(container, loggerFactory);
             return lockManager;
-        }
-
-        public static void AddAzureStorageProvider(this IServiceCollection services)
-        {
-            services.TryAddSingleton<IAzureStorageProvider, AzureStorageProvider>();
-            services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, CoreWebJobsOptionsSetup<JobHostInternalStorageOptions>>());
-            services.AddAzureStorageBlobs();
         }
     }
 }

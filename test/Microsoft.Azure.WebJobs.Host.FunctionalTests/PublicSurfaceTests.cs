@@ -21,7 +21,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             var expected = new[]
             {
-                "IAzureStorageProvider",
                 "CloudBlobContainerDistributedLockManager",
                 "DistributedLockManagerContainerProvider",
                 "JobHostInternalStorageOptions",
