@@ -7,13 +7,12 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    // Describe a constant value, commonly used for inputs. 
-    internal class ConstantValueProvider : IValueProvider
+    internal class CacheAwareValueProvider : IValueProvider, IValueBinder
     {
         private object _value;
         private string _invokeString;
 
-        public ConstantValueProvider(object value, Type type, string invokeString)
+        public CacheAwareValueProvider(object value, Type type, string invokeString)
         {
             this._value = value;
             this.Type = type;
@@ -25,6 +24,19 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         public Task<object> GetValueAsync()
         {
             return Task.FromResult(_value);
+        }
+
+        public async Task SetValueAsync(object value, CancellationToken cancellationToken)
+        {
+            if (this._value is ICacheAwareWriteObject writeObj)
+            {
+                await writeObj.TryPutToCacheAsync(isDeleteOnFailure: true);
+            }
+
+            if (this._value is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
         }
 
         public string ToInvokeString()
