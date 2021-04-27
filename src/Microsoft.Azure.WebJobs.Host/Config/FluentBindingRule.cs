@@ -231,13 +231,28 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         }
 
         /// <summary>
+        /// TODO.
         /// Bind an attribute to a stream. This ensures the stream is flushed after the user function returns. 
         /// It uses the attribute's Access property to determine direction (Read/Write). 
         /// It includes rules for additional types of TextReader,string, byte[], and TextWriter,out string, out byte[].
         /// </summary>
         /// <param name="builder"></param>
         /// <param name="fileAccess"></param>
-        public void BindToCacheObjectOrStream(Func<TAttribute, ValueBindingContext, Task<FunctionDataCacheStream>> builder, FileAccess fileAccess)
+        public void BindToCacheObjectOrStream(Func<TAttribute, ValueBindingContext, Task<ICacheAwareWriteObject>> builder, FileAccess fileAccess)
+        {
+            var pm = PatternMatcher.New(builder);
+            BindToStream(pm, fileAccess);
+        }
+
+        /// <summary>
+        /// TODO.
+        /// Bind an attribute to a stream. This ensures the stream is flushed after the user function returns. 
+        /// It uses the attribute's Access property to determine direction (Read/Write). 
+        /// It includes rules for additional types of TextReader,string, byte[], and TextWriter,out string, out byte[].
+        /// </summary>
+        /// <param name="builder"></param>
+        /// <param name="fileAccess"></param>
+        public void BindToCacheObjectOrStream(Func<TAttribute, ValueBindingContext, Task<ICacheAwareReadObject>> builder, FileAccess fileAccess)
         {
             var pm = PatternMatcher.New(builder);
             BindToStream(pm, fileAccess);

@@ -488,12 +488,6 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     }
                     _stream.Close();
                 }
-
-                // If the Stream points to an object that can be cached after it is written, then we do so before disposing the Stream off.
-                if (_stream is ICacheAfterWriteStream cacheStream)
-                {
-                    await cacheStream.TryPutToFunctionDataCacheAsync(isDeleteOnFailure: true);
-                }
             }
 
             public string ToInvokeString()
