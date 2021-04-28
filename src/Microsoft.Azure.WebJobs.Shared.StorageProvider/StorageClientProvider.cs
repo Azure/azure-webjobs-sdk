@@ -4,10 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Net.Http;
 using Azure.Core;
-using Azure.Core.Pipeline;
-using Azure.Identity;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
@@ -166,12 +163,6 @@ namespace Microsoft.Azure.WebJobs.Shared.StorageProvider
         protected virtual TClientOptions CreateClientOptions(IConfiguration configuration)
         {
             var clientOptions = (TClientOptions)_componentFactory.CreateClientOptions(typeof(TClientOptions), null, configuration);
-            clientOptions.Diagnostics.ApplicationId = clientOptions.Diagnostics.ApplicationId ?? "AzureWebJobs";
-            if (SkuUtility.IsDynamicSku)
-            {
-                clientOptions.Transport = CreateTransportForDynamicSku();
-            }
-
             return clientOptions;
         }
 
@@ -230,14 +221,6 @@ namespace Microsoft.Azure.WebJobs.Shared.StorageProvider
 #pragma warning disable CA1056 // URI-like properties should not be strings
         protected abstract string ServiceUriSubDomain { get; }
 #pragma warning restore CA1056 // URI-like properties should not be strings
-
-        private static HttpPipelineTransport CreateTransportForDynamicSku()
-        {
-            return new HttpClientTransport(new HttpClient(new HttpClientHandler()
-            {
-                MaxConnectionsPerServer = 50
-            }));
-        }
 
         private bool IsConnectionStringPresent(IConfiguration configuration)
         {

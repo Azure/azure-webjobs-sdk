@@ -9,7 +9,6 @@
     <Import_RootNamespace>Microsoft.Azure.WebJobs.Shared.StorageProvider</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)SkuUtility.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)StorageClientProvider.cs" />
   </ItemGroup>
 </Project>
