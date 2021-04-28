@@ -67,6 +67,10 @@ namespace Microsoft.Extensions.Hosting
                 CloudStorageAccount account = config.GetStorageAccount();
                 if (account == null)
                 {
+                    if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("POD_NAME")))
+                    {
+                        return new KubernetesDistributedLockManager(loggerFactory);
+                    }
                     return new InMemoryDistributedLockManager();
                 }
 
