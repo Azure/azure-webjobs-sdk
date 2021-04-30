@@ -1,7 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <Import Project="..\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.projitems" Label="Shared" />
-  <Import Project="..\Microsoft.Azure.WebJobs.Shared.StorageProvider\WebJobs.Shared.StorageProvider.projitems" Label="Shared" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\build\common.props" />
   <PropertyGroup>
     <Version>$(StorageProviderVersion)</Version>
@@ -12,7 +9,7 @@
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
     <NoWarn>NU5104</NoWarn>
   </PropertyGroup>
@@ -33,6 +30,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj" />
+    <ProjectReference Include="..\Microsoft.Azure.WebJobs.StorageProvider.Common\WebJobs.StorageProvider.Common.csproj" />
   </ItemGroup>
 
 </Project>

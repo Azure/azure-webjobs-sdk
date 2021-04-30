@@ -13,7 +13,7 @@ namespace Microsoft.Azure.WebJobs.StorageProvider.Queues
     public static class AzureQueueBuilderExtensions
     {
         /// <summary>
-        /// Adds the Storage Queues extension to the provided <see cref="IServiceCollection"/>.
+        /// Adds the core services needed to create Azure Queue clients using the QueueServiceClientProvider.
         /// </summary>
         /// <param name="services">The <see cref="IServiceCollection"/> to configure.</param>
         public static void AddAzureStorageQueues(this IServiceCollection services)

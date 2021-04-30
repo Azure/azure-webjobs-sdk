@@ -13,7 +13,7 @@ namespace Microsoft.Azure.WebJobs.StorageProvider.Blobs
     public static class AzureBlobBuilderExtensions
     {
         /// <summary>
-        /// Adds the Storage Blobs extension to the provided <see cref="IServiceCollection"/>.
+        /// Adds the core services needed to create Azure Blob clients using the BlobServiceClientProvider.
         /// </summary>
         /// <param name="services">The <see cref="IServiceCollection"/> to configure.</param>
         public static void AddAzureStorageBlobs(this IServiceCollection services)

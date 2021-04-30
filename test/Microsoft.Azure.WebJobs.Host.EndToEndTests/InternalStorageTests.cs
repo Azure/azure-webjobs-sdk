@@ -21,7 +21,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
     {
         // End-2-end test that we can run a JobHost from purely a SAS connection string. 
         [Fact]
-        public async Task Test1()
+        public async Task TestJobHostInternalStorageOptions_SasConnection()
         {
             var containerName = "test-internal1";
 
@@ -104,7 +104,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         // End-2-end test that we can run a JobHost from a container name
         [Fact]
-        public async Task Test2()
+        public async Task TestJobHostInternalStorageOptions_ContainerName()
         {
             var containerName = "test-internal2";
 
