@@ -228,65 +228,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.Equal(container.Name, "myContainer3"); // specified in sas.             
         }
 
-        // Verify that JobHostConfig pulls a container name from appsettings. 
-        // Tests reading from an environment variable.
-        [Fact]
-        public void JobHost_UsesContainerName_FromEnvVar()
-        {
-            var fakeContainerName = "myContainer";
-
-            using (EnvVarHolder.Set("AzureWebJobs:InternalContainerName", fakeContainerName))
-            {
-                var hostBuilder = new HostBuilder()
-                 .ConfigureDefaultTestHost(b =>
-                 {
-                     b.AddAzureStorage();
-                     b.AddAzureStorageCoreServices();
-                 })
-                 .ConfigureAppConfiguration(c =>
-                 {
-                     c.AddEnvironmentVariables();
-                 });
-
-                IHost host = hostBuilder.Build();
-
-                var config = host.Services.GetService<IOptions<JobHostInternalStorageOptions>>();
-
-                var containerName = config.Value.InternalContainerName;
-                Assert.NotNull(containerName);
-                Assert.Equal(fakeContainerName, containerName);
-            }
-        }
-
-        // Verify that JobHostConfig pulls a container name from appsettings. 
-        [Fact]
-        public void JobHost_UsesContainerName()
-        {
-            var fakeContainerName = "myContainer3";
-
-            var hostBuilder = new HostBuilder()
-             .ConfigureDefaultTestHost(b =>
-             {
-                 b.AddAzureStorage();
-                 b.AddAzureStorageCoreServices();
-             })
-             .ConfigureAppConfiguration(c =>
-             {
-                 c.AddInMemoryCollection(new Dictionary<string, string>
-                 {
-                        { "AzureWebJobs:InternalContainerName", fakeContainerName }
-                 });
-             });
-
-            IHost host = hostBuilder.Build();
-
-            var config = host.Services.GetService<IOptions<JobHostInternalStorageOptions>>();
-
-            var containerName = config.Value.InternalContainerName;
-            Assert.NotNull(containerName);
-            Assert.Equal(fakeContainerName, containerName); // specified in sas.             
-        }
-
         // Test that we can explicitly disable storage and call through a function
         // And enable the fast table logger and ensure that's getting events.
         [Fact]

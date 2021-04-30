@@ -1,9 +1,9 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
-using Microsoft.Azure.Storage.Blob;
 using Microsoft.Extensions.Options;
+using Microsoft.Azure.Storage.Blob;
+using System;
 
 namespace Microsoft.Azure.WebJobs
 {
@@ -40,7 +40,5 @@ namespace Microsoft.Azure.WebJobs
     public class JobHostInternalStorageOptions
     {
         public string InternalSasBlobContainer { get; set; }
-
-        public string InternalContainerName { get; set; }
     }
 }

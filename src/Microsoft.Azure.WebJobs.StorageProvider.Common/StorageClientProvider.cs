@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using Azure.Core;
 using Microsoft.Azure.WebJobs.Host;
