@@ -3,8 +3,8 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <IsPackable>false</IsPackable>
-    <AssemblyName>Microsoft.Azure.WebJobs.Host.EndToEndTests</AssemblyName>
-    <RootNamespace>Microsoft.Azure.WebJobs.Host.EndToEndTests</RootNamespace>
+    <AssemblyName>Microsoft.Azure.WebJobs.StorageProvider.FunctionalTests</AssemblyName>
+    <RootNamespace>Microsoft.Azure.WebJobs.StorageProvider.FunctionalTests</RootNamespace>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
