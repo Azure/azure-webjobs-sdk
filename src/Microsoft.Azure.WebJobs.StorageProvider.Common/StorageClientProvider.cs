@@ -36,6 +36,8 @@ namespace Microsoft.Azure.WebJobs.StorageProvider.Common
             _componentFactory = componentFactory;
             _logForwarder = logForwarder;
             _logger = logger;
+
+            _logForwarder.Start();
         }
 
         /// <summary>
@@ -113,7 +115,6 @@ namespace Microsoft.Azure.WebJobs.StorageProvider.Common
                 throw new InvalidOperationException($"Storage account connection string '{IConfigurationExtensions.GetPrefixedConnectionStringName(name)}' does not exist. Make sure that it is a defined App Setting.");
             }
 
-            _logForwarder.Start();
             var credential = _componentFactory.CreateTokenCredential(connectionSection);
             var options = CreateClientOptions(connectionSection);
             return CreateClient(connectionSection, credential, options);
