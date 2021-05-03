@@ -22,9 +22,6 @@ $projects =
   "src\Microsoft.Azure.WebJobs.Logging.ApplicationInsights\WebJobs.Logging.ApplicationInsights.csproj",
   "src\Microsoft.Azure.WebJobs.Extensions.Storage\WebJobs.Extensions.Storage.csproj",
   "src\Microsoft.Azure.WebJobs.Host.Storage\WebJobs.Host.Storage.csproj",
-  "src\Microsoft.Azure.WebJobs.StorageProvider.Blobs\WebJobs.StorageProvider.Blobs.csproj",
-  "src\Microsoft.Azure.WebJobs.StorageProvider.Common\WebJobs.StorageProvider.Common.csproj",
-  "src\Microsoft.Azure.WebJobs.StorageProvider.Queues\WebJobs.StorageProvider.Queues.csproj",
   "test\Microsoft.Azure.WebJobs.Host.TestCommon\WebJobs.Host.TestCommon.csproj"
 
 foreach ($project in $projects)

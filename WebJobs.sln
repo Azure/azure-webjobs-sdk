@@ -53,14 +53,6 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FSharpFunctions", "test\Tes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmarks", "test\Benchmarks\Benchmarks.csproj", "{78F8086D-8313-477A-B24F-E475A690880A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.StorageProvider.Common", "src\Microsoft.Azure.WebJobs.StorageProvider.Common\WebJobs.StorageProvider.Common.csproj", "{EDC42565-0E03-4764-8BF0-F1C988007AA8}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.StorageProvider.Blobs", "src\Microsoft.Azure.WebJobs.StorageProvider.Blobs\WebJobs.StorageProvider.Blobs.csproj", "{B5F43308-792C-4D18-A131-E8F9EBF117C0}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.StorageProvider.Queues", "src\Microsoft.Azure.WebJobs.StorageProvider.Queues\WebJobs.StorageProvider.Queues.csproj", "{E594791A-117A-489C-8D21-CF84E870A073}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.StorageProvider.FunctionalTests", "test\Microsoft.Azure.WebJobs.StorageProvider.FunctionalTests\WebJobs.StorageProvider.FunctionalTests.csproj", "{6CA09ECB-7B42-45DE-A67E-651296A23277}"
-EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.projitems*{32f7d43d-1dd6-46f3-90fe-99b914de8daa}*SharedItemsImports = 5
@@ -142,22 +134,6 @@ Global
 		{78F8086D-8313-477A-B24F-E475A690880A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{78F8086D-8313-477A-B24F-E475A690880A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{78F8086D-8313-477A-B24F-E475A690880A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B5F43308-792C-4D18-A131-E8F9EBF117C0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B5F43308-792C-4D18-A131-E8F9EBF117C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B5F43308-792C-4D18-A131-E8F9EBF117C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B5F43308-792C-4D18-A131-E8F9EBF117C0}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E594791A-117A-489C-8D21-CF84E870A073}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E594791A-117A-489C-8D21-CF84E870A073}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E594791A-117A-489C-8D21-CF84E870A073}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E594791A-117A-489C-8D21-CF84E870A073}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6CA09ECB-7B42-45DE-A67E-651296A23277}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6CA09ECB-7B42-45DE-A67E-651296A23277}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6CA09ECB-7B42-45DE-A67E-651296A23277}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6CA09ECB-7B42-45DE-A67E-651296A23277}.Release|Any CPU.Build.0 = Release|Any CPU
-		{EDC42565-0E03-4764-8BF0-F1C988007AA8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{EDC42565-0E03-4764-8BF0-F1C988007AA8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{EDC42565-0E03-4764-8BF0-F1C988007AA8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EDC42565-0E03-4764-8BF0-F1C988007AA8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -174,7 +150,6 @@ Global
 		{C5E1A8E8-711F-4377-A8BD-7DB58E6C580D} = {639967B0-0544-4C52-94AC-9A3D25E33256}
 		{11702A4B-8402-4082-BE38-4F0C2CBBF61D} = {C5E1A8E8-711F-4377-A8BD-7DB58E6C580D}
 		{78F8086D-8313-477A-B24F-E475A690880A} = {639967B0-0544-4C52-94AC-9A3D25E33256}
-		{6CA09ECB-7B42-45DE-A67E-651296A23277} = {639967B0-0544-4C52-94AC-9A3D25E33256}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {371BFA14-0980-4A43-A18A-CA1C1A9CB784}

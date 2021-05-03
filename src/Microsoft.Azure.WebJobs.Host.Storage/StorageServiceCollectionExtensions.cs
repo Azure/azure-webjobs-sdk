@@ -43,7 +43,7 @@ namespace Microsoft.Extensions.Hosting
             // Add runtime services that depend on storage.
             services.AddSingleton<IDistributedLockManager>(provider => Create(provider));
 
-            // Used specifically for the CloudBlobContainerDistributedLockManager implementaiton 
+            // Used specifically for the CloudBlobContainerDistributedLockManager implementation
             services.TryAddSingleton<DistributedLockManagerContainerProvider>();
 
             services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<StorageAccountOptions>, StorageAccountOptionsSetup>());
@@ -52,7 +52,7 @@ namespace Microsoft.Extensions.Hosting
             services.TryAddSingleton<IDelegatingHandlerProvider, DefaultDelegatingHandlerProvider>();
         }
 
-        // This is only called if the host didn't already provide an implementation 
+        // This is only called if the host didn't already provide an implementation
         private static IDistributedLockManager Create(IServiceProvider provider)
         {
             // $$$ get rid of LegacyConfig
