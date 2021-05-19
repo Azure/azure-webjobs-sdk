@@ -8,6 +8,12 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Triggers
 {
+    /// <summary>
+    /// Bind TMessage --> TUserType. Use the specified custom converter for the conversion
+    /// to TUserType. Populate binding contract with TUserType members.
+    /// </summary>
+    /// <typeparam name="TMessage"></typeparam>
+    /// <typeparam name="TTriggerValue"></typeparam>
     internal class CustomTriggerArgumentBinding<TMessage, TTriggerValue> :
         SimpleTriggerArgumentBinding<TMessage, TTriggerValue>
     {
