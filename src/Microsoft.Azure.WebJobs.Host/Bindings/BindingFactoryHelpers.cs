@@ -27,25 +27,20 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             ITriggerBindingStrategy<TMessage, TTriggerValue> bindingStrategy,
             IConverterManager converterManager)
         {
-            // Wrapper to convert runtime Type to a compile time  generic. 
-            var method = typeof(BindingFactoryHelpers).GetMethod("GetDirectTriggerBindingWorker", BindingFlags.NonPublic | BindingFlags.Static);
-            method = method.MakeGenericMethod(typeof(TMessage), typeof(TTriggerValue), exactType);
-            var argumentBinding = MethodInvoke<SimpleTriggerArgumentBinding<TMessage, TTriggerValue>>(
-                method, 
-                bindingStrategy, converterManager);
-            return argumentBinding;
+            return GetDirectTriggerBindingWorker(bindingStrategy, converterManager, exactType);
         }
 
         private static SimpleTriggerArgumentBinding<TMessage, TTriggerValue>
-            GetDirectTriggerBindingWorker<TMessage, TTriggerValue, TUserType>(
-            ITriggerBindingStrategy<TMessage, TTriggerValue> bindingStrategy,
-            IConverterManager converterManager)
+            GetDirectTriggerBindingWorker<TMessage, TTriggerValue>(
+                ITriggerBindingStrategy<TMessage, TTriggerValue> bindingStrategy,
+                IConverterManager converterManager,
+                Type userType)
         {
-            var directConvert = converterManager.GetConverter<TMessage, TUserType, Attribute>();
+            var directConvert = converterManager.GetConverter<Attribute>(typeof(TMessage), userType);
             if (directConvert != null)
             {
-                var argumentBinding = new CustomTriggerArgumentBinding<TMessage, TTriggerValue, TUserType>(
-                    bindingStrategy, converterManager, directConvert);
+                var argumentBinding = new CustomTriggerArgumentBinding<TMessage, TTriggerValue>(
+                    bindingStrategy, converterManager, directConvert, userType);
                 return argumentBinding;
             }
             return null;
