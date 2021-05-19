@@ -8,7 +8,6 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Triggers;
-using Microsoft.Azure.WebJobs.Host.Triggers.TriggerArgumentBinding;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {

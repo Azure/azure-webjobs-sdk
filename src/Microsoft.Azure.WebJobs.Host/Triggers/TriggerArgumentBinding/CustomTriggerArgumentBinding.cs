@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Microsoft.Azure.WebJobs.Host.Triggers.TriggerArgumentBinding
+namespace Microsoft.Azure.WebJobs.Host.Triggers
 {
     internal class CustomTriggerArgumentBinding<TMessage, TTriggerValue> :
         SimpleTriggerArgumentBinding<TMessage, TTriggerValue>
