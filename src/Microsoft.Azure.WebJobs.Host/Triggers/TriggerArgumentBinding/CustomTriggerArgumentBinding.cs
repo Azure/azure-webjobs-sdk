@@ -1,30 +1,25 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using Microsoft.Azure.WebJobs.Host.Bindings;
 using System;
 using System.Collections.Generic;
-using Microsoft.Azure.WebJobs.Host.Bindings;
 using System.Threading.Tasks;
 
-namespace Microsoft.Azure.WebJobs.Host.Triggers
+namespace Microsoft.Azure.WebJobs.Host.Triggers.TriggerArgumentBinding
 {
-    /// <summary>
-    /// Bind TMessage --> TUserType. Use the specified custom converter for the conversion
-    /// to TUserType. Populate binding contract with TUserType members.
-    /// </summary>
-    /// <typeparam name="TMessage"></typeparam>
-    /// <typeparam name="TTriggerValue"></typeparam>
-    /// <typeparam name="TUserType"></typeparam>
-    internal class CustomTriggerArgumentBinding<TMessage, TTriggerValue, TUserType> : 
+    internal class CustomTriggerArgumentBinding<TMessage, TTriggerValue> :
         SimpleTriggerArgumentBinding<TMessage, TTriggerValue>
     {
         private IBindingDataProvider _bindingDataProvider;
-        private readonly FuncAsyncConverter<TMessage, TUserType> _converter;
+        private readonly FuncAsyncConverter _converter;
+        private readonly Type _userType;
 
         public CustomTriggerArgumentBinding(
-            ITriggerBindingStrategy<TMessage, TTriggerValue> bindingStrategy, 
+            ITriggerBindingStrategy<TMessage, TTriggerValue> bindingStrategy,
             IConverterManager converterManager,
-            FuncAsyncConverter<TMessage, TUserType> converter) :
+            FuncAsyncConverter converter,
+            Type userType) :
             base(bindingStrategy, converterManager)
         {
             if (converter == null)
@@ -32,14 +27,15 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                 throw new ArgumentNullException(nameof(converter));
             }
             this._converter = converter;
-            this.ElementType = typeof(TUserType);
+            _userType = userType;
+            this.ElementType = _userType;
 
             _bindingDataProvider = BindingDataProvider.FromType(ElementType);
             AddToBindingContract(_bindingDataProvider);
         }
 
         internal override async Task<object> ConvertAsync(
-            TMessage value, 
+            TMessage value,
             Dictionary<string, object> bindingData,
             ValueBindingContext context)
         {
