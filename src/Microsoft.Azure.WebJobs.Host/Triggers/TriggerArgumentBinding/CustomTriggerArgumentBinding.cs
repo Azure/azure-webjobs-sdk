@@ -11,9 +11,8 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers.TriggerArgumentBinding
     internal class CustomTriggerArgumentBinding<TMessage, TTriggerValue> :
         SimpleTriggerArgumentBinding<TMessage, TTriggerValue>
     {
-        private IBindingDataProvider _bindingDataProvider;
+        private readonly IBindingDataProvider _bindingDataProvider;
         private readonly FuncAsyncConverter _converter;
-        private readonly Type _userType;
 
         public CustomTriggerArgumentBinding(
             ITriggerBindingStrategy<TMessage, TTriggerValue> bindingStrategy,
@@ -27,8 +26,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers.TriggerArgumentBinding
                 throw new ArgumentNullException(nameof(converter));
             }
             this._converter = converter;
-            _userType = userType;
-            this.ElementType = _userType;
+            this.ElementType = userType;
 
             _bindingDataProvider = BindingDataProvider.FromType(ElementType);
             AddToBindingContract(_bindingDataProvider);
