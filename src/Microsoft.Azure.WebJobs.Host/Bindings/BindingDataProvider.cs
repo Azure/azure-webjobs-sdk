@@ -64,13 +64,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
             else
             {
-                Dictionary<string, object> bindingData = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-                foreach (var propertyHelper in _propertyHelpers)
-                {
-                    object propertyValue = propertyHelper.GetValue(value);
-                    bindingData.Add(propertyHelper.Name, propertyValue);
-                }
-                return bindingData;
+                return GetBindingDataFromPropertyHelpers(value);
             }
         }
 
@@ -125,6 +119,25 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         public static BindingDataProvider FromTemplate(string template, bool ignoreCase = false)
         {
             return new BindingDataProvider(template, ignoreCase);
+        }
+
+        private IReadOnlyDictionary<string, object> GetBindingDataFromPropertyHelpers(object value)
+        {
+            var bindingData = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            foreach (var propertyHelper in _propertyHelpers)
+            {
+                try
+                {
+                    object propertyValue = propertyHelper.GetValue(value);
+                    bindingData.Add(propertyHelper.Name, propertyValue);
+                }
+                catch (Exception)
+                {
+                    // Skip if accessing the property throws
+                }
+            }
+
+            return bindingData;
         }
     }
 }

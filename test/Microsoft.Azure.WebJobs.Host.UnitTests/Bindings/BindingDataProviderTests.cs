@@ -79,6 +79,24 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
         }
 
         [Fact]
+        public void GetBindingData_IfPropertyThrows_SkipsThrowingProperty()
+        {
+            // Arrange
+            IBindingDataProvider provider = BindingDataProvider.FromType(typeof(DataTypeWithThrowingProperty));
+            string json = @"{ ""ABeforeThrow"" : 10, ""BAfterThrow"" : 20 }";
+            object value = JsonConvert.DeserializeObject(json, typeof(DataTypeWithThrowingProperty));
+
+            // Act
+            var bindingData = provider.GetBindingData(value);
+
+            // Assert
+            Assert.NotNull(bindingData);
+            Assert.Equal(2, bindingData.Count);
+            Assert.Equal(10, bindingData["ABeforeThrow"]);
+            Assert.Equal(20, bindingData["BAfterThrow"]);
+        }
+
+        [Fact]
         public void GetBindingData_IfComplexDataType_ReturnsBindingDataWithAllTypes()
         {
             // Arrange
@@ -181,6 +199,19 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
         private class SimpleDataType
         {
             public int Name { get; set; }
+        }
+
+        private class DataTypeWithThrowingProperty
+        {
+            public int ABeforeThrow { get; set; } // Yes
+
+            public bool IThrow // skip: throws on get
+            {
+                get { throw new Exception("Can't get this property");  }
+                set { IThrow = value; }
+            }
+
+            public int BAfterThrow { get; set; } // Yes
         }
 
         private class ComplexDataType
