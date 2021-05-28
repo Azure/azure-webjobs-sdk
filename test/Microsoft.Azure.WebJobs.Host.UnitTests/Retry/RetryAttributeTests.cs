@@ -38,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             RetryContext lastRetryContext = new RetryContext
             {
-                RetryCount = 5
+                RetryCount = 6
             };
             Assert.Equal(TimeSpan.Zero, retry.GetNextDelay(lastRetryContext));
         }
@@ -77,7 +77,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             RetryContext lastRetryContext = new RetryContext
             {
-                RetryCount = 5
+                RetryCount = 6
             };
             Assert.Equal(TimeSpan.Zero, retry.GetNextDelay(lastRetryContext));
         }

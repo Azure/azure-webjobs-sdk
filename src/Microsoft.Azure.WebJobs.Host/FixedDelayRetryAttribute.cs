@@ -37,7 +37,7 @@ namespace Microsoft.Azure.WebJobs
 
         public override TimeSpan GetNextDelay(RetryContext context)
         {
-            if (MaxRetryCount == -1 || context.RetryCount < MaxRetryCount)
+            if (MaxRetryCount == -1 || context.RetryCount <= MaxRetryCount)
             {
                 return _delayStrategy.GetNextDelay(false);
             }

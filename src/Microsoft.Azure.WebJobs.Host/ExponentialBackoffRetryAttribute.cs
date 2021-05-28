@@ -64,7 +64,7 @@ namespace Microsoft.Azure.WebJobs
                 context.State.Add(_delayStrategyKeyName, delayStrategy);
             }
 
-            if (MaxRetryCount == -1 || context.RetryCount < MaxRetryCount)
+            if (MaxRetryCount == -1 || context.RetryCount <= MaxRetryCount)
             {
                 return delayStrategy.GetNextDelay(false);
             }
