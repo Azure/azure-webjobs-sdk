@@ -54,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         public Type GetDefaultType(Attribute attribute, FileAccess access, Type requestedType)
         {
             // If the requestedType is a batch type, we need to return the batch version of default types
-            IEnumerable<Type> targets = requestedType.IsArray && !_defaultTypes.Contains(requestedType) 
+            IEnumerable<Type> targets = requestedType.IsArray && !_defaultTypes.Contains(requestedType)
                 ? _defaultBatchTypes
                 : _defaultTypes;
 
@@ -116,46 +116,47 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return Task.FromResult<IBinding>(null);
             }
 
-            var type = typeof(ExactBinding<>).MakeGenericType(typeof(TAttribute), typeof(TTriggerValue), parameterType);
-            var method = type.GetMethod("TryBuild", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
-            var binding = BindingFactoryHelpers.MethodInvoke<IBinding>(method, this, context);
+            var binding = ExactBinding.TryBuild(this, context);
 
             return Task.FromResult<IBinding>(binding);
         }
 
-        private class ExactBinding<TUserType> : IBinding
+        private class ExactBinding : IBinding
         {
-            private FuncAsyncConverter<TTriggerValue, TUserType> _converter;
+            private FuncAsyncConverter _converter;
 
             private FuncAsyncConverter<DirectInvokeString, TTriggerValue> _directInvoker;
             private FuncAsyncConverter<TTriggerValue, DirectInvokeString> _getInvokeString;
+            private Type _userType;
 
             private TAttribute _attribute;
 
             public bool FromAttribute => true;
 
-            public static ExactBinding<TUserType> TryBuild(
+            public static ExactBinding TryBuild(
                 TriggerAdapterBindingProvider<TAttribute, TTriggerValue> parent,
                 BindingProviderContext context)
             {
+                var parameter = context.Parameter;
+                var userType = parameter.ParameterType;
                 IConverterManager cm = parent._converterManager;
 
-                var converter = cm.GetConverter<TTriggerValue, TUserType, TAttribute>();
+                var converter = cm.GetConverter<TAttribute>(typeof(TTriggerValue), userType);
 
                 if (converter == null)
                 {
                     return null;
                 }
 
-                var parameter = context.Parameter;
                 var attributeSource = TypeUtility.GetResolvedAttribute<TAttribute>(parameter);
 
-                return new ExactBinding<TUserType>
+                return new ExactBinding
                 {
                     _converter = converter,
                     _directInvoker = GetDirectInvoker(cm),
                     _getInvokeString = GetDirectInvokeString(cm),
-                    _attribute = attributeSource
+                    _attribute = attributeSource,
+                    _userType = userType
                 };
             }
 
@@ -214,10 +215,10 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     }
                 }
 
-                TUserType result = await _converter(val, _attribute, context);
+                var result = await _converter(val, _attribute, context);
 
                 DirectInvokeString invokeString = await _getInvokeString(val, _attribute, context);
-                IValueProvider vp = new ConstantValueProvider(result, typeof(TUserType), invokeString.Value);
+                IValueProvider vp = new ConstantValueProvider(result, _userType, invokeString.Value);
                 return vp;
             }
 
