@@ -10,6 +10,7 @@ namespace Microsoft.Azure.WebJobs.Host
         public const string DevelopmentEnvironmentValue = "Development";
         public const string DynamicSku = "Dynamic";
         public const string AzureWebsiteSku = "WEBSITE_SKU";
+        public const string AzureWebJobsShutdownFile = "WEBJOBS_SHUTDOWN_FILE";
         public const string DateTimeFormatString = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffK";
     }
 }
