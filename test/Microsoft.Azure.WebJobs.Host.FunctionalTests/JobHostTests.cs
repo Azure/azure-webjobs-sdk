@@ -10,16 +10,17 @@ using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.Storage.Queue;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
-using Microsoft.Azure.Storage.Queue;
 using Moq;
 using Xunit;
 
@@ -311,6 +312,62 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 stopTaskSource.SetResult(null);
                 alreadyStopping.GetAwaiter().GetResult();
                 stoppingAgain.GetAwaiter().GetResult();
+            }
+        }
+
+        [Fact]
+        public async Task ShutdownFileCreated_HostShutsDownGracefully()
+        {
+            // Setup the directory where we'll be writing the shutdown file
+            string shutdownPath = Path.Combine(Path.GetTempPath(), "WebJobs", "shutdown");
+            Environment.SetEnvironmentVariable(Constants.AzureWebJobsShutdownFile, shutdownPath);
+            Directory.CreateDirectory(Path.GetDirectoryName(shutdownPath));
+            if (File.Exists(shutdownPath))
+            {
+                File.Delete(shutdownPath);
+            }
+
+            // Test hosted service that we'll use below to verify user registered hosted services
+            // are stopped gracefully on shutdown
+            var testService = new TestHostedService();
+
+            var builder = new HostBuilder().ConfigureDefaultTestHost();
+            builder.ConfigureServices(services =>
+            {
+                services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService>(testService));
+            });
+
+            var host = builder.Build();
+            using (host)
+            {
+                // start running the host without blocking so we can trigger the shutdown below
+                Task runTask = host.RunAsync();
+
+                // wait for the host to start completely
+                var loggerProvider = host.GetTestLoggerProvider();
+                IEnumerable<LogMessage> logs = null;
+                await TestHelpers.Await(() =>
+                {
+                    logs = loggerProvider.GetAllLogMessages();
+                    var startedLog = logs.SingleOrDefault(p => p.FormattedMessage == "Job host started");
+                    return startedLog != null;
+                });
+
+                // trigger the shutdown
+                File.Create(shutdownPath);
+
+                // wait for the run task to complete successfully
+                await TestHelpers.Await(() =>
+                {
+                    return runTask.IsCompleted;
+                });
+
+                Assert.True(testService.StartCalled);
+                Assert.True(testService.StopCalled);
+
+                logs = loggerProvider.GetAllLogMessages();
+                Assert.NotNull(logs.SingleOrDefault(p => p.FormattedMessage == "Stopping JobHost"));
+                Assert.NotNull(logs.SingleOrDefault(p => p.FormattedMessage == "Job host stopped"));
             }
         }
 
@@ -745,6 +802,24 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 }
 
                 base.Log(logLevel, eventId, state, exception, formatter);
+            }
+        }
+
+        public class TestHostedService : IHostedService
+        {
+            public bool StartCalled { get; set; }
+            public bool StopCalled { get; set; }
+
+            public Task StartAsync(CancellationToken cancellationToken)
+            {
+                StartCalled = true;
+                return Task.CompletedTask;
+            }
+
+            public Task StopAsync(CancellationToken cancellationToken)
+            {
+                StopCalled = true;
+                return Task.CompletedTask;
             }
         }
     }
