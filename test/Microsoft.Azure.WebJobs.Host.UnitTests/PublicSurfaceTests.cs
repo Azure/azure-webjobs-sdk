@@ -269,7 +269,23 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "RetryAttribute",
                 "FixedDelayRetryAttribute",
                 "ExponentialBackoffRetryAttribute",
-                "RetryContext"
+                "RetryContext",
+                "ConcurrencyManager",
+                "ConcurrencyOptions",
+                "ConcurrencyStatus",
+                "HostConcurrencySnapshot",
+                "ConcurrencyThrottleStatus",
+                "ConcurrencyThrottleAggregateStatus",
+                "FunctionConcurrencySnapshot",
+                "HostHealthState",
+                "HostProcessStatus",
+                "IConcurrencyStatusRepository",
+                "IConcurrencyThrottleManager",
+                "IConcurrencyThrottleProvider",
+                "IHostProcessMonitor",
+                "IPrimaryHostStateProvider",
+                "PrimaryHostCoordinatorOptions",
+                "ThrottleState"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);

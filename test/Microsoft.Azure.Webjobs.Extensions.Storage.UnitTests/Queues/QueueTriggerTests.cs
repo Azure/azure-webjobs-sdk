@@ -109,7 +109,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Assert.Equal("Exception binding parameter 'message'", exception.Message);
             Exception innerException = exception.InnerException;
             Assert.IsType<DecoderFallbackException>(innerException);
-            Assert.Equal("Unable to translate bytes [FF] at index -1 from specified code page to Unicode.",
+            Assert.Equal("Unable to translate bytes [FF] at index 0 from specified code page to Unicode.",
                 innerException.Message);
         }
 

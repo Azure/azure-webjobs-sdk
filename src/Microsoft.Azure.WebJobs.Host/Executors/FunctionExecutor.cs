@@ -14,6 +14,7 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
@@ -29,6 +30,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly ILogger _resultsLogger;
         private readonly IEnumerable<IFunctionFilter> _globalFunctionFilters;
         private readonly IDrainModeManager _drainModeManager;
+        private readonly ConcurrencyManager _concurrencyManager;
 
         private readonly Dictionary<string, object> _inputBindingScope = new Dictionary<string, object>
         {
@@ -50,6 +52,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 IFunctionOutputLogger functionOutputLogger,
                 IWebJobsExceptionHandler exceptionHandler,
                 IAsyncCollector<FunctionInstanceLogEntry> functionEventCollector,
+                ConcurrencyManager concurrencyManager,
                 ILoggerFactory loggerFactory = null,
                 IEnumerable<IFunctionFilter> globalFunctionFilters = null,
                 IDrainModeManager drainModeManager = null)
@@ -62,6 +65,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _resultsLogger = _loggerFactory.CreateLogger(LogCategories.Results);
             _globalFunctionFilters = globalFunctionFilters ?? Enumerable.Empty<IFunctionFilter>();
             _drainModeManager = drainModeManager;
+            _concurrencyManager = concurrencyManager ?? throw new ArgumentNullException(nameof(concurrencyManager));
         }
 
         public HostOutputMessage HostOutputMessage
@@ -79,9 +83,15 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             ExceptionDispatchInfo exceptionInfo = null;
             string functionStartedMessageId = null;
             FunctionInstanceLogEntry instanceLogEntry = null;
+            Stopwatch sw = Stopwatch.StartNew();
 
             try
             {
+                if (_concurrencyManager.Enabled)
+                {
+                    _concurrencyManager.FunctionStarted(functionInstanceEx.FunctionDescriptor.Id);
+                }
+
                 using (_resultsLogger?.BeginFunctionScope(functionInstanceEx, HostOutputMessage.HostInstanceId))
                 using (parameterHelper)
                 {
@@ -130,6 +140,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
             finally
             {
+                sw.Stop();
+                if (_concurrencyManager.Enabled)
+                {
+                    _concurrencyManager.FunctionCompleted(functionInstanceEx.FunctionDescriptor.Id, sw.Elapsed);
+                }
+
                 ((IDisposable)functionInstanceEx)?.Dispose();
             }
 

@@ -31,6 +31,7 @@ namespace Microsoft.Azure.WebJobs
     public static class WebJobsServiceCollectionExtensions
     {
         private const string SingletonConfigSectionName = "Singleton";
+        private const string ConcurrencyConfigSectionName = "Concurrency";
 
         /// <summary>
         /// Adds the WebJobs services to the provided <see cref="IServiceCollection"/>.
@@ -86,6 +87,9 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IDistributedLockManager, InMemoryDistributedLockManager>();
             services.TryAddSingleton<IScaleMonitorManager, ScaleMonitorManager>();
 
+            services.AddSingleton<IPrimaryHostStateProvider, PrimaryHostStateProvider>();
+            services.AddSingleton<IHostedService, PrimaryHostCoordinator>();
+
             // $$$ Can we remove these completely? 
             services.TryAddSingleton<DefaultTriggerBindingFactory>();
             services.TryAddSingleton<ITriggerBindingProvider>(p => p.GetRequiredService<DefaultTriggerBindingFactory>().Create());
@@ -114,6 +118,24 @@ namespace Microsoft.Azure.WebJobs
             services.AddSingleton<IOptionsLoggingSource, OptionsLoggingSource>();
             services.AddSingleton<IHostedService, OptionsLoggingService>();
             services.AddSingleton<IOptionsFormatter<LoggerFilterOptions>, LoggerFilterOptionsFormatter>();
+
+            // Concurrency management
+            services.TryAddSingleton<IConcurrencyStatusRepository, NullConcurrencyStatusRepository>();
+            services.TryAddSingleton<IHostProcessMonitor, DefaultHostProcessMonitor>();
+            services.TryAddSingleton<IConcurrencyThrottleManager, DefaultConcurrencyThrottleManager>();
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IConcurrencyThrottleProvider, HostHealthThrottleProvider>());
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IConcurrencyThrottleProvider, ThreadPoolStarvationThrottleProvider>());
+            services.TryAddSingleton<ConcurrencyManager>();
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ConcurrencyManagerService>());
+
+            services.ConfigureOptions<ConcurrencyOptionsSetup>();
+            services.ConfigureOptions<PrimaryHostCoordinatorOptionsSetup>();
+            services.AddOptions<ConcurrencyOptions>()
+                .Configure<IConfiguration>((options, config) =>
+                {
+                    var section = config.GetWebJobsRootConfiguration().GetSection(ConcurrencyConfigSectionName);
+                    section.Bind(options);
+                });
 
             services.AddOptions<SingletonOptions>()
                 .Configure<IHostingEnvironment>((options, env) =>

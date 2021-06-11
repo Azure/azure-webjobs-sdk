@@ -13,6 +13,7 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
@@ -166,12 +167,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             var mockFunctionOutputLogger = new NullFunctionOutputLogger();
             var mockExceptionHandler = new Mock<IWebJobsExceptionHandler>();
             var mockFunctionEventCollector = new Mock<IAsyncCollector<FunctionInstanceLogEntry>>();
+            var mockConcurrencyManager = new Mock<ConcurrencyManager>();
 
             var functionExecutor = new FunctionExecutor(
                 mockFunctionInstanceLogger.Object,
                 mockFunctionOutputLogger,
                 mockExceptionHandler.Object,
                 mockFunctionEventCollector.Object,
+                mockConcurrencyManager.Object,
                 NullLoggerFactory.Instance,
                 null,
                 drainModeManager);
