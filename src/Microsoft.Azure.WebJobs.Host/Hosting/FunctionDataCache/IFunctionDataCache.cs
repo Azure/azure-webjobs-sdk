@@ -5,6 +5,9 @@ using System;
 
 namespace Microsoft.Azure.WebJobs
 {
+    /// <summary>
+    /// Interface to interact with the cache that contains binding data objects.
+    /// </summary>
     public interface IFunctionDataCache : IDisposable
     {
         /// <summary>

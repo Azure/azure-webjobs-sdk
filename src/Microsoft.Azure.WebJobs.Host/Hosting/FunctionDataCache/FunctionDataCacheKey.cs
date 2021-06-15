@@ -3,6 +3,10 @@
 
 namespace Microsoft.Azure.WebJobs
 {
+    /// <summary>
+    /// Key associated with objects in <see cref="IFunctionDataCache"/>.
+    /// Also used to lookup an object in the cache.
+    /// </summary>
     public class FunctionDataCacheKey
     {
         public FunctionDataCacheKey(string id, string version)

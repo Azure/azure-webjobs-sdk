@@ -101,18 +101,16 @@ namespace Microsoft.Azure.WebJobs
                 throw new InvalidOperationException("No binding found for attribute '" + attribute.GetType() + "'.");
             }
 
-            // Create a clone of the binding context, so any binding data that was added
-            // will be applied to the binding
+            // Create a clone of the binding context, so any binding data that was added will be applied to the binding
             var ambientBindingContext = new AmbientBindingContext(_bindingSource.AmbientBindingContext.FunctionContext, _bindingData);
             var bindingContext = new BindingContext(ambientBindingContext, cancellationToken);
 
-            // TODO move to separate method
             foreach (Attribute attr in attributes)
             {
-                SharedMemoryAttribute sharedMemoryAttribute = attr as SharedMemoryAttribute;
-                if (sharedMemoryAttribute != null)
+                if (attr is SharedMemoryAttribute sharedMemoryAttribute)
                 {
                     bindingContext.ValueContext.SharedMemoryMetadata = new SharedMemoryMetadata(sharedMemoryAttribute.MemoryMapName, sharedMemoryAttribute.Count);
+                    break;
                 }
             }
 

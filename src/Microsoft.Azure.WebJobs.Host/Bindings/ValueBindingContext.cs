@@ -14,8 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         private readonly FunctionBindingContext _functionContext;
         private readonly CancellationToken _cancellationToken;
 
-        // TODO make this private readonly
-        public SharedMemoryMetadata _sharedMemoryMetadata;
+        private SharedMemoryMetadata _sharedMemoryMetadata;
 
         /// <summary>
         /// Creates a new instance.
@@ -23,10 +22,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// <param name="functionContext">The context for the parent function.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> to use.</param>
         public ValueBindingContext(FunctionBindingContext functionContext, CancellationToken cancellationToken)
+            : this(functionContext, null, cancellationToken)
         {
-            _functionContext = functionContext;
-            _cancellationToken = cancellationToken;
-            _sharedMemoryMetadata = null;
         }
 
         /// <summary>
@@ -34,12 +31,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// </summary>
         /// <param name="functionContext">The context for the parent function.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> to use.</param>
-        /// <param name="memoryMapName">The name of the shared memory map where the value is present.</param>
-        public ValueBindingContext(FunctionBindingContext functionContext, SharedMemoryMetadata memoryMapName, CancellationToken cancellationToken)
+        /// <param name="sharedMemoryMetadata">The metadata of the shared memory map where the value is present.</param>
+        public ValueBindingContext(FunctionBindingContext functionContext, SharedMemoryMetadata sharedMemoryMetadata, CancellationToken cancellationToken)
         {
             _functionContext = functionContext;
             _cancellationToken = cancellationToken;
-            _sharedMemoryMetadata = memoryMapName;
+            _sharedMemoryMetadata = sharedMemoryMetadata;
         }
 
         /// <summary>
@@ -81,7 +78,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         public SharedMemoryMetadata SharedMemoryMetadata
         {
             get { return _sharedMemoryMetadata; }
-            set { _sharedMemoryMetadata = value; } // TODO remove
+            set { _sharedMemoryMetadata = value; }
         }
     }
 }

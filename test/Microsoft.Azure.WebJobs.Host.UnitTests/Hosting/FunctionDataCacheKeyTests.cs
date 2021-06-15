@@ -46,6 +46,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             FunctionDataCacheKey key = new FunctionDataCacheKey(id, version1);
 
             Assert.True(set.Add(key));
+            Assert.Contains(new FunctionDataCacheKey(id, version1), set);
 
             string version2 = "bar2";
             Assert.DoesNotContain(new FunctionDataCacheKey(id, version2), set);
@@ -61,6 +62,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             FunctionDataCacheKey key = new FunctionDataCacheKey(id1, version);
 
             Assert.True(set.Add(key));
+            Assert.Contains(new FunctionDataCacheKey(id1, version), set);
 
             string id2 = "foo2";
             Assert.DoesNotContain(new FunctionDataCacheKey(id2, version), set);
