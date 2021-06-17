@@ -3,7 +3,7 @@
   <PropertyGroup>
     <!-- This project needs a static version number for the HostId checks, which are based on the version -->
     <Version>3.0.0$(VersionSuffix)</Version>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <IsPackable>false</IsPackable>
     <AssemblyName>Microsoft.Azure.WebJobs.Host.UnitTests</AssemblyName>
     <RootNamespace>Microsoft.Azure.WebJobs.Host.UnitTests</RootNamespace>
@@ -46,6 +46,7 @@
     <ProjectReference Include="..\..\src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj" />
     <ProjectReference Include="..\..\src\Microsoft.Azure.WebJobs.Logging.ApplicationInsights\WebJobs.Logging.ApplicationInsights.csproj" />
     <ProjectReference Include="..\..\src\Microsoft.Azure.WebJobs.Logging\WebJobs.Logging.csproj" />
+    <ProjectReference Include="..\..\TestChildProcess\TestChildProcess.csproj" />
     <ProjectReference Include="..\Microsoft.Azure.WebJobs.Host.TestCommon\WebJobs.Host.TestCommon.csproj" />
   </ItemGroup>
 

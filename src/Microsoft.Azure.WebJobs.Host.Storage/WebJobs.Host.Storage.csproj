@@ -9,6 +9,7 @@
     <Version>$(HostStorageVersion)</Version>
     <InformationalVersion>$(Version) Commit hash: $(CommitHash)</InformationalVersion>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
     <AssemblyName>Microsoft.Azure.WebJobs.Host.Storage</AssemblyName>
   </PropertyGroup>  
   

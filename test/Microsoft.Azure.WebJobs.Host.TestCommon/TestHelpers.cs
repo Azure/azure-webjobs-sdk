@@ -243,6 +243,11 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             return host.Services.GetServices<ILoggerProvider>().OfType<TestLoggerProvider>().Single();
         }
 
+        public static TService GetServiceOrNull<TService>(this IHost host)
+        {
+            return host.Services.GetServices<TService>().SingleOrDefault();
+        }
+
         public static TExtension GetExtension<TExtension>(this IHost host)
         {
             return host.Services.GetServices<IExtensionConfigProvider>().OfType<TExtension>().SingleOrDefault();
@@ -335,6 +340,15 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
         public static IConfiguration BuildConfiguration(this IDictionary<string, string> dict)
         {
             return new ConfigurationBuilder().AddInMemoryCollection(dict).Build();
+        }
+
+        public static void SetupStopwatch(Stopwatch sw, TimeSpan elapsed)
+        {
+            sw.Restart();
+
+            // set elapsed so to simulate time having passed
+            FieldInfo elapsedFieldInfo = typeof(Stopwatch).GetField("_elapsed", BindingFlags.NonPublic | BindingFlags.Instance);
+            elapsedFieldInfo.SetValue(sw, elapsed.Ticks);
         }
     }
 

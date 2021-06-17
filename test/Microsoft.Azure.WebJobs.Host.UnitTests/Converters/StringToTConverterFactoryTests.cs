@@ -426,7 +426,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Converters
             // Assert
             Assert.NotNull(converter);
             ExceptionAssert.ThrowsFormat(() => converter.Convert("{00000000-0000-0000-0000-000000000000}"),
-                "Unrecognized Guid format.");
+                "Guid should contain 32 digits with 4 dashes (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).");
         }
 
         [Fact]
@@ -539,7 +539,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Converters
                 // Assert
                 Assert.NotNull(converter);
                 ExceptionAssert.ThrowsFormat(() => converter.Convert("-10:00:00,123"),
-                    "String was not recognized as a valid TimeSpan.");
+                    "String '-10:00:00,123' was not recognized as a valid TimeSpan.");
             }
         }
 

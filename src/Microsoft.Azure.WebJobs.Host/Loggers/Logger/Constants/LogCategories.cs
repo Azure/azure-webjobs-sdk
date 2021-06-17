@@ -13,6 +13,8 @@ namespace Microsoft.Azure.WebJobs.Logging
         private static readonly Regex _userFunctionRegex = new Regex(@"^Function\.[^\s\.]+\.User$");
         private static readonly Regex _functionRegex = new Regex(@"^Function\.[^\s\.]+$");
 
+        public const string HostGeneral = "Host.General";
+
         /// <summary>
         /// The category for all logs written by the function host during startup and shutdown. This
         /// includes indexing and configuration logs.
@@ -43,6 +45,16 @@ namespace Microsoft.Azure.WebJobs.Logging
         /// The category for function bindings.
         /// </summary>
         public const string Bindings = "Host.Bindings";
+
+        /// <summary>
+        /// The category for scale related logs.
+        /// </summary>
+        public const string Scale = "Host.Scale";
+
+        /// <summary>
+        /// The category for logs related to concurrency management.
+        /// </summary>
+        public const string Concurrency = "Host.Concurrency";
 
         /// <summary>
         /// The category for function binding access stats.

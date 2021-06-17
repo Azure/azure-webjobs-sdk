@@ -9,6 +9,7 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Loggers;
+using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -50,6 +51,8 @@ namespace Microsoft.Extensions.Hosting
             services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, CoreWebJobsOptionsSetup<JobHostInternalStorageOptions>>());
 
             services.TryAddSingleton<IDelegatingHandlerProvider, DefaultDelegatingHandlerProvider>();
+
+            services.AddSingleton<IConcurrencyStatusRepository, BlobStorageConcurrencyStatusRepository>();
         }
 
         // This is only called if the host didn't already provide an implementation
