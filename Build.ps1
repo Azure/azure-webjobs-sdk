@@ -38,7 +38,7 @@ foreach ($project in $projects)
 
 ### Sign package if build is not a PR
 $isPr = Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER
-if (-not $isPr -and -not $isLocal) {
+if ((-not $isPr -and -not $isLocal) -or $env:ForceArtifacts -eq "1") {
   & ".\tools\RunSigningJob.ps1" 
   if (-not $?) { exit 1 }
 }

@@ -1,7 +1,7 @@
 $isPr = Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER
 $directoryPath = Split-Path $MyInvocation.MyCommand.Path -Parent
 
-if (-not $isPr -and $env:SkipAssemblySigning -ne "true") {
+if ((-not $isPr -and $env:SkipAssemblySigning -ne "true") -or $env:ForceArtifacts -eq "1") {
   $timeout = new-timespan -Minutes 15
   $sw = [diagnostics.stopwatch]::StartNew();
   $polling = $true;
@@ -24,15 +24,15 @@ if (-not $isPr -and $env:SkipAssemblySigning -ne "true") {
     exit(1);
   }
 
-  Remove-Item "$directoryPath/../buildoutput" -Recurse -Force
+  Remove-Item "$directoryPath/../../../buildoutput" -Recurse -Force
 
-  Mkdir "$directoryPath/../buildoutput"
+  Mkdir "$directoryPath/../../../buildoutput"
 
-  Get-AzureStorageBlobContent "$env:APPVEYOR_BUILD_VERSION.zip" "webjobs-signed" -Destination "$directoryPath/../buildoutput/signed.zip" -Context $ctx
+  Get-AzureStorageBlobContent "$env:APPVEYOR_BUILD_VERSION.zip" "webjobs-signed" -Destination "$directoryPath/../../../buildoutput/signed.zip" -Context $ctx
 
-  Expand-Archive "$directoryPath/../buildoutput/signed.zip" "$directoryPath/../buildoutput/signed"
+  Expand-Archive "$directoryPath/../../../buildoutput/signed.zip" "$directoryPath/../../../buildoutput/signed"
 
-  Get-ChildItem "$directoryPath/../buildoutput/signed" | % {
+  Get-ChildItem "$directoryPath/../../../buildoutput/signed" | % {
     Push-AppveyorArtifact $_.FullName
   }
   if (-not $?) { exit 1 }
