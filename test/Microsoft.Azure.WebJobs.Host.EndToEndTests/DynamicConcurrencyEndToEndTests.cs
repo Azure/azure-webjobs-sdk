@@ -47,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // force an initial concurrency to ensure throttles are hit relatively quickly
             IHost host = CreateTestJobHost<TestJobs>();
             var concurrencyManager = host.GetServiceOrNull<ConcurrencyManager>();
-            int initialConcurrency = 5;
+            int initialConcurrency = 10;
             ApplyTestSnapshot(concurrencyManager, highCpuConcurrency: initialConcurrency);
 
             host.Start();
@@ -62,7 +62,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 bool complete = TestJobs.InvokeCount > 5 && throttleLogs.Length > 0 && concurrencyDecreaseLogs.Length > 0;
 
                 return Task.FromResult(complete);
-            });
+            }, timeout: 90 * 1000);
 
             await host.StopAsync();
 
