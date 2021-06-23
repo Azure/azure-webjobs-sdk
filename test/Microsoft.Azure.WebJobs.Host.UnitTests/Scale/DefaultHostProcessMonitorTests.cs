@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using static Microsoft.Azure.WebJobs.Host.UnitTests.Scale.ProcessMonitorTests;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
 {
@@ -24,6 +25,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
         private readonly TestLoggerProvider _loggerProvider;
         private readonly ILogger _logger;
 
+        private List<TimeSpan> _testHostProcessorTimeSamples;
+        private List<long> _testHostMemorySamples;
+        private List<TimeSpan> _testChildProcessorTimeSamples;
+        private List<long> _testChildMemorySamples;
+
         private ProcessStats _testHostProcessStats;
         private ProcessStats _testChildProcessStats;
 
@@ -34,23 +40,30 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             _loggerFactory.AddProvider(_loggerProvider);
             _logger = _loggerFactory.CreateLogger(LogCategories.Concurrency);
 
-            var mockProcessMonitor = new Mock<ProcessMonitor>(MockBehavior.Strict);
-            mockProcessMonitor.Setup(p => p.GetStats()).Returns(() => _testHostProcessStats);
-
             var options = new ConcurrencyOptions
             {
                 DynamicConcurrencyEnabled = true,
                 TotalAvailableMemoryBytes = 10000
             };
             var optionsWrapper = new OptionsWrapper<ConcurrencyOptions>(options);
-            _hostProcessMonitor = new DefaultHostProcessMonitor(optionsWrapper, mockProcessMonitor.Object);
+            var hostTestProcess = new TestProcess(1, _testHostProcessorTimeSamples, _testHostMemorySamples);
+            var hostProcessMonitor = new Mock<ProcessMonitor>(MockBehavior.Strict);
+            hostProcessMonitor.Setup(p => p.Process).Returns(hostTestProcess);
+            hostProcessMonitor.Setup(p => p.GetStats()).Returns(() => _testHostProcessStats);
+            _hostProcessMonitor = new DefaultHostProcessMonitor(optionsWrapper, hostProcessMonitor.Object);
 
             // add a child process monitor
-            mockProcessMonitor = new Mock<ProcessMonitor>(MockBehavior.Strict);
-            mockProcessMonitor.Setup(p => p.GetStats()).Returns(() => _testChildProcessStats);
-            mockProcessMonitor.Setup(p => p.Process).Returns(Process.GetCurrentProcess());
+            var childTestProcess = new TestProcess(2, _testChildProcessorTimeSamples, _testChildMemorySamples);
+            var childProcessMonitor = new Mock<ProcessMonitor>(MockBehavior.Strict);
+            childProcessMonitor.Setup(p => p.Process).Returns(childTestProcess);
+            childProcessMonitor.Setup(p => p.GetStats()).Returns(() => _testChildProcessStats);
+            _hostProcessMonitor.RegisterChildProcessMonitor(childProcessMonitor.Object);
 
-            _hostProcessMonitor.RegisterChildProcessMonitor(mockProcessMonitor.Object);
+            _testHostProcessorTimeSamples = new List<TimeSpan>();
+            _testHostMemorySamples = new List<long>();
+
+            _testChildProcessorTimeSamples = new List<TimeSpan>();
+            _testChildMemorySamples = new List<long>();
 
             _testHostProcessStats = new ProcessStats
             {
@@ -327,18 +340,18 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             Assert.Equal("[HostMonitor] Host memory threshold exceeded (8500 >= 8000)", log.FormattedMessage);
         }
 
-        [Fact(Skip = "Failing on CI. Need to investigate.")]
-        public async Task ChildProcessLifetimeManagement_ExitedProcessesAreRemoved()
+        [Fact]
+        public async Task ChildProcessManagement_ExitedProcessesAreRemoved()
         {
             var options = new ConcurrencyOptions();
             var localProcessMonitor = new DefaultHostProcessMonitor(new OptionsWrapper<ConcurrencyOptions>(options));
             var hostProcess = Process.GetCurrentProcess();
 
             int numChildProcesses = 3;
-            List<Process> childProcesses = new List<Process>();
-            for (int i = 0; i < numChildProcesses; i++)
+            List<TestProcess> childProcesses = new List<TestProcess>();
+            for (int i = 1; i <= numChildProcesses; i++)
             {
-                var childProcess = Process.Start("TestChildProcess.exe");
+                var childProcess = new TestProcess(i);
                 childProcesses.Add(childProcess);
             }
 
@@ -346,7 +359,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
 
             foreach (var currProcess in childProcesses)
             {
-                localProcessMonitor.RegisterChildProcess(currProcess);
+                var childMonitor = new ProcessMonitor(currProcess);
+                localProcessMonitor.RegisterChildProcessMonitor(childMonitor);
             }
 
             // initial call to get status which will start the monitoring
@@ -382,7 +396,27 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             localProcessMonitor.GetStatus(_logger);
             logs = _loggerProvider.GetAllLogMessages().ToArray();
             Assert.Equal(2 + numChildProcesses - 1, logs.Length);
-            Assert.Empty(logs.Where(p => p.FormattedMessage.Contains(killedProcess.Id.ToString())));
+            Assert.Empty(logs.Where(p => p.FormattedMessage.Contains($"[HostMonitor] Host process CPU stats (PID {killedProcess.Id})")));
+        }
+
+        [Fact]
+        public void ChildProcessManagement_Register_Unregister()
+        {
+            var childProcess1 = new Process();
+            var childProcess2 = new Process();
+            var childProcess3 = new Process();
+
+            var options = new ConcurrencyOptions();
+            var localProcessMonitor = new DefaultHostProcessMonitor(new OptionsWrapper<ConcurrencyOptions>(options));
+            Assert.Empty(localProcessMonitor.ChildProcessMonitors);
+
+            localProcessMonitor.RegisterChildProcess(childProcess1);
+            localProcessMonitor.RegisterChildProcess(childProcess2);
+            localProcessMonitor.RegisterChildProcess(childProcess3);
+            Assert.Equal(3, localProcessMonitor.ChildProcessMonitors.Count);
+
+            localProcessMonitor.UnregisterChildProcess(childProcess2);
+            Assert.Equal(2, localProcessMonitor.ChildProcessMonitors.Count);
         }
     }
 }

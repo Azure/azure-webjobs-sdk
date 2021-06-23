@@ -37,6 +37,9 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             }
         }
 
+        // for testing
+        internal List<ProcessMonitor> ChildProcessMonitors => _childProcessMonitors;
+
         public void RegisterChildProcess(Process process)
         {
             if (process == null)
@@ -66,7 +69,10 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             ProcessMonitor monitor = null;
             lock (_syncLock)
             {
-                monitor = _childProcessMonitors.SingleOrDefault(p => p.Process == process);
+                // Try to locate the monitor for the specified process and remove it if found.
+                // Note: use of Equals rather than == is important here since ProcessWrapper
+                // overrides equality.
+                monitor = _childProcessMonitors.SingleOrDefault(p => p.Process.Equals(process));
                 if (monitor != null)
                 {
                     _childProcessMonitors.Remove(monitor);
