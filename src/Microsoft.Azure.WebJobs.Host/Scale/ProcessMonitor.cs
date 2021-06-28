@@ -18,9 +18,8 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         private readonly List<double> _cpuLoadHistory = new List<double>();
         private readonly List<long> _memoryUsageHistory = new List<long>();
         private readonly int _effectiveCores;
-        private readonly Process _process;
         private readonly bool _autoStart;
-        private readonly IProcessMetricsProvider _processMetricsProvider;
+        private readonly IProcess _process;
 
         private Timer _timer;
         private TimeSpan? _lastProcessorTime;
@@ -35,15 +34,14 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         }
 
         public ProcessMonitor(Process process, TimeSpan? interval = null)
-            : this(process, new DefaultProcessMetricsProvider(process), interval)
+            : this(new ProcessWrapper(process), interval)
         {
         }
 
-        public ProcessMonitor(Process process, IProcessMetricsProvider processMetricsProvider, TimeSpan? interval = null, int? effectiveCores = null, bool autoStart = true)
+        public ProcessMonitor(IProcess process, TimeSpan? interval = null, int? effectiveCores = null, bool autoStart = true)
         {
             _process = process ?? throw new ArgumentNullException(nameof(process));
             _interval = interval ?? TimeSpan.FromSeconds(DefaultSampleIntervalSeconds);
-            _processMetricsProvider = processMetricsProvider;
             _effectiveCores = effectiveCores ?? Utility.GetEffectiveCoresCount();
             _autoStart = autoStart;
         }
@@ -51,7 +49,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// <summary>
         /// The process being monitored.
         /// </summary>
-        public virtual Process Process => _process;
+        public virtual IProcess Process => _process;
 
         internal void EnsureTimerStarted()
         {
@@ -91,13 +89,20 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
 
         private void OnTimer(object state)
         {
-            if (_disposed || _process.HasExited)
+            if (_disposed)
             {
                 return;
             }
 
             try
             {
+                if (_process.HasExited)
+                {
+                    // stop monitoring the exited process
+                    _timer.Change(Timeout.Infinite, Timeout.Infinite);
+                    return;
+                }
+
                 _process.Refresh();
 
                 SampleProcessMetrics();
@@ -128,7 +133,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
 
         internal void SampleCPULoad(TimeSpan currSampleDuration)
         {
-            var currProcessorTime = _processMetricsProvider.TotalProcessorTime;
+            var currProcessorTime = _process.TotalProcessorTime;
 
             if (_lastProcessorTime != null)
             {
@@ -159,7 +164,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
 
         internal void SampleMemoryUsage()
         {
-            AddSample(_memoryUsageHistory, _processMetricsProvider.PrivateMemoryBytes);
+            AddSample(_memoryUsageHistory, _process.PrivateMemoryBytes);
         }
 
         private void AddSample<T>(List<T> samples, T sample)
@@ -190,6 +195,88 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         public void Dispose()
         {
             Dispose(true);
+        }
+
+        /// <summary>
+        /// Interface over a system Process. Useful for mock testing because
+        /// Process isn't mockable.
+        /// </summary>
+        internal interface IProcess
+        {
+            int Id { get; }
+            bool HasExited { get; }
+            TimeSpan TotalProcessorTime { get; }
+            long PrivateMemoryBytes { get; }
+            void Refresh();
+        }
+
+        internal class ProcessWrapper : IProcess
+        {
+            private readonly Process _process;
+
+            public ProcessWrapper(Process process)
+            {
+                _process = process ?? throw new ArgumentNullException(nameof(process));
+            }
+
+            public int Id => _process.Id;
+
+            public bool HasExited
+            {
+                get
+                {
+                    try
+                    {
+                        return _process.HasExited;
+                    }
+                    catch
+                    {
+                        // When the process has been Closed/Disposed
+                        // Process members like HasExited will throw
+                        return true;
+                    }
+                }
+            }
+
+            public TimeSpan TotalProcessorTime => _process.TotalProcessorTime;
+
+            public long PrivateMemoryBytes => _process.PrivateMemorySize64;
+
+            public void Refresh()
+            {
+                _process.Refresh();
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (obj == null)
+                {
+                    return false;
+                }
+
+                // when comparing to Process instance, we're equal if we wrap
+                // the same process
+                Process otherProcess = obj as Process;
+                if (otherProcess != null)
+                {
+                    return object.ReferenceEquals(_process, otherProcess);
+                }
+
+                // when comparing to another ProcessWrapper, we're equal if we're
+                // both pointing to the same process
+                ProcessWrapper otherWrapper = obj as ProcessWrapper;
+                if (otherWrapper != null)
+                {
+                    return object.ReferenceEquals(_process, otherWrapper._process);
+                }
+
+                return base.Equals(obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return _process.GetHashCode();
+            }
         }
     }
 }

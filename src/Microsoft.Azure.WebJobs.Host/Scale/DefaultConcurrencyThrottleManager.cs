@@ -66,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
 
         private void UpdateThrottleState()
         {
-            IEnumerable<ConcurrencyThrottleStatus> throttleResults = _throttleProviders.Select(p => p.GetStatus(_logger));
+            IEnumerable<ConcurrencyThrottleStatus> throttleResults = _throttleProviders.Select(p => p.GetStatus(_logger)).ToArray();
 
             bool throttleEnabled = throttleResults.Any(p => p.State == ThrottleState.Enabled);
             ThrottleState newThrottleState;

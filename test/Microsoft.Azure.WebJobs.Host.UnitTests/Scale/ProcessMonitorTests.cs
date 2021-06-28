@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Xunit;
+using static Microsoft.Azure.WebJobs.Host.Scale.ProcessMonitor;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
 {
@@ -24,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             _testProcessorTimeValues = new List<TimeSpan>();
             _testPrivateMemoryValues = new List<long>();
             int effectiveCores = 1;
-            _monitor = new ProcessMonitor(Process.GetCurrentProcess(), new TestProcessMetricsProvider(_testProcessorTimeValues, _testPrivateMemoryValues), effectiveCores: effectiveCores, autoStart: false);
+            _monitor = new ProcessMonitor(new TestProcess(1, _testProcessorTimeValues, _testPrivateMemoryValues), effectiveCores: effectiveCores, autoStart: false);
         }
 
         public static IEnumerable<object[]> CPULoadTestData =>
@@ -50,6 +51,60 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
                     new List<long> { 524288000, 524690234, 525598012, 528710023, 538765843, 560987645, 598712101, 628928343, 645986754, 645985532, 656887110, 667853423 }
                 }
             };
+
+        [Fact]
+        public void Process_TotalProcessorTime_ReturnsExpectedResult()
+        {
+            var process = Process.GetCurrentProcess();
+            var monitor = new ProcessMonitor(process);
+
+            Assert.Equal(monitor.Process.TotalProcessorTime, process.TotalProcessorTime);
+
+            process.Refresh();
+
+            Assert.Equal(monitor.Process.TotalProcessorTime, process.TotalProcessorTime);
+        }
+
+        [Fact]
+        public void Process_PrivateMemoryBytes_ReturnsExpectedResult()
+        {
+            var process = Process.GetCurrentProcess();
+            var monitor = new ProcessMonitor(process);
+
+            Assert.Equal(monitor.Process.PrivateMemoryBytes, process.PrivateMemorySize64);
+
+            process.Refresh();
+
+            Assert.Equal(monitor.Process.PrivateMemoryBytes, process.PrivateMemorySize64);
+        }
+
+        [Fact]
+        public void Process_Id_ReturnsExpectedResult()
+        {
+            var process = Process.GetCurrentProcess();
+            var monitor = new ProcessMonitor(process);
+
+            Assert.Equal(monitor.Process.Id, process.Id);
+        }
+
+        [Fact]
+        public void Process_Disposed_HasExited_ReturnsExpectedValue()
+        {
+            var process = new Process();
+            process.Dispose();
+
+            var monitor = new ProcessMonitor(process);
+            Assert.True(monitor.Process.HasExited);
+        }
+
+        [Fact]
+        public void Process_HasExited_ReturnsExpectedValue()
+        {
+            var process = Process.GetCurrentProcess();
+
+            var monitor = new ProcessMonitor(process);
+            Assert.False(monitor.Process.HasExited);
+        }
 
         [Fact]
         public async Task GetStats_StartsSampleTimer()
@@ -134,23 +189,78 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             Assert.Equal(expected, cpuLoad);
         }
 
-        private class TestProcessMetricsProvider : IProcessMetricsProvider
+        [Fact]
+        public void ProcessWrapper_Equals_ReturnsExpectedResult()
         {
+            Process p1 = new Process();
+            IProcess pw1 = new ProcessWrapper(p1);
+
+            Process p2 = new Process();
+            IProcess pw2 = new ProcessWrapper(p2);
+
+            IProcess pw3 = new ProcessWrapper(p2);
+
+            // A wrapper is equal to its inner process.
+            Assert.True(pw1.Equals(p1));
+
+            // Not equal to another process.
+            Assert.False(pw1.Equals(p2));
+
+            // Self equality.
+            Assert.True(pw1.Equals(pw1));
+
+            // Note that only Equals works here. When using
+            // operator == the method used for the comparison
+            // is determined at compile time and won't end up
+            // using our overload.
+            Assert.False(pw1 == p1);
+
+            // Two different instances are not equal
+            Assert.False(pw1.Equals(pw2));
+
+            // these two wrapper instances point to the same underlying
+            // process so are equal
+            Assert.True(pw2.Equals(pw3));
+            Assert.False(pw2 == pw3);
+
+            Assert.False(pw1.Equals(null));
+        }
+
+        internal class TestProcess : IProcess
+        {
+            private int _id;
             private int _idx = 0;
             private List<TimeSpan> _processorTimeValues;
             private List<long> _privateMemoryValues;
+            private bool _hasExited;
+            private TimeSpan _totalProcessorTime;
+            private long _privateMemoryBytes;
+            private Random _rand = new Random();
 
-            public TestProcessMetricsProvider(List<TimeSpan> processorTimeValues, List<long> privateMemoryValues)
+            public TestProcess(int id, List<TimeSpan> processorTimeValues = null, List<long> privateMemoryValues = null)
             {
+                _id = id;
                 _processorTimeValues = processorTimeValues;
                 _privateMemoryValues = privateMemoryValues;
+                _totalProcessorTime = TimeSpan.FromMilliseconds(500);
+                _privateMemoryBytes = 500 * 1024 * 1024;
             }
+
+            // no underlying process for this test process
+            public Process Inner => null;
 
             public TimeSpan TotalProcessorTime
             {
                 get
                 {
-                    return _processorTimeValues[_idx++];
+                    if (_processorTimeValues != null)
+                    {
+                        return _processorTimeValues[_idx++];
+                    }
+                    else
+                    {
+                        return _totalProcessorTime;
+                    }
                 }
             }
 
@@ -158,8 +268,30 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             {
                 get
                 {
-                    return _privateMemoryValues[_idx++];
+                    if (_privateMemoryValues != null)
+                    {
+                        return _privateMemoryValues[_idx++];
+                    }
+                    else
+                    {
+                        return _privateMemoryBytes;
+                    }
                 }
+            }
+
+            public int Id => _id;
+
+            public bool HasExited => _hasExited;
+
+            public void Refresh()
+            {
+                _totalProcessorTime = _totalProcessorTime.Add(TimeSpan.FromMilliseconds(_rand.Next(50, 100)));
+                _privateMemoryBytes = _rand.Next(500 * 1024 * 1024, 550 * 1024 * 1024);
+            }
+
+            public void Kill()
+            {
+                _hasExited = true;
             }
         }
     }
