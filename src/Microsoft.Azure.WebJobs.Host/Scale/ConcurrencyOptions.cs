@@ -147,9 +147,9 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             {
                 { nameof(DynamicConcurrencyEnabled), DynamicConcurrencyEnabled },
                 { nameof(MaximumFunctionConcurrency), MaximumFunctionConcurrency },
-                { nameof(TotalAvailableMemoryBytes), TotalAvailableMemoryBytes },
                 // TODO: Once Memory monitoring is public add this back
                 // https://github.com/Azure/azure-webjobs-sdk/issues/2733
+                //{ nameof(TotalAvailableMemoryBytes), TotalAvailableMemoryBytes },
                 //{ nameof(MemoryThreshold), MemoryThreshold },
                 { nameof(CPUThreshold), CPUThreshold },
                 { nameof(SnapshotPersistenceEnabled), SnapshotPersistenceEnabled }

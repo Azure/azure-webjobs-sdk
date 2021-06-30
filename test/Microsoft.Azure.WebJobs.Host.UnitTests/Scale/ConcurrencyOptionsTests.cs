@@ -127,7 +127,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             string expected = @"{
   ""DynamicConcurrencyEnabled"": true,
   ""MaximumFunctionConcurrency"": 1000,
-  ""TotalAvailableMemoryBytes"": 3000000,
   ""CPUThreshold"": 0.85,
   ""SnapshotPersistenceEnabled"": true
 }";

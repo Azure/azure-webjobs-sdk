@@ -176,7 +176,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "{",
                     "  \"DynamicConcurrencyEnabled\": false",
                     "  \"MaximumFunctionConcurrency\": 500",
-                    "  \"TotalAvailableMemoryBytes\": -1",
                     "  \"CPUThreshold\": 0.8",
                     "  \"SnapshotPersistenceEnabled\": true",
                     "}",
