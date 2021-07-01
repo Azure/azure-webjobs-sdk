@@ -127,10 +127,11 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         {
             var snapshot = _concurrencyManager.GetSnapshot();
 
-            // only persist snapshots for functions that are in our current index
-            // this ensures we prune any stale entries from a previously applied snapshot
+            // Only persist snapshots for functions that are in our current index. This ensures
+            // we prune any stale entries from a previously applied snapshot.
+            // Note that functions using a shared listener are treated specially here.
             var functionIndex = await _functionIndexProvider.GetAsync(CancellationToken.None);
-            var functions = functionIndex.ReadAll().ToLookup(p => p.Descriptor.Id, StringComparer.OrdinalIgnoreCase);
+            var functions = functionIndex.ReadAll().ToLookup(p => p.Descriptor.SharedListenerId ?? p.Descriptor.Id, StringComparer.OrdinalIgnoreCase);
             snapshot.FunctionSnapshots = snapshot.FunctionSnapshots.Where(p => functions.Contains(p.Key)).ToDictionary(p => p.Key, p => p.Value);
 
             if (!snapshot.Equals(_lastSnapshot))

@@ -84,12 +84,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             string functionStartedMessageId = null;
             FunctionInstanceLogEntry instanceLogEntry = null;
             Stopwatch sw = Stopwatch.StartNew();
+            string concurrencyFunctionId = functionInstanceEx.FunctionDescriptor.SharedListenerId ?? functionInstanceEx.FunctionDescriptor.Id;
 
             try
             {
                 if (_concurrencyManager.Enabled)
                 {
-                    _concurrencyManager.FunctionStarted(functionInstanceEx.FunctionDescriptor.Id);
+                    _concurrencyManager.FunctionStarted(concurrencyFunctionId);
                 }
 
                 using (_resultsLogger?.BeginFunctionScope(functionInstanceEx, HostOutputMessage.HostInstanceId))
@@ -143,7 +144,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 sw.Stop();
                 if (_concurrencyManager.Enabled)
                 {
-                    _concurrencyManager.FunctionCompleted(functionInstanceEx.FunctionDescriptor.Id, sw.Elapsed);
+                    _concurrencyManager.FunctionCompleted(concurrencyFunctionId, sw.Elapsed);
                 }
 
                 ((IDisposable)functionInstanceEx)?.Dispose();

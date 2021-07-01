@@ -285,7 +285,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IHostProcessMonitor",
                 "IPrimaryHostStateProvider",
                 "PrimaryHostCoordinatorOptions",
-                "ThrottleState"
+                "ThrottleState",
+                "SharedListenerAttribute"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);

@@ -188,8 +188,10 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             Dictionary<string, IBinding> nonTriggerBindings = new Dictionary<string, IBinding>();
             IReadOnlyDictionary<string, Type> bindingDataContract;
 
+            string sharedListenerId = null;
             if (triggerBinding != null)
             {
+                sharedListenerId = GetSharedListenerIdOrNull(triggerBinding);
                 bindingDataContract = triggerBinding.BindingDataContract;
 
                 // See if a regular binding can handle it. 
@@ -308,7 +310,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
 
             string triggerParameterName = triggerParameter != null ? triggerParameter.Name : null;
-            FunctionDescriptor functionDescriptor = CreateFunctionDescriptor(method, triggerParameterName, triggerBinding, nonTriggerBindings);
+            FunctionDescriptor functionDescriptor = CreateFunctionDescriptor(method, triggerParameterName, triggerBinding, nonTriggerBindings, sharedListenerId);
             IFunctionInvoker invoker = FunctionInvokerFactory.Create(method, _activator);
             IFunctionDefinition functionDefinition;
 
@@ -330,6 +332,19 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
 
             index.Add(functionDefinition, functionDescriptor, method);
+        }
+
+        internal static string GetSharedListenerIdOrNull(ITriggerBinding triggerBinding)
+        {
+            // see if the trigger binding uses the shared listener pattern and if so
+            // capture the shared ID for application to the FunctionDescriptor below
+            var sharedListenerAttribute = triggerBinding.GetType().GetCustomAttribute<SharedListenerAttribute>();
+            if (sharedListenerAttribute != null && !string.IsNullOrEmpty(sharedListenerAttribute.SharedListenerId))
+            {
+                return sharedListenerAttribute.SharedListenerId;
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -396,7 +411,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         }
 
         private FunctionDescriptor CreateFunctionDescriptor(MethodInfo method, string triggerParameterName,
-            ITriggerBinding triggerBinding, IReadOnlyDictionary<string, IBinding> nonTriggerBindings)
+            ITriggerBinding triggerBinding, IReadOnlyDictionary<string, IBinding> nonTriggerBindings, string sharedListenerId)
         {
             var descr = FromMethod(method, _configuration, this._activator, _nameResolver, _defaultTimeout, _defaultRetryStrategy);
 
@@ -418,6 +433,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
             descr.Parameters = parameters;
             descr.TriggerParameterDescriptor = parameters.OfType<TriggerParameterDescriptor>().FirstOrDefault();
+            descr.SharedListenerId = sharedListenerId;
 
             return descr;
         }
