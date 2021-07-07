@@ -57,15 +57,25 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             {
                 { "function0", new FunctionConcurrencySnapshot { Concurrency = 5 } },
                 { "function1", new FunctionConcurrencySnapshot { Concurrency = 10 } },
-                { "function2", new FunctionConcurrencySnapshot { Concurrency = 15 } }
+                { "function2", new FunctionConcurrencySnapshot { Concurrency = 15 } },
+                { "testsharedid", new FunctionConcurrencySnapshot { Concurrency = 20 } }
             };
 
+            // add a few normal functions
             List<IFunctionDefinition> functions = new List<IFunctionDefinition>();
             for (int i = 0; i < 3; i++)
             {
                 var functionDefinitionMock = new Mock<IFunctionDefinition>(MockBehavior.Strict);
                 functionDefinitionMock.Setup(p => p.Descriptor).Returns(new FunctionDescriptor { Id = $"function{i}" });
                 functions.Add(functionDefinitionMock.Object); 
+            }
+
+            // add a few functions using the shared listener pattern
+            for (int i = 3; i < 6; i++)
+            {
+                var functionDefinitionMock = new Mock<IFunctionDefinition>(MockBehavior.Strict);
+                functionDefinitionMock.Setup(p => p.Descriptor).Returns(new FunctionDescriptor { Id = $"function{i}", SharedListenerId = "testsharedid" });
+                functions.Add(functionDefinitionMock.Object);
             }
 
             var functionIndexMock = new Mock<IFunctionIndex>(MockBehavior.Strict);
@@ -167,7 +177,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
         }
 
         [Fact]
-        public async Task OnPersistenceTimer_Primary_WriteSnapshot()
+        public async Task OnPersistenceTimer_Primary_WritesSnapshot()
         {
             _isPrimaryHost = true;
 
@@ -181,7 +191,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             _concurrencyManagerMock.VerifyAll();
 
             Assert.True(_concurrencyManagerService.StatusPersistenceTimer.Enabled);
-            Assert.Equal(3, _snapshot.FunctionSnapshots.Count);
+            Assert.Equal(4, _snapshot.FunctionSnapshots.Count);
         }
 
         [Fact]
@@ -202,11 +212,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             _concurrencyManagerMock.VerifyAll();
 
             Assert.True(_concurrencyManagerService.StatusPersistenceTimer.Enabled);
-            Assert.Equal(3, _snapshot.FunctionSnapshots.Count);
+            Assert.Equal(4, _snapshot.FunctionSnapshots.Count);
             Assert.Collection(_snapshot.FunctionSnapshots,
                 p => Assert.Equal("function0", p.Key),
                 p => Assert.Equal("function1", p.Key),
-                p => Assert.Equal("function2", p.Key));
+                p => Assert.Equal("function2", p.Key),
+                p => Assert.Equal("testsharedid", p.Key));
         }
 
         [Fact]

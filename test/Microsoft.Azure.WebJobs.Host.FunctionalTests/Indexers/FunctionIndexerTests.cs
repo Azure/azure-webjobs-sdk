@@ -8,15 +8,16 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.Storage;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Indexers;
+using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Properties;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.Logging;
-using Microsoft.Azure.Storage;
 using Moq;
 using Xunit;
 
@@ -279,6 +280,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             Assert.Equal("ClassB.Test", index.LookupByName("ClassB.Test").Descriptor.ShortName);
         }
 
+        [Fact]
+        public void GetSharedListenerIdOrNull_ReturnsExpectedValue()
+        {
+            string result = FunctionIndexer.GetSharedListenerIdOrNull(new TestTriggerBinding());
+            Assert.Null(result);
+
+            result = FunctionIndexer.GetSharedListenerIdOrNull(new TestSharedListenerTriggerBinding());
+            Assert.Equal("TestSharedListenerId", result);
+        }
+
         public class ClassA
         {
             [NoAutomaticTrigger]
@@ -484,6 +495,50 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             }
         }
 
+        [SharedListener("TestSharedListenerId")]
+        public class TestSharedListenerTriggerBinding : ITriggerBinding
+        {
+            public Type TriggerValueType => throw new NotImplementedException();
+
+            public IReadOnlyDictionary<string, Type> BindingDataContract => throw new NotImplementedException();
+
+            public Task<ITriggerData> BindAsync(object value, ValueBindingContext context)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Task<IListener> CreateListenerAsync(ListenerFactoryContext context)
+            {
+                throw new NotImplementedException();
+            }
+
+            public ParameterDescriptor ToParameterDescriptor()
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public class TestTriggerBinding : ITriggerBinding
+        {
+            public Type TriggerValueType => throw new NotImplementedException();
+
+            public IReadOnlyDictionary<string, Type> BindingDataContract => throw new NotImplementedException();
+
+            public Task<ITriggerData> BindAsync(object value, ValueBindingContext context)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Task<IListener> CreateListenerAsync(ListenerFactoryContext context)
+            {
+                throw new NotImplementedException();
+            }
+
+            public ParameterDescriptor ToParameterDescriptor()
+            {
+                throw new NotImplementedException();
+            }
+        }
 
         [Fact]
         public async Task FSharpTasks_AreCorrectlyIndexed()

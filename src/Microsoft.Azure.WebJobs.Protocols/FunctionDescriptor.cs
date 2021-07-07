@@ -79,6 +79,12 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
         /// </summary>
         [JsonIgnore]
         internal IRetryStrategy RetryStrategy { get; set; }
+
+        /// <summary>
+        /// Gets or sets the shared listener ID for this function.
+        /// </summary>
+        [JsonIgnore]
+        internal string SharedListenerId { get; set; }
 #endif
     }
 }

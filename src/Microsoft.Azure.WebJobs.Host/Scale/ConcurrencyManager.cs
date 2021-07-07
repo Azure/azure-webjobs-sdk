@@ -72,7 +72,9 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// <param name="functionId">This should be the full ID, as returned by <see cref="FunctionDescriptor.ID"/>.</param>
         /// <returns>The updated concurrency status.</returns>
         /// <remarks>
-        /// This method shouldn't be called concurrently for the same function ID.
+        /// This method shouldn't be called concurrently for the same function ID. For trigger bindings using a shared listener pattern,
+        /// the ID passed to this function should be the shared ID, and that ID should also be annotated on the
+        /// <see cref="Microsoft.Azure.WebJobs.Host.Triggers.ITriggerBinding"/> implementation using <see cref="SharedListenerAttribute"/>.
         /// </remarks>
         public ConcurrencyStatus GetStatus(string functionId)
         {
