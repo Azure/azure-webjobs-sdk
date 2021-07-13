@@ -62,21 +62,19 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             Assert.Equal(concurrencyManager.Enabled, enabled);
         }
 
-        [Theory]
-        [InlineData(ThrottleState.Enabled)]
-        [InlineData(ThrottleState.Disabled)]
-        [InlineData(ThrottleState.Unknown)]
-        public void ThrottleEnabled_ReturnsExpectedResult(ThrottleState throttleState)
+        [Fact]
+        public void ThrottleStatus_ReturnsExpectedResult()
         {
-            _throttleStatus = new ConcurrencyThrottleAggregateStatus { State = throttleState };
+            _throttleStatus = new ConcurrencyThrottleAggregateStatus { State = ThrottleState.Disabled };
 
             // set the last adjustment outside of the throttle window so GetStatus
             // won't short circuit
             TestHelpers.SetupStopwatch(_testFunctionConcurrencyStatus.LastConcurrencyAdjustmentStopwatch, TimeSpan.FromSeconds(ConcurrencyStatus.DefaultMinAdjustmentFrequencySeconds + 1));
 
-            _concurrencyManager.GetStatus(TestFunctionId);
+            var concurrencyStatus = _concurrencyManager.GetStatus(TestFunctionId);
 
-            Assert.Equal(_concurrencyManager.ThrottleEnabled, throttleState == ThrottleState.Enabled);
+            Assert.Same(_throttleStatus, _concurrencyManager.ThrottleStatus);
+            Assert.Same(_throttleStatus, concurrencyStatus.ThrottleStatus);
         }
 
         [Theory]
@@ -395,6 +393,34 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             Assert.Equal(25, _concurrencyManager.ConcurrencyStatuses["testfunction1"].CurrentConcurrency);
             Assert.Equal(50, _concurrencyManager.ConcurrencyStatuses["testfunction2"].CurrentConcurrency);
             Assert.Equal(75, _concurrencyManager.ConcurrencyStatuses["testfunction3"].CurrentConcurrency);
+        }
+
+        [Fact]
+        public void ApplySnapshot_ConcurrencyGreaterThanMax_DoesNotApplySnapshot()
+        {
+            var snapshot = new HostConcurrencySnapshot
+            {
+                Timestamp = DateTime.UtcNow,
+                NumberOfCores = _concurrencyManager.EffectiveCoresCount,
+                FunctionSnapshots = new Dictionary<string, FunctionConcurrencySnapshot>
+                {
+                    { "testfunction1", new FunctionConcurrencySnapshot { Concurrency = 50 } },
+                    { "testfunction2", new FunctionConcurrencySnapshot { Concurrency = 100 } },
+                    { "testfunction3", new FunctionConcurrencySnapshot { Concurrency = 501 } }
+                }
+            };
+
+            Assert.Single(_concurrencyManager.ConcurrencyStatuses);
+            Assert.Equal(1, _concurrencyManager.ConcurrencyStatuses["testfunction"].CurrentConcurrency);
+
+            _concurrencyManager.ApplySnapshot(snapshot);
+
+            Assert.Equal(3, _concurrencyManager.ConcurrencyStatuses.Count);
+
+            // snapshot for third function wasn't applied because it's over limit
+            Assert.Equal(1, _concurrencyManager.ConcurrencyStatuses["testfunction"].CurrentConcurrency);
+            Assert.Equal(50, _concurrencyManager.ConcurrencyStatuses["testfunction1"].CurrentConcurrency);
+            Assert.Equal(100, _concurrencyManager.ConcurrencyStatuses["testfunction2"].CurrentConcurrency);
         }
 
         private void SimulateFunctionInvocations(string functionId, int count)

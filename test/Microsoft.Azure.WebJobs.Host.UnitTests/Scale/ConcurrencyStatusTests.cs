@@ -23,12 +23,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
         private readonly Mock<ConcurrencyManager> _concurrencyManagerMock;
         private readonly ConcurrencyStatus _testConcurrencyStatus;
 
-        private bool _throttleEnabled;
+        private ConcurrencyThrottleAggregateStatus _throttleStatus;
 
         public ConcurrencyStatusTests()
         {
+            _throttleStatus = new ConcurrencyThrottleAggregateStatus();
+
             _concurrencyManagerMock = new Mock<ConcurrencyManager>(MockBehavior.Strict);
-            _concurrencyManagerMock.SetupGet(p => p.ThrottleEnabled).Returns(() => _throttleEnabled);
+            _concurrencyManagerMock.SetupGet(p => p.ThrottleStatus).Returns(() => _throttleStatus);
 
             _testConcurrencyStatus = new ConcurrencyStatus(TestFunctionId, _concurrencyManagerMock.Object);
         }
@@ -40,56 +42,46 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
         }
 
         [Fact]
-        public void AvailableInvocationCount_ReturnsAvailableBuffer()
+        public void GetAvailableInvocationCount_ReturnsAvailableBuffer()
         {
             _testConcurrencyStatus.OutstandingInvocations = 25;
             _testConcurrencyStatus.CurrentConcurrency = 100;
 
-            Assert.Equal(75, _testConcurrencyStatus.AvailableInvocationCount);
+            Assert.Equal(75, _testConcurrencyStatus.GetAvailableInvocationCount(0));
+            Assert.Equal(15, _testConcurrencyStatus.GetAvailableInvocationCount(85));
         }
 
         [Fact]
-        public void AvailableInvocationCount_OverLimit_ReturnsZero()
+        public void GetAvailableInvocationCount_NegativePendingInvocations_Throws()
+        {
+            _testConcurrencyStatus.OutstandingInvocations = 75;
+            _testConcurrencyStatus.CurrentConcurrency = 100;
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => _testConcurrencyStatus.GetAvailableInvocationCount(-1));
+        }
+
+        [Fact]
+        public void GetAvailableInvocationCount_OverLimit_ReturnsZero()
         {
             _testConcurrencyStatus.OutstandingInvocations = 105;
             _testConcurrencyStatus.CurrentConcurrency = 100;
 
-            Assert.Equal(0, _testConcurrencyStatus.AvailableInvocationCount);
+            Assert.Equal(0, _testConcurrencyStatus.GetAvailableInvocationCount(0));
+            Assert.Equal(0, _testConcurrencyStatus.GetAvailableInvocationCount(120));
         }
 
         [Fact]
-        public void AvailableInvocationCount_ThrottleEnabled_ReturnsZero()
+        public void GetAvailableInvocationCount_ThrottleEnabled_ReturnsZero()
         {
             _testConcurrencyStatus.OutstandingInvocations = 25;
             _testConcurrencyStatus.CurrentConcurrency = 100;
-            _throttleEnabled = true;
+            _throttleStatus = new ConcurrencyThrottleAggregateStatus
+            {
+                State = ThrottleState.Enabled,
+                EnabledThrottles = new List<string> { "CPU" }
+            };
 
-            Assert.Equal(0, _testConcurrencyStatus.AvailableInvocationCount);
-        }
-
-        [Fact]
-        public void NextStatusDelay_ReturnsExpectedValue()
-        {
-            // AvailableInvocationCount > 0
-            _testConcurrencyStatus.OutstandingInvocations = 25;
-            _testConcurrencyStatus.CurrentConcurrency = 100;
-            _throttleEnabled = false;
-            Assert.True(_testConcurrencyStatus.AvailableInvocationCount > 0);
-            Assert.Equal(TimeSpan.Zero, _testConcurrencyStatus.NextStatusDelay);
-
-            // AvailableInvocationCount == 0
-            _testConcurrencyStatus.OutstandingInvocations = 125;
-            _testConcurrencyStatus.CurrentConcurrency = 100;
-            _throttleEnabled = false;
-            Assert.Equal(0, _testConcurrencyStatus.AvailableInvocationCount);
-            Assert.Equal(TimeSpan.FromSeconds(ConcurrencyStatus.NextStatusDelayDefaultSeconds), _testConcurrencyStatus.NextStatusDelay);
-
-            // AvailableInvocationCount == 0 (Throttling)
-            _testConcurrencyStatus.OutstandingInvocations = 125;
-            _testConcurrencyStatus.CurrentConcurrency = 100;
-            _throttleEnabled = true;
-            Assert.Equal(0, _testConcurrencyStatus.AvailableInvocationCount);
-            Assert.Equal(TimeSpan.FromSeconds(ConcurrencyStatus.NextStatusDelayDefaultSeconds), _testConcurrencyStatus.NextStatusDelay);
+            Assert.Equal(0, _testConcurrencyStatus.GetAvailableInvocationCount(0));
         }
 
         [Fact]

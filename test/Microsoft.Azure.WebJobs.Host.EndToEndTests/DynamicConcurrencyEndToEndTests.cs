@@ -616,6 +616,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     private readonly ConcurrencyManager _concurrencyManager;
                     private readonly FunctionDescriptor _descriptor;
                     private readonly string _source;
+                    private int _pendingInvocationCount;
                     private bool _disposed;
 
                     public TestTriggerListener(ConcurrencyManager concurrencyManager, ITriggeredFunctionExecutor executor, FunctionDescriptor descriptor, string source)
@@ -666,12 +667,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                                 // Demonstrates how a listener integrates with Dynamic Concurrency querying
                                 // ConcurrencyManager and limiting the amount of new invocations started.
                                 var concurrencyStatus = _concurrencyManager.GetStatus(_descriptor.Id);
-                                currentBatchSize = Math.Min(concurrencyStatus.AvailableInvocationCount, 32);
+                                int availableInvocationCount = concurrencyStatus.GetAvailableInvocationCount(_pendingInvocationCount);
+                                currentBatchSize = Math.Min(availableInvocationCount, 32);
                                 if (currentBatchSize == 0)
                                 {
                                     // if we're not healthy or we're at our limit, we'll wait
                                     // a bit before checking again
-                                    _timer.Change((int)concurrencyStatus.NextStatusDelay.TotalMilliseconds, Timeout.Infinite);
+                                    _timer.Change(1000, Timeout.Infinite);
                                     return;
                                 }
                             }
@@ -682,7 +684,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                             foreach (var evt in events)
                             {
                                 foundEvent = true;
-                                _executor.TryExecuteAsync(new TriggeredFunctionData { TriggerValue = evt }, CancellationToken.None);
+                                var tIgnore = ExecuteFunctionAsync(evt);
                             }
 
                             if (foundEvent)
@@ -700,6 +702,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         catch
                         {
                             // don't let background exceptions propagate
+                        }
+                    }
+
+                    private async Task ExecuteFunctionAsync(TestEvent evt)
+                    {
+                        try
+                        {
+                            Interlocked.Increment(ref _pendingInvocationCount);
+
+                            await _executor.TryExecuteAsync(new TriggeredFunctionData { TriggerValue = evt }, CancellationToken.None);
+                        }
+                        finally
+                        {
+                            Interlocked.Decrement(ref _pendingInvocationCount);
                         }
                     }
                 }
