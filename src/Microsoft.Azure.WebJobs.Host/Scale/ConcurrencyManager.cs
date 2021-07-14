@@ -28,7 +28,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         private readonly IConcurrencyThrottleManager _concurrencyThrottleManager;
         private readonly bool _enabled;
 
-        private ConcurrencyThrottleAggregateStatus? _throttleStatus;
+        private ConcurrencyThrottleAggregateStatus _throttleStatus;
 
 #nullable disable
         // for mock testing only
@@ -50,6 +50,8 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             _enabled = _options.Value.DynamicConcurrencyEnabled;
 
             EffectiveCoresCount = Utility.GetEffectiveCoresCount();
+
+            _throttleStatus = new ConcurrencyThrottleAggregateStatus();
         }
 
         /// <summary>
@@ -58,9 +60,9 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         public bool Enabled => _enabled;
 
         /// <summary>
-        /// Gets a value indicating whether any throttles are currently enabled.
+        /// Gets the current throttle status.
         /// </summary>
-        internal virtual bool ThrottleEnabled => _throttleStatus?.State == ThrottleState.Enabled;
+        internal virtual ConcurrencyThrottleAggregateStatus ThrottleStatus => _throttleStatus;
 
         internal int EffectiveCoresCount { get; set; }
 
@@ -148,6 +150,13 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                 foreach (var functionSnapshot in hostSnapshot.FunctionSnapshots)
                 {
                     int concurrency = GetCoreAdjustedConcurrency(functionSnapshot.Value.Concurrency, hostSnapshot.NumberOfCores, EffectiveCoresCount);
+                    if (concurrency > _options.Value.MaximumFunctionConcurrency)
+                    {
+                        // don't apply the snapshot if its concurrency value is greater than the
+                        // maximum configured level
+                        continue;
+                    }
+
                     functionSnapshot.Value.Concurrency = concurrency;
 
                     // Since we may be initializing for functions that haven't run yet, if the snapshot contains

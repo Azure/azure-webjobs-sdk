@@ -12,6 +12,11 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
     /// </summary>
     public class ConcurrencyThrottleAggregateStatus
     {
+        public ConcurrencyThrottleAggregateStatus()
+        {
+            State = ThrottleState.Unknown;
+        }
+
         /// <summary>
         /// Gets or sets current aggregate throttle state.
         /// </summary>

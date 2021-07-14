@@ -12,7 +12,6 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
     /// </summary>
     public class ConcurrencyStatus
     {
-        internal const int NextStatusDelayDefaultSeconds = 1;
         internal const int DefaultFailedAdjustmentQuietWindowSeconds = 30;
         internal const int AdjustmentRunWindowSeconds = 10;
         internal const int DefaultMinAdjustmentFrequencySeconds = 5;
@@ -58,58 +57,30 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         public string FunctionId { get; }
 
         /// <summary>
-        /// Gets the current number of new invocations of this function the host can process.
-        /// When throttling is enabled, this may return 0 meaning no new invocations should be
-        /// started.
-        /// </summary>
-        public int AvailableInvocationCount
-        {
-            get
-            {
-                if (_concurrencyManager.ThrottleEnabled || OutstandingInvocations > CurrentConcurrency)
-                {
-                    // we can't take any work right now
-                    return 0;
-                }
-                else
-                {
-                    // no throttles are enabled, so we can take work up to the current concurrency level
-                    return CurrentConcurrency - OutstandingInvocations;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Gets the current concurrency level for this function. This adjusts
+        /// Gets the current maximum allowed concurrency level for this function. This adjusts
         /// dynamically over time.
         /// </summary>
+        /// <remarks>
+        /// The number of outstanding invocations should always be less than or equal
+        /// to this number. When concurrency is dynamically adjusted down, it might be
+        /// possible for the number of outstanding invocations to exceed this number
+        /// for a short period of time, but in general the above holds.
+        /// </remarks>
         public int CurrentConcurrency { get; internal set; }
 
         /// <summary>
-        /// Gets the current number of in progress invocations of this function.
+        /// Gets the current number of actively executing invocations of this function.
         /// </summary>
         public int OutstandingInvocations { get; internal set; }
 
         /// <summary>
-        /// Gets the recommended delay for the next time <see cref="ConcurrencyManager.GetStatus(string)"/> should be called
-        /// for this function.
+        /// Gets the current throttle status.
         /// </summary>
-        public TimeSpan NextStatusDelay
+        public ConcurrencyThrottleAggregateStatus ThrottleStatus
         {
             get
             {
-                if (AvailableInvocationCount == 0)
-                {
-                    // currently hardcoded, but can be made dynamic/configurable in the future
-                    // if the host is currently throttling or otherwise can't take any more work,
-                    // caller should delay the next status call, to give time for the situation
-                    // to change
-                    return TimeSpan.FromSeconds(NextStatusDelayDefaultSeconds);
-                }
-                else
-                {
-                    return TimeSpan.Zero;
-                }
+                return _concurrencyManager.ThrottleStatus;
             }
         }
 
@@ -142,6 +113,47 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// concurrency was adjusted.
         /// </summary>
         internal double TotalInvocationTimeSinceLastAdjustmentMs { get; set; }
+
+        /// <summary>
+        /// Gets the current number of new invocations of this function the host can process.
+        /// When throttling is enabled, this may return 0 meaning no new invocations should be
+        /// started.
+        /// </summary>
+        /// <param name="pendingInvocations">The number of pending invocations the caller
+        /// is tracking. Must be greater than or equal to zero. Note that this number may be greater than
+        /// <see cref="ConcurrencyStatus.OutstandingInvocations"/> since some pending invocations may not have
+        /// actually started executing yet.
+        /// </param>
+        /// <remarks>
+        /// Intuitively, the number of available invocations is <see cref="CurrentConcurrency"/> minus
+        /// the number of pending/outstanding invocations. This method also takes the current throttle state
+        /// into account and will return 0 if <see cref="ThrottleStatus"/> indicates one or more throttles
+        /// are currently enabled.
+        /// </remarks>
+        /// <returns>The maximum number of new invocations that can be started.</returns>
+        public int GetAvailableInvocationCount(int pendingInvocations)
+        {
+            if (pendingInvocations < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(pendingInvocations));
+            }
+
+            // the number of pending invocations as tracked by the caller may be greater than
+            // the number of OutstandingInvocations we're tracking, since some of the pending
+            // invocations may not have actually started executing yet
+            pendingInvocations = Math.Max(pendingInvocations, OutstandingInvocations);
+
+            if (_concurrencyManager.ThrottleStatus.State == ThrottleState.Enabled || pendingInvocations >= CurrentConcurrency)
+            {
+                // we can't take any work right now
+                return 0;
+            }
+            else
+            {
+                // no throttles are enabled, so we can take work up to the current concurrency level
+                return CurrentConcurrency - pendingInvocations;
+            }
+        }
 
         internal void ApplySnapshot(FunctionConcurrencySnapshot snapshot)
         {

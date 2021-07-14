@@ -110,7 +110,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                 // need to simulate the listener beginning the invocation
                 concurrencyStatus = _concurrencyManager.GetStatus(functionId);
                 Assert.Single(_concurrencyManager.ConcurrencyStatuses);
-                Assert.Equal(1, concurrencyStatus.AvailableInvocationCount);
+                Assert.Equal(1, concurrencyStatus.GetAvailableInvocationCount(0));
                 Assert.Equal(0, concurrencyStatus.OutstandingInvocations);
                 Assert.Equal(0, concurrencyStatus.InvocationsSinceLastAdjustment);
                 Assert.Equal(0, concurrencyStatus.MaxConcurrentExecutionsSinceLastAdjustment);
@@ -125,7 +125,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             {
                 // verify concurrency manager tracked the invocation
                 concurrencyStatus = _concurrencyManager.ConcurrencyStatuses[functionId];
-                Assert.Equal(1, concurrencyStatus.AvailableInvocationCount);
+                Assert.Equal(1, concurrencyStatus.GetAvailableInvocationCount(0));
                 Assert.Equal(0, concurrencyStatus.OutstandingInvocations);
                 Assert.Equal(1, concurrencyStatus.InvocationsSinceLastAdjustment);
                 Assert.Equal(1, concurrencyStatus.MaxConcurrentExecutionsSinceLastAdjustment);
