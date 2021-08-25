@@ -40,10 +40,10 @@ namespace Microsoft.Azure.WebJobs
         /// Put the object into the cache.
         /// </summary>
         /// <param name="cacheObject">Object to put into the cache.</param>
-        /// <param name="incrementActiveReferenceCount">Whether to keep an active reference on the object when inserted into the cache.
+        /// <param name="isIncrementActiveReference">Whether to keep an active reference on the object when inserted into the cache.
         /// This is needed in cases where this object needs to be read in the future and we don't want it to be evicted.
         /// e.g., when an object is being read as part of input binding and will need to be used right away, we don't want another binding to result in evicting this object.</param>
         /// <returns><see cref="true"/> if the object was successfully put into the cache, <see cref="false"/> otherwise.</returns>
-        bool TryPutToCache(SharedMemoryMetadata cacheObject, bool incrementActiveReferenceCount);
+        bool TryPutToCache(SharedMemoryMetadata cacheObject, bool isIncrementActiveReference);
     }
 }
