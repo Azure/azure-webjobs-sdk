@@ -3,12 +3,13 @@
 
 using System;
 using System.IO;
-using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs
 {
     /// <summary>
-    /// TODO.
+    /// An object that is being read as input.
+    /// It may be read from storage if the cache does not have it. In this case, an attempt is made to cache this object for future reads.
+    /// It may be read from the cache if it was previously read and cached.
     /// </summary>
     public interface ICacheAwareReadObject : IDisposable
     {
@@ -38,9 +39,11 @@ namespace Microsoft.Azure.WebJobs
         /// <summary>
         /// Put the object into the cache.
         /// </summary>
-        /// <param name="cacheObject"></param>
-        /// <param name="isIncrementActiveReference"></param>
+        /// <param name="cacheObject">Object to put into the cache.</param>
+        /// <param name="incrementActiveReferenceCount">Whether to keep an active reference on the object when inserted into the cache.
+        /// This is needed in cases where this object needs to be read in the future and we don't want it to be evicted.
+        /// e.g., when an object is being read as part of input binding and will need to be used right away, we don't want another binding to result in evicting this object.</param>
         /// <returns><see cref="true"/> if the object was successfully put into the cache, <see cref="false"/> otherwise.</returns>
-        bool TryPutToCache(SharedMemoryMetadata cacheObject, bool isIncrementActiveReference);
+        bool TryPutToCache(SharedMemoryMetadata cacheObject, bool incrementActiveReferenceCount);
     }
 }

@@ -1,14 +1,14 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
 using System.IO;
 using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs
 {
     /// <summary>
-    /// TODO.
+    /// An object that is being written as output.
+    /// An attempt will be made to write this object into the cache for future reads.
     /// </summary>
     public interface ICacheAwareWriteObject
     {

@@ -6,7 +6,7 @@ using System;
 namespace Microsoft.Azure.WebJobs.Description
 {
     /// <summary>
-    /// TODO .
+    /// Object containing metadata about a shared memory region to read/write from/to.
     /// </summary>
     [AttributeUsage(AttributeTargets.Parameter)]
     [Binding]
@@ -16,7 +16,7 @@ namespace Microsoft.Azure.WebJobs.Description
         private long _count;
 
         /// <summary>
-        /// TODO .
+        /// Construct a <see cref="SharedMemoryAttribute"/> with the given metadata.
         /// </summary>
         /// <param name="memoryMapName"></param>
         /// <param name="count"></param>
