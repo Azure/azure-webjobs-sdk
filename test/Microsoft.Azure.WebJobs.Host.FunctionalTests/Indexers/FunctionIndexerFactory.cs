@@ -36,7 +36,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 .ConfigureDefaultTestHost(b =>
                 {
                     b.UseHostId("testhost")
-                    .AddAzureStorage();
+                    .AddAzureStorage()
+                    .AddServiceBus();
                 })
                 .ConfigureServices(services =>
                 {

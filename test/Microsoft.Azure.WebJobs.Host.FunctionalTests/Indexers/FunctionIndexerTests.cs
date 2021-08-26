@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.ServiceBus.Core;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
@@ -44,6 +45,32 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             InvalidOperationException innerException = exception.InnerException as InvalidOperationException;
             Assert.NotNull(innerException);
             Assert.Equal($"Cannot bind parameter 'parsed' to type Foo&. Make sure the parameter Type is supported by the binding. {Resource.ExtensionInitializationMessage}", innerException.Message);
+        }
+
+        [Fact]
+        public async Task IndexMethod_ProvidesBindingContractHelp_WhenParameterFailsToBind()
+        {
+            FunctionIndexer product = CreateProductUnderTest();
+
+            // QueueTrigger example
+            FunctionIndexingException exception = await Assert.ThrowsAsync<FunctionIndexingException>(async () =>
+            {
+                var methodToIndex = typeof(FunctionIndexerTests).GetMethod(nameof(FunctionIndexerTests.QueueTrigger_ContractParameterBindingFailsIndexing));
+                await product.IndexMethodAsync(methodToIndex, null, CancellationToken.None);
+            });
+            InvalidOperationException innerException = exception.InnerException as InvalidOperationException;
+            Assert.NotNull(innerException);
+            Assert.Equal("Cannot bind parameter 'expiryTime' to type DateTimeOffset. Make sure the parameter Type is supported by the binding. The binding supports the following parameter names for type DateTimeOffset: (ExpirationTime, InsertionTime, NextVisibleTime). If you're trying to bind to one of those values, rename your parameter to match the contract name (case insensitive). If you're using binding extensions (e.g. Azure Storage, ServiceBus, Timers, etc.) make sure you've called the registration method for the extension(s) in your startup code (e.g. builder.AddAzureStorage(), builder.AddServiceBus(), builder.AddTimers(), etc.).", innerException.Message);
+
+            // ServiceBusTrigger example
+            exception = await Assert.ThrowsAsync<FunctionIndexingException>(async () =>
+            {
+                var methodToIndex = typeof(FunctionIndexerTests).GetMethod(nameof(FunctionIndexerTests.ServiceBusTrigger_ContractParameterBindingFailsIndexing));
+                await product.IndexMethodAsync(methodToIndex, null, CancellationToken.None);
+            });
+            innerException = exception.InnerException as InvalidOperationException;
+            Assert.NotNull(innerException);
+            Assert.Equal("Cannot bind parameter 'receiver' to type MessageReceiver. Make sure the parameter Type is supported by the binding. The binding supports the following parameter names for type MessageReceiver: (MessageReceiver). If you're trying to bind to one of those values, rename your parameter to match the contract name (case insensitive). If you're using binding extensions (e.g. Azure Storage, ServiceBus, Timers, etc.) make sure you've called the registration method for the extension(s) in your startup code (e.g. builder.AddAzureStorage(), builder.AddServiceBus(), builder.AddTimers(), etc.).", innerException.Message);
         }
 
         [Theory]
@@ -375,6 +402,20 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
         [NoAutomaticTrigger]
         public static void FailIndexing(string input, out Foo parsed)
+        {
+            throw new NotImplementedException();
+        }
+
+        // Attempt to bind to a QueueTrigger binding contract member with the wrong name
+        // In this case, we're trying to bind to ExpirationTime
+        public static void QueueTrigger_ContractParameterBindingFailsIndexing([QueueTrigger("queue")] string input, DateTimeOffset expiryTime)
+        {
+            throw new NotImplementedException();
+        }
+
+        // Attempt to bind to a QueueTrigger binding contract member with the wrong name
+        // In this case, we're trying to bind to MessageReceiver
+        public static void ServiceBusTrigger_ContractParameterBindingFailsIndexing([ServiceBusTrigger("queue")] string input, MessageReceiver receiver)
         {
             throw new NotImplementedException();
         }
