@@ -171,6 +171,46 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             _mockThrottleManager.Verify(p => p.GetStatus(), Times.Never);
         }
 
+        [Fact]
+        public void GetStatus_OnlyLogsOnStatusChange()
+        {
+            TestHelpers.SetupStopwatch(_testFunctionConcurrencyStatus.LastConcurrencyAdjustmentStopwatch, TimeSpan.FromSeconds(ConcurrencyStatus.DefaultMinAdjustmentFrequencySeconds));
+            _throttleStatus = new ConcurrencyThrottleAggregateStatus { State = ThrottleState.Disabled };
+
+            // make a bunch of back to back GetStatus calls
+            // only expect a log entry for the first one
+            ConcurrencyStatus status = null;
+            for (int i = 0; i < 10; i++)
+            {
+                status = _concurrencyManager.GetStatus(TestFunctionId);
+            }
+            Assert.Equal(1, status.CurrentConcurrency);
+            var logs = _loggerProvider.GetAllLogMessages().Where(p => p.Category == LogCategories.Concurrency).ToArray();
+            Assert.Single(logs);
+            Assert.Equal("testfunction Concurrency: 1, OutstandingInvocations: 0", logs[0].FormattedMessage);
+
+            // now increase concurrency - expect a single log
+            _loggerProvider.ClearAllLogMessages();
+            status.IncreaseConcurrency();
+            TestHelpers.SetupStopwatch(_testFunctionConcurrencyStatus.LastConcurrencyAdjustmentStopwatch, TimeSpan.FromSeconds(ConcurrencyStatus.DefaultMinAdjustmentFrequencySeconds));
+            status = _concurrencyManager.GetStatus(TestFunctionId);
+            Assert.Equal(2, status.CurrentConcurrency);
+            logs = _loggerProvider.GetAllLogMessages().Where(p => p.Category == LogCategories.Concurrency).ToArray();
+            Assert.Single(logs);
+            Assert.Equal("testfunction Concurrency: 2, OutstandingInvocations: 0", logs[0].FormattedMessage);
+
+            // make a bunch more back to back GetStatus calls without
+            // changing anything - don't expect any logs
+            _loggerProvider.ClearAllLogMessages();
+            for (int i = 0; i < 10; i++)
+            {
+                status = _concurrencyManager.GetStatus(TestFunctionId);
+            }
+            Assert.Equal(2, status.CurrentConcurrency);
+            logs = _loggerProvider.GetAllLogMessages().Where(p => p.Category == LogCategories.Concurrency).ToArray();
+            Assert.Empty(logs);
+        }
+
         [Theory]
         [InlineData(50, true)]
         [InlineData(1, false)]

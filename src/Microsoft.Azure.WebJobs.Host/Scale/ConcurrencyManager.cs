@@ -121,7 +121,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                 functionConcurrencyStatus.DecreaseConcurrency();
             }
 
-            _logger.HostConcurrencyStatus(functionId, functionConcurrencyStatus.CurrentConcurrency, functionConcurrencyStatus.OutstandingInvocations);
+            functionConcurrencyStatus.LogUpdates(_logger);
 
             return functionConcurrencyStatus;
         }
