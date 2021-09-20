@@ -8,7 +8,6 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.Storage;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Indexers;
@@ -548,7 +547,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                 BindingFlags.Static | BindingFlags.Public);
             Assert.NotNull(method); // Guard
 
-            FunctionIndexer indexer = FunctionIndexerFactory.Create(CloudStorageAccount.DevelopmentStorageAccount);
+            FunctionIndexer indexer = FunctionIndexerFactory.Create();
             var indexCollector = new TestIndexCollector();
 
             // Act & Assert

@@ -2,90 +2,58 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Threading;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Config;
-using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.Storage;
+using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using WebJobs.Host.Storage.Logging;
 
 namespace Microsoft.Extensions.Hosting
 {
     public static class StorageServiceCollectionExtensions
     {
-        [Obsolete("Dashboard is being deprecated. Use AppInsights.")]
-        public static IServiceCollection AddDashboardLogging(this IServiceCollection services)
-        {
-            services.TryAddSingleton<LoggerProviderFactory>();
-
-            services.TryAddSingleton<IFunctionOutputLoggerProvider>(p => p.GetRequiredService<LoggerProviderFactory>().GetLoggerProvider<IFunctionOutputLoggerProvider>());
-            services.TryAddSingleton<IFunctionOutputLogger>(p => p.GetRequiredService<IFunctionOutputLoggerProvider>().GetAsync(CancellationToken.None).GetAwaiter().GetResult());
-
-            services.TryAddSingleton<IFunctionInstanceLoggerProvider>(p => p.GetRequiredService<LoggerProviderFactory>().GetLoggerProvider<IFunctionInstanceLoggerProvider>());
-            services.TryAddSingleton<IFunctionInstanceLogger>(p => p.GetRequiredService<IFunctionInstanceLoggerProvider>().GetAsync(CancellationToken.None).GetAwaiter().GetResult());
-
-            services.TryAddSingleton<IHostInstanceLoggerProvider>(p => p.GetRequiredService<LoggerProviderFactory>().GetLoggerProvider<IHostInstanceLoggerProvider>());
-            services.TryAddSingleton<IHostInstanceLogger>(p => p.GetRequiredService<IHostInstanceLoggerProvider>().GetAsync(CancellationToken.None).GetAwaiter().GetResult());
-
-            return services;
-        }
-
         public static void AddAzureStorageCoreServices(this IServiceCollection services)
         {
             // Replace existing runtime services with storage-backed implementations.
             // Add runtime services that depend on storage.
             services.AddSingleton<IDistributedLockManager>(provider => Create(provider));
 
-            // Used specifically for the CloudBlobContainerDistributedLockManager implementation
-            services.TryAddSingleton<DistributedLockManagerContainerProvider>();
-
-            services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<StorageAccountOptions>, StorageAccountOptionsSetup>());
             services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, CoreWebJobsOptionsSetup<JobHostInternalStorageOptions>>());
 
             services.TryAddSingleton<IDelegatingHandlerProvider, DefaultDelegatingHandlerProvider>();
+
+            // May need to rename this to HostBlobServiceClientProvider
+            services.TryAddSingleton<BlobServiceClientProvider>();
+            services.AddAzureClientsCore();
 
             services.AddSingleton<IConcurrencyStatusRepository, BlobStorageConcurrencyStatusRepository>();
         }
 
         // This is only called if the host didn't already provide an implementation
+        // TODO: Should this attempt to create a client or just check for connection setting?
         private static IDistributedLockManager Create(IServiceProvider provider)
         {
-            // $$$ get rid of LegacyConfig
-            var opts = provider.GetRequiredService<IOptions<StorageAccountOptions>>();
-
+            var azureStorageProvider = provider.GetRequiredService<IAzureStorageProvider>();
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
-
-            var sas = provider.GetService<DistributedLockManagerContainerProvider>();
-
-            CloudBlobContainer container;
-
-            if (sas != null && sas.InternalContainer != null)
+            var logger = loggerFactory.CreateLogger<IDistributedLockManager>();
+            try
             {
-                container = sas.InternalContainer;
+                var container = azureStorageProvider.GetWebJobsBlobContainerClient();
+                logger.LogDebug("Using BlobLeaseDistributedLockManager in Functions Host.");
+                return new BlobLeaseDistributedLockManager(loggerFactory, azureStorageProvider);
             }
-            else
+            catch (InvalidOperationException)
             {
-                var config = opts.Value;
-                CloudStorageAccount account = config.GetStorageAccount();
-                if (account == null)
-                {
-                    return new InMemoryDistributedLockManager();
-                }
-
-                var blobClient = new CloudBlobClient(account.BlobStorageUri, account.Credentials, config.DelegatingHandlerProvider?.Create());
-                container = blobClient.GetContainerReference(HostContainerNames.Hosts);
+                // If there is an error getting the container client,
+                // register an InMemoryDistributedLockManager.
+                logger.LogDebug("Using InMemoryDistributedLockManager in Functions Host.");
+                return new InMemoryDistributedLockManager();
             }
-
-            var lockManager = new CloudBlobContainerDistributedLockManager(container, loggerFactory);
-            return lockManager;
         }
     }
 }

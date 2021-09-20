@@ -8,7 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.Storage.Blob;
+using Azure.Storage.Blobs;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Configuration;
@@ -29,12 +29,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 .UseEnvironment("Development")
                 .ConfigureDefaultTestHost(b =>
                 {
-                    b.AddAzureStorage()
-                    .AddAzureStorageCoreServices();
+                    b.AddAzureStorageQueues();
+                    b.AddAzureStorageCoreServices();
                 });
 
             IHost host = hostBuilder.Build();
-            var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
+            var config = host.Services.GetService<IOptions<JobHostInternalStorageOptions>>();
 
             var hostingEnvironment = host.Services.GetService<IHostingEnvironment>();
             Assert.True(hostingEnvironment.IsDevelopment());
@@ -53,12 +53,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 .UseEnvironment("Production")
                 .ConfigureDefaultTestHost(b =>
                 {
-                    b.AddAzureStorage()
-                    .AddAzureStorageCoreServices();
+                    b.AddAzureStorageQueues();
+                    b.AddAzureStorageCoreServices();
                 });
 
             IHost host = hostBuilder.Build();
-            var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
+            var config = host.Services.GetService<IOptions<JobHostInternalStorageOptions>>();
 
             var hostingEnvironment = host.Services.GetService<IHostingEnvironment>();
             Assert.False(hostingEnvironment.IsDevelopment());
@@ -78,8 +78,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 .UseEnvironment("Development")
                 .ConfigureDefaultTestHost(b =>
                 {
-                    b.AddAzureStorage()
-                    .AddAzureStorageCoreServices();
+                    b.AddAzureStorageQueues();
+                    b.AddAzureStorageCoreServices();
                 })
                 .ConfigureServices(services =>
                 {
@@ -95,7 +95,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 });
 
             IHost host = hostBuilder.Build();
-            var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
+            var config = host.Services.GetService<IOptions<JobHostInternalStorageOptions>>();
 
             var hostingEnvironment = host.Services.GetService<IHostingEnvironment>();
             Assert.True(hostingEnvironment.IsDevelopment());
@@ -148,8 +148,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 var hostBuilder = new HostBuilder()
                  .ConfigureDefaultTestHost(b =>
                     {
-                        b.AddAzureStorage()
-                        .AddAzureStorageCoreServices();
+                        b.AddAzureStorageCoreServices();
                     })
                  .ConfigureAppConfiguration(c =>
                  {
@@ -158,11 +157,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
                 IHost host = hostBuilder.Build();
 
-                var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
+                var config = host.Services.GetService<IOptions<JobHostInternalStorageOptions>>();
 
-                var container = config.InternalContainer;
+                var container = config.Value.InternalSasBlobContainer;
                 Assert.NotNull(container);
-                Assert.Equal(container.Name, "myContainer"); // specified in sas. 
+                BlobContainerClient containerClient = new BlobContainerClient(new Uri(container));
+                Assert.Equal(containerClient.Name, "myContainer"); // specified in sas. 
             }
         }
 
@@ -173,8 +173,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var hostBuilder = new HostBuilder()
              .ConfigureDefaultTestHost(b =>
              {
-                 b.AddAzureStorage()
-                 .AddAzureStorageCoreServices();
+                 b.AddAzureStorageCoreServices();
              })
              .ConfigureAppConfiguration(c =>
              {
@@ -184,19 +183,17 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             hostBuilder.ConfigureServices((ctx, services) =>
             {
                 var uri2 = new Uri("https://contoso.blob.core.windows.net/myContainer2?signature=foo");
-                services.AddSingleton<DistributedLockManagerContainerProvider>(new DistributedLockManagerContainerProvider()
-                {
-                    InternalContainer = new CloudBlobContainer(uri2)
-                });
+                services.Configure<JobHostInternalStorageOptions>(o => o.InternalSasBlobContainer = uri2.ToString());
             });
 
             IHost host = hostBuilder.Build();
 
-            var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
+            var config = host.Services.GetService<IOptions<JobHostInternalStorageOptions>>();
 
-            var container = config.InternalContainer;
+            var container = config.Value.InternalSasBlobContainer;
             Assert.NotNull(container);
-            Assert.Equal(container.Name, "myContainer2"); // specified in sas. 
+            BlobContainerClient containerClient = new BlobContainerClient(new Uri(container));
+            Assert.Equal(containerClient.Name, "myContainer2"); // specified in sas.
         }
 
         // Verify that JobHostConfig pulls a Sas container from appsettings. 
@@ -208,8 +205,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var hostBuilder = new HostBuilder()
              .ConfigureDefaultTestHost(b =>
              {
-                 b.AddAzureStorage()
-                 .AddAzureStorageCoreServices();
+                 b.AddAzureStorageCoreServices();
              })
              .ConfigureAppConfiguration(c =>
              {
@@ -221,11 +217,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             IHost host = hostBuilder.Build();
 
-            var config = host.Services.GetService<DistributedLockManagerContainerProvider>();
+            var config = host.Services.GetService<IOptions<JobHostInternalStorageOptions>>();
 
-            var container = config.InternalContainer;
+            var container = config.Value.InternalSasBlobContainer;
             Assert.NotNull(container);
-            Assert.Equal(container.Name, "myContainer3"); // specified in sas.             
+            BlobContainerClient containerClient = new BlobContainerClient(new Uri(container));
+            Assert.Equal(containerClient.Name, "myContainer3"); // specified in sas.
         }
 
         // Test that we can explicitly disable storage and call through a function

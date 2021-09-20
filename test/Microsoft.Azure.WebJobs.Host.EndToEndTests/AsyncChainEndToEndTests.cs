@@ -11,18 +11,21 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
+using Azure.Storage.Queues;
+using Azure.Storage.Queues.Models;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
-using Microsoft.Azure.Storage.Queue;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
@@ -43,7 +46,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private const string TriggerDetailsMessageStart = "Trigger Details:";
 
-        private static CloudStorageAccount _storageAccount;
+        private static QueueServiceClient _queueServiceClient;
+        private static BlobServiceClient _blobServiceClient;
 
         private static RandomNameResolver _resolver;
         private readonly IHostBuilder _hostBuilder;
@@ -52,7 +56,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private static string _finalBlobContent;
         private static TimeSpan _timeoutJobDelay;
 
-        private readonly CloudQueue _testQueue;
+        private readonly QueueClient _testQueueClient;
         private readonly TestFixture _fixture;
 
         public AsyncChainEndToEndTests(TestFixture fixture)
@@ -63,7 +67,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _hostBuilder = new HostBuilder()
                 .ConfigureDefaultTestHost<AsyncChainEndToEndTests>(b =>
                 {
-                    b.AddAzureStorage();
+                    // Necessary for Blob/Queue bindings
+                    b.AddAzureStorageQueues();
+                    b.AddAzureStorageBlobs();
                 })
                 .ConfigureServices(services =>
                 {
@@ -78,17 +84,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     });
                 });
 
-            _storageAccount = fixture.StorageAccount;
+            _blobServiceClient = fixture.BlobServiceClient;
+            _queueServiceClient = fixture.QueueServiceClient;
 
             // This is how long the Timeout test functions will wait for cancellation.
             _timeoutJobDelay = TimeSpan.FromSeconds(30);
 
-            CloudQueueClient queueClient = _storageAccount.CreateCloudQueueClient();
             string queueName = _resolver.ResolveInString(TestQueueName);
-            _testQueue = queueClient.GetQueueReference(queueName);
-            if (!_testQueue.CreateIfNotExistsAsync().Result)
+            _testQueueClient = _queueServiceClient.GetQueueClient(queueName);
+
+            var response = _testQueueClient.CreateIfNotExistsAsync().Result;
+            if (response == null)
             {
-                _testQueue.ClearAsync().Wait();
+                // Queue already exists, need to clear it
+                _testQueueClient.ClearMessagesAsync().Wait();
             }
         }
 
@@ -105,6 +114,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 string[] loggerOutputLines = loggerProvider.GetAllLogMessages()
                     .Where(p => p.FormattedMessage != null)
+                    .Where(p => p.Category != "Azure.Core")
                     .SelectMany(p => p.FormattedMessage.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries))
                     .OrderBy(p => p)
                     .ToArray();
@@ -146,13 +156,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "User TraceWriter log 1",
                     "User TraceWriter log 2",
                     "Starting JobHost",
-                    "Stopped the listener 'Microsoft.Azure.WebJobs.Host.Listeners.CompositeListener' for function 'BlobToBlobAsync'",
-                    "Stopped the listener 'Microsoft.Azure.WebJobs.Host.Queues.Listeners.QueueListener' for function 'QueueToBlobAsync'",
-                    "Stopped the listener 'Microsoft.Azure.WebJobs.Host.Queues.Listeners.QueueListener' for function 'QueueToQueueAsync'",
+                    "Stopped the listener 'Microsoft.Azure.WebJobs.Extensions.Storage.Common.Listeners.CompositeListener' for function 'BlobToBlobAsync'",
+                    "Stopped the listener 'Microsoft.Azure.WebJobs.Extensions.Storage.Common.Listeners.QueueListener' for function 'QueueToBlobAsync'",
+                    "Stopped the listener 'Microsoft.Azure.WebJobs.Extensions.Storage.Common.Listeners.QueueListener' for function 'QueueToQueueAsync'",
                     "Stopping JobHost",
-                    "Stopping the listener 'Microsoft.Azure.WebJobs.Host.Listeners.CompositeListener' for function 'BlobToBlobAsync'",
-                    "Stopping the listener 'Microsoft.Azure.WebJobs.Host.Queues.Listeners.QueueListener' for function 'QueueToBlobAsync'",
-                    "Stopping the listener 'Microsoft.Azure.WebJobs.Host.Queues.Listeners.QueueListener' for function 'QueueToQueueAsync'",
+                    "Stopping the listener 'Microsoft.Azure.WebJobs.Extensions.Storage.Common.Listeners.CompositeListener' for function 'BlobToBlobAsync'",
+                    "Stopping the listener 'Microsoft.Azure.WebJobs.Extensions.Storage.Common.Listeners.QueueListener' for function 'QueueToBlobAsync'",
+                    "Stopping the listener 'Microsoft.Azure.WebJobs.Extensions.Storage.Common.Listeners.QueueListener' for function 'QueueToQueueAsync'",
+                    "registered http endpoint", // logged in Microsoft.Azure.WebJobs.Extensions.Blobs.BlobsExtensionConfigProvider
                     "QueuesOptions",
                     "{",
                     "  \"BatchSize\": 16",
@@ -160,6 +171,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "  \"MaxPollingInterval\": \"00:00:02\",",
                     string.Format("  \"NewBatchThreshold\": {0},", 8 * processorCount),
                     "  \"VisibilityTimeout\": \"00:00:00\"",
+                    "  \"MessageEncoding\": \"Base64\"",
                     "}",
                     "LoggerFilterOptions",
                     "{",
@@ -181,7 +193,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "}",
                     "BlobsOptions",
                     "{",
-                    "  \"CentralizedPoisonQueue\": false",
+                    "  \"MaxDegreeOfParallelism\": 96",
+                    "}",
+                    "QueuesOptions", // This QueuesOptions are an internal type within Microsoft.Azure.WebJobs.Extensions.Storage.Blobs
+                    "{",
+                    "  \"BatchSize\": 16",
+                    "  \"NewBatchThreshold\": 96,",
+                    "  \"MaxPollingInterval\": \"00:01:00\",",
+                    "  \"MaxDequeueCount\": 5,",
+                    "  \"VisibilityTimeout\": \"00:00:00\"",
+                    "  \"MessageEncoding\": \"Base64\"",
                     "}",
                     "SingletonOptions",
                     "{",
@@ -206,7 +227,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string[] triggerDetailsLoggerOutput = loggerOutputLines
                     .Where(m => m.StartsWith(TriggerDetailsMessageStart)).ToArray();
 
-                string expectedPattern = "Trigger Details: MessageId: (.*), DequeueCount: [0-9]+, InsertionTime: (.*)";
+                string expectedPattern = "Trigger Details: MessageId: (.*), DequeueCount: [0-9]+, InsertedOn: (.*)";
 
                 foreach (string msg in triggerDetailsLoggerOutput)
                 {
@@ -220,7 +241,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             using (_functionCompletedEvent = new ManualResetEvent(initialState: false))
             {
-                CustomQueueProcessorFactory queueProcessorFactory = new CustomQueueProcessorFactory();
+                TestQueueProcessorFactory queueProcessorFactory = new TestQueueProcessorFactory();
 
                 _hostBuilder.ConfigureServices(services =>
                 {
@@ -229,10 +250,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 await AsyncChainEndToEndInternal(_hostBuilder);
 
-                Assert.Equal(2, queueProcessorFactory.CustomQueueProcessors.Count);
-                Assert.True(queueProcessorFactory.CustomQueueProcessors.All(p => p.Context.Queue.Name.StartsWith("asynce2eq")));
-                Assert.True(queueProcessorFactory.CustomQueueProcessors.Sum(p => p.BeginProcessingCount) >= 2);
-                Assert.True(queueProcessorFactory.CustomQueueProcessors.Sum(p => p.CompleteProcessingCount) >= 2);
+                Assert.Equal(2, queueProcessorFactory.TestQueueProcessors.Count);
+                Assert.True(queueProcessorFactory.TestQueueProcessors.All(p => p.Context.Queue.Name.StartsWith("asynce2eq")));
+                Assert.True(queueProcessorFactory.TestQueueProcessors.Sum(p => p.BeginProcessingCount) >= 2);
+                Assert.True(queueProcessorFactory.TestQueueProcessors.Sum(p => p.CompleteProcessingCount) >= 2);
             }
         }
 
@@ -243,8 +264,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 TestLoggerProvider loggerProvider = await AsyncChainEndToEndInternal(_hostBuilder);
 
-                // Validate Logger                
-                bool hasError = loggerProvider.GetAllLogMessages().Where(p => p.FormattedMessage != null && p.FormattedMessage.Contains("Error")).Any();
+                // Validate Logger
+                bool hasError = loggerProvider.GetAllLogMessages().Where(p => p.FormattedMessage != null && p.Category != "Azure.Core" && p.FormattedMessage.Contains("Error")).Any();
                 Assert.False(hasError);
 
                 IEnumerable<string> userLogMessages = loggerProvider.GetAllLogMessages()
@@ -410,13 +431,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             IHost host = _hostBuilder.Build();
             JobHost jobHost = host.GetJobHost();
 
-            var blobClient = _fixture.StorageAccount.CreateCloudBlobClient();
-            var container = blobClient.GetContainerReference("test-output");
-            if (await container.ExistsAsync())
+            var blobContainerClient = _blobServiceClient.GetBlobContainerClient("test-output");
+            if (await blobContainerClient.ExistsAsync())
             {
-                foreach (CloudBlockBlob blob in (await container.ListBlobsSegmentedAsync(null)).Results)
+                await foreach (var blob in blobContainerClient.GetBlobsAsync())
                 {
-                    await blob.DeleteAsync();
+                    await blobContainerClient.DeleteBlobIfExistsAsync(blob.Name);
                 }
             }
 
@@ -428,12 +448,24 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await jobHost.CallAsync(methodInfo, arguments);
 
             // We expect 3 separate blobs to have been written
-            var blobs = (await container.ListBlobsSegmentedAsync(null)).Results.Cast<CloudBlockBlob>().ToArray();
-            Assert.Equal(3, blobs.Length);
-            foreach (var blob in blobs)
+            int blobCount = 0;
+            await foreach (var blob in blobContainerClient.GetBlobsAsync())
             {
-                string content = await blob.DownloadTextAsync();
+                string content = await blobContainerClient.GetBlobClient(blob.Name).DownloadTextAsync();
                 Assert.Equal("Test Value", content.Trim(new char[] { '\uFEFF', '\u200B' }));
+
+                blobCount++;
+            }
+
+            Assert.Equal(3, blobCount);
+
+            // Test Cleanup
+            if (await blobContainerClient.ExistsAsync())
+            {
+                await foreach (var blob in blobContainerClient.GetBlobsAsync())
+                {
+                    await blobContainerClient.DeleteBlobIfExistsAsync(blob.Name);
+                }
             }
         }
 
@@ -643,15 +675,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             CancellationToken token,
             TraceWriter trace)
         {
-            CloudBlobClient blobClient = _storageAccount.CreateCloudBlobClient();
-            CloudBlobContainer container = blobClient.GetContainerReference(_resolver.ResolveInString(ContainerName));
-            CloudBlockBlob blob = container.GetBlockBlobReference(NonWebJobsBlobName);
-
-            string blobContent = await blob.DownloadTextAsync();
-
+            var content = await _blobServiceClient.GetBlobContainerClient(_resolver.ResolveInString(ContainerName)).GetBlobClient(NonWebJobsBlobName).DownloadTextAsync();
             trace.Info("User TraceWriter log 1");
 
-            await output.AddAsync(blobContent + message);
+            await output.AddAsync(content + message);
         }
 
         public static async Task QueueToBlobAsync(
@@ -742,55 +769,44 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 userMessageCallback: () => $"Function did not complete in {waitTimeout} ms. Current time: {DateTime.UtcNow.ToString("HH:mm:ss.fff")}{Environment.NewLine}{loggerProvider.GetLogString()}");
         }
 
-        private class CustomQueueProcessorFactory : IQueueProcessorFactory
+        private class TestQueueProcessorFactory : IQueueProcessorFactory
         {
-            public List<CustomQueueProcessor> CustomQueueProcessors = new List<CustomQueueProcessor>();
+            public List<TestQueueProcessor> TestQueueProcessors = new List<TestQueueProcessor>();
 
-            public QueueProcessor Create(QueueProcessorFactoryContext context)
+            public QueueProcessor Create(QueueProcessorOptions context)
             {
-                // demonstrates how the Queue.ServiceClient options can be configured
-                context.Queue.ServiceClient.DefaultRequestOptions.ServerTimeout = TimeSpan.FromSeconds(30);
-
-                // demonstrates how queue options can be customized
-                context.Queue.EncodeMessage = true;
-
-                // demonstrates how batch processing behavior and other knobs
-                // can be customized
-                context.BatchSize = 30;
-                context.NewBatchThreshold = 100;
-                context.MaxPollingInterval = TimeSpan.FromSeconds(15);
-
-                CustomQueueProcessor processor = new CustomQueueProcessor(context);
-                CustomQueueProcessors.Add(processor);
-                return processor;
+                var queueProcessor = new TestQueueProcessor(context);
+                TestQueueProcessors.Add(queueProcessor);
+                return queueProcessor;
             }
         }
 
-        public class CustomQueueProcessor : QueueProcessor
+        private class TestQueueProcessor : QueueProcessor
         {
             public int BeginProcessingCount = 0;
             public int CompleteProcessingCount = 0;
 
-            public CustomQueueProcessor(QueueProcessorFactoryContext context) : base(context)
+            public TestQueueProcessor(QueueProcessorOptions context)
+                : base(context)
             {
                 Context = context;
             }
 
-            public QueueProcessorFactoryContext Context { get; private set; }
+            internal QueueProcessorOptions Context { get; private set; }
 
-            public override Task<bool> BeginProcessingMessageAsync(CloudQueueMessage message, CancellationToken cancellationToken)
+            protected override Task<bool> BeginProcessingMessageAsync(QueueMessage message, CancellationToken cancellationToken)
             {
                 BeginProcessingCount++;
                 return base.BeginProcessingMessageAsync(message, cancellationToken);
             }
 
-            public override Task CompleteProcessingMessageAsync(CloudQueueMessage message, FunctionResult result, CancellationToken cancellationToken)
+            protected override Task CompleteProcessingMessageAsync(QueueMessage message, FunctionResult result, CancellationToken cancellationToken)
             {
                 CompleteProcessingCount++;
                 return base.CompleteProcessingMessageAsync(message, result, cancellationToken);
             }
 
-            protected override async Task ReleaseMessageAsync(CloudQueueMessage message, FunctionResult result, TimeSpan visibilityTimeout, CancellationToken cancellationToken)
+            protected override async Task ReleaseMessageAsync(QueueMessage message, FunctionResult result, TimeSpan visibilityTimeout, CancellationToken cancellationToken)
             {
                 // demonstrates how visibility timeout for failed messages can be customized
                 // the logic here could implement exponential backoff, etc.
@@ -802,6 +818,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         public class TestFixture : IDisposable
         {
+            private readonly IConfiguration _configuration;
+            private readonly BlobServiceClientProvider _blobServiceClientProvider;
+            private readonly QueueServiceClientProvider _queueServiceClientProvider;
+
             public TestFixture()
             {
                 // We know the tests are using the default storage provider, so pull that out
@@ -809,32 +829,72 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 IHost host = new HostBuilder()
                     .ConfigureDefaultTestHost<TestFixture>(b =>
                     {
-                        b.AddAzureStorage();
+                        // Necessary for Blob/Queue bindings
+                        b.AddAzureStorageBlobs();
+                        b.AddAzureStorageQueues();
+
+                        // Necessary to manipulate Blobs/Queues for these tests
+                        b.Services.AddSingleton<BlobServiceClientProvider>();
+                        b.Services.AddSingleton<QueueServiceClientProvider>();
                     })
                     .Build();
 
-                var provider = host.Services.GetService<StorageAccountProvider>();
-                StorageAccount = provider.GetHost().SdkObject;
+                _configuration = host.Services.GetService<IConfiguration>();
+                _blobServiceClientProvider = host.Services.GetService<BlobServiceClientProvider>();
+                _queueServiceClientProvider = host.Services.GetService<QueueServiceClientProvider>();
             }
 
-            public CloudStorageAccount StorageAccount
+            public QueueServiceClient QueueServiceClient
             {
-                get;
-                private set;
+                get
+                {
+                    return _queueServiceClientProvider.Get(ConnectionStringNames.Storage, _configuration);
+                }
+
+                private set
+                {
+                    QueueServiceClient = value;
+                }
+            }
+
+            public BlobServiceClient BlobServiceClient
+            {
+                get
+                {
+                    return _blobServiceClientProvider.Get(ConnectionStringNames.Storage, _configuration);
+                }
+
+                private set
+                {
+                    BlobServiceClient = value;
+                }
             }
 
             public void Dispose()
             {
-                CloudBlobClient blobClient = StorageAccount.CreateCloudBlobClient();
-                foreach (var testContainer in blobClient.ListContainersSegmentedAsync(TestArtifactsPrefix, null).Result.Results)
-                {
-                    testContainer.DeleteAsync().Wait();
-                }
+                DisposeBlobs().Wait();
+                DisposeQueues().Wait();
+            }
 
-                CloudQueueClient queueClient = StorageAccount.CreateCloudQueueClient();
-                foreach (var testQueue in queueClient.ListQueuesSegmentedAsync(TestArtifactsPrefix, null).Result.Results)
+            private async Task DisposeBlobs()
+            {
+                if (BlobServiceClient != null)
                 {
-                    testQueue.DeleteAsync().Wait();
+                    await foreach (var testBlob in BlobServiceClient.GetBlobContainersAsync(prefix: TestArtifactsPrefix))
+                    {
+                        await BlobServiceClient.DeleteBlobContainerAsync(testBlob.Name);
+                    }
+                }
+            }
+
+            private async Task DisposeQueues()
+            {
+                if (QueueServiceClient != null)
+                {
+                    await foreach (var testQueue in QueueServiceClient.GetQueuesAsync(prefix: TestArtifactsPrefix))
+                    {
+                        await QueueServiceClient.DeleteQueueAsync(testQueue.Name);
+                    }
                 }
             }
         }
@@ -860,7 +920,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             public Task OnUnhandledExceptionAsync(ExceptionDispatchInfo exceptionInfo)
             {
                 // TODO: FACAVAL - Validate this, tests are stepping over each other.
-                if (!(exceptionInfo.SourceException is StorageException storageException &&
+                if (!(exceptionInfo.SourceException is RequestFailedException storageException &&
                     storageException?.InnerException is TaskCanceledException))
                 {
                     UnhandledExceptionInfos.Add(exceptionInfo);

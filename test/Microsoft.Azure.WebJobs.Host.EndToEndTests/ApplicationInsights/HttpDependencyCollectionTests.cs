@@ -7,16 +7,16 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Storage.Blobs;
+using Azure.Storage.Queues;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
-using Microsoft.Azure.Storage.Queue;
 using Xunit;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
@@ -41,10 +41,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
         private string _outputQueueName;
         private string _triggerQueueName;
 
-        private CloudBlobClient _blobClient;
         private RandomNameResolver _resolver;
-        private CloudQueueClient _queueClient;
-        private CloudQueue _triggerQueue;
+        private BlobServiceClient _blobServiceClient;
+        private QueueServiceClient _queueServiceClient;
+        private QueueClient _triggerQueueClient;
 
         [Fact]
         public async Task BindingsAreNotReportedWhenFiltered()
@@ -65,6 +65,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.Empty(_channel.Telemetries.OfType<DependencyTelemetry>().ToList());
         }
 
+        // TODO: Analyze Track2 changes for differences in this test from Track1
         [Fact]
         public async Task BlobBindingsAreReported()
         {
@@ -81,15 +82,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             }
 
             RequestTelemetry request = _channel.Telemetries.OfType<RequestTelemetry>().Single(r => r.Name == nameof(BlobInputAndOutputBindings));
+
+            var leafDependencies = new List<DependencyTelemetry>();
+            GetLeafDependenciesOfRequest(_channel.Telemetries.OfType<DependencyTelemetry>(), request.Id, leafDependencies);
+
             List<DependencyTelemetry> dependencies = _channel.Telemetries.OfType<DependencyTelemetry>().ToList();
 
-            List<DependencyTelemetry> inDependencies = dependencies
+            var containerDependencies = dependencies.Where(d => d.Properties.ContainsKey("Container")).ToList();
+            List<DependencyTelemetry> inDependencies = containerDependencies
                 .Where(d => d.Properties.Single(p => p.Key == "Container").Value == _inputContainerName).ToList();
-            List<DependencyTelemetry> outDependencies = dependencies
+            List<DependencyTelemetry> outDependencies = containerDependencies
                 .Where(d => d.Properties.Single(p => p.Key == "Container").Value == _outputContainerName).ToList();
 
             // only bindings calls are reported
-            Assert.Equal(dependencies.Count, inDependencies.Count + outDependencies.Count);
+            Assert.Equal(containerDependencies.Count, inDependencies.Count + outDependencies.Count);
 
             foreach (var inputDep in inDependencies)
             {
@@ -99,7 +105,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                     "in",
                     nameof(BlobInputAndOutputBindings),
                     request.Context.Operation.Id,
-                    request.Id);
+                    inputDep.Context.Operation.ParentId); // ParentId won't be the parentId of the RequestTelemetry since it is Dependency Tree
+
+                // Check that the ParentId for inputDep can be traced back to RequestTelemtry
+                Assert.Contains(leafDependencies, d => d.Id == inputDep.Id);
             }
 
             foreach (var outputDep in outDependencies)
@@ -110,16 +119,38 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                     "out",
                     nameof(BlobInputAndOutputBindings),
                     request.Context.Operation.Id,
-                    request.Id);
+                    outputDep.Context.Operation.ParentId); // ParentId won't be the parentId of the RequestTelemetry since it is Dependency Tree
+
+                // Check that the ParentId for outputDep can be traced back to RequestTelemtry
+                Assert.Contains(leafDependencies, d => d.Id == outputDep.Id);
             }
 
-
             // PUT container, HEAD blob, PUT lease, PUT content
+            Assert.True(outDependencies.Select(d => d.Name).Distinct().Count() <= 4);
             // since there could be failures and retries, we should expect more
-            Assert.True(outDependencies.Count <= 4);
 
             // HEAD blob, GET blob
-            Assert.True(inDependencies.Count >= 2);
+            Assert.True(inDependencies.Select(d => d.Name).Distinct().Count() >= 2);
+
+            // NEED TO REEXAMINE WITH TRACK2 EXTENSIONS
+            // since there could be failures and retries, we should expect more
+            //Assert.True(outDependencies.Count <= 4);
+            //Assert.True(inDependencies.Count >= 2);
+        }
+
+        private static void GetLeafDependenciesOfRequest(IEnumerable<DependencyTelemetry> dependencies, string currId, List<DependencyTelemetry> leafDependencies)
+        {
+            var children = dependencies.Where(d => d.Context.Operation.ParentId == currId);
+            if (!children.Any())
+            {
+                leafDependencies.Add(dependencies.Single(d => d.Id == currId));
+                return;
+            }
+
+            foreach (var dependency in children)
+            {
+                GetLeafDependenciesOfRequest(dependencies, dependency.Id, leafDependencies);
+            }
         }
 
         [Fact]
@@ -182,6 +213,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.Single(_channel.Telemetries.OfType<DependencyTelemetry>());
         }
 
+        // TODO: Analyze Track2 changes for differences in this test from Track1
         [Fact]
         public async Task BlobTriggerCallsAreReported()
         {
@@ -193,11 +225,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 await Task.Delay(3000);
                 Assert.Empty(_channel.Telemetries.OfType<DependencyTelemetry>());
 
-                CloudBlobContainer container = _blobClient.GetContainerReference(_triggerContainerName);
-                await container.CreateIfNotExistsAsync();
-
-                CloudBlockBlob blob = container.GetBlockBlobReference("triggerBlob");
-                await blob.UploadTextAsync("TestData");
+                var containerClient = _blobServiceClient.GetBlobContainerClient(_triggerContainerName);
+                await containerClient.CreateIfNotExistsAsync();
+                var blobClient = containerClient.GetBlobClient("triggerBlob");
+                blobClient.UploadTextAsync("TestData").Wait();
 
                 _functionWaitHandle.WaitOne();
                 // let host run for a while to write output queue message
@@ -207,15 +238,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             }
 
             RequestTelemetry request = _channel.Telemetries.OfType<RequestTelemetry>().Single();
+
+            var leafDependencies = new List<DependencyTelemetry>();
+            GetLeafDependenciesOfRequest(_channel.Telemetries.OfType<DependencyTelemetry>(), request.Id, leafDependencies);
+
             List<DependencyTelemetry> dependencies = _channel.Telemetries.OfType<DependencyTelemetry>().ToList();
 
-            List<DependencyTelemetry> blobDependencies = dependencies.Where(d => d.Type == "Azure blob").ToList();
-            List<DependencyTelemetry> queueDependencies = dependencies.Where(d => d.Type == "Azure queue").ToList();
+            var azureDependencies = dependencies.Where(d => d.Type.StartsWith("Azure")).ToList();
+            List<DependencyTelemetry> blobDependencies = azureDependencies.Where(d => d.Type == "Azure blob").ToList();
+            List<DependencyTelemetry> queueDependencies = azureDependencies.Where(d => d.Type == "Azure queue").ToList();
 
-            Assert.True(dependencies.Count >= 3);
+            Assert.True(azureDependencies.Count >= 3);
 
             // only bindings calls are reported
-            Assert.Equal(dependencies.Count, blobDependencies.Count + queueDependencies.Count);
+            Assert.Equal(azureDependencies.Count, blobDependencies.Count + queueDependencies.Count);
 
             // one HEAD, one GET to download blob
             Assert.True(blobDependencies.Count >= 2);
@@ -231,7 +267,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                     "triggerBlob",
                     nameof(BlobTrigger),
                     request.Context.Operation.Id,
-                    request.Id);
+                    inputDep.Context.Operation.ParentId); // ParentId won't be the parentId of the RequestTelemetry since it is Dependency Tree
+
+                // Check that the ParentId for outputDep can be traced back to RequestTelemtry
+                Assert.Contains(leafDependencies, d => d.Id == inputDep.Id);
             }
 
             ValidateQueueDependency(
@@ -239,9 +278,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 _outputQueueName,
                 nameof(BlobTrigger),
                 request.Context.Operation.Id,
-                request.Id);
+                queueDependencies.First().Context.Operation.ParentId); // ParentId won't be the parentId of the RequestTelemetry since it is Dependency Tree
+
+            // Check that the ParentId for outputDep can be traced back to RequestTelemtry
+            Assert.Contains(leafDependencies, d => d.Id == queueDependencies.First().Id);
         }
 
+        // TODO: Analyze Track2 changes for differences in this test from Track1
         [Fact]
         public async Task QueueTriggerCallsAreReported()
         {
@@ -253,7 +296,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 await Task.Delay(3000);
                 Assert.Empty(_channel.Telemetries.OfType<DependencyTelemetry>());
 
-                await _triggerQueue.AddMessageAsync(new CloudQueueMessage("TestData"));
+                await _triggerQueueClient.SendMessageAsync("TestData");
 
                 _functionWaitHandle.WaitOne();
                 // let host run for a while to write output queue message
@@ -263,16 +306,21 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             }
 
             RequestTelemetry request = _channel.Telemetries.OfType<RequestTelemetry>().Single();
+
+            var leafDependencies = new List<DependencyTelemetry>();
+            GetLeafDependenciesOfRequest(_channel.Telemetries.OfType<DependencyTelemetry>(), request.Id, leafDependencies);
+
             List<DependencyTelemetry> dependencies = _channel.Telemetries.OfType<DependencyTelemetry>().ToList();
 
-            List<DependencyTelemetry> bindingsDependencies = dependencies
+            var containerDependencies = dependencies.Where(d => d.Properties.ContainsKey("Container")).ToList();
+            List<DependencyTelemetry> bindingsDependencies = containerDependencies
                 .Where(d => d.Properties.Single(p => p.Key == LogConstants.CategoryNameKey).Value == LogCategories.Bindings).ToList();
 
             // only bindings calls are reported, queue read happens before that and is not reported
-            Assert.True(dependencies.Count >= 4);
+            Assert.True(containerDependencies.Count >= 4);
 
             // PUT container, HEAD blob, PUT lease, PUT content
-            Assert.Equal(dependencies.Count, bindingsDependencies.Count);
+            Assert.Equal(containerDependencies.Count, bindingsDependencies.Count);
 
             foreach (var outputDep in bindingsDependencies)
             {
@@ -282,7 +330,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                     "out1",
                     nameof(QueueTrigger),
                     request.Context.Operation.Id,
-                    request.Id);
+                    outputDep.Context.Operation.ParentId); // ParentId won't be the parentId of the RequestTelemetry since it is Dependency Tree
+
+                // Check that the ParentId for outputDep can be traced back to RequestTelemtry
+                Assert.Contains(leafDependencies, d => d.Id == outputDep.Id);
             }
         }
 
@@ -372,7 +423,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost<HttpDependencyCollectionTests>(b =>
                 {
-                    b.AddAzureStorage();
+                    // Necessary for Blob/Queue bindings
+                    b.AddAzureStorageBlobs();
+                    // Track2 Queues Extensions expects Base64 encoded message; Track2 Queues package no longer encodes by default (Track1 used Base64 default)
+                    b.AddAzureStorageQueues(o => o.MessageEncoding = QueueMessageEncoding.None);
+
+                    // Necessary to manipulate Blobs/Queues for these tests
+                    b.Services.AddSingleton<BlobServiceClientProvider>();
+                    b.Services.AddSingleton<QueueServiceClientProvider>();
                 })
                 .ConfigureServices(services =>
                 {
@@ -392,10 +450,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             TelemetryConfiguration telemteryConfiguration = host.Services.GetService<TelemetryConfiguration>();
             telemteryConfiguration.TelemetryChannel = _channel;
 
-            StorageAccountProvider provider = host.Services.GetService<StorageAccountProvider>();
-            CloudStorageAccount storageAccount = provider.GetHost().SdkObject;
-            _blobClient = storageAccount.CreateCloudBlobClient();
-            _queueClient = storageAccount.CreateCloudQueueClient();
+            var configuration = host.Services.GetService<IConfiguration>();
+
+            var blobServiceClientProvider = host.Services.GetService<BlobServiceClientProvider>();
+            _blobServiceClient = blobServiceClientProvider.Get(ConnectionStringNames.Storage, configuration);
+
+            var queueServiceClientProvider = host.Services.GetService<QueueServiceClientProvider>();
+            _queueServiceClient = queueServiceClientProvider.Get(ConnectionStringNames.Storage, configuration);
 
             _inputContainerName = _resolver.ResolveInString(InputContainerNamePattern);
             _outputContainerName = _resolver.ResolveInString(OutputContainerNamePattern);
@@ -403,20 +464,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             _outputQueueName = _resolver.ResolveInString(OutputQueueNamePattern);
             _triggerQueueName = _resolver.ResolveInString(TriggerQueueNamePattern);
 
-            CloudBlobContainer inContainer = _blobClient.GetContainerReference(_inputContainerName);
-            CloudBlobContainer outContainer = _blobClient.GetContainerReference(_outputContainerName);
-            CloudBlobContainer triggerContainer = _blobClient.GetContainerReference(_triggerContainerName);
-            CloudQueue outputQueue = _queueClient.GetQueueReference(_outputQueueName);
-            _triggerQueue = _queueClient.GetQueueReference(_triggerQueueName);
+            var inContainer = _blobServiceClient.GetBlobContainerClient(_inputContainerName);
+            var outContainer = _blobServiceClient.GetBlobContainerClient(_outputContainerName);
+            var triggerContainer = _blobServiceClient.GetBlobContainerClient(_triggerContainerName);
+            var outputQueue = _queueServiceClient.GetQueueClient(_outputQueueName);
+            _triggerQueueClient = _queueServiceClient.GetQueueClient(_triggerQueueName);
 
-            inContainer.CreateIfNotExistsAsync().Wait();
-            outContainer.CreateIfNotExistsAsync().Wait();
-            triggerContainer.CreateIfNotExistsAsync().Wait();
-            outputQueue.CreateIfNotExistsAsync().Wait();
-            _triggerQueue.CreateIfNotExistsAsync().Wait();
+            inContainer.CreateIfNotExists();
+            outContainer.CreateIfNotExists();
+            triggerContainer.CreateIfNotExists();
+            outputQueue.CreateIfNotExists();
+            _triggerQueueClient.CreateIfNotExists();
 
-            CloudBlockBlob inBlob = inContainer.GetBlockBlobReference("in");
-            inBlob.UploadTextAsync("TestData").Wait();
+            var blobClient = inContainer.GetBlobClient("in");
+            blobClient.UploadTextAsync("TestData").Wait();
 
             return host;
         }
@@ -424,6 +485,30 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
         public void Dispose()
         {
             _channel?.Dispose();
+            DisposeBlobs().Wait();
+            DisposeQueues().Wait();
+        }
+
+        private async Task DisposeBlobs()
+        {
+            if (_blobServiceClient != null)
+            {
+                await foreach (var testBlob in _blobServiceClient.GetBlobContainersAsync(prefix: TestArtifactPrefix))
+                {
+                    await _blobServiceClient.DeleteBlobContainerAsync(testBlob.Name);
+                }
+            }
+        }
+
+        private async Task DisposeQueues()
+        {
+            if (_queueServiceClient != null)
+            {
+                await foreach (var testQueue in _queueServiceClient.GetQueuesAsync(prefix: TestArtifactPrefix))
+                {
+                    await _queueServiceClient.DeleteQueueAsync(testQueue.Name);
+                }
+            }
         }
     }
 }

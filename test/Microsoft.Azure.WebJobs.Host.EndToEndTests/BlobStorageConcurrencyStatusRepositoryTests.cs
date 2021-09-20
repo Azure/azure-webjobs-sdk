@@ -3,10 +3,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.Storage.Blob;
+using Azure.Storage.Blobs;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
@@ -50,13 +49,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _mockHostIdProvider = new Mock<IHostIdProvider>(MockBehavior.Strict);
             _mockHostIdProvider.Setup(p => p.GetHostIdAsync(CancellationToken.None)).ReturnsAsync(TestHostId);
 
-            _repository = new BlobStorageConcurrencyStatusRepository(configuration, _mockHostIdProvider.Object, _loggerFactory);
+            var mockAzureStorageProvider = new Mock<IAzureStorageProvider>(MockBehavior.Strict);
+            mockAzureStorageProvider.Setup(p => p.GetWebJobsBlobContainerClient()).Returns(new BlobContainerClient(configuration.GetWebJobsConnectionString(ConnectionStringNames.Storage), HostContainerNames.Hosts));
+
+            _repository = new BlobStorageConcurrencyStatusRepository(configuration, mockAzureStorageProvider.Object, _mockHostIdProvider.Object, _loggerFactory);
         }
 
         [Fact]
         public async Task GetContainerAsync_ReturnsExpectedContainer()
         {
-            CloudBlobContainer container = await _repository.GetContainerAsync(CancellationToken.None);
+            BlobContainerClient container = await _repository.GetContainerAsync(CancellationToken.None);
             Assert.Equal(HostContainerNames.Hosts, container.Name);
         }
 
@@ -74,8 +76,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await DeleteTestBlobsAsync();
 
             var path = await _repository.GetBlobPathAsync(CancellationToken.None);
-            CloudBlobContainer container = await _repository.GetContainerAsync(CancellationToken.None);
-            CloudBlockBlob blob = container.GetBlockBlobReference(path);
+            BlobContainerClient container = await _repository.GetContainerAsync(CancellationToken.None);
+            BlobClient blob = container.GetBlobClient(path);
             bool exists = await blob.ExistsAsync();
             Assert.False(exists);
 
@@ -84,7 +86,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             exists = await blob.ExistsAsync();
             Assert.True(exists);
 
-            var content = await blob.DownloadTextAsync();
+            var downloadResponse = await blob.DownloadTextAsync();
+            string content = downloadResponse.Trim(new char[] { '\uFEFF', '\u200B' });
+
             var result = JsonConvert.DeserializeObject<HostConcurrencySnapshot>(content);
 
             Assert.True(_testSnapshot.Equals(result));
@@ -96,8 +100,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             await DeleteTestBlobsAsync();
 
             string path = await _repository.GetBlobPathAsync(CancellationToken.None);
-            CloudBlobContainer container = await _repository.GetContainerAsync(CancellationToken.None);
-            CloudBlockBlob blob = container.GetBlockBlobReference(path);
+            BlobContainerClient container = await _repository.GetContainerAsync(CancellationToken.None);
+            BlobClient blob = container.GetBlobClient(path);
 
             string content = JsonConvert.SerializeObject(_testSnapshot);
             await blob.UploadTextAsync(content);
@@ -121,7 +125,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         public async Task NoStorageConnection_HandledGracefully()
         {
             IConfiguration configuration = new ConfigurationBuilder().Build();
-            var localRepository = new BlobStorageConcurrencyStatusRepository(configuration, _mockHostIdProvider.Object, _loggerFactory);
+            var mockAzureStorageProvider = new Mock<IAzureStorageProvider>(MockBehavior.Strict);
+            mockAzureStorageProvider.Setup(p => p.GetWebJobsBlobContainerClient()).Throws(new Exception("Could not create BlobContainerClient in IAzureStorageProvider mock."));
+
+            var localRepository = new BlobStorageConcurrencyStatusRepository(configuration, mockAzureStorageProvider.Object, _mockHostIdProvider.Object, _loggerFactory);
 
             var container = await localRepository.GetContainerAsync(CancellationToken.None);
             Assert.Null(container);
@@ -134,11 +141,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
         private async Task DeleteTestBlobsAsync()
         {
-            CloudBlobContainer container = await _repository.GetContainerAsync(CancellationToken.None);
-            var blobs = container.ListBlobs($"concurrency/{TestHostId}", useFlatBlobListing: true);
-            foreach (var blob in blobs.Cast<CloudBlockBlob>())
+            var containerClient = await _repository.GetContainerAsync(CancellationToken.None);
+            await foreach (var blob in containerClient.GetBlobsAsync(prefix: $"concurrency/{TestHostId}"))
             {
-                await blob.DeleteAsync();
+                await containerClient.DeleteBlobAsync(blob.Name);
             }
         }
     }

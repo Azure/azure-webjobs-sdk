@@ -8,10 +8,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Azure.Storage.Queue;
 using Newtonsoft.Json.Linq;
 using Xunit;
 using Xunit.Abstractions;
@@ -27,9 +25,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         // also make it easy to debug
         private static ITestOutputHelper _output;
         private static Stopwatch _stopwatch = new Stopwatch();
-
-        private CloudQueue _sharedQueue;
-        private CloudQueue _poisonQueue;
 
         // Each test should set this up; it will be used during cleanup.
         private IHost _host;
@@ -75,28 +70,30 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 {
                     // each test will have a unique hostId so that consecutive test run will not be affected by clean up code
                     b.UseHostId(Guid.NewGuid().ToString("N"))
-                    .AddAzureStorage()
+                    // Necessary for Queue bindings
+                    .AddAzureStorageQueues()
                     .AddExtension<DispatchQueueTestConfig>();
+
+                    // Necessary to manipulate Queues for these tests
+                    b.Services.AddSingleton<QueueServiceClientProvider>();
                 })
                 .Build();
-                        
-            {
-                _funcInvocation = new ConcurrentStringSet();
 
-                _host.Start();
+            _funcInvocation = new ConcurrentStringSet();
 
-                _stopwatch.Restart();
+            _host.Start();
 
-                int twoFuncCount = DispatchQueueTestConfig.BatchSize * 2;
-                await TestHelpers.Await(() => _funcInvocation.TotalAdd() >= twoFuncCount || _funcInvocation.HasDuplicate(),
-                                        7000, 1000);
+            _stopwatch.Restart();
 
-                // make sure each function is triggered once and only once
-                Assert.Equal(twoFuncCount, _funcInvocation.TotalAdd());
-                Assert.False(_funcInvocation.HasDuplicate());
+            int twoFuncCount = DispatchQueueTestConfig.BatchSize * 2;
+            await TestHelpers.Await(() => _funcInvocation.TotalAdd() >= twoFuncCount || _funcInvocation.HasDuplicate(),
+                                    7000, 1000);
 
-                _stopwatch.Stop();
-            }
+            // make sure each function is triggered once and only once
+            Assert.Equal(twoFuncCount, _funcInvocation.TotalAdd());
+            Assert.False(_funcInvocation.HasDuplicate());
+
+            _stopwatch.Stop();
         }
 
         [Fact(Skip = "Fix DispatchQueue")]
@@ -107,40 +104,43 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 {
                     // each test will have a unique hostId so that consecutive test run will not be affected by clean up code
                     b.UseHostId(Guid.NewGuid().ToString("N"))
-                    .AddAzureStorage()
+                    // Necessary for Queue bindings
+                    .AddAzureStorageQueues()
                     .AddExtension<DispatchQueueTestConfig>();
+
+                    // Necessary to manipulate Queues for these tests
+                    b.Services.AddSingleton<QueueServiceClientProvider>();
                 })
                 .Build();
-                        
-            {
-                _funcInvocation = new ConcurrentStringSet();
 
-                _host.Start();
+            _funcInvocation = new ConcurrentStringSet();
 
-                _stopwatch.Restart();
+            _host.Start();
 
-                // this test takes long since it does at least 5 dequeue on the poison message
-                // count retries caused by failures and poison queue function process
-                int funcWithExceptionCount = DispatchQueueTestConfig.BatchSize + _host.GetOptions<QueuesOptions>().MaxDequeueCount;
-                await TestHelpers.Await(() => _funcInvocation.TotalAdd() >= funcWithExceptionCount, 10000, 1000);
+            _stopwatch.Restart();
 
-                Assert.Equal(funcWithExceptionCount, _funcInvocation.TotalAdd());
-                Assert.True(_funcInvocation.HasDuplicate());
-                Assert.True(SampleTriggerWithPoisonQueue.PoisonQueueResult);
+            // this test takes long since it does at least 5 dequeue on the poison message
+            // count retries caused by failures and poison queue function process
+            int funcWithExceptionCount = DispatchQueueTestConfig.BatchSize + _host.GetOptions<QueuesOptions>().MaxDequeueCount;
+            await TestHelpers.Await(() => _funcInvocation.TotalAdd() >= funcWithExceptionCount, 10000, 1000);
 
-                _stopwatch.Stop();
-            }
+            Assert.Equal(funcWithExceptionCount, _funcInvocation.TotalAdd());
+            Assert.True(_funcInvocation.HasDuplicate());
+            Assert.True(SampleTriggerWithPoisonQueue.PoisonQueueResult);
+
+            _stopwatch.Stop();
         }
 
         public void Dispose()
         {
             // each test will have a different hostId
             // and therefore a different sharedQueue and poisonQueue
-            CloudQueueClient client = _host.GetStorageAccount().CreateCloudQueueClient();
-            _sharedQueue = client.GetQueueReference("azure-webjobs-shared-" + _host.Services.GetService<IHostIdProvider>().GetHostIdAsync(CancellationToken.None).Result);
-            _poisonQueue = client.GetQueueReference("azure-webjobs-poison-" + _host.Services.GetService<IHostIdProvider>().GetHostIdAsync(CancellationToken.None).Result);
-            _sharedQueue.DeleteIfExistsAsync().Wait();
-            _poisonQueue.DeleteIfExistsAsync().Wait();
+            var queueServiceClient = _host.GetQueueServiceClient();
+            var sharedQueue = queueServiceClient?.GetQueueClient("azure-webjobs-shared-" + _host.Services.GetService<IHostIdProvider>().GetHostIdAsync(CancellationToken.None).Result);
+            var poisonQueue = queueServiceClient?.GetQueueClient("azure-webjobs-poison-" + _host.Services.GetService<IHostIdProvider>().GetHostIdAsync(CancellationToken.None).Result);
+
+            sharedQueue?.DeleteIfExistsAsync().Wait();
+            poisonQueue?.DeleteIfExistsAsync().Wait();
 
             _host.Dispose();
         }

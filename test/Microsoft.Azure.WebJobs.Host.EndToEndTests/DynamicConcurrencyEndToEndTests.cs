@@ -279,10 +279,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 .ConfigureDefaultTestHost<TProg>(b =>
                 {
                     b.UseHostId(TestHostId)
-                        .AddAzureStorage()
                         .AddExtension<TestTriggerAttributeBindingProvider>();
 
-                    RuntimeStorageWebJobsBuilderExtensions.AddAzureStorageCoreServices(b);
+                    b.AddAzureStorageCoreServices();
 
                     b.Services.AddOptions<ConcurrencyOptions>().Configure(options =>
                     {
@@ -300,6 +299,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 })
                 .ConfigureServices(services =>
                 {
+                    services.AddSingleton<IAzureStorageProvider, TestAzureStorageProvider>();
                 })
                 .ConfigureLogging((context, b) =>
                 {

@@ -43,8 +43,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             }
         }
 
-        private static void BadTableName([Table(@"#")] IDictionary<Tuple<string, string>, object> t) { }
-
         private static void MultipleQueueParams([QueueTrigger("p123")] int p123, [QueueTrigger("p234")] int p234) { }
 
         private static void QueueNestedIEnumerable([Queue("myoutputqueue")] ICollection<IEnumerable<Payload>> myoutputqueue) { }

@@ -10,13 +10,15 @@ using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
-using Microsoft.Azure.Storage.Queue;
+using Azure;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Specialized;
+using Azure.Storage.Queues.Models;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -26,8 +28,11 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
-    public class JobHostTests
+    public class JobHostTests : IClassFixture<JobHostTests.TestFixture>
     {
+        private const string TestArtifactContainerPrefix = "e2e-jobhosttests";
+        private const string TestArtifactContainerName = TestArtifactContainerPrefix + "-%rnd%";
+
         // Checks that we write the marker file when we call the host
         [Fact]
         public void TestSdkMarkerIsWrittenWhenInAzureWebSites()
@@ -374,7 +379,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public async Task CallAsync_WithDictionary()
         {
-            var host = JobHostFactory.Create<ProgramSimple>(null);
+            var host = JobHostFactory.Create<ProgramSimple>();
 
             var value = "abc";
             ProgramSimple._value = null;
@@ -389,7 +394,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [InlineData("test")]
         public async Task CallAsync_WithObject(string methodName)
         {
-            var host = JobHostFactory.Create<ProgramSimple>(null);
+            var host = JobHostFactory.Create<ProgramSimple>();
 
             var x = "abc";
             ProgramSimple._value = null;
@@ -404,7 +409,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             // Arrange
             ProgramWithCancellationToken.Cleanup();
-            var host = JobHostFactory.Create<ProgramWithCancellationToken>(null);
+            var host = JobHostFactory.Create<ProgramWithCancellationToken>();
 
             using (CancellationTokenSource source = new CancellationTokenSource())
             {
@@ -429,7 +434,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 string expectedStackTrace = expectedExceptionInfo.SourceException.StackTrace;
                 ThrowingProgram.ExceptionInfo = expectedExceptionInfo;
 
-                var host = JobHostFactory.Create<ThrowingProgram>(null);
+                var host = JobHostFactory.Create<ThrowingProgram>();
                 MethodInfo methodInfo = typeof(ThrowingProgram).GetMethod("Throw");
 
                 // Act & Assert
@@ -444,34 +449,41 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 ThrowingProgram.ExceptionInfo = null;
             }
         }
-
         [Fact]
         public async Task BlobTrigger_ProvidesBlobTriggerBindingData()
         {
             try
             {
+                RandomNameResolver nameResolver = new RandomNameResolver();
+
                 // Arrange
                 var host = new HostBuilder()
                     .ConfigureDefaultTestHost<BlobTriggerBindingDataProgram>(c =>
                     {
-                        c.AddAzureStorage();
+                        c.AddAzureStorageBlobs();
+                    })
+                    .ConfigureServices(s =>
+                    {
+                        s.AddSingleton<INameResolver>(nameResolver);
                     })
                     .Build()
                     .GetJobHost();
 
                 using (host)
                 {
-                    CloudStorageAccount account = CloudStorageAccount.DevelopmentStorageAccount;
+                    string containerName = nameResolver.ResolveInString(TestArtifactContainerName);
+                    string blobName = "blob";
+                    string expectedPath = containerName + "/" + blobName;
+
+                    var containerClient = TestFixture.GetTestContainerClient(containerName);
+                    await containerClient.CreateIfNotExistsAsync();
+                    var blockBlobClient = containerClient.GetBlockBlobClient(blobName);
+                    await blockBlobClient.UploadTextAsync("test");
 
                     MethodInfo methodInfo = typeof(BlobTriggerBindingDataProgram).GetMethod(nameof(BlobTriggerBindingDataProgram.OnBlob));
-                    string containerName = "a";
-                    string blobName = "b";
-                    string expectedPath = containerName + "/" + blobName;
-                    CloudBlobContainer container = account.CreateCloudBlobClient().GetContainerReference(containerName);
-                    ICloudBlob blob = container.GetBlockBlobReference(blobName);
 
                     // Act
-                    await host.CallAsync(methodInfo, new { blob = blob });
+                    await host.CallAsync(methodInfo, new { blob = blockBlobClient });
 
                     // Assert
                     Assert.Equal(expectedPath, BlobTriggerBindingDataProgram.BlobTrigger);
@@ -488,11 +500,17 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             try
             {
+                RandomNameResolver nameResolver = new RandomNameResolver();
+
                 // Arrange
                 var host = new HostBuilder()
                     .ConfigureDefaultTestHost<QueueTriggerBindingDataProgram>(c =>
                     {
-                        c.AddAzureStorage();
+                        c.AddAzureStorageQueues();
+                    })
+                    .ConfigureServices(s =>
+                    {
+                        s.AddSingleton<INameResolver>(nameResolver);
                     })
                     .Build()
                     .GetJobHost();
@@ -515,6 +533,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
+#if false // These tests should be in the Azure SDK extensions repo for storage
         [Fact]
         public async Task QueueTrigger_WithTextualByteArrayMessage_ProvidesQueueTriggerBindingData()
         {
@@ -524,7 +543,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 var host = new HostBuilder()
                     .ConfigureDefaultTestHost<QueueTriggerBindingDataProgram>(c =>
                     {
-                        c.AddAzureStorage();
+                        c.AddAzureStorageQueues();
                     })
                     .Build()
                     .GetJobHost();
@@ -533,7 +552,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 {
                     MethodInfo methodInfo = typeof(QueueTriggerBindingDataProgram).GetMethod(nameof(QueueTriggerBindingDataProgram.OnQueue));
                     string expectedMessage = "abc";
-                    CloudQueueMessage message = new CloudQueueMessage(expectedMessage);
+                    QueueMessage message = new QueueMessage();
                     Assert.Equal(expectedMessage, message.AsString); // Guard
 
                     // Act
@@ -617,6 +636,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 QueueTriggerBindingDataProgram.QueueTrigger = null;
             }
         }
+#endif
 
         [Fact]
         [Trait("Category", "secretsrequired")]
@@ -632,7 +652,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var builder = new HostBuilder()
                 .ConfigureDefaultTestHost<BindingErrorsProgram>(b =>
                 {
-                    b.AddAzureStorage();
+                    b.AddAzureStorageBlobs();
+                    b.AddAzureStorageQueues();
                 })
                 .ConfigureLogging(logging =>
                 {
@@ -649,27 +670,21 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 Assert.True(fex.Handled);
                 Assert.Equal("BindingErrorsProgram.Invalid", fex.MethodName);
 
-                // verify that the binding error was logged
-                Assert.Equal(11, errorLogger.GetLogMessages().Count);
-
                 // Skip validating the initial 'Starting JobHost' message and the OptionsFormatters
-                
-                LogMessage logMessage = errorLogger.GetLogMessages()[7];
-                Assert.Equal("Error indexing method 'BindingErrorsProgram.Invalid'", logMessage.FormattedMessage);
-                Assert.Same(fex, logMessage.Exception);
-                Assert.Equal("Invalid container name: invalid$=+1", logMessage.Exception.InnerException.Message);
 
-                logMessage = errorLogger.GetLogMessages()[8];
-                Assert.Equal("Function 'BindingErrorsProgram.Invalid' failed indexing and will be disabled.", logMessage.FormattedMessage);
+                // verify that the binding error was logged
+                var bindingErrorLog = errorLogger.GetLogMessages().Single(l => l.FormattedMessage.Equals("Error indexing method 'BindingErrorsProgram.Invalid'"));
+                Assert.NotNull(bindingErrorLog);
+                Assert.Same(fex, bindingErrorLog.Exception);
+
+                var disabledLog = errorLogger.GetLogMessages().Single(l => l.FormattedMessage.Equals("Function 'BindingErrorsProgram.Invalid' failed indexing and will be disabled."));
+                Assert.NotNull(disabledLog);
 
                 // verify that the valid function was still indexed
-                logMessage = errorLogger.GetLogMessages()[9];
-                Assert.True(logMessage.FormattedMessage.Contains("Found the following functions"));
-                Assert.True(logMessage.FormattedMessage.Contains("BindingErrorsProgram.Valid"));
+                Assert.Contains(errorLogger.GetLogMessages(), p => p.FormattedMessage.Contains("Found the following functions") && p.FormattedMessage.Contains("BindingErrorsProgram.Valid"));
 
                 // verify that the job host was started successfully
-                logMessage = errorLogger.GetLogMessages()[10];
-                Assert.Equal("Job host started", logMessage.FormattedMessage);
+                Assert.Contains(errorLogger.GetLogMessages(), p => p.FormattedMessage.Equals("Job host started"));
 
                 await host.StopAsync();
             }
@@ -748,7 +763,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             public static string BlobTrigger { get; set; }
 
-            public static void OnBlob([BlobTrigger("ignore/{name}")] ICloudBlob blob, string blobTrigger)
+            public static void OnBlob([BlobTrigger("ignore")] BlobClient blob, string blobTrigger)
             {
                 BlobTrigger = blobTrigger;
             }
@@ -759,7 +774,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             public static string QueueTrigger { get; set; }
             public static byte[] Bytes { get; set; }
 
-            public static void OnQueue([QueueTrigger("ignore")] CloudQueueMessage message, string queueTrigger)
+            public static void OnQueue([QueueTrigger("ignore")] QueueMessage message, string queueTrigger)
             {
                 QueueTrigger = queueTrigger;
             }
@@ -820,6 +835,59 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
                 StopCalled = true;
                 return Task.CompletedTask;
+            }
+        }
+
+        private class TestFixture : IDisposable
+        {
+            public static BlobServiceClient BlobServiceClient;
+
+            public TestFixture()
+            {
+                // Create a default host since we know that's where the account
+                // is coming from
+                IHost host = new HostBuilder()
+                    .ConfigureDefaultTestHost(b =>
+                    {
+                        b.AddAzureStorageCoreServices();
+
+                        // Necessary to manipulate Blobs for these tests
+                        b.Services.AddSingleton<BlobServiceClientProvider>();
+                    })
+                    .Build();
+
+                var configuration = host.Services.GetRequiredService<IConfiguration>();
+                var blobServiceClientProvider = host.Services.GetRequiredService<BlobServiceClientProvider>();
+                BlobServiceClient = blobServiceClientProvider.Get(ConnectionStringNames.Storage, configuration);
+            }
+
+            public static BlobContainerClient GetTestContainerClient(string name)
+            {
+                return BlobServiceClient?.GetBlobContainerClient(name);
+            }
+
+            public void Dispose()
+            {
+
+                DisposeBlobs().Wait();
+            }
+
+            private async Task DisposeBlobs()
+            {
+                if (BlobServiceClient != null)
+                {
+                    await foreach (var testBlobContainer in BlobServiceClient.GetBlobContainersAsync(prefix: TestArtifactContainerPrefix))
+                    {
+                        try
+                        {
+                            await BlobServiceClient.DeleteBlobContainerAsync(testBlobContainer.Name);
+                        }
+                        catch (RequestFailedException)
+                        {
+                            // best effort
+                        }
+                    }
+                }
             }
         }
     }

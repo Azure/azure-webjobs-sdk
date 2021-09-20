@@ -149,6 +149,10 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                         _started = false;
                     }
                 }
+                catch (Exception ex)
+                {
+                    _logger?.LogError("Error", ex);
+                }
                 finally
                 {
                     _semaphoreSlim.Release();

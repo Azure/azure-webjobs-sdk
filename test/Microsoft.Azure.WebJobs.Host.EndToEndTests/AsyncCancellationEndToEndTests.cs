@@ -4,13 +4,11 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Executors;
+using Azure.Storage.Queues;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Queue;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
@@ -27,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private static EventWaitHandle _functionCompleted;
         private static bool _tokenCancelled;
 
-        private readonly CloudStorageAccount _storageAccount;
+        private readonly QueueServiceClient _queueServiceClient;
         private readonly RandomNameResolver _resolver;
         private readonly IHost _host;
 
@@ -38,7 +36,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _host = new HostBuilder()
                 .ConfigureDefaultTestHost<AsyncCancellationEndToEndTests>(b =>
                 {
-                    b.AddAzureStorage();
+                    // Necessary for Blob/Queue bindings
+                    b.AddAzureStorageBlobs();
+                    b.AddAzureStorageQueues();
+
+                    b.Services.AddSingleton<QueueServiceClientProvider>();
                 })
                 .ConfigureServices(services =>
                 {
@@ -46,8 +48,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 })
                 .Build();
 
-            var accountProvider = _host.Services.GetService<StorageAccountProvider>();
-            _storageAccount = accountProvider.GetHost().SdkObject;
+            var configuration = _host.Services.GetService<IConfiguration>();
+            var queueServiceClientProvider = _host.Services.GetService<QueueServiceClientProvider>();
+            _queueServiceClient = queueServiceClientProvider.Get(ConnectionStringNames.Storage, configuration);
 
             _invokeInFunction = () => { };
             _tokenCancelled = false;
@@ -60,12 +63,17 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _functionStarted.Dispose();
             _functionCompleted.Dispose();
 
-            if (_storageAccount != null)
+            DisposeQueues().Wait();
+        }
+
+        private async Task DisposeQueues()
+        {
+            if (_queueServiceClient != null)
             {
-                CloudQueueClient queueClient = _storageAccount.CreateCloudQueueClient();
-                foreach (var testQueue in queueClient.ListQueuesSegmentedAsync(TestArtifactPrefix, null).Result.Results)
+                // TODO: May need to fully await on this before iterating the async for loop
+                await foreach (var testQueue in _queueServiceClient.GetQueuesAsync(prefix: TestArtifactPrefix))
                 {
-                    testQueue.DeleteAsync().Wait();
+                    await _queueServiceClient.DeleteQueueAsync(testQueue.Name);
                 }
             }
         }
