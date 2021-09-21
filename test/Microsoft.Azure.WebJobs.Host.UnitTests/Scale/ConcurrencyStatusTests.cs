@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -22,6 +23,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
         private readonly Random _rand = new Random();
         private readonly Mock<ConcurrencyManager> _concurrencyManagerMock;
         private readonly ConcurrencyStatus _testConcurrencyStatus;
+        private readonly LoggerFactory _loggerFactory;
+        private readonly TestLoggerProvider _loggerProvider;
+        private readonly ILogger _testLogger;
 
         private ConcurrencyThrottleAggregateStatus _throttleStatus;
 
@@ -33,6 +37,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             _concurrencyManagerMock.SetupGet(p => p.ThrottleStatus).Returns(() => _throttleStatus);
 
             _testConcurrencyStatus = new ConcurrencyStatus(TestFunctionId, _concurrencyManagerMock.Object);
+
+            _loggerFactory = new LoggerFactory();
+            _loggerProvider = new TestLoggerProvider();
+            _loggerFactory.AddProvider(_loggerProvider);
+            _testLogger = _loggerFactory.CreateLogger("Test");
         }
 
         [Fact]
@@ -413,6 +422,37 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             Assert.Equal(expectedInvocationCount, _testConcurrencyStatus.InvocationsSinceLastAdjustment);
             Assert.Equal(latencies.Sum(), _testConcurrencyStatus.TotalInvocationTimeSinceLastAdjustmentMs);
             Assert.Equal(numThreads, _testConcurrencyStatus.MaxConcurrentExecutionsSinceLastAdjustment);
+        }
+
+        [Fact]
+        public void LogStatus_OnlyLogsWhenStatusChanges()
+        {
+            _testConcurrencyStatus.LogUpdates(_testLogger);
+            var logs = _loggerProvider.GetAllLogMessages().ToArray();
+            Assert.Single(logs);
+            Assert.Equal("testfunction Concurrency: 1, OutstandingInvocations: 0", logs[0].FormattedMessage);
+
+            _loggerProvider.ClearAllLogMessages();
+            _testConcurrencyStatus.LogUpdates(_testLogger);
+            _testConcurrencyStatus.LogUpdates(_testLogger);
+            logs = _loggerProvider.GetAllLogMessages().ToArray();
+            Assert.Empty(logs);
+
+            _loggerProvider.ClearAllLogMessages();
+            _testConcurrencyStatus.IncreaseConcurrency();
+            _testConcurrencyStatus.LogUpdates(_testLogger);
+            _testConcurrencyStatus.LogUpdates(_testLogger);
+            logs = _loggerProvider.GetAllLogMessages().ToArray();
+            Assert.Single(logs);
+            Assert.Equal("testfunction Concurrency: 2, OutstandingInvocations: 0", logs[0].FormattedMessage);
+
+            _loggerProvider.ClearAllLogMessages();
+            _testConcurrencyStatus.ApplySnapshot(new FunctionConcurrencySnapshot { Concurrency = 3 });
+            _testConcurrencyStatus.LogUpdates(_testLogger);
+            _testConcurrencyStatus.LogUpdates(_testLogger);
+            logs = _loggerProvider.GetAllLogMessages().ToArray();
+            Assert.Single(logs);
+            Assert.Equal("testfunction Concurrency: 3, OutstandingInvocations: 0", logs[0].FormattedMessage);
         }
     }
 }

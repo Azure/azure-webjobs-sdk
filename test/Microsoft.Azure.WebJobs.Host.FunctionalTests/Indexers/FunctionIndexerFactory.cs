@@ -26,6 +26,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                     // Needed for Blob/Queue triggers and bindings
                     b.AddAzureStorageBlobs();
                     b.AddAzureStorageQueues();
+
+                    b.AddServiceBus();
                 })
                 .ConfigureServices(services =>
                 {

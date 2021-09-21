@@ -4,6 +4,7 @@
 using System;
 using System.Diagnostics;
 using System.Threading;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Scale
 {
@@ -22,6 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
 
         private int _adjustmentRunDirection;
         private int _adjustmentRunCount;
+        private int _lastLoggedConcurrency;
 
         /// <summary>
         /// Constructs a new instance.
@@ -237,6 +239,19 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         {
             int delta = GetNextAdjustment(-1);
             AdjustConcurrency(delta);
+        }
+
+        /// <summary>
+        /// Log if concurrency status has changed since the last call.
+        /// </summary>
+        /// <param name="logger">The logger to use.</param>
+        internal void LogUpdates(ILogger logger)
+        {
+            if (CurrentConcurrency != _lastLoggedConcurrency)
+            {
+                logger.HostConcurrencyStatus(FunctionId, CurrentConcurrency, OutstandingInvocations);
+                _lastLoggedConcurrency = CurrentConcurrency;
+            }
         }
 
         internal void FunctionStarted()

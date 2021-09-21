@@ -253,9 +253,24 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
                     if (triggerBinding != null && !hasNoAutomaticTriggerAttribute)
                     {
-                        throw new InvalidOperationException(
-                            string.Format(Resource.UnableToBindParameterFormat,
-                            parameter.Name, parameter.ParameterType.Name, Resource.ExtensionInitializationMessage));
+                        string extendedBindingErrorHelpText = Resource.ExtensionInitializationMessage;
+
+                        if (bindingDataContract != null)
+                        {
+                            // If a non-trigger/non-attributed parameter binding fails, check to see if we've successfully bound
+                            // a trigger parameter and have a binding contract. If so, it might be that the customer is trying to
+                            // bind to a contract member. If the parameter type matches one of the binding contract members,
+                            // extend the binding error by indicating the valid parameter names for that Type.
+                            string[] matchingContractNames = bindingDataContract.Where(p => parameter.ParameterType == p.Value).Select(p => p.Key).ToArray();
+                            if (matchingContractNames.Length > 0)
+                            {
+                                string bindingContractHelpText = $"The binding supports the following parameter names for type {parameter.ParameterType.Name}: ({string.Join(", ", matchingContractNames)}). If you're trying to bind to one of those values, rename your parameter to match the contract name (case insensitive).";
+                                extendedBindingErrorHelpText = $"{bindingContractHelpText} {extendedBindingErrorHelpText}";
+                            }
+                        }
+
+                        string bindingError = string.Format(Resource.UnableToBindParameterFormat, parameter.Name, parameter.ParameterType.Name, extendedBindingErrorHelpText);
+                        throw new InvalidOperationException(bindingError);
                     }
                     else
                     {

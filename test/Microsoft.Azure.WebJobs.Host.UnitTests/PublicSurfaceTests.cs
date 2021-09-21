@@ -286,7 +286,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IPrimaryHostStateProvider",
                 "PrimaryHostCoordinatorOptions",
                 "ThrottleState",
-                "SharedListenerAttribute"
+                "SharedListenerAttribute",
+                "FunctionDataCacheKey",
+                "ICacheAwareReadObject",
+                "ICacheAwareWriteObject",
+                "IFunctionDataCache",
+                "SharedMemoryAttribute",
+                "SharedMemoryMetadata"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);

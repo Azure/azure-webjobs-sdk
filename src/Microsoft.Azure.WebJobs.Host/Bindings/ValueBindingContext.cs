@@ -14,15 +14,29 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         private readonly FunctionBindingContext _functionContext;
         private readonly CancellationToken _cancellationToken;
 
+        private SharedMemoryMetadata _sharedMemoryMetadata;
+
         /// <summary>
         /// Creates a new instance.
         /// </summary>
         /// <param name="functionContext">The context for the parent function.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> to use.</param>
         public ValueBindingContext(FunctionBindingContext functionContext, CancellationToken cancellationToken)
+            : this(functionContext, null, cancellationToken)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new instance.
+        /// </summary>
+        /// <param name="functionContext">The context for the parent function.</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to use.</param>
+        /// <param name="sharedMemoryMetadata">The metadata of the shared memory map where the value is present.</param>
+        public ValueBindingContext(FunctionBindingContext functionContext, SharedMemoryMetadata sharedMemoryMetadata, CancellationToken cancellationToken)
         {
             _functionContext = functionContext;
             _cancellationToken = cancellationToken;
+            _sharedMemoryMetadata = sharedMemoryMetadata;
         }
 
         /// <summary>
@@ -55,6 +69,16 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         public CancellationToken CancellationToken
         {
             get { return _cancellationToken; }
+        }
+
+        /// <summary>
+        /// Gets the informatino about where in the shared memory map the value is exists.
+        /// This can be used by the storage extension to create an entry for this object in the <see cref="IFunctionDataCache"/>.
+        /// </summary>
+        public SharedMemoryMetadata SharedMemoryMetadata
+        {
+            get { return _sharedMemoryMetadata; }
+            set { _sharedMemoryMetadata = value; }
         }
     }
 }
