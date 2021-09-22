@@ -64,6 +64,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _fixture = fixture;
             _resolver = new RandomNameResolver();
 
+            int processorCount = Extensions.Storage.Utility.GetProcessorCount();
+
             _hostBuilder = new HostBuilder()
                 .ConfigureDefaultTestHost<AsyncChainEndToEndTests>(b =>
                 {
@@ -77,12 +79,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     services.Configure<QueuesOptions>(o =>
                     {
                         o.MaxPollingInterval = TimeSpan.FromSeconds(2);
+                        o.BatchSize = 16;
+                        o.NewBatchThreshold = 8 * processorCount; // workaround for static isDynamicSku and ProcessorCount variables in T2 extensions
                     });
                     services.Configure<FunctionResultAggregatorOptions>(o =>
                     {
                         o.IsEnabled = false;
                     });
-                });
+                })
+                .ConfigureAppConfiguration(c => c.AddEnvironmentVariables());
 
             _blobServiceClient = fixture.BlobServiceClient;
             _queueServiceClient = fixture.QueueServiceClient;
