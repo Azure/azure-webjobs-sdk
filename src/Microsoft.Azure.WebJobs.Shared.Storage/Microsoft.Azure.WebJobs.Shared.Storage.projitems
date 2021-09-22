@@ -10,7 +10,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)BlobStorageExtensions.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)StorageExceptionsExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CommonUtility.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)WebJobsStorageDelegatingHandler.cs" />
   </ItemGroup>

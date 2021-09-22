@@ -70,7 +70,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             if (_queueServiceClient != null)
             {
-                // TODO: May need to fully await on this before iterating the async for loop
                 await foreach (var testQueue in _queueServiceClient.GetQueuesAsync(prefix: TestArtifactPrefix))
                 {
                     await _queueServiceClient.DeleteQueueAsync(testQueue.Name);

@@ -28,10 +28,6 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
-    /// <summary>
-    /// TODO: TEMP - implementation should be moved https://github.com/Azure/azure-webjobs-sdk/issues/2710
-    /// Borrowed from WebJobs.Host.EndToEndTests
-    /// </summary>
     public partial class SingletonEndToEndTests : IClassFixture<SingletonEndToEndTests.TestFixture>
     {
         private const string TestHostId = "e2etesthost";

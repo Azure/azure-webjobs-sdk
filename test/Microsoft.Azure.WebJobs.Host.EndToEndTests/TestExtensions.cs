@@ -14,12 +14,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
     static class TestExtensions
     {
-        //public static StorageAccount GetStorageAccount(this IHost host)
-        //{
-        //    var provider = host.Services.GetRequiredService<StorageAccountProvider>(); // $$$ ok?
-        //    return provider.GetHost();
-        //}
-
         public static QueueServiceClient GetQueueServiceClient(this IHost host)
         {
             var configuration = host.Services.GetRequiredService<IConfiguration>();

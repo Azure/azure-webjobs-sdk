@@ -57,7 +57,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             Assert.NotNull(descriptor);
             var parameters = descriptor.Parameters;
             Assert.Single(parameters);
-            //Assert.IsType<BlobParameterDescriptor>(parameters.First());
         }
 
         private static void NameResolver([Blob(@"input/%name%")] TextReader inputs) { }
@@ -75,10 +74,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             Assert.Single(parameters);
             ParameterDescriptor firstParameter = parameters.First();
             Assert.Equal("inputs", firstParameter.Name);
-            //Assert.IsType<BlobParameterDescriptor>(firstParameter);
-            //BlobParameterDescriptor blobParameter = (BlobParameterDescriptor)firstParameter;
-            //Assert.Equal(@"input", blobParameter.ContainerName);
-            //Assert.Equal(@"VALUE", blobParameter.BlobName);
         }
 
         public static void AutoTrigger1([BlobTrigger(@"daas-test-input/{name}.csv")] TextReader inputs) { }
@@ -141,9 +136,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
             ParameterDescriptor firstParameter = parameters.First();
             Assert.Equal("QueueTriggerParameterDescriptor", firstParameter.GetType().Name);
-            //Assert.IsType<QueueTriggerParameterDescriptor>(firstParameter);
-            //QueueTriggerParameterDescriptor queueParameter = (QueueTriggerParameterDescriptor)firstParameter;
-            //Assert.Equal("inputqueue", queueParameter.QueueName); // queue name gets normalized. 
             Assert.Equal("queueValue", firstParameter.Name); // parameter name does not.
         }
 
@@ -163,8 +155,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             Assert.Single(parameters);
 
             ParameterDescriptor firstParameter = parameters.First();
-            //QueueParameterDescriptor queueParameter = (QueueParameterDescriptor)firstParameter;
-            //Assert.Equal("inputqueue", queueParameter.QueueName); // queue name gets normalized.
             Assert.Equal("inputQueue", firstParameter.Name); // parameter name does not.
         }
 
@@ -192,9 +182,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             ParameterDescriptor firstParameter = parameters.ElementAt(0);
             Assert.Equal("input", firstParameter.Name);
             Assert.Equal("BlobTriggerParameterDescriptor", firstParameter.GetType().Name);
-            //Assert.IsType<BlobTriggerParameterDescriptor>(firstParameter);
-            //BlobTriggerParameterDescriptor blobParameter = (BlobTriggerParameterDescriptor)firstParameter;
-            //Assert.Equal("container", blobParameter.ContainerName);
 
             ParameterDescriptor secondParameter = parameters.ElementAt(1);
             Assert.Equal("unbound", secondParameter.Name);
@@ -217,9 +204,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             ParameterDescriptor firstParameter = parameters.ElementAt(0);
             Assert.Equal("input", firstParameter.Name);
             Assert.Equal("BlobTriggerParameterDescriptor", firstParameter.GetType().Name);
-            //Assert.IsType<BlobTriggerParameterDescriptor>(firstParameter);
-            //BlobTriggerParameterDescriptor blobParameter = (BlobTriggerParameterDescriptor)firstParameter;
-            //Assert.Equal("container", blobParameter.ContainerName);
 
             ParameterDescriptor secondParameter = parameters.ElementAt(1);
             Assert.Equal("bound", secondParameter.Name);
