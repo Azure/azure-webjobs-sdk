@@ -193,7 +193,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "}",
                     "BlobsOptions",
                     "{",
-                    "  \"MaxDegreeOfParallelism\": 96",
+                    string.Format("  \"MaxDegreeOfParallelism\": {0}", 8 * processorCount),
                     "}",
                     "QueuesOptions", // This QueuesOptions are an internal type within Microsoft.Azure.WebJobs.Extensions.Storage.Blobs
                     "{",

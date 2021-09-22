@@ -9,6 +9,7 @@ using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
@@ -78,7 +79,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
             else
             {
-                Environment.SetEnvironmentVariable(Constants.AzureWebsiteSku, "dynamic");
+                Environment.SetEnvironmentVariable(Constants.AzureWebsiteSku, "Dynamic");
             }
 
             RandomNameResolver nameResolver = new RandomNameResolver();
@@ -90,6 +91,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         o.BatchSize = batchSize;
                         // Track2 Queues Extensions expects Base64 encoded message; Track2 Queues package no longer encodes by default (Track1 used Base64 default)
                         o.MessageEncoding = QueueMessageEncoding.None;
+                        o.NewBatchThreshold = isDynamicSku ? (batchSize / 2) : (batchSize / 2) * processorCount; // To get around static isDynamicSku variable in T2 storage extensions
                     });
                 })
                 .ConfigureServices(services =>
@@ -99,6 +101,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     // Necessary to manipulate Queues for these tests
                     services.AddSingleton<QueueServiceClientProvider>();
                 })
+                .ConfigureAppConfiguration(c => c.AddEnvironmentVariables())
                 .Build();
 
             var configuration = host.Services.GetRequiredService<IConfiguration>();
