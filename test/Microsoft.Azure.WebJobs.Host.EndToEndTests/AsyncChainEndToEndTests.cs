@@ -203,7 +203,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "QueuesOptions", // This QueuesOptions are an internal type within Microsoft.Azure.WebJobs.Extensions.Storage.Blobs
                     "{",
                     "  \"BatchSize\": 16",
-                    "  \"NewBatchThreshold\": 96,",
+                    string.Format("  \"NewBatchThreshold\": {0},", 8 * processorCount),
                     "  \"MaxPollingInterval\": \"00:01:00\",",
                     "  \"MaxDequeueCount\": 5,",
                     "  \"VisibilityTimeout\": \"00:00:00\"",
