@@ -30,6 +30,7 @@ namespace Microsoft.Extensions.Hosting
             // May need to rename this to HostBlobServiceClientProvider
             services.TryAddSingleton<BlobServiceClientProvider>();
             services.AddAzureClientsCore();
+            services.TryAddSingleton<IAzureStorageProvider, AzureStorageProvider>();
 
             services.AddSingleton<IConcurrencyStatusRepository, BlobStorageConcurrencyStatusRepository>();
         }

@@ -97,7 +97,7 @@ namespace Microsoft.Extensions.Configuration
         public static IConfigurationSection GetWebJobsConnectionStringSection(this IConfiguration configuration, string connectionStringName)
         {
             // first try prefixing
-            string prefixedConnectionStringName = IConfigurationExtensions.GetPrefixedConnectionStringName(connectionStringName);
+            string prefixedConnectionStringName = GetPrefixedConnectionStringName(connectionStringName);
             IConfigurationSection section = GetConnectionStringOrSettingSection(configuration, prefixedConnectionStringName);
 
             if (!section.Exists())

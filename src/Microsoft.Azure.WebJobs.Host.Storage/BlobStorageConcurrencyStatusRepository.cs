@@ -4,16 +4,13 @@
 #nullable enable
 
 using System;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Specialized;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Logging;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -22,15 +19,15 @@ namespace Microsoft.Azure.WebJobs.Host
     internal class BlobStorageConcurrencyStatusRepository : IConcurrencyStatusRepository
     {
         private readonly IHostIdProvider _hostIdProvider;
-        private readonly IAzureStorageProvider _azureStorageProvider;
         private readonly ILogger _logger;
+        private readonly IAzureStorageProvider _azureStorageProvider;
         private BlobContainerClient? _blobContainerClient;
 
-        public BlobStorageConcurrencyStatusRepository(IConfiguration configuration, IAzureStorageProvider azureStorageProvider, IHostIdProvider hostIdProvider, ILoggerFactory loggerFactory)
+        public BlobStorageConcurrencyStatusRepository(IHostIdProvider hostIdProvider, ILoggerFactory loggerFactory, IAzureStorageProvider azureStorageProvider)
         {
             _hostIdProvider = hostIdProvider;
-            _azureStorageProvider = azureStorageProvider;
             _logger = loggerFactory.CreateLogger(LogCategories.Concurrency);
+            _azureStorageProvider = azureStorageProvider;
         }
 
         public async Task<HostConcurrencySnapshot?> ReadAsync(CancellationToken cancellationToken)
@@ -39,11 +36,12 @@ namespace Microsoft.Azure.WebJobs.Host
 
             try
             {
-                BlobContainerClient? container = await GetContainerAsync(cancellationToken);
-                if (container != null)
+                BlobContainerClient? containerClient = await GetContainerClientAsync(cancellationToken);
+                if (containerClient != null)
                 {
-                    BlockBlobClient blob = container.GetBlockBlobClient(blobPath);
-                    string? content = (await blob.DownloadContentAsync(cancellationToken)).Value?.Content?.ToString();
+                    BlobClient blobClient = containerClient.GetBlobClient(blobPath);
+                    string content = await blobClient.DownloadTextAsync();
+
                     if (!string.IsNullOrEmpty(content))
                     {
                         var result = JsonConvert.DeserializeObject<HostConcurrencySnapshot>(content);
@@ -51,8 +49,9 @@ namespace Microsoft.Azure.WebJobs.Host
                     }
                 }
             }
-            catch (RequestFailedException ex) when (ex.Status == 404)
+            catch (RequestFailedException exception) when (exception.Status == 404)
             {
+                // we haven't recorded a status yet
                 return null;
             }
             catch (Exception e)
@@ -70,16 +69,12 @@ namespace Microsoft.Azure.WebJobs.Host
 
             try
             {
-                BlobContainerClient? container = await GetContainerAsync(cancellationToken);
-                if (container != null)
+                BlobContainerClient? containerClient = await GetContainerClientAsync(cancellationToken);
+                if (containerClient != null)
                 {
-                    BlockBlobClient blob = container.GetBlockBlobClient(blobPath);
-
-                    using (StreamWriter writer = new StreamWriter(await blob.OpenWriteAsync(overwrite: true, cancellationToken: cancellationToken)))
-                    {
-                        var content = JsonConvert.SerializeObject(snapshot);
-                        await writer.WriteAsync(content);
-                    }
+                    BlobClient blobClient = containerClient.GetBlobClient(blobPath);
+                    var content = JsonConvert.SerializeObject(snapshot);
+                    await blobClient.UploadTextAsync(content);
                 }
             }
             catch (Exception e)
@@ -89,7 +84,7 @@ namespace Microsoft.Azure.WebJobs.Host
             }
         }
 
-        internal async Task<BlobContainerClient?> GetContainerAsync(CancellationToken cancellationToken)
+        internal async Task<BlobContainerClient?> GetContainerClientAsync(CancellationToken cancellationToken)
         {
             if (_blobContainerClient == null)
             {
@@ -100,7 +95,7 @@ namespace Microsoft.Azure.WebJobs.Host
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError(e, $"Error getting BlobContainer for BlobStorageConcurrencyStatusRepository.");
+                    _logger.LogError(e, $"Error getting BlobContainerClient for BlobStorageConcurrencyStatusRepository.");
                 }
             }
 

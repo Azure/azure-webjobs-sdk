@@ -869,10 +869,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             public void Dispose()
             {
 
-                DisposeBlobs().Wait();
+                CleanBlobsAsync().Wait();
             }
 
-            private async Task DisposeBlobs()
+            private async Task CleanBlobsAsync()
             {
                 if (BlobServiceClient != null)
                 {

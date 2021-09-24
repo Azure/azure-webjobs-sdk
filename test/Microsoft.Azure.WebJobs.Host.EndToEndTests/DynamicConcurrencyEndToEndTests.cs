@@ -297,10 +297,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         }
                     });
                 })
-                .ConfigureServices(services =>
-                {
-                    services.AddSingleton<IAzureStorageProvider, TestAzureStorageProvider>();
-                })
                 .ConfigureLogging((context, b) =>
                 {
                     b.SetMinimumLevel(LogLevel.Information);

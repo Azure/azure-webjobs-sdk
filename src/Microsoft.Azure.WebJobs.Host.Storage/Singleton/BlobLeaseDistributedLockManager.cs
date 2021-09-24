@@ -98,7 +98,7 @@ namespace Microsoft.Azure.WebJobs.Host
         {
             if (!string.IsNullOrWhiteSpace(accountName))
             {
-                throw new InvalidOperationException("Must replace singleton lease manager to support multiple accounts");
+                throw new InvalidOperationException("Must replace IDistributedLockManager to support multiple accounts");
             }
 
             return _azureStorageProvider.GetWebJobsBlobContainerClient();
@@ -106,7 +106,6 @@ namespace Microsoft.Azure.WebJobs.Host
 
         internal string GetLockPath(string lockId)
         {
-            // lockId here is already in the format {accountName}/{functionDescriptor}.{scopeId}
             return string.Format(CultureInfo.InvariantCulture, "{0}/{1}", SingletonLocks, lockId);
         }
 
@@ -131,7 +130,6 @@ namespace Microsoft.Azure.WebJobs.Host
                 // exist. If it doesn't we handle the 404, create it, and retry below
                 var leaseResponse = await lockManager.GetBlobLeaseClient(blobClient, proposedLeaseId).AcquireAsync(leasePeriod, cancellationToken: cancellationToken);
                 return leaseResponse.Value.LeaseId;
-                // return await blob.AcquireLeaseAsync(leasePeriod, proposedLeaseId, accessCondition: null, options: null, operationContext: null, cancellationToken: cancellationToken);
             }
             catch (RequestFailedException exception)
             {

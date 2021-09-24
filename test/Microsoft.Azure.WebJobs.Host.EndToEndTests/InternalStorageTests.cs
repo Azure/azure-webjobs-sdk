@@ -40,7 +40,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost(prog, b =>
                 {
-                    b.Services.AddSingleton<IAzureStorageProvider, TestAzureStorageProvider>();
                     RuntimeStorageWebJobsBuilderExtensions.AddAzureStorageCoreServices(b);
                 })
                 .ConfigureAppConfiguration(config =>

@@ -3,7 +3,7 @@
 
 using Azure.Storage.Blobs;
 
-namespace Microsoft.Azure.WebJobs
+namespace Microsoft.Azure.WebJobs.Host
 {
     /// <summary>
     /// Interface to retrieve BlobServiceClient objects

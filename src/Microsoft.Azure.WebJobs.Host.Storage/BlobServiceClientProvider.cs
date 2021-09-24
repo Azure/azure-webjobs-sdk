@@ -10,10 +10,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
-    /// <summary>
-    /// Provider to create BlobServiceClient objects.
-    /// TODO: This should remain in Functions Host. Not in WebJobs repo.
-    /// </summary>
     internal class BlobServiceClientProvider : StorageClientProvider<BlobServiceClient, BlobClientOptions>
     {
         public BlobServiceClientProvider(AzureComponentFactory componentFactory, AzureEventSourceLogForwarder logForwarder, ILogger<BlobServiceClientProvider> logger)

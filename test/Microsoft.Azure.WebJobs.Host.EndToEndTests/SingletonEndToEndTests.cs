@@ -411,7 +411,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         public class TestJobs
         {
             private const string Secondary = "SecondaryStorage";
-            public const string LeaseBlobRootPath = "Microsoft.Azure.WebJobs.Host.EndToEndTests.SingletonEndToEndTestsV2+TestJobs";
+            public const string LeaseBlobRootPath = "Microsoft.Azure.WebJobs.Host.EndToEndTests.SingletonEndToEndTests+TestJobs";
             public static int Queue1MessageCount = 0;
             public static int Queue2MessageCount = 0;
             public static bool FailureDetected = false;
@@ -656,9 +656,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         o.LockAcquisitionTimeout = TimeSpan.FromSeconds(10);
                         o.LockAcquisitionPollingInterval = TimeSpan.FromMilliseconds(500);
                     });
-
-                    services.AddSingleton<IDistributedLockManager, BlobLeaseDistributedLockManager>();
-                    services.AddSingleton<IAzureStorageProvider, TestAzureStorageProvider>();
                 });
 
             extraConfig?.Invoke(hostBuilder); // test hook gets final say to replace. 
@@ -843,26 +840,26 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 var queueServiceClientProvider = host.Services.GetRequiredService<QueueServiceClientProvider>();
                 QueueServiceClient = queueServiceClientProvider.Get(ConnectionStringNames.Storage, configuration);
 
-                _lockDirectoryContainerClient = BlobServiceClient.GetBlobContainerClient("azure-webjobs-hosts");
+                _lockDirectoryContainerClient = BlobServiceClient.GetBlobContainerClient(HostContainerNames.Hosts);
 
                 SecondaryBlobServiceClient = blobServiceClientProvider.Get($"AzureWebJobs{Secondary}", configuration);
-                _secondaryLockDirectoryContainerClient = SecondaryBlobServiceClient.GetBlobContainerClient("azure-webjobs-hosts");
+                _secondaryLockDirectoryContainerClient = SecondaryBlobServiceClient.GetBlobContainerClient(HostContainerNames.Hosts);
             }
 
             public void Dispose()
             {
 
-                DisposeBlobs(BlobServiceClient).Wait();
-                DisposeBlobs(SecondaryBlobServiceClient).Wait();
-                DisposeQueues().Wait();
+                CleanBlobsAsync(BlobServiceClient).Wait();
+                CleanBlobsAsync(SecondaryBlobServiceClient).Wait();
+                CleanQueuesAsync().Wait();
             }
 
-            private async Task DisposeBlobs(BlobServiceClient blobServiceClient)
+            private async Task CleanBlobsAsync(BlobServiceClient blobServiceClient)
             {
                 if (blobServiceClient != null)
                 {
-                    var containerClient = blobServiceClient.GetBlobContainerClient("azure-webjobs-hosts");
-                    if (containerClient.Exists())
+                    var containerClient = blobServiceClient.GetBlobContainerClient(HostContainerNames.Hosts);
+                    if (await containerClient.ExistsAsync())
                     {
                         await foreach (var testBlob in containerClient.GetBlobsAsync(prefix: string.Format("locks/{0}", TestHostId)))
                         {
@@ -880,7 +877,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 }
             }
 
-            private async Task DisposeQueues()
+            private async Task CleanQueuesAsync()
             {
                 if (QueueServiceClient != null)
                 {

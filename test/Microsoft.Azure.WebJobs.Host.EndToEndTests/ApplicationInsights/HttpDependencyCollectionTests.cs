@@ -485,11 +485,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
         public void Dispose()
         {
             _channel?.Dispose();
-            DisposeBlobs().Wait();
-            DisposeQueues().Wait();
+            CleanBlobsAsync().Wait();
+            CleanQueuesAsync().Wait();
         }
 
-        private async Task DisposeBlobs()
+        private async Task CleanBlobsAsync()
         {
             if (_blobServiceClient != null)
             {
@@ -500,7 +500,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             }
         }
 
-        private async Task DisposeQueues()
+        private async Task CleanQueuesAsync()
         {
             if (_queueServiceClient != null)
             {

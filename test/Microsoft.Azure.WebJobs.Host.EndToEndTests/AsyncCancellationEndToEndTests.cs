@@ -63,10 +63,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _functionStarted.Dispose();
             _functionCompleted.Dispose();
 
-            DisposeQueues().Wait();
+            CleanQueuesAsync().Wait();
         }
 
-        private async Task DisposeQueues()
+        private async Task CleanQueuesAsync()
         {
             if (_queueServiceClient != null)
             {

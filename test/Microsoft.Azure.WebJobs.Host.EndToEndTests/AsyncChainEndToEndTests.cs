@@ -877,11 +877,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             public void Dispose()
             {
-                DisposeBlobs().Wait();
-                DisposeQueues().Wait();
+                CleanBlobsAsync().Wait();
+                CleanQueuesAsync().Wait();
             }
 
-            private async Task DisposeBlobs()
+            private async Task CleanBlobsAsync()
             {
                 if (BlobServiceClient != null)
                 {
@@ -892,7 +892,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 }
             }
 
-            private async Task DisposeQueues()
+            private async Task CleanQueuesAsync()
             {
                 if (QueueServiceClient != null)
                 {

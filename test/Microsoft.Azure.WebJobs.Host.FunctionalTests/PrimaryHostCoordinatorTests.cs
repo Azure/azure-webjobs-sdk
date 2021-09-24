@@ -47,8 +47,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                         o.Enabled = _enabled;
                     });
 
-                    s.AddSingleton<IAzureStorageProvider, TestAzureStorageProvider>();
-
                     configure?.Invoke(s);
                 })
                 .ConfigureLogging(b =>
