@@ -8,9 +8,9 @@ using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.Azure.WebJobs.Host
+namespace Microsoft.Azure.WebJobs.Host.Storage
 {
-    internal class BlobServiceClientProvider : StorageClientProvider<BlobServiceClient, BlobClientOptions>
+    public class BlobServiceClientProvider : StorageClientProvider<BlobServiceClient, BlobClientOptions>
     {
         public BlobServiceClientProvider(AzureComponentFactory componentFactory, AzureEventSourceLogForwarder logForwarder, ILogger<BlobServiceClientProvider> logger)
             : base(componentFactory, logForwarder, logger) { }

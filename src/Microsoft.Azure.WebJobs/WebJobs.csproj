@@ -7,6 +7,7 @@
     <AssemblyName>Microsoft.Azure.WebJobs</AssemblyName>
     <RootNamespace>Microsoft.Azure.WebJobs</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>

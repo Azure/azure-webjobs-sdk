@@ -8,7 +8,7 @@ using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.Azure.WebJobs.Host
+namespace Microsoft.Azure.WebJobs.Host.Storage
 {
     /// <summary>
     /// Abstraction to provide storage clients from the connection names.
@@ -16,7 +16,7 @@ namespace Microsoft.Azure.WebJobs.Host
     /// property.
     /// If the connection is not specified on the attribute, it uses a default account.
     /// </summary>
-    internal abstract class StorageClientProvider<TClient, TClientOptions> where TClientOptions : ClientOptions
+    public abstract class StorageClientProvider<TClient, TClientOptions> where TClientOptions : ClientOptions
     {
         private readonly AzureComponentFactory _componentFactory;
         private readonly AzureEventSourceLogForwarder _logForwarder;
@@ -118,15 +118,6 @@ namespace Microsoft.Azure.WebJobs.Host
         }
 
         protected abstract TClient CreateClient(string connectionString);
-
-        /// <summary>
-        /// The host account is for internal storage mechanisms like load balancer queuing.
-        /// </summary>
-        /// <returns>Storage client</returns>
-        public virtual TClient GetHost()
-        {
-            return this.Get(null, null);
-        }
 
         /// <summary>
         /// Creates client options from the given configuration

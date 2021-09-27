@@ -4,6 +4,7 @@
 using System;
 using Azure.Core;
 using Azure.Storage.Queues;
+using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
