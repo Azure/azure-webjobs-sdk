@@ -13,13 +13,14 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
     /// </summary>
     public class AzureStorageProvider : IAzureStorageProvider
     {
-        private IConfiguration _configuration;
         private BlobServiceClientProvider _blobServiceClientProvider;
         private IOptionsMonitor<JobHostInternalStorageOptions> _storageOptions;
 
+        protected IConfiguration Configuration { get; set; }
+
         public AzureStorageProvider(IConfiguration configuration, BlobServiceClientProvider blobServiceClientProvider, IOptionsMonitor<JobHostInternalStorageOptions> options)
         {
-            _configuration = configuration;
+            Configuration = configuration;
             _blobServiceClientProvider = blobServiceClientProvider;
             _storageOptions = options;
         }
@@ -31,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
         /// <returns>Whether the connection has an associated value or section</returns>
         public virtual bool ConnectionExists(string connection)
         {
-            var section = _configuration.GetWebJobsConnectionStringSection(connection);
+            var section = Configuration.GetWebJobsConnectionStringSection(connection);
             return section != null && section.Exists();
         }
 
@@ -39,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
         /// Retrieves a BlobContainerClient for the reserved WebJobs container
         /// </summary>
         /// <returns>BlobContainerClient for WebJobs operations</returns>
-        public BlobContainerClient GetWebJobsBlobContainerClient()
+        public virtual BlobContainerClient GetWebJobsBlobContainerClient()
         {
             if (_storageOptions?.CurrentValue.InternalSasBlobContainer != null)
             {
@@ -63,7 +64,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
         public virtual bool TryGetBlobServiceClientFromConnection(out BlobServiceClient client, string connection)
         {
             var connectionToUse = connection ?? ConnectionStringNames.Storage;
-            return _blobServiceClientProvider.TryGet(connectionToUse, _configuration, out client);
+            return _blobServiceClientProvider.TryGet(connectionToUse, Configuration, out client);
         }
     }
 }
