@@ -18,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             var configuration = host.Services.GetRequiredService<IConfiguration>();
             var queueServiceClientProvider = host.Services.GetRequiredService<QueueServiceClientProvider>();
-            if (queueServiceClientProvider.TryGet(ConnectionStringNames.Storage, configuration, out QueueServiceClient queueServiceClient))
+            if (queueServiceClientProvider.TryCreate(ConnectionStringNames.Storage, configuration, out QueueServiceClient queueServiceClient))
             {
                 return queueServiceClient;
             }

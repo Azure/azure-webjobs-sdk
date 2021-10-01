@@ -106,7 +106,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             var configuration = host.Services.GetRequiredService<IConfiguration>();
             var queueServiceClientProvider = host.Services.GetRequiredService<QueueServiceClientProvider>();
-            _queueServiceClient = queueServiceClientProvider.Get(ConnectionStringNames.Storage, configuration);
+            _queueServiceClient = queueServiceClientProvider.Create(ConnectionStringNames.Storage, configuration);
             var queueClient = _queueServiceClient.GetQueueClient(nameResolver.ResolveInString(TestQueueName));
             await queueClient.CreateIfNotExistsAsync();
 

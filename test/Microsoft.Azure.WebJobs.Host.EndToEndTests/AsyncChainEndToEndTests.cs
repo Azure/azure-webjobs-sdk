@@ -854,7 +854,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 get
                 {
-                    return _queueServiceClientProvider.Get(ConnectionStringNames.Storage, _configuration);
+                    return _queueServiceClientProvider.Create(ConnectionStringNames.Storage, _configuration);
                 }
 
                 private set
@@ -867,7 +867,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             {
                 get
                 {
-                    return _blobServiceClientProvider.Get(ConnectionStringNames.Storage, _configuration);
+                    return _blobServiceClientProvider.Create(ConnectionStringNames.Storage, _configuration);
                 }
 
                 private set

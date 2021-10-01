@@ -39,11 +39,5 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 
             return base.CreateClient(configuration, tokenCredential, options);
         }
-
-        /// <inheritdoc/>
-        protected override QueueServiceClient CreateClient(string connectionString)
-        {
-            return new QueueServiceClient(connectionString);
-        }
     }
 }

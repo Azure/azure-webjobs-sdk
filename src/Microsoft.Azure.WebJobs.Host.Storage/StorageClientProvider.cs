@@ -11,10 +11,8 @@ using Microsoft.Extensions.Logging;
 namespace Microsoft.Azure.WebJobs.Host.Storage
 {
     /// <summary>
-    /// Abstraction to provide storage clients from the connection names.
-    /// This gets the storage account name via the binding attribute's <see cref="IConnectionProvider.Connection"/>
-    /// property.
-    /// If the connection is not specified on the attribute, it uses a default account.
+    /// Passthrough-class to create Azure storage service clients using registered Azure services.
+    /// If the connection is not specified, it uses a default account.
     /// </summary>
     public abstract class StorageClientProvider<TClient, TClientOptions> where TClientOptions : ClientOptions
     {
@@ -25,9 +23,9 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
         /// <summary>
         /// Initializes a new instance of the <see cref="StorageClientProvider{TClient, TClientOptions}"/> class that uses the registered Azure services.
         /// </summary>
-        /// <param name="configuration">The configuration to use when creating Client-specific objects. <see cref="IConfiguration"/></param>
-        /// <param name="componentFactory">The Azure factory responsible for creating clients. <see cref="AzureComponentFactory"/></param>
-        /// <param name="logForwarder">Log forwarder that forwards events to ILogger. <see cref="AzureEventSourceLogForwarder"/></param>
+        /// <param name="componentFactory">The Azure factory responsible for creating clients. <see cref="AzureComponentFactory"/>.</param>
+        /// <param name="logForwarder">Log forwarder that forwards events to ILogger. <see cref="AzureEventSourceLogForwarder"/>.</param>
+        /// <param name="logger">Instance of <see cref="ILogger{StorageClientProvider{TClient, TClientOptions}}"/> for logging events.</param>
         public StorageClientProvider(AzureComponentFactory componentFactory, AzureEventSourceLogForwarder logForwarder, ILogger<StorageClientProvider<TClient, TClientOptions>> logger)
         {
             _componentFactory = componentFactory;
@@ -38,24 +36,24 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
         }
 
         /// <summary>
-        /// Gets the subdomain for the resource (i.e. blob, queue, file, table)
+        /// Gets the subdomain for the resource (i.e. blob, queue, file, table).
         /// </summary>
 #pragma warning disable CA1056 // URI-like properties should not be strings
         protected abstract string ServiceUriSubDomain { get; }
 #pragma warning restore CA1056 // URI-like properties should not be strings
 
         /// <summary>
-        /// Gets the storage client specified by <paramref name="name"/>
+        /// Attemptse to create the storage client specified by <paramref name="name"/>
         /// </summary>
-        /// <param name="name">Name of the connection to use</param>
-        /// <param name="configuration">Configuration to use</param>
-        /// <param name="client">Client that was created if the connection was valid; otherwise, the default value for the type of <paramref name="client"/>.</param>
-        /// <returns>true if the client could be created; false otherwise</returns>
-        public virtual bool TryGet(string name, IConfiguration configuration, out TClient client)
+        /// <param name="name">Name of the connection to use.</param>
+        /// <param name="configuration"><see cref="IConfiguration"/> to retrieve the value from.</param>
+        /// <param name="client"><see cref="TClient"/> that was created if the connection was valid; otherwise, the default value for the type of <paramref name="client"/>.</param>
+        /// <returns>true if the client could be created; false otherwise.</returns>
+        public virtual bool TryCreate(string name, IConfiguration configuration, out TClient client)
         {
             try
             {
-                client = Get(name, configuration);
+                client = Create(name, configuration);
                 return true;
             }
             catch (Exception ex)
@@ -67,32 +65,31 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
         }
 
         /// <summary>
-        /// Gets the storage client specified by <paramref name="name"/>
+        /// Creates the storage client specified by <paramref name="name"/>.
         /// </summary>
-        /// <param name="name">Name of the connection to use</param>
+        /// <param name="name">Name of the connection to use.</param>
         /// <param name="resolver">A resolver to interpret the provided connection <paramref name="name"/>.</param>
-        /// <param name="configuration">Configuration to use</param>
+        /// <param name="configuration"><see cref="IConfiguration"/> to retrieve the value from.</param>
         /// <returns>Client that was created.</returns>
-        public virtual TClient Get(string name, INameResolver resolver, IConfiguration configuration)
+        public virtual TClient Create(string name, INameResolver resolver, IConfiguration configuration)
         {
             var resolvedName = resolver.ResolveWholeString(name);
-            return this.Get(resolvedName, configuration);
+            return this.Create(resolvedName, configuration);
         }
 
         /// <summary>
-        /// Gets the storage client specified by <paramref name="name"/>
+        /// Creates the storage client specified by <paramref name="name"/>.
         /// </summary>
-        /// <param name="name">Name of the connection to use</param>
-        /// <param name="configuration">Configuration to use</param>
+        /// <param name="name">Name of the connection to use.</param>
+        /// <param name="configuration"><see cref="IConfiguration"/> to retrieve the value from.</param>
         /// <returns>Client that was created.</returns>
-        public virtual TClient Get(string name, IConfiguration configuration)
+        public virtual TClient Create(string name, IConfiguration configuration)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
                 name = ConnectionStringNames.Storage; // default
             }
 
-            // $$$ Where does validation happen?
             IConfigurationSection connectionSection = configuration?.GetWebJobsConnectionStringSection(name);
             if (connectionSection == null || !connectionSection.Exists())
             {
@@ -106,24 +103,22 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
         }
 
         /// <summary>
-        /// Creates a storage client
+        /// Creates a storage client.
         /// </summary>
         /// <param name="configuration">The <see cref="IConfiguration"/> to use when creating Client-specific objects.</param>
         /// <param name="tokenCredential">The <see cref="TokenCredential"/> to authenticate for requests.</param>
-        /// <param name="options">Generic options to use for the client</param>
-        /// <returns>Storage client</returns>
+        /// <param name="options">Generic options to use for the client.</param>
+        /// <returns>Storage client.</returns>
         protected virtual TClient CreateClient(IConfiguration configuration, TokenCredential tokenCredential, TClientOptions options)
         {
             return (TClient)_componentFactory.CreateClient(typeof(TClient), configuration, tokenCredential, options);
         }
 
-        protected abstract TClient CreateClient(string connectionString);
-
         /// <summary>
-        /// Creates client options from the given configuration
+        /// Creates client options from the given <see cref="IConfiguration"/>.
         /// </summary>
-        /// <param name="configuration">Registered <see cref="IConfiguration"/></param>
-        /// <returns>Client options</returns>
+        /// <param name="configuration">Registered <see cref="IConfiguration"/>.</param>
+        /// <returns>Client options.</returns>
         protected virtual TClientOptions CreateClientOptions(IConfiguration configuration)
         {
             var clientOptions = (TClientOptions)_componentFactory.CreateClientOptions(typeof(TClientOptions), null, configuration);
@@ -132,11 +127,11 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
 
         /// <summary>
         /// Either constructs the serviceUri from the provided accountName
-        /// or retrieves the serviceUri for the specific resource (i.e. blobServiceUri or queueServiceUri)
+        /// or retrieves the serviceUri for the specific resource (i.e. blobServiceUri or queueServiceUri).
         /// </summary>
-        /// <param name="configuration">Registered <see cref="IConfiguration"/></param>
-        /// <param name="serviceUri">instantiates the serviceUri</param>
-        /// <returns>retrieval success</returns>
+        /// <param name="configuration">Registered <see cref="IConfiguration"/>.</param>
+        /// <param name="serviceUri">instantiates the serviceUri.</param>
+        /// <returns>Whether the serviceUri was successfully retrieved.</returns>
         protected virtual bool TryGetServiceUri(IConfiguration configuration, out Uri serviceUri)
         {
             try
@@ -161,17 +156,17 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 _logger.LogDebug("Could not parse serviceUri from the configuration. Exception: {0}", ex.ToString());
             }
 
-            serviceUri = default(Uri);
+            serviceUri = default;
             return false;
         }
 
         /// <summary>
-        /// Generates the serviceUri for a particular storage resource
+        /// Generates the serviceUri for a particular storage resource.
         /// </summary>
-        /// <param name="accountName">accountName for the storage account</param>
-        /// <param name="defaultProtocol">protocol to use for REST requests</param>
-        /// <param name="endpointSuffix">endpoint suffix for the storage account</param>
-        /// <returns>Uri for the storage resource</returns>
+        /// <param name="accountName">accountName for the storage account.</param>
+        /// <param name="defaultProtocol">protocol to use for REST requests.</param>
+        /// <param name="endpointSuffix">endpoint suffix for the storage account.</param>
+        /// <returns>Uri for the storage resource.</returns>
         protected virtual Uri FormatServiceUri(string accountName, string defaultProtocol = "https", string endpointSuffix = "core.windows.net")
         {
             // Todo: Eventually move this into storage sdk
@@ -182,7 +177,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
         /// <summary>
         /// Checks if the specified <see cref="IConfiguration"/> object represents a connection string.
         /// </summary>
-        /// <param name="configuration">The <see cref="IConfiguration"/> to check</param>
+        /// <param name="configuration">The <see cref="IConfiguration"/> to retrieve the value from.</param>
         /// <returns>true if this <see cref="IConfiguration"/> object is a connection string; false otherwise.</returns>
         protected bool IsConnectionStringPresent(IConfiguration configuration)
         {

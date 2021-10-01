@@ -50,7 +50,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             var configuration = _host.Services.GetService<IConfiguration>();
             var queueServiceClientProvider = _host.Services.GetService<QueueServiceClientProvider>();
-            _queueServiceClient = queueServiceClientProvider.Get(ConnectionStringNames.Storage, configuration);
+            _queueServiceClient = queueServiceClientProvider.Create(ConnectionStringNames.Storage, configuration);
 
             _invokeInFunction = () => { };
             _tokenCancelled = false;

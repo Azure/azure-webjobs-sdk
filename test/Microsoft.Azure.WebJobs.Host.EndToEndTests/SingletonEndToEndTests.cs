@@ -836,14 +836,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 var configuration = host.Services.GetRequiredService<IConfiguration>();
                 var blobServiceClientProvider = host.Services.GetRequiredService<BlobServiceClientProvider>();
-                BlobServiceClient = blobServiceClientProvider.Get(ConnectionStringNames.Storage, configuration);
+                BlobServiceClient = blobServiceClientProvider.Create(ConnectionStringNames.Storage, configuration);
 
                 var queueServiceClientProvider = host.Services.GetRequiredService<QueueServiceClientProvider>();
-                QueueServiceClient = queueServiceClientProvider.Get(ConnectionStringNames.Storage, configuration);
+                QueueServiceClient = queueServiceClientProvider.Create(ConnectionStringNames.Storage, configuration);
 
                 _lockDirectoryContainerClient = BlobServiceClient.GetBlobContainerClient(HostContainerNames.Hosts);
 
-                SecondaryBlobServiceClient = blobServiceClientProvider.Get($"AzureWebJobs{Secondary}", configuration);
+                SecondaryBlobServiceClient = blobServiceClientProvider.Create($"AzureWebJobs{Secondary}", configuration);
                 _secondaryLockDirectoryContainerClient = SecondaryBlobServiceClient.GetBlobContainerClient(HostContainerNames.Hosts);
             }
 

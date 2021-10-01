@@ -454,10 +454,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             var configuration = host.Services.GetService<IConfiguration>();
 
             var blobServiceClientProvider = host.Services.GetService<BlobServiceClientProvider>();
-            _blobServiceClient = blobServiceClientProvider.Get(ConnectionStringNames.Storage, configuration);
+            _blobServiceClient = blobServiceClientProvider.Create(ConnectionStringNames.Storage, configuration);
 
             var queueServiceClientProvider = host.Services.GetService<QueueServiceClientProvider>();
-            _queueServiceClient = queueServiceClientProvider.Get(ConnectionStringNames.Storage, configuration);
+            _queueServiceClient = queueServiceClientProvider.Create(ConnectionStringNames.Storage, configuration);
 
             _inputContainerName = _resolver.ResolveInString(InputContainerNamePattern);
             _outputContainerName = _resolver.ResolveInString(OutputContainerNamePattern);

@@ -27,7 +27,6 @@ namespace Microsoft.Extensions.Hosting
 
             services.TryAddSingleton<IDelegatingHandlerProvider, DefaultDelegatingHandlerProvider>();
 
-            // May need to rename this to HostBlobServiceClientProvider
             services.TryAddSingleton<BlobServiceClientProvider>();
             services.AddAzureClientsCore();
             services.TryAddSingleton<IAzureStorageProvider, AzureStorageProvider>();
@@ -45,14 +44,14 @@ namespace Microsoft.Extensions.Hosting
             try
             {
                 var container = azureStorageProvider.GetWebJobsBlobContainerClient();
-                logger.LogDebug("Using BlobLeaseDistributedLockManager in Functions Host.");
+                logger.LogDebug("Using BlobLeaseDistributedLockManager.");
                 return new BlobLeaseDistributedLockManager(loggerFactory, azureStorageProvider);
             }
             catch (InvalidOperationException)
             {
                 // If there is an error getting the container client,
                 // register an InMemoryDistributedLockManager.
-                logger.LogDebug("Using InMemoryDistributedLockManager in Functions Host.");
+                logger.LogDebug("Using InMemoryDistributedLockManager.");
                 return new InMemoryDistributedLockManager();
             }
         }

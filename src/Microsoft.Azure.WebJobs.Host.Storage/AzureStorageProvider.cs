@@ -9,15 +9,24 @@ using Microsoft.Extensions.Options;
 namespace Microsoft.Azure.WebJobs.Host.Storage
 {
     /// <summary>
-    /// Handles instantiating Azure storage clients
+    /// Handles instantiating Azure storage clients from an <see cref="IConfiguration"/> source.
     /// </summary>
     public class AzureStorageProvider : IAzureStorageProvider
     {
         private BlobServiceClientProvider _blobServiceClientProvider;
         private IOptionsMonitor<JobHostInternalStorageOptions> _storageOptions;
 
+        /// <summary>
+        /// <see cref="IConfiguration"/> instance to retrieve connection values.
+        /// </summary>
         protected IConfiguration Configuration { get; set; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AzureStorageProvider"/> class.
+        /// </summary>
+        /// <param name="configuration"><see cref="IConfiguration"/> object to use for retrieving connection values.</param>
+        /// <param name="blobServiceClientProvider"><see cref="BlobServiceClientProvider"/> to instantiate Azure Blob-related clients.</param>
+        /// <param name="options">Options to define default Storage Blob containers for internal WebJobs operations.</param>
         public AzureStorageProvider(IConfiguration configuration, BlobServiceClientProvider blobServiceClientProvider, IOptionsMonitor<JobHostInternalStorageOptions> options)
         {
             Configuration = configuration;
@@ -25,21 +34,14 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
             _storageOptions = options;
         }
 
-        /// <summary>
-        /// Checks whether the specified connection has an associated value
-        /// </summary>
-        /// <param name="connection">Connection to check</param>
-        /// <returns>Whether the connection has an associated value or section</returns>
+        /// <inheritdoc/>
         public virtual bool ConnectionExists(string connection)
         {
             var section = Configuration.GetWebJobsConnectionStringSection(connection);
             return section != null && section.Exists();
         }
 
-        /// <summary>
-        /// Retrieves a BlobContainerClient for the reserved WebJobs container
-        /// </summary>
-        /// <returns>BlobContainerClient for WebJobs operations</returns>
+        /// <inheritdoc/>
         public virtual BlobContainerClient GetWebJobsBlobContainerClient()
         {
             if (_storageOptions?.CurrentValue.InternalSasBlobContainer != null)
@@ -55,16 +57,11 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
             return blobServiceClient.GetBlobContainerClient(HostContainerNames.Hosts);
         }
 
-        /// <summary>
-        /// Attempts to retrieve the BlobServiceClient from the specified connection
-        /// </summary>
-        /// <param name="client">client to instantiate</param>
-        /// <param name="connection">connection to use</param>
-        /// <returns>whether the attempt was successful</returns>
+        /// <inheritdoc/>
         public virtual bool TryGetBlobServiceClientFromConnection(out BlobServiceClient client, string connection)
         {
             var connectionToUse = connection ?? ConnectionStringNames.Storage;
-            return _blobServiceClientProvider.TryGet(connectionToUse, Configuration, out client);
+            return _blobServiceClientProvider.TryCreate(connectionToUse, Configuration, out client);
         }
     }
 }

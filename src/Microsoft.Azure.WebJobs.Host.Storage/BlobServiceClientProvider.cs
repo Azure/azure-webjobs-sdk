@@ -10,8 +10,17 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Storage
 {
+    /// <summary>
+    /// Pass-through class to create a <see cref="BlobServiceClient"/> using <see cref="AzureComponentFactory"/>.
+    /// </summary>
     public class BlobServiceClientProvider : StorageClientProvider<BlobServiceClient, BlobClientOptions>
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BlobServiceClientProvider"/> class that uses the registered Azure services to create a BlobServiceClient.
+        /// </summary>
+        /// <param name="componentFactory">The Azure factory responsible for creating clients. <see cref="AzureComponentFactory"/></param>
+        /// <param name="logForwarder">Log forwarder that forwards events to ILogger. <see cref="AzureEventSourceLogForwarder"/></param>
+        /// <param name="logger">Instance of <see cref="ILogger{StorageClientProvider{TClient, TClientOptions}}"/> for logging events.</param>
         public BlobServiceClientProvider(AzureComponentFactory componentFactory, AzureEventSourceLogForwarder logForwarder, ILogger<BlobServiceClientProvider> logger)
             : base(componentFactory, logForwarder, logger) { }
 
@@ -34,12 +43,6 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
             }
 
             return base.CreateClient(configuration, tokenCredential, options);
-        }
-
-        /// <inheritdoc/>
-        protected override BlobServiceClient CreateClient(string connectionString)
-        {
-            return new BlobServiceClient(connectionString);
         }
     }
 }

@@ -647,7 +647,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
                 var configuration = host.Services.GetRequiredService<IConfiguration>();
                 var blobServiceClientProvider = host.Services.GetRequiredService<BlobServiceClientProvider>();
-                BlobServiceClient = blobServiceClientProvider.Get(ConnectionStringNames.Storage, configuration);
+                BlobServiceClient = blobServiceClientProvider.Create(ConnectionStringNames.Storage, configuration);
             }
 
             public static BlobContainerClient GetTestContainerClient(string name)
