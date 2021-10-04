@@ -31,10 +31,7 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.5.0" />
     <PackageReference Include="xunit" Version="2.3.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.3.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj" />
+	<PackageReference Include="Microsoft.Azure.WebJobs" Version="3.0.31-11877" />
   </ItemGroup>
 
 </Project>

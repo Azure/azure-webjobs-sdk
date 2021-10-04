@@ -7,14 +7,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{639967B0
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Sample", "Sample", "{72A798F0-699B-4C8E-8D43-C1749661471E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs", "src\Microsoft.Azure.WebJobs\WebJobs.csproj", "{9D176316-CA11-40F3-A960-1ADC9AD0C460}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.Host", "src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj", "{39554ABE-D7B7-45FF-8D7C-56432ABCDE3D}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.Logging", "src\Microsoft.Azure.WebJobs.Logging\WebJobs.Logging.csproj", "{4F668623-B7D3-4834-99E2-2C0C8E0FFB9D}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.Logging.ApplicationInsights", "src\Microsoft.Azure.WebJobs.Logging.ApplicationInsights\WebJobs.Logging.ApplicationInsights.csproj", "{32F7D43D-1DD6-46F3-90FE-99B914DE8DAA}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SampleHost", "sample\SampleHost\SampleHost.csproj", "{93429246-CCE9-4EB0-B94D-68522862BA79}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.Host.UnitTests", "test\Microsoft.Azure.WebJobs.Host.UnitTests\WebJobs.Host.UnitTests.csproj", "{CA75D667-A785-4394-AA5C-3A6C658C23A7}"
@@ -55,8 +47,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Benchmarks", "test\Benchmar
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.projitems*{32f7d43d-1dd6-46f3-90fe-99b914de8daa}*SharedItemsImports = 5
-		src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.projitems*{39554abe-d7b7-45ff-8d7c-56432abcde3d}*SharedItemsImports = 5
 		src\Microsoft.Azure.WebJobs.Shared.Storage\Microsoft.Azure.WebJobs.Shared.Storage.projitems*{6bed7f8a-a199-4d9d-85d1-6856ee3292c6}*SharedItemsImports = 13
 		src\Microsoft.Azure.WebJobs.Protocols\Microsoft.Azure.WebJobs.Protocols.projitems*{6fcd0852-6019-4cd5-9b7e-0de021a72bd7}*SharedItemsImports = 13
 		src\Microsoft.Azure.WebJobs.Shared.Storage\Microsoft.Azure.WebJobs.Shared.Storage.projitems*{a9733406-267c-4a53-ab07-d3a834e22153}*SharedItemsImports = 5
@@ -70,22 +60,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{9D176316-CA11-40F3-A960-1ADC9AD0C460}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9D176316-CA11-40F3-A960-1ADC9AD0C460}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9D176316-CA11-40F3-A960-1ADC9AD0C460}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9D176316-CA11-40F3-A960-1ADC9AD0C460}.Release|Any CPU.Build.0 = Release|Any CPU
-		{39554ABE-D7B7-45FF-8D7C-56432ABCDE3D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{39554ABE-D7B7-45FF-8D7C-56432ABCDE3D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{39554ABE-D7B7-45FF-8D7C-56432ABCDE3D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{39554ABE-D7B7-45FF-8D7C-56432ABCDE3D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4F668623-B7D3-4834-99E2-2C0C8E0FFB9D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4F668623-B7D3-4834-99E2-2C0C8E0FFB9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4F668623-B7D3-4834-99E2-2C0C8E0FFB9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4F668623-B7D3-4834-99E2-2C0C8E0FFB9D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{32F7D43D-1DD6-46F3-90FE-99B914DE8DAA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{32F7D43D-1DD6-46F3-90FE-99B914DE8DAA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{32F7D43D-1DD6-46F3-90FE-99B914DE8DAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{32F7D43D-1DD6-46F3-90FE-99B914DE8DAA}.Release|Any CPU.Build.0 = Release|Any CPU
 		{93429246-CCE9-4EB0-B94D-68522862BA79}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{93429246-CCE9-4EB0-B94D-68522862BA79}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{93429246-CCE9-4EB0-B94D-68522862BA79}.Release|Any CPU.ActiveCfg = Release|Any CPU

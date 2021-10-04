@@ -35,12 +35,12 @@
     <PackageReference Include="xunit" Version="2.3.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.3.1" />
     <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.0-beta3-build3705" />
+	<PackageReference Include="Microsoft.Azure.WebJobs" Version="3.0.31-11877" />
+	<PackageReference Include="Microsoft.Azure.WebJobs.Logging" Version="4.0.2" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Microsoft.Azure.WebJobs.Extensions.Storage\WebJobs.Extensions.Storage.csproj" />
-    <ProjectReference Include="..\..\src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj" />
-    <ProjectReference Include="..\..\src\Microsoft.Azure.WebJobs.Logging\WebJobs.Logging.csproj" />
     <ProjectReference Include="..\FakeStorage\FakeAzureStorage.csproj" />
     <ProjectReference Include="..\Microsoft.Azure.WebJobs.Host.TestCommon\WebJobs.Host.TestCommon.csproj" />
   </ItemGroup>

@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Collections.Generic;
+using Microsoft.Azure.WebJobs;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
