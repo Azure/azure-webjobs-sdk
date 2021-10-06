@@ -41,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var container = azureStorageProvider.GetWebJobsBlobContainerClient();
             await VerifyContainerClientAvailable(container);
 
-            Assert.True(azureStorageProvider.TryGetBlobServiceClientFromConnection(out BlobServiceClient blobServiceClient, ConnectionStringNames.Storage));
+            Assert.True(azureStorageProvider.TryGetBlobServiceClientFromConnection(ConnectionStringNames.Storage, out BlobServiceClient blobServiceClient));
             await VerifyBlobServiceClientAvailable(blobServiceClient);
         }
 
@@ -54,58 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var azureStorageProvider = GetAzureStorageProvider(configuration);
             Assert.Throws<InvalidOperationException>(() => azureStorageProvider.GetWebJobsBlobContainerClient());
 
-            Assert.False(azureStorageProvider.TryGetBlobServiceClientFromConnection(out BlobServiceClient blobServiceClient, ConnectionStringNames.Storage));
-        }
-
-        [Fact]
-        public void TestAzureStorageProvider_ConnectionExistsWorksProperly()
-        {
-            var bytes = Encoding.UTF8.GetBytes("someKey");
-            var encodedString = Convert.ToBase64String(bytes);
-
-            // Connection exists in configuration
-            var configData = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                { StorageConnection, $"DefaultEndpointsProtocol=https;AccountName=webHostAccount;AccountKey={encodedString};EndpointSuffix=core.windows.net" },
-            };
-            var configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(configData)
-                .Build();
-
-            var azureStorageProvider = GetAzureStorageProvider(configuration);
-            Assert.True(azureStorageProvider.ConnectionExists(ConnectionStringNames.Storage));
-
-            // Connection doesn't exist
-            configuration = new ConfigurationBuilder()
-                .Build();
-
-            azureStorageProvider = GetAzureStorageProvider(configuration);
-            Assert.False(azureStorageProvider.ConnectionExists(ConnectionStringNames.Storage));
-
-            // Connection is a set of configuration settings
-            configData = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                { "AzureWebJobsStorAGE:accountName", "testAccount" },
-            };
-            configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(configData)
-                .Build();
-
-            azureStorageProvider = GetAzureStorageProvider(configuration);
-            Assert.True(azureStorageProvider.ConnectionExists(ConnectionStringNames.Storage));
-
-            // Connection is a set of configuration settings
-            configData = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                { "AzureWebJobsStorage:blobServiceUri", "https://testAccount.blob.core.windows.net" },
-                { "AzureWebJobsStorage:queueServiceUri", "https://testAccount.queue.core.windows.net" }
-            };
-            configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(configData)
-                .Build();
-
-            azureStorageProvider = GetAzureStorageProvider(configuration);
-            Assert.True(azureStorageProvider.ConnectionExists(ConnectionStringNames.Storage));
+            Assert.False(azureStorageProvider.TryGetBlobServiceClientFromConnection(ConnectionStringNames.Storage, out BlobServiceClient blobServiceClient));
         }
 
         private async Task VerifyBlobServiceClientAvailable(BlobServiceClient client)
@@ -134,7 +83,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
         }
 
-        private static IAzureStorageProvider GetAzureStorageProvider(IConfiguration configuration, JobHostInternalStorageOptions storageOptions = null)
+        private static IAzureBlobStorageProvider GetAzureStorageProvider(IConfiguration configuration, JobHostInternalStorageOptions storageOptions = null)
         {
             IHost tempHost = new HostBuilder()
                 .ConfigureServices(services =>
@@ -149,7 +98,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                     }
                 }).Build();
 
-            var azureStorageProvider = tempHost.Services.GetRequiredService<IAzureStorageProvider>();
+            var azureStorageProvider = tempHost.Services.GetRequiredService<IAzureBlobStorageProvider>();
             return azureStorageProvider;
         }
     }

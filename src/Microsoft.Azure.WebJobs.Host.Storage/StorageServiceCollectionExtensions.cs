@@ -27,9 +27,10 @@ namespace Microsoft.Extensions.Hosting
 
             services.TryAddSingleton<IDelegatingHandlerProvider, DefaultDelegatingHandlerProvider>();
 
-            services.TryAddSingleton<BlobServiceClientProvider>();
+            // Adds necessary Azure services to create clients
             services.AddAzureClientsCore();
-            services.TryAddSingleton<IAzureStorageProvider, AzureStorageProvider>();
+
+            services.TryAddSingleton<IAzureBlobStorageProvider, AzureStorageProvider>();
 
             services.AddSingleton<IConcurrencyStatusRepository, BlobStorageConcurrencyStatusRepository>();
         }
@@ -38,7 +39,7 @@ namespace Microsoft.Extensions.Hosting
         // TODO: Should this attempt to create a client or just check for connection setting?
         private static IDistributedLockManager Create(IServiceProvider provider)
         {
-            var azureStorageProvider = provider.GetRequiredService<IAzureStorageProvider>();
+            var azureStorageProvider = provider.GetRequiredService<IAzureBlobStorageProvider>();
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
             var logger = loggerFactory.CreateLogger<IDistributedLockManager>();
             try

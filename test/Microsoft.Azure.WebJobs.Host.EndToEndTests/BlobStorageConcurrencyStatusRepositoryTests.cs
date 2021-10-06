@@ -50,7 +50,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _mockHostIdProvider = new Mock<IHostIdProvider>(MockBehavior.Strict);
             _mockHostIdProvider.Setup(p => p.GetHostIdAsync(CancellationToken.None)).ReturnsAsync(TestHostId);
 
-            var mockAzureStorageProvider = new Mock<IAzureStorageProvider>(MockBehavior.Strict);
+            var mockAzureStorageProvider = new Mock<IAzureBlobStorageProvider>(MockBehavior.Strict);
             mockAzureStorageProvider.Setup(p => p.GetWebJobsBlobContainerClient()).Returns(new BlobContainerClient(configuration.GetWebJobsConnectionString(ConnectionStringNames.Storage), HostContainerNames.Hosts));
 
             _repository = new BlobStorageConcurrencyStatusRepository(_mockHostIdProvider.Object, _loggerFactory, mockAzureStorageProvider.Object);
@@ -132,7 +132,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         public async Task NoStorageConnection_HandledGracefully()
         {
             IConfiguration configuration = new ConfigurationBuilder().Build();
-            var mockAzureStorageProvider = new Mock<IAzureStorageProvider>(MockBehavior.Strict);
+            var mockAzureStorageProvider = new Mock<IAzureBlobStorageProvider>(MockBehavior.Strict);
             mockAzureStorageProvider.Setup(p => p.GetWebJobsBlobContainerClient()).Throws(new Exception("Could not create BlobContainerClient in IAzureStorageProvider mock."));
             var localRepository = new BlobStorageConcurrencyStatusRepository(_mockHostIdProvider.Object, _loggerFactory, mockAzureStorageProvider.Object);
 

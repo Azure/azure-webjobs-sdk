@@ -93,7 +93,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             var host = CreateHost();
 
-            var containerClient = host.Services.GetRequiredService<IAzureStorageProvider>().GetWebJobsBlobContainerClient();
+            var containerClient = host.Services.GetRequiredService<IAzureBlobStorageProvider>().GetWebJobsBlobContainerClient();
             string hostId = GetHostId(host);
 
             using (host)
@@ -114,7 +114,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             var host = CreateHost();
 
-            var containerClient = host.Services.GetRequiredService<IAzureStorageProvider>().GetWebJobsBlobContainerClient();
+            var containerClient = host.Services.GetRequiredService<IAzureBlobStorageProvider>().GetWebJobsBlobContainerClient();
             string hostId = GetHostId(host);
 
             BlobClient blobClient = await GetLockBlobAsync(containerClient, hostId);
@@ -148,7 +148,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             var host = CreateHost();
 
-            var containerClient = host.Services.GetRequiredService<IAzureStorageProvider>().GetWebJobsBlobContainerClient();
+            var containerClient = host.Services.GetRequiredService<IAzureBlobStorageProvider>().GetWebJobsBlobContainerClient();
             string hostId = GetHostId(host);
 
             using (host)
@@ -191,7 +191,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             var host = CreateHost();
 
-            var containerClient = host.Services.GetRequiredService<IAzureStorageProvider>().GetWebJobsBlobContainerClient();
+            var containerClient = host.Services.GetRequiredService<IAzureBlobStorageProvider>().GetWebJobsBlobContainerClient();
             string hostId = GetHostId(host);
             var primaryHostCoordinator = host.Services.GetServices<IHostedService>().OfType<PrimaryHostCoordinator>().Single();
 
@@ -309,14 +309,14 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             {
                 s.AddSingleton<IHostIdProvider>(_ => new FixedHostIdProvider(hostId1));
             });
-            var containerClient1 = host1.Services.GetRequiredService<IAzureStorageProvider>().GetWebJobsBlobContainerClient();
+            var containerClient1 = host1.Services.GetRequiredService<IAzureBlobStorageProvider>().GetWebJobsBlobContainerClient();
 
 
             var host2 = CreateHost(s =>
             {
                 s.AddSingleton<IHostIdProvider>(_ => new FixedHostIdProvider(hostId2));
             });
-            var containerClient2 = host2.Services.GetRequiredService<IAzureStorageProvider>().GetWebJobsBlobContainerClient();
+            var containerClient2 = host2.Services.GetRequiredService<IAzureBlobStorageProvider>().GetWebJobsBlobContainerClient();
 
             using (host1)
             using (host2)

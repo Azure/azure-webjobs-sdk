@@ -21,10 +21,10 @@ namespace Microsoft.Azure.WebJobs.Host
     {
         private readonly IHostIdProvider _hostIdProvider;
         private readonly ILogger _logger;
-        private readonly IAzureStorageProvider _azureStorageProvider;
+        private readonly IAzureBlobStorageProvider _azureStorageProvider;
         private BlobContainerClient? _blobContainerClient;
 
-        public BlobStorageConcurrencyStatusRepository(IHostIdProvider hostIdProvider, ILoggerFactory loggerFactory, IAzureStorageProvider azureStorageProvider)
+        public BlobStorageConcurrencyStatusRepository(IHostIdProvider hostIdProvider, ILoggerFactory loggerFactory, IAzureBlobStorageProvider azureStorageProvider)
         {
             _hostIdProvider = hostIdProvider;
             _logger = loggerFactory.CreateLogger(LogCategories.Concurrency);

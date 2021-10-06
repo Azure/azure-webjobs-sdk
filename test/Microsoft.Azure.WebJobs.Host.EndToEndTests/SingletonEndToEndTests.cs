@@ -280,15 +280,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         // Allow a host to override container resolution. 
         class CustomLockManager : BlobLeaseDistributedLockManager
         {
-            private readonly IAzureStorageProvider _azureStorageProvider;
+            private readonly IAzureBlobStorageProvider _azureStorageProvider;
 
-            public CustomLockManager(ILoggerFactory logger, IAzureStorageProvider azureStorageProvider) : base(logger, azureStorageProvider)
+            public CustomLockManager(ILoggerFactory logger, IAzureBlobStorageProvider azureStorageProvider) : base(logger, azureStorageProvider)
             {
                 _azureStorageProvider = azureStorageProvider;
             }
             protected override BlobContainerClient GetContainerClient(string accountName)
             {
-                _azureStorageProvider.TryGetBlobServiceClientFromConnection(out BlobServiceClient blobServiceClient, accountName);
+                _azureStorageProvider.TryGetBlobServiceClientFromConnection(accountName, out BlobServiceClient blobServiceClient);
                 return blobServiceClient.GetBlobContainerClient(HostContainerNames.Hosts);
             }
         }

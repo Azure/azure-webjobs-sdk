@@ -27,11 +27,11 @@ namespace Microsoft.Azure.WebJobs.Host
         internal const string SingletonLocks = "locks";
 
         private readonly ILogger _logger;
-        private readonly IAzureStorageProvider _azureStorageProvider;
+        private readonly IAzureBlobStorageProvider _azureStorageProvider;
 
         public BlobLeaseDistributedLockManager(
             ILoggerFactory loggerFactory,
-            IAzureStorageProvider azureStorageProvider) // Take an ILoggerFactory since that's a DI component.
+            IAzureBlobStorageProvider azureStorageProvider) // Take an ILoggerFactory since that's a DI component.
         {
             _logger = loggerFactory.CreateLogger(LogCategories.Singleton);
             _azureStorageProvider = azureStorageProvider;

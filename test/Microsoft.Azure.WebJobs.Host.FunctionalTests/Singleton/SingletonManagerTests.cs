@@ -72,7 +72,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             // To set up testing
             public BlobContainerClient ContainerClient;
 
-            public TestBlobLeaseDistributedLockManager(ILoggerFactory logger, IAzureStorageProvider azureStorageProvider) : base(logger, azureStorageProvider) { }
+            public TestBlobLeaseDistributedLockManager(ILoggerFactory logger, IAzureBlobStorageProvider azureStorageProvider) : base(logger, azureStorageProvider) { }
 
             protected override BlobContainerClient GetContainerClient(string accountName)
             {
