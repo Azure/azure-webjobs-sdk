@@ -23,7 +23,7 @@ using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 {
-    public class HttpDependencyCollectionTests : IDisposable
+    public class HttpDependencyCollectionTests : IAsyncDisposable
     {
         private const string TestArtifactPrefix = "e2etestsai";
         private const string OutputQueueNamePattern = TestArtifactPrefix + "out%rnd%";
@@ -483,11 +483,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             return host;
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
             _channel?.Dispose();
-            CleanBlobsAsync().Wait();
-            CleanQueuesAsync().Wait();
+            await CleanBlobsAsync();
+            await CleanQueuesAsync();
         }
 
         private async Task CleanBlobsAsync()

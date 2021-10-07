@@ -812,7 +812,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
-        private class TestFixture : IDisposable
+        private class TestFixture : IAsyncDisposable
         {
             public BlobServiceClient BlobServiceClient;
             public BlobServiceClient SecondaryBlobServiceClient;
@@ -847,12 +847,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 _secondaryLockDirectoryContainerClient = SecondaryBlobServiceClient.GetBlobContainerClient(HostContainerNames.Hosts);
             }
 
-            public void Dispose()
+            public async ValueTask DisposeAsync()
             {
 
-                CleanBlobsAsync(BlobServiceClient).Wait();
-                CleanBlobsAsync(SecondaryBlobServiceClient).Wait();
-                CleanQueuesAsync().Wait();
+                await CleanBlobsAsync(BlobServiceClient);
+                await CleanBlobsAsync(SecondaryBlobServiceClient);
+                await CleanQueuesAsync();
             }
 
             private async Task CleanBlobsAsync(BlobServiceClient blobServiceClient)

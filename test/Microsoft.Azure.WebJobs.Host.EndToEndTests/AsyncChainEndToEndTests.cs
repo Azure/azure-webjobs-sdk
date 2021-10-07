@@ -822,7 +822,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
-        public class TestFixture : IDisposable
+        public class TestFixture : IAsyncDisposable
         {
             private readonly IConfiguration _configuration;
             private readonly BlobServiceClientProvider _blobServiceClientProvider;
@@ -876,10 +876,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 }
             }
 
-            public void Dispose()
+            public async ValueTask DisposeAsync()
             {
-                CleanBlobsAsync().Wait();
-                CleanQueuesAsync().Wait();
+                await CleanBlobsAsync();
+                await CleanQueuesAsync();
             }
 
             private async Task CleanBlobsAsync()

@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
-    public class AsyncCancellationEndToEndTests : IDisposable
+    public class AsyncCancellationEndToEndTests : IAsyncDisposable
     {
         private const string TestArtifactPrefix = "asynccancele2e";
         private const string QueueName = TestArtifactPrefix + "%rnd%";
@@ -58,12 +58,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _functionCompleted = new ManualResetEvent(initialState: false);
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
             _functionStarted.Dispose();
             _functionCompleted.Dispose();
 
-            CleanQueuesAsync().Wait();
+            await CleanQueuesAsync();
         }
 
         private async Task CleanQueuesAsync()

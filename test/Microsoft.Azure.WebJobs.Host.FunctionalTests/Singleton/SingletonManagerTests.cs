@@ -627,7 +627,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             }
         }
 
-        private class TestFixture : IDisposable
+        private class TestFixture : IAsyncDisposable
         {
             public static BlobServiceClient BlobServiceClient;
 
@@ -655,10 +655,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
                 return BlobServiceClient?.GetBlobContainerClient(name);
             }
 
-            public void Dispose()
+            public async ValueTask DisposeAsync()
             {
 
-                CleanBlobsAsync().Wait();
+                await CleanBlobsAsync();
             }
 
             private async Task CleanBlobsAsync()

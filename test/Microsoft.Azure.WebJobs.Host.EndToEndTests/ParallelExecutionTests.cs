@@ -14,7 +14,7 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
-    public class ParallelExecutionTests : IDisposable
+    public class ParallelExecutionTests : IAsyncDisposable
     {
         private const string TestArtifactPrefix = "e2etestparallelqueue";
         private const string TestQueueName = TestArtifactPrefix + "-%rnd%";
@@ -137,9 +137,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
-            CleanQueuesAsync().Wait();
+            await CleanQueuesAsync();
         }
 
         private async Task CleanQueuesAsync()
