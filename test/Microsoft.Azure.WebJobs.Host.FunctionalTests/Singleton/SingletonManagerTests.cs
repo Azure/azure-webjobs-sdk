@@ -45,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         }
     }
 
-    public class SingletonManagerTests : IClassFixture<SingletonManagerTests.TestFixture>
+    public class SingletonManagerTests : IAsyncLifetime
     {
         private const string TestArtifactContainerPrefix = "e2e-singletonmanagertests";
         private const string TestArtifactContainerName = TestArtifactContainerPrefix + "-%rnd%";
@@ -93,7 +93,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             loggerFactory.AddProvider(_loggerProvider);
 
             var testBlobLeaseDistributedLockManager = new TestBlobLeaseDistributedLockManager(loggerFactory, null);
-            _testContainerClient = TestFixture.GetTestContainerClient(new RandomNameResolver().ResolveInString(TestArtifactContainerName));
+            var blobServiceClient = TestHelpers.GetTestBlobServiceClient();
+
+            _testContainerClient = blobServiceClient.GetBlobContainerClient(new RandomNameResolver().ResolveInString(TestArtifactContainerName));
             testBlobLeaseDistributedLockManager.ContainerClient = _testContainerClient;
             _core = testBlobLeaseDistributedLockManager;
 
@@ -111,6 +113,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             _singletonManager = new SingletonManager(_core, new OptionsWrapper<SingletonOptions>(_singletonConfig), _mockExceptionDispatcher.Object, loggerFactory, new FixedHostIdProvider(TestHostId), _nameResolver);
 
             _singletonManager.MinimumLeaseRenewalInterval = TimeSpan.FromMilliseconds(250);
+        }
+
+        public Task InitializeAsync() => Task.CompletedTask;
+
+        public async Task DisposeAsync()
+        {
+            await _testContainerClient.DeleteIfExistsAsync();
         }
 
         [Fact]
@@ -624,61 +633,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
                     return value;
                 }
                 throw new NotSupportedException(string.Format("Cannot resolve name: '{0}'", name));
-            }
-        }
-
-        private class TestFixture : IAsyncLifetime
-        {
-            public static BlobServiceClient BlobServiceClient;
-
-            public TestFixture()
-            {
-                // Create a default host since we know that's where the account
-                // is coming from
-                IHost host = new HostBuilder()
-                    .ConfigureDefaultTestHost(b =>
-                    {
-                        b.AddAzureStorageCoreServices();
-
-                        // Necessary to manipulate Blobs for these tests
-                        b.Services.AddSingleton<BlobServiceClientProvider>();
-                    })
-                    .Build();
-
-                var configuration = host.Services.GetRequiredService<IConfiguration>();
-                var blobServiceClientProvider = host.Services.GetRequiredService<BlobServiceClientProvider>();
-                BlobServiceClient = blobServiceClientProvider.Create(ConnectionStringNames.Storage, configuration);
-            }
-
-            public static BlobContainerClient GetTestContainerClient(string name)
-            {
-                return BlobServiceClient?.GetBlobContainerClient(name);
-            }
-
-            public Task InitializeAsync() => Task.CompletedTask;
-
-            public async Task DisposeAsync()
-            {
-
-                await CleanBlobsAsync();
-            }
-
-            private async Task CleanBlobsAsync()
-            {
-                if (BlobServiceClient != null)
-                {
-                    await foreach (var testBlobContainer in BlobServiceClient.GetBlobContainersAsync(prefix: TestArtifactContainerPrefix))
-                    {
-                        try
-                        {
-                            await BlobServiceClient.DeleteBlobContainerAsync(testBlobContainer.Name);
-                        }
-                        catch (RequestFailedException)
-                        {
-                            // best effort
-                        }
-                    }
-                }
             }
         }
     }

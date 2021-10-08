@@ -88,7 +88,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     b.AddAzureStorageQueues(o =>
                     {
                         o.BatchSize = batchSize;
-                        // Track2 Queues Extensions expects Base64 encoded message; Track2 Queues package no longer encodes by default (Track1 used Base64 default)
                         o.MessageEncoding = QueueMessageEncoding.None;
                         o.NewBatchThreshold = isDynamicSku ? (batchSize / 2) : (batchSize / 2) * processorCount; // To get around static isDynamicSku variable in T2 storage extensions
                     });

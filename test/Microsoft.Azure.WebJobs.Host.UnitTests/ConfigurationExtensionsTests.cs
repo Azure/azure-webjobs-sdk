@@ -44,7 +44,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
-        public void GetWebJobsConnectionStringSection_ReturnsExpected()
+        public void GetWebJobsConnectionSection_ReturnsExpected()
         {
             // Value and children in the section
             var configValues = new Dictionary<string, string>
