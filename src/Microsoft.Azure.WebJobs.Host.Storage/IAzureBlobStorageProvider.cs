@@ -6,15 +6,16 @@ using Azure.Storage.Blobs;
 namespace Microsoft.Azure.WebJobs.Host.Storage
 {
     /// <summary>
-    /// Interface to retrieve Azure blob storage clients
+    /// Provides methods for creating Azure blob storage clients, ensuring all necessary configuration is applied.
+    /// Implementations are responsible instantiating these clients and using desired options, credentials, or service URIs.
     /// </summary>
     public interface IAzureBlobStorageProvider
     {
         /// <summary>
-        /// Gets the WebJobs BlobContainerClient to use for internal operations with Blob storage.
+        /// Attempts to create a client for the hosting container used for internal storage.
         /// </summary>
-        /// <returns>A <see cref="BlobContainerClient"/> for the desired container.</returns>
-        BlobContainerClient GetWebJobsBlobContainerClient();
+        /// <returns>A <see cref="BlobContainerClient"/> for the hosting container.</returns>
+        bool TryCreateHostingBlobContainerClient(out BlobContainerClient blobContainerClient);
 
         /// <summary>
         /// Attempts to retrieve the <see cref="BlobServiceClient"/> from the specified connection.

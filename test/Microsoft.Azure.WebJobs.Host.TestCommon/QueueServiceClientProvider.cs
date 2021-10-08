@@ -14,14 +14,5 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
     {
         public QueueServiceClientProvider(AzureComponentFactory componentFactory, AzureEventSourceLogForwarder logForwarder)
             : base(componentFactory, logForwarder) { }
-
-        /// <inheritdoc/>
-        protected override string ServiceUriSubDomain
-        {
-            get
-            {
-                return "queue";
-            }
-        }
     }
 }

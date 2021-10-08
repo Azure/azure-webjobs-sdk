@@ -94,7 +94,7 @@ namespace Microsoft.Extensions.Configuration
             return false;
         }
 
-        public static IConfigurationSection GetWebJobsConnectionStringSection(this IConfiguration configuration, string connectionStringName)
+        public static IConfigurationSection GetWebJobsConnectionSection(this IConfiguration configuration, string connectionStringName)
         {
             // first try prefixing
             string prefixedConnectionStringName = GetPrefixedConnectionStringName(connectionStringName);
@@ -110,7 +110,7 @@ namespace Microsoft.Extensions.Configuration
         }
 
         /// <summary>
-        /// Looks for a connection string by first checking the ConfigurationStrings section, and then the root.
+        /// Looks for a connection string by first checking the ConnectionStrings section, and then the root.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         /// <param name="connectionName">The connection string key.</param>

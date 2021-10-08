@@ -16,7 +16,6 @@ using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.Configuration;
@@ -256,13 +255,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         [Fact]
         public async Task SingletonFunction_StorageAccountOverride()
         {
-            IHost host = CreateTestJobHost<TestJobs1>(1, (hostBuilder) =>
-            {
-                hostBuilder.ConfigureServices((services) =>
-                {
-                    services.AddSingleton<IDistributedLockManager, CustomLockManager>();
-                });
-            });
+            IHost host = CreateTestJobHost<TestJobs1>(1);
             await host.StartAsync();
 
             MethodInfo method = typeof(TestJobs1).GetMethod(nameof(TestJobs1.SingletonJob_StorageAccountOverride));
@@ -275,22 +268,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // make sure the lease blob was only created in the secondary account
             await VerifyLeaseDoesNotExistAsync(method, SingletonScope.Function, null);
             await VerifyLeaseState(method, SingletonScope.Function, null, LeaseState.Available, LeaseStatus.Unlocked, directory: _secondaryLockDirectoryContainerClient);
-        }
-
-        // Allow a host to override container resolution. 
-        class CustomLockManager : BlobLeaseDistributedLockManager
-        {
-            private readonly IAzureBlobStorageProvider _azureStorageProvider;
-
-            public CustomLockManager(ILoggerFactory logger, IAzureBlobStorageProvider azureStorageProvider) : base(logger, azureStorageProvider)
-            {
-                _azureStorageProvider = azureStorageProvider;
-            }
-            protected override BlobContainerClient GetContainerClient(string accountName)
-            {
-                _azureStorageProvider.TryGetBlobServiceClientFromConnection(accountName, out BlobServiceClient blobServiceClient);
-                return blobServiceClient.GetBlobContainerClient(HostContainerNames.Hosts);
-            }
         }
 
         [Fact]
@@ -812,7 +789,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
-        private class TestFixture : IAsyncDisposable
+        private class TestFixture : IAsyncLifetime
         {
             public BlobServiceClient BlobServiceClient;
             public BlobServiceClient SecondaryBlobServiceClient;
@@ -827,27 +804,21 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     .ConfigureDefaultTestHost(b =>
                     {
                         b.AddAzureStorageCoreServices();
-
-                        // Necessary to manipulate Blobs/Queues for these tests
-                        b.Services.AddSingleton<BlobServiceClientProvider>();
-                        b.Services.AddSingleton<QueueServiceClientProvider>();
                     })
                     .Build();
 
-                var configuration = host.Services.GetRequiredService<IConfiguration>();
-                var blobServiceClientProvider = host.Services.GetRequiredService<BlobServiceClientProvider>();
-                BlobServiceClient = blobServiceClientProvider.Create(ConnectionStringNames.Storage, configuration);
-
-                var queueServiceClientProvider = host.Services.GetRequiredService<QueueServiceClientProvider>();
-                QueueServiceClient = queueServiceClientProvider.Create(ConnectionStringNames.Storage, configuration);
+                BlobServiceClient = TestHelpers.GetTestBlobServiceClient();
+                QueueServiceClient = TestHelpers.GetTestQueueServiceClient();
 
                 _lockDirectoryContainerClient = BlobServiceClient.GetBlobContainerClient(HostContainerNames.Hosts);
 
-                SecondaryBlobServiceClient = blobServiceClientProvider.Create($"AzureWebJobs{Secondary}", configuration);
+                SecondaryBlobServiceClient = TestHelpers.GetTestBlobServiceClient($"AzureWebJobs{Secondary}");
                 _secondaryLockDirectoryContainerClient = SecondaryBlobServiceClient.GetBlobContainerClient(HostContainerNames.Hosts);
             }
 
-            public async ValueTask DisposeAsync()
+            public Task InitializeAsync() => Task.CompletedTask;
+
+            public async Task DisposeAsync()
             {
 
                 await CleanBlobsAsync(BlobServiceClient);

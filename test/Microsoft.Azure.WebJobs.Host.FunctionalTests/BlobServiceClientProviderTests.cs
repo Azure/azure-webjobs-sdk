@@ -44,7 +44,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public async Task TestBlobStorageProvider_TryConnectionName()
+        public async Task Create_ReturnsValidClient()
         {
             var client = _blobServiceClientProvider.Create(StorageConnection, _configuration);
             Assert.NotNull(client);
@@ -52,14 +52,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public async Task TestBlobStorageProvider_ConnectionName()
-        {
-            var client = _blobServiceClientProvider.Create(StorageConnection, _configuration);
-            await VerifyServiceAvailable(client);
-        }
-
-        [Fact]
-        public async Task TestBlobStorageProvider_ConnectionNameWithResolver()
+        public async Task Create_NameResolverReturnsValidClient()
         {
             var resolver = new DefaultNameResolver(_configuration);
 
@@ -68,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public async Task TestBlobStorageProvider_TryConnectionStringVariants()
+        public async Task Create_ConnectionStringSectionChecked()
         {
             var testData = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {

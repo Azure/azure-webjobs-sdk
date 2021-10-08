@@ -19,7 +19,6 @@ using Azure.Storage.Queues.Models;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Queues;
-using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Logging;
@@ -87,8 +86,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     {
                         o.IsEnabled = false;
                     });
-                })
-                .ConfigureAppConfiguration(c => c.AddEnvironmentVariables());
+                });
 
             _blobServiceClient = fixture.BlobServiceClient;
             _queueServiceClient = fixture.QueueServiceClient;
@@ -681,7 +679,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             CancellationToken token,
             TraceWriter trace)
         {
-            var content = await _blobServiceClient.GetBlobContainerClient(_resolver.ResolveInString(ContainerName)).GetBlobClient(NonWebJobsBlobName).DownloadTextAsync();
+            var content = await _blobServiceClient.GetBlobContainerClient(_resolver.ResolveInString(ContainerName)).GetBlobClient(NonWebJobsBlobName).DownloadTextAsync(cancellationToken: token);
             trace.Info("User TraceWriter log 1");
 
             await output.AddAsync(content + message);
@@ -822,11 +820,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
-        public class TestFixture : IAsyncDisposable
+        public class TestFixture : IAsyncLifetime
         {
-            private readonly IConfiguration _configuration;
-            private readonly BlobServiceClientProvider _blobServiceClientProvider;
-            private readonly QueueServiceClientProvider _queueServiceClientProvider;
+            public readonly BlobServiceClient BlobServiceClient;
+            public readonly QueueServiceClient QueueServiceClient;
 
             public TestFixture()
             {
@@ -838,45 +835,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         // Necessary for Blob/Queue bindings
                         b.AddAzureStorageBlobs();
                         b.AddAzureStorageQueues();
-
-                        // Necessary to manipulate Blobs/Queues for these tests
-                        b.Services.AddSingleton<BlobServiceClientProvider>();
-                        b.Services.AddSingleton<QueueServiceClientProvider>();
                     })
                     .Build();
 
-                _configuration = host.Services.GetService<IConfiguration>();
-                _blobServiceClientProvider = host.Services.GetService<BlobServiceClientProvider>();
-                _queueServiceClientProvider = host.Services.GetService<QueueServiceClientProvider>();
+                BlobServiceClient = TestHelpers.GetTestBlobServiceClient();
+                QueueServiceClient = TestHelpers.GetTestQueueServiceClient();
             }
 
-            public QueueServiceClient QueueServiceClient
-            {
-                get
-                {
-                    return _queueServiceClientProvider.Create(ConnectionStringNames.Storage, _configuration);
-                }
+            public Task InitializeAsync() => Task.CompletedTask;
 
-                private set
-                {
-                    QueueServiceClient = value;
-                }
-            }
-
-            public BlobServiceClient BlobServiceClient
-            {
-                get
-                {
-                    return _blobServiceClientProvider.Create(ConnectionStringNames.Storage, _configuration);
-                }
-
-                private set
-                {
-                    BlobServiceClient = value;
-                }
-            }
-
-            public async ValueTask DisposeAsync()
+            public async Task DisposeAsync()
             {
                 await CleanBlobsAsync();
                 await CleanQueuesAsync();

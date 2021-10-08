@@ -9,12 +9,11 @@ using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
-    public class ParallelExecutionTests : IAsyncDisposable
+    public class ParallelExecutionTests : IAsyncLifetime
     {
         private const string TestArtifactPrefix = "e2etestparallelqueue";
         private const string TestQueueName = TestArtifactPrefix + "-%rnd%";
@@ -97,16 +96,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<INameResolver>(nameResolver);
-
-                    // Necessary to manipulate Queues for these tests
-                    services.AddSingleton<QueueServiceClientProvider>();
                 })
                 .ConfigureAppConfiguration(c => c.AddEnvironmentVariables())
                 .Build();
 
-            var configuration = host.Services.GetRequiredService<IConfiguration>();
-            var queueServiceClientProvider = host.Services.GetRequiredService<QueueServiceClientProvider>();
-            _queueServiceClient = queueServiceClientProvider.Create(ConnectionStringNames.Storage, configuration);
+            _queueServiceClient = TestHelpers.GetTestQueueServiceClient();
             var queueClient = _queueServiceClient.GetQueueClient(nameResolver.ResolveInString(TestQueueName));
             await queueClient.CreateIfNotExistsAsync();
 
@@ -137,7 +131,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
-        public async ValueTask DisposeAsync()
+        public Task InitializeAsync() => Task.CompletedTask;
+
+        public async Task DisposeAsync()
         {
             await CleanQueuesAsync();
         }

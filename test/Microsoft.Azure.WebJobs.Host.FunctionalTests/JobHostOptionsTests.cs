@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure.Storage.Blobs;
 using Microsoft.Azure.WebJobs.Host.Loggers;
+using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -158,11 +159,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 IHost host = hostBuilder.Build();
 
                 var config = host.Services.GetService<IOptions<JobHostInternalStorageOptions>>();
+                var blobStorageProvider = host.Services.GetService<IAzureBlobStorageProvider>();
 
                 var container = config.Value.InternalSasBlobContainer;
                 Assert.NotNull(container);
-                BlobContainerClient containerClient = new BlobContainerClient(new Uri(container));
-                Assert.Equal(containerClient.Name, "myContainer"); // specified in sas. 
+
+                Assert.True(blobStorageProvider.TryCreateHostingBlobContainerClient(out BlobContainerClient containerClient));
+                Assert.Equal("myContainer", containerClient.Name); // specified in sas. 
             }
         }
 
@@ -189,11 +192,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             IHost host = hostBuilder.Build();
 
             var config = host.Services.GetService<IOptions<JobHostInternalStorageOptions>>();
+            var blobStorageProvider = host.Services.GetService<IAzureBlobStorageProvider>();
 
             var container = config.Value.InternalSasBlobContainer;
             Assert.NotNull(container);
-            BlobContainerClient containerClient = new BlobContainerClient(new Uri(container));
-            Assert.Equal(containerClient.Name, "myContainer2"); // specified in sas.
+
+            Assert.True(blobStorageProvider.TryCreateHostingBlobContainerClient(out BlobContainerClient containerClient));
+            Assert.Equal("myContainer2", containerClient.Name); // specified in sas.
         }
 
         // Verify that JobHostConfig pulls a Sas container from appsettings. 
@@ -218,11 +223,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             IHost host = hostBuilder.Build();
 
             var config = host.Services.GetService<IOptions<JobHostInternalStorageOptions>>();
+            var blobStorageProvider = host.Services.GetService<IAzureBlobStorageProvider>();
 
             var container = config.Value.InternalSasBlobContainer;
             Assert.NotNull(container);
-            BlobContainerClient containerClient = new BlobContainerClient(new Uri(container));
-            Assert.Equal(containerClient.Name, "myContainer3"); // specified in sas.
+
+            Assert.True(blobStorageProvider.TryCreateHostingBlobContainerClient(out BlobContainerClient containerClient));
+            Assert.Equal("myContainer3", containerClient.Name); // specified in sas.
         }
 
         // Test that we can explicitly disable storage and call through a function

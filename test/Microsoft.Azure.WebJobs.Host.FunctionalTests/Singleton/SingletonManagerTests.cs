@@ -72,7 +72,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             // To set up testing
             public BlobContainerClient ContainerClient;
 
-            public TestBlobLeaseDistributedLockManager(ILoggerFactory logger, IAzureBlobStorageProvider azureStorageProvider) : base(logger, azureStorageProvider) { }
+            public TestBlobLeaseDistributedLockManager(ILoggerFactory logger, IAzureBlobStorageProvider blobStorageProvider) : base(logger, blobStorageProvider) { }
 
             protected override BlobContainerClient GetContainerClient(string accountName)
             {
@@ -219,7 +219,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             await _testContainerClient.CreateIfNotExistsAsync();
             if (!_testContainerClient.GetBlobClient(string.Format("locks/{0}", TestLockId)).Exists())
             {
-                await _testContainerClient.GetBlobClient(string.Format("locks/{0}", TestLockId)).UploadTextAsync("");
+                await _testContainerClient.GetBlobClient(string.Format("locks/{0}", TestLockId)).UploadTextAsync("", overwrite: true);
             }
 
             // Lease this blob to test polling behavior
@@ -251,7 +251,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
                 await _testContainerClient.CreateIfNotExistsAsync();
                 if (!_testContainerClient.GetBlobClient(string.Format("locks/{0}", TestLockId)).Exists())
                 {
-                    await _testContainerClient.GetBlobClient(string.Format("locks/{0}", TestLockId)).UploadTextAsync("");
+                    await _testContainerClient.GetBlobClient(string.Format("locks/{0}", TestLockId)).UploadTextAsync("", overwrite: true);
                 }
 
                 // Lease this blob to test polling behavior
@@ -281,7 +281,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             await _testContainerClient.CreateIfNotExistsAsync();
             if (!_testContainerClient.GetBlobClient(string.Format("locks/{0}", TestLockId)).Exists())
             {
-                await _testContainerClient.GetBlobClient(string.Format("locks/{0}", TestLockId)).UploadTextAsync("");
+                await _testContainerClient.GetBlobClient(string.Format("locks/{0}", TestLockId)).UploadTextAsync("", overwrite: true);
             }
 
             // Lease this blob to test polling behavior
@@ -326,7 +326,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             await _testContainerClient.CreateIfNotExistsAsync();
             if (!_testContainerClient.GetBlobClient(string.Format("locks/{0}", TestLockId)).Exists())
             {
-                await _testContainerClient.GetBlobClient(string.Format("locks/{0}", TestLockId)).UploadTextAsync("");
+                await _testContainerClient.GetBlobClient(string.Format("locks/{0}", TestLockId)).UploadTextAsync("", overwrite: true);
             }
 
             var properties = (await _testContainerClient.GetBlobClient(string.Format("locks/{0}", TestLockId)).GetPropertiesAsync()).Value;
@@ -627,7 +627,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             }
         }
 
-        private class TestFixture : IAsyncDisposable
+        private class TestFixture : IAsyncLifetime
         {
             public static BlobServiceClient BlobServiceClient;
 
@@ -655,7 +655,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
                 return BlobServiceClient?.GetBlobContainerClient(name);
             }
 
-            public async ValueTask DisposeAsync()
+            public Task InitializeAsync() => Task.CompletedTask;
+
+            public async Task DisposeAsync()
             {
 
                 await CleanBlobsAsync();

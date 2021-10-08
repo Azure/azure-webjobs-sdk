@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         private const string StorageConnection = "AzureWebJobsStorage";
 
         [Fact]
-        public async Task TestAzureStorageProvider_ConnectionInWebHostConfiguration()
+        public async Task ConnectionStringSectionUsed()
         {
             var testConfiguration = new ConfigurationBuilder()
                     .AddEnvironmentVariables()
@@ -37,7 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 .Build();
 
             var azureStorageProvider = GetAzureStorageProvider(configuration);
-            var container = azureStorageProvider.GetWebJobsBlobContainerClient();
+            Assert.True(azureStorageProvider.TryCreateHostingBlobContainerClient(out BlobContainerClient container));
             await VerifyContainerClientAvailable(container);
 
             Assert.True(azureStorageProvider.TryGetBlobServiceClientFromConnection(ConnectionStringNames.Storage, out BlobServiceClient blobServiceClient));
@@ -45,15 +45,14 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         }
 
         [Fact]
-        public void TestAzureStorageProvider_NoConnectionThrowsException()
+        public void NoConnectionThrowsException()
         {
             var configuration = new ConfigurationBuilder()
                 .Build();
 
             var azureStorageProvider = GetAzureStorageProvider(configuration);
-            Assert.Throws<InvalidOperationException>(() => azureStorageProvider.GetWebJobsBlobContainerClient());
-
-            Assert.False(azureStorageProvider.TryGetBlobServiceClientFromConnection(ConnectionStringNames.Storage, out BlobServiceClient blobServiceClient));
+            Assert.False(azureStorageProvider.TryCreateHostingBlobContainerClient(out _));
+            Assert.False(azureStorageProvider.TryGetBlobServiceClientFromConnection(ConnectionStringNames.Storage, out _));
         }
 
         private async Task VerifyBlobServiceClientAvailable(BlobServiceClient client)

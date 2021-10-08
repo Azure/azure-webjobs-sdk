@@ -59,8 +59,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.NotNull(internalOptions);
             Assert.Equal(fakeSasUri.ToString(), internalOptions.Value.InternalSasBlobContainer);
 
-            var actualContainerName = host.Services.GetService<IAzureBlobStorageProvider>().GetWebJobsBlobContainerClient().Name;
-            Assert.Equal(containerClient.Name, actualContainerName);
+            Assert.True(host.Services.GetService<IAzureBlobStorageProvider>().TryCreateHostingBlobContainerClient(out BlobContainerClient actualContainer));
+            Assert.Equal(containerClient.Name, actualContainer.Name);
 
             await host.GetJobHost().CallAsync(nameof(BasicProg.Foo));
 

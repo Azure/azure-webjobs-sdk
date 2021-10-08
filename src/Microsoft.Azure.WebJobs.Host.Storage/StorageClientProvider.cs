@@ -9,7 +9,7 @@ using Microsoft.Extensions.Configuration;
 namespace Microsoft.Azure.WebJobs.Host.Storage
 {
     /// <summary>
-    /// Passthrough-class to create Azure storage service clients using registered Azure services.
+    /// Passthrough-class to create Azure storage service clients using using <see cref="AzureComponentFactory"/>.
     /// If the connection is not specified, it uses a default account.
     /// </summary>
     internal abstract class StorageClientProvider<TClient, TClientOptions> where TClientOptions : ClientOptions
@@ -30,13 +30,6 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
             _logForwarder.Start();
         }
 
-        /// <summary>
-        /// Gets the subdomain for the resource (i.e. blob, queue, file, table).
-        /// </summary>
-#pragma warning disable CA1056 // URI-like properties should not be strings
-        protected abstract string ServiceUriSubDomain { get; }
-#pragma warning restore CA1056 // URI-like properties should not be strings
-
         public virtual TClient Create(string name, INameResolver resolver, IConfiguration configuration)
         {
             var resolvedName = resolver.ResolveWholeString(name);
@@ -50,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 name = ConnectionStringNames.Storage; // default
             }
 
-            IConfigurationSection connectionSection = configuration?.GetWebJobsConnectionStringSection(name);
+            IConfigurationSection connectionSection = configuration?.GetWebJobsConnectionSection(name);
             if (connectionSection == null || !connectionSection.Exists())
             {
                 // Not found

@@ -27,14 +27,14 @@ namespace Microsoft.Azure.WebJobs.Host
         internal const string SingletonLocks = "locks";
 
         private readonly ILogger _logger;
-        private readonly IAzureBlobStorageProvider _azureStorageProvider;
+        private readonly IAzureBlobStorageProvider _blobStorageProvider;
 
         public BlobLeaseDistributedLockManager(
             ILoggerFactory loggerFactory,
             IAzureBlobStorageProvider azureStorageProvider) // Take an ILoggerFactory since that's a DI component.
         {
             _logger = loggerFactory.CreateLogger(LogCategories.Singleton);
-            _azureStorageProvider = azureStorageProvider;
+            _blobStorageProvider = azureStorageProvider;
         }
 
         public Task<bool> RenewAsync(IDistributedLock lockHandle, CancellationToken cancellationToken)
@@ -95,14 +95,19 @@ namespace Microsoft.Azure.WebJobs.Host
             return lockHandle;
         }
 
-        protected virtual BlobContainerClient GetContainerClient(string accountName)
+        protected virtual BlobContainerClient GetContainerClient(string connectionName)
         {
-            if (!string.IsNullOrWhiteSpace(accountName))
+            if (!string.IsNullOrEmpty(connectionName) && _blobStorageProvider.TryGetBlobServiceClientFromConnection(connectionName, out BlobServiceClient client))
             {
-                throw new InvalidOperationException("Must replace IDistributedLockManager to support multiple accounts");
+                return client.GetBlobContainerClient(HostContainerNames.Hosts);
             }
 
-            return _azureStorageProvider.GetWebJobsBlobContainerClient();
+            if (!_blobStorageProvider.TryCreateHostingBlobContainerClient(out BlobContainerClient blobContainerClient))
+            {
+                throw new InvalidOperationException($"Could not create BlobContainerClient in BlobLeaseDistributedLockManager using Connection: {ConnectionStringNames.Storage}");
+            }
+
+            return blobContainerClient;
         }
 
         internal string GetLockPath(string lockId)

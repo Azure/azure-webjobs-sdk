@@ -73,27 +73,26 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     // Necessary for Queue bindings
                     .AddAzureStorageQueues()
                     .AddExtension<DispatchQueueTestConfig>();
-
-                    // Necessary to manipulate Queues for these tests
-                    b.Services.AddSingleton<QueueServiceClientProvider>();
                 })
                 .Build();
 
-            _funcInvocation = new ConcurrentStringSet();
+            {
+                _funcInvocation = new ConcurrentStringSet();
 
-            _host.Start();
+                _host.Start();
 
-            _stopwatch.Restart();
+                _stopwatch.Restart();
 
-            int twoFuncCount = DispatchQueueTestConfig.BatchSize * 2;
-            await TestHelpers.Await(() => _funcInvocation.TotalAdd() >= twoFuncCount || _funcInvocation.HasDuplicate(),
-                                    7000, 1000);
+                int twoFuncCount = DispatchQueueTestConfig.BatchSize * 2;
+                await TestHelpers.Await(() => _funcInvocation.TotalAdd() >= twoFuncCount || _funcInvocation.HasDuplicate(),
+                                        7000, 1000);
 
-            // make sure each function is triggered once and only once
-            Assert.Equal(twoFuncCount, _funcInvocation.TotalAdd());
-            Assert.False(_funcInvocation.HasDuplicate());
+                // make sure each function is triggered once and only once
+                Assert.Equal(twoFuncCount, _funcInvocation.TotalAdd());
+                Assert.False(_funcInvocation.HasDuplicate());
 
-            _stopwatch.Stop();
+                _stopwatch.Stop();
+            }
         }
 
         [Fact(Skip = "Fix DispatchQueue")]
@@ -107,35 +106,34 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     // Necessary for Queue bindings
                     .AddAzureStorageQueues()
                     .AddExtension<DispatchQueueTestConfig>();
-
-                    // Necessary to manipulate Queues for these tests
-                    b.Services.AddSingleton<QueueServiceClientProvider>();
                 })
                 .Build();
 
-            _funcInvocation = new ConcurrentStringSet();
+            {
+                _funcInvocation = new ConcurrentStringSet();
 
-            _host.Start();
+                _host.Start();
 
-            _stopwatch.Restart();
+                _stopwatch.Restart();
 
-            // this test takes long since it does at least 5 dequeue on the poison message
-            // count retries caused by failures and poison queue function process
-            int funcWithExceptionCount = DispatchQueueTestConfig.BatchSize + _host.GetOptions<QueuesOptions>().MaxDequeueCount;
-            await TestHelpers.Await(() => _funcInvocation.TotalAdd() >= funcWithExceptionCount, 10000, 1000);
+                // this test takes long since it does at least 5 dequeue on the poison message
+                // count retries caused by failures and poison queue function process
+                int funcWithExceptionCount = DispatchQueueTestConfig.BatchSize + _host.GetOptions<QueuesOptions>().MaxDequeueCount;
+                await TestHelpers.Await(() => _funcInvocation.TotalAdd() >= funcWithExceptionCount, 10000, 1000);
 
-            Assert.Equal(funcWithExceptionCount, _funcInvocation.TotalAdd());
-            Assert.True(_funcInvocation.HasDuplicate());
-            Assert.True(SampleTriggerWithPoisonQueue.PoisonQueueResult);
+                Assert.Equal(funcWithExceptionCount, _funcInvocation.TotalAdd());
+                Assert.True(_funcInvocation.HasDuplicate());
+                Assert.True(SampleTriggerWithPoisonQueue.PoisonQueueResult);
 
-            _stopwatch.Stop();
+                _stopwatch.Stop();
+            }
         }
 
         public void Dispose()
         {
             // each test will have a different hostId
             // and therefore a different sharedQueue and poisonQueue
-            var queueServiceClient = _host.GetQueueServiceClient();
+            var queueServiceClient = TestHelpers.GetTestQueueServiceClient();
             var sharedQueue = queueServiceClient?.GetQueueClient("azure-webjobs-shared-" + _host.Services.GetService<IHostIdProvider>().GetHostIdAsync(CancellationToken.None).Result);
             var poisonQueue = queueServiceClient?.GetQueueClient("azure-webjobs-poison-" + _host.Services.GetService<IHostIdProvider>().GetHostIdAsync(CancellationToken.None).Result);
 

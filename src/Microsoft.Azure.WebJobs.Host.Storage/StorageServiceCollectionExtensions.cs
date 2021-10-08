@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using Azure.Storage.Blobs;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Config;
@@ -36,25 +37,26 @@ namespace Microsoft.Extensions.Hosting
         }
 
         // This is only called if the host didn't already provide an implementation
-        // TODO: Should this attempt to create a client or just check for connection setting?
         private static IDistributedLockManager Create(IServiceProvider provider)
         {
-            var azureStorageProvider = provider.GetRequiredService<IAzureBlobStorageProvider>();
+            var blobStorageProvider = provider.GetRequiredService<IAzureBlobStorageProvider>();
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
             var logger = loggerFactory.CreateLogger<IDistributedLockManager>();
-            try
+
+            IDistributedLockManager lockManager;
+            if (blobStorageProvider.TryCreateHostingBlobContainerClient(out _))
             {
-                var container = azureStorageProvider.GetWebJobsBlobContainerClient();
-                logger.LogDebug("Using BlobLeaseDistributedLockManager.");
-                return new BlobLeaseDistributedLockManager(loggerFactory, azureStorageProvider);
+                lockManager = new BlobLeaseDistributedLockManager(loggerFactory, blobStorageProvider);
             }
-            catch (InvalidOperationException)
+            else
             {
                 // If there is an error getting the container client,
                 // register an InMemoryDistributedLockManager.
-                logger.LogDebug("Using InMemoryDistributedLockManager.");
-                return new InMemoryDistributedLockManager();
+                lockManager = new InMemoryDistributedLockManager();
             }
+
+            logger.LogDebug($"Using {lockManager.GetType().Name}");
+            return lockManager;
         }
     }
 }

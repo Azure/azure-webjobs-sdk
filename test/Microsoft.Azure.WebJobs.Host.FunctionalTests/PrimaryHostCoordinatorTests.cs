@@ -93,7 +93,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             var host = CreateHost();
 
-            var containerClient = host.Services.GetRequiredService<IAzureBlobStorageProvider>().GetWebJobsBlobContainerClient();
+            Assert.True(host.Services.GetRequiredService<IAzureBlobStorageProvider>().TryCreateHostingBlobContainerClient(out BlobContainerClient containerClient));
             string hostId = GetHostId(host);
 
             using (host)
@@ -114,7 +114,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             var host = CreateHost();
 
-            var containerClient = host.Services.GetRequiredService<IAzureBlobStorageProvider>().GetWebJobsBlobContainerClient();
+            Assert.True(host.Services.GetRequiredService<IAzureBlobStorageProvider>().TryCreateHostingBlobContainerClient(out BlobContainerClient containerClient));
             string hostId = GetHostId(host);
 
             BlobClient blobClient = await GetLockBlobAsync(containerClient, hostId);
@@ -148,7 +148,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             var host = CreateHost();
 
-            var containerClient = host.Services.GetRequiredService<IAzureBlobStorageProvider>().GetWebJobsBlobContainerClient();
+            Assert.True(host.Services.GetRequiredService<IAzureBlobStorageProvider>().TryCreateHostingBlobContainerClient(out BlobContainerClient containerClient));
             string hostId = GetHostId(host);
 
             using (host)
@@ -191,7 +191,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             var host = CreateHost();
 
-            var containerClient = host.Services.GetRequiredService<IAzureBlobStorageProvider>().GetWebJobsBlobContainerClient();
+            Assert.True(host.Services.GetRequiredService<IAzureBlobStorageProvider>().TryCreateHostingBlobContainerClient(out BlobContainerClient containerClient));
             string hostId = GetHostId(host);
             var primaryHostCoordinator = host.Services.GetServices<IHostedService>().OfType<PrimaryHostCoordinator>().Single();
 
@@ -309,14 +309,14 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             {
                 s.AddSingleton<IHostIdProvider>(_ => new FixedHostIdProvider(hostId1));
             });
-            var containerClient1 = host1.Services.GetRequiredService<IAzureBlobStorageProvider>().GetWebJobsBlobContainerClient();
 
+            Assert.True(host1.Services.GetRequiredService<IAzureBlobStorageProvider>().TryCreateHostingBlobContainerClient(out BlobContainerClient containerClient1));
 
             var host2 = CreateHost(s =>
             {
                 s.AddSingleton<IHostIdProvider>(_ => new FixedHostIdProvider(hostId2));
             });
-            var containerClient2 = host2.Services.GetRequiredService<IAzureBlobStorageProvider>().GetWebJobsBlobContainerClient();
+            Assert.True(host2.Services.GetRequiredService<IAzureBlobStorageProvider>().TryCreateHostingBlobContainerClient(out BlobContainerClient containerClient2));
 
             using (host1)
             using (host2)
@@ -347,7 +347,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             var blobClient = containerClient.GetBlobClient("locks/" + PrimaryHostCoordinator.GetBlobName(hostId));
             if (!await blobClient.ExistsAsync())
             {
-                await blobClient.UploadTextAsync("");
+                await blobClient.UploadTextAsync("", overwrite: true);
             }
 
             return blobClient;

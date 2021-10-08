@@ -6,14 +6,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure.Storage.Queues;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
-    public class AsyncCancellationEndToEndTests : IAsyncDisposable
+    public class AsyncCancellationEndToEndTests : IAsyncLifetime
     {
         private const string TestArtifactPrefix = "asynccancele2e";
         private const string QueueName = TestArtifactPrefix + "%rnd%";
@@ -39,8 +38,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     // Necessary for Blob/Queue bindings
                     b.AddAzureStorageBlobs();
                     b.AddAzureStorageQueues();
-
-                    b.Services.AddSingleton<QueueServiceClientProvider>();
                 })
                 .ConfigureServices(services =>
                 {
@@ -48,9 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 })
                 .Build();
 
-            var configuration = _host.Services.GetService<IConfiguration>();
-            var queueServiceClientProvider = _host.Services.GetService<QueueServiceClientProvider>();
-            _queueServiceClient = queueServiceClientProvider.Create(ConnectionStringNames.Storage, configuration);
+            _queueServiceClient = TestHelpers.GetTestQueueServiceClient();
 
             _invokeInFunction = () => { };
             _tokenCancelled = false;
@@ -58,7 +53,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _functionCompleted = new ManualResetEvent(initialState: false);
         }
 
-        public async ValueTask DisposeAsync()
+        public Task InitializeAsync() => Task.CompletedTask;
+
+        public async Task DisposeAsync()
         {
             _functionStarted.Dispose();
             _functionCompleted.Dispose();

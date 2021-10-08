@@ -12,6 +12,13 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
 {
     /// <summary>
     /// Handles instantiating Azure storage clients from an <see cref="IConfiguration"/> source.
+    /// Certain configuration settings are used to instantiate the clients. These include settings
+    /// necessary to construct the Azure service URIs and settings to specify credential related
+    /// information (i.e. clientId, tenantId, etc. where applicable).
+    /// <see cref="Microsoft.Extensions.Azure.ClientFactory"/> is where a bulk of the
+    /// <see cref="IConfiguration"/> source is read.
+    /// This implementation adds extra configuration by using <see cref="StorageServiceUriOptions"/> to bind to
+    /// a particular <see cref="IConfigurationSection"/>.
     /// </summary>
     internal class AzureStorageProvider : IAzureBlobStorageProvider
     {
@@ -29,19 +36,24 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
             _blobServiceClientProvider = new BlobServiceClientProvider(componentFactory, logForwarder);
         }
 
-        public virtual BlobContainerClient GetWebJobsBlobContainerClient()
+        public virtual bool TryCreateHostingBlobContainerClient(out BlobContainerClient blobContainerClient)
         {
             if (_storageOptions?.CurrentValue.InternalSasBlobContainer != null)
             {
-                return new BlobContainerClient(new Uri(_storageOptions.CurrentValue.InternalSasBlobContainer));
+                blobContainerClient = new BlobContainerClient(new Uri(_storageOptions.CurrentValue.InternalSasBlobContainer));
+                _logger.LogDebug($"Using storage account {blobContainerClient.AccountName} and container {blobContainerClient.Name} for hosting BlobContainerClient.");
+                return true;
             }
 
             if (!TryGetBlobServiceClientFromConnection(ConnectionStringNames.Storage, out BlobServiceClient blobServiceClient))
             {
-                throw new InvalidOperationException($"Could not create BlobContainerClient in AzureStorageProvider using Connection: {ConnectionStringNames.Storage}");
+                _logger.LogDebug($"Could not create BlobContainerClient using Connection: {ConnectionStringNames.Storage}");
+                blobContainerClient = default;
+                return false;
             }
 
-            return blobServiceClient.GetBlobContainerClient(HostContainerNames.Hosts);
+            blobContainerClient = blobServiceClient.GetBlobContainerClient(HostContainerNames.Hosts);
+            return true;
         }
 
         public virtual bool TryGetBlobServiceClientFromConnection(string connection, out BlobServiceClient client)
@@ -55,7 +67,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
             }
             catch (Exception e)
             {
-                _logger.LogDebug($"Could not create BlobServiceClient in AzureStorageProvider. Exception: {e}");
+                _logger.LogDebug($"Could not create BlobServiceClient. Exception: {e}");
                 client = default;
                 return false;
             }

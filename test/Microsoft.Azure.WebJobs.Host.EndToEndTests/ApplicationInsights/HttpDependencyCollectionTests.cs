@@ -11,7 +11,6 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Queues;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Configuration;
@@ -23,7 +22,7 @@ using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 {
-    public class HttpDependencyCollectionTests : IAsyncDisposable
+    public class HttpDependencyCollectionTests : IAsyncLifetime
     {
         private const string TestArtifactPrefix = "e2etestsai";
         private const string OutputQueueNamePattern = TestArtifactPrefix + "out%rnd%";
@@ -229,7 +228,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 var containerClient = _blobServiceClient.GetBlobContainerClient(_triggerContainerName);
                 await containerClient.CreateIfNotExistsAsync();
                 var blobClient = containerClient.GetBlobClient("triggerBlob");
-                blobClient.UploadTextAsync("TestData").Wait();
+                blobClient.UploadTextAsync("TestData", overwrite: true).Wait();
 
                 _functionWaitHandle.WaitOne();
                 // let host run for a while to write output queue message
@@ -428,10 +427,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                     b.AddAzureStorageBlobs();
                     // Track2 Queues Extensions expects Base64 encoded message; Track2 Queues package no longer encodes by default (Track1 used Base64 default)
                     b.AddAzureStorageQueues(o => o.MessageEncoding = QueueMessageEncoding.None);
-
-                    // Necessary to manipulate Blobs/Queues for these tests
-                    b.Services.AddSingleton<BlobServiceClientProvider>();
-                    b.Services.AddSingleton<QueueServiceClientProvider>();
                 })
                 .ConfigureServices(services =>
                 {
@@ -453,11 +448,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
             var configuration = host.Services.GetService<IConfiguration>();
 
-            var blobServiceClientProvider = host.Services.GetService<BlobServiceClientProvider>();
-            _blobServiceClient = blobServiceClientProvider.Create(ConnectionStringNames.Storage, configuration);
-
-            var queueServiceClientProvider = host.Services.GetService<QueueServiceClientProvider>();
-            _queueServiceClient = queueServiceClientProvider.Create(ConnectionStringNames.Storage, configuration);
+            _blobServiceClient = TestHelpers.GetTestBlobServiceClient();
+            _queueServiceClient = TestHelpers.GetTestQueueServiceClient();
 
             _inputContainerName = _resolver.ResolveInString(InputContainerNamePattern);
             _outputContainerName = _resolver.ResolveInString(OutputContainerNamePattern);
@@ -478,12 +470,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             _triggerQueueClient.CreateIfNotExists();
 
             var blobClient = inContainer.GetBlobClient("in");
-            blobClient.UploadTextAsync("TestData").Wait();
+            blobClient.UploadTextAsync("TestData", overwrite: true).Wait();
 
             return host;
         }
 
-        public async ValueTask DisposeAsync()
+        public Task InitializeAsync() => Task.CompletedTask;
+
+        public async Task DisposeAsync()
         {
             _channel?.Dispose();
             await CleanBlobsAsync();

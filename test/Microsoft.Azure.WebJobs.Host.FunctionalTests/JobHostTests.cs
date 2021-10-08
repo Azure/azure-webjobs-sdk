@@ -10,16 +10,12 @@ using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Azure;
 using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Specialized;
 using Azure.Storage.Queues.Models;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
-using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -29,11 +25,8 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
-    public class JobHostTests : IClassFixture<JobHostTests.TestFixture>
+    public class JobHostTests
     {
-        private const string TestArtifactContainerPrefix = "e2e-jobhosttests";
-        private const string TestArtifactContainerName = TestArtifactContainerPrefix + "-%rnd%";
-
         // Checks that we write the marker file when we call the host
         [Fact]
         public void TestSdkMarkerIsWrittenWhenInAzureWebSites()
@@ -450,194 +443,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 ThrowingProgram.ExceptionInfo = null;
             }
         }
-        [Fact]
-        public async Task BlobTrigger_ProvidesBlobTriggerBindingData()
-        {
-            try
-            {
-                RandomNameResolver nameResolver = new RandomNameResolver();
-
-                // Arrange
-                var host = new HostBuilder()
-                    .ConfigureDefaultTestHost<BlobTriggerBindingDataProgram>(c =>
-                    {
-                        c.AddAzureStorageBlobs();
-                    })
-                    .ConfigureServices(s =>
-                    {
-                        s.AddSingleton<INameResolver>(nameResolver);
-                    })
-                    .Build()
-                    .GetJobHost();
-
-                using (host)
-                {
-                    string containerName = nameResolver.ResolveInString(TestArtifactContainerName);
-                    string blobName = "blob";
-                    string expectedPath = containerName + "/" + blobName;
-
-                    var containerClient = TestFixture.GetTestContainerClient(containerName);
-                    await containerClient.CreateIfNotExistsAsync();
-                    var blockBlobClient = containerClient.GetBlockBlobClient(blobName);
-                    await blockBlobClient.UploadTextAsync("test");
-
-                    MethodInfo methodInfo = typeof(BlobTriggerBindingDataProgram).GetMethod(nameof(BlobTriggerBindingDataProgram.OnBlob));
-
-                    // Act
-                    await host.CallAsync(methodInfo, new { blob = blockBlobClient });
-
-                    // Assert
-                    Assert.Equal(expectedPath, BlobTriggerBindingDataProgram.BlobTrigger);
-                }
-            }
-            finally
-            {
-                BlobTriggerBindingDataProgram.BlobTrigger = null;
-            }
-        }
-
-        [Fact]
-        public async Task QueueTrigger_ProvidesQueueTriggerBindingData()
-        {
-            try
-            {
-                RandomNameResolver nameResolver = new RandomNameResolver();
-
-                // Arrange
-                var host = new HostBuilder()
-                    .ConfigureDefaultTestHost<QueueTriggerBindingDataProgram>(c =>
-                    {
-                        c.AddAzureStorageQueues();
-                    })
-                    .ConfigureServices(s =>
-                    {
-                        s.AddSingleton<INameResolver>(nameResolver);
-                    })
-                    .Build()
-                    .GetJobHost();
-
-                using (host)
-                {
-                    MethodInfo methodInfo = typeof(QueueTriggerBindingDataProgram).GetMethod(nameof(QueueTriggerBindingDataProgram.OnQueue));
-                    string expectedMessage = "a";
-
-                    // Act
-                    await host.CallAsync(methodInfo, new { message = expectedMessage });
-
-                    // Assert
-                    Assert.Equal(expectedMessage, QueueTriggerBindingDataProgram.QueueTrigger);
-                }
-            }
-            finally
-            {
-                QueueTriggerBindingDataProgram.QueueTrigger = null;
-            }
-        }
-
-#if false // These tests should be in the Azure SDK extensions repo for storage
-        [Fact]
-        public async Task QueueTrigger_WithTextualByteArrayMessage_ProvidesQueueTriggerBindingData()
-        {
-            try
-            {
-                // Arrange
-                var host = new HostBuilder()
-                    .ConfigureDefaultTestHost<QueueTriggerBindingDataProgram>(c =>
-                    {
-                        c.AddAzureStorageQueues();
-                    })
-                    .Build()
-                    .GetJobHost();
-
-                using (host)
-                {
-                    MethodInfo methodInfo = typeof(QueueTriggerBindingDataProgram).GetMethod(nameof(QueueTriggerBindingDataProgram.OnQueue));
-                    string expectedMessage = "abc";
-                    QueueMessage message = new QueueMessage();
-                    Assert.Equal(expectedMessage, message.AsString); // Guard
-
-                    // Act
-                    await host.CallAsync(methodInfo, new { message });
-
-                    // Assert
-                    Assert.Equal(expectedMessage, QueueTriggerBindingDataProgram.QueueTrigger);
-                }
-            }
-            finally
-            {
-                QueueTriggerBindingDataProgram.QueueTrigger = null;
-            }
-        }
-
-        [Fact]
-        public async Task QueueTrigger_WithNonTextualByteArrayMessageUsingQueueTriggerBindingData_Throws()
-        {
-            try
-            {
-                // Arrange
-                var host = new HostBuilder()
-                    .ConfigureDefaultTestHost<QueueTriggerBindingDataProgram>(c =>
-                    {
-                        c.AddAzureStorage();
-                    })
-                    .Build()
-                    .GetJobHost();
-
-                using (host)
-                {
-                    MethodInfo methodInfo = typeof(QueueTriggerBindingDataProgram).GetMethod(nameof(QueueTriggerBindingDataProgram.OnQueue));
-                    byte[] contents = new byte[] { 0x00, 0xFF }; // Not valid UTF-8
-                    CloudQueueMessage message = new CloudQueueMessage(contents);
-
-                    // Act & Assert
-                    FunctionInvocationException exception = await Assert.ThrowsAsync<FunctionInvocationException>(
-                        () => host.CallAsync(methodInfo, new { message = message }));
-                    // This exeption shape/message could be better, but it's meets a minimum acceptibility threshold.
-                    Assert.Equal("Exception binding parameter 'queueTrigger'", exception.InnerException.Message);
-                    Exception innerException = exception.InnerException.InnerException;
-                    Assert.IsType<InvalidOperationException>(innerException);
-                    Assert.Equal("Binding data does not contain expected value 'queueTrigger'.", innerException.Message);
-                }
-            }
-            finally
-            {
-                QueueTriggerBindingDataProgram.QueueTrigger = null;
-            }
-        }
-
-        [Fact]
-        public async Task QueueTrigger_WithNonTextualByteArrayMessageNotUsingQueueTriggerBindingData_DoesNotThrow()
-        {
-            try
-            {
-                // Arrange
-                var host = new HostBuilder()
-                    .ConfigureDefaultTestHost<QueueTriggerBindingDataProgram>(c =>
-                    {
-                        c.AddAzureStorage();
-                    })
-                    .Build()
-                    .GetJobHost();
-
-                using (host)
-                {
-                    MethodInfo methodInfo = typeof(QueueTriggerBindingDataProgram).GetMethod(nameof(QueueTriggerBindingDataProgram.ProcessQueueAsBytes));
-                    byte[] expectedBytes = new byte[] { 0x00, 0xFF }; // Not valid UTF-8
-                    CloudQueueMessage message = new CloudQueueMessage(expectedBytes);
-
-                    // Act
-                    await host.CallAsync(methodInfo, new { message = message });
-
-                    // Assert
-                    Assert.Equal(QueueTriggerBindingDataProgram.Bytes, expectedBytes);
-                }
-            }
-            finally
-            {
-                QueueTriggerBindingDataProgram.QueueTrigger = null;
-            }
-        }
-#endif
 
         [Fact]
         [Trait("Category", "secretsrequired")]
@@ -760,32 +565,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
-        private class BlobTriggerBindingDataProgram
-        {
-            public static string BlobTrigger { get; set; }
-
-            public static void OnBlob([BlobTrigger("ignore")] BlobClient blob, string blobTrigger)
-            {
-                BlobTrigger = blobTrigger;
-            }
-        }
-
-        private class QueueTriggerBindingDataProgram
-        {
-            public static string QueueTrigger { get; set; }
-            public static byte[] Bytes { get; set; }
-
-            public static void OnQueue([QueueTrigger("ignore")] QueueMessage message, string queueTrigger)
-            {
-                QueueTrigger = queueTrigger;
-            }
-
-            public static void ProcessQueueAsBytes([QueueTrigger("ignore")] byte[] message)
-            {
-                Bytes = message;
-            }
-        }
-
         private class BindingErrorsProgram
         {
             // Invalid function
@@ -836,59 +615,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
                 StopCalled = true;
                 return Task.CompletedTask;
-            }
-        }
-
-        private class TestFixture : IAsyncDisposable
-        {
-            public static BlobServiceClient BlobServiceClient;
-
-            public TestFixture()
-            {
-                // Create a default host since we know that's where the account
-                // is coming from
-                IHost host = new HostBuilder()
-                    .ConfigureDefaultTestHost(b =>
-                    {
-                        b.AddAzureStorageCoreServices();
-
-                        // Necessary to manipulate Blobs for these tests
-                        b.Services.AddSingleton<BlobServiceClientProvider>();
-                    })
-                    .Build();
-
-                var configuration = host.Services.GetRequiredService<IConfiguration>();
-                var blobServiceClientProvider = host.Services.GetRequiredService<BlobServiceClientProvider>();
-                BlobServiceClient = blobServiceClientProvider.Create(ConnectionStringNames.Storage, configuration);
-            }
-
-            public static BlobContainerClient GetTestContainerClient(string name)
-            {
-                return BlobServiceClient?.GetBlobContainerClient(name);
-            }
-
-            public async ValueTask DisposeAsync()
-            {
-
-                await CleanBlobsAsync();
-            }
-
-            private async Task CleanBlobsAsync()
-            {
-                if (BlobServiceClient != null)
-                {
-                    await foreach (var testBlobContainer in BlobServiceClient.GetBlobContainersAsync(prefix: TestArtifactContainerPrefix))
-                    {
-                        try
-                        {
-                            await BlobServiceClient.DeleteBlobContainerAsync(testBlobContainer.Name);
-                        }
-                        catch (RequestFailedException)
-                        {
-                            // best effort
-                        }
-                    }
-                }
             }
         }
     }
