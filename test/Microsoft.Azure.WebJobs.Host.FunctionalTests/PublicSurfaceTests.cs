@@ -24,8 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 "JobHostInternalStorageOptions",
                 "RuntimeStorageWebJobsBuilderExtensions",
                 "StorageServiceCollectionExtensions",
-                "IAzureBlobStorageProvider",
-                "StorageServiceUriOptions"
+                "IAzureBlobStorageProvider"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);

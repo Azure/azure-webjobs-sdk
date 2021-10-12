@@ -78,7 +78,7 @@ namespace Microsoft.Azure.WebJobs.Host
             CancellationToken cancellationToken)
         {
             var lockBlob = this.GetContainerClient(account).GetBlobClient(GetLockPath(lockId));
-            string leaseId = await TryAcquireLeaseAsync(this, lockBlob, lockPeriod, proposedLeaseId, cancellationToken, account);
+            string leaseId = await TryAcquireLeaseAsync(this, lockBlob, lockPeriod, proposedLeaseId, cancellationToken);
 
             if (string.IsNullOrEmpty(leaseId))
             {
@@ -97,7 +97,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
         protected virtual BlobContainerClient GetContainerClient(string connectionName)
         {
-            if (!string.IsNullOrEmpty(connectionName) && _blobStorageProvider.TryGetBlobServiceClientFromConnection(connectionName, out BlobServiceClient client))
+            if (!string.IsNullOrEmpty(connectionName) && _blobStorageProvider.TryCreateBlobServiceClientFromConnection(connectionName, out BlobServiceClient client))
             {
                 return client.GetBlobContainerClient(HostContainerNames.Hosts);
             }
@@ -121,13 +121,18 @@ namespace Microsoft.Azure.WebJobs.Host
             return blobClient.GetBlobLeaseClient(proposedLeaseId);
         }
 
+        // Allows the extension method to be mocked for testing
+        protected virtual BlobContainerClient GetParentBlobContainerClient(BlobClient blobClient)
+        {
+            return blobClient.GetParentBlobContainerClient();
+        }
+
         private static async Task<string> TryAcquireLeaseAsync(
             BlobLeaseDistributedLockManager lockManager,
             BlobClient blobClient,
             TimeSpan leasePeriod,
             string proposedLeaseId,
-            CancellationToken cancellationToken,
-            string accountOverride)
+            CancellationToken cancellationToken)
         {
             bool blobDoesNotExist = false;
             try
@@ -155,7 +160,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
             if (blobDoesNotExist)
             {
-                await TryCreateAsync(lockManager, blobClient, cancellationToken, accountOverride);
+                await TryCreateAsync(lockManager, blobClient, cancellationToken);
 
                 try
                 {
@@ -202,7 +207,7 @@ namespace Microsoft.Azure.WebJobs.Host
             }
         }
 
-        private static async Task<bool> TryCreateAsync(BlobLeaseDistributedLockManager lockManager, BlobClient blob, CancellationToken cancellationToken, string accountOverride)
+        private static async Task<bool> TryCreateAsync(BlobLeaseDistributedLockManager lockManager, BlobClient blob, CancellationToken cancellationToken)
         {
             bool isContainerNotFoundException = false;
 
@@ -234,7 +239,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
             Debug.Assert(isContainerNotFoundException);
 
-            var container = lockManager.GetContainerClient(accountOverride);
+            var container = lockManager.GetParentBlobContainerClient(blob);
             try
             {
                 await container.CreateIfNotExistsAsync(cancellationToken: cancellationToken);

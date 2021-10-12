@@ -40,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Assert.True(azureStorageProvider.TryCreateHostingBlobContainerClient(out BlobContainerClient container));
             await VerifyContainerClientAvailable(container);
 
-            Assert.True(azureStorageProvider.TryGetBlobServiceClientFromConnection(ConnectionStringNames.Storage, out BlobServiceClient blobServiceClient));
+            Assert.True(azureStorageProvider.TryCreateBlobServiceClientFromConnection(ConnectionStringNames.Storage, out BlobServiceClient blobServiceClient));
             await VerifyBlobServiceClientAvailable(blobServiceClient);
         }
 
@@ -52,7 +52,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
             var azureStorageProvider = GetAzureStorageProvider(configuration);
             Assert.False(azureStorageProvider.TryCreateHostingBlobContainerClient(out _));
-            Assert.False(azureStorageProvider.TryGetBlobServiceClientFromConnection(ConnectionStringNames.Storage, out _));
+            Assert.False(azureStorageProvider.TryCreateBlobServiceClientFromConnection(ConnectionStringNames.Storage, out _));
         }
 
         private async Task VerifyBlobServiceClientAvailable(BlobServiceClient client)

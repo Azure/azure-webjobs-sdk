@@ -120,17 +120,17 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             var blobLockManager = new TestBlobLeaseDistributedLockManager(new LoggerFactory(), blobStorageProvider);
 
             // Testing primary account
-            blobStorageProvider.TryGetBlobServiceClientFromConnection(ConnectionStringNames.Storage, out BlobServiceClient blobServiceClient);
+            blobStorageProvider.TryCreateBlobServiceClientFromConnection(ConnectionStringNames.Storage, out BlobServiceClient blobServiceClient);
             var accountContainer = blobLockManager.BaseGetContainerClient(ConnectionStringNames.Storage);
             Assert.Equal(blobServiceClient.AccountName, accountContainer.AccountName);
 
             // Testing primary account by providing null accountName argument
-            blobStorageProvider.TryGetBlobServiceClientFromConnection(ConnectionStringNames.Storage, out blobServiceClient);
+            blobStorageProvider.TryCreateBlobServiceClientFromConnection(ConnectionStringNames.Storage, out blobServiceClient);
             accountContainer = blobLockManager.BaseGetContainerClient(null);
             Assert.Equal(blobServiceClient.AccountName, accountContainer.AccountName);
 
             // Testing secondary account
-            blobStorageProvider.TryGetBlobServiceClientFromConnection(Secondary, out blobServiceClient);
+            blobStorageProvider.TryCreateBlobServiceClientFromConnection(Secondary, out blobServiceClient);
             accountContainer = blobLockManager.BaseGetContainerClient(Secondary);
             Assert.Equal(blobServiceClient.AccountName, accountContainer.AccountName);
         }

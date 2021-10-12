@@ -45,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
                 return true;
             }
 
-            if (!TryGetBlobServiceClientFromConnection(ConnectionStringNames.Storage, out BlobServiceClient blobServiceClient))
+            if (!TryCreateBlobServiceClientFromConnection(ConnectionStringNames.Storage, out BlobServiceClient blobServiceClient))
             {
                 _logger.LogDebug($"Could not create BlobContainerClient using Connection: {ConnectionStringNames.Storage}");
                 blobContainerClient = default;
@@ -56,7 +56,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
             return true;
         }
 
-        public virtual bool TryGetBlobServiceClientFromConnection(string connection, out BlobServiceClient client)
+        public virtual bool TryCreateBlobServiceClientFromConnection(string connection, out BlobServiceClient client)
         {
             var connectionToUse = connection ?? ConnectionStringNames.Storage;
 

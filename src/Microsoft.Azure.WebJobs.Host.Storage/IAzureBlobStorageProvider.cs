@@ -23,6 +23,6 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
         /// <param name="connection">connection name to use.</param>
         /// <param name="client"><see cref="BlobServiceClient"/> to instantiate.</param>
         /// <returns>Whether the attempt was successful.</returns>
-        bool TryGetBlobServiceClientFromConnection(string connection, out BlobServiceClient client);
+        bool TryCreateBlobServiceClientFromConnection(string connection, out BlobServiceClient client);
     }
 }
