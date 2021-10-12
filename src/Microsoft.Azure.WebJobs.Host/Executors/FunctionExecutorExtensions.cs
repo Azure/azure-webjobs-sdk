@@ -69,7 +69,16 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 TimeSpan nextDelay = retryStrategy.GetNextDelay(retryContext);
                 logger.LogFunctionRetryAttempt(nextDelay, attempt, retryStrategy.MaxRetryCount);
 
-                await Task.Delay(nextDelay);
+                try
+                {
+                    // If the invocation is cancelled retries must stop.
+                    await Task.Delay(nextDelay, cancellationToken);
+                } 
+                catch (TaskCanceledException)
+                {
+                    logger.LogExitFromRetryLoop();
+                    break;
+                }
             }
 
             return functionResult;

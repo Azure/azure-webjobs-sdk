@@ -102,8 +102,14 @@ namespace Microsoft.Extensions.Logging
         private static readonly Action<ILogger, string, Exception> _functionConcurrencyIncrease =
            LoggerMessage.Define<string>(
            LogLevel.Debug,
-           new EventId(338, nameof(FunctionConcurrencyIncrease)),
+           new EventId(339, nameof(FunctionConcurrencyIncrease)),
            "{functionId} Increasing concurrency");
+
+        private static readonly Action<ILogger, Exception> _logExitFromRetryLoop =
+           LoggerMessage.Define(
+           LogLevel.Warning,
+           new EventId(340, nameof(LogExitFromRetryLoop)),
+           "Invocation cancelled - exiting retry loop.");
 
         public static void PrimaryHostCoordinatorLockLeaseAcquired(this ILogger logger, string websiteInstanceId)
         {
@@ -235,6 +241,11 @@ namespace Microsoft.Extensions.Logging
         public static void LogFunctionRetryAttempt(this ILogger logger, TimeSpan nextDelay, int attemptCount, int maxRetryCount)
         {
             _logFunctionRetryAttempt(logger, nextDelay, attemptCount, maxRetryCount, null);
+        }
+
+        internal static void LogExitFromRetryLoop(this ILogger logger)
+        {
+            _logExitFromRetryLoop(logger, null);
         }
     }
 }
