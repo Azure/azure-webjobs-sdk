@@ -3,9 +3,9 @@
 
 using System;
 using System.Collections.Generic;
-using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Extensions.Configuration;
 using Xunit;
+using static Microsoft.Azure.WebJobs.Host.Storage.BlobServiceClientProvider;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
