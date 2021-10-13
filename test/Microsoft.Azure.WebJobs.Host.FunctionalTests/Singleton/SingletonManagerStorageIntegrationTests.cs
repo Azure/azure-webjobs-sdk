@@ -19,7 +19,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
-using SingletonLockHandle = Microsoft.Azure.WebJobs.Host.BlobLeaseDistributedLockManager.SingletonLockHandle;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 {
@@ -31,7 +30,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         private const string TestHostId = "testhost";
         private const string TestLockId = "testid";
         private const string TestInstanceId = "testinstance";
-        private const string Secondary = "SecondaryStorage";
 
         private BlobLeaseDistributedLockManager _core;
         private SingletonManager _singletonManager;
@@ -55,7 +53,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             {
                 if (!string.IsNullOrWhiteSpace(accountName))
                 {
-                    throw new InvalidOperationException("Must replace singleton lease manager to support multiple accounts");
+                    throw new InvalidOperationException("This test does not support multiple accounts.");
                 }
 
                 return ContainerClient;
@@ -103,36 +101,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         public async Task DisposeAsync()
         {
             await _testContainerClient.DeleteIfExistsAsync();
-        }
-
-        [Fact]
-        public void GetLockPath()
-        {
-            var path = _core.GetLockPath(ConnectionStringNames.Storage);
-            var expectedPath = string.Format("{0}/{1}", HostDirectoryNames.SingletonLocks, ConnectionStringNames.Storage);
-            Assert.Equal(expectedPath, path);
-        }
-
-        [Fact]
-        public void GetContainerClient_SupportsMultipleAccounts()
-        {
-            var blobStorageProvider = TestHelpers.GetTestAzureBlobStorageProvider();
-            var blobLockManager = new TestBlobLeaseDistributedLockManager(new LoggerFactory(), blobStorageProvider);
-
-            // Testing primary account
-            blobStorageProvider.TryCreateBlobServiceClientFromConnection(ConnectionStringNames.Storage, out BlobServiceClient blobServiceClient);
-            var accountContainer = blobLockManager.BaseGetContainerClient(ConnectionStringNames.Storage);
-            Assert.Equal(blobServiceClient.AccountName, accountContainer.AccountName);
-
-            // Testing primary account by providing null accountName argument
-            blobStorageProvider.TryCreateBlobServiceClientFromConnection(ConnectionStringNames.Storage, out blobServiceClient);
-            accountContainer = blobLockManager.BaseGetContainerClient(null);
-            Assert.Equal(blobServiceClient.AccountName, accountContainer.AccountName);
-
-            // Testing secondary account
-            blobStorageProvider.TryCreateBlobServiceClientFromConnection(Secondary, out blobServiceClient);
-            accountContainer = blobLockManager.BaseGetContainerClient(Secondary);
-            Assert.Equal(blobServiceClient.AccountName, accountContainer.AccountName);
         }
 
         [Fact]

@@ -18,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Host.Storage
         bool TryCreateHostingBlobContainerClient(out BlobContainerClient blobContainerClient);
 
         /// <summary>
-        /// Attempts to retrieve the <see cref="BlobServiceClient"/> from the specified connection.
+        /// Attempts to create the <see cref="BlobServiceClient"/> from the specified connection.
         /// </summary>
         /// <param name="connection">connection name to use.</param>
         /// <param name="client"><see cref="BlobServiceClient"/> to instantiate.</param>

@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -28,6 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
         private readonly ILogger _logger;
         private readonly IAzureBlobStorageProvider _blobStorageProvider;
+        private readonly ConcurrentDictionary<string, BlobContainerClient> _lockBlobContainerClientMap = new ConcurrentDictionary<string, BlobContainerClient>(StringComparer.OrdinalIgnoreCase);
 
         public BlobLeaseDistributedLockManager(
             ILoggerFactory loggerFactory,
@@ -78,7 +80,7 @@ namespace Microsoft.Azure.WebJobs.Host
             CancellationToken cancellationToken)
         {
             var lockBlob = this.GetContainerClient(account).GetBlobClient(GetLockPath(lockId));
-            string leaseId = await TryAcquireLeaseAsync(this, lockBlob, lockPeriod, proposedLeaseId, cancellationToken);
+            string leaseId = await TryAcquireLeaseAsync(lockBlob, lockPeriod, proposedLeaseId, cancellationToken);
 
             if (string.IsNullOrEmpty(leaseId))
             {
@@ -97,17 +99,46 @@ namespace Microsoft.Azure.WebJobs.Host
 
         protected virtual BlobContainerClient GetContainerClient(string connectionName)
         {
-            if (!string.IsNullOrEmpty(connectionName) && _blobStorageProvider.TryCreateBlobServiceClientFromConnection(connectionName, out BlobServiceClient client))
+            if (string.IsNullOrEmpty(connectionName))
             {
-                return client.GetBlobContainerClient(HostContainerNames.Hosts);
+                // Dictionary lookup needs non-null string
+                connectionName = string.Empty;
             }
 
-            if (!_blobStorageProvider.TryCreateHostingBlobContainerClient(out BlobContainerClient blobContainerClient))
+            // First check the cache if we have a BlobContainerClient for this connection
+            if (_lockBlobContainerClientMap.TryGetValue(connectionName, out BlobContainerClient blobContainerClient))
             {
-                throw new InvalidOperationException($"Could not create BlobContainerClient in BlobLeaseDistributedLockManager using Connection: {ConnectionStringNames.Storage}");
+                return blobContainerClient;
             }
 
-            return blobContainerClient;
+            BlobContainerClient containerClient = CreateBlobContainerClient(connectionName);
+            _lockBlobContainerClientMap[connectionName] = containerClient;
+            return containerClient;
+        }
+
+        // Helper method to retrieve a new BlobContainerClient with ability to override the default storage account
+        private BlobContainerClient CreateBlobContainerClient(string connectionName)
+        {
+            if (!string.IsNullOrEmpty(connectionName))
+            {
+                if (_blobStorageProvider.TryCreateBlobServiceClientFromConnection(connectionName, out BlobServiceClient client))
+                {
+                    return client.GetBlobContainerClient(HostContainerNames.Hosts);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Could not create BlobContainerClient for {typeof(BlobLeaseDistributedLockManager).Name} with Connection: {connectionName}.");
+                }
+            }
+            else
+            {
+                if (!_blobStorageProvider.TryCreateHostingBlobContainerClient(out BlobContainerClient blobContainerClient))
+                {
+                    throw new InvalidOperationException($"Could not create BlobContainerClient for {typeof(BlobLeaseDistributedLockManager).Name}.");
+                }
+
+                return blobContainerClient;
+            }
         }
 
         internal string GetLockPath(string lockId)
@@ -127,8 +158,7 @@ namespace Microsoft.Azure.WebJobs.Host
             return blobClient.GetParentBlobContainerClient();
         }
 
-        private static async Task<string> TryAcquireLeaseAsync(
-            BlobLeaseDistributedLockManager lockManager,
+        private async Task<string> TryAcquireLeaseAsync(
             BlobClient blobClient,
             TimeSpan leasePeriod,
             string proposedLeaseId,
@@ -139,7 +169,7 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 // Optimistically try to acquire the lease. The blob may not yet
                 // exist. If it doesn't we handle the 404, create it, and retry below
-                var leaseResponse = await lockManager.GetBlobLeaseClient(blobClient, proposedLeaseId).AcquireAsync(leasePeriod, cancellationToken: cancellationToken);
+                var leaseResponse = await GetBlobLeaseClient(blobClient, proposedLeaseId).AcquireAsync(leasePeriod, cancellationToken: cancellationToken);
                 return leaseResponse.Value.LeaseId;
             }
             catch (RequestFailedException exception)
@@ -160,11 +190,11 @@ namespace Microsoft.Azure.WebJobs.Host
 
             if (blobDoesNotExist)
             {
-                await TryCreateAsync(lockManager, blobClient, cancellationToken);
+                await TryCreateAsync(blobClient, cancellationToken);
 
                 try
                 {
-                    var leaseResponse = await lockManager.GetBlobLeaseClient(blobClient, proposedLeaseId).AcquireAsync(leasePeriod, cancellationToken: cancellationToken);
+                    var leaseResponse = await GetBlobLeaseClient(blobClient, proposedLeaseId).AcquireAsync(leasePeriod, cancellationToken: cancellationToken);
                     return leaseResponse.Value.LeaseId;
                 }
                 catch (RequestFailedException exception)
@@ -207,7 +237,7 @@ namespace Microsoft.Azure.WebJobs.Host
             }
         }
 
-        private static async Task<bool> TryCreateAsync(BlobLeaseDistributedLockManager lockManager, BlobClient blob, CancellationToken cancellationToken)
+        private async Task<bool> TryCreateAsync(BlobClient blobClient, CancellationToken cancellationToken)
         {
             bool isContainerNotFoundException = false;
 
@@ -215,7 +245,7 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 using (Stream stream = new MemoryStream(Encoding.UTF8.GetBytes(string.Empty)))
                 {
-                    await blob.UploadAsync(stream, cancellationToken: cancellationToken);
+                    await blobClient.UploadAsync(stream, cancellationToken: cancellationToken);
                 }
                 return true;
             }
@@ -239,7 +269,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
             Debug.Assert(isContainerNotFoundException);
 
-            var container = lockManager.GetParentBlobContainerClient(blob);
+            var container = GetParentBlobContainerClient(blobClient);
             try
             {
                 await container.CreateIfNotExistsAsync(cancellationToken: cancellationToken);
@@ -254,7 +284,7 @@ namespace Microsoft.Azure.WebJobs.Host
             {
                 using (Stream stream = new MemoryStream(Encoding.UTF8.GetBytes(string.Empty)))
                 {
-                    await blob.UploadAsync(stream, cancellationToken: cancellationToken);
+                    await blobClient.UploadAsync(stream, cancellationToken: cancellationToken);
                 }
 
                 return true;

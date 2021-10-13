@@ -93,7 +93,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             var host = CreateHost();
 
-            Assert.True(host.Services.GetRequiredService<IAzureBlobStorageProvider>().TryCreateHostingBlobContainerClient(out BlobContainerClient containerClient));
+            var containerClient = GetHostingBlobContainerClient(host);
             string hostId = GetHostId(host);
 
             using (host)
@@ -114,7 +114,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             var host = CreateHost();
 
-            Assert.True(host.Services.GetRequiredService<IAzureBlobStorageProvider>().TryCreateHostingBlobContainerClient(out BlobContainerClient containerClient));
+            var containerClient = GetHostingBlobContainerClient(host);
             string hostId = GetHostId(host);
 
             BlobClient blobClient = await GetLockBlobAsync(containerClient, hostId);
@@ -148,7 +148,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             var host = CreateHost();
 
-            Assert.True(host.Services.GetRequiredService<IAzureBlobStorageProvider>().TryCreateHostingBlobContainerClient(out BlobContainerClient containerClient));
+            var containerClient = GetHostingBlobContainerClient(host);
             string hostId = GetHostId(host);
 
             using (host)
@@ -191,7 +191,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             var host = CreateHost();
 
-            Assert.True(host.Services.GetRequiredService<IAzureBlobStorageProvider>().TryCreateHostingBlobContainerClient(out BlobContainerClient containerClient));
+            var containerClient = GetHostingBlobContainerClient(host);
             string hostId = GetHostId(host);
             var primaryHostCoordinator = host.Services.GetServices<IHostedService>().OfType<PrimaryHostCoordinator>().Single();
 
@@ -393,6 +393,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         public static string GetHostId(IHost host)
         {
             return host.Services.GetService<IHostIdProvider>().GetHostIdAsync(CancellationToken.None).GetAwaiter().GetResult();
+        }
+
+        public static BlobContainerClient GetHostingBlobContainerClient(IHost host)
+        {
+            host.Services.GetRequiredService<IAzureBlobStorageProvider>().TryCreateHostingBlobContainerClient(out BlobContainerClient containerClient);
+            return containerClient;
         }
 
         public class Program
