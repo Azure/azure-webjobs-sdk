@@ -7,9 +7,11 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
+using Azure;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Specialized;
 using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -91,7 +93,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             var host = CreateHost();
 
-            string connectionString = GetStorageConnectionString(host);
+            var containerClient = GetHostingBlobContainerClient(host);
             string hostId = GetHostId(host);
 
             using (host)
@@ -104,7 +106,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 await host.StopAsync();
             }
 
-            await ClearLeaseBlob(connectionString, hostId);
+            await ClearLeaseBlob(containerClient, hostId);
         }
 
         [Fact]
@@ -112,13 +114,13 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             var host = CreateHost();
 
-            string connectionString = GetStorageConnectionString(host);
+            var containerClient = GetHostingBlobContainerClient(host);
             string hostId = GetHostId(host);
 
-            ICloudBlob blob = await GetLockBlobAsync(connectionString, hostId);
+            BlobClient blobClient = await GetLockBlobAsync(containerClient, hostId);
 
             // Acquire a lease on the host lock blob
-            string leaseId = await blob.AcquireLeaseAsync(TimeSpan.FromMinutes(1));
+            string leaseId = (await blobClient.GetBlobLeaseClient().AcquireAsync(TimeSpan.FromMinutes(1))).Value.LeaseId;
 
             using (host)
             {
@@ -130,7 +132,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 Assert.False(primaryState.IsPrimary);
 
                 // Now release it, and we should reclaim it.
-                await blob.ReleaseLeaseAsync(new AccessCondition { LeaseId = leaseId });
+                await blobClient.GetBlobLeaseClient(leaseId).ReleaseAsync();
 
                 await TestHelpers.Await(() => primaryState.IsPrimary,
                     userMessageCallback: () => $"{nameof(IPrimaryHostStateProvider.IsPrimary)} was not correctly set to 'true' when lease was acquired.");
@@ -138,7 +140,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 await host.StopAsync();
             }
 
-            await ClearLeaseBlob(connectionString, hostId);
+            await ClearLeaseBlob(containerClient, hostId);
         }
 
         [Fact]
@@ -146,12 +148,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             var host = CreateHost();
 
-            string connectionString = GetStorageConnectionString(host);
+            var containerClient = GetHostingBlobContainerClient(host);
             string hostId = GetHostId(host);
 
             using (host)
             {
-                ICloudBlob blob = await GetLockBlobAsync(connectionString, hostId);
+                BlobClient blobClient = await GetLockBlobAsync(containerClient, hostId);
                 var primaryState = host.Services.GetService<IPrimaryHostStateProvider>();
                 var manager = host.Services.GetServices<IHostedService>().OfType<PrimaryHostCoordinator>().Single();
                 var lockManager = host.Services.GetService<IDistributedLockManager>();
@@ -165,7 +167,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
 
                     // Release the manager's lease and acquire one with a different id
                     await lockManager.ReleaseLockAsync(manager.LockHandle, CancellationToken.None);
-                    tempLeaseId = await blob.AcquireLeaseAsync(TimeSpan.FromSeconds(30), Guid.NewGuid().ToString());
+                    tempLeaseId = (await blobClient.GetBlobLeaseClient(Guid.NewGuid().ToString()).AcquireAsync(TimeSpan.FromSeconds(30))).Value.LeaseId;
 
                     await TestHelpers.Await(() => !primaryState.IsPrimary,
                         userMessageCallback: () => $"{nameof(IPrimaryHostStateProvider.IsPrimary)} was not correctly set to 'false' when lease lost.");
@@ -174,14 +176,14 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 {
                     if (tempLeaseId != null)
                     {
-                        await blob.ReleaseLeaseAsync(new AccessCondition { LeaseId = tempLeaseId });
+                        await blobClient.GetBlobLeaseClient(tempLeaseId).ReleaseAsync();
                     }
                 }
 
                 await host.StopAsync();
             }
 
-            await ClearLeaseBlob(connectionString, hostId);
+            await ClearLeaseBlob(containerClient, hostId);
         }
 
         [Fact]
@@ -189,7 +191,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
         {
             var host = CreateHost();
 
-            string connectionString = GetStorageConnectionString(host);
+            var containerClient = GetHostingBlobContainerClient(host);
             string hostId = GetHostId(host);
             var primaryHostCoordinator = host.Services.GetServices<IHostedService>().OfType<PrimaryHostCoordinator>().Single();
 
@@ -206,23 +208,23 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             // Container disposal is a fire-and-forget so this service disposal could be delayed. This will force it.
             primaryHostCoordinator.Dispose();
 
-            ICloudBlob blob = await GetLockBlobAsync(connectionString, hostId);
+            BlobClient blobClient = await GetLockBlobAsync(containerClient, hostId);
 
             string leaseId = null;
             try
             {
                 // Acquire a lease on the host lock blob
-                leaseId = await blob.AcquireLeaseAsync(TimeSpan.FromSeconds(15));
+                leaseId = (await blobClient.GetBlobLeaseClient().AcquireAsync(TimeSpan.FromSeconds(15))).Value.LeaseId;
 
-                await blob.ReleaseLeaseAsync(new AccessCondition { LeaseId = leaseId });
+                await blobClient.GetBlobLeaseClient(leaseId).ReleaseAsync();
             }
-            catch (StorageException exc) when (exc.RequestInformation.HttpStatusCode == 409)
+            catch (RequestFailedException exc) when (exc.Status == 409)
             {
             }
 
             Assert.False(string.IsNullOrEmpty(leaseId), "Failed to acquire a blob lease. The lease was not properly released.");
 
-            await ClearLeaseBlob(connectionString, hostId);
+            await ClearLeaseBlob(containerClient, hostId);
         }
 
         [Fact]
@@ -238,7 +240,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 s.AddSingleton<IDistributedLockManager>(_ => blobMock.Object);
             });
 
-            string connectionString = GetStorageConnectionString(host);
             string hostId = GetHostId(host);
             string instanceId = Microsoft.Azure.WebJobs.Utility.GetInstanceId();
 
@@ -268,7 +269,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 .Returns(() => Task.FromResult<IDistributedLock>(new FakeLock()));
 
             blobMock.Setup(b => b.RenewAsync(It.IsAny<IDistributedLock>(), It.IsAny<CancellationToken>()))
-                .Returns(() => Task.FromException<bool>(new StorageException(new RequestResult { HttpStatusCode = 409 }, "test", null)))
+                .Returns(() => Task.FromException<bool>(new RequestFailedException(409, "test")))
                 .Callback(() => renewResetEvent.Set());
 
             var host = CreateHost(s =>
@@ -309,13 +310,13 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 s.AddSingleton<IHostIdProvider>(_ => new FixedHostIdProvider(hostId1));
             });
 
+            Assert.True(host1.Services.GetRequiredService<IAzureBlobStorageProvider>().TryCreateHostingBlobContainerClient(out BlobContainerClient containerClient1));
+
             var host2 = CreateHost(s =>
             {
                 s.AddSingleton<IHostIdProvider>(_ => new FixedHostIdProvider(hostId2));
             });
-
-            string host1ConnectionString = GetStorageConnectionString(host1);
-            string host2ConnectionString = GetStorageConnectionString(host2);
+            Assert.True(host2.Services.GetRequiredService<IAzureBlobStorageProvider>().TryCreateHostingBlobContainerClient(out BlobContainerClient containerClient2));
 
             using (host1)
             using (host2)
@@ -335,41 +336,36 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
                 await host2.StopAsync();
             }
 
-            await Task.WhenAll(ClearLeaseBlob(host1ConnectionString, hostId1), ClearLeaseBlob(host2ConnectionString, hostId2));
+            await Task.WhenAll(ClearLeaseBlob(containerClient1, hostId1), ClearLeaseBlob(containerClient2, hostId2));
         }
 
-        private static async Task<ICloudBlob> GetLockBlobAsync(string accountConnectionString, string hostId)
+        private static async Task<BlobClient> GetLockBlobAsync(BlobContainerClient containerClient, string hostId)
         {
-            CloudStorageAccount account = CloudStorageAccount.Parse(accountConnectionString);
-            CloudBlobClient client = account.CreateCloudBlobClient();
+            await containerClient.CreateIfNotExistsAsync();
 
-            var container = client.GetContainerReference(HostContainerNames.Hosts);
-
-            await container.CreateIfNotExistsAsync();
-
-            // the StorageDistributedLockManager puts things under the /locks path by default
-            CloudBlockBlob blob = container.GetBlockBlobReference("locks/" + PrimaryHostCoordinator.GetBlobName(hostId));
-            if (!await blob.ExistsAsync())
+            // The BlobLeaseDistributedLockManager puts things under the /locks path by default
+            var blobClient = containerClient.GetBlobClient("locks/" + PrimaryHostCoordinator.GetBlobName(hostId));
+            if (!await blobClient.ExistsAsync())
             {
-                await blob.UploadFromStreamAsync(new MemoryStream());
+                await blobClient.UploadTextAsync("", overwrite: true);
             }
 
-            return blob;
+            return blobClient;
         }
 
-        private async Task ClearLeaseBlob(string connectionString, string hostId)
+        private async Task ClearLeaseBlob(BlobContainerClient containerClient, string hostId)
         {
-            ICloudBlob blob = await GetLockBlobAsync(connectionString, hostId);
+            BlobClient blobClient = await GetLockBlobAsync(containerClient, hostId);
 
             try
             {
-                await blob.BreakLeaseAsync(TimeSpan.Zero);
+                await blobClient.GetBlobLeaseClient().BreakAsync(TimeSpan.Zero);
             }
             catch
             {
             }
 
-            await blob.DeleteIfExistsAsync();
+            await blobClient.DeleteIfExistsAsync();
         }
 
         private class FakeLock : IDistributedLock
@@ -394,14 +390,15 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
         }
 
-        private static string GetStorageConnectionString(IHost host)
-        {
-            return host.Services.GetService<IConfiguration>().GetWebJobsConnectionString("Storage");
-        }
-
         public static string GetHostId(IHost host)
         {
             return host.Services.GetService<IHostIdProvider>().GetHostIdAsync(CancellationToken.None).GetAwaiter().GetResult();
+        }
+
+        public static BlobContainerClient GetHostingBlobContainerClient(IHost host)
+        {
+            host.Services.GetRequiredService<IAzureBlobStorageProvider>().TryCreateHostingBlobContainerClient(out BlobContainerClient containerClient);
+            return containerClient;
         }
 
         public class Program

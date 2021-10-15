@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 
@@ -40,6 +41,39 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 // Clear
                 Environment.SetEnvironmentVariable(settingName, null);
             }
+        }
+
+        [Fact]
+        public void GetWebJobsConnectionSection_ReturnsExpected()
+        {
+            // Value and children in the section
+            var configValues = new Dictionary<string, string>
+            {
+                { "AzureWebJobsStorage", "connectionString" },
+                { "AzureWebJobsStorage:subsection", "test1" },
+            };
+            var config = new ConfigurationBuilder()
+                .AddInMemoryCollection(configValues)
+                .Build();
+
+            var section = config.GetWebJobsConnectionSection(ConnectionStringNames.Storage);
+            Assert.True(section.Exists());
+            Assert.False(string.IsNullOrEmpty(section.Value));
+            Assert.Equal("test1", section["subsection"]);
+
+            // No value, just children
+            configValues = new Dictionary<string, string>
+            {
+                { "AzureWebJobsStorage:subsection", "test2" },
+            };
+            config = new ConfigurationBuilder()
+                .AddInMemoryCollection(configValues)
+                .Build();
+
+            section = config.GetWebJobsConnectionSection(ConnectionStringNames.Storage);
+            Assert.True(section.Exists());
+            Assert.True(string.IsNullOrEmpty(section.Value));
+            Assert.Equal("test2", section["subsection"]);
         }
     }
 }

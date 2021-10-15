@@ -2,20 +2,12 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.Host.Triggers;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Azure.Storage;
 using Moq;
-using Newtonsoft.Json;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Data
@@ -41,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Data
                 BindingFlags.Static | BindingFlags.NonPublic);
             Assert.NotNull(method); // Guard
 
-            FunctionIndexer indexer = FunctionIndexerFactory.Create(CloudStorageAccount.DevelopmentStorageAccount);
+            FunctionIndexer indexer = FunctionIndexerFactory.Create();
             IFunctionIndexCollector stubIndex = new Mock<IFunctionIndexCollector>().Object;
 
             // Act & Assert

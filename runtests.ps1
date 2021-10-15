@@ -4,8 +4,7 @@ $projects =
   "test\Microsoft.Azure.WebJobs.Host.UnitTests",
   "test\Microsoft.Azure.WebJobs.Host.FunctionalTests",
   "test\Microsoft.Azure.WebJobs.Logging.FunctionalTests",
-  "test\Microsoft.Azure.WebJobs.Host.EndToEndTests",
-  "test\Microsoft.Azure.Webjobs.Extensions.Storage.UnitTests"
+  "test\Microsoft.Azure.WebJobs.Host.EndToEndTests"
   
 
 foreach ($project in $projects)

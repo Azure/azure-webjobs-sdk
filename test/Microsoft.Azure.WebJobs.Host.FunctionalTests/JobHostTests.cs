@@ -10,9 +10,8 @@ using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
-using Microsoft.Azure.Storage.Queue;
+using Azure.Storage.Blobs;
+using Azure.Storage.Queues.Models;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
@@ -374,7 +373,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [Fact]
         public async Task CallAsync_WithDictionary()
         {
-            var host = JobHostFactory.Create<ProgramSimple>(null);
+            var host = JobHostFactory.Create<ProgramSimple>();
 
             var value = "abc";
             ProgramSimple._value = null;
@@ -389,7 +388,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         [InlineData("test")]
         public async Task CallAsync_WithObject(string methodName)
         {
-            var host = JobHostFactory.Create<ProgramSimple>(null);
+            var host = JobHostFactory.Create<ProgramSimple>();
 
             var x = "abc";
             ProgramSimple._value = null;
@@ -404,7 +403,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             // Arrange
             ProgramWithCancellationToken.Cleanup();
-            var host = JobHostFactory.Create<ProgramWithCancellationToken>(null);
+            var host = JobHostFactory.Create<ProgramWithCancellationToken>();
 
             using (CancellationTokenSource source = new CancellationTokenSource())
             {
@@ -429,7 +428,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 string expectedStackTrace = expectedExceptionInfo.SourceException.StackTrace;
                 ThrowingProgram.ExceptionInfo = expectedExceptionInfo;
 
-                var host = JobHostFactory.Create<ThrowingProgram>(null);
+                var host = JobHostFactory.Create<ThrowingProgram>();
                 MethodInfo methodInfo = typeof(ThrowingProgram).GetMethod("Throw");
 
                 // Act & Assert
@@ -442,179 +441,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             finally
             {
                 ThrowingProgram.ExceptionInfo = null;
-            }
-        }
-
-        [Fact]
-        public async Task BlobTrigger_ProvidesBlobTriggerBindingData()
-        {
-            try
-            {
-                // Arrange
-                var host = new HostBuilder()
-                    .ConfigureDefaultTestHost<BlobTriggerBindingDataProgram>(c =>
-                    {
-                        c.AddAzureStorage();
-                    })
-                    .Build()
-                    .GetJobHost();
-
-                using (host)
-                {
-                    CloudStorageAccount account = CloudStorageAccount.DevelopmentStorageAccount;
-
-                    MethodInfo methodInfo = typeof(BlobTriggerBindingDataProgram).GetMethod(nameof(BlobTriggerBindingDataProgram.OnBlob));
-                    string containerName = "a";
-                    string blobName = "b";
-                    string expectedPath = containerName + "/" + blobName;
-                    CloudBlobContainer container = account.CreateCloudBlobClient().GetContainerReference(containerName);
-                    ICloudBlob blob = container.GetBlockBlobReference(blobName);
-
-                    // Act
-                    await host.CallAsync(methodInfo, new { blob = blob });
-
-                    // Assert
-                    Assert.Equal(expectedPath, BlobTriggerBindingDataProgram.BlobTrigger);
-                }
-            }
-            finally
-            {
-                BlobTriggerBindingDataProgram.BlobTrigger = null;
-            }
-        }
-
-        [Fact]
-        public async Task QueueTrigger_ProvidesQueueTriggerBindingData()
-        {
-            try
-            {
-                // Arrange
-                var host = new HostBuilder()
-                    .ConfigureDefaultTestHost<QueueTriggerBindingDataProgram>(c =>
-                    {
-                        c.AddAzureStorage();
-                    })
-                    .Build()
-                    .GetJobHost();
-
-                using (host)
-                {
-                    MethodInfo methodInfo = typeof(QueueTriggerBindingDataProgram).GetMethod(nameof(QueueTriggerBindingDataProgram.OnQueue));
-                    string expectedMessage = "a";
-
-                    // Act
-                    await host.CallAsync(methodInfo, new { message = expectedMessage });
-
-                    // Assert
-                    Assert.Equal(expectedMessage, QueueTriggerBindingDataProgram.QueueTrigger);
-                }
-            }
-            finally
-            {
-                QueueTriggerBindingDataProgram.QueueTrigger = null;
-            }
-        }
-
-        [Fact]
-        public async Task QueueTrigger_WithTextualByteArrayMessage_ProvidesQueueTriggerBindingData()
-        {
-            try
-            {
-                // Arrange
-                var host = new HostBuilder()
-                    .ConfigureDefaultTestHost<QueueTriggerBindingDataProgram>(c =>
-                    {
-                        c.AddAzureStorage();
-                    })
-                    .Build()
-                    .GetJobHost();
-
-                using (host)
-                {
-                    MethodInfo methodInfo = typeof(QueueTriggerBindingDataProgram).GetMethod(nameof(QueueTriggerBindingDataProgram.OnQueue));
-                    string expectedMessage = "abc";
-                    CloudQueueMessage message = new CloudQueueMessage(expectedMessage);
-                    Assert.Equal(expectedMessage, message.AsString); // Guard
-
-                    // Act
-                    await host.CallAsync(methodInfo, new { message });
-
-                    // Assert
-                    Assert.Equal(expectedMessage, QueueTriggerBindingDataProgram.QueueTrigger);
-                }
-            }
-            finally
-            {
-                QueueTriggerBindingDataProgram.QueueTrigger = null;
-            }
-        }
-
-        [Fact]
-        public async Task QueueTrigger_WithNonTextualByteArrayMessageUsingQueueTriggerBindingData_Throws()
-        {
-            try
-            {
-                // Arrange
-                var host = new HostBuilder()
-                    .ConfigureDefaultTestHost<QueueTriggerBindingDataProgram>(c =>
-                    {
-                        c.AddAzureStorage();
-                    })
-                    .Build()
-                    .GetJobHost();
-
-                using (host)
-                {
-                    MethodInfo methodInfo = typeof(QueueTriggerBindingDataProgram).GetMethod(nameof(QueueTriggerBindingDataProgram.OnQueue));
-                    byte[] contents = new byte[] { 0x00, 0xFF }; // Not valid UTF-8
-                    CloudQueueMessage message = new CloudQueueMessage(contents);
-
-                    // Act & Assert
-                    FunctionInvocationException exception = await Assert.ThrowsAsync<FunctionInvocationException>(
-                        () => host.CallAsync(methodInfo, new { message = message }));
-                    // This exeption shape/message could be better, but it's meets a minimum acceptibility threshold.
-                    Assert.Equal("Exception binding parameter 'queueTrigger'", exception.InnerException.Message);
-                    Exception innerException = exception.InnerException.InnerException;
-                    Assert.IsType<InvalidOperationException>(innerException);
-                    Assert.Equal("Binding data does not contain expected value 'queueTrigger'.", innerException.Message);
-                }
-            }
-            finally
-            {
-                QueueTriggerBindingDataProgram.QueueTrigger = null;
-            }
-        }
-
-        [Fact]
-        public async Task QueueTrigger_WithNonTextualByteArrayMessageNotUsingQueueTriggerBindingData_DoesNotThrow()
-        {
-            try
-            {
-                // Arrange
-                var host = new HostBuilder()
-                    .ConfigureDefaultTestHost<QueueTriggerBindingDataProgram>(c =>
-                    {
-                        c.AddAzureStorage();
-                    })
-                    .Build()
-                    .GetJobHost();
-
-                using (host)
-                {
-                    MethodInfo methodInfo = typeof(QueueTriggerBindingDataProgram).GetMethod(nameof(QueueTriggerBindingDataProgram.ProcessQueueAsBytes));
-                    byte[] expectedBytes = new byte[] { 0x00, 0xFF }; // Not valid UTF-8
-                    CloudQueueMessage message = new CloudQueueMessage(expectedBytes);
-
-                    // Act
-                    await host.CallAsync(methodInfo, new { message = message });
-
-                    // Assert
-                    Assert.Equal(QueueTriggerBindingDataProgram.Bytes, expectedBytes);
-                }
-            }
-            finally
-            {
-                QueueTriggerBindingDataProgram.QueueTrigger = null;
             }
         }
 
@@ -632,7 +458,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var builder = new HostBuilder()
                 .ConfigureDefaultTestHost<BindingErrorsProgram>(b =>
                 {
-                    b.AddAzureStorage();
+                    b.AddAzureStorageBlobs();
+                    b.AddAzureStorageQueues();
                 })
                 .ConfigureLogging(logging =>
                 {
@@ -649,27 +476,21 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 Assert.True(fex.Handled);
                 Assert.Equal("BindingErrorsProgram.Invalid", fex.MethodName);
 
-                // verify that the binding error was logged
-                Assert.Equal(11, errorLogger.GetLogMessages().Count);
-
                 // Skip validating the initial 'Starting JobHost' message and the OptionsFormatters
-                
-                LogMessage logMessage = errorLogger.GetLogMessages()[7];
-                Assert.Equal("Error indexing method 'BindingErrorsProgram.Invalid'", logMessage.FormattedMessage);
-                Assert.Same(fex, logMessage.Exception);
-                Assert.Equal("Invalid container name: invalid$=+1", logMessage.Exception.InnerException.Message);
 
-                logMessage = errorLogger.GetLogMessages()[8];
-                Assert.Equal("Function 'BindingErrorsProgram.Invalid' failed indexing and will be disabled.", logMessage.FormattedMessage);
+                // verify that the binding error was logged
+                var bindingErrorLog = errorLogger.GetLogMessages().Single(l => l.FormattedMessage.Equals("Error indexing method 'BindingErrorsProgram.Invalid'"));
+                Assert.NotNull(bindingErrorLog);
+                Assert.Same(fex, bindingErrorLog.Exception);
+
+                var disabledLog = errorLogger.GetLogMessages().Single(l => l.FormattedMessage.Equals("Function 'BindingErrorsProgram.Invalid' failed indexing and will be disabled."));
+                Assert.NotNull(disabledLog);
 
                 // verify that the valid function was still indexed
-                logMessage = errorLogger.GetLogMessages()[9];
-                Assert.True(logMessage.FormattedMessage.Contains("Found the following functions"));
-                Assert.True(logMessage.FormattedMessage.Contains("BindingErrorsProgram.Valid"));
+                Assert.Contains(errorLogger.GetLogMessages(), p => p.FormattedMessage.Contains("Found the following functions") && p.FormattedMessage.Contains("BindingErrorsProgram.Valid"));
 
                 // verify that the job host was started successfully
-                logMessage = errorLogger.GetLogMessages()[10];
-                Assert.Equal("Job host started", logMessage.FormattedMessage);
+                Assert.Contains(errorLogger.GetLogMessages(), p => p.FormattedMessage.Equals("Job host started"));
 
                 await host.StopAsync();
             }
@@ -741,32 +562,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             public static void Throw()
             {
                 ExceptionInfo.Throw();
-            }
-        }
-
-        private class BlobTriggerBindingDataProgram
-        {
-            public static string BlobTrigger { get; set; }
-
-            public static void OnBlob([BlobTrigger("ignore/{name}")] ICloudBlob blob, string blobTrigger)
-            {
-                BlobTrigger = blobTrigger;
-            }
-        }
-
-        private class QueueTriggerBindingDataProgram
-        {
-            public static string QueueTrigger { get; set; }
-            public static byte[] Bytes { get; set; }
-
-            public static void OnQueue([QueueTrigger("ignore")] CloudQueueMessage message, string queueTrigger)
-            {
-                QueueTrigger = queueTrigger;
-            }
-
-            public static void ProcessQueueAsBytes([QueueTrigger("ignore")] byte[] message)
-            {
-                Bytes = message;
             }
         }
 
