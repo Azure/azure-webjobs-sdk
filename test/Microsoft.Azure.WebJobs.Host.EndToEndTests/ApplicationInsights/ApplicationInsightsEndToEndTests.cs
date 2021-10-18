@@ -1256,12 +1256,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             public void StopListening()
             {
-                _applicationInsightsListener.Stop();
                 _tcs?.Cancel(false);
                 if (_listenTask != null && !_listenTask.IsCompleted)
                 {
                     _listenTask.Wait();
                 }
+                _applicationInsightsListener.Stop();
 
                 _tcs?.Dispose();
                 _listenTask = null;
