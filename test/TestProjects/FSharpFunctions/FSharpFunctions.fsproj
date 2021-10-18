@@ -10,7 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="TaskBuilder.fs" Version="2.1.0" />
-	<PackageReference Include="Microsoft.Azure.WebJobs.Core" Version="3.0.30" />
+	<PackageReference Include="Microsoft.Azure.WebJobs.Core" Version="3.0.31" />
   </ItemGroup>
 
 </Project>
