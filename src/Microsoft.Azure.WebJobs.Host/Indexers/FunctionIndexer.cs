@@ -408,7 +408,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
 
             IRetryStrategy retryStrategy = TypeUtility.GetHierarchicalAttributeOrNull<RetryAttribute>(method) ?? defaultRetryStrategy;
-
+ 
             return new FunctionDescriptor
             {
                 Id = method.GetFullName(),

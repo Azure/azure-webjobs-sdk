@@ -418,6 +418,58 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             RunOnFunctionTimeoutTest(true, "Function will not be cancelled while debugging.");
         }
 
+        [Fact]
+        public void GetStatus_Returns_Expected()
+        {
+            var triggerData = new TriggeredFunctionData
+            {
+                TriggerValue = 123,
+                TriggerDetails = new Dictionary<string, string>()
+            };
+            var functionDescriptor = FunctionExecutorTestHelper.GetFunctionDescriptor();
+            var functionInstance = FunctionExecutorTestHelper.CreateFunctionInstance(Guid.NewGuid(), triggerData.TriggerDetails, false, functionDescriptor, 1000);
+            FunctionExecutor executor = GetTestFunctionExecutor();
+
+            // Arrange
+            HostStartedMessage testMessage = new HostStartedMessage();
+            executor.HostOutputMessage = testMessage;
+
+            FunctionActivityStatus status = executor.GetStatus();
+
+            Assert.Equal(status.OutstandingInvocations, 0);
+            Assert.Equal(status.OutstandingRetries, 0);
+
+            ManualResetEvent resetEvent = new ManualResetEvent(false);
+            _ = Task.Run(async () =>
+            {
+                // validate that we have 2 active invocation and 2 retries
+                await TestHelpers.Await(() =>
+                {
+                    var status = (executor as IFunctionActivityStatusProvider).GetStatus();
+                    return status.OutstandingInvocations == 2 && status.OutstandingRetries == 2;
+                }, 5000);
+                resetEvent.Set();
+            });
+
+            List<Task> tasks = new List<Task>();
+
+            Action action = new Action(async () =>
+            {
+                (executor as IRetryNotifier).RetryPending();
+                await executor.TryExecuteAsync(functionInstance, CancellationToken.None);
+                (executor as IRetryNotifier).RetryComplete();
+            });
+            tasks.Add(Task.Run(action));
+            tasks.Add(Task.Run(action));
+
+            Task.WaitAll(tasks.ToArray(), 5000);
+            bool result = resetEvent.WaitOne(5000);
+            Assert.True(result);
+
+            Assert.Equal(status.OutstandingInvocations, 0);
+            Assert.Equal(status.OutstandingRetries, 0);
+        }
+
         private void RunOnFunctionTimeoutTest(bool isDebugging, string expectedMessage)
         {
             System.Timers.Timer timer = new System.Timers.Timer(TimeSpan.FromMinutes(1).TotalMilliseconds);

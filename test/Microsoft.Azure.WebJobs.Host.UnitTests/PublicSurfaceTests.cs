@@ -292,7 +292,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "ICacheAwareWriteObject",
                 "IFunctionDataCache",
                 "SharedMemoryAttribute",
-                "SharedMemoryMetadata"
+                "SharedMemoryMetadata",
+                "FunctionActivityStatus",
+                "IFunctionActivityStatusProvider"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);

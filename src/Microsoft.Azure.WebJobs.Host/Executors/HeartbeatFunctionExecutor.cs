@@ -7,21 +7,19 @@ using Microsoft.Azure.WebJobs.Host.Timers;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal class HeartbeatFunctionExecutor : IFunctionExecutor
+    internal class HeartbeatFunctionExecutor : DelegatingFunctionExecutor, IFunctionExecutor
     {
         private readonly IRecurrentCommand _heartbeatCommand;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
-        private readonly IFunctionExecutor _innerExecutor;
 
         public HeartbeatFunctionExecutor(IRecurrentCommand heartbeatCommand,
-            IWebJobsExceptionHandler exceptionHandler, IFunctionExecutor innerExecutor)
+            IWebJobsExceptionHandler exceptionHandler, IFunctionExecutor innerExecutor) : base(innerExecutor)
         {
             _heartbeatCommand = heartbeatCommand;
             _exceptionHandler = exceptionHandler;
-            _innerExecutor = innerExecutor;
         }
 
-        public async Task<IDelayedException> TryExecuteAsync(IFunctionInstance instance, CancellationToken cancellationToken)
+        public override async Task<IDelayedException> TryExecuteAsync(IFunctionInstance instance, CancellationToken cancellationToken)
         {
             IDelayedException result;
 

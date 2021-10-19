@@ -7,18 +7,16 @@ using Microsoft.Azure.WebJobs.Host.Listeners;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal class AbortListenerFunctionExecutor : IFunctionExecutor
+    internal class AbortListenerFunctionExecutor : DelegatingFunctionExecutor
     {
         private readonly IListenerFactory _abortListenerFactory;
-        private readonly IFunctionExecutor _innerExecutor;
 
-        public AbortListenerFunctionExecutor(IListenerFactory abortListenerFactory, IFunctionExecutor innerExecutor)
+        public AbortListenerFunctionExecutor(IListenerFactory abortListenerFactory, IFunctionExecutor innerExecutor) : base(innerExecutor)
         {
             _abortListenerFactory = abortListenerFactory;
-            _innerExecutor = innerExecutor;
         }
 
-        public async Task<IDelayedException> TryExecuteAsync(IFunctionInstance instance, CancellationToken cancellationToken)
+        public override async Task<IDelayedException> TryExecuteAsync(IFunctionInstance instance, CancellationToken cancellationToken)
         {
             IDelayedException result;
 

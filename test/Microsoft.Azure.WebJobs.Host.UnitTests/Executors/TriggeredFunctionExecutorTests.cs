@@ -13,6 +13,7 @@ using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Scale;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.Configuration;
@@ -86,8 +87,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                 TriggerValue = 123,
                 TriggerDetails = new Dictionary<string, string>()
             };
-            var functionDescriptor = GetFunctionDescriptor();
-            var functionInstance = (IFunctionInstance)CreateFunctionInstance(Guid.NewGuid(), triggerData.TriggerDetails, false, functionDescriptor);
+            var functionDescriptor = FunctionExecutorTestHelper.GetFunctionDescriptor();
+            var functionInstance = FunctionExecutorTestHelper.CreateFunctionInstance(Guid.NewGuid(), triggerData.TriggerDetails, false, functionDescriptor);
             string functionId = functionInstance.FunctionDescriptor.Id;
             if (sharedListenerFunctionId != null)
             {
@@ -142,8 +143,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                 TriggerValue = 123,
                 TriggerDetails = new Dictionary<string, string>()
             };
-            var functionDescriptor = GetFunctionDescriptor();
-            var functionInstance = (IFunctionInstance)CreateFunctionInstance(Guid.NewGuid(), triggerData.TriggerDetails, invocationThrows, functionDescriptor);
+            var functionDescriptor = FunctionExecutorTestHelper.GetFunctionDescriptor();
+            var functionInstance = FunctionExecutorTestHelper.CreateFunctionInstance(Guid.NewGuid(), triggerData.TriggerDetails, invocationThrows, functionDescriptor);
             var serviceScopeFactoryMock = new Mock<IServiceScopeFactory>(MockBehavior.Strict);
             var instaceFactoryMock = new Mock<ITriggeredFunctionInstanceFactory<int>>();
 
@@ -152,7 +153,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             instaceFactoryMock.Setup(m => m.Create(It.IsAny<FunctionInstanceFactoryContext<int>>())).Returns(functionInstance);
 
             var triggerExecutor = new TriggeredFunctionExecutor<int>(functionDescriptor, functionExecutor, instaceFactoryMock.Object, NullLoggerFactory.Instance);
-            
+
             // Arrange
             HostStartedMessage testMessage = new HostStartedMessage();
             functionExecutor.HostOutputMessage = testMessage;
@@ -180,41 +181,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             }
         }
 
-        private FunctionDescriptor GetFunctionDescriptor()
-        {
-            var method = GetType().GetMethod(nameof(TestFunction), BindingFlags.NonPublic | BindingFlags.Static);
-            return FunctionIndexer.FromMethod(method, new ConfigurationBuilder().Build());
-        }
-
-        private IFunctionInstance CreateFunctionInstance(Guid id, IDictionary<string, string> triggerDetails, bool invocationThrows, FunctionDescriptor descriptor)
-        {
-            var serviceScopeFactoryMock = new Mock<IServiceScopeFactory>(MockBehavior.Strict);
-            var serviceScopeMock = new Mock<IServiceScope>();
-            serviceScopeFactoryMock.Setup(s => s.CreateScope()).Returns(serviceScopeMock.Object);
-            Mock<IFunctionInvoker> mockInvoker = new Mock<IFunctionInvoker>();
-            int invocationCount = 0;
-            mockInvoker.Setup(i => i.InvokeAsync(It.IsAny<object>(), It.IsAny<object[]>()))
-                .Returns(() =>
-                {
-                    invocationCount++;
-                    if (invocationThrows)
-                    {
-                        throw new Exception($"Test retry exception. invocationCount:{invocationCount}");
-                    }
-                    return Task.FromResult<object>(null);
-                });
-            mockInvoker.Setup(m => m.ParameterNames).Returns(new List<string>());
-            var mockBindingSource = new Mock<IBindingSource>();
-            var valueProviders = Task.Run(() =>
-            {
-                IDictionary<string, IValueProvider> d = new Dictionary<string, IValueProvider>();
-                IReadOnlyDictionary<string, IValueProvider> red = new ReadOnlyDictionary<string, IValueProvider>(d);
-                return red;
-            });
-            mockBindingSource.Setup(p => p.BindAsync(It.IsAny<ValueBindingContext>())).Returns(valueProviders);
-            return new FunctionInstance(id, triggerDetails, null, new ExecutionReason(), mockBindingSource.Object, mockInvoker.Object, descriptor, serviceScopeFactoryMock.Object);
-        }
-
         private FunctionExecutor GetTestFunctionExecutor(DrainModeManager drainModeManager = null, ConcurrencyOptions concurrencyOptions = null)
         {
             var mockFunctionInstanceLogger = new Mock<IFunctionInstanceLogger>();
@@ -240,12 +206,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             functionExecutor.HostOutputMessage = new HostStartedMessage();
 
             return functionExecutor;
-        }
-
-        [FixedDelayRetry(5, "00:00:01")]
-        private static void TestFunction()
-        {
-            // used for a FunctionDescriptor
         }
     }
 }

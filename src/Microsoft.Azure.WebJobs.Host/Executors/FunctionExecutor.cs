@@ -21,7 +21,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal class FunctionExecutor : IFunctionExecutor
+    internal class FunctionExecutor : IFunctionExecutor, IFunctionActivityStatusProvider, IRetryNotifier
     {
         private readonly IFunctionInstanceLogger _functionInstanceLogger;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
@@ -31,6 +31,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IEnumerable<IFunctionFilter> _globalFunctionFilters;
         private readonly IDrainModeManager _drainModeManager;
         private readonly ConcurrencyManager _concurrencyManager;
+        private int _outstandingInvocations;
+        private int _outstandingRetries;
 
         private readonly Dictionary<string, object> _inputBindingScope = new Dictionary<string, object>
         {
@@ -85,9 +87,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             FunctionInstanceLogEntry instanceLogEntry = null;
             Stopwatch sw = Stopwatch.StartNew();
             string concurrencyFunctionId = functionInstanceEx.FunctionDescriptor.SharedListenerId ?? functionInstanceEx.FunctionDescriptor.Id;
-
+            
             try
             {
+                Interlocked.Increment(ref _outstandingInvocations);
                 if (_concurrencyManager.Enabled)
                 {
                     _concurrencyManager.FunctionStarted(concurrencyFunctionId);
@@ -147,10 +150,31 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     _concurrencyManager.FunctionCompleted(concurrencyFunctionId, sw.Elapsed);
                 }
 
+                Interlocked.Decrement(ref _outstandingInvocations);
+
                 ((IDisposable)functionInstanceEx)?.Dispose();
             }
 
             return exceptionInfo != null ? new ExceptionDispatchInfoDelayedException(exceptionInfo) : null;
+        }
+
+        public FunctionActivityStatus GetStatus()
+        {
+            return new FunctionActivityStatus()
+            {
+                OutstandingInvocations = _outstandingInvocations,
+                OutstandingRetries = _outstandingRetries
+            };
+        }
+
+        public void RetryPending()
+        {
+            Interlocked.Increment(ref _outstandingRetries);
+        }
+
+        public void RetryComplete()
+        {
+            Interlocked.Decrement(ref _outstandingRetries);
         }
 
         private FunctionInstanceLogEntry CreateInstanceLogEntry(FunctionCompletedMessage functionStartedMessage)
