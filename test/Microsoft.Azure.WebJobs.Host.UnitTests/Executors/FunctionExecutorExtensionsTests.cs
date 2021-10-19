@@ -28,12 +28,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             _ = Task.Run(async () =>
             {
-                await Task.Delay(1000);
+                await Task.Delay(100);
                 cancellationTokenSource.Cancel();
             });
 
             Mock<IFunctionInstance> mockFunctionInstance = new Mock<IFunctionInstance>(MockBehavior.Strict);
-            FunctionDescriptor functionDescriptor = GetFunctionDescriptor();
+            FunctionDescriptor functionDescriptor = GetFunctionDescriptor(100, 5);
             mockFunctionInstance.Setup(x => x.FunctionDescriptor).Returns(functionDescriptor);
 
             Func<IFunctionInstance> instanceFactory = () => mockFunctionInstance.Object;
@@ -52,7 +52,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         public async Task TryExecuteWithRetries_Call_RetryNotifier()
         {
             Mock<IFunctionInstance> mockFunctionInstance = new Mock<IFunctionInstance>(MockBehavior.Strict);
-            FunctionDescriptor functionDescriptor = GetFunctionDescriptor();
+            FunctionDescriptor functionDescriptor = GetFunctionDescriptor(100, 5);
             mockFunctionInstance.Setup(x => x.FunctionDescriptor).Returns(functionDescriptor);
 
             Func<IFunctionInstance> instanceFactory = () => mockFunctionInstance.Object;
@@ -78,10 +78,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             Assert.Equal(retryCompletedCallsCount, 1);
         }
 
-        private FunctionDescriptor GetFunctionDescriptor()
+        private FunctionDescriptor GetFunctionDescriptor(int maxRetryCount, int delayInMs)
         {
-            int maxRetryCount = 5;
-            TimeSpan delay = TimeSpan.FromMilliseconds(1000);
+            TimeSpan delay = TimeSpan.FromMilliseconds(delayInMs);
             var mockRetryStrategy = new Mock<IRetryStrategy>();
             mockRetryStrategy.Setup(p => p.MaxRetryCount).Returns(maxRetryCount);
             mockRetryStrategy.Setup(p => p.GetNextDelay(It.IsAny<RetryContext>())).Returns(delay);

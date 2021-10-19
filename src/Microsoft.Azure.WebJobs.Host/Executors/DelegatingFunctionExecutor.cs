@@ -8,32 +8,28 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 {
     abstract internal class DelegatingFunctionExecutor : IRetryNotifier, IFunctionExecutor
     {
-        readonly protected IFunctionExecutor _innerExecutor;
+        readonly private IFunctionExecutor _innerExecutor;
+        readonly private IRetryNotifier _retryNotifier;
 
         public DelegatingFunctionExecutor(IFunctionExecutor innerExecutor)
         {
             _innerExecutor = innerExecutor;
+            _retryNotifier = innerExecutor as IRetryNotifier;
         }
 
         public virtual Task<IDelayedException> TryExecuteAsync(IFunctionInstance instance, CancellationToken cancellationToken)
         {
-            return Task.FromResult<IDelayedException>(null);
+            return _innerExecutor.TryExecuteAsync(instance, cancellationToken);
         }
 
-        public void RetryPending()
+        public virtual void RetryPending()
         {
-            if (_innerExecutor is IRetryNotifier retryNotifier)
-            {
-                retryNotifier.RetryPending();
-            }
+            _retryNotifier?.RetryPending();
         }
 
-        public void RetryComplete()
+        public virtual void RetryComplete()
         {
-            if (_innerExecutor is IRetryNotifier retryNotifier)
-            {
-                retryNotifier.RetryComplete();
-            }
+            _retryNotifier?.RetryComplete();
         }
     }
 }

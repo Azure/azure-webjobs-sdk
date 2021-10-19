@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal class ShutdownFunctionExecutor : DelegatingFunctionExecutor, IFunctionExecutor
+    internal class ShutdownFunctionExecutor : DelegatingFunctionExecutor
     {
         private readonly CancellationToken _shutdownToken;
 
@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             using (CancellationTokenSource callCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(
                 _shutdownToken, cancellationToken))
             {
-                return await _innerExecutor.TryExecuteAsync(instance, callCancellationSource.Token);
+                return await base.TryExecuteAsync(instance, callCancellationSource.Token);
             }
         }
     }

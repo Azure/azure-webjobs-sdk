@@ -7,7 +7,7 @@ using Microsoft.Azure.WebJobs.Host.Timers;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal class HeartbeatFunctionExecutor : DelegatingFunctionExecutor, IFunctionExecutor
+    internal class HeartbeatFunctionExecutor : DelegatingFunctionExecutor
     {
         private readonly IRecurrentCommand _heartbeatCommand;
         private readonly IWebJobsExceptionHandler _exceptionHandler;
@@ -28,7 +28,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 await _heartbeatCommand.TryExecuteAsync(cancellationToken);
                 timer.Start();
 
-                result = await _innerExecutor.TryExecuteAsync(instance, cancellationToken);
+                result = await base.TryExecuteAsync(instance, cancellationToken);
 
                 await timer.StopAsync(cancellationToken);
             }

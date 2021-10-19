@@ -24,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 await listener.StartAsync(cancellationToken);
 
-                result = await _innerExecutor.TryExecuteAsync(instance, cancellationToken);
+                result = await base.TryExecuteAsync(instance, cancellationToken);
 
                 await listener.StopAsync(cancellationToken);
             }

@@ -419,7 +419,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         }
 
         [Fact]
-        public void GetStatus_Returns_Expected()
+        public async Task GetStatus_Returns_Expected()
         {
             var triggerData = new TriggeredFunctionData
             {
@@ -440,7 +440,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             Assert.Equal(status.OutstandingRetries, 0);
 
             ManualResetEvent resetEvent = new ManualResetEvent(false);
-            _ = Task.Run(async () =>
+            Task monitoringTask = Task.Run(async () =>
             {
                 // validate that we have 2 active invocation and 2 retries
                 await TestHelpers.Await(() =>
@@ -448,24 +448,26 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                     var status = (executor as IFunctionActivityStatusProvider).GetStatus();
                     return status.OutstandingInvocations == 2 && status.OutstandingRetries == 2;
                 }, 5000);
-                resetEvent.Set();
             });
 
-            List<Task> tasks = new List<Task>();
-
-            Action action = new Action(async () =>
+            Task executionTask1 = Task.Run(async () =>
             {
                 (executor as IRetryNotifier).RetryPending();
                 await executor.TryExecuteAsync(functionInstance, CancellationToken.None);
                 (executor as IRetryNotifier).RetryComplete();
             });
-            tasks.Add(Task.Run(action));
-            tasks.Add(Task.Run(action));
 
-            Task.WaitAll(tasks.ToArray(), 5000);
-            bool result = resetEvent.WaitOne(5000);
-            Assert.True(result);
+            Task executionTask2 = Task.Run(async () =>
+            {
+                (executor as IRetryNotifier).RetryPending();
+                await executor.TryExecuteAsync(functionInstance, CancellationToken.None);
+                (executor as IRetryNotifier).RetryComplete();
+            });
 
+            await Task.WhenAll(monitoringTask, executionTask1, executionTask2);
+
+            // validate that there are no active invocations or retries in 
+            status = executor.GetStatus();
             Assert.Equal(status.OutstandingInvocations, 0);
             Assert.Equal(status.OutstandingRetries, 0);
         }
