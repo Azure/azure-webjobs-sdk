@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    abstract internal class DelegatingFunctionExecutor : IRetryNotifier, IFunctionExecutor
+    internal abstract class DelegatingFunctionExecutor : IRetryNotifier, IFunctionExecutor
     {
-        readonly private IFunctionExecutor _innerExecutor;
-        readonly private IRetryNotifier _retryNotifier;
+        private readonly IFunctionExecutor _innerExecutor;
+        private readonly IRetryNotifier _retryNotifier;
 
         public DelegatingFunctionExecutor(IFunctionExecutor innerExecutor)
         {

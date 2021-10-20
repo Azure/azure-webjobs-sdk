@@ -9,7 +9,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     public interface IFunctionActivityStatusProvider
     {
         /// <summary>
-        /// Returns activity status of the job host
+        /// Gets the current <see cref="FunctionActivityStatus"/> of the job host.
         /// </summary>
         /// <returns></returns>
         public FunctionActivityStatus GetStatus();
