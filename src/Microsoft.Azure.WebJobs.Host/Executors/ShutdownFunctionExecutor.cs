@@ -6,23 +6,21 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    internal class ShutdownFunctionExecutor : IFunctionExecutor
+    internal class ShutdownFunctionExecutor : DelegatingFunctionExecutor
     {
         private readonly CancellationToken _shutdownToken;
-        private readonly IFunctionExecutor _innerExecutor;
 
-        public ShutdownFunctionExecutor(CancellationToken shutdownToken, IFunctionExecutor innerExecutor)
+        public ShutdownFunctionExecutor(CancellationToken shutdownToken, IFunctionExecutor innerExecutor) : base(innerExecutor)
         {
             _shutdownToken = shutdownToken;
-            _innerExecutor = innerExecutor;
         }
 
-        public async Task<IDelayedException> TryExecuteAsync(IFunctionInstance instance, CancellationToken cancellationToken)
+        public override async Task<IDelayedException> TryExecuteAsync(IFunctionInstance instance, CancellationToken cancellationToken)
         {
             using (CancellationTokenSource callCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(
                 _shutdownToken, cancellationToken))
             {
-                return await _innerExecutor.TryExecuteAsync(instance, callCancellationSource.Token);
+                return await base.TryExecuteAsync(instance, callCancellationSource.Token);
             }
         }
     }

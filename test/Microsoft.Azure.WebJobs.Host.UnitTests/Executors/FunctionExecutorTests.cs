@@ -418,6 +418,60 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             RunOnFunctionTimeoutTest(true, "Function will not be cancelled while debugging.");
         }
 
+        [Fact]
+        public async Task GetStatus_Returns_Expected()
+        {
+            var triggerData = new TriggeredFunctionData
+            {
+                TriggerValue = 123,
+                TriggerDetails = new Dictionary<string, string>()
+            };
+            var functionDescriptor = FunctionExecutorTestHelper.GetFunctionDescriptor();
+            var functionInstance = FunctionExecutorTestHelper.CreateFunctionInstance(Guid.NewGuid(), triggerData.TriggerDetails, false, functionDescriptor, 1000);
+            FunctionExecutor executor = GetTestFunctionExecutor();
+
+            // Arrange
+            HostStartedMessage testMessage = new HostStartedMessage();
+            executor.HostOutputMessage = testMessage;
+
+            FunctionActivityStatus status = executor.GetStatus();
+
+            Assert.Equal(status.OutstandingInvocations, 0);
+            Assert.Equal(status.OutstandingRetries, 0);
+
+            ManualResetEvent resetEvent = new ManualResetEvent(false);
+            Task monitoringTask = Task.Run(async () =>
+            {
+                // validate that we have 2 active invocation and 2 retries
+                await TestHelpers.Await(() =>
+                {
+                    var status = (executor as IFunctionActivityStatusProvider).GetStatus();
+                    return status.OutstandingInvocations == 2 && status.OutstandingRetries == 2;
+                }, 5000);
+            });
+
+            Task executionTask1 = Task.Run(async () =>
+            {
+                (executor as IRetryNotifier).RetryPending();
+                await executor.TryExecuteAsync(functionInstance, CancellationToken.None);
+                (executor as IRetryNotifier).RetryComplete();
+            });
+
+            Task executionTask2 = Task.Run(async () =>
+            {
+                (executor as IRetryNotifier).RetryPending();
+                await executor.TryExecuteAsync(functionInstance, CancellationToken.None);
+                (executor as IRetryNotifier).RetryComplete();
+            });
+
+            await Task.WhenAll(monitoringTask, executionTask1, executionTask2);
+
+            // validate that there are no active invocations or retries in 
+            status = executor.GetStatus();
+            Assert.Equal(status.OutstandingInvocations, 0);
+            Assert.Equal(status.OutstandingRetries, 0);
+        }
+
         private void RunOnFunctionTimeoutTest(bool isDebugging, string expectedMessage)
         {
             System.Timers.Timer timer = new System.Timers.Timer(TimeSpan.FromMinutes(1).TotalMilliseconds);

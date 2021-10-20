@@ -5,6 +5,7 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using System;
 using System.Linq;
@@ -27,12 +28,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             _ = Task.Run(async () =>
             {
-                await Task.Delay(1000);
+                await Task.Delay(100);
                 cancellationTokenSource.Cancel();
             });
 
             Mock<IFunctionInstance> mockFunctionInstance = new Mock<IFunctionInstance>(MockBehavior.Strict);
-            FunctionDescriptor functionDescriptor = GetFunctionDescriptor();
+            FunctionDescriptor functionDescriptor = GetFunctionDescriptor(100, 5);
             mockFunctionInstance.Setup(x => x.FunctionDescriptor).Returns(functionDescriptor);
 
             Func<IFunctionInstance> instanceFactory = () => mockFunctionInstance.Object;
@@ -47,10 +48,39 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             Assert.NotNull(loggerProvider.GetAllLogMessages().SingleOrDefault(x => x.FormattedMessage == "Invocation cancelled - exiting retry loop."));
         }
 
-        private FunctionDescriptor GetFunctionDescriptor()
+        [Fact]
+        public async Task TryExecuteWithRetries_Call_RetryNotifier()
         {
-            int maxRetryCount = 5;
-            TimeSpan delay = TimeSpan.FromMilliseconds(1000);
+            Mock<IFunctionInstance> mockFunctionInstance = new Mock<IFunctionInstance>(MockBehavior.Strict);
+            FunctionDescriptor functionDescriptor = GetFunctionDescriptor(100, 5);
+            mockFunctionInstance.Setup(x => x.FunctionDescriptor).Returns(functionDescriptor);
+
+            Func<IFunctionInstance> instanceFactory = () => mockFunctionInstance.Object;
+            Mock<IFunctionExecutor> functionExecutor = new Mock<IFunctionExecutor>(MockBehavior.Strict);
+            functionExecutor.Setup(x => x.TryExecuteAsync(It.IsAny<IFunctionInstance>(), It.IsAny<CancellationToken>())).Returns(() =>
+            {
+                return Task.FromResult((IDelayedException)new DelayedException(new Exception("test")));
+            });
+            int retryPendingCallsCount = 0, retryCompletedCallsCount = 0;
+            functionExecutor.As<IRetryNotifier>().Setup(x => x.RetryPending()).Callback(() =>
+            {
+                retryPendingCallsCount++;
+            });
+
+            functionExecutor.As<IRetryNotifier>().Setup(x => x.RetryComplete()).Callback(() =>
+            {
+                retryCompletedCallsCount++;
+            });
+         
+            var result = await functionExecutor.Object.TryExecuteAsync(instanceFactory, NullLoggerFactory.Instance, CancellationToken.None);
+
+            Assert.Equal(retryPendingCallsCount, 1);
+            Assert.Equal(retryCompletedCallsCount, 1);
+        }
+
+        private FunctionDescriptor GetFunctionDescriptor(int maxRetryCount, int delayInMs)
+        {
+            TimeSpan delay = TimeSpan.FromMilliseconds(delayInMs);
             var mockRetryStrategy = new Mock<IRetryStrategy>();
             mockRetryStrategy.Setup(p => p.MaxRetryCount).Returns(maxRetryCount);
             mockRetryStrategy.Setup(p => p.GetNextDelay(It.IsAny<RetryContext>())).Returns(delay);
