@@ -3,10 +3,16 @@
 
 using System;
 
-namespace Microsoft.Azure.WebJobs.Host.Config
+namespace Microsoft.Azure.WebJobs.Host
 {
+    /// <summary>
+    /// Configuration options for controlling function execution retry behavior
+    /// </summary>
     public class RetryOptions
     {
+        /// <summary>
+        /// Gets or sets built-in retry strategy
+        /// </summary>
         public RetryStrategy Strategy { get; set; }
 
         /// <summary>
