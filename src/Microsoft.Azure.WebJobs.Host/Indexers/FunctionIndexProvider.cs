@@ -59,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _defaultTimeout = timeoutOptions.Value.ToAttribute();
             _allowPartialHostStartup = hostOptions.Value.AllowPartialHostStartup;
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-            _defaultRetryStrategy = retryOptions.Value.ToAttribute();
+            _defaultRetryStrategy = retryOptions.Value.ToAttributeOrNull();
         }
 
         public async Task<IFunctionIndex> GetAsync(CancellationToken cancellationToken)

@@ -36,10 +36,10 @@ namespace Microsoft.Azure.WebJobs.Host
         public TimeSpan? MaximumInterval { get; set; }
 
         /// <summary>
-        /// Converts to <see cref="RetryAttribute"/> attribute
+        /// Returns <see cref="RetryAttribute"/> or null if retry policy is not defined
         /// </summary>
         /// <returns></returns>
-        public RetryAttribute ToAttribute()
+        internal RetryAttribute ToAttributeOrNull()
         {
             switch (Strategy)
             {
