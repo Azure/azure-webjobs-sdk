@@ -45,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             IOptions<JobHostOptions> hostOptions,
             IConfiguration configuration,
             IServiceScopeFactory serviceScopeFactory,
-            IRetryStrategy defaultRetryStrategy = null)
+            IOptions<RetryOptions> retryOptions)
         {
             _typeLocator = typeLocator ?? throw new ArgumentNullException(nameof(typeLocator));
             _triggerBindingProvider = triggerBindingProvider ?? throw new ArgumentNullException(nameof(triggerBindingProvider));
@@ -59,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _defaultTimeout = timeoutOptions.Value.ToAttribute();
             _allowPartialHostStartup = hostOptions.Value.AllowPartialHostStartup;
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-            _defaultRetryStrategy = defaultRetryStrategy;
+            _defaultRetryStrategy = retryOptions.Value.ToAttributeOrNull();
         }
 
         public async Task<IFunctionIndex> GetAsync(CancellationToken cancellationToken)
