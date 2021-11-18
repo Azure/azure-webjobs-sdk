@@ -294,9 +294,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "SharedMemoryAttribute",
                 "SharedMemoryMetadata",
                 "FunctionActivityStatus",
-                "IFunctionActivityStatusProvider",
-                "RetryOptions",
-                "RetryStrategy"
+                "IFunctionActivityStatusProvider"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);
