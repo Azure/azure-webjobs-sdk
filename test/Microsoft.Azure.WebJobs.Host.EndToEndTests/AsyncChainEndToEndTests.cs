@@ -140,7 +140,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "Microsoft.Azure.WebJobs.Host.EndToEndTests.AsyncChainEndToEndTests.BlobToBlobAsync",
                     "Microsoft.Azure.WebJobs.Host.EndToEndTests.AsyncChainEndToEndTests.ReadResultBlob",
                     "Microsoft.Azure.WebJobs.Host.EndToEndTests.AsyncChainEndToEndTests.SystemParameterBindingOutput",
-                    "Microsoft.Azure.WebJobs.Host.EndToEndTests.AsyncChainEndToEndTests.RetryJob_NoAttribute",
                     "Function 'AsyncChainEndToEndTests.DisabledJob' is disabled",
                     "Job host started",
                     "Executing 'AsyncChainEndToEndTests.WriteStartDataMessageToQueue' (Reason='This function was programmatically called via the host APIs.', Id=",
@@ -549,53 +548,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.Empty(exceptionHandler.UnhandledExceptionInfos);
         }
 
-        [Fact]
-        public async Task Retry_UsingOptions()
-        {
-            _hostBuilder.ConfigureServices(services =>
-            {
-                services.Configure<RetryOptions>(o =>
-                {
-                    o.DelayInterval = TimeSpan.FromSeconds(1);
-                    o.Strategy = RetryStrategy.FixedDelay;
-                    o.MaxRetryCount = 3;
-                });
-
-                services.AddSingleton<IWebJobsExceptionHandlerFactory, CapturingExceptionHandlerFactory>();
-            });
-
-            JobHost jobHost = null;
-            try
-            {
-                IHost host = _hostBuilder.Build();
-                jobHost = host.GetJobHost();
-
-                await jobHost.StartAsync();
-
-                MethodInfo methodInfo = GetType().GetMethod(nameof(RetryJob_NoAttribute));
-
-                Exception ex = await Assert.ThrowsAnyAsync<Exception>(async () =>
-                {
-                    await jobHost.CallAsync(methodInfo);
-                });
-
-                Assert.Equal(ex.InnerException.Message, "Test exception");
-
-                // Validate Logger
-                var loggerProvider = host.GetTestLoggerProvider();
-                
-                int executionsCount = loggerProvider.GetAllLogMessages().Where(x => 
-                x.Exception?.Message == $"Exception while executing function: {nameof(AsyncChainEndToEndTests)}.{nameof(RetryJob_NoAttribute)}" &&
-                    x.Category.Contains(nameof(RetryJob_NoAttribute))).Count();
-
-                Assert.Equal(executionsCount, 4);
-            }
-            finally
-            {
-                await jobHost?.StopAsync();
-            }
-        }
-
         private async Task RunTimeoutTest(IHost host, Type expectedExceptionType, string functionName)
         {
             JobHost jobHost = host.GetJobHost();
@@ -720,11 +672,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             log.Info("Completed");
         }
 
-        [NoAutomaticTrigger]
-        public static void RetryJob_NoAttribute(CancellationToken cancellationToken)
-        {
-            throw new Exception("Test exception");
-        }
 
         public static async Task QueueToQueueAsync(
             [QueueTrigger(Queue1Name)] string message,
