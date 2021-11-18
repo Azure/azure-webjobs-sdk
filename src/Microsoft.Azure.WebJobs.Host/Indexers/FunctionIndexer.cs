@@ -183,7 +183,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                         throw new InvalidOperationException("More than one trigger per function is not allowed.");
                     }
 
-                    if (method.GetCustomAttribute<RetryAttribute>() != null &&
+                    if ((method.GetCustomAttribute<RetryAttribute>() != null || method.DeclaringType.GetCustomAttribute<RetryAttribute>() != null) &&
                         triggerBinding.GetType().GetCustomAttribute<SupportsRetryAttribute>() == null)
                     {
                         _logger?.LogWarning($"Retries are not allowed for {triggerBinding.GetType().Name}");
