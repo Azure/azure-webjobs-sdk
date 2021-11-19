@@ -182,12 +182,6 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                     {
                         throw new InvalidOperationException("More than one trigger per function is not allowed.");
                     }
-
-                    if ((method.GetCustomAttribute<RetryAttribute>() != null || method.DeclaringType.GetCustomAttribute<RetryAttribute>() != null) &&
-                        triggerBinding.GetType().GetCustomAttribute<SupportsRetryAttribute>() == null)
-                    {
-                        _logger?.LogWarning($"Retries are not allowed for {triggerBinding.GetType().Name}");
-                    }
                 }
             }
 
@@ -435,6 +429,11 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             ITriggerBinding triggerBinding, IReadOnlyDictionary<string, IBinding> nonTriggerBindings, string sharedListenerId)
         {
             var descr = FromMethod(method, _configuration, this._activator, _nameResolver, _defaultTimeout, _defaultRetryStrategy);
+
+            if (descr.RetryStrategy != null && triggerBinding.GetType().GetCustomAttribute<SupportsRetryAttribute>() == null)
+            {
+                _logger?.LogWarning($"Retries are not supported by the trigger binding for { descr.ShortName}.");
+            }
 
             List<ParameterDescriptor> parameters = new List<ParameterDescriptor>();
 

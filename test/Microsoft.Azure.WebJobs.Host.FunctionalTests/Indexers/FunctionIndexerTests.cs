@@ -335,7 +335,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             // Act & Assert
             await indexer.IndexMethodAsyncCore(method, indexCollector, CancellationToken.None);
 
-            Assert.Contains(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Retries are not allowed for") && x.Level == LogLevel.Warning);
+            Assert.Contains(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Retries are not supported by the trigger binding for ") && x.Level == LogLevel.Warning);
         }
 
         [Fact]
@@ -356,7 +356,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             // Act & Assert
             await indexer.IndexMethodAsyncCore(method, indexCollector, CancellationToken.None);
 
-            Assert.DoesNotContain(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Retries are not allowed for"));
+            Assert.DoesNotContain(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Retries are not supported by the trigger binding for "));
         }
 
         [Theory]
@@ -384,7 +384,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                 await indexer.IndexMethodAsyncCore(method, indexCollector, CancellationToken.None);
             });
 
-            Assert.DoesNotContain(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Retries are not allowed for"));
+            Assert.DoesNotContain(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Retries are not supported by the trigger binding for "));
         }
 
         public class ClassA
