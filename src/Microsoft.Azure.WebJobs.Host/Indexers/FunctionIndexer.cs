@@ -430,7 +430,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         {
             var descr = FromMethod(method, _configuration, this._activator, _nameResolver, _defaultTimeout, _defaultRetryStrategy);
 
-            if (descr.RetryStrategy != null && triggerBinding.GetType().GetCustomAttribute<SupportsRetryAttribute>() == null)
+            if (descr.RetryStrategy != null && triggerBinding != null && triggerBinding.GetType().GetCustomAttribute<SupportsRetryAttribute>() == null)
             {
                 _logger?.LogWarning($"Retries are not supported by the trigger binding for { descr.ShortName}.");
             }
