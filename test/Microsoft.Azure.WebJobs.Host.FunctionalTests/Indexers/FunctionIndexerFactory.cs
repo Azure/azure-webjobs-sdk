@@ -16,7 +16,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
     internal static class FunctionIndexerFactory
     {
         public static FunctionIndexer Create(INameResolver nameResolver = null,
-            IExtensionRegistry extensionRegistry = null, ILoggerFactory loggerFactory = null)
+            IExtensionRegistry extensionRegistry = null, ITriggerBindingProvider triggerBindingProvider = null, ILoggerFactory loggerFactory = null)
         {
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost(b =>
@@ -43,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 })
                 .Build();
 
-            ITriggerBindingProvider triggerBindingProvider = host.Services.GetService<ITriggerBindingProvider>();
+            triggerBindingProvider = triggerBindingProvider ?? host.Services.GetService<ITriggerBindingProvider>();
             IBindingProvider bindingProvider = host.Services.GetService<CompositeBindingProvider>();
             IJobActivator activator = host.Services.GetService<IJobActivator>();
             extensionRegistry = host.Services.GetService<IExtensionRegistry>();

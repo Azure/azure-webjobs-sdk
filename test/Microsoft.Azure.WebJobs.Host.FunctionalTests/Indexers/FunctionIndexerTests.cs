@@ -316,6 +316,77 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             Assert.Equal("TestSharedListenerId", result);
         }
 
+        [Theory]
+        [InlineData(typeof(FunctionIndexerTests), nameof(FunctionIndexerTests.QueueTriggerFixedDelayRetry_Test))]
+        [InlineData(typeof(QueueTriggerClassFixedDelayRetry), nameof(QueueTriggerClassFixedDelayRetry.QueueTriggerFixedDelayRetry_Test))]
+        public async Task IndexMethodAsyncCore_LogsRetryUnsupportedWarning(Type type, string methodName)
+        {
+            // Arrange
+            var loggerFactory = new LoggerFactory();
+            var loggerProvider = new TestLoggerProvider();
+            loggerFactory.AddProvider(loggerProvider);
+
+            MethodInfo method = type.GetMethod(methodName, BindingFlags.Static | BindingFlags.Public);
+            Assert.NotNull(method); // Guard
+
+            FunctionIndexer indexer = FunctionIndexerFactory.Create(loggerFactory: loggerFactory);
+            var indexCollector = new TestIndexCollector();
+
+            // Act & Assert
+            await indexer.IndexMethodAsyncCore(method, indexCollector, CancellationToken.None);
+
+            Assert.Contains(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Retries are not supported by the trigger binding for ") && x.Level == LogLevel.Warning);
+        }
+
+        [Fact]
+        public async Task IndexMethodAsyncCore_NoRetryAttribute_NoWarning()
+        {
+            // Arrange
+            var loggerFactory = new LoggerFactory();
+            var loggerProvider = new TestLoggerProvider();
+            loggerFactory.AddProvider(loggerProvider);
+
+            MethodInfo method = typeof(FunctionIndexerTests).GetMethod(nameof(FunctionIndexerTests.QueueTrigger_Test),
+                BindingFlags.Static | BindingFlags.Public);
+            Assert.NotNull(method); // Guard
+
+            FunctionIndexer indexer = FunctionIndexerFactory.Create(loggerFactory: loggerFactory);
+            var indexCollector = new TestIndexCollector();
+
+            // Act & Assert
+            await indexer.IndexMethodAsyncCore(method, indexCollector, CancellationToken.None);
+
+            Assert.DoesNotContain(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Retries are not supported by the trigger binding for "));
+        }
+
+        [Theory]
+        [InlineData(typeof(FunctionIndexerTests), nameof(FunctionIndexerTests.QueueTriggerFixedDelayRetry_Test))]
+        [InlineData(typeof(QueueTriggerClassFixedDelayRetry), nameof(QueueTriggerClassFixedDelayRetry.QueueTriggerFixedDelayRetry_Test))]
+
+        public async Task IndexMethodAsyncCore_SupportsRetryAttribute_NoWarning(Type type, string methodName)
+        {
+            // Arrange
+            var loggerFactory = new LoggerFactory();
+            var loggerProvider = new TestLoggerProvider();
+            loggerFactory.AddProvider(loggerProvider);
+
+            TestTriggerBinsingProvider testTriggerBinsingProvider = new TestTriggerBinsingProvider();
+            MethodInfo method = type.GetMethod(methodName, BindingFlags.Static | BindingFlags.Public);
+            Assert.NotNull(method); // Guard
+
+            FunctionIndexer indexer = FunctionIndexerFactory.Create(loggerFactory: loggerFactory, triggerBindingProvider: testTriggerBinsingProvider);
+            var indexCollector = new TestIndexCollector();
+
+            // Act & Assert
+            // NotImplementedException is expected
+            await Assert.ThrowsAsync<NotImplementedException>(async () =>
+            {
+                await indexer.IndexMethodAsyncCore(method, indexCollector, CancellationToken.None);
+            });
+
+            Assert.DoesNotContain(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Retries are not supported by the trigger binding for "));
+        }
+
         public class ClassA
         {
             [NoAutomaticTrigger]
@@ -508,6 +579,33 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         {
         }
 
+        class QueueTriggerClass
+        {
+
+            public static void QueueTrigger_Test([QueueTrigger("queue")] string input)
+            {
+            }
+        }
+
+        public static void QueueTrigger_Test([QueueTrigger("queue")] string input)
+        {
+        }
+
+
+        [FixedDelayRetry(4, "00:30:00")]
+        class QueueTriggerClassFixedDelayRetry
+        {
+            
+            public static void QueueTriggerFixedDelayRetry_Test([QueueTrigger("queue")] string input)
+            {
+            }
+        }
+
+        [FixedDelayRetry(4, "00:30:00")]
+        public static void QueueTriggerFixedDelayRetry_Test([QueueTrigger("queue")] string input)
+        {
+        }
+
         public class MyCustomRetryAttribute : RetryAttribute
         {
             public MyCustomRetryAttribute(int maxRetryCount) : base(maxRetryCount)
@@ -577,6 +675,19 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             public ParameterDescriptor ToParameterDescriptor()
             {
                 throw new NotImplementedException();
+            }
+        }
+
+        [SupportsRetry]
+        public class SupportRetryTestTriggerBinding : TestTriggerBinding
+        {
+        }
+
+        public class TestTriggerBinsingProvider : ITriggerBindingProvider
+        {
+            public Task<ITriggerBinding> TryCreateAsync(TriggerBindingProviderContext context)
+            {
+                return Task.FromResult(new SupportRetryTestTriggerBinding() as ITriggerBinding);
             }
         }
 
