@@ -431,11 +431,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             var descr = FromMethod(method, _configuration, this._activator, _nameResolver, _defaultTimeout, _defaultRetryStrategy);
 
             // Temporary comment: https://github.com/Azure/azure-webjobs-sdk/issues/2788
-            //if (descr.RetryStrategy != null && triggerBinding != null && triggerBinding.GetType().GetCustomAttribute<SupportsRetryAttribute>() == null)
-            //{
-            //    _logger?.LogWarning($"Retries are not supported by the trigger binding for { descr.ShortName}.");
-            //    descr.RetryStrategy = null; // Need to fix tests
-            //}
+            // CheckRetrySupport(triggerBinding, descr);
+
 
             List<ParameterDescriptor> parameters = new List<ParameterDescriptor>();
 
@@ -458,6 +455,15 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             descr.SharedListenerId = sharedListenerId;
 
             return descr;
+        }
+
+        private void CheckRetrySupport(ITriggerBinding triggerBinding, FunctionDescriptor descr)
+        {
+            if (descr.RetryStrategy != null && triggerBinding != null && triggerBinding.GetType().GetCustomAttribute<SupportsRetryAttribute>() == null)
+            {
+                _logger?.LogWarning($"Retries are not supported by the trigger binding for { descr.ShortName}.");
+                descr.RetryStrategy = null; // Need to fix tests
+            }
         }
 
         private class ListenerFactory : IListenerFactory
