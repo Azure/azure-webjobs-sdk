@@ -316,8 +316,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             Assert.Equal("TestSharedListenerId", result);
         }
 
-        //[Fact(Skip = "https://github.com/Azure/azure-webjobs-sdk/issues/2788")]
-        [Fact]
+        [Fact(Skip = "https://github.com/Azure/azure-webjobs-sdk/issues/2788")]        
         public void CheckRetrySupport_SetsRetryToNull()
         {
             // Arrange
@@ -335,8 +334,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             Assert.Contains(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Retries are not supported by the trigger binding for ") && x.Level == LogLevel.Warning);
         }
 
-        //[Fact(Skip = "https://github.com/Azure/azure-webjobs-sdk/issues/2788")]
-        [Fact]
+        [Fact(Skip = "https://github.com/Azure/azure-webjobs-sdk/issues/2788")]
         public void CheckRetrySupport_LeavesRetry()
         {
             // Arrange
