@@ -596,23 +596,23 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
         public class TestTriggerBinding : ITriggerBinding
         {
-            public Type TriggerValueType => null;
+            public Type TriggerValueType => throw new NotImplementedException();
 
-            public IReadOnlyDictionary<string, Type> BindingDataContract => null;
+            public IReadOnlyDictionary<string, Type> BindingDataContract => throw new NotImplementedException();
 
             public Task<ITriggerData> BindAsync(object value, ValueBindingContext context)
             {
-                return null;
+                throw new NotImplementedException();
             }
 
             public Task<IListener> CreateListenerAsync(ListenerFactoryContext context)
             {
-                return null;
+                throw new NotImplementedException();
             }
 
             public ParameterDescriptor ToParameterDescriptor()
             {
-                return null;
+                throw new NotImplementedException();
             }
         }
 
