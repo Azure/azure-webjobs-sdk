@@ -21,6 +21,7 @@ using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Host.Indexers
 {
@@ -429,9 +430,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             ITriggerBinding triggerBinding, IReadOnlyDictionary<string, IBinding> nonTriggerBindings, string sharedListenerId)
         {
             var descr = FromMethod(method, _configuration, this._activator, _nameResolver, _defaultTimeout, _defaultRetryStrategy);
-
-            // Temporary comment: https://github.com/Azure/azure-webjobs-sdk/issues/2788
-            // CheckRetrySupport(triggerBinding, descr, _logger);
+            
+            CheckRetrySupport(triggerBinding, descr, _logger);
 
             List<ParameterDescriptor> parameters = new List<ParameterDescriptor>();
 
@@ -458,10 +458,16 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
         internal static void CheckRetrySupport(ITriggerBinding triggerBinding, FunctionDescriptor descr, ILogger logger)
         {
-            if (descr.RetryStrategy != null && triggerBinding != null && triggerBinding.GetType().GetCustomAttribute<SupportsRetryAttribute>() == null)
+            if (descr.RetryStrategy != null)
             {
-                logger?.LogWarning($"Retries are not supported by the trigger binding for { descr.ShortName}.");
-                descr.RetryStrategy = null; // Need to fix tests
+                logger?.LogDebug($"Retry strategy is defined for function '{descr?.ShortName}' with trigger binding type '{triggerBinding?.GetType().Name}'. Strategy = '{JsonConvert.SerializeObject(descr?.RetryStrategy)}'");
+
+                //Temporary comment: https://github.com/Azure/azure-webjobs-sdk/issues/2788
+                //if (triggerBinding != null && triggerBinding.GetType().GetCustomAttribute<SupportsRetryAttribute>() == null)
+                //{                    
+                    //logger?.LogWarning($"Retries are not supported by the trigger binding for '{ descr.ShortName}'.");
+                    //descr.RetryStrategy = null; // Need to fix tests
+                //}
             }
         }
 

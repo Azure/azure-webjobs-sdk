@@ -316,7 +316,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             Assert.Equal("TestSharedListenerId", result);
         }
 
-        [Fact(Skip = "https://github.com/Azure/azure-webjobs-sdk/issues/2788")]        
+        [Fact]
         public void CheckRetrySupport_SetsRetryToNull()
         {
             // Arrange
@@ -325,16 +325,20 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
             FunctionDescriptor desc = new FunctionDescriptor()
             {
-                RetryStrategy = new FixedDelayRetryAttribute(5, "00:00:01")
+                RetryStrategy = new FixedDelayRetryAttribute(5, "00:00:01"),
+                ShortName = "Test"
             };
 
             // Act & Assert
             FunctionIndexer.CheckRetrySupport(new TestTriggerBinding(), desc, logger);
-            Assert.Null(desc.RetryStrategy);
-            Assert.Contains(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Retries are not supported by the trigger binding for ") && x.Level == LogLevel.Warning);
+            Assert.Contains(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Retry strategy is defined for function ") && x.Level == LogLevel.Debug);
+
+            //Temporary comment: https://github.com/Azure/azure-webjobs-sdk/issues/2788
+            //Assert.Null(desc.RetryStrategy);
+            //Assert.Contains(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Retries are not supported by the trigger binding for ") && x.Level == LogLevel.Warning);
         }
 
-        [Fact(Skip = "https://github.com/Azure/azure-webjobs-sdk/issues/2788")]
+        [Fact]
         public void CheckRetrySupport_LeavesRetry()
         {
             // Arrange
@@ -348,8 +352,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
             // Act & Assert
             FunctionIndexer.CheckRetrySupport(new SupportRetryTestTriggerBinding(), desc, logger);
-            Assert.NotNull(desc.RetryStrategy);
-            Assert.DoesNotContain(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Retries are not supported by the trigger binding for "));
+            Assert.Contains(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Retry strategy is defined for function ") && x.Level == LogLevel.Debug);
+
+            //Temporary comment: https://github.com/Azure/azure-webjobs-sdk/issues/2788
+            //Assert.NotNull(desc.RetryStrategy);
+            //Assert.DoesNotContain(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Retries are not supported by the trigger binding for "));
         }
 
         public class ClassA
