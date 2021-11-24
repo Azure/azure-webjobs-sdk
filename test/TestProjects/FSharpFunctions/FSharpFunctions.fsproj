@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\..\build\common.props" />
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -10,6 +10,8 @@
 
   <ItemGroup>
     <PackageReference Include="TaskBuilder.fs" Version="2.1.0" />
+    <!-- SDK/Relational bug, see https://github.com/NuGet/Home/issues/11357 -->
+    <PackageReference Include="FSharp.Core" Version="6.0.1" />
   </ItemGroup>
 
   <ItemGroup>

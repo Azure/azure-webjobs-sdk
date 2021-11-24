@@ -78,10 +78,10 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
         public IDictionary<string, object> Properties { get; set; }
 
         /// <summary>
-        /// An in-memory timer to measure the duration during execution. Use <see cref="Duration"/> for persisted cases.
+        /// A tick count of the creation point to measure the duration of execution. Use <see cref="Duration"/> for persisted cases.
         /// </summary>
         [JsonIgnore]
-        public Stopwatch LiveTimer { get; set; }
+        public long StartTimeTicks { get; set; }
 
         /// <summary>
         /// Function has just started. This is before arguments are bound. 

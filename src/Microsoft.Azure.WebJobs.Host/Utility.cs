@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -166,6 +167,17 @@ namespace Microsoft.Azure.WebJobs
             var attribute = type.GetCustomAttribute<ExtensionAttribute>(false);
 
             return attribute?.ConfigurationSection ?? GetExtensionAliasFromTypeName(type.Name);
+        }
+
+        private static readonly double TicksRatio = TimeSpan.TicksPerSecond / (double)Stopwatch.Frequency;
+
+        /// <summary>
+        /// Gets a timestamp given start ticks (from <see cref="Stopwatch.GetTimestamp"/>) without allocating a Stopwatch.
+        /// </summary>
+        public static TimeSpan GetDuration(long startTicks)
+        {
+            var tickDiff = Stopwatch.GetTimestamp() - startTicks;
+            return new TimeSpan((long)(TicksRatio * tickDiff));
         }
     }
 }

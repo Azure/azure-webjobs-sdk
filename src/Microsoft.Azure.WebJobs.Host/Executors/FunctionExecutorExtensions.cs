@@ -33,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     IFunctionInstance functionInstance = instanceFactory.Invoke();
                     if (logger == null)
                     {
-                        logger = loggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(functionInstance.FunctionDescriptor.LogName));
+                        logger = functionInstance.FunctionDescriptor.GetFunctionLogger(loggerFactory);
                     }
 
                     if (retryContext == null && functionInstance.FunctionDescriptor.RetryStrategy != null)

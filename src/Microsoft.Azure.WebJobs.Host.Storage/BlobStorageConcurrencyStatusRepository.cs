@@ -58,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Host
             catch (Exception e)
             {
                 _logger.LogError(e, $"Error reading snapshot blob {blobPath}");
-                throw e;
+                throw;
             }
 
             return null;
@@ -81,7 +81,7 @@ namespace Microsoft.Azure.WebJobs.Host
             catch (Exception e)
             {
                 _logger.LogError(e, $"Error writing snapshot blob {blobPath}");
-                throw e;
+                throw;
             }
         }
 

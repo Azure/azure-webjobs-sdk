@@ -29,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         }
 
         [Fact]
-        public async Task LogFunctionStarted_CallsLogger()
+        public void LogFunctionStarted_CallsLogger()
         {
             Dictionary<string, string> triggerDetails = new Dictionary<string, string>()
             {
@@ -55,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 $"DequeueCount: {triggerDetails["DequeueCount"]}, " +
                 $"InsertionTime: {triggerDetails["InsertionTime"]}";
 
-            await _instanceLogger.LogFunctionStartedAsync(message, CancellationToken.None);
+            _instanceLogger.LogFunctionStarted(message);
 
             string expectedCategory = LogCategories.CreateFunctionCategory(message.Function.LogName);
 
@@ -84,7 +84,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         }
 
         [Fact]
-        public async Task LogFunctionCompleted_CallsLogger()
+        public void LogFunctionCompleted_CallsLogger()
         {
             FunctionDescriptor descriptor = new FunctionDescriptor
             {
@@ -112,8 +112,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 EndTime = DateTime.UtcNow + new TimeSpan(0, 0, 0, 0, 20)
             };
 
-            await _instanceLogger.LogFunctionCompletedAsync(successMessage, CancellationToken.None);
-            await _instanceLogger.LogFunctionCompletedAsync(failureMessage, CancellationToken.None);
+            _instanceLogger.LogFunctionCompleted(successMessage);
+            _instanceLogger.LogFunctionCompleted(failureMessage);
 
             LogMessage[] logMessages = _provider.GetAllLogMessages().ToArray();
 

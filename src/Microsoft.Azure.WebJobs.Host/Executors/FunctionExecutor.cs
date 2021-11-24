@@ -79,13 +79,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         public async Task<IDelayedException> TryExecuteAsync(IFunctionInstance functionInstance, CancellationToken cancellationToken)
         {
             var functionInstanceEx = (IFunctionInstanceEx)functionInstance;
-            var logger = _loggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(functionInstanceEx.FunctionDescriptor.LogName));
+            var logger = functionInstanceEx.FunctionDescriptor.GetFunctionLogger(_loggerFactory);
             var functionStartedMessage = CreateStartedMessage(functionInstanceEx);
             var parameterHelper = new ParameterHelper(functionInstanceEx);
             ExceptionDispatchInfo exceptionInfo = null;
             string functionStartedMessageId = null;
             FunctionInstanceLogEntry instanceLogEntry = null;
-            Stopwatch sw = Stopwatch.StartNew();
+            var funcStart = Stopwatch.GetTimestamp();
             string concurrencyFunctionId = functionInstanceEx.FunctionDescriptor.SharedListenerId ?? functionInstanceEx.FunctionDescriptor.Id;
             
             try
@@ -121,8 +121,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                     // If function started was logged, don't cancel calls to log function completed.
                     bool loggedStartedEvent = functionStartedMessageId != null;
-                    var logCompletedCancellationToken = loggedStartedEvent ? CancellationToken.None : cancellationToken;
-                    await _functionInstanceLogger.LogFunctionCompletedAsync(functionStartedMessage, logCompletedCancellationToken);
+                    _functionInstanceLogger.LogFunctionCompleted(functionStartedMessage);
 
                     if (instanceLogEntry != null)
                     {
@@ -133,7 +132,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                     if (loggedStartedEvent)
                     {
-                        await _functionInstanceLogger.DeleteLogFunctionStartedAsync(functionStartedMessageId, cancellationToken);
+                        _functionInstanceLogger.DeleteLogFunctionStarted(functionStartedMessageId);
                     }
                 }
 
@@ -144,10 +143,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
             finally
             {
-                sw.Stop();
+                var funcEnd = Stopwatch.GetTimestamp();
+                var elapsed = new TimeSpan((funcEnd - funcStart) * Stopwatch.Frequency);
                 if (_concurrencyManager.Enabled)
                 {
-                    _concurrencyManager.FunctionCompleted(concurrencyFunctionId, sw.Elapsed);
+                    _concurrencyManager.FunctionCompleted(concurrencyFunctionId, elapsed);
                 }
 
                 Interlocked.Decrement(ref _outstandingInvocations);
@@ -188,7 +188,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 TriggerReason = functionStartedMessage.ReasonDetails,
                 StartTime = functionStartedMessage.StartTime.DateTime,
                 Properties = new Dictionary<string, object>(),
-                LiveTimer = Stopwatch.StartNew()
+                StartTimeTicks = Stopwatch.GetTimestamp()
             };
             Debug.Assert(logEntry.IsStart);
 
@@ -197,9 +197,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         private void CompleteInstanceLogEntry(FunctionInstanceLogEntry instanceLogEntry, IDictionary<string, string> arguments, ExceptionDispatchInfo exceptionInfo)
         {
-            instanceLogEntry.LiveTimer.Stop();
             instanceLogEntry.EndTime = DateTime.UtcNow;
-            instanceLogEntry.Duration = instanceLogEntry.LiveTimer.Elapsed;
+            instanceLogEntry.Duration = Utility.GetDuration(instanceLogEntry.StartTimeTicks);
             instanceLogEntry.Arguments = arguments;
             if (exceptionInfo != null)
             {
@@ -264,7 +263,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             var outputDefinition = await _functionOutputLogger.CreateAsync(instance, cancellationToken);
             var outputLog = outputDefinition.CreateOutput();
-            var updateOutputLogTimer = StartOutputTimer(outputLog.UpdateCommand, _exceptionHandler);
+            var updateOutputLogTimer = StartOutputTimer(outputLog.UpdateCommand, _exceptionHandler, cancellationToken);
 
             try
             {
@@ -301,7 +300,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                     // Log started events
                     CompleteStartedMessage(message, outputDefinition, parameterHelper);
-                    string startedMessageId = await _functionInstanceLogger.LogFunctionStartedAsync(message, cancellationToken);
+                    string startedMessageId = _functionInstanceLogger.LogFunctionStarted(message);
 
                     instanceLogEntry.Arguments = message.Arguments;
                     await _functionEventCollector.AddAsync(instanceLogEntry);
@@ -314,7 +313,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         {
                             var parameterWatchers = parameterHelper.CreateParameterWatchers();
                             var updateParameterLogCommand = outputDefinition.CreateParameterLogUpdateCommand(parameterWatchers, logger);
-                            updateParameterLogTimer = StartParameterLogTimer(updateParameterLogCommand, _exceptionHandler);
+                            updateParameterLogTimer = StartParameterLogTimer(updateParameterLogCommand, _exceptionHandler, functionCancellationTokenSource.Token);
                         }
 
                         await ExecuteWithWatchersAsync(instance, parameterHelper, logger, functionCancellationTokenSource);
@@ -450,12 +449,15 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             timer.Stop();
 
             bool shouldTimeout = timeoutWhileDebugging || !isDebuggerAttached();
-            string message = string.Format(CultureInfo.InvariantCulture,
-                "Timeout value of {0} exceeded by function '{1}' (Id: '{2}'). {3}",
-                timeout.ToString(), method.ShortName, instanceId,
-                shouldTimeout ? "Initiating cancellation." : "Function will not be cancelled while debugging.");
 
-            logger?.LogError(message);
+            if (logger?.IsEnabled(LogLevel.Error) == true)
+            {
+                string message = string.Format(CultureInfo.InvariantCulture,
+                    "Timeout value of {0} exceeded by function '{1}' (Id: '{2}'). {3}",
+                    timeout.ToString(), method.ShortName, instanceId,
+                    shouldTimeout ? "Initiating cancellation." : "Function will not be cancelled while debugging.");
+                logger?.LogError(message);
+            }
 
             // Only cancel the token if not debugging
             if (shouldTimeout)
@@ -468,7 +470,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         }
 
         [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
-        private static ITaskSeriesTimer StartOutputTimer(IRecurrentCommand updateCommand, IWebJobsExceptionHandler exceptionHandler)
+        private static ITaskSeriesTimer StartOutputTimer(IRecurrentCommand updateCommand, IWebJobsExceptionHandler exceptionHandler, CancellationToken cancellationToken)
         {
             if (updateCommand == null)
             {
@@ -477,14 +479,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             TimeSpan initialDelay = FunctionOutputIntervals.InitialDelay;
             TimeSpan refreshRate = FunctionOutputIntervals.RefreshRate;
-            ITaskSeriesTimer timer = FixedDelayStrategy.CreateTimer(updateCommand, initialDelay, refreshRate, exceptionHandler);
+            ITaskSeriesTimer timer = FixedDelayStrategy.CreateTimer(updateCommand, initialDelay, refreshRate, exceptionHandler, cancellationToken);
             timer.Start();
 
             return timer;
         }
 
         [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
-        private static ITaskSeriesTimer StartParameterLogTimer(IRecurrentCommand updateCommand, IWebJobsExceptionHandler exceptionHandler)
+        private static ITaskSeriesTimer StartParameterLogTimer(IRecurrentCommand updateCommand, IWebJobsExceptionHandler exceptionHandler, CancellationToken cancellationToken)
         {
             if (updateCommand == null)
             {
@@ -493,7 +495,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             TimeSpan initialDelay = FunctionParameterLogIntervals.InitialDelay;
             TimeSpan refreshRate = FunctionParameterLogIntervals.RefreshRate;
-            ITaskSeriesTimer timer = FixedDelayStrategy.CreateTimer(updateCommand, initialDelay, refreshRate, exceptionHandler);
+            ITaskSeriesTimer timer = FixedDelayStrategy.CreateTimer(updateCommand, initialDelay, refreshRate, exceptionHandler, cancellationToken);
             timer.Start();
 
             return timer;
@@ -878,7 +880,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             public IDictionary<string, string> CreateInvokeStringArguments()
             {
-                IDictionary<string, string> arguments = new Dictionary<string, string>();
+                IDictionary<string, string> arguments = new Dictionary<string, string>(_valueProviders?.Count ?? 0);
 
                 if (_valueProviders != null)
                 {
@@ -1111,7 +1113,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 // - Iff a Pre filter runs, then run the corresponding post. 
                 // - if a pre-filter fails, short circuit the pipeline. Skip the remaining pre-filters and body.
 
-                CancellationToken cancellationToken;
+                CancellationToken cancellationToken = default;
                 int len = _filters.Count;
                 int highestSuccessfulFilter = -1;
 

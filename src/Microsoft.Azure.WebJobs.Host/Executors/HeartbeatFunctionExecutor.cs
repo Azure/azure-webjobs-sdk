@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             IDelayedException result;
 
-            using (ITaskSeriesTimer timer = CreateHeartbeatTimer(_exceptionHandler))
+            using (ITaskSeriesTimer timer = CreateHeartbeatTimer(_exceptionHandler, cancellationToken))
             {
                 await _heartbeatCommand.TryExecuteAsync(cancellationToken);
                 timer.Start();
@@ -36,10 +36,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             return result;
         }
 
-        private ITaskSeriesTimer CreateHeartbeatTimer(IWebJobsExceptionHandler exceptionHandler)
+        private ITaskSeriesTimer CreateHeartbeatTimer(IWebJobsExceptionHandler exceptionHandler, CancellationToken cancellationToken)
         {
             return LinearSpeedupStrategy.CreateTimer(_heartbeatCommand, HeartbeatIntervals.NormalSignalInterval,
-                HeartbeatIntervals.MinimumSignalInterval, exceptionHandler);
+                HeartbeatIntervals.MinimumSignalInterval, exceptionHandler, cancellationToken);
         }
     }
 }

@@ -36,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             _exceededThrottles = new List<string> { ThreadPoolStarvationThrottleName }.AsReadOnly();
         }
 
-        public void OnTimer(object state)
+        public void OnTimer(object? state)
         {
             lock (_syncLock)
             {

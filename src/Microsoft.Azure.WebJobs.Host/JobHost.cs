@@ -42,6 +42,8 @@ namespace Microsoft.Azure.WebJobs
         // Points to a completed task after initialization. 
         private Task _hostInitializationTask = null;
 
+        private bool HasInitialized => _hostInitializationTask?.IsCompleted ?? false;
+
         private int _state;
         private Task _stopTask;
         private bool _disposed;
@@ -197,7 +199,11 @@ namespace Microsoft.Azure.WebJobs
 
             ThrowIfDisposed();
 
-            await EnsureHostInitializedAsync(cancellationToken);
+
+            if (!HasInitialized)
+            {
+                await EnsureHostInitializedAsync(cancellationToken);
+            }
 
             var function = _context.FunctionLookup.Lookup(method);
 
@@ -218,7 +224,10 @@ namespace Microsoft.Azure.WebJobs
 
             ThrowIfDisposed();
 
-            await EnsureHostInitializedAsync(cancellationToken);
+            if (!HasInitialized)
+            {
+                await EnsureHostInitializedAsync(cancellationToken);
+            }
 
             IFunctionDefinition function = _context.FunctionLookup.LookupByName(name);
 

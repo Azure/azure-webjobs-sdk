@@ -131,26 +131,25 @@ namespace Microsoft.Azure.WebJobs.Host
                 return null;
             }
 
-            var renewal = CreateLeaseRenewalTimer(lockPeriod, handle);
+            var renewal = CreateLeaseRenewalTimer(lockPeriod, handle, cancellationToken);
 
             // start the renewal timer, which ensures that we maintain our lease until
             // the lock is released
             renewal.Start();
 
-            string msg = string.Format(CultureInfo.InvariantCulture, "Singleton lock acquired ({0})", lockId);
-            _logger?.LogDebug(msg);
+            _logger?.LogDebug(string.Format(CultureInfo.InvariantCulture, "Singleton lock acquired ({0})", lockId));
 
             return new RenewableLockHandle(handle, renewal);
         }
 
-        private ITaskSeriesTimer CreateLeaseRenewalTimer(TimeSpan leasePeriod, IDistributedLock lockHandle)
+        private ITaskSeriesTimer CreateLeaseRenewalTimer(TimeSpan leasePeriod, IDistributedLock lockHandle, CancellationToken cancellationToken)
         {
             // renew the lease when it is halfway to expiring   
             TimeSpan normalUpdateInterval = new TimeSpan(leasePeriod.Ticks / 2);
 
             IDelayStrategy speedupStrategy = new LinearSpeedupStrategy(normalUpdateInterval, MinimumLeaseRenewalInterval);
             ITaskSeriesCommand command = new RenewLeaseCommand(_lockManager, lockHandle, speedupStrategy);
-            return new TaskSeriesTimer(command, this._exceptionHandler, Task.Delay(normalUpdateInterval));
+            return new TaskSeriesTimer(command, this._exceptionHandler, Task.Delay(normalUpdateInterval, cancellationToken));
         }
 
         internal static TimeSpan GetLockPeriod(SingletonAttribute attribute, SingletonOptions config)
@@ -168,8 +167,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
             await _lockManager.ReleaseLockAsync(handle.InnerLock, cancellationToken);
 
-            string msg = string.Format(CultureInfo.InvariantCulture, "Singleton lock released ({0})", handle.InnerLock.LockId);
-            _logger?.LogDebug(msg);
+            _logger?.LogDebug(string.Format(CultureInfo.InvariantCulture, "Singleton lock released ({0})", handle.InnerLock.LockId));
         }
 
         public string FormatLockId(FunctionDescriptor method, SingletonScope scope, string scopeId)

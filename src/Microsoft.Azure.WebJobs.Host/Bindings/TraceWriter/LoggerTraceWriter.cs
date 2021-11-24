@@ -38,13 +38,16 @@ namespace Microsoft.Azure.WebJobs.Logging
 
             LogLevel level = GetLogLevel(traceEvent.Level);
 
-            var state = new ReadOnlyDictionary<string, object>(new Dictionary<string, object>(traceEvent.Properties)
+            if (_logger?.IsEnabled(level) == true)
             {
-                // Maintain parity with ILogger
-                [_originalFormat] = traceEvent.Message
-            });
+                var state = new ReadOnlyDictionary<string, object>(new Dictionary<string, object>(traceEvent.Properties)
+                {
+                    // Maintain parity with ILogger
+                    [_originalFormat] = traceEvent.Message
+                });
 
-            _logger?.Log(level, 0, state, traceEvent.Exception, (s, e) => traceEvent.Message);
+                _logger?.Log(level, 0, state, traceEvent.Exception, (s, e) => traceEvent.Message);
+            }
         }
 
         internal static LogLevel GetLogLevel(TraceLevel traceLevel)

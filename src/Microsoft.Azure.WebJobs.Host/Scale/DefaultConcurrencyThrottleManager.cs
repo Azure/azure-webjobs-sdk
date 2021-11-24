@@ -90,7 +90,9 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             List<string>? newEnabledThrottles = null;
             if (newThrottleState == ThrottleState.Enabled)
             {
+#pragma warning disable CS8603 // Possible null reference return.
                 newEnabledThrottles = throttleResults.Where(p => p.EnabledThrottles != null).SelectMany(p => p.EnabledThrottles).Distinct().ToList();
+#pragma warning restore CS8603 // Possible null reference return.
             }
 
             lock (_syncLock)

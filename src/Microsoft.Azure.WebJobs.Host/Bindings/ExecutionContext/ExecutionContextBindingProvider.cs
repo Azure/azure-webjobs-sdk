@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -88,6 +89,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 private readonly ValueBindingContext _context;
                 private readonly IOptions<ExecutionContextOptions> _options;
+                // TODO: Is this valid, or can something change it via Directory.SetCurrentDirectory
+                // This is ~4.5% of our allocations vs. the 4.x baseline and 3.3.x lib
+                // Source: https://github.com/dotnet/runtime/blob/b201a16e1a642f9532c8ea4e42d23af8f4484a36/src/libraries/System.Private.CoreLib/src/System/Environment.Windows.cs#L13-L39
+                private static readonly string _currentDirectory = Environment.CurrentDirectory;
+                private ExecutionContext _executionContext;
 
                 public ExecutionContextValueProvider(ValueBindingContext context, IOptions<ExecutionContextOptions> options)
                 {
@@ -102,7 +108,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                 public Task<object> GetValueAsync()
                 {
-                    return Task.FromResult<object>(CreateContext());
+                    // TODO: Is there any reason we can't cache this? It's not immutable today, so need to check
+                    return Task.FromResult<object>(_executionContext ??= CreateContext());
                 }
 
                 public string ToInvokeString()
@@ -116,7 +123,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     {
                         InvocationId = _context.FunctionInstanceId,
                         FunctionName = _context.FunctionContext.MethodName,
-                        FunctionDirectory = Environment.CurrentDirectory,
+                        FunctionDirectory = _currentDirectory,
                         FunctionAppDirectory = _options.Value.AppDirectory,
                         RetryContext = _context.FunctionContext.RetryContext
                     };

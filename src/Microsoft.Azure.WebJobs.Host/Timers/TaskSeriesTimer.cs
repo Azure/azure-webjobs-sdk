@@ -78,13 +78,19 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
 
         private async Task StopAsyncCore(CancellationToken cancellationToken)
         {
-            await Task.Delay(0);
-            TaskCompletionSource<object> cancellationTaskSource = new TaskCompletionSource<object>();
-
-            using (cancellationToken.Register(() => cancellationTaskSource.SetCanceled()))
+            if (!_run.IsCompleted)
             {
-                // Wait for all pending command tasks to complete (or cancellation of the token) before returning.
-                await Task.WhenAny(_run, cancellationTaskSource.Task);
+#if NET6_0_OR_GREATER
+                await _run.WaitAsync(cancellationToken);
+#else
+                TaskCompletionSource<object> cancellationTaskSource = new TaskCompletionSource<object>();
+
+                using (_cancellationTokenSource.Token.Register((cts) => ((TaskCompletionSource<object>)cts).SetCanceled(), cancellationTaskSource))
+                {
+                    // Wait for all pending command tasks to complete (or cancellation of the token) before returning.
+                    await Task.WhenAny(_run, cancellationTaskSource.Task);
+                }
+#endif
             }
 
             _stopped = true;
@@ -111,7 +117,7 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
             }
         }
 
-        private async Task RunAsync(CancellationToken cancellationToken)
+        private async Task RunAsync()
         {
             try
             {
@@ -120,31 +126,35 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
 
                 Task wait = _initialWait;
 
+#if !NET6_0_OR_GREATER
+                TaskCompletionSource<object> cancellationTaskSource = new TaskCompletionSource<object>();
+                using var _ = _cancellationTokenSource.Token.Register((cts) => ((TaskCompletionSource<object>)cts).SetCanceled(), cancellationTaskSource);
+#endif
                 // Execute tasks one at a time (in a series) until stopped.
-                while (!cancellationToken.IsCancellationRequested)
+                // TODO: Remove spacing, minimizing diff
+                while (!_cancellationTokenSource.IsCancellationRequested)
                 {
-                    TaskCompletionSource<object> cancellationTaskSource = new TaskCompletionSource<object>();
-
-                    using (cancellationToken.Register(() => cancellationTaskSource.SetCanceled()))
-                    {
                         try
                         {
+#if NET6_0_OR_GREATER
+                            await wait.WaitAsync(_cancellationTokenSource.Token);
+#else
                             await Task.WhenAny(wait, cancellationTaskSource.Task);
+#endif
                         }
                         catch (OperationCanceledException)
                         {
                             // When Stop fires, don't make it wait for wait before it can return.
                         }
-                    }
 
-                    if (cancellationToken.IsCancellationRequested)
+                    if (_cancellationTokenSource.IsCancellationRequested)
                     {
                         break;
                     }
 
                     try
                     {
-                        TaskSeriesCommandResult result = await _command.ExecuteAsync(cancellationToken);
+                        TaskSeriesCommandResult result = await _command.ExecuteAsync(_cancellationTokenSource.Token);
                         wait = result.Wait;
                     }
                     catch (Exception ex) when (ex.InnerException is OperationCanceledException)
