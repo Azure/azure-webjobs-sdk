@@ -54,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
                 throw new InvalidOperationException("The timer has already been started; it cannot be restarted.");
             }
 
-            _run = RunAsync(_cancellationTokenSource.Token);
+            _run = RunAsync();
             _started = true;
         }
 
