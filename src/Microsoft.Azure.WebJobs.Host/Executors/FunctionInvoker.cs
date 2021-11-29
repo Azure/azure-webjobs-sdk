@@ -46,8 +46,11 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
         public async Task<object> InvokeAsync(object instance, object[] arguments)
         {
+            // TODO: This causes a lot more task context switching/delay for the function itself overall
+            // Can we determine that a function is async and conditionally do this?
+
             // Return a task immediately in case the method is not async.
-            await Task.Yield();
+            //await Task.Yield();
 
             return await _methodInvoker.InvokeAsync((TReflected)instance, arguments);
         }
