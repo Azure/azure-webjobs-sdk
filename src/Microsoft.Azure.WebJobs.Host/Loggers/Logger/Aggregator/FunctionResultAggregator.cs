@@ -44,7 +44,9 @@ namespace Microsoft.Azure.WebJobs.Logging
             _buffer = new BufferBlock<FunctionInstanceLogEntry>(
                 new ExecutionDataflowBlockOptions()
                 {
-                    BoundedCapacity = maxBacklog
+                    // This is a source of lock contention under high load
+                    // Are we okay increasing it or removing to lessen contention on .SendAsync()?
+                    //BoundedCapacity = maxBacklog
                 });
 
             _batcher = new BatchBlock<FunctionInstanceLogEntry>(maxBacklog,
