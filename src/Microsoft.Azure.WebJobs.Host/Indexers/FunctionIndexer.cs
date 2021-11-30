@@ -460,7 +460,12 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         {
             if (descr.RetryStrategy != null)
             {
-                logger?.LogDebug($"Retry strategy is defined for function '{descr?.ShortName}' with trigger binding type '{triggerBinding?.GetType().Name}'. Strategy = '{JsonConvert.SerializeObject(descr?.RetryStrategy)}'");
+                string functionName = descr?.ShortName;
+                string triggerBindingName = triggerBinding?.GetType().Name;
+                string strategy = JsonConvert.SerializeObject(descr?.RetryStrategy);
+
+                logger?.LogDebug("Retry strategy is defined for function '{FunctionName}' with trigger binding type 'TriggerBindingName'. Strategy = '{Strategy}'", 
+                    functionName, triggerBindingName, strategy);
 
                 //Temporary comment: https://github.com/Azure/azure-webjobs-sdk/issues/2788
                 //if (triggerBinding != null && triggerBinding.GetType().GetCustomAttribute<SupportsRetryAttribute>() == null)
