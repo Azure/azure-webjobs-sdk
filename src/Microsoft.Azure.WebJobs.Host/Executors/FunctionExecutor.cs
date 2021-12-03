@@ -143,8 +143,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             }
             finally
             {
-                var funcEnd = Stopwatch.GetTimestamp();
-                var elapsed = new TimeSpan((funcEnd - funcStart) * Stopwatch.Frequency);
+                var elapsed = Utility.GetDuration(funcStart);
                 if (_concurrencyManager.Enabled)
                 {
                     _concurrencyManager.FunctionCompleted(concurrencyFunctionId, elapsed);
