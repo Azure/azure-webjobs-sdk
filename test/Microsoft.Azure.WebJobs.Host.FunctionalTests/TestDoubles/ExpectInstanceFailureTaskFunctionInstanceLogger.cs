@@ -18,12 +18,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
             _taskSource = taskSource;
         }
 
-        public Task<string> LogFunctionStartedAsync(FunctionStartedMessage message, CancellationToken cancellationToken)
+        public string LogFunctionStarted(FunctionStartedMessage message)
         {
-            return Task.FromResult(string.Empty);
+            return string.Empty;
         }
 
-        public Task LogFunctionCompletedAsync(FunctionCompletedMessage message, CancellationToken cancellationToken)
+        public void LogFunctionCompleted(FunctionCompletedMessage message)
         {
             if (message != null)
             {
@@ -32,13 +32,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
                 // A faulted task is reserved for unexpected failures (like unhandled background exceptions).
                 _taskSource.SetResult(message.Failure != null ? message.Failure.Exception : null);
             }
-
-            return Task.FromResult(0);
         }
 
-        public Task DeleteLogFunctionStartedAsync(string startedMessageId, CancellationToken cancellationToken)
+        public void DeleteLogFunctionStarted(string startedMessageId)
         {
-            return Task.FromResult(0);
         }
     }
 }

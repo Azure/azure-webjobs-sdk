@@ -57,8 +57,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                 // Determine if the function is disabled
                 if (functionDefinition.Descriptor.IsDisabled)
                 {
-                    string msg = string.Format("Function '{0}' is disabled", functionDefinition.Descriptor.ShortName);
-                    _logger?.LogInformation(msg);
+                    _logger?.LogInformation($"Function '{functionDefinition.Descriptor.ShortName}' is disabled");
                     continue;
                 }
 

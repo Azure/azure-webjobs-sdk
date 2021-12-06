@@ -222,7 +222,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             // this overhead for functions that are actually using dynamic concurrency.
             // For DC enabled functions, we won't see an invocation until after the first
             // call to GetStatus, which will create the ConcurrencyStatus.
-            if (ConcurrencyStatuses.TryGetValue(functionId, out ConcurrencyStatus concurrencyStatus))
+            if (ConcurrencyStatuses.TryGetValue(functionId, out ConcurrencyStatus? concurrencyStatus))
             {
                 concurrencyStatus.FunctionStarted();
             }
@@ -239,7 +239,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             // this overhead for functions that are actually using dynamic concurrency.
             // For DC enabled functions, we won't see an invocation until after the first
             // call to GetStatus, which will create the ConcurrencyStatus.
-            if (ConcurrencyStatuses.TryGetValue(functionId, out ConcurrencyStatus concurrencyStatus))
+            if (ConcurrencyStatuses.TryGetValue(functionId, out ConcurrencyStatus? concurrencyStatus))
             {
                 concurrencyStatus.FunctionCompleted(latency);
             }

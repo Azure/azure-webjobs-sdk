@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\build\common.props" />
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
     <PackageId>Microsoft.Azure.WebJobs.Core</PackageId>
     <Description>This library simplifies the task of adding background processing to your Microsoft Azure Web Sites. The SDK uses Microsoft Azure Storage, triggering a function in your program when items are added to Queues and Blobs. A dashboard provides rich monitoring and diagnostics for the programs that you write by using the SDK. For more information, please visit http://go.microsoft.com/fwlink/?LinkID=320971</Description>
     <AssemblyName>Microsoft.Azure.WebJobs</AssemblyName>

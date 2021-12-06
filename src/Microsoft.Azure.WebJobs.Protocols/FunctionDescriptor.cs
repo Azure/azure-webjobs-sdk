@@ -2,6 +2,8 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Collections.Generic;
+using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.Logging;
 
 #if PUBLICPROTOCOL
 namespace Microsoft.Azure.WebJobs.Protocols
@@ -85,6 +87,14 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
         /// </summary>
         [JsonIgnore]
         internal string SharedListenerId { get; set; }
+
+        [JsonIgnore]
+        private ILogger _functionLogger;
+        /// <summary>
+        /// Gets the primary logger to be used with this function, so we don't create it or attempt to every run.
+        /// </summary>
+        /// <remarks>This avoids allocations of string names and the waits in logger creation itself.</remarks>
+        internal ILogger GetFunctionLogger(ILoggerFactory loggerFactory) => _functionLogger ??= loggerFactory?.CreateLogger(LogCategories.CreateFunctionCategory(LogName));
 #endif
     }
 }

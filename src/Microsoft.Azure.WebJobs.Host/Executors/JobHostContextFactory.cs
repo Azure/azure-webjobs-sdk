@@ -181,7 +181,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             IRecurrentCommand heartbeatCommand, IWebJobsExceptionHandler exceptionHandler, CancellationToken shutdownToken)
         {
             IListener factoryListener = new ListenerFactoryListener(allFunctionsListenerFactory, sharedQueue);
-            IListener heartbeatListener = new HeartbeatListener(heartbeatCommand, exceptionHandler, factoryListener);
+            IListener heartbeatListener = new HeartbeatListener(heartbeatCommand, exceptionHandler, factoryListener, shutdownToken);
             IListener shutdownListener = new ShutdownListener(shutdownToken, heartbeatListener);
             return shutdownListener;
         }

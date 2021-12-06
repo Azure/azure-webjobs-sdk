@@ -938,7 +938,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 });
 
                 Assert.True(double.TryParse(functionRequest.Properties[LogConstants.FunctionExecutionTimeKey], out double functionDuration));
-                Assert.True(functionRequest.Duration.TotalMilliseconds >= functionDuration);
+                Assert.True(functionRequest.Duration.TotalMilliseconds >= functionDuration, $"Expected {functionRequest.Duration.TotalMilliseconds} >= {functionDuration}");
                 Assert.Equal("1.2.3.4", functionRequest.Context.Location.Ip);
                 Assert.Equal("http://localhost/some/path", functionRequest.Url.ToString());
 

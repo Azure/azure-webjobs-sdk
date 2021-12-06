@@ -69,7 +69,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         /// <summary>
         /// The category for logs written from within user functions.
         /// </summary>
-        public static string CreateFunctionUserCategory(string functionName) => $"{CreateFunctionCategory(functionName)}.User";
+        public static string CreateFunctionUserCategory(string functionName) => $"Function.{functionName}.User";
 
         /// <summary>
         /// Returns a logging category like "Host.Triggers.{triggerName}".

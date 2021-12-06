@@ -203,15 +203,17 @@ namespace Microsoft.Extensions.Logging
         {
             bool succeeded = logEntry.Exception == null;
 
-            IDictionary<string, object> payload = new Dictionary<string, object>();
-            payload.Add(LogConstants.FullNameKey, logEntry.FunctionName);
-            payload.Add(LogConstants.InvocationIdKey, logEntry.FunctionInstanceId);
-            payload.Add(LogConstants.NameKey, logEntry.LogName);
-            payload.Add(LogConstants.TriggerReasonKey, logEntry.TriggerReason);
-            payload.Add(LogConstants.StartTimeKey, logEntry.StartTime);
-            payload.Add(LogConstants.EndTimeKey, logEntry.EndTime);
-            payload.Add(LogConstants.DurationKey, logEntry.Duration);
-            payload.Add(LogConstants.SucceededKey, succeeded);
+            IDictionary<string, object> payload = new Dictionary<string, object>(8)
+            {
+                { LogConstants.FullNameKey, logEntry.FunctionName },
+                { LogConstants.InvocationIdKey, logEntry.FunctionInstanceId },
+                { LogConstants.NameKey, logEntry.LogName },
+                { LogConstants.TriggerReasonKey, logEntry.TriggerReason },
+                { LogConstants.StartTimeKey, logEntry.StartTime },
+                { LogConstants.EndTimeKey, logEntry.EndTime },
+                { LogConstants.DurationKey, logEntry.Duration },
+                { LogConstants.SucceededKey, succeeded }
+            };
 
             LogLevel level = succeeded ? LogLevel.Information : LogLevel.Error;
 
@@ -228,7 +230,7 @@ namespace Microsoft.Extensions.Logging
         internal static IDisposable BeginFunctionScope(this ILogger logger, IFunctionInstance functionInstance, Guid hostInstanceId)
         {
             return logger?.BeginScope(
-                new Dictionary<string, object>
+                new Dictionary<string, object>(5)
                 {
                     [ScopeKeys.FunctionInvocationId] = functionInstance?.Id.ToString(),
                     [ScopeKeys.FunctionName] = functionInstance?.FunctionDescriptor?.LogName,

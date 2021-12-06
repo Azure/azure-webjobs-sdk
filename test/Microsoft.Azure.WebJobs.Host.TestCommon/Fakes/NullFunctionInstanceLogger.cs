@@ -10,22 +10,17 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 {
     public class NullFunctionInstanceLogger : IFunctionInstanceLogger
     {
-        Task<string> IFunctionInstanceLogger.LogFunctionStartedAsync(FunctionStartedMessage message,
-            CancellationToken cancellationToken)
+        string IFunctionInstanceLogger.LogFunctionStarted(FunctionStartedMessage message)
         {
-            return Task.FromResult(string.Empty);
+            return string.Empty;
         }
 
-        Task IFunctionInstanceLogger.LogFunctionCompletedAsync(FunctionCompletedMessage message,
-            CancellationToken cancellationToken)
+        void IFunctionInstanceLogger.LogFunctionCompleted(FunctionCompletedMessage message)
         {
-            return Task.FromResult(0);
         }
 
-        Task IFunctionInstanceLogger.DeleteLogFunctionStartedAsync(string startedMessageId,
-            CancellationToken cancellationToken)
+        void IFunctionInstanceLogger.DeleteLogFunctionStarted(string startedMessageId)
         {
-            return Task.FromResult(0);
         }
     }
 }

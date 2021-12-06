@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Timers
@@ -70,11 +71,11 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
         }
 
         public static ITaskSeriesTimer CreateTimer(IRecurrentCommand command, TimeSpan normalInterval,
-            TimeSpan minimumInterval, IWebJobsExceptionHandler exceptionHandler)
+            TimeSpan minimumInterval, IWebJobsExceptionHandler exceptionHandler, CancellationToken cancellationToken)
         {
             IDelayStrategy delayStrategy = new LinearSpeedupStrategy(normalInterval, minimumInterval);
             ITaskSeriesCommand timerCommand = new RecurrentTaskSeriesCommand(command, delayStrategy);
-            return new TaskSeriesTimer(timerCommand, exceptionHandler, Task.Delay(normalInterval));
+            return new TaskSeriesTimer(timerCommand, exceptionHandler, Task.Delay(normalInterval, cancellationToken));
         }
     }
 }

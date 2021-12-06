@@ -92,7 +92,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             }
         }
 
-        internal async void OnPersistenceTimer(object sender, ElapsedEventArgs e)
+        internal async void OnPersistenceTimer(object? sender, ElapsedEventArgs e)
         {
             await OnPersistenceTimer();
         }

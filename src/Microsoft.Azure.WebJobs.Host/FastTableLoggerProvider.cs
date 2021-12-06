@@ -118,20 +118,24 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             {
                 _writer.Flush();
 
-                if (item != null)
-                {
-                    var str = Encoding.UTF8.GetString(_ms.ToArray());
+                // TODO: Discuss, this is only being captured for test purposes
+                // Do we need to capture this string otherwise? It's a fairly large allocation overall
+                // If we need to keep - could take an IOptions specifying whether to capture or not perhaps?
 
-                    // Truncate. 
-                    if (str.Length > FunctionInstanceLogEntry.MaxLogOutputLength)
-                    {
-                        // 0123456789
-                        // abcdefghij
-                        str = str.Substring(0, FunctionInstanceLogEntry.MaxLogOutputLength - 1) + "…";
-                    }
+                //if (item != null)
+                //{
+                //    var str = Encoding.UTF8.GetString(_ms.ToArray());
 
-                    item.LogOutput = str;
-                }
+                //    // Truncate. 
+                //    if (str.Length > FunctionInstanceLogEntry.MaxLogOutputLength)
+                //    {
+                //        // 0123456789
+                //        // abcdefghij
+                //        str = str.Substring(0, FunctionInstanceLogEntry.MaxLogOutputLength - 1) + "…";
+                //    }
+
+                //    item.LogOutput = str;
+                //}
 
                 return Task.FromResult(0);
             }
