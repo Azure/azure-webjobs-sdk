@@ -878,7 +878,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             public IDictionary<string, string> CreateInvokeStringArguments()
             {
-                IDictionary<string, string> arguments = new Dictionary<string, string>();
+                IDictionary<string, string> arguments = new Dictionary<string, string>(_valueProviders?.Count ?? 0);
 
                 if (_valueProviders != null)
                 {
