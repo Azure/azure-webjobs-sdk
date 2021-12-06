@@ -11,7 +11,7 @@
   <ItemGroup>
     <PackageReference Include="TaskBuilder.fs" Version="2.1.0" />
     <!-- SDK/Relational bug, see https://github.com/NuGet/Home/issues/11357 -->
-    <PackageReference Include="FSharp.Core" Version="6.0.1" />
+    <PackageReference Update="FSharp.Core" Version="6.0.1" />
   </ItemGroup>
 
   <ItemGroup>
