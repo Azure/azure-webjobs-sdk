@@ -30,12 +30,12 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
                 new HashSet<string>(ignoreFailureFunctions) : new HashSet<string>();
         }
 
-        Task<string> IFunctionInstanceLogger.LogFunctionStartedAsync(FunctionStartedMessage message, CancellationToken cancellationToken)
+        string IFunctionInstanceLogger.LogFunctionStarted(FunctionStartedMessage message)
         {
-            return Task.FromResult(String.Empty);
+            return string.Empty;
         }
 
-        Task IFunctionInstanceLogger.LogFunctionCompletedAsync(FunctionCompletedMessage message, CancellationToken cancellationToken)
+        void IFunctionInstanceLogger.LogFunctionCompleted(FunctionCompletedMessage message)
         {
             if (message != null && message.Failure != null && message.Function != null &&
                 !_ignoreFailureFunctions.Contains(message.Function.FullName))
@@ -47,13 +47,10 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
             {
                 _taskSource.SetResult(default(TResult));
             }
-
-            return Task.CompletedTask;
         }
 
-        public Task DeleteLogFunctionStartedAsync(string startedMessageId, CancellationToken cancellationToken)
+        public void DeleteLogFunctionStarted(string startedMessageId)
         {
-            return Task.FromResult(0);
         }
     }
 }

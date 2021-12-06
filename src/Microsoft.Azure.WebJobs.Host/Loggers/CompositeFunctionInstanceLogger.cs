@@ -17,13 +17,13 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             _loggers = loggers;
         }
 
-        public async Task<string> LogFunctionStartedAsync(FunctionStartedMessage message, CancellationToken cancellationToken)
+        public string LogFunctionStarted(FunctionStartedMessage message)
         {
             string startedMessageId = null;
 
             foreach (IFunctionInstanceLogger logger in _loggers)
             {
-                var messageId = await logger.LogFunctionStartedAsync(message, cancellationToken);
+                var messageId = logger.LogFunctionStarted(message);
                 if (!String.IsNullOrEmpty(messageId))
                 {
                     if (String.IsNullOrEmpty(startedMessageId))
@@ -40,19 +40,19 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             return startedMessageId;
         }
 
-        public async Task LogFunctionCompletedAsync(FunctionCompletedMessage message, CancellationToken cancellationToken)
+        public void LogFunctionCompleted(FunctionCompletedMessage message)
         {
             foreach (IFunctionInstanceLogger logger in _loggers)
             {
-                await logger.LogFunctionCompletedAsync(message, cancellationToken);
+                logger.LogFunctionCompleted(message);
             }
         }
 
-        public async Task DeleteLogFunctionStartedAsync(string startedMessageId, CancellationToken cancellationToken)
+        public void DeleteLogFunctionStarted(string startedMessageId)
         {
             foreach (IFunctionInstanceLogger logger in _loggers)
             {
-                await logger.DeleteLogFunctionStartedAsync(startedMessageId, cancellationToken);
+                logger.DeleteLogFunctionStarted(startedMessageId);
             }
         }
     }
