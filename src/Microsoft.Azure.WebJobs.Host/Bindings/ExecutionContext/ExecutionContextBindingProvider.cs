@@ -88,6 +88,9 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 private readonly ValueBindingContext _context;
                 private readonly IOptions<ExecutionContextOptions> _options;
+                // This is ~4.5% of our allocations vs. the 4.x baseline and 3.3.x lib
+                // Source: https://github.com/dotnet/runtime/blob/b201a16e1a642f9532c8ea4e42d23af8f4484a36/src/libraries/System.Private.CoreLib/src/System/Environment.Windows.cs#L13-L39
+                private static readonly string _currentDirectory = Environment.CurrentDirectory;
 
                 public ExecutionContextValueProvider(ValueBindingContext context, IOptions<ExecutionContextOptions> options)
                 {
@@ -116,7 +119,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     {
                         InvocationId = _context.FunctionInstanceId,
                         FunctionName = _context.FunctionContext.MethodName,
-                        FunctionDirectory = Environment.CurrentDirectory,
+                        FunctionDirectory = _currentDirectory,
                         FunctionAppDirectory = _options.Value.AppDirectory,
                         RetryContext = _context.FunctionContext.RetryContext
                     };
