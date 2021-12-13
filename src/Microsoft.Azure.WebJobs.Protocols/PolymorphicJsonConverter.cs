@@ -29,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
         private readonly string _typePropertyName;
         private readonly IDictionary<string, Type> _nameToTypeMap;
         private readonly IDictionary<Type, string> _typeToNameMap;
-        private static readonly ConcurrentDictionary<Type, NonCircularContractResolver> _nonCircularResolverCache = new ();
+        private static readonly ConcurrentDictionary<Type, NonCircularContractResolver> _nonCircularResolverCache = new ConcurrentDictionary<Type, NonCircularContractResolver>();
 
         /// <summary>Initializes a new instance of the <see cref="PolymorphicJsonConverter"/> class.</summary>
         /// <param name="typeMapping">The type names to use when serializing types.</param>
