@@ -132,7 +132,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
             // Now that we've handled the type, temporarily remove this converter so we can serialize this element and
             // its children without infinite recursion.
             IContractResolver originalContractResolver = serializer.ContractResolver;
-            serializer.ContractResolver = _nonCircularResolverCache.GetOrAdd(valueType, static type => new NonCircularContractResolver(type));
+            serializer.ContractResolver = _nonCircularResolverCache.GetOrAdd(valueType, type => new NonCircularContractResolver(type));
 
             JObject json = JObject.FromObject(value, serializer);
 
