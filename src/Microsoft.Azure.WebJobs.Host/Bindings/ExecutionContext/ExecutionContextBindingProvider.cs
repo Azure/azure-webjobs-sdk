@@ -88,9 +88,6 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 private readonly ValueBindingContext _context;
                 private readonly IOptions<ExecutionContextOptions> _options;
-                // This is ~4.5% of our allocations vs. the 4.x baseline and 3.3.x lib
-                // Source: https://github.com/dotnet/runtime/blob/b201a16e1a642f9532c8ea4e42d23af8f4484a36/src/libraries/System.Private.CoreLib/src/System/Environment.Windows.cs#L13-L39
-                private static readonly string _currentDirectory = Environment.CurrentDirectory;
 
                 public ExecutionContextValueProvider(ValueBindingContext context, IOptions<ExecutionContextOptions> options)
                 {
@@ -115,21 +112,19 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                 private ExecutionContext CreateContext()
                 {
-                    var result = new ExecutionContext
+                    var options = _options.Value;
+
+                    // The inline check of AppDirectory is so that we don't call the relatively expensive (in both allocations and locking) Environment.CurrentDirectory
+                    return new ExecutionContext
                     {
                         InvocationId = _context.FunctionInstanceId,
                         FunctionName = _context.FunctionContext.MethodName,
-                        FunctionDirectory = _currentDirectory,
-                        FunctionAppDirectory = _options.Value.AppDirectory,
+                        FunctionDirectory = options.AppDirectory != null
+                                                ? System.IO.Path.Combine(options.AppDirectory, _context.FunctionContext.MethodName)
+                                                : Environment.CurrentDirectory,
+                        FunctionAppDirectory = options.AppDirectory,
                         RetryContext = _context.FunctionContext.RetryContext
                     };
-
-                    if (result.FunctionAppDirectory != null)
-                    {
-                        result.FunctionDirectory = System.IO.Path.Combine(result.FunctionAppDirectory, result.FunctionName);
-                    }
-
-                    return result;
                 }
             }
         }
