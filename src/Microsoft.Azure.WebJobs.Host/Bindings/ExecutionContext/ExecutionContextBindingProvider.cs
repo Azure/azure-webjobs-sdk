@@ -112,19 +112,25 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                 private ExecutionContext CreateContext()
                 {
-                    var options = _options.Value;
-
-                    // The inline check of AppDirectory is so that we don't call the relatively expensive (in both allocations and locking) Environment.CurrentDirectory
-                    return new ExecutionContext
+                    var result = new ExecutionContext
                     {
                         InvocationId = _context.FunctionInstanceId,
                         FunctionName = _context.FunctionContext.MethodName,
-                        FunctionDirectory = options.AppDirectory != null
-                                                ? System.IO.Path.Combine(options.AppDirectory, _context.FunctionContext.MethodName)
-                                                : Environment.CurrentDirectory,
-                        FunctionAppDirectory = options.AppDirectory,
+                        FunctionAppDirectory = _options.Value.AppDirectory,
                         RetryContext = _context.FunctionContext.RetryContext
                     };
+
+                    // Environment.CurrentDirectory allocates every call and locks internally - since we don't need it in the hot path be sure to invoke it lazily.
+                    if (result.FunctionAppDirectory != null)
+                    {
+                        result.FunctionDirectory = System.IO.Path.Combine(result.FunctionAppDirectory, result.FunctionName);
+                    }
+                    else
+                    {
+                        result.FunctionDirectory = Environment.CurrentDirectory;
+                    }
+
+                    return result;
                 }
             }
         }
