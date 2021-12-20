@@ -611,28 +611,36 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             // If the job method is an instance method and the job class implements
             // the filter interface, this filter runs first before all other filters
-            TFilter instanceFilter = instance as TFilter;
-            if (instanceFilter != null)
+            if (instance is TFilter instanceFilter)
             {
                 yield return instanceFilter;
             }
 
             // Add any global filters
-            foreach (var filter in globalFunctionFilters.OfType<TFilter>())
+            foreach (var filter in globalFunctionFilters)
             {
-                yield return filter;
+                if (filter is TFilter tFilter)
+                {
+                    yield return tFilter;
+                }
             }
 
             // Next, any class level filters are added
-            foreach (var filter in functionDescriptor.ClassLevelFilters.OfType<TFilter>())
+            foreach (var filter in functionDescriptor.ClassLevelFilters)
             {
-                yield return filter;
+                if (filter is TFilter tFilter)
+                {
+                    yield return tFilter;
+                }
             }
 
             // Finally, any method level filters are added
-            foreach (var filter in functionDescriptor.MethodLevelFilters.OfType<TFilter>())
+            foreach (var filter in functionDescriptor.MethodLevelFilters)
             {
-                yield return filter;
+                if (filter is TFilter tFilter)
+                {
+                    yield return tFilter;
+                }
             }
         }
 
@@ -1017,9 +1025,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 {
                     if (_valueProviders != null)
                     {
-                        foreach (var disposableItem in _valueProviders.Values.OfType<IDisposable>())
+                        foreach (var provider in _valueProviders.Values)
                         {
-                            disposableItem.Dispose();
+                            if (provider is IDisposable disposableItem)
+                            {
+                                disposableItem.Dispose();
+                            }
                         }
                     }
 
