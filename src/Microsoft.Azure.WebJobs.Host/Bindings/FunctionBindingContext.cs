@@ -89,7 +89,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// <summary>
         /// The service provider for the current function invocation scope.
         /// </summary>
-        public IServiceProvider InstanceServices { get; set; }
+        public IServiceProvider InstanceServices => this._functionInvocationServices;
 
         /// <summary>
         /// Gets the retry context if this invocation is being retried.
