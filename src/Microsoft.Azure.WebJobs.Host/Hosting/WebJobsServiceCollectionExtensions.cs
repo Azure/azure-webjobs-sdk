@@ -8,6 +8,7 @@ using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Configuration;
 using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Azure.WebJobs.Host.Hosting;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Loggers;
@@ -137,6 +138,10 @@ namespace Microsoft.Azure.WebJobs
                 {
                     var section = config.GetWebJobsRootConfiguration().GetSection(ConcurrencyConfigSectionName);
                     section.Bind(options);
+                    if (WebJobsExtensionOptionRegistry.OptIn)
+                    {
+                        WebJobsExtensionOptionRegistry.Register(WebJobsExtensionOptionRegistry.ConcurrencySectionName, section.Key, options);
+                    }
                 });
 
             services.AddOptions<SingletonOptions>()

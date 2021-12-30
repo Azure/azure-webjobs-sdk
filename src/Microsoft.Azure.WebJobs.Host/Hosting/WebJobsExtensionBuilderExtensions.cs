@@ -2,7 +2,9 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -25,6 +27,10 @@ namespace Microsoft.Azure.WebJobs
                 if (section.Exists())
                 {
                     section.Bind(options);
+                    if (WebJobsExtensionOptionRegistry.OptIn)
+                    {
+                        WebJobsExtensionOptionRegistry.Register(WebJobsExtensionOptionRegistry.ExtensionsSectionName, section.Key, options);
+                    }
                 }
             });
 
