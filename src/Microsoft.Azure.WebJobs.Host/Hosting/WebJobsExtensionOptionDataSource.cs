@@ -33,6 +33,21 @@ namespace Microsoft.Azure.WebJobs.Host.Hosting
             return json;
         }
 
+        public JObject GetOptions()
+        {
+            var json = new JObject();
+            foreach (var section in _extensiosConfigs)
+            {
+                foreach (var subSection in section.Value)
+                {
+                    var subSectionJson = new JObject();
+                    subSectionJson.Add(subSection.Key, JObject.Parse(JsonConvert.SerializeObject(subSection.Value)));
+                    json.Add(section.Key, subSectionJson);
+                }
+            }
+            return json;
+        }
+
         public object Register(string section, string subSection, object config)
         {
             return _extensiosConfigs.AddOrUpdate(section, (k) =>

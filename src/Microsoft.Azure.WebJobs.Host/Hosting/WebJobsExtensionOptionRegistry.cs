@@ -2,6 +2,8 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Concurrent;
 
 namespace Microsoft.Azure.WebJobs.Host.Hosting
 {
@@ -13,7 +15,9 @@ namespace Microsoft.Azure.WebJobs.Host.Hosting
         public static bool OptIn { get; set; } = false;
 
         private static IWebJobsExtensionOptionDataSource _instance = new WebJobsExtensionOptionDataSource();
-        
+
+        private static ConcurrentDictionary<string, Action> _subscriber = new ConcurrentDictionary<string, Action>();
+
         /// <summary>
         /// Interface for testability. Do not use in Production.
         /// </summary>
@@ -34,7 +38,28 @@ namespace Microsoft.Azure.WebJobs.Host.Hosting
         /// <returns></returns>
         public static object Register(string section, string subSection, object options)
         {
-            return _instance.Register(section, subSection, options);
+            var obj = _instance.Register(section, subSection, options);
+            Nortify();
+            return obj;
+        }
+
+        /// <summary>
+        /// Subscribe the notification of the change.
+        /// </summary>
+        /// <param name="key">Unique string</param>
+        /// <param name="action">Action that you want to execute when receives the change</param>
+        /// <returns></returns>
+        public static object Subscribe(string key, Action action)
+        {
+            return _subscriber.AddOrUpdate(key, action, (k, v) => action);
+        }
+
+        private static void Nortify()
+        {
+            foreach (var x in _subscriber.Values)
+            {
+                x.Invoke();
+            }
         }
 
         /// <summary>
@@ -53,6 +78,15 @@ namespace Microsoft.Azure.WebJobs.Host.Hosting
         public static JObject GetOptions(string section)
         {
             return _instance.GetOptions(section);
-        }           
+        }      
+        
+        /// <summary>
+        /// Get the registered options.
+        /// </summary>
+        /// <returns></returns>
+        public static JObject GetOptions()
+        {
+            return _instance.GetOptions();
+        }
     }
 }

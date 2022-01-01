@@ -12,5 +12,7 @@ namespace Microsoft.Azure.WebJobs.Host.Hosting
         void Clear();
 
         JObject GetOptions(string section);
+
+        JObject GetOptions();
     }
 }
