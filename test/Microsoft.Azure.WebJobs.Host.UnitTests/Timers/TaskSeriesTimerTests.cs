@@ -290,6 +290,19 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
         }
 
         [Fact]
+        public void Start_IfStopped_DoesNotThrow()
+        {
+            // Arrange
+            ITaskSeriesCommand command = CreateStubCommand(TimeSpan.Zero);
+            ITaskSeriesTimer product = CreateProductUnderTest(command);
+            product.Start();
+            product.StopAsync(CancellationToken.None).GetAwaiter().GetResult();
+
+            // Act & Assert
+            ExceptionAssert.DoesNotThrow(() => product.Start());
+        }
+
+        [Fact]
         public void StopAsync_TriggersCommandCancellationToken()
         {
             // Arrange

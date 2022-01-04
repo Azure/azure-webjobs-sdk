@@ -56,20 +56,21 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
 
             _run = RunAsync(_cancellationTokenSource.Token);
             _started = true;
+            _stopped = false;
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
 
-            if (!_started)
-            {
-                throw new InvalidOperationException("The timer has not yet been started.");
-            }
-
             if (_stopped)
             {
                 throw new InvalidOperationException("The timer has already been stopped.");
+            }
+
+            if (!_started)
+            {
+                throw new InvalidOperationException("The timer has not yet been started.");
             }
 
             _cancellationTokenSource.Cancel();
@@ -88,6 +89,7 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
             }
 
             _stopped = true;
+            _started = false;
         }
 
         public void Cancel()
