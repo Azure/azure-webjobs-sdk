@@ -8,7 +8,6 @@ using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Configuration;
 using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Executors;
-using Microsoft.Azure.WebJobs.Host.Hosting;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Loggers;
@@ -32,6 +31,7 @@ namespace Microsoft.Azure.WebJobs
     public static class WebJobsServiceCollectionExtensions
     {
         private const string SingletonConfigSectionName = "Singleton";
+        private const string ConcurrencyConfigSectionName = "Concurrency";
 
         /// <summary>
         /// Adds the WebJobs services to the provided <see cref="IServiceCollection"/>.
@@ -132,6 +132,12 @@ namespace Microsoft.Azure.WebJobs
 
             services.ConfigureOptions<ConcurrencyOptionsSetup>();
             services.ConfigureOptions<PrimaryHostCoordinatorOptionsSetup>();
+            services.AddOptions<ConcurrencyOptions>()
+                .Configure<IConfiguration>((options, config) =>
+                {
+                    var section = config.GetWebJobsRootConfiguration().GetSection(ConcurrencyConfigSectionName);
+                    section.Bind(options);
+                });
 
             services.AddOptions<SingletonOptions>()
                 .Configure<IHostingEnvironment>((options, env) =>
