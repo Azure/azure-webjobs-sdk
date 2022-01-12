@@ -32,7 +32,6 @@ namespace Microsoft.Azure.WebJobs
     public static class WebJobsServiceCollectionExtensions
     {
         private const string SingletonConfigSectionName = "Singleton";
-        private const string ConcurrencyConfigSectionName = "Concurrency";
 
         /// <summary>
         /// Adds the WebJobs services to the provided <see cref="IServiceCollection"/>.
@@ -133,16 +132,6 @@ namespace Microsoft.Azure.WebJobs
 
             services.ConfigureOptions<ConcurrencyOptionsSetup>();
             services.ConfigureOptions<PrimaryHostCoordinatorOptionsSetup>();
-            services.AddOptions<ConcurrencyOptions>()
-                .Configure<IConfiguration>((options, config) =>
-                {
-                    var section = config.GetWebJobsRootConfiguration().GetSection(ConcurrencyConfigSectionName);
-                    section.Bind(options);
-                    if (WebJobsExtensionOptionRegistry.OptIn)
-                    {
-                        WebJobsExtensionOptionRegistry.Register(WebJobsExtensionOptionRegistry.ConcurrencySectionName, section.Key, options);
-                    }
-                });
 
             services.AddOptions<SingletonOptions>()
                 .Configure<IHostingEnvironment>((options, env) =>

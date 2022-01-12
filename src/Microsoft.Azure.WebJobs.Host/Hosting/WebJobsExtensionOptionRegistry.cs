@@ -9,9 +9,6 @@ namespace Microsoft.Azure.WebJobs.Host.Hosting
 {
     public class WebJobsExtensionOptionRegistry 
     {
-        public const string ConcurrencySectionName = "Concurrency";
-        public const string ExtensionsSectionName = "Extensions";
-
         public static bool OptIn { get; set; } = false;
 
         private static IWebJobsExtensionOptionDataSource _instance = new WebJobsExtensionOptionDataSource();
@@ -33,12 +30,11 @@ namespace Microsoft.Azure.WebJobs.Host.Hosting
         /// Register the options object of an WebJobs extension in Memory.
         /// </summary>
         /// <param name="section"></param>
-        /// <param name="subSection"></param>
         /// <param name="options"></param>
         /// <returns></returns>
-        public static object Register(string section, string subSection, object options)
+        public static object Register(string section, object options)
         {
-            var obj = _instance.Register(section, subSection, options);
+            var obj = _instance.Register(section, options);
             Nortify();
             return obj;
         }
@@ -69,16 +65,6 @@ namespace Microsoft.Azure.WebJobs.Host.Hosting
         {
             _instance.Clear();
         }
-
-        /// <summary>
-        /// Get the registered options.
-        /// </summary>
-        /// <param name="section"></param>
-        /// <returns>Registered options</returns>
-        public static JObject GetOptions(string section)
-        {
-            return _instance.GetOptions(section);
-        }      
         
         /// <summary>
         /// Get the registered options.

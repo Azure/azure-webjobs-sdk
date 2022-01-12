@@ -28,10 +28,11 @@ namespace Microsoft.Azure.WebJobs
                 if (section.Exists())
                 {
                     section.Bind(options);
-                    if (WebJobsExtensionOptionRegistry.OptIn)
-                    {
-                        WebJobsExtensionOptionRegistry.Register(WebJobsExtensionOptionRegistry.ExtensionsSectionName, section.Key, options);
-                    }
+                }
+
+                if (WebJobsExtensionOptionRegistry.OptIn)
+                {
+                    WebJobsExtensionOptionRegistry.Register(section.Key, options);
                 }
             });
 

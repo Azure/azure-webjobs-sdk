@@ -10,27 +10,11 @@ namespace Microsoft.Azure.WebJobs.Host.Hosting
 {
     public class WebJobsExtensionOptionDataSource : IWebJobsExtensionOptionDataSource
     {
-        private static ConcurrentDictionary<string, Dictionary<string, object>> _extensiosConfigs = new ConcurrentDictionary<string, Dictionary<string, object>>();
+        private static ConcurrentDictionary<string, object> _extensiosConfigs = new ConcurrentDictionary<string, object>();
 
         public void Clear()
         {
             _extensiosConfigs.Clear();
-        }
-
-        public JObject GetOptions(string section)
-        {
-            var json = new JObject();
-            var sectionOptions = _extensiosConfigs[section];
-            if (sectionOptions == null)
-            {
-                return json;
-            }
-
-            foreach (var kv in sectionOptions)
-            {
-                json.Add(kv.Key, JObject.Parse(JsonConvert.SerializeObject(kv.Value)));
-            }
-            return json;
         }
 
         public JObject GetOptions()
@@ -38,28 +22,14 @@ namespace Microsoft.Azure.WebJobs.Host.Hosting
             var json = new JObject();
             foreach (var section in _extensiosConfigs)
             {
-                foreach (var subSection in section.Value)
-                {
-                    var subSectionJson = new JObject();
-                    subSectionJson.Add(subSection.Key, JObject.Parse(JsonConvert.SerializeObject(subSection.Value)));
-                    json.Add(section.Key, subSectionJson);
-                }
+                json.Add(section.Key, JObject.Parse(JsonConvert.SerializeObject(section.Value)));
             }
             return json;
         }
 
-        public object Register(string section, string subSection, object config)
+        public object Register(string section, object config)
         {
-            return _extensiosConfigs.AddOrUpdate(section, (k) =>
-            {
-                var firstDictionary = new Dictionary<string, object>();
-                firstDictionary.Add(subSection, config);
-                return firstDictionary;
-            }, (k, v) => 
-            { 
-                v.Add(subSection, config); 
-                return v; 
-            });
+            return _extensiosConfigs.AddOrUpdate(section, config, (k, v) => v);
         }
     }
 }

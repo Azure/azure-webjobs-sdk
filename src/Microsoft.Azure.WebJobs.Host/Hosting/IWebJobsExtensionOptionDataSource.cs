@@ -7,11 +7,9 @@ namespace Microsoft.Azure.WebJobs.Host.Hosting
 {
     public interface IWebJobsExtensionOptionDataSource
     {
-        object Register(string section, string subSection, object config);
+        object Register(string section, object config);
 
         void Clear();
-
-        JObject GetOptions(string section);
 
         JObject GetOptions();
     }
