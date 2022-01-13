@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
 
 namespace Microsoft.Azure.WebJobs.Host.Hosting
 {
@@ -9,6 +10,8 @@ namespace Microsoft.Azure.WebJobs.Host.Hosting
     {
         object Register(string section, object config);
 
+        IReadOnlyDictionary<string, object> GetExtensionConfigs();
+        
         void Clear();
 
         JObject GetOptions();

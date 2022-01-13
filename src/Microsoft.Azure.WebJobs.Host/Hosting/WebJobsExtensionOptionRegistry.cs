@@ -4,6 +4,7 @@
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace Microsoft.Azure.WebJobs.Host.Hosting
 {
@@ -65,7 +66,16 @@ namespace Microsoft.Azure.WebJobs.Host.Hosting
         {
             _instance.Clear();
         }
-        
+
+        /// <summary>
+        /// GetExtension Configurations.
+        /// </summary>
+        /// <returns></returns>
+        public static IReadOnlyDictionary<string, object> GetExtensionConfigs()
+        {
+            return _instance.GetExtensionConfigs();
+        }
+
         /// <summary>
         /// Get the registered options.
         /// </summary>

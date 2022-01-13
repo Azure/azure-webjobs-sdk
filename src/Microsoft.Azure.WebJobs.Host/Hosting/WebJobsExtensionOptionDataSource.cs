@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Hosting
 {
@@ -15,6 +16,11 @@ namespace Microsoft.Azure.WebJobs.Host.Hosting
         public void Clear()
         {
             _extensiosConfigs.Clear();
+        }
+
+        public IReadOnlyDictionary<string, object> GetExtensionConfigs()
+        {
+            return _extensiosConfigs.ToDictionary(kv => kv.Key, kv => kv.Value);
         }
 
         public JObject GetOptions()
