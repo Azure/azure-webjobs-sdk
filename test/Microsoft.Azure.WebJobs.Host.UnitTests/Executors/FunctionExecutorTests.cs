@@ -376,37 +376,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         }
 
         [Fact]
-        public async Task ExecuteLoggingAsync_WithDrainModeManagerEnabled_RequestsCancellation()
-        {
-            var loggerFactory = new LoggerFactory();
-            var loggerProvider = new TestLoggerProvider();
-            loggerFactory.AddProvider(loggerProvider);
-            var drainModeLogger = loggerFactory.CreateLogger<DrainModeManager>();
-
-            var logger = new TestLogger("Tests.FunctionExecutor");
-            var mockFunctionInstanceEx = GetFunctionInstanceExMockInstance();
-            var parameterHelper = new FunctionExecutor.ParameterHelper(mockFunctionInstanceEx);
-
-            var drainModeManager = new DrainModeManager(drainModeLogger);
-            await drainModeManager.EnableDrainModeAsync(CancellationToken.None);
-            var functionExecutor = GetTestFunctionExecutor(drainModeManager);
-
-            try
-            {
-                await functionExecutor.ExecuteWithLoggingAsync(mockFunctionInstanceEx, new FunctionStartedMessage(), new FunctionInstanceLogEntry(), parameterHelper, logger, CancellationToken.None);
-            }
-            // Function Invocation Exception is expected
-            catch (FunctionInvocationException)
-            {
-            }
-            finally
-            {
-                var messages = logger.GetLogMessages().Select(p => p.FormattedMessage);
-                Assert.Equal(messages.ElementAt(0), "Requesting cancellation for function invocation '00000000-0000-0000-0000-000000000000'");
-            }
-        }
-
-        [Fact]
         public void OnFunctionTimeout_PerformsExpectedOperations()
         {
             RunOnFunctionTimeoutTest(false, "Initiating cancellation.");
