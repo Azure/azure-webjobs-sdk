@@ -152,12 +152,6 @@ namespace Microsoft.Azure.WebJobs.Host
             return blobClient.GetBlobLeaseClient(proposedLeaseId);
         }
 
-        // // Allows the extension method to be mocked for testing
-        protected virtual BlobProperties GetBlobProperties(BlobClient blobClient)
-        {
-            return blobClient.GetProperties();
-        }
-
         // Allows the extension method to be mocked for testing
         protected virtual BlobContainerClient GetParentBlobContainerClient(BlobClient blobClient)
         {
@@ -173,14 +167,20 @@ namespace Microsoft.Azure.WebJobs.Host
             bool blobDoesNotExist = false;
             try
             {
-                // Check if a lease is available before trying to acquire.
-                // If it doesn't we handle the 404, create it, and retry below
-                var blobProperties = GetBlobProperties(blobClient);
+                // Check if a lease is available before trying to acquire. The blob may
+                // not yet exist; if it doesn't we handle the 404, create it, and retry below
+                var blobProperties = await ReadLeaseBlobMetadata(blobClient, cancellationToken);
 
-                if (blobProperties?.LeaseState != LeaseState.Leased)
+                switch (blobProperties?.LeaseState)
                 {
-                    var leaseResponse = await GetBlobLeaseClient(blobClient, proposedLeaseId).AcquireAsync(leasePeriod, cancellationToken: cancellationToken);
-                    return leaseResponse.Value.LeaseId;
+                    case null:
+                    case LeaseState.Available:
+                    case LeaseState.Expired:
+                    case LeaseState.Broken:
+                        var leaseResponse = await GetBlobLeaseClient(blobClient, proposedLeaseId).AcquireAsync(leasePeriod, cancellationToken: cancellationToken);
+                        return leaseResponse.Value.LeaseId;
+                    default:
+                        return null;
                 }
             }
             catch (RequestFailedException exception)

@@ -509,7 +509,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             SingletonLock singleton = null;
             if (parameterHelper.HasSingleton)
             {
-                // if the function is a Singleton, aquire the lock
+                // if the function is a Singleton, acquire the lock
                 singleton = await parameterHelper.GetSingletonLockAsync();
                 await singleton.AcquireAsync(functionCancellationTokenSource.Token);
             }

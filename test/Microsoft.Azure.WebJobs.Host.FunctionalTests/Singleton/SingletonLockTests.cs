@@ -30,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         }
 
         [Fact]
-        public async Task AquireAsync_InvokesSingletonManager_WithExpectedValues()
+        public async Task AcquireAsync_InvokesSingletonManager_WithExpectedValues()
         {
             CancellationToken cancellationToken = new CancellationToken();
             SingletonAttribute attribute = new SingletonAttribute();
