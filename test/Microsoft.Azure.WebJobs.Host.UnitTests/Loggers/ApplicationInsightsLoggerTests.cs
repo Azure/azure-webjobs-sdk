@@ -1021,11 +1021,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
         private static void ValidateScope(IDictionary<string, object> expected)
         {
-            var scopeDict = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
-            Assert.Equal(expected.Count, scopeDict.Count);
+            Assert.Equal(expected.Count, ScopeProperties.GetAll().Count());
             foreach (var entry in expected)
             {
-                Assert.Equal(entry.Value, scopeDict[entry.Key]);
+                Assert.True(ScopeProperties.TryGetValue(entry.Key, out var scopeVal));
+                Assert.Equal(entry.Value, scopeVal);
             }
         }
 
