@@ -15,10 +15,6 @@ namespace Microsoft.Azure.WebJobs.Host
 
         void RegisterListener(IListener listener);
 
-        void RegisterTokenSource(Guid guid, CancellationTokenSource tokenSource);
-
-        void UnRegisterTokenSource(Guid guid);
-
         Task EnableDrainModeAsync(CancellationToken cancellationToken);
     }
 }
