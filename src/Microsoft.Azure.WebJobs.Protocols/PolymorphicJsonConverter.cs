@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -28,6 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
         private readonly string _typePropertyName;
         private readonly IDictionary<string, Type> _nameToTypeMap;
         private readonly IDictionary<Type, string> _typeToNameMap;
+        private static readonly ConcurrentDictionary<Type, NonCircularContractResolver> _nonCircularResolverCache = new ConcurrentDictionary<Type, NonCircularContractResolver>();
 
         /// <summary>Initializes a new instance of the <see cref="PolymorphicJsonConverter"/> class.</summary>
         /// <param name="typeMapping">The type names to use when serializing types.</param>
@@ -130,7 +132,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
             // Now that we've handled the type, temporarily remove this converter so we can serialize this element and
             // its children without infinite recursion.
             IContractResolver originalContractResolver = serializer.ContractResolver;
-            serializer.ContractResolver = new NonCircularContractResolver(valueType);
+            serializer.ContractResolver = _nonCircularResolverCache.GetOrAdd(valueType, type => new NonCircularContractResolver(type));
 
             JObject json = JObject.FromObject(value, serializer);
 
