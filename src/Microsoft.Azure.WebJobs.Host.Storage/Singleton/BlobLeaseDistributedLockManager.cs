@@ -167,8 +167,11 @@ namespace Microsoft.Azure.WebJobs.Host
             bool blobDoesNotExist = false;
             try
             {
-                // Check if a lease is available before trying to acquire. The blob may
-                // not yet exist; if it doesn't we handle the 404, create it, and retry below
+                // Check if a lease is available before trying to acquire. The blob may not
+                // yet exist; if it doesn't we handle the 404, create it, and retry below.
+                // The reason we're checking to see if the lease is available before trying
+                // to acquire is to avoid the flood of 409 errors that Application Insights
+                // picks up when a lease cannot be acquired due to conflict; see issue #2318.
                 var blobProperties = await ReadLeaseBlobMetadata(blobClient, cancellationToken);
 
                 switch (blobProperties?.LeaseState)
