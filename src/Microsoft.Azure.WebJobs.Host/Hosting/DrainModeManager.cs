@@ -32,24 +32,12 @@ namespace Microsoft.Azure.WebJobs.Host
             Listeners.Add(listener);
         }
 
-        public void RegisterTokenSource(Guid guid, CancellationTokenSource tokenSource)
-        {
-            _cancellationTokenSources.TryAdd(guid, tokenSource);
-        }
-
-        public void UnRegisterTokenSource(Guid guid)
-        {
-            _cancellationTokenSources.TryRemove(guid, out CancellationTokenSource cts);
-        }
-
         public async Task EnableDrainModeAsync(CancellationToken cancellationToken)
         {
             if (!IsDrainModeEnabled)
             {
                 IsDrainModeEnabled = true;
                 _logger.LogInformation("DrainMode mode enabled");
-
-                CancelFunctionInvocations();
 
                 List<Task> tasks = new List<Task>();
 
@@ -62,27 +50,6 @@ namespace Microsoft.Azure.WebJobs.Host
                 await Task.WhenAll(tasks);
 
                 _logger.LogInformation("Call to StopAsync complete, registered listeners are now stopped");
-            }
-        }
-
-        public void CancelFunctionInvocations()
-        {
-            foreach (var keyValuePair in _cancellationTokenSources)
-            {
-                string invocationId = keyValuePair.Key.ToString();
-                try
-                {
-                    _logger?.LogInformation("Requesting cancellation for function invocation '{invocationId}'", invocationId);
-                    keyValuePair.Value.Cancel();
-                }
-                catch (ObjectDisposedException)
-                {
-                    _logger?.LogInformation("Cancellation token for function invocation '{invocationId}' already disposed. No action required", invocationId);
-                }
-                catch (Exception exception)
-                {
-                    _logger?.LogError(exception, "Exception occured when attempting to request cancellation for function invocation '{invocationId}'", invocationId);
-                }
             }
         }
     }

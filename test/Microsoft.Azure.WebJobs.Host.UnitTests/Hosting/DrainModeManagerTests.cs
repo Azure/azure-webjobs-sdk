@@ -59,32 +59,5 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
                p => Assert.Equal("Calling StopAsync on the registered listeners", p),
                p => Assert.Equal("Call to StopAsync complete, registered listeners are now stopped", p));
         }
-
-        [Fact]
-        public async Task RegisterListener_EnableDrainModeAsync_CancelAllRegisteredTokens()
-        {
-            Mock<IListener> listener = new Mock<IListener>(MockBehavior.Strict);
-            listener.Setup(bl => bl.StopAsync(It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(false));
-
-            var drainModeManager = new DrainModeManager(_logger);
-            drainModeManager.RegisterListener(listener.Object);
-
-            var tokenSource = new CancellationTokenSource();
-            var guid = Guid.NewGuid();
-            drainModeManager.RegisterTokenSource(guid, tokenSource);
-
-            await drainModeManager.EnableDrainModeAsync(CancellationToken.None);
-            listener.VerifyAll();
-
-            Assert.Equal(drainModeManager.IsDrainModeEnabled, true);
-            Assert.Equal(tokenSource.Token.IsCancellationRequested, true);
-
-            Assert.Collection(_loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage),
-               p => Assert.Equal("DrainMode mode enabled", p),
-               p => Assert.Equal($"Requesting cancellation for function invocation '{guid}'", p),
-               p => Assert.Equal("Calling StopAsync on the registered listeners", p),
-               p => Assert.Equal("Call to StopAsync complete, registered listeners are now stopped", p));
-        }
     }
 }
