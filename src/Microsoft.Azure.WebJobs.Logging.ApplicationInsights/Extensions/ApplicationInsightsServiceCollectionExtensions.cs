@@ -217,7 +217,8 @@ namespace Microsoft.Extensions.DependencyInjection
                     appIdProvider,
                     filterOptions,
                     roleInstanceProvider,
-                    provider.GetService<QuickPulseInitializationScheduler>());
+                    provider.GetService<QuickPulseInitializationScheduler>(),
+                    provider.GetServices<ITelemetryProcessorFactory>());
 
                 return config;
             });
@@ -275,7 +276,8 @@ namespace Microsoft.Extensions.DependencyInjection
             IApplicationIdProvider applicationIdProvider,
             LoggerFilterOptions filterOptions,
             IRoleInstanceProvider roleInstanceProvider,
-            QuickPulseInitializationScheduler delayer)
+            QuickPulseInitializationScheduler delayer,
+            IEnumerable<ITelemetryProcessorFactory> processorFactories)
         {
             if (options.ConnectionString != null)
             {
@@ -350,6 +352,11 @@ namespace Microsoft.Extensions.DependencyInjection
             if (options.SnapshotConfiguration != null)
             {
                 configuration.TelemetryProcessorChainBuilder.UseSnapshotCollector(options.SnapshotConfiguration);
+            }
+
+            foreach (var processorFactory in processorFactories)
+            {
+                configuration.TelemetryProcessorChainBuilder.Use(processorFactory.Create);
             }
 
             configuration.TelemetryProcessorChainBuilder.Build();

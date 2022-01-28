@@ -792,6 +792,54 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             }
         }
 
+        [Fact]
+        public void DependencyInjection_UsesCustomTelemetryProcessorFactory()
+        {
+            var snapshotConfiguration = new SnapshotCollectorConfiguration();
+            using (var host = new HostBuilder()
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<ITelemetryProcessorFactory, MyTelemetryProcessorFactory>();
+                })
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsightsWebJobs(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                    });
+                }).Build())
+            {
+                var config = host.Services.GetService<TelemetryConfiguration>();
+                Assert.Equal(5, config.TelemetryProcessors.Count);
+                Assert.IsType<OperationFilteringTelemetryProcessor>(config.TelemetryProcessors[0]);
+                Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[1]);
+                Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[2]);
+                Assert.IsType<MyTelemetryProcessor>(config.TelemetryProcessors[3]);
+            }
+        }
+
+        private class MyTelemetryProcessorFactory : ITelemetryProcessorFactory
+        {
+            public ITelemetryProcessor Create(ITelemetryProcessor nextProcessor) => new MyTelemetryProcessor(nextProcessor);
+        }
+
+        private class MyTelemetryProcessor : ITelemetryProcessor
+        {
+            private readonly ITelemetryProcessor _next;
+            public bool Called = false;
+
+            public MyTelemetryProcessor(ITelemetryProcessor next)
+            {
+                _next = next;
+            }
+
+            public void Process(ITelemetry item)
+            {
+                Called = true;
+                _next.Process(item);
+            }
+        }
+
         private static IHost CreateHost(Action<HostBuilderContext, ILoggingBuilder> configureLogging = null, Action<IConfigurationBuilder> configureConfiguration = null)
         {
             var builder = new HostBuilder()
