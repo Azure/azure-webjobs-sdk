@@ -405,6 +405,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
                 throw new RequestFailedException(409, "Failed to get lease in test");
             });
 
+            mockAccount.BlobClient.Setup(p => p.GetPropertiesAsync(It.IsAny<BlobRequestConditions>(), It.IsAny<CancellationToken>())).Returns(Task.FromResult(mockAccount.CreateInternalAzureBlobResponse<BlobProperties>()));
+
             SingletonAttribute attribute = new SingletonAttribute();
             SingletonLockHandle lockHandle = await _singletonManager.TryLockInternalAsync(TestLockId, TestInstanceId, attribute, cancellationToken, retry: false);
 
@@ -440,6 +442,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             {
                 ++count;
             }, () => throw new RequestFailedException(409, "Failed to get lease in test"));
+
+            mockAccount.BlobClient.Setup(p => p.GetPropertiesAsync(It.IsAny<BlobRequestConditions>(), It.IsAny<CancellationToken>())).Returns(Task.FromResult(mockAccount.CreateInternalAzureBlobResponse<BlobProperties>()));
 
             SingletonAttribute attribute = new SingletonAttribute();
             TimeoutException exception = await Assert.ThrowsAsync<TimeoutException>(async () => await _singletonManager.LockAsync(TestLockId, TestInstanceId, attribute, cancellationToken));
