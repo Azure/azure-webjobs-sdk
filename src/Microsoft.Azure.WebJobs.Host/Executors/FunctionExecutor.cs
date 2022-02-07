@@ -271,19 +271,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 // (e.g. Based on TimeoutAttribute, etc.)                
                 CancellationTokenSource functionCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-                if (_drainModeManager != null)
-                {
-                    if (_drainModeManager.IsDrainModeEnabled == true)
-                    {
-                        functionCancellationTokenSource.Cancel();
-                        logger?.LogInformation("Requesting cancellation for function invocation '{invocationId}'", instance.Id);
-                    }
-                    else
-                    {
-                        _drainModeManager?.RegisterTokenSource(instance.Id, functionCancellationTokenSource);
-                    }
-                }
-
                 using (functionCancellationTokenSource)
                 {
                     FunctionOutputLogger.SetOutput(outputLog);
@@ -335,7 +322,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     {
                         updateParameterLogTimer?.Dispose();
                         parameterHelper.FlushParameterWatchers();
-                        _drainModeManager?.UnRegisterTokenSource(instance.Id);
                     }
 
                     var exceptionInfo = GetExceptionDispatchInfo(invocationException, instance);
@@ -508,7 +494,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             SingletonLock singleton = null;
             if (parameterHelper.HasSingleton)
             {
-                // if the function is a Singleton, aquire the lock
+                // if the function is a Singleton, acquire the lock
                 singleton = await parameterHelper.GetSingletonLockAsync();
                 await singleton.AcquireAsync(functionCancellationTokenSource.Token);
             }
@@ -610,28 +596,36 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             // If the job method is an instance method and the job class implements
             // the filter interface, this filter runs first before all other filters
-            TFilter instanceFilter = instance as TFilter;
-            if (instanceFilter != null)
+            if (instance is TFilter instanceFilter)
             {
                 yield return instanceFilter;
             }
 
             // Add any global filters
-            foreach (var filter in globalFunctionFilters.OfType<TFilter>())
+            foreach (var filter in globalFunctionFilters)
             {
-                yield return filter;
+                if (filter is TFilter tFilter)
+                {
+                    yield return tFilter;
+                }
             }
 
             // Next, any class level filters are added
-            foreach (var filter in functionDescriptor.ClassLevelFilters.OfType<TFilter>())
+            foreach (var filter in functionDescriptor.ClassLevelFilters)
             {
-                yield return filter;
+                if (filter is TFilter tFilter)
+                {
+                    yield return tFilter;
+                }
             }
 
             // Finally, any method level filters are added
-            foreach (var filter in functionDescriptor.MethodLevelFilters.OfType<TFilter>())
+            foreach (var filter in functionDescriptor.MethodLevelFilters)
             {
-                yield return filter;
+                if (filter is TFilter tFilter)
+                {
+                    yield return tFilter;
+                }
             }
         }
 
@@ -1016,9 +1010,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 {
                     if (_valueProviders != null)
                     {
-                        foreach (var disposableItem in _valueProviders.Values.OfType<IDisposable>())
+                        foreach (var provider in _valueProviders.Values)
                         {
-                            disposableItem.Dispose();
+                            if (provider is IDisposable disposableItem)
+                            {
+                                disposableItem.Dispose();
+                            }
                         }
                     }
 

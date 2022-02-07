@@ -116,14 +116,18 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     {
                         InvocationId = _context.FunctionInstanceId,
                         FunctionName = _context.FunctionContext.MethodName,
-                        FunctionDirectory = Environment.CurrentDirectory,
                         FunctionAppDirectory = _options.Value.AppDirectory,
                         RetryContext = _context.FunctionContext.RetryContext
                     };
 
+                    // Environment.CurrentDirectory allocates every call and locks internally - since we don't need it in the hot path be sure to invoke it lazily.
                     if (result.FunctionAppDirectory != null)
                     {
                         result.FunctionDirectory = System.IO.Path.Combine(result.FunctionAppDirectory, result.FunctionName);
+                    }
+                    else
+                    {
+                        result.FunctionDirectory = Environment.CurrentDirectory;
                     }
 
                     return result;
