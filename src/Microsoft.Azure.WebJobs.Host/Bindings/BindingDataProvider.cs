@@ -96,15 +96,37 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
 
             Dictionary<string, Type> contract = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, Type> declaringTypes = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
+
             foreach (PropertyHelper property in bindingDataProperties)
             {
-                if (contract.ContainsKey(property.Name))
+                if (!contract.ContainsKey(property.Name))
                 {
-                    throw new InvalidOperationException(
-                        string.Format(CultureInfo.InvariantCulture,
-                        "Multiple properties named '{0}' found in type '{1}'.", property.Name, type.Name));
+                    contract.Add(property.Name, property.Property.PropertyType);
+                    declaringTypes.Add(property.Name, property.Property.DeclaringType);
                 }
-                contract.Add(property.Name, property.Property.PropertyType);
+                else
+                {
+                    // If the mapped property is declared on the type being bound, then the property was
+                    // shadowed.  Consider the direct property to have priority and replace the existing member.
+                    if (property.Property.DeclaringType == type)
+                    {
+                        contract[property.Name] = property.Property.PropertyType;
+                        declaringTypes[property.Name] = property.Property.DeclaringType;
+                    }
+                    else if (declaringTypes[property.Name] != type)
+                    {
+                        // If the mapped property was not directly declared on the type being bound and neither
+                        // is the current property, then the property was shadowed somewhere in the base hierarchy.
+                        // Because it's not clear which property we should use, consider this an invalid scenario.
+                        throw new InvalidOperationException(
+                            string.Format(CultureInfo.InvariantCulture,
+                            "Multiple properties named '{0}' found in type '{1}'.", property.Name, type.Name));
+                    }
+
+                    // If the mapped property was directly declared on the type being bound and the current property
+                    // was not, take no action.  Keep the direct property and silently ignore the shadowed version.
+                }
             }
 
             return new BindingDataProvider(type, contract, bindingDataProperties);

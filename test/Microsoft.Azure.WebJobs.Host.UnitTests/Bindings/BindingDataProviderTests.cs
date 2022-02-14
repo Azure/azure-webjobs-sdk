@@ -42,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
             // Assert
             Assert.NotNull(provider);
             Assert.NotNull(provider.Contract);
-            
+
             var names = provider.Contract.Keys.ToArray();
             Array.Sort(names);
             var expected = new string[] { "IntProp", "Nested", "StringProp" };
@@ -54,9 +54,22 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
         {
             var ex = Assert.Throws<InvalidOperationException>(() =>
             {
-                BindingDataProvider.FromType(typeof(DerivedWithNew));
+                BindingDataProvider.FromType(typeof(DerivedWithNewHierarchy));
             });
-            Assert.Equal("Multiple properties named 'A' found in type 'DerivedWithNew'.", ex.Message);
+            Assert.Equal("Multiple properties named 'A' found in type 'DerivedWithNewHierarchy'.", ex.Message);
+        }
+
+        [Fact]
+        public void FromType_ShadowedPropertiesOnType_ReturnsValidBindingData()
+        {
+            var provider = BindingDataProvider.FromType(typeof(DerivedWithNew));
+            var json = @"{""a"":27}";
+            var value = JsonConvert.DeserializeObject(json, typeof(DerivedWithNew));
+            var bindingData = provider.GetBindingData(value);
+
+            Assert.NotNull(bindingData);
+            Assert.Equal(1, bindingData.Count);
+            Assert.Equal(27, bindingData["a"]);
         }
 
         [Fact]
@@ -251,6 +264,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
         private class DerivedWithNew : Base
         {
             new public int A { get; set; }
+        }
+
+        private class DerivedWithNewHierarchy : DerivedWithNew
+        {
         }
 
         private class Derived : Base
