@@ -7,22 +7,26 @@ using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Host.Config
 {
-    internal class WebJobsExtensionOptionsConfiguration<TOptions> : IConfigureOptions<TOptions> where TOptions : class
+    internal class WebJobsExtensionOptionsConfiguration<TOptions> : IWebJobsExtensionOptionsConfiguration<TOptions> where TOptions : class
     {
-        private readonly string _extensionName;
         private readonly IConfiguration _configuration;
         private readonly Action<IConfiguration, string, TOptions> _configure;
+        private readonly IExtensionInfo _extensionInfo;
 
-        public WebJobsExtensionOptionsConfiguration(IConfiguration configuration, string extensionName, Action<IConfiguration, string, TOptions> configure)
+        public WebJobsExtensionOptionsConfiguration(IConfiguration configuration, IExtensionInfo extensionInfo, Action<IConfiguration, string, TOptions> configure)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _configure = configure ?? throw new ArgumentNullException(nameof(configure));
-            _extensionName = extensionName;
+            _extensionInfo = extensionInfo;
         }
+
+        public IExtensionInfo ExtensionInfo => _extensionInfo;
+
+        public Type OptionType => typeof(TOptions);
 
         public void Configure(TOptions options)
         {
-            var extensionPath = _configuration.GetWebJobsExtensionConfigurationSectionPath(_extensionName);
+            var extensionPath = _configuration.GetWebJobsExtensionConfigurationSectionPath(_extensionInfo.ConfigurationSectionName);
             _configure(_configuration, extensionPath, options);
         }
     }

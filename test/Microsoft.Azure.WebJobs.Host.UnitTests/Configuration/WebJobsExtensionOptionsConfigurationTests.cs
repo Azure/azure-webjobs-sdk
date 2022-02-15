@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Extensions.Configuration;
+using Moq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Configuration
@@ -65,8 +66,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Configuration
         {
             var config = new ConfigurationBuilder()
                 .AddInMemoryCollection(configValues);
+            var extensionInfo = new Mock<IExtensionInfo>();
+            extensionInfo.Setup(p => p.Name).Returns(extensionName);
+            extensionInfo.Setup(p => p.ConfigurationSectionName).Returns(extensionName);
 
-            var optionsConfig = new WebJobsExtensionOptionsConfiguration<TOptions>(config.Build(), extensionName, (s, p, o) => s.GetSection(p).Bind(o));
+            var optionsConfig = new WebJobsExtensionOptionsConfiguration<TOptions>(config.Build(), extensionInfo.Object, (s, p, o) => s.GetSection(p).Bind(o));
             var options = new TOptions();
 
             // Act
