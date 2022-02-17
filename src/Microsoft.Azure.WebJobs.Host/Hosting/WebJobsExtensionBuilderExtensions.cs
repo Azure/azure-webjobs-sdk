@@ -7,6 +7,7 @@ using System.Diagnostics;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs
@@ -71,9 +72,9 @@ namespace Microsoft.Azure.WebJobs
                 throw new ArgumentNullException(nameof(configure));
             }
 
-            builder.Services.AddSingleton<IConfigureOptions<TOptions>>((IServiceProvider p) => new WebJobsExtensionOptionsConfiguration<TOptions>(p.GetService<IConfiguration>(), builder.ExtensionInfo, configure));
-            builder.Services.AddSingleton<IWebJobsExtensionOptionsConfiguration<TOptions>>((IServiceProvider p) => new WebJobsExtensionOptionsConfiguration<TOptions>(p.GetService<IConfiguration>(), builder.ExtensionInfo, configure));
-            
+            builder.Services.AddSingleton<IConfigureOptions<TOptions>>(p => new WebJobsExtensionOptionsConfiguration<TOptions>(p.GetService<IConfiguration>(), builder.ExtensionInfo, configure));
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IWebJobsExtensionOptionsConfiguration, WebJobsExtensionOptionsConfiguration<TOptions>>(p => new WebJobsExtensionOptionsConfiguration<TOptions>(p.GetService<IConfiguration>(), builder.ExtensionInfo, configure)));
+
             return builder;
         }
     }

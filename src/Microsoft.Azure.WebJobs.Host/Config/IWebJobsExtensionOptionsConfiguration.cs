@@ -8,9 +8,9 @@ using System.Text;
 
 namespace Microsoft.Azure.WebJobs.Host.Config
 {
-    public interface IWebJobsExtensionOptionsConfiguration<TOptions> : IConfigureOptions<TOptions> where TOptions : class
+    public interface IWebJobsExtensionOptionsConfiguration
     {
-        IExtensionInfo ExtensionInfo { get; }
+        ExtensionInfo ExtensionInfo { get; }
         Type OptionType { get; }
     }
 }
