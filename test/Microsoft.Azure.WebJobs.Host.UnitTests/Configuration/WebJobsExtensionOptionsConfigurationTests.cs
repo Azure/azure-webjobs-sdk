@@ -66,6 +66,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Configuration
         {
             var config = new ConfigurationBuilder()
                 .AddInMemoryCollection(configValues);
+
             var extensionInfo = new Mock<IExtensionInfo>();
             extensionInfo.Setup(p => p.Name).Returns(extensionName);
             extensionInfo.Setup(p => p.ConfigurationSectionName).Returns(extensionName);

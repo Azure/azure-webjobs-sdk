@@ -213,7 +213,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IWebJobsExceptionHandlerFactory",
                 "IWebJobsExtensionBuilder",
                 "IWebJobsExtensionConfiguration`1",
-                "IWebJobsExtensionOptionsConfiguration`1",
+                "IWebJobsExtensionOptionsConfiguration",
                 "IWebJobsStartup",
                 "IWebJobsStartup2",
                 "IWebJobsStartupTypeLocator",

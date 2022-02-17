@@ -10,7 +10,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
 {
     public interface IWebJobsExtensionOptionsConfiguration
     {
-        ExtensionInfo ExtensionInfo { get; }
+        IExtensionInfo ExtensionInfo { get; }
         Type OptionType { get; }
     }
 }
