@@ -11,7 +11,7 @@ using static Microsoft.Azure.WebJobs.Utility;
 
 namespace Microsoft.Azure.WebJobs
 {
-    public class ExtensionInfo : IExtensionInfo
+    public class ExtensionInfo
     {
         private ExtensionInfo(string name, string configurationSectionName)
         {

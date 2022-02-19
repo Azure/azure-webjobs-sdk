@@ -73,7 +73,7 @@ namespace Microsoft.Azure.WebJobs
             }
 
             builder.Services.AddSingleton<IConfigureOptions<TOptions>>(p => new WebJobsExtensionOptionsConfiguration<TOptions>(p.GetService<IConfiguration>(), builder.ExtensionInfo, configure));
-            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IWebJobsExtensionOptionsConfiguration, WebJobsExtensionOptionsConfiguration<TOptions>>(p => new WebJobsExtensionOptionsConfiguration<TOptions>(p.GetService<IConfiguration>(), builder.ExtensionInfo, configure)));
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IExtensionOptionsInfo, ExtensionOptionsInfo<TOptions>>(p => new ExtensionOptionsInfo<TOptions>(builder.ExtensionInfo)));
 
             return builder;
         }
