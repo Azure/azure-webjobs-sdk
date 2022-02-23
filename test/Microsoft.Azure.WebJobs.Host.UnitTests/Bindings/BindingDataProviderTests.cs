@@ -50,26 +50,45 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
         }
 
         [Fact]
-        public void FromType_DuplicatePropertiesDetected_Throws()
+        public void FromType_ShadowedPropertiesInParent_ReturnsValidBindingData()
         {
-            var ex = Assert.Throws<InvalidOperationException>(() =>
-            {
-                BindingDataProvider.FromType(typeof(DerivedWithNewHierarchy));
-            });
-            Assert.Equal("Multiple properties named 'A' found in type 'DerivedWithNewHierarchy'.", ex.Message);
+            var provider = BindingDataProvider.FromType(typeof(DerivedWithShadowParent));
+            var json = @"{""a"":27, ""b"" : 123}";
+            var value = JsonConvert.DeserializeObject(json, typeof(DerivedWithShadowParent));
+            var bindingData = provider.GetBindingData(value);
+
+            Assert.NotNull(bindingData);
+            Assert.Equal(2, bindingData.Count);
+            Assert.Equal(27, bindingData["a"]);
+            Assert.Equal(123, bindingData["b"]);
+        }
+
+        [Fact]
+        public void FromType_ShadowedPropertiesInHierarchy_ReturnsValidBindingData()
+        {
+            var provider = BindingDataProvider.FromType(typeof(DerivedWithShadowHierarchy));
+            var json = @"{""a"":27, ""b"" : ""string-value""}";
+            var value = JsonConvert.DeserializeObject(json, typeof(DerivedWithShadowHierarchy));
+            var bindingData = provider.GetBindingData(value);
+
+            Assert.NotNull(bindingData);
+            Assert.Equal(2, bindingData.Count);
+            Assert.Equal(27, bindingData["a"]);
+            Assert.Equal("string-value", bindingData["b"]);
         }
 
         [Fact]
         public void FromType_ShadowedPropertiesOnType_ReturnsValidBindingData()
         {
-            var provider = BindingDataProvider.FromType(typeof(DerivedWithNew));
-            var json = @"{""a"":27}";
-            var value = JsonConvert.DeserializeObject(json, typeof(DerivedWithNew));
+            var provider = BindingDataProvider.FromType(typeof(DerivedWithShadow));
+            var json = @"{""a"":27, ""b"" : 123}";
+            var value = JsonConvert.DeserializeObject(json, typeof(DerivedWithShadow));
             var bindingData = provider.GetBindingData(value);
 
             Assert.NotNull(bindingData);
-            Assert.Equal(1, bindingData.Count);
+            Assert.Equal(2, bindingData.Count);
             Assert.Equal(27, bindingData["a"]);
+            Assert.Equal(123, bindingData["b"]);
         }
 
         [Fact]
@@ -173,7 +192,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
 
             // Get binding data for the type used when creating the provider
             Assert.Equal(1, bindingData.Count);
-            Assert.Equal(1, bindingData["a"]);
+            Assert.Equal(1L, bindingData["a"]);
         }
 
         [Fact]
@@ -258,21 +277,26 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
 
         private class Base
         {
-            public int? A { get; set; }
-        }
-
-        private class DerivedWithNew : Base
-        {
-            new public int A { get; set; }
-        }
-
-        private class DerivedWithNewHierarchy : DerivedWithNew
-        {
+            public long? A { get; set; }
         }
 
         private class Derived : Base
         {
             public int B { get; set; }
+        }
+
+        private class DerivedWithShadow : Derived
+        {
+            new public int A { get; set; }
+        }
+
+        private class DerivedWithShadowParent : DerivedWithShadow
+        {
+        }
+
+        private class DerivedWithShadowHierarchy : DerivedWithShadowParent
+        {
+            new public string B { get; set; }
         }
     }
 }

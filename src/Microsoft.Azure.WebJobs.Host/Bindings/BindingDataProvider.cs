@@ -89,44 +89,25 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             }
 
             // The properties on user-defined types are valid binding data.
-            IReadOnlyList<PropertyHelper> bindingDataProperties = PropertyHelper.GetProperties(type);
+            IReadOnlyList<PropertyHelper> bindingDataProperties = PropertyHelper.GetVisibleProperties(type);
             if (bindingDataProperties.Count == 0)
             {
                 return null;
             }
 
             Dictionary<string, Type> contract = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
-            Dictionary<string, Type> declaringTypes = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
-
             foreach (PropertyHelper property in bindingDataProperties)
             {
-                if (!contract.ContainsKey(property.Name))
+                // Because only visible properties are being returned from the type hierarchy, there should
+                // be no duplication due to shadowing and this condition should never be met.  This check
+                // exists only as guard to ensure a meaningful error message should something unexpected occur.
+                if (contract.ContainsKey(property.Name))
                 {
-                    contract.Add(property.Name, property.Property.PropertyType);
-                    declaringTypes.Add(property.Name, property.Property.DeclaringType);
+                    throw new InvalidOperationException(
+                        string.Format(CultureInfo.InvariantCulture,
+                        "Multiple visible properties named '{0}' found for type '{1}'.", property.Name, type.Name));
                 }
-                else
-                {
-                    // If the mapped property is declared on the type being bound, then the property was
-                    // shadowed.  Consider the direct property to have priority and replace the existing member.
-                    if (property.Property.DeclaringType == type)
-                    {
-                        contract[property.Name] = property.Property.PropertyType;
-                        declaringTypes[property.Name] = property.Property.DeclaringType;
-                    }
-                    else if (declaringTypes[property.Name] != type)
-                    {
-                        // If the mapped property was not directly declared on the type being bound and neither
-                        // is the current property, then the property was shadowed somewhere in the base hierarchy.
-                        // Because it's not clear which property we should use, consider this an invalid scenario.
-                        throw new InvalidOperationException(
-                            string.Format(CultureInfo.InvariantCulture,
-                            "Multiple properties named '{0}' found in type '{1}'.", property.Name, type.Name));
-                    }
-
-                    // If the mapped property was directly declared on the type being bound and the current property
-                    // was not, take no action.  Keep the direct property and silently ignore the shadowed version.
-                }
+                contract.Add(property.Name, property.Property.PropertyType);
             }
 
             return new BindingDataProvider(type, contract, bindingDataProperties);
