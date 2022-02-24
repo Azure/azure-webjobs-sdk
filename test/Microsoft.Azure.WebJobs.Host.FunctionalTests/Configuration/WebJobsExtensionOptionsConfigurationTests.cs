@@ -101,6 +101,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Configuration
                 }).Build();
 
             var options = host.Services.GetService<IOptions<TestOptions>>();
+
             Assert.Equal("test1", options.Value.Config1);
             Assert.Equal("test2", options.Value.Config2);
             Assert.Equal("fromconfigureoptions", options.Value.Config3);
