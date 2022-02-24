@@ -1,19 +1,20 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using Microsoft.Azure.WebJobs.Hosting;
 using System;
 
 namespace Microsoft.Azure.WebJobs.Host.Config
 {
-    public class ExtensionOptionsInfo<TOptions> : IExtensionOptionsInfo
-    {
-        private readonly ExtensionInfo _extensionInfo;
-        public ExtensionOptionsInfo(ExtensionInfo extensionInfo)
+    public class ExtensionOptionsInfo : IExtensionOptionsInfo
+    {   
+        public ExtensionOptionsInfo(ExtensionInfo extensionInfo, IOptionsFormatter optionsFormatter)
         {
-            _extensionInfo = extensionInfo;
+            ExtensionInfo = extensionInfo;
+            OptionsFormatter = optionsFormatter;
         }
-        public ExtensionInfo ExtensionInfo => _extensionInfo;
 
-        public Type OptionType => typeof(TOptions);
+        public ExtensionInfo ExtensionInfo { get; private set; }
+        public IOptionsFormatter OptionsFormatter { get; private set; }
     }
 }

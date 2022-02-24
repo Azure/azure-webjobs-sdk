@@ -2,10 +2,8 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Collections.Generic;
-using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Extensions.Configuration;
-using Moq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Configuration
@@ -21,7 +19,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Configuration
                 { "azurewebjobs:extensions:testext:testvalue2", "test2" },
             };
 
-            TestOptions options = ConfigureOptions<TestOptions, TestExtensionConfigProvider>(config);
+            TestOptions options = ConfigureOptions<TestOptions>(config, "testext");
 
             // Assert
             Assert.Equal("test1", options.TestValue1);
@@ -38,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Configuration
                 { "testroot:extensions:testext:testvalue2", "test2" },
             };
 
-            TestOptions options = ConfigureOptions<TestOptions, TestExtensionConfigProvider>(config);
+            TestOptions options = ConfigureOptions<TestOptions>(config, "testext");
 
             // Assert
             Assert.Equal("test1", options.TestValue1);
@@ -55,21 +53,20 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Configuration
                 { "extensions:testext:testvalue2", "test2" },
             };
 
-            TestOptions options = ConfigureOptions<TestOptions, TestExtensionConfigProvider>(config);
+            TestOptions options = ConfigureOptions<TestOptions>(config, "testext");
 
             // Assert
             Assert.Equal("test1", options.TestValue1);
             Assert.Equal("test2", options.TestValue2);
         }
 
-        private TOptions ConfigureOptions<TOptions, TExtension>(IDictionary<string, string> configValues) where TExtension : IExtensionConfigProvider
+        private TOptions ConfigureOptions<TOptions>(IDictionary<string, string> configValues, string extensionName = null)
             where TOptions : class, new()
         {
             var config = new ConfigurationBuilder()
                 .AddInMemoryCollection(configValues);
-            var extensionInfo = ExtensionInfo.FromExtension<TExtension>();
 
-            var optionsConfig = new WebJobsExtensionOptionsConfiguration<TOptions>(config.Build(), extensionInfo, (s, p, o) => s.GetSection(p).Bind(o));
+            var optionsConfig = new WebJobsExtensionOptionsConfiguration<TOptions>(config.Build(), extensionName, (s, p, o) => s.GetSection(p).Bind(o));
             var options = new TOptions();
 
             // Act
@@ -83,14 +80,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Configuration
             public string TestValue1 { get; set; }
 
             public string TestValue2 { get; set; }
-        }
-
-        [Extension("testext", "testext")]
-        private class TestExtensionConfigProvider : IExtensionConfigProvider
-        {
-            public void Initialize(ExtensionConfigContext context)
-            {
-            }
         }
     }
 }
