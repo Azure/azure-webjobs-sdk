@@ -78,6 +78,35 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Configuration
         }
 
         [Fact]
+        public void ConfigureAndBindOptions_BindsToConfiguration()
+        {
+            var host = new HostBuilder()
+                .ConfigureAppConfiguration(b =>
+                {
+                    b.AddInMemoryCollection(new Dictionary<string, string>
+                    {
+                        { "AzureWebJobs:extensions:test:config1", "test1" },
+                        { "AzureWebJobs:extensions:test:config2", "test2" },
+                        { "AzureWebJobs:extensions:test:config3", "test3" }
+                    });
+                })
+                .ConfigureDefaultTestHost(b =>
+                {
+                    b.AddExtension<TestExtensionConfigProvider>()
+                    .BindOptions<TestOptions>()
+                    .ConfigureOptions<TestOptions>((section, o) =>
+                    {
+                        o.Config3 = "fromconfigureoptions";
+                    });
+                }).Build();
+
+            var options = host.Services.GetService<IOptions<TestOptions>>();
+            Assert.Equal("test1", options.Value.Config1);
+            Assert.Equal("test2", options.Value.Config2);
+            Assert.Equal("fromconfigureoptions", options.Value.Config3);
+        }
+
+        [Fact]
         public void ConfigureExtensionOptionsInfo_BindToEnumeration()
         {
             var host = new HostBuilder()
