@@ -7,7 +7,7 @@ using System;
 
 namespace Microsoft.Azure.WebJobs.Host.Config
 {
-    public class ExtensionOptionsProvider<TOptions> : IExtensionOptionsProvider
+    internal class ExtensionOptionsProvider<TOptions> : IExtensionOptionsProvider
     {
         private IOptionsMonitor<TOptions> _optionsMonitor;
         public ExtensionOptionsProvider(ExtensionInfo extensionInfo, IOptionsMonitor<TOptions> optionsMonitor)

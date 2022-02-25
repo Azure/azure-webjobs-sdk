@@ -124,7 +124,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "ExecutionReason",
                 "ExtensionConfigContext",
                 "ExtensionInfo",
-                "ExtensionOptionsProvider`1",
                 "FluentBinder",
                 "FluentBindingRule`1",
                 "FluentConverterRules`2",
