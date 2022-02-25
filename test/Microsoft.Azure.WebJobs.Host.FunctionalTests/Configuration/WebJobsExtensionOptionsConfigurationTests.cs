@@ -116,11 +116,8 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Configuration
                     b.AddInMemoryCollection(new Dictionary<string, string>
                     {
                         { "AzureWebJobs:extensions:test:config1", "test1" },
-                        { "AzureWebJobs:extensions:test:config2", "test2" },
-                        { "AzureWebJobs:extensions:test:config3", "test3" },
                         { "AzureWebJobs:extensions:eventHubs:config1", "test1" },
-                        { "AzureWebJobs:extensions:eventHubs:config2", "test2" },
-                        { "AzureWebJobs:extensions:eventHubs:config3", "test3" },
+                        { "AzureWebJobs:extensions:noInterface:config1", "test1" }
                     });
                 })
                 .ConfigureDefaultTestHost(b =>
@@ -131,16 +128,22 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Configuration
                     b.AddExtension<TestEventHubExtensionConfigProvider>()
                     .BindOptions<TestEventHubOptions>();
 
-                    b.AddExtension<TestIgnoredExtensionConfigProvider>()
-                    .BindOptions<TestIgnoredOptions>();
+                    b.AddExtension<TestNoInterfaceExtensionConfigProvider>()
+                    .BindOptions<TestNoInterfaceOptions>();
+
+                    b.AddExtension<TestExtensionConfigProvider>()
+                    .BindOptions<TestOptions>()
+                    .BindOptions<TestOptions>();
                 }).Build();
             
-            var extensionOptionsInfo = host.Services.GetServices<IExtensionOptionsInfo>().ToArray();
-            Assert.Equal(2, extensionOptionsInfo.Count());
-            Assert.Equal("Test", extensionOptionsInfo[0].ExtensionInfo.ConfigurationSectionName);
-            Assert.Equal("test1", ((TestOptions)extensionOptionsInfo[0].OptionsFormatter).Config1);
-            Assert.Equal("EventHubs", extensionOptionsInfo[1].ExtensionInfo.ConfigurationSectionName);
-            Assert.Equal("test1", ((TestEventHubOptions)extensionOptionsInfo[1].OptionsFormatter).Config1);
+            var extensionOptionsProvider = host.Services.GetServices<IExtensionOptionsProvider>().ToArray();
+            Assert.Equal(3, extensionOptionsProvider.Count());
+            Assert.Equal("Test", extensionOptionsProvider[0].ExtensionInfo.ConfigurationSectionName);
+            Assert.Equal("test1", ((TestOptions)extensionOptionsProvider[0].GetOptions()).Config1);
+            Assert.Equal("EventHubs", extensionOptionsProvider[1].ExtensionInfo.ConfigurationSectionName);
+            Assert.Equal("test1", ((TestEventHubOptions)extensionOptionsProvider[1].GetOptions()).Config1);
+            Assert.Equal("NoInterface", extensionOptionsProvider[2].ExtensionInfo.ConfigurationSectionName);
+            Assert.Equal("test1", ((TestNoInterfaceOptions)extensionOptionsProvider[2].GetOptions()).Config1);
         }
 
         private class TestExtensionConfigProvider : IExtensionConfigProvider
@@ -185,15 +188,15 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Configuration
             }
         }
 
-        [Extension("Ignored")]
-        private class TestIgnoredExtensionConfigProvider : IExtensionConfigProvider
+        [Extension("NoInterface", "NoInterface")]
+        private class TestNoInterfaceExtensionConfigProvider : IExtensionConfigProvider
         {
             public void Initialize(ExtensionConfigContext context)
             {
             }
         }
 
-        private class TestIgnoredOptions
+        private class TestNoInterfaceOptions
         {
             public string Config1 { get; set; }
 

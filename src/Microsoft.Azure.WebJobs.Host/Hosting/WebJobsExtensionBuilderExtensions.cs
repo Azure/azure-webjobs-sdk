@@ -22,7 +22,7 @@ namespace Microsoft.Azure.WebJobs
         /// <typeparam name="TOptions">The type of options to bind.</typeparam>
         /// <param name="builder">The <see cref="IWebJobsExtensionBuilder"/> to configure.</param>
         /// <returns>The configured <see cref="IWebJobsExtensionBuilder"</returns>
-        public static IWebJobsExtensionBuilder BindOptions<TOptions>(this IWebJobsExtensionBuilder builder) where TOptions : class, new()
+        public static IWebJobsExtensionBuilder BindOptions<TOptions>(this IWebJobsExtensionBuilder builder) where TOptions : class
         {
             builder.ConfigureOptions<TOptions>((section, options) =>
             {
@@ -42,7 +42,7 @@ namespace Microsoft.Azure.WebJobs
         /// <param name="builder">The <see cref="IWebJobsExtensionBuilder"/> to configure.</param>
         /// <param name="configure">The <see cref="Action{IConfigurationSection, TOptions}"/> that will be invoked when configuring the options.</param>
         /// <returns>The configured <see cref="IWebJobsExtensionBuilder"</returns>
-        public static IWebJobsExtensionBuilder ConfigureOptions<TOptions>(this IWebJobsExtensionBuilder builder, Action<IConfigurationSection, TOptions> configure) where TOptions : class, new()
+        public static IWebJobsExtensionBuilder ConfigureOptions<TOptions>(this IWebJobsExtensionBuilder builder, Action<IConfigurationSection, TOptions> configure) where TOptions : class
         {
             if (configure == null)
             {
@@ -66,7 +66,7 @@ namespace Microsoft.Azure.WebJobs
         /// <param name="configure">The <see cref="Action{IConfiguration, string, TOptions}"/> that will be invoked when configuring the options, providing the root configuration, the
         /// extension configuration section path and the option to configure.</param>
         /// <returns>The configured <see cref="IWebJobsExtensionBuilder"</returns>
-        public static IWebJobsExtensionBuilder ConfigureOptions<TOptions>(this IWebJobsExtensionBuilder builder, Action<IConfiguration, string, TOptions> configure) where TOptions : class, new()
+        public static IWebJobsExtensionBuilder ConfigureOptions<TOptions>(this IWebJobsExtensionBuilder builder, Action<IConfiguration, string, TOptions> configure) where TOptions : class
         {
             if (configure == null)
             {
@@ -76,10 +76,7 @@ namespace Microsoft.Azure.WebJobs
             builder.Services.AddSingleton<IConfigureOptions<TOptions>>(p =>
                 new WebJobsExtensionOptionsConfiguration<TOptions>(p.GetService<IConfiguration>(), builder.ExtensionInfo.ConfigurationSectionName, configure));
 
-            if (typeof(IOptionsFormatter).IsAssignableFrom(typeof(TOptions)))
-            {
-                builder.Services.AddSingleton<IExtensionOptionsInfo>(p => new ExtensionOptionsInfo(builder.ExtensionInfo, p.GetService<IOptions<TOptions>>().Value as IOptionsFormatter));
-            }
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IExtensionOptionsProvider, ExtensionOptionsProvider<TOptions>>(p => new ExtensionOptionsProvider<TOptions>(builder.ExtensionInfo, p.GetService<IOptionsMonitor<TOptions>>())));
 
             return builder;
         }
