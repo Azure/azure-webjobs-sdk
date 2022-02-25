@@ -3,17 +3,14 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Xunit;
 using Microsoft.Azure.WebJobs.Hosting;
-using Xunit.Sdk;
 using Newtonsoft.Json;
 using Microsoft.Azure.WebJobs.Description;
 using System.Linq;
