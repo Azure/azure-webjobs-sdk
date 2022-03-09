@@ -42,6 +42,8 @@ namespace Microsoft.Azure.WebJobs
         // Points to a completed task after initialization. 
         private Task _hostInitializationTask = null;
 
+        private bool HasInitialized => _hostInitializationTask?.IsCompleted ?? false;
+
         private int _state;
         private Task _stopTask;
         private bool _disposed;
@@ -188,7 +190,7 @@ namespace Microsoft.Azure.WebJobs
         /// <param name="arguments">The argument names and values to bind to parameters in the job method. In addition to parameter values, these may also include binding data values. </param>
         /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
         /// <returns>A <see cref="Task"/> that will call the job method.</returns>
-        public async Task CallAsync(MethodInfo method, IDictionary<string, object> arguments, CancellationToken cancellationToken = default(CancellationToken))
+        public Task CallAsync(MethodInfo method, IDictionary<string, object> arguments, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (method == null)
             {
@@ -197,11 +199,21 @@ namespace Microsoft.Azure.WebJobs
 
             ThrowIfDisposed();
 
-            await EnsureHostInitializedAsync(cancellationToken);
+            async Task CallAsyncAwaited(MethodInfo method, IDictionary<string, object> arguments, CancellationToken cancellationToken)
+            {
+                await EnsureHostInitializedAsync(cancellationToken);
+                var function = _context.FunctionLookup.Lookup(method);
+                await CallAsyncCore(function, method, arguments, cancellationToken);
+            }
+
+            // Skip async state machine if we're initialized
+            if (!HasInitialized)
+            {
+                return CallAsyncAwaited(method, arguments, cancellationToken);
+            }
 
             var function = _context.FunctionLookup.Lookup(method);
-
-            await CallAsyncCore(function, method, arguments, cancellationToken);
+            return CallAsyncCore(function, method, arguments, cancellationToken);
         }
 
         /// <summary>Calls a job method.</summary>
@@ -209,7 +221,7 @@ namespace Microsoft.Azure.WebJobs
         /// <param name="arguments">The argument names and values to bind to parameters in the job method. In addition to parameter values, these may also include binding data values. </param>
         /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
         /// <returns>A <see cref="Task"/> that will call the job method.</returns>
-        public async Task CallAsync(string name, IDictionary<string, object> arguments = null, CancellationToken cancellationToken = default(CancellationToken))
+        public Task CallAsync(string name, IDictionary<string, object> arguments = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (name == null)
             {
@@ -217,12 +229,23 @@ namespace Microsoft.Azure.WebJobs
             }
 
             ThrowIfDisposed();
+            
+            async Task CallAsyncAwaited(string nameCancellationToken, IDictionary<string, object> arguments, CancellationToken cancellationToken)
+            {
+                await EnsureHostInitializedAsync(cancellationToken);
+                IFunctionDefinition function = _context.FunctionLookup.LookupByName(name);
+                await CallAsyncCore(function, name, arguments, cancellationToken);
+            }
 
-            await EnsureHostInitializedAsync(cancellationToken);
+            // Skip async state machine if we're initialized
+            if (!HasInitialized)
+            {
+                return CallAsyncAwaited(name, arguments, cancellationToken);
+            }
 
             IFunctionDefinition function = _context.FunctionLookup.LookupByName(name);
 
-            await CallAsyncCore(function, name, arguments, cancellationToken);
+            return CallAsyncCore(function, name, arguments, cancellationToken);
         }
 
 
