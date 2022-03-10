@@ -128,7 +128,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             {
                 // Log that the function failed.
                 FunctionCompletedMessage failedMessage = CreateFailedMessage(message);
-                await _functionInstanceLogger.LogFunctionCompletedAsync(failedMessage, cancellationToken);
+                _functionInstanceLogger.LogFunctionCompleted(failedMessage);
             }
         }
 

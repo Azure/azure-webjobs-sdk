@@ -121,8 +121,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                     // If function started was logged, don't cancel calls to log function completed.
                     bool loggedStartedEvent = functionStartedMessageId != null;
-                    var logCompletedCancellationToken = loggedStartedEvent ? CancellationToken.None : cancellationToken;
-                    await _functionInstanceLogger.LogFunctionCompletedAsync(functionStartedMessage, logCompletedCancellationToken);
+                    _functionInstanceLogger.LogFunctionCompleted(functionStartedMessage);
 
                     if (instanceLogEntry != null)
                     {
@@ -133,7 +132,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                     if (loggedStartedEvent)
                     {
-                        await _functionInstanceLogger.DeleteLogFunctionStartedAsync(functionStartedMessageId, cancellationToken);
+                        _functionInstanceLogger.DeleteLogFunctionStarted(functionStartedMessageId);
                     }
                 }
 
@@ -288,7 +287,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                     // Log started events
                     CompleteStartedMessage(message, outputDefinition, parameterHelper);
-                    string startedMessageId = await _functionInstanceLogger.LogFunctionStartedAsync(message, cancellationToken);
+                    string startedMessageId = _functionInstanceLogger.LogFunctionStarted(message);
 
                     instanceLogEntry.Arguments = message.Arguments;
                     await _functionEventCollector.AddAsync(instanceLogEntry);
