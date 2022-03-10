@@ -166,6 +166,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IEventCollectorFactory",
                 "IEventCollectorProvider",
                 "IExtensionConfigProvider",
+                "IExtensionOptionsProvider",
                 "IExtensionRegistry",
                 "IExtensionRegistryExtensions",
                 "IExtensionRegistryFactory",
