@@ -48,6 +48,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         private bool _foundMessageSinceLastDelay;
         private bool _disposed;
         private TaskCompletionSource<object> _stopWaitingTaskSource;
+        private Lazy<string> _details;
 
         // for mock testing only
         internal QueueListener()
@@ -100,6 +101,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
             _logger = loggerFactory.CreateLogger<QueueListener>();
             _functionDescriptor = functionDescriptor ?? throw new ArgumentNullException(nameof(functionDescriptor));
             _functionId = functionId ?? _functionDescriptor.Id;
+            _details = new Lazy<string>(() => $"queue name='{_queue.Name}', storage account name='{_queue.ServiceClient.GetAccountName()}'");
 
             // if the function runs longer than this, the invisibility will be updated
             // on a timer periodically for the duration of the function execution
@@ -141,6 +143,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         {
             ThrowIfDisposed();
             _timer.Start();
+            _logger.LogDebug($"Storage queue listener started: {_details.Value}");
             return Task.FromResult(0);
         }
 
@@ -148,10 +151,21 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         {
             using (cancellationToken.Register(() => _shutdownCancellationTokenSource.Cancel()))
             {
-                ThrowIfDisposed();
-                _timer.Cancel();
-                await Task.WhenAll(_processing);
-                await _timer.StopAsync(cancellationToken);
+                try
+                {
+                    ThrowIfDisposed();
+                    _timer.Cancel();
+                    await Task.WhenAll(_processing);
+                    await _timer.StopAsync(cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Storage queue listener encountered an error while stopping ({_details.Value})");
+                }
+                finally
+                {
+                    _logger.LogDebug($"Storage queue listener stopped ({_details.Value})");
+                }
             }
         }
 
