@@ -20,6 +20,11 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private bool _disposed;
         private Lazy<string> _details;
 
+        // for mock test purposes only
+        internal BlobListener(ISharedListener sharedListener)
+        {
+        }
+
         public BlobListener(ISharedListener sharedListener, CloudBlobContainer container, ILoggerFactory loggerFactory)
         {
             _sharedListener = sharedListener;
