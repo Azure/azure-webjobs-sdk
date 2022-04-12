@@ -94,7 +94,7 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<DefaultTriggerBindingFactory>();
             services.TryAddSingleton<ITriggerBindingProvider>(p => p.GetRequiredService<DefaultTriggerBindingFactory>().Create());
 
-            // Exception handler
+            // Exception handler Test
             services.TryAddSingleton<IWebJobsExceptionHandlerFactory, DefaultWebJobsExceptionHandlerFactory>();
             services.TryAddSingleton<IWebJobsExceptionHandler>(p => p.GetRequiredService<IWebJobsExceptionHandlerFactory>().Create(p.GetRequiredService<IHost>()));
 
