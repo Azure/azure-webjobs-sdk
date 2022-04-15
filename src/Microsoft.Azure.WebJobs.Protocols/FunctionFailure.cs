@@ -33,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
             {
                 Exception = ex,
                 ExceptionType = ex.GetType().FullName,
-                ExceptionDetails = ex.ToDetails()
+                ExceptionDetails = ex is ObjectDisposedException ? ex.ToString() : ex.ToDetails() // Do not format ObjectDisposedExceptions to aid in debugging
             };
         }
     }
