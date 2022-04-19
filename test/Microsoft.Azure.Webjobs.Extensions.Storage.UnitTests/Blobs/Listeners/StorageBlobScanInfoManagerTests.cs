@@ -9,6 +9,8 @@ using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
 using Microsoft.Azure.Storage.Blob;
 using Newtonsoft.Json.Linq;
 using Xunit;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
 {
@@ -25,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             var client = account.CreateCloudBlobClient();
 
             // by default there is no table in this client
-            var manager = new StorageBlobScanInfoManager(hostId, client);
+            var manager = new StorageBlobScanInfoManager(hostId, client, new TestExceptionHandler(), NullLogger<BlobListener>.Instance);
 
             var result = await manager.LoadLatestScanAsync(storageAccountName, containerName);
 
@@ -44,7 +46,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             var container = client.GetContainerReference(HostContainerNames.Hosts);
             await container.CreateIfNotExistsAsync();
 
-            var manager = new StorageBlobScanInfoManager(hostId, client);
+            var manager = new StorageBlobScanInfoManager(hostId, client, new TestExceptionHandler(), NullLogger<BlobListener>.Instance);
 
             var result = await manager.LoadLatestScanAsync(storageAccountName, containerName);
 
@@ -66,7 +68,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             var blob = GetBlockBlobReference(client, hostId, storageAccountName, containerName);
             await blob.UploadTextAsync(string.Format("{{ \"LatestScan\" : \"{0}\" }}", now.ToString("o")));
 
-            var manager = new StorageBlobScanInfoManager(hostId, client);
+            var manager = new StorageBlobScanInfoManager(hostId, client, new TestExceptionHandler(), NullLogger<BlobListener>.Instance);
 
             var result = await manager.LoadLatestScanAsync(storageAccountName, containerName);
 
@@ -86,7 +88,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             await container.CreateIfNotExistsAsync();
             DateTime now = DateTime.UtcNow;
 
-            var manager = new StorageBlobScanInfoManager(hostId, client);
+            var manager = new StorageBlobScanInfoManager(hostId, client, new TestExceptionHandler(), NullLogger<BlobListener>.Instance);
 
             await manager.UpdateLatestScanAsync(storageAccountName, containerName, now);
 
@@ -116,7 +118,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Blobs.Listeners
             var blob = GetBlockBlobReference(client, hostId, storageAccountName, containerName);
             await blob.UploadTextAsync(string.Format("{{ 'LatestScan' : '{0}' }}", past.ToString("o")));
 
-            var manager = new StorageBlobScanInfoManager(hostId, client);
+            var manager = new StorageBlobScanInfoManager(hostId, client, new TestExceptionHandler(), NullLogger<BlobListener>.Instance);
 
             await manager.UpdateLatestScanAsync(storageAccountName, containerName, now);
 

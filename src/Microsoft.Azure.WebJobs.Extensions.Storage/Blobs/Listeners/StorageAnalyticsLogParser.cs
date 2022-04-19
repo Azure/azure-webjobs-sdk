@@ -11,7 +11,10 @@ using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.WebJobs.Extensions.Storage;
+using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
@@ -52,10 +55,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 
         private readonly Regex _compiledRegex;
         private readonly ILogger<BlobListener> _logger;
+        private readonly IWebJobsExceptionHandler _exceptionHandler;
 
-        public StorageAnalyticsLogParser(ILogger<BlobListener> logger)
+        public StorageAnalyticsLogParser(IWebJobsExceptionHandler exceptionHandler, ILogger<BlobListener> logger)
         {
             _compiledRegex = new Regex(FieldPattern, RegexOptions.Compiled);
+            _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -80,7 +85,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         {
             List<StorageAnalyticsLogEntry> entries = new List<StorageAnalyticsLogEntry>();
 
-            using (TextReader tr = new StreamReader(await blob.OpenReadAsync(cancellationToken)))
+            OperationContext operationContext = new OperationContext { ClientRequestID = Guid.NewGuid().ToString() };
+            using (TextReader tr = new StreamReader(await TimeoutHandler.ExecuteWithTimeout("ParseLogAsync", operationContext.ClientRequestID, _exceptionHandler,
+                    _logger, cancellationToken, () =>
+                    {
+                        return blob.OpenReadAsync(accessCondition: null, options: null, operationContext: operationContext, cancellationToken);
+                    })))
             {
                 for (int lineNumber = 1; ; lineNumber++)
                 {

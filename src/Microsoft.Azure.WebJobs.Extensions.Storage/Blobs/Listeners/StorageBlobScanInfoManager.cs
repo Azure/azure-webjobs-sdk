@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.WebJobs.Extensions.Storage;
+using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
@@ -18,8 +20,11 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         private readonly JsonSerializer _serializer;
         private readonly string _hostId;
         private CloudBlobDirectory _blobScanInfoDirectory;
+        private readonly IWebJobsExceptionHandler _exceptionHandler;
+        private readonly ILogger _logger;
 
-        public StorageBlobScanInfoManager(string hostId, CloudBlobClient blobClient)
+
+        public StorageBlobScanInfoManager(string hostId, CloudBlobClient blobClient, IWebJobsExceptionHandler exceptionHandler, ILogger logger)
         {
             if (string.IsNullOrEmpty(hostId))
             {
@@ -39,6 +44,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 
             string blobScanInfoDirectoryPath = string.Format(CultureInfo.InvariantCulture, "blobscaninfo/{0}", _hostId);
             _blobScanInfoDirectory = blobClient.GetContainerReference(HostContainerNames.Hosts).GetDirectoryReference(blobScanInfoDirectoryPath);
+            _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
+            _logger = logger;
         }
 
         public async Task<DateTime?> LoadLatestScanAsync(string storageAccountName, string containerName)
@@ -89,7 +96,13 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             try
             {
                 CloudBlockBlob scanInfoBlob = GetScanInfoBlobReference(storageAccountName, containerName);
-                await scanInfoBlob.UploadTextAsync(scanInfoLine);
+                OperationContext operationContext = new OperationContext { ClientRequestID = Guid.NewGuid().ToString() };
+                await TimeoutHandler.ExecuteWithTimeout("UpdateLatestScanAsync", operationContext.ClientRequestID, _exceptionHandler,
+                      _logger, CancellationToken.None, async() =>
+                      {
+                          await scanInfoBlob.UploadTextAsync(scanInfoLine, encoding: null, accessCondition: null, options: null, operationContext);
+                          return Task.FromResult(true);
+                      });                
             }
             catch
             {

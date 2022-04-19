@@ -33,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             _exceptionHandler = exceptionHandler ?? throw new ArgumentNullException(nameof(exceptionHandler));
 
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _parser = new StorageAnalyticsLogParser(logger);
+            _parser = new StorageAnalyticsLogParser(exceptionHandler, logger);
         }
 
         public CloudBlobClient Client

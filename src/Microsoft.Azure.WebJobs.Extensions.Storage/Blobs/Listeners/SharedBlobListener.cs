@@ -15,6 +15,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
     {
         private readonly IBlobListenerStrategy _strategy;
         private readonly ITaskSeriesTimer _timer;
+        private readonly IWebJobsExceptionHandler _exceptionHandler;
 
         private bool _started;
         private bool _disposed;
@@ -36,6 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 
             // Start the first iteration immediately.
             _timer = new TaskSeriesTimer(_strategy, exceptionHandler, initialWait: Task.Delay(0));
+            _exceptionHandler = exceptionHandler;
         }
 
         public IBlobWrittenWatcher BlobWritterWatcher
@@ -102,7 +104,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         {
             if (!account.IsDevelopmentStorageAccount())
             {
-                IBlobScanInfoManager scanInfoManager = new StorageBlobScanInfoManager(hostId, account.CreateCloudBlobClient());
+                IBlobScanInfoManager scanInfoManager = new StorageBlobScanInfoManager(hostId, account.CreateCloudBlobClient(), exceptionHandler, logger);
                 return new ScanBlobScanLogHybridPollingStrategy(scanInfoManager, exceptionHandler, logger);
             }
             else

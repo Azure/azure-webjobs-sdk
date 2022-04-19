@@ -3,6 +3,7 @@
 
 using System;
 using Microsoft.Azure.WebJobs.Host.Blobs.Listeners;
+using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -18,7 +19,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
         [InlineData(@"1.0;2014-09-08T18:49:25.5834856Z;PutBlob;Success;201;7;7;authenticated;storagesample;storagesample;blob;""https://storagesample.blob.core.windows.net/input//&quot;;&quot;?timeout=90"";""/storagesample/input//&quot;;&quot;"";9e9c90bc-0001-0052-2acc-abdcc9000000;0;192.100.0.102:4362;2011-08-18;325;0;225;0;0;""1B2M2Y8AsgTpgAmY7PhCfg=="";""1B2M2Y8AsgTpgAmY7PhCfg=="";""&quot;0x8D199ACBF198B4E&quot;"";Monday, 08-Sep-14 18:49:25 GMT;;""WA-Storage/1.7.0"";;", @"/storagesample/input//"";""")]
         public void TryParseLogEntry_IfValidLogEnry_ReturnsEntryInstance(string line, string blobPath)
         {
-            StorageAnalyticsLogParser parser = new StorageAnalyticsLogParser(NullLogger<BlobListener>.Instance);
+            StorageAnalyticsLogParser parser = new StorageAnalyticsLogParser(new TestExceptionHandler(), NullLogger<BlobListener>.Instance);
 
             StorageAnalyticsLogEntry entry = parser.TryParseLogEntry(line);
 
@@ -32,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Blobs.Listeners
         [InlineData(@"1.0;2014-09-08T18:49:25.5834856Z;CopyBlob;Success;202;13;13;authenticated;storagesample;storagesample;blob;""https://storagesample.blob.core.windows.net/sample-container/Copy-sample-blob.txt"";""/storagesample/sample-container/Copy-sample-blob.txt"";4;5;6;7;8;9;0;1;2;3;4;5;6;7;8;9;0;")]
         public void TryParseLogEntry_IfMalformedInput_ReturnsNull(string line)
         {
-            StorageAnalyticsLogParser parser = new StorageAnalyticsLogParser(NullLogger<BlobListener>.Instance);
+            StorageAnalyticsLogParser parser = new StorageAnalyticsLogParser(new TestExceptionHandler(), NullLogger<BlobListener>.Instance);
 
             StorageAnalyticsLogEntry entry = parser.TryParseLogEntry(line);
 
