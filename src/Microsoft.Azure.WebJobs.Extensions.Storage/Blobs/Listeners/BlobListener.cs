@@ -23,6 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         // for mock test purposes only
         internal BlobListener(ISharedListener sharedListener)
         {
+            _sharedListener = sharedListener;
         }
 
         public BlobListener(ISharedListener sharedListener, CloudBlobContainer container, ILoggerFactory loggerFactory)
