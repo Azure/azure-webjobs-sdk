@@ -430,8 +430,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         {
             var descr = FromMethod(method, _configuration, this._activator, _nameResolver, _defaultTimeout, _defaultRetryStrategy);
 
-            // Temporary comment: https://github.com/Azure/azure-webjobs-sdk/issues/2788
-            // CheckRetrySupport(triggerBinding, descr, _logger);
+            CheckRetrySupport(triggerBinding, descr, _logger);
 
             List<ParameterDescriptor> parameters = new List<ParameterDescriptor>();
 
@@ -460,8 +459,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         {
             if (descr.RetryStrategy != null && triggerBinding != null && triggerBinding.GetType().GetCustomAttribute<SupportsRetryAttribute>() == null)
             {
-                logger?.LogWarning($"Retries are not supported by the trigger binding for { descr.ShortName}.");
-                descr.RetryStrategy = null; // Need to fix tests
+                logger?.LogWarning($"Retries are not supported for function '{ descr.ShortName}'. For more information, please visit http://aka.ms/func-retry-policies.");
+                descr.RetryStrategy = null;
             }
         }
 
