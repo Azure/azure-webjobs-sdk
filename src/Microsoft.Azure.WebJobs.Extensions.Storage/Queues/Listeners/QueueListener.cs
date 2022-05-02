@@ -151,21 +151,11 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         {
             using (cancellationToken.Register(() => _shutdownCancellationTokenSource.Cancel()))
             {
-                try
-                {
-                    ThrowIfDisposed();
-                    _timer.Cancel();
-                    await Task.WhenAll(_processing);
-                    await _timer.StopAsync(cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, $"Storage queue listener encountered an error while stopping ({_details})");
-                }
-                finally
-                {
-                    _logger.LogDebug($"Storage queue listener stopped ({_details})");
-                }
+                ThrowIfDisposed();
+                _timer.Cancel();
+                await Task.WhenAll(_processing);
+                await _timer.StopAsync(cancellationToken);
+                _logger.LogDebug($"Storage queue listener stopped ({_details})");
             }
         }
 

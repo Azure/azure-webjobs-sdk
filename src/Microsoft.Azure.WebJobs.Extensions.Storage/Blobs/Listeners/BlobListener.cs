@@ -35,23 +35,15 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            try
-            {
-                ThrowIfDisposed();
+            ThrowIfDisposed();
 
-                if (_started)
-                {
-                    throw new InvalidOperationException("The listener has already been started.");
-                }
-
-                _logger.LogDebug($"Storage blob listener started ({_details})");
-                return StartAsyncCore(cancellationToken);
-            }
-            catch (Exception ex)
+            if (_started)
             {
-                _logger.LogError(ex, $"Storage blob listener exception during starting ({_details})");
-                throw;
+                throw new InvalidOperationException("The listener has already been started.");
             }
+
+            _logger.LogDebug($"Storage blob listener started ({_details})");
+            return StartAsyncCore(cancellationToken);
         }
 
         private async Task StartAsyncCore(CancellationToken cancellationToken)
@@ -64,27 +56,16 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            try
-            {
-                ThrowIfDisposed();
+            ThrowIfDisposed();
 
-                if (!_started)
-                {
-                    throw new InvalidOperationException(
-                        "The listener has not yet been started or has already been stopped.");
-                }
+            if (!_started)
+            {
+                throw new InvalidOperationException(
+                    "The listener has not yet been started or has already been stopped.");
+            }
 
-                return StopAsyncCore(cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"storage blob listener exception during stopping ({_details})");
-                throw;
-            }
-            finally
-            {
-                _logger.LogDebug($"Storage blob listener stopped ({_details})");
-            }
+            _logger.LogDebug($"Storage blob listener stopped ({_details})");
+            return StopAsyncCore(cancellationToken);    
         }
 
         private async Task StopAsyncCore(CancellationToken cancellationToken)
