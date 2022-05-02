@@ -18,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 
         private bool _started;
         private bool _disposed;
-        private Lazy<string> _details;
+        private string _details;
 
         // for mock test purposes only
         internal BlobListener(ISharedListener sharedListener)
@@ -26,10 +26,10 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             _sharedListener = sharedListener;
         }
 
-        public BlobListener(ISharedListener sharedListener, CloudBlobContainer container, ILoggerFactory loggerFactory)
+        public BlobListener(ISharedListener sharedListener, CloudBlobContainer container, ILoggerFactory loggerFactory, IBlobPathSource blobPathSource)
         {
             _sharedListener = sharedListener;
-            _details = new Lazy<string>(() => $"blob container={container.Name}, storage account name={container.ServiceClient.GetAccountName()}");
+            _details = $"blob container={container.Name}, storage account name={container.ServiceClient.GetAccountName()}, blob name pattern={blobPathSource.BlobNamePattern}";
             _logger = loggerFactory.CreateLogger<BlobListener>();
         }
 
@@ -44,12 +44,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                     throw new InvalidOperationException("The listener has already been started.");
                 }
 
-                _logger.LogDebug($"Storage blob listener started ({_details.Value})");
+                _logger.LogDebug($"Storage blob listener started ({_details})");
                 return StartAsyncCore(cancellationToken);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Storage blob listener exception during starting ({_details.Value})");
+                _logger.LogError(ex, $"Storage blob listener exception during starting ({_details})");
                 throw;
             }
         }
@@ -78,12 +78,12 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"storage blob listener exception during stopping ({_details.Value})");
+                _logger.LogError(ex, $"storage blob listener exception during stopping ({_details})");
                 throw;
             }
             finally
             {
-                _logger.LogDebug($"Storage blob listener stopped ({_details.Value})");
+                _logger.LogDebug($"Storage blob listener stopped ({_details})");
             }
         }
 
