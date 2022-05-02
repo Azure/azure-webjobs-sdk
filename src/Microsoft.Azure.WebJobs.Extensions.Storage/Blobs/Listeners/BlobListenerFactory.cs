@@ -126,7 +126,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 // want a single instance of the blob poll/scan logic to be running
                 // across host instances
                 var singletonBlobListener = _singletonManager.CreateHostSingletonListener(
-                    new BlobListener(sharedBlobListener, _container, _loggerFactory), SingletonBlobListenerScopeId);
+                    new BlobListener(sharedBlobListener, _container, _loggerFactory, _input), SingletonBlobListenerScopeId);
                 _sharedContextProvider.SetValue(SingletonBlobListenerScopeId, true);
 
                 return new CompositeListener(singletonBlobListener, queueListener);

@@ -143,7 +143,7 @@ namespace Microsoft.Azure.WebJobs.Host.Queues.Listeners
         {
             ThrowIfDisposed();
             _timer.Start();
-            _logger.LogDebug($"Storage queue listener started: {_details}");
+            _logger.LogDebug($"Storage queue listener started ({_details})");
             return Task.FromResult(0);
         }
 
