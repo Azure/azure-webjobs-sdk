@@ -99,7 +99,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             SharedBlobQueueListener sharedBlobQueueListener = _sharedContextProvider.GetOrCreateInstance<SharedBlobQueueListener>(
                 new SharedBlobQueueListenerFactory(_hostAccount, sharedQueueWatcher, hostBlobTriggerQueue,
                     _queueOptions, _exceptionHandler, _loggerFactory, sharedBlobListener.BlobWritterWatcher, _functionDescriptor));
-            var queueListener = new BlobListener(sharedBlobQueueListener, _container, _loggerFactory);
+            var queueListener = new BlobListener(sharedBlobQueueListener, _container, _loggerFactory, _input);
 
             // determine which client to use for the poison queue
             // by default this should target the same storage account
