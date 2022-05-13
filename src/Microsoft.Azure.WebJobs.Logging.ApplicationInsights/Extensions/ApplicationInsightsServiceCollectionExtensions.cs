@@ -31,6 +31,13 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     internal static class ApplicationInsightsServiceCollectionExtensions
     {
+
+        public static IServiceCollection AddApplicationInsights(this IServiceCollection services)
+        {
+            return services.AddApplicationInsights(_ => { }, _ => { });
+        }
+
+
         public static IServiceCollection AddApplicationInsights(this IServiceCollection services, Action<ApplicationInsightsLoggerOptions> configure)
         {
             services.AddApplicationInsights();
@@ -41,7 +48,8 @@ namespace Microsoft.Extensions.DependencyInjection
             return services;
         }
 
-        public static IServiceCollection AddApplicationInsights(this IServiceCollection services)
+        internal static IServiceCollection AddApplicationInsights(this IServiceCollection services, Action<ApplicationInsightsLoggerOptions> configureOptions,
+            Action<TelemetryConfiguration> additionalConfiguration)
         {
             services.TryAddSingleton<ISdkVersionProvider, WebJobsSdkVersionProvider>();
             services.TryAddSingleton<IRoleInstanceProvider, WebJobsRoleInstanceProvider>();
@@ -217,7 +225,8 @@ namespace Microsoft.Extensions.DependencyInjection
                     appIdProvider,
                     filterOptions,
                     roleInstanceProvider,
-                    provider.GetService<QuickPulseInitializationScheduler>());
+                    provider.GetService<QuickPulseInitializationScheduler>(),
+                    additionalConfiguration);
 
                 return config;
             });
@@ -275,7 +284,8 @@ namespace Microsoft.Extensions.DependencyInjection
             IApplicationIdProvider applicationIdProvider,
             LoggerFilterOptions filterOptions,
             IRoleInstanceProvider roleInstanceProvider,
-            QuickPulseInitializationScheduler delayer)
+            QuickPulseInitializationScheduler delayer,
+            Action<TelemetryConfiguration> additionalConfiguration)
         {
             if (options.ConnectionString != null)
             {
@@ -346,6 +356,8 @@ namespace Microsoft.Extensions.DependencyInjection
                     return processor;
                 });
             }
+
+            additionalConfiguration?.Invoke(configuration);
 
             if (options.SnapshotConfiguration != null)
             {
