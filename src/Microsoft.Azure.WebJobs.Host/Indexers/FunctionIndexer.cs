@@ -459,8 +459,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         {
             if (descr.RetryStrategy != null && triggerBinding != null && triggerBinding.GetType().GetCustomAttribute<SupportsRetryAttribute>() == null)
             {
-                logger?.LogWarning($"Retries are not supported for function '{ descr.ShortName}'. For more information, please visit http://aka.ms/func-retry-policies.");
-                descr.RetryStrategy = null;
+                logger?.LogWarning($"Soon retries will not be supported for function '{ descr.ShortName}'. For more information, please visit http://aka.ms/func-retry-policies.");
+                // descr.RetryStrategy = null; This need to uncommented after "Retry policy" GA
             }
         }
 
