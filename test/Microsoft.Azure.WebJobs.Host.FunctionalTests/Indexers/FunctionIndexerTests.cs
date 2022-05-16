@@ -317,7 +317,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         }
 
         [Fact]        
-        public void CheckRetrySupport_SetsRetryToNull()
+        public void CheckRetrySupport_DoesNotSetRetryToNull()
         {
             // Arrange
             var loggerProvider = new TestLoggerProvider();
@@ -330,8 +330,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
             // Act & Assert
             FunctionIndexer.CheckRetrySupport(new TestTriggerBinding(), desc, logger);
-            Assert.Null(desc.RetryStrategy);
-            Assert.Contains(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Retries are not supported for function ") && x.Level == LogLevel.Warning);
+            Assert.NotNull(desc.RetryStrategy);
+            Assert.Contains(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Soon retries will not be supported for function ") && x.Level == LogLevel.Warning);
         }
 
         [Fact]
