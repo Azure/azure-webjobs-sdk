@@ -26,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             _sharedListener = sharedListener;
         }
 
-        public BlobListener(ISharedListener sharedListener, CloudBlobContainer container, ILoggerFactory loggerFactory, IBlobPathSource blobPathSource)
+        public BlobListener(ISharedListener sharedListener, CloudBlobContainer container, IBlobPathSource blobPathSource, ILoggerFactory loggerFactory)
         {
             _sharedListener = sharedListener;
             _details = $"blob container={container.Name}, storage account name={container.ServiceClient.GetAccountName()}, blob name pattern={blobPathSource.BlobNamePattern}";
