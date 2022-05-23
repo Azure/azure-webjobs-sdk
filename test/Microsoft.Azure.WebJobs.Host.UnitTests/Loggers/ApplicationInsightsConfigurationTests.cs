@@ -185,7 +185,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Assert.NotNull(providers[0]);
 
                 // Verify Processors
-                Assert.Equal(6, config.TelemetryProcessors.Count);
+                Assert.Equal(4, config.TelemetryProcessors.Count);
                 Assert.IsType<OperationFilteringTelemetryProcessor>(config.TelemetryProcessors[0]);
                 Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[1]);
                 Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[2]);
@@ -218,7 +218,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 .Build())
             {
                 var config = host.Services.GetService<TelemetryConfiguration>();
-                Assert.Equal(6, config.TelemetryProcessors.Count);
+                Assert.Equal(5, config.TelemetryProcessors.Count);
                 Assert.IsType<OperationFilteringTelemetryProcessor>(config.TelemetryProcessors[0]);
                 Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[1]);
                 Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[2]);
@@ -560,7 +560,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 }).Build())
             {
                 var config = host.Services.GetService<TelemetryConfiguration>();
-                Assert.Equal(4, config.TelemetryProcessors.Count);
+                Assert.Equal(5, config.TelemetryProcessors.Count);
                 Assert.IsType<OperationFilteringTelemetryProcessor>(config.TelemetryProcessors[0]);
                 Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[1]);
                 Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[2]);
@@ -585,7 +585,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 }).Build())
             {
                 var config = host.Services.GetService<TelemetryConfiguration>();
-                Assert.Equal(4, config.TelemetryProcessors.Count);
+                Assert.Equal(5, config.TelemetryProcessors.Count);
                 Assert.IsType<OperationFilteringTelemetryProcessor>(config.TelemetryProcessors[0]);
                 Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[1]);
                 Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[2]);

@@ -47,7 +47,7 @@ namespace Microsoft.Extensions.Logging
              this ILoggingBuilder builder,
              Action<ApplicationInsightsLoggerOptions> configure)
         {
-            return builder.AddApplicationInsightsWebJobs(configure, _ => { });
+            return builder.AddApplicationInsightsWebJobs(configure, null);
         }
 
         /// <summary>

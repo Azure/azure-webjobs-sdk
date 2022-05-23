@@ -244,6 +244,11 @@ namespace Microsoft.Extensions.DependencyInjection
 
             services.AddSingleton<ILoggerProvider, ApplicationInsightsLoggerProvider>();
 
+            if (configureOptions != null)
+            {
+                services.Configure<ApplicationInsightsLoggerOptions>(configureOptions);
+            }
+
             return services;
         }
 
