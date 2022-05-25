@@ -38,7 +38,8 @@ namespace Microsoft.Extensions.DependencyInjection
         }
 
 
-        public static IServiceCollection AddApplicationInsights(this IServiceCollection services, Action<ApplicationInsightsLoggerOptions> loggerOptionsConfiguration)
+        public static IServiceCollection AddApplicationInsights(this IServiceCollection services, 
+            Action<ApplicationInsightsLoggerOptions> loggerOptionsConfiguration)
         {
             services.AddApplicationInsights();
             if (loggerOptionsConfiguration != null)
@@ -48,7 +49,8 @@ namespace Microsoft.Extensions.DependencyInjection
             return services;
         }
 
-        internal static IServiceCollection AddApplicationInsights(this IServiceCollection services, Action<ApplicationInsightsLoggerOptions> loggerOptionsConfiguration,
+        internal static IServiceCollection AddApplicationInsights(this IServiceCollection services, 
+            Action<ApplicationInsightsLoggerOptions> loggerOptionsConfiguration,
             Action<TelemetryConfiguration> additionalTelemetryConfig)
         {
             services.TryAddSingleton<ISdkVersionProvider, WebJobsSdkVersionProvider>();
