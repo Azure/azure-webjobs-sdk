@@ -41,11 +41,7 @@ namespace Microsoft.Extensions.DependencyInjection
         public static IServiceCollection AddApplicationInsights(this IServiceCollection services, 
             Action<ApplicationInsightsLoggerOptions> loggerOptionsConfiguration)
         {
-            services.AddApplicationInsights();
-            if (loggerOptionsConfiguration != null)
-            {
-                services.Configure<ApplicationInsightsLoggerOptions>(loggerOptionsConfiguration);
-            }
+            services.AddApplicationInsights(loggerOptionsConfiguration, _ => { });
             return services;
         }
 

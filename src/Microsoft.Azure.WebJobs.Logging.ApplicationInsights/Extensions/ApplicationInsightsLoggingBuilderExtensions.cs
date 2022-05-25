@@ -45,9 +45,9 @@ namespace Microsoft.Extensions.Logging
         /// </summary>        
         public static ILoggingBuilder AddApplicationInsightsWebJobs(
              this ILoggingBuilder builder,
-             Action<ApplicationInsightsLoggerOptions> configure)
+             Action<ApplicationInsightsLoggerOptions> loggerOptionsConfiguration)
         {
-            return builder.AddApplicationInsightsWebJobs(configure, null);
+            return builder.AddApplicationInsightsWebJobs(loggerOptionsConfiguration, null);
         }
 
         /// <summary>
@@ -55,11 +55,11 @@ namespace Microsoft.Extensions.Logging
         /// </summary>  
         public static ILoggingBuilder AddApplicationInsightsWebJobs(
             this ILoggingBuilder builder,
-            Action<ApplicationInsightsLoggerOptions> configureOptions,
-            Action<TelemetryConfiguration> additionalConfiguration)
+            Action<ApplicationInsightsLoggerOptions> loggerOptionsConfiguration,
+            Action<TelemetryConfiguration> additionalTelemetryConfiguration)
         {
             builder.AddConfiguration();
-            builder.Services.AddApplicationInsights(configureOptions, additionalConfiguration);
+            builder.Services.AddApplicationInsights(loggerOptionsConfiguration, additionalTelemetryConfiguration);
 
             builder.Services.PostConfigure<LoggerFilterOptions>(o =>
             {
