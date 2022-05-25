@@ -38,18 +38,18 @@ namespace Microsoft.Extensions.DependencyInjection
         }
 
 
-        public static IServiceCollection AddApplicationInsights(this IServiceCollection services, Action<ApplicationInsightsLoggerOptions> configure)
+        public static IServiceCollection AddApplicationInsights(this IServiceCollection services, Action<ApplicationInsightsLoggerOptions> loggerOptionsConfiguration)
         {
             services.AddApplicationInsights();
-            if (configure != null)
+            if (loggerOptionsConfiguration != null)
             {
-                services.Configure<ApplicationInsightsLoggerOptions>(configure);
+                services.Configure<ApplicationInsightsLoggerOptions>(loggerOptionsConfiguration);
             }
             return services;
         }
 
-        internal static IServiceCollection AddApplicationInsights(this IServiceCollection services, Action<ApplicationInsightsLoggerOptions> configureOptions,
-            Action<TelemetryConfiguration> additionalConfiguration)
+        internal static IServiceCollection AddApplicationInsights(this IServiceCollection services, Action<ApplicationInsightsLoggerOptions> loggerOptionsConfiguration,
+            Action<TelemetryConfiguration> additionalTelemetryConfig)
         {
             services.TryAddSingleton<ISdkVersionProvider, WebJobsSdkVersionProvider>();
             services.TryAddSingleton<IRoleInstanceProvider, WebJobsRoleInstanceProvider>();
@@ -226,7 +226,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     filterOptions,
                     roleInstanceProvider,
                     provider.GetService<QuickPulseInitializationScheduler>(),
-                    additionalConfiguration);
+                    additionalTelemetryConfig);
 
                 return config;
             });
@@ -244,9 +244,9 @@ namespace Microsoft.Extensions.DependencyInjection
 
             services.AddSingleton<ILoggerProvider, ApplicationInsightsLoggerProvider>();
 
-            if (configureOptions != null)
+            if (loggerOptionsConfiguration != null)
             {
-                services.Configure<ApplicationInsightsLoggerOptions>(configureOptions);
+                services.Configure<ApplicationInsightsLoggerOptions>(loggerOptionsConfiguration);
             }
 
             return services;
@@ -290,7 +290,7 @@ namespace Microsoft.Extensions.DependencyInjection
             LoggerFilterOptions filterOptions,
             IRoleInstanceProvider roleInstanceProvider,
             QuickPulseInitializationScheduler delayer,
-            Action<TelemetryConfiguration> additionalConfiguration)
+            Action<TelemetryConfiguration> additionalTelemetryConfig)
         {
             if (options.ConnectionString != null)
             {
@@ -362,7 +362,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 });
             }
 
-            additionalConfiguration?.Invoke(configuration);
+            additionalTelemetryConfig?.Invoke(configuration);
 
             if (options.SnapshotConfiguration != null)
             {
