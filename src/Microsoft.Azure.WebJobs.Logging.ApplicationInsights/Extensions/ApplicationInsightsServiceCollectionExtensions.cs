@@ -31,17 +31,23 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     internal static class ApplicationInsightsServiceCollectionExtensions
     {
-        public static IServiceCollection AddApplicationInsights(this IServiceCollection services, Action<ApplicationInsightsLoggerOptions> configure)
+
+        public static IServiceCollection AddApplicationInsights(this IServiceCollection services)
         {
-            services.AddApplicationInsights();
-            if (configure != null)
-            {
-                services.Configure<ApplicationInsightsLoggerOptions>(configure);
-            }
+            return services.AddApplicationInsights(_ => { }, _ => { });
+        }
+
+
+        public static IServiceCollection AddApplicationInsights(this IServiceCollection services, 
+            Action<ApplicationInsightsLoggerOptions> loggerOptionsConfiguration)
+        {
+            services.AddApplicationInsights(loggerOptionsConfiguration, _ => { });
             return services;
         }
 
-        public static IServiceCollection AddApplicationInsights(this IServiceCollection services)
+        internal static IServiceCollection AddApplicationInsights(this IServiceCollection services, 
+            Action<ApplicationInsightsLoggerOptions> loggerOptionsConfiguration,
+            Action<TelemetryConfiguration> additionalTelemetryConfig)
         {
             services.TryAddSingleton<ISdkVersionProvider, WebJobsSdkVersionProvider>();
             services.TryAddSingleton<IRoleInstanceProvider, WebJobsRoleInstanceProvider>();
@@ -217,7 +223,8 @@ namespace Microsoft.Extensions.DependencyInjection
                     appIdProvider,
                     filterOptions,
                     roleInstanceProvider,
-                    provider.GetService<QuickPulseInitializationScheduler>());
+                    provider.GetService<QuickPulseInitializationScheduler>(),
+                    additionalTelemetryConfig);
 
                 return config;
             });
@@ -234,6 +241,11 @@ namespace Microsoft.Extensions.DependencyInjection
             });
 
             services.AddSingleton<ILoggerProvider, ApplicationInsightsLoggerProvider>();
+
+            if (loggerOptionsConfiguration != null)
+            {
+                services.Configure<ApplicationInsightsLoggerOptions>(loggerOptionsConfiguration);
+            }
 
             return services;
         }
@@ -275,7 +287,8 @@ namespace Microsoft.Extensions.DependencyInjection
             IApplicationIdProvider applicationIdProvider,
             LoggerFilterOptions filterOptions,
             IRoleInstanceProvider roleInstanceProvider,
-            QuickPulseInitializationScheduler delayer)
+            QuickPulseInitializationScheduler delayer,
+            Action<TelemetryConfiguration> additionalTelemetryConfig)
         {
             if (options.ConnectionString != null)
             {
@@ -346,6 +359,8 @@ namespace Microsoft.Extensions.DependencyInjection
                     return processor;
                 });
             }
+
+            additionalTelemetryConfig?.Invoke(configuration);
 
             if (options.SnapshotConfiguration != null)
             {
