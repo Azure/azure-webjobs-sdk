@@ -28,29 +28,32 @@ namespace WebJobs.Host.Storage.Logging
             return _queueWriter.EnqueueAsync(message, cancellationToken);
         }
 
-        public Task<string> LogFunctionStartedAsync(FunctionStartedMessage message, CancellationToken cancellationToken)
+        public string LogFunctionStarted(FunctionStartedMessage message)
         {
-            return _queueWriter.EnqueueAsync(message, cancellationToken);
+            return _queueWriter.EnqueueAsync(message, CancellationToken.None)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
-        public Task LogFunctionCompletedAsync(FunctionCompletedMessage message, CancellationToken cancellationToken)
+        public void LogFunctionCompleted(FunctionCompletedMessage message)
         {
             if (message == null)
             {
                 throw new ArgumentNullException("message");
             }
 
-            return _queueWriter.EnqueueAsync(message, cancellationToken);
+            _queueWriter.EnqueueAsync(message, CancellationToken.None)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
-        public Task DeleteLogFunctionStartedAsync(string startedMessageId, CancellationToken cancellationToken)
+        public void DeleteLogFunctionStarted(string startedMessageId)
         {
             if (String.IsNullOrEmpty(startedMessageId))
             {
                 throw new ArgumentNullException("startedMessageId");
             }
 
-            return _queueWriter.DeleteAsync(startedMessageId, cancellationToken);
+            _queueWriter.DeleteAsync(startedMessageId, CancellationToken.None)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
         }
     }
 }
