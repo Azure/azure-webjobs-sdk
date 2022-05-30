@@ -36,7 +36,6 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles
 
         public void DeleteLogFunctionStarted(string startedMessageId)
         {
-            
         }
     }
 }
