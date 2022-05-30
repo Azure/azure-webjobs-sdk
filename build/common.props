@@ -2,7 +2,7 @@
   <PropertyGroup>
     <!-- Packages can have independent versions and only increment when released -->
     <ExtensionsStorageVersion>4.0.5$(VersionSuffix)</ExtensionsStorageVersion>
-    <HostStorageVersion>4.0.4$(VersionSuffix)</HostStorageVersion>
+    <HostStorageVersion>4.1.0$(VersionSuffix)</HostStorageVersion>
     
     <TargetFramework>netstandard2.0</TargetFramework>
     <DebugType>embedded</DebugType>      
