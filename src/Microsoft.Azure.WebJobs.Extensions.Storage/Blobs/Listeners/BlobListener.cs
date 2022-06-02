@@ -6,22 +6,34 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Scale;
+using Microsoft.Azure.Storage.Blob;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 {
     internal sealed class BlobListener : IListener, IScaleMonitorProvider
     {
         private readonly ISharedListener _sharedListener;
+        private readonly ILogger<BlobListener> _logger;
 
         private bool _started;
         private bool _disposed;
+        private string _details;
 
-        public BlobListener(ISharedListener sharedListener)
+        // for mock test purposes only
+        internal BlobListener(ISharedListener sharedListener)
         {
             _sharedListener = sharedListener;
         }
 
-        public Task StartAsync(CancellationToken cancellationToken)
+        public BlobListener(ISharedListener sharedListener, CloudBlobContainer container, IBlobPathSource blobPathSource, ILoggerFactory loggerFactory)
+        {
+            _sharedListener = sharedListener;
+            _details = $"blob container={container.Name}, storage account name={container.ServiceClient.GetAccountName()}, blob name pattern={blobPathSource.BlobNamePattern}";
+            _logger = loggerFactory.CreateLogger<BlobListener>();
+        }
+
+        public async Task StartAsync(CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
 
@@ -30,7 +42,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 throw new InvalidOperationException("The listener has already been started.");
             }
 
-            return StartAsyncCore(cancellationToken);
+            await StartAsyncCore(cancellationToken);
+            _logger.LogDebug($"Storage blob listener started ({_details})");
         }
 
         private async Task StartAsyncCore(CancellationToken cancellationToken)
@@ -41,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             _started = true;
         }
 
-        public Task StopAsync(CancellationToken cancellationToken)
+        public async Task StopAsync(CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
 
@@ -51,7 +64,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                     "The listener has not yet been started or has already been stopped.");
             }
 
-            return StopAsyncCore(cancellationToken);
+            await StopAsyncCore(cancellationToken);
+            _logger.LogDebug($"Storage blob listener stopped ({_details})");
         }
 
         private async Task StopAsyncCore(CancellationToken cancellationToken)
