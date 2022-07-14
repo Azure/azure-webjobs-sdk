@@ -23,6 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.Tracing
                 activity.SetTag(TraceConstants.AttributeCloudPlatformKey, TraceConstants.AttributeCloudPlatformValue);
                 activity.SetTag(TraceConstants.AttributeFaasNameKey, funcFullName);
                 activity.SetTag(TraceConstants.AttributeFaasInstanceKey, funcinstanceid);
+                activity.SetTag("Rohit", "Ranjan");
             }
             return activity;
         }

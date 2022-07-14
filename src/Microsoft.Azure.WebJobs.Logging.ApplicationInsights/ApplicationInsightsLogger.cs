@@ -17,7 +17,7 @@ using Microsoft.Extensions.Primitives;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
-    internal class ApplicationInsightsLogger : ILogger
+    public class ApplicationInsightsLogger : ILogger
     {
         private readonly TelemetryClient _telemetryClient;
         private readonly ApplicationInsightsLoggerOptions _loggerOptions;
