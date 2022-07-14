@@ -17,7 +17,7 @@ using Microsoft.Extensions.Primitives;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
-    internal class ApplicationInsightsLogger : ILogger
+    public class ApplicationInsightsLogger : ILogger
     {
         private readonly TelemetryClient _telemetryClient;
         private readonly ApplicationInsightsLoggerOptions _loggerOptions;
@@ -515,6 +515,10 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     else
                     {
                         operation = _telemetryClient.StartOperation<RequestTelemetry>(functionName);
+                        if (Activity.Current != null)
+                        {
+                            Activity.Current.ActivityTraceFlags = ActivityTraceFlags.Recorded;
+                        }
                     }
 
                     var triggerDetails = stateValues.GetValueOrDefault<IDictionary<string, string>>(ScopeKeys.TriggerDetails);
