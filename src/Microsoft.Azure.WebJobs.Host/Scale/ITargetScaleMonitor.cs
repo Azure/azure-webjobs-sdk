@@ -9,7 +9,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         Task<int> GetScaleVoteAsync(ScaleStatusContext context);
     }
 
-    public interface ITargetScaleMonitor<TMetrics> : IScaleMonitor where TMetrics : ScaleMetrics
+    public interface ITargetScaleMonitor<TMetrics> : ITargetScaleMonitor where TMetrics : ScaleMetrics
     {
         new Task<TMetrics> GetMetricsAsync();
 
