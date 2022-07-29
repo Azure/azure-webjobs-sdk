@@ -88,6 +88,8 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IHostInstanceLogger, NullHostInstanceLogger>();
             services.TryAddSingleton<IDistributedLockManager, InMemoryDistributedLockManager>();
             services.TryAddSingleton<IScaleMonitorManager, ScaleMonitorManager>();
+            services.TryAddSingleton<IDynamicTargetValueProvider, DynamicTargetValueProvider>();
+
 
             services.AddSingleton<IPrimaryHostStateProvider, PrimaryHostStateProvider>();
             services.AddSingleton<IHostedService, PrimaryHostCoordinator>();
