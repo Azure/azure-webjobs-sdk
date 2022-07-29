@@ -12,6 +12,7 @@ branches:
   - dev
   - master
   - next
+  - storagev4
 image: Visual Studio 2017
 max_jobs: 1
 install:
