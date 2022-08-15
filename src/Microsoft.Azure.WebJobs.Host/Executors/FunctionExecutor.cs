@@ -16,6 +16,7 @@ using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Azure.WebJobs.Host.Tracing;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
 
@@ -77,7 +78,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         }
 
         public async Task<IDelayedException> TryExecuteAsync(IFunctionInstance functionInstance, CancellationToken cancellationToken)
-        {
+        {   
             var functionInstanceEx = (IFunctionInstanceEx)functionInstance;
             var logger = _loggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(functionInstanceEx.FunctionDescriptor.LogName));
             var functionStartedMessage = CreateStartedMessage(functionInstanceEx);
@@ -294,34 +295,40 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
                     Exception invocationException = null;
                     ITaskSeriesTimer updateParameterLogTimer = null;
-                    try
+                    using (Activity activity = TraceHelper.StartInvocationActivity(
+                        instance.Id.ToString(), instance.FunctionDescriptor.ShortName, instance.FunctionDescriptor.FullName,
+                        instance.Id.ToString()))
                     {
-                        if (outputDefinition != NullFunctionOutputDefinition.Instance)
+                        try
                         {
-                            var parameterWatchers = parameterHelper.CreateParameterWatchers();
-                            var updateParameterLogCommand = outputDefinition.CreateParameterLogUpdateCommand(parameterWatchers, logger);
-                            updateParameterLogTimer = StartParameterLogTimer(updateParameterLogCommand, _exceptionHandler);
+                            if (outputDefinition != NullFunctionOutputDefinition.Instance)
+                            {
+                                var parameterWatchers = parameterHelper.CreateParameterWatchers();
+                                var updateParameterLogCommand = outputDefinition.CreateParameterLogUpdateCommand(parameterWatchers, logger);
+                                updateParameterLogTimer = StartParameterLogTimer(updateParameterLogCommand, _exceptionHandler);
+                            }
+
+                            await ExecuteWithWatchersAsync(instance, parameterHelper, logger, functionCancellationTokenSource);
+
+                            if (updateParameterLogTimer != null)
+                            {
+                                // Stop the watches after calling IValueBinder.SetValue (it may do things that should show up in
+                                // the watches).
+                                // Also, IValueBinder.SetValue could also take a long time (flushing large caches), and so it's
+                                // useful to have watches still running.
+                                await updateParameterLogTimer.StopAsync(functionCancellationTokenSource.Token);
+                            }
                         }
-
-                        await ExecuteWithWatchersAsync(instance, parameterHelper, logger, functionCancellationTokenSource);
-
-                        if (updateParameterLogTimer != null)
+                        catch (Exception ex)
                         {
-                            // Stop the watches after calling IValueBinder.SetValue (it may do things that should show up in
-                            // the watches).
-                            // Also, IValueBinder.SetValue could also take a long time (flushing large caches), and so it's
-                            // useful to have watches still running.
-                            await updateParameterLogTimer.StopAsync(functionCancellationTokenSource.Token);
+                            invocationException = ex;
+                            activity?.RecordException(ex);
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        invocationException = ex;
-                    }
-                    finally
-                    {
-                        updateParameterLogTimer?.Dispose();
-                        parameterHelper.FlushParameterWatchers();
+                        finally
+                        {
+                            updateParameterLogTimer?.Dispose();
+                            parameterHelper.FlushParameterWatchers();
+                        }
                     }
 
                     var exceptionInfo = GetExceptionDispatchInfo(invocationException, instance);

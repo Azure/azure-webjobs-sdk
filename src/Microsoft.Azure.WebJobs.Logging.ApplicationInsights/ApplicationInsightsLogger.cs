@@ -454,7 +454,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             return DictionaryLoggerScope.Push(state);
         }
 
-        private void StartTelemetryIfFunctionInvocation(IDictionary<string, object> stateValues)
+        public void StartTelemetryIfFunctionInvocation(IDictionary<string, object> stateValues)
         {
             if (stateValues == null)
             {
@@ -515,6 +515,11 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     else
                     {
                         operation = _telemetryClient.StartOperation<RequestTelemetry>(functionName);
+                        //  Mark as useful to record
+                        if (Activity.Current != null && Activity.Current.ActivityTraceFlags == ActivityTraceFlags.None)
+                        {
+                            Activity.Current.ActivityTraceFlags = ActivityTraceFlags.Recorded;
+                        }
                     }
 
                     var triggerDetails = stateValues.GetValueOrDefault<IDictionary<string, string>>(ScopeKeys.TriggerDetails);
