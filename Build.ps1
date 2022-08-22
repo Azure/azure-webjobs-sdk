@@ -8,13 +8,14 @@ if ($isLocal){
   $packageSuffix = "dev" + [datetime]::UtcNow.Ticks.ToString()
   Write-Host "Local build - setting package suffixes to $packageSuffix" -ForegroundColor Yellow
 }
+
 dotnet --version
 
 dotnet build Webjobs.sln -v q
 
 if (-not $?) { exit 1 }
 
-$projects = 
+$projects =
   "src\Microsoft.Azure.WebJobs\WebJobs.csproj",
   "src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj",
   "src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.Sources.csproj",
@@ -26,18 +27,20 @@ $projects =
 foreach ($project in $projects)
 {
   $cmd = "pack", "$project", "-o", $outputDirectory, "--no-build"
-  
+
   if ($packageSuffix -ne "0")
   {
     $cmd += "--version-suffix", "-$packageSuffix"
   }
 
-  & dotnet $cmd  
+  & dotnet $cmd
 }
 
 ### Sign package if build is not a PR
 $isPr = Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER
 if ((-not $isPr -and -not $isLocal) -or $env:ForceArtifacts -eq "1") {
-  & ".\tools\RunSigningJob.ps1" 
+  & ".\tools\RunSigningJob.ps1"
   if (-not $?) { exit 1 }
 }
+
+nuget init /Users/likasem/source/buildoutput /Users/likasem/source/localnuget
