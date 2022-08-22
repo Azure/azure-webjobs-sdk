@@ -166,6 +166,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IEventCollectorFactory",
                 "IEventCollectorProvider",
                 "IExtensionConfigProvider",
+                "IExtensionOptionsProvider",
                 "IExtensionRegistry",
                 "IExtensionRegistryExtensions",
                 "IExtensionRegistryFactory",
@@ -295,7 +296,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "SharedMemoryMetadata",
                 "FunctionActivityStatus",
                 "IFunctionActivityStatusProvider",
-                "SupportsRetryAttribute"
+                "SupportsRetryAttribute",
+                "AppServicesHostingUtility"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);

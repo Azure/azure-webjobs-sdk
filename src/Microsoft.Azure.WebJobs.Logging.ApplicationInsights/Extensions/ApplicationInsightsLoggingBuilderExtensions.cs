@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Configuration;
@@ -43,11 +44,22 @@ namespace Microsoft.Extensions.Logging
         /// Registers Application Insights and <see cref="ApplicationInsightsLoggerProvider"/> with an <see cref="ILoggingBuilder"/>.
         /// </summary>        
         public static ILoggingBuilder AddApplicationInsightsWebJobs(
+             this ILoggingBuilder builder,
+             Action<ApplicationInsightsLoggerOptions> loggerOptionsConfiguration)
+        {
+            return builder.AddApplicationInsightsWebJobs(loggerOptionsConfiguration, null);
+        }
+
+        /// <summary>
+        /// Registers Application Insights and <see cref="ApplicationInsightsLoggerProvider"/> with an <see cref="ILoggingBuilder"/>.
+        /// </summary>  
+        public static ILoggingBuilder AddApplicationInsightsWebJobs(
             this ILoggingBuilder builder,
-            Action<ApplicationInsightsLoggerOptions> configure)
+            Action<ApplicationInsightsLoggerOptions> loggerOptionsConfiguration,
+            Action<TelemetryConfiguration> additionalTelemetryConfiguration)
         {
             builder.AddConfiguration();
-            builder.Services.AddApplicationInsights(configure);
+            builder.Services.AddApplicationInsights(loggerOptionsConfiguration, additionalTelemetryConfiguration);
 
             builder.Services.PostConfigure<LoggerFilterOptions>(o =>
             {

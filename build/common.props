@@ -1,9 +1,9 @@
 <Project>
   <PropertyGroup>
     <!-- Packages can have independent versions and only increment when released -->
-    <Version>3.0.32$(VersionSuffix)</Version>
-    <HostStorageVersion>5.0.0-beta.1$(VersionSuffix)</HostStorageVersion>
-    <LoggingVersion>4.0.2$(VersionSuffix)</LoggingVersion>
+    <Version>3.0.34$(VersionSuffix)</Version>
+    <HostStorageVersion>5.0.0-beta.2$(VersionSuffix)</HostStorageVersion>
+    <LoggingVersion>4.0.3$(VersionSuffix)</LoggingVersion>
     
     <TargetFramework>netstandard2.0</TargetFramework>
     <DebugType>embedded</DebugType>      

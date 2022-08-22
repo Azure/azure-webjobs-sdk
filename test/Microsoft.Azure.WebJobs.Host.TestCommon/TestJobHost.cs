@@ -16,7 +16,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
         private readonly IJobActivator _jobActivator;
 
         public JobHost(
-            IOptions<JobHostOptions> options, 
+            IOptions<JobHostOptions> options,
             IJobHostContextFactory contextFactory,
             IJobActivator jobActivator)
             : base(options, contextFactory)
@@ -24,18 +24,18 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             _jobActivator = jobActivator;
         }
 
-        public async Task CallAsync(string methodName, object arguments = null)
+        public Task CallAsync(string methodName, object arguments = null)
         {
-            await base.CallAsync(methodName, arguments);
+            return base.CallAsync(methodName, arguments);
         }
 
-        public async Task CallAsync(string methodName, IDictionary<string, object> arguments)
+        public Task CallAsync(string methodName, IDictionary<string, object> arguments)
         {
-            await base.CallAsync(typeof(TProgram).GetMethod(methodName), arguments);
+            return base.CallAsync(typeof(TProgram).GetMethod(methodName), arguments);
         }
 
         // Start listeners and run until the Task source is set. 
-        public async Task<TResult> RunTriggerAsync<TResult>(TaskCompletionSource<TResult> taskSource= null)
+        public async Task<TResult> RunTriggerAsync<TResult>(TaskCompletionSource<TResult> taskSource = null)
         {
             // Program was registered with the job activator, so we can get it
             TProgram prog = _jobActivator.CreateInstance<TProgram>();

@@ -316,8 +316,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             Assert.Equal("TestSharedListenerId", result);
         }
 
-        [Fact(Skip = "https://github.com/Azure/azure-webjobs-sdk/issues/2788")]        
-        public void CheckRetrySupport_SetsRetryToNull()
+        [Fact]        
+        public void CheckRetrySupport_DoesNotSetRetryToNull()
         {
             // Arrange
             var loggerProvider = new TestLoggerProvider();
@@ -330,11 +330,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
             // Act & Assert
             FunctionIndexer.CheckRetrySupport(new TestTriggerBinding(), desc, logger);
-            Assert.Null(desc.RetryStrategy);
-            Assert.Contains(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Retries are not supported by the trigger binding for ") && x.Level == LogLevel.Warning);
+            Assert.NotNull(desc.RetryStrategy);
+            Assert.Contains(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Soon retries will not be supported for function ") && x.Level == LogLevel.Warning);
         }
 
-        [Fact(Skip = "https://github.com/Azure/azure-webjobs-sdk/issues/2788")]
+        [Fact]
         public void CheckRetrySupport_LeavesRetry()
         {
             // Arrange
