@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Azure.WebJobs.Script.Abstractions.Description.Binding;
 using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
@@ -36,6 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         // Listed in precedence for providing via DefaultType.
         // Precedence is more important than how we produce the default type (a direct conversion vs. a converter)
         private static readonly Type[] _defaultTypes = new Type[] {
+            typeof(RichBindingReferenceType),
             typeof(byte[]),
             typeof(JObject),
             typeof(JArray),
@@ -205,7 +207,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 {
                     if (_directInvoker != null && (value is string str))
                     {
-                        // Direct invoke case. Need to converrt String-->TTriggerValue. 
+                        // Direct invoke case. Need to convert String-->TTriggerValue.
                         val = await _directInvoker(new DirectInvokeString(str), _attribute, context);
                     }
                     else
@@ -224,7 +226,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
             public Task<IValueProvider> BindAsync(BindingContext context)
             {
-                // Never called, since a trigger alreayd has an object. 
+                // Never called, since a trigger already has an object.
                 throw new NotImplementedException();
             }
 
