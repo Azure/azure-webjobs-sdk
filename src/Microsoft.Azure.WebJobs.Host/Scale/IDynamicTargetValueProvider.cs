@@ -8,6 +8,6 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
 {
     public interface IDynamicTargetValueProvider
     {
-        Task<int> GetDynamicTargetValue(string functionId, bool isDynamicConcurrencyEnabled);
+        Task<int> GetDynamicTargetValueAsync(string functionId);
     }
 }

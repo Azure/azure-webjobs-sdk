@@ -88,7 +88,6 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IHostInstanceLogger, NullHostInstanceLogger>();
             services.TryAddSingleton<IDistributedLockManager, InMemoryDistributedLockManager>();
             services.TryAddSingleton<IScaleMonitorManager, ScaleMonitorManager>();
-            services.TryAddSingleton<IDynamicTargetValueProvider, DynamicTargetValueProvider>();
 
 
             services.AddSingleton<IPrimaryHostStateProvider, PrimaryHostStateProvider>();
@@ -131,6 +130,7 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IConcurrencyThrottleProvider, ThreadPoolStarvationThrottleProvider>());
             services.TryAddSingleton<ConcurrencyManager>();
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ConcurrencyManagerService>());
+            services.TryAddSingleton<IDynamicTargetValueProvider, DynamicTargetValueProvider>();
 
             services.ConfigureOptions<ConcurrencyOptionsSetup>();
             services.ConfigureOptions<PrimaryHostCoordinatorOptionsSetup>();
