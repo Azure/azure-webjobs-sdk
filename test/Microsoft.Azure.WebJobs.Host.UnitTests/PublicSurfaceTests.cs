@@ -297,7 +297,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "FunctionActivityStatus",
                 "IFunctionActivityStatusProvider",
                 "SupportsRetryAttribute",
-                "AppServicesHostingUtility"
+                "AppServicesHostingUtility",
+                "IDynamicTargetValueProvider",
+                "ITargetScaleMonitor",
+                "ITargetScaleMonitor`1"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);
