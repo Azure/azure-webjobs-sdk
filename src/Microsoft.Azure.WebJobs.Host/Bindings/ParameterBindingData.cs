@@ -8,7 +8,7 @@ using System.Xml.Linq;
 
 namespace Microsoft.Azure.WebJobs.Script.Abstractions.Description.Binding
 {
-    public class RichBindingReferenceType
+    public class ParameterBindingData
     {
         /// <summary>
         /// Gets or Sets all the properties of ReferenceType

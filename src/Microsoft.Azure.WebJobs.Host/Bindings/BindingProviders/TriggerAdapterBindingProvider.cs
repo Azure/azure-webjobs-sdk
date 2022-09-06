@@ -37,7 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         // Listed in precedence for providing via DefaultType.
         // Precedence is more important than how we produce the default type (a direct conversion vs. a converter)
         private static readonly Type[] _defaultTypes = new Type[] {
-            typeof(RichBindingReferenceType),
+            typeof(ParameterBindingData),
             typeof(byte[]),
             typeof(JObject),
             typeof(JArray),
