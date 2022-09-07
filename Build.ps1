@@ -42,5 +42,3 @@ if ((-not $isPr -and -not $isLocal) -or $env:ForceArtifacts -eq "1") {
   & ".\tools\RunSigningJob.ps1"
   if (-not $?) { exit 1 }
 }
-
-nuget init /Users/likasem/source/buildoutput /Users/likasem/source/localnuget
