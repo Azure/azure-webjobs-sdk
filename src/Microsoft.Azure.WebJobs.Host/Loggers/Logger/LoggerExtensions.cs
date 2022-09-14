@@ -15,11 +15,17 @@ namespace Microsoft.Extensions.Logging
     /// </summary>
     public static class LoggerExtensions
     {
+        private static readonly Action<ILogger, int, Exception> _logFunctionRetryFailed =
+           LoggerMessage.Define<int>(
+           LogLevel.Error,
+           new EventId(324, nameof(LogFunctionRetryFailed)),
+           "Function failed after '{attempt}' retries.");
+
         private static readonly Action<ILogger, TimeSpan, int, int, Exception> _logFunctionRetryAttempt =
            LoggerMessage.Define<TimeSpan, int, int>(
            LogLevel.Debug,
            new EventId(325, nameof(LogFunctionRetryAttempt)),
-           "Waiting for `{nextDelay}` before retrying function execution. Next attempt: '{attempt}'. Max retry count: '{retryStrategy.MaxRetryCount}'");
+           "Waiting for `{nextDelay}` before retrying function execution. Next attempt: '{attempt}'. Max retry count: '{retryStrategy.MaxRetryCount}'.");
 
         private static readonly Action<ILogger, int, string, double, double, Exception> _hostProcessCpuStats =
            LoggerMessage.Define<int, string, double, double>(
@@ -243,6 +249,11 @@ namespace Microsoft.Extensions.Logging
         public static void LogFunctionRetryAttempt(this ILogger logger, TimeSpan nextDelay, int attemptCount, int maxRetryCount)
         {
             _logFunctionRetryAttempt(logger, nextDelay, attemptCount, maxRetryCount, null);
+        }
+
+        public static void LogFunctionRetryFailed(this ILogger logger, int attemptCount, IDelayedException result)
+        {
+            _logFunctionRetryFailed(logger, attemptCount, result?.Exception);
         }
 
         internal static void LogExitFromRetryLoop(this ILogger logger)

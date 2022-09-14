@@ -61,13 +61,14 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     }
 
                     IRetryStrategy retryStrategy = functionInstance.FunctionDescriptor.RetryStrategy;
-                    if (retryStrategy.MaxRetryCount != -1 && ++attempt > retryStrategy.MaxRetryCount)
+                    if (retryStrategy.MaxRetryCount != -1 && attempt == retryStrategy.MaxRetryCount)
                     {
                         // retry count exceeded
+                        logger.LogFunctionRetryFailed(attempt, functionResult);
                         break;
                     }
 
-                    retryContext.RetryCount = attempt;
+                    retryContext.RetryCount = ++attempt;
                     retryContext.Exception = functionResult?.Exception;
 
                     TimeSpan nextDelay = retryStrategy.GetNextDelay(retryContext);
