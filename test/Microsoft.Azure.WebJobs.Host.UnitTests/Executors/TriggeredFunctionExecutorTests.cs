@@ -176,7 +176,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             if (invocationThrows)
             {
                 var messages = testLogger.GetLogMessages().Select(p => p.FormattedMessage).ToArray();
-                Assert.Single(messages.Where(x => x == "Function failed after '5' retries."));
+                Assert.Single(messages.Where(x => x == "Function execution failed after '5' retries."));
                 Assert.Equal(5, messages.Where(x => x.StartsWith("Waiting for `")).Count());
                 Assert.NotNull(result.Exception.InnerException);
                 Assert.Equal("Test retry exception. invocationCount:6", result.Exception.InnerException.Message);

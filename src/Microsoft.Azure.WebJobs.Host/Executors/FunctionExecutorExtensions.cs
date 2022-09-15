@@ -64,7 +64,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     if (retryStrategy.MaxRetryCount != -1 && attempt == retryStrategy.MaxRetryCount)
                     {
                         // retry count exceeded
-                        logger.LogFunctionRetryFailed(attempt, functionResult);
+                        logger.LogFunctionRetriesFailed(attempt, functionResult);
                         break;
                     }
 

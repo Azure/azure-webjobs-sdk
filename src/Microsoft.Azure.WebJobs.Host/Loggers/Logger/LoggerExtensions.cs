@@ -15,11 +15,11 @@ namespace Microsoft.Extensions.Logging
     /// </summary>
     public static class LoggerExtensions
     {
-        private static readonly Action<ILogger, int, Exception> _logFunctionRetryFailed =
+        private static readonly Action<ILogger, int, Exception> _logFunctionRetriesFailed =
            LoggerMessage.Define<int>(
            LogLevel.Error,
-           new EventId(324, nameof(LogFunctionRetryFailed)),
-           "Function failed after '{attempt}' retries.");
+           new EventId(324, nameof(LogFunctionRetriesFailed)),
+           "Function execution failed after '{attempt}' retries.");
 
         private static readonly Action<ILogger, TimeSpan, int, int, Exception> _logFunctionRetryAttempt =
            LoggerMessage.Define<TimeSpan, int, int>(
@@ -251,9 +251,9 @@ namespace Microsoft.Extensions.Logging
             _logFunctionRetryAttempt(logger, nextDelay, attemptCount, maxRetryCount, null);
         }
 
-        public static void LogFunctionRetryFailed(this ILogger logger, int attemptCount, IDelayedException result)
+        public static void LogFunctionRetriesFailed(this ILogger logger, int attemptCount, IDelayedException result)
         {
-            _logFunctionRetryFailed(logger, attemptCount, result?.Exception);
+            _logFunctionRetriesFailed(logger, attemptCount, result?.Exception);
         }
 
         internal static void LogExitFromRetryLoop(this ILogger logger)
