@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +19,7 @@ using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -152,7 +154,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             instaceFactoryMock.Setup(m => m.Create(It.IsAny<FunctionInstanceFactoryContext<int>>())).Returns(functionInstance);
 
-            var triggerExecutor = new TriggeredFunctionExecutor<int>(functionDescriptor, functionExecutor, instaceFactoryMock.Object, NullLoggerFactory.Instance);
+            var testLogger = new TestLogger("Test");
+            Mock<ILoggerFactory> factoryMock = new Mock<ILoggerFactory>(MockBehavior.Strict);
+            factoryMock.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(testLogger);
+            var triggerExecutor = new TriggeredFunctionExecutor<int>(functionDescriptor, functionExecutor, instaceFactoryMock.Object, factoryMock.Object);
 
             // Arrange
             HostStartedMessage testMessage = new HostStartedMessage();
@@ -170,7 +175,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             if (invocationThrows)
             {
-                Assert.NotNull(result);
+                var messages = testLogger.GetLogMessages().Select(p => p.FormattedMessage).ToArray();
+                Assert.Single(messages.Where(x => x == "Function execution failed after '5' retries."));
+                Assert.Equal(5, messages.Where(x => x.StartsWith("Waiting for `")).Count());
                 Assert.NotNull(result.Exception.InnerException);
                 Assert.Equal("Test retry exception. invocationCount:6", result.Exception.InnerException.Message);
             }
