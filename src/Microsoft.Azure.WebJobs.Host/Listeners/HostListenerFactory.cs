@@ -14,6 +14,7 @@ using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Host.Listeners
 {
@@ -29,12 +30,16 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         private readonly ILogger _logger;
         private readonly bool _allowPartialHostStartup;
         private readonly Action _listenersCreatedCallback;
+        private readonly IOptions<ConcurrencyOptions> _concurrencyOptions;
         private readonly IScaleMonitorManager _monitorManager;
+        private readonly ITargetScalerManager _targetScalerManager;
         private readonly IDrainModeManager _drainModeManager;
 
 
         public HostListenerFactory(IEnumerable<IFunctionDefinition> functionDefinitions, SingletonManager singletonManager, IJobActivator activator,
-            INameResolver nameResolver, ILoggerFactory loggerFactory, IScaleMonitorManager monitorManager, Action listenersCreatedCallback, bool allowPartialHostStartup = false, IDrainModeManager drainModeManager = null)
+            INameResolver nameResolver, ILoggerFactory loggerFactory, IOptions<ConcurrencyOptions> concurrencyOptions, 
+            IScaleMonitorManager monitorManager, ITargetScalerManager targetScalerManager, Action listenersCreatedCallback, 
+            bool allowPartialHostStartup = false, IDrainModeManager drainModeManager = null)
         {
             _functionDefinitions = functionDefinitions;
             _singletonManager = singletonManager;
@@ -43,7 +48,9 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             _loggerFactory = loggerFactory;
             _logger = _loggerFactory?.CreateLogger(LogCategories.Startup);
             _allowPartialHostStartup = allowPartialHostStartup;
+            _concurrencyOptions = concurrencyOptions;
             _monitorManager = monitorManager;
+            _targetScalerManager = targetScalerManager;
             _listenersCreatedCallback = listenersCreatedCallback;
             _drainModeManager = drainModeManager;
         }
@@ -70,7 +77,18 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 
                 IListener listener = await listenerFactory.CreateAsync(cancellationToken);
 
-                RegisterScaleMonitor(listener, _monitorManager);
+                if (_concurrencyOptions != null && _concurrencyOptions.Value != null && _concurrencyOptions.Value.DynamicConcurrencyEnabled)
+                {
+                    if (!RegisterTargetScaler(listener, _targetScalerManager))
+                    {
+                        // if an extension does not implement ITargetScaler try to register IScaleMonitor
+                        RegisterScaleMonitor(listener, _monitorManager);
+                    }
+                }
+                else
+                {
+                    RegisterScaleMonitor(listener, _monitorManager);
+                }
 
                 // if the listener is a Singleton, wrap it with our SingletonListener
                 SingletonAttribute singletonAttribute = SingletonManager.GetListenerSingletonOrNull(listener.GetType(), functionDefinition.Descriptor);
@@ -121,6 +139,34 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                     RegisterScaleMonitor(innerListener, monitorManager);
                 }
             }
+        }
+
+        internal static bool RegisterTargetScaler(IListener listener, ITargetScalerManager targetScalerManager)
+        {
+            bool result = false;
+            if (listener is ITargetScaler targetScaler)
+            {
+                targetScalerManager.Register(targetScaler);
+                result = true;
+            }
+            else if (listener is ITargetScalerProvider targetScalerProvider)
+            {
+                var scaler = ((ITargetScalerProvider)listener).GetTargetScaler();
+                targetScalerManager.Register(scaler);
+                result = true;
+            }
+            else if (listener is IEnumerable<IListener>)
+            {
+                // for composite listeners, we need to check all the inner listeners
+                foreach (var innerListener in ((IEnumerable<IListener>)listener))
+                {
+                    if (RegisterTargetScaler(innerListener, targetScalerManager))
+                    {
+                        result = true;
+                    }
+                }
+            }
+            return result;
         }
 
         internal static bool IsDisabled(MethodInfo method, INameResolver nameResolver, IJobActivator activator, IConfiguration configuration)
