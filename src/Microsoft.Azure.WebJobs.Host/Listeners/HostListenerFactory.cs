@@ -22,6 +22,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
     {
         private static readonly MethodInfo JobActivatorCreateMethod = typeof(IJobActivator).GetMethod("CreateInstance", BindingFlags.Public | BindingFlags.Instance).GetGenericMethodDefinition();
         private const string IsDisabledFunctionName = "IsDisabled";
+        private const string TargetBaseScalingEnabled = "TARGET_BASED_SCALING_ENABLED";
         private readonly IEnumerable<IFunctionDefinition> _functionDefinitions;
         private readonly SingletonManager _singletonManager;
         private readonly IJobActivator _activator;
@@ -30,16 +31,13 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         private readonly ILogger _logger;
         private readonly bool _allowPartialHostStartup;
         private readonly Action _listenersCreatedCallback;
-        private readonly IOptions<ConcurrencyOptions> _concurrencyOptions;
         private readonly IScaleMonitorManager _monitorManager;
         private readonly ITargetScalerManager _targetScalerManager;
         private readonly IDrainModeManager _drainModeManager;
 
 
         public HostListenerFactory(IEnumerable<IFunctionDefinition> functionDefinitions, SingletonManager singletonManager, IJobActivator activator,
-            INameResolver nameResolver, ILoggerFactory loggerFactory, IOptions<ConcurrencyOptions> concurrencyOptions, 
-            IScaleMonitorManager monitorManager, ITargetScalerManager targetScalerManager, Action listenersCreatedCallback, 
-            bool allowPartialHostStartup = false, IDrainModeManager drainModeManager = null)
+            INameResolver nameResolver, ILoggerFactory loggerFactory, IScaleMonitorManager monitorManager, ITargetScalerManager targetScalerManager, Action listenersCreatedCallback, bool allowPartialHostStartup = false, IDrainModeManager drainModeManager = null)
         {
             _functionDefinitions = functionDefinitions;
             _singletonManager = singletonManager;
@@ -48,7 +46,6 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             _loggerFactory = loggerFactory;
             _logger = _loggerFactory?.CreateLogger(LogCategories.Startup);
             _allowPartialHostStartup = allowPartialHostStartup;
-            _concurrencyOptions = concurrencyOptions;
             _monitorManager = monitorManager;
             _targetScalerManager = targetScalerManager;
             _listenersCreatedCallback = listenersCreatedCallback;
@@ -77,15 +74,16 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 
                 IListener listener = await listenerFactory.CreateAsync(cancellationToken);
 
-                if (_concurrencyOptions != null && _concurrencyOptions.Value != null && _concurrencyOptions.Value.DynamicConcurrencyEnabled)
+                bool targetScalerRegistered = false;
+                if (bool.TryParse(Environment.GetEnvironmentVariable(TargetBaseScalingEnabled), out bool isTargetBaseScalingEnabled))
                 {
-                    if (!RegisterTargetScaler(listener, _targetScalerManager))
+                    if (isTargetBaseScalingEnabled)
                     {
-                        // if an extension does not implement ITargetScaler try to register IScaleMonitor
-                        RegisterScaleMonitor(listener, _monitorManager);
+                        targetScalerRegistered = RegisterTargetScaler(listener, _targetScalerManager);
                     }
                 }
-                else
+                
+                if (!targetScalerRegistered)
                 {
                     RegisterScaleMonitor(listener, _monitorManager);
                 }

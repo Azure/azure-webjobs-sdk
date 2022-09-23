@@ -303,7 +303,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "ITargetScalerProvider",
                 "TargetScalerDescriptor",
                 "TargetScalerResult",
-                "TargetScaleStatusContext"
+                "TargetScalerStatusContext"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);

@@ -49,15 +49,20 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
         [InlineData(true, typeof(TestListener_Monitor), typeof(TestListener_TargetScalerProvider), 1, 1)]
         [InlineData(true, typeof(TestListener_TargetScaler), typeof(TestListener_TargetScalerProvider), 0, 2)]
         [InlineData(true, typeof(TestListener_Monitor), typeof(TestListener_MonitorAndTargetScaler), 1, 1)]
-        public async Task CreateAsync_RegistersScaleMonitorsAndTargetScaler(bool dynamicConcurrencyEnabled,
+        public async Task CreateAsync_RegistersScaleMonitorsAndTargetScaler(bool tbsEnabled,
             Type listenerType1, Type listenerType2,
             int expectedMonitors, int expectedTargetScalers)
         {
+            if (tbsEnabled)
+            {
+                Environment.SetEnvironmentVariable("TARGET_BASED_SCALING_ENABLED", tbsEnabled.ToString());
+            }
+
             ILoggerFactory loggerFactory = new LoggerFactory();
             TestLoggerProvider loggerProvider = new TestLoggerProvider();
             loggerFactory.AddProvider(loggerProvider);
 
-            // Adding a ScaleMonitor
+            // Adding a testListener1
             Mock<IFunctionDefinition> mockFunctionDefinition1 = new Mock<IFunctionDefinition>();
             Mock<IFunctionInstanceFactory> mockInstanceFactory1 = new Mock<IFunctionInstanceFactory>(MockBehavior.Strict);
             Mock<IListenerFactory> mockListenerFactory1 = new Mock<IListenerFactory>(MockBehavior.Strict);
@@ -67,7 +72,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             FunctionDescriptor descriptor1 = FunctionIndexer.FromMethod(method1, _configuration, _jobActivator);
             FunctionDefinition definition1 = new FunctionDefinition(descriptor1, mockInstanceFactory1.Object, mockListenerFactory1.Object);
 
-            // Adding a TargetScaler
+            // Adding a testListener2
             Mock<IFunctionDefinition> mockFunctionDefinition2 = new Mock<IFunctionDefinition>();
             Mock<IFunctionInstanceFactory> mockInstanceFactory2 = new Mock<IFunctionInstanceFactory>(MockBehavior.Strict);
             Mock<IListenerFactory> mockListenerFactory2 = new Mock<IListenerFactory>(MockBehavior.Strict);
@@ -85,12 +90,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             var monitorManager = new ScaleMonitorManager();
             var targetScalerManager = new TargetScalerManager();
             var drainModeManagerMock = new Mock<IDrainModeManager>();
-            IOptions<ConcurrencyOptions> concurrenyOptions = Options.Create(new ConcurrencyOptions
-            {
-                DynamicConcurrencyEnabled = dynamicConcurrencyEnabled
-            });
             SingletonManager singletonManager = new SingletonManager();
-            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, concurrenyOptions, monitorManager, targetScalerManager, () => { }, false, drainModeManagerMock.Object);
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManager, targetScalerManager, () => { }, false, drainModeManagerMock.Object);
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 
             var monitors = monitorManager.GetMonitors().ToArray();
@@ -99,6 +100,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             Assert.Equal(monitors.Count(), expectedMonitors);
 
             Assert.Equal(taretScalers.Count(), expectedTargetScalers);
+
+            Environment.SetEnvironmentVariable("TARGET_BASED_SCALING_ENABLED", null);
         }
 
         [Fact]
@@ -200,9 +203,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             // function definitions indicate that they are not disabled
             var monitorManagerMock = new Mock<IScaleMonitorManager>(MockBehavior.Strict);
             var targetScalerManagerMock = new Mock<ITargetScalerManager>(MockBehavior.Strict);
-            var concurrencyOptionsMock = new Mock<IOptions<ConcurrencyOptions>>(MockBehavior.Strict);
             var drainModeManagerMock = new Mock<IDrainModeManager>();
-            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, concurrencyOptionsMock.Object, monitorManagerMock.Object, targetScalerManagerMock.Object, () => { }, false, drainModeManagerMock.Object);
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManagerMock.Object, targetScalerManagerMock.Object, () => { }, false, drainModeManagerMock.Object);
 
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 
@@ -483,7 +485,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
                 throw new NotImplementedException();
             }
 
-            public Task<TargetScalerResult> GetScaleResultAsync(TargetScaleStatusContext context)
+            public Task<TargetScalerResult> GetScaleResultAsync(TargetScalerStatusContext context)
             {
                 throw new NotImplementedException();
             }
@@ -542,7 +544,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
                     throw new NotImplementedException();
                 }
 
-                public Task<TargetScalerResult> GetScaleResultAsync(TargetScaleStatusContext context)
+                public Task<TargetScalerResult> GetScaleResultAsync(TargetScalerStatusContext context)
                 {
                     throw new NotImplementedException();
                 }
@@ -553,7 +555,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
         {
             public TargetScalerDescriptor TargetScalerDescriptor => throw new NotImplementedException();
 
-            public Task<TargetScalerResult> GetScaleResultAsync(TargetScaleStatusContext context)
+            public Task<TargetScalerResult> GetScaleResultAsync(TargetScalerStatusContext context)
             {
                 throw new NotImplementedException();
             }

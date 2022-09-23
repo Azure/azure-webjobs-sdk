@@ -131,7 +131,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     host.OnHostInitialized();
                 };
                 IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), _singletonManager, _activator, _nameResolver, _loggerFactory, 
-                    _concurrencyOptions, _monitorManager, _targetScalerManager, listenersCreatedCallback, _jobHostOptions.Value.AllowPartialHostStartup, _drainModeManager);
+                    _monitorManager, _targetScalerManager, listenersCreatedCallback, _jobHostOptions.Value.AllowPartialHostStartup, _drainModeManager);
 
                 string hostId = await _hostIdProvider.GetHostIdAsync(cancellationToken);
                 bool dashboardLoggingEnabled = _dashboardLoggingSetup.Setup(functions, functionsListenerFactory, out IFunctionExecutor hostCallExecutor,

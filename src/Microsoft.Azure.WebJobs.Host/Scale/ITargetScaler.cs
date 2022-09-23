@@ -19,9 +19,9 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// <summary>
         /// Return the current scale result based on the specified context.
         /// </summary>
-        /// <param name="context">The <see cref="TargetScaleStatusContext"/> to use to determine
+        /// <param name="context">The <see cref="TargetScalerStatusContext"/> to use to determine
         /// the scale result.</param>
         /// <returns>The scale result.</returns>
-        Task<TargetScalerResult> GetScaleResultAsync(TargetScaleStatusContext context);
+        Task<TargetScalerResult> GetScaleResultAsync(TargetScalerStatusContext context);
     }
 }
