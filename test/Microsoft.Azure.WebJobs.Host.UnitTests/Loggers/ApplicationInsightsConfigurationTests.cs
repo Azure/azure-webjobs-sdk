@@ -82,13 +82,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 var modules = host.Services.GetServices<ITelemetryModule>().ToList();
 
                 // Verify Modules
-                Assert.Equal(5, modules.Count);
+                Assert.Equal(6, modules.Count);
                 Assert.Single(modules.OfType<DependencyTrackingTelemetryModule>());
 
                 Assert.Single(modules.OfType<QuickPulseTelemetryModule>());
                 Assert.Single(modules.OfType<PerformanceCollectorModule>());
                 Assert.Single(modules.OfType<AppServicesHeartbeatTelemetryModule>());
                 Assert.Single(modules.OfType<RequestTrackingTelemetryModule>());
+                Assert.Single(modules.OfType<TransmissionStatusTelemetryModule>());
 
                 var dependencyModule = modules.OfType<DependencyTrackingTelemetryModule>().Single();
 
@@ -159,13 +160,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 var modules = host.Services.GetServices<ITelemetryModule>().ToList();
 
                 // Verify Modules
-                Assert.Equal(5, modules.Count);
+                Assert.Equal(6, modules.Count);
                 Assert.Single(modules.OfType<DependencyTrackingTelemetryModule>());
 
                 Assert.Single(modules.OfType<QuickPulseTelemetryModule>());
                 Assert.Single(modules.OfType<PerformanceCollectorModule>());
                 Assert.Single(modules.OfType<AppServicesHeartbeatTelemetryModule>());
                 Assert.Single(modules.OfType<RequestTrackingTelemetryModule>());
+                Assert.Single(modules.OfType<TransmissionStatusTelemetryModule>());
 
                 var dependencyModule = modules.OfType<DependencyTrackingTelemetryModule>().Single();
 
