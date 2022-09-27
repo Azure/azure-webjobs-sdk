@@ -8,5 +8,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         public const string ZeroIpAddress = "0.0.0.0";
         public const string Unknown = "[Unknown]";
         public const string ClientIpKey = "ClientIp";
+        public const string HostDiagnosticSourcePrefix = "Microsoft.Azure.Functions.Host.";
+        public const string HostDiagnosticSourceDebugEventNamePrefix = "debug-";
     }
 }

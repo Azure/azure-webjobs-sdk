@@ -80,6 +80,7 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddSingleton<ITelemetryInitializer, MetricSdkVersionTelemetryInitializer>();
             services.AddSingleton<QuickPulseInitializationScheduler>();
             services.AddSingleton<QuickPulseTelemetryModule>();
+            services.AddSingleton<ITelemetryModule, TransmissionStatusTelemetryModule>();
 
             services.AddSingleton<ITelemetryModule>(provider =>
             {
