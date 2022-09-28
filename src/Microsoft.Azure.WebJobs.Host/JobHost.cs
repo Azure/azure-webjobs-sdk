@@ -336,7 +336,7 @@ namespace Microsoft.Azure.WebJobs
                 return Task.CompletedTask;
             }
 
-            TaskCompletionSource<bool> tsc = null;
+            TaskCompletionSource<bool> tcs = null;
 
             if (_hostInitializationTask == null)
             {
@@ -345,16 +345,16 @@ namespace Microsoft.Azure.WebJobs
                     if (_hostInitializationTask == null)
                     {
                         // This thread wins the race and owns initialing. 
-                        tsc = new TaskCompletionSource<bool>();
-                        _hostInitializationTask = tsc.Task;
+                        tcs = new TaskCompletionSource<bool>();
+                        _hostInitializationTask = tcs.Task;
                     }
                 }
             }
 
-            if (tsc != null)
+            if (tcs != null)
             {
-                // Ignore the return value and use tsc so that all threads are awaiting the same thing. 
-                Task ignore = InitializeHostAsync(cancellationToken, tsc);
+                // Ignore the return value and use tcs so that all threads are awaiting the same thing. 
+                Task ignore = InitializeHostAsync(cancellationToken, tcs);
             }
 
             return _hostInitializationTask;

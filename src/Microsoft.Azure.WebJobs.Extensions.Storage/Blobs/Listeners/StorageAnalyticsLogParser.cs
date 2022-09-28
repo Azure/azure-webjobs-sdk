@@ -112,8 +112,10 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
 
                             _logger.LogWarning(message);
                         }
-
-                        entries.Add(entry);
+                        if (entry != null)
+                        {
+                            entries.Add(entry);
+                        }
                     }
                 }
             }
