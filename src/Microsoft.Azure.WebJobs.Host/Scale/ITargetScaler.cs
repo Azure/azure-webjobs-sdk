@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 namespace Microsoft.Azure.WebJobs.Host.Scale
 {
     /// <summary>
-    /// Interface defining a target scaler that can participate in Azure Functions scaling decisions by
-    /// taking current metrics, and scaling based on those metrics.
+    /// Interface defining an Azure Functions scaler that makes scale decisions based on current 
+    /// event source metrics and function concurrency.
     /// </summary>
     public interface ITargetScaler
     {
@@ -19,9 +19,9 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// <summary>
         /// Return the current scale result based on the specified context.
         /// </summary>
-        /// <param name="context">The <see cref="TargetScalerStatusContext"/> to use to determine
+        /// <param name="context">The <see cref="TargetScalerContext"/> to use to determine
         /// the scale result.</param>
         /// <returns>The scale result.</returns>
-        Task<TargetScalerResult> GetScaleResultAsync(TargetScalerStatusContext context);
+        Task<TargetScalerResult> GetScaleResultAsync(TargetScalerContext context);
     }
 }

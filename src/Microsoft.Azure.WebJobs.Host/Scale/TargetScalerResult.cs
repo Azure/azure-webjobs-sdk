@@ -4,13 +4,13 @@
 namespace Microsoft.Azure.WebJobs.Host.Scale
 {
     /// <summary>
-    /// Represents result for target base scale.
+    /// Represents the scale result of a target scaler.
     /// </summary>
     public class TargetScalerResult
     {
         /// <summary>
         /// Gets or sets the target worker count.
         /// </summary>
-        public int WorkerCountDifference { get; set; }
+        public int TargetWorkerCount { get; set; }
     }
 }

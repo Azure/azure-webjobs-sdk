@@ -14,11 +14,11 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// <summary>
         /// Register an <see cref="ITargetScaler"/> instance.
         /// </summary>
-        /// <param name="monitor">The monitor instance to register.</param>
-        void Register(ITargetScaler monitor);
+        /// <param name="scaler">The target scaler instance to register.</param>
+        void Register(ITargetScaler scaler);
 
         /// <summary>
-        /// Get all registered target scale instances.
+        /// Get all registered target scaler instances.
         /// </summary>
         /// <remarks>
         /// Should only be called after the host has been started and all

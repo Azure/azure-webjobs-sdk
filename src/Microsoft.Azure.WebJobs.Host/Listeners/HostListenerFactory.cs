@@ -35,7 +35,6 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         private readonly ITargetScalerManager _targetScalerManager;
         private readonly IDrainModeManager _drainModeManager;
 
-
         public HostListenerFactory(IEnumerable<IFunctionDefinition> functionDefinitions, SingletonManager singletonManager, IJobActivator activator,
             INameResolver nameResolver, ILoggerFactory loggerFactory, IScaleMonitorManager monitorManager, ITargetScalerManager targetScalerManager, Action listenersCreatedCallback, bool allowPartialHostStartup = false, IDrainModeManager drainModeManager = null)
         {
@@ -74,20 +73,9 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 
                 IListener listener = await listenerFactory.CreateAsync(cancellationToken);
 
-                bool targetScalerRegistered = false;
-                if (bool.TryParse(Environment.GetEnvironmentVariable(TargetBaseScalingEnabled), out bool isTargetBaseScalingEnabled))
-                {
-                    if (isTargetBaseScalingEnabled)
-                    {
-                        targetScalerRegistered = RegisterTargetScaler(listener, _targetScalerManager);
-                    }
-                }
+                RegisterScaleMonitor(listener, _monitorManager);
+                RegisterTargetScaler(listener, _targetScalerManager);
                 
-                if (!targetScalerRegistered)
-                {
-                    RegisterScaleMonitor(listener, _monitorManager);
-                }
-
                 // if the listener is a Singleton, wrap it with our SingletonListener
                 SingletonAttribute singletonAttribute = SingletonManager.GetListenerSingletonOrNull(listener.GetType(), functionDefinition.Descriptor);
                 if (singletonAttribute != null)
@@ -139,32 +127,25 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             }
         }
 
-        internal static bool RegisterTargetScaler(IListener listener, ITargetScalerManager targetScalerManager)
+        internal static void RegisterTargetScaler(IListener listener, ITargetScalerManager targetScalerManager)
         {
-            bool result = false;
             if (listener is ITargetScaler targetScaler)
             {
                 targetScalerManager.Register(targetScaler);
-                result = true;
             }
             else if (listener is ITargetScalerProvider targetScalerProvider)
             {
                 var scaler = ((ITargetScalerProvider)listener).GetTargetScaler();
                 targetScalerManager.Register(scaler);
-                result = true;
             }
             else if (listener is IEnumerable<IListener>)
             {
                 // for composite listeners, we need to check all the inner listeners
                 foreach (var innerListener in ((IEnumerable<IListener>)listener))
                 {
-                    if (RegisterTargetScaler(innerListener, targetScalerManager))
-                    {
-                        result = true;
-                    }
+                    RegisterTargetScaler(innerListener, targetScalerManager);
                 }
             }
-            return result;
         }
 
         internal static bool IsDisabled(MethodInfo method, INameResolver nameResolver, IJobActivator activator, IConfiguration configuration)

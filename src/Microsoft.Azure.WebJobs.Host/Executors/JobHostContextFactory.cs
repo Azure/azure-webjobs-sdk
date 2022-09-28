@@ -51,7 +51,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IScaleMonitorManager _monitorManager;
         private readonly IDrainModeManager _drainModeManager;
         private readonly IApplicationLifetime _applicationLifetime;
-        private readonly IOptions<ConcurrencyOptions> _concurrencyOptions;
         private readonly ITargetScalerManager _targetScalerManager;
 
         public JobHostContextFactory(
@@ -100,7 +99,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _monitorManager = monitorManager;
             _drainModeManager = drainModeManager;
             _applicationLifetime = applicationLifetime;
-            _concurrencyOptions = concurrencyOptions;
             _targetScalerManager = targetScalerManager;
         }
 
@@ -130,7 +128,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     // they are started).
                     host.OnHostInitialized();
                 };
-                IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), _singletonManager, _activator, _nameResolver, _loggerFactory, 
+                IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), _singletonManager, _activator, _nameResolver, _loggerFactory,
                     _monitorManager, _targetScalerManager, listenersCreatedCallback, _jobHostOptions.Value.AllowPartialHostStartup, _drainModeManager);
 
                 string hostId = await _hostIdProvider.GetHostIdAsync(cancellationToken);

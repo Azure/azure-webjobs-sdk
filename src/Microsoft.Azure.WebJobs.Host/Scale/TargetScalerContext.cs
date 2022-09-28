@@ -4,22 +4,17 @@
 namespace Microsoft.Azure.WebJobs.Host.Scale
 {
     /// <summary>
-    /// Context used by <see cref="ITargetScaler.GetScaleResultAsync(TargetScalerStatusContext)"/> to decide
+    /// Context used by <see cref="ITargetScaler.GetScaleResultAsync(TargetScalerContext)"/> to decide
     /// scale result.
     /// </summary>
-    public class TargetScalerStatusContext
+    public class TargetScalerContext
     {
         /// <summary>
         /// The current worker dyanimc worker concurrency. 
         /// </summary>
         /// <remarks>
-        /// Value is reolved in the <see cref="ITargetScaler"/> implementation if null.
+        /// When not specified, the scaler will determine the concurrency based on configuration.
         /// </remarks>
         public int? InstanceConcurrency { get; set; }
-
-        /// <summary>
-        /// The current worker count for the host application.
-        /// </summary>
-        public int WorkerCount { get; set; }
     }
 }
