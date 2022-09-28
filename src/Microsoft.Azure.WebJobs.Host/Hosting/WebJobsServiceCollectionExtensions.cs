@@ -123,6 +123,7 @@ namespace Microsoft.Azure.WebJobs
             services.AddSingleton<IOptionsFormatter<LoggerFilterOptions>, LoggerFilterOptionsFormatter>();
 
             // Concurrency management
+            services.TryAddSingleton<IConcurrencyStatusRepository, NullConcurrencyStatusRepository>();
             services.TryAddSingleton<IHostProcessMonitor, DefaultHostProcessMonitor>();
             services.TryAddSingleton<IConcurrencyThrottleManager, DefaultConcurrencyThrottleManager>();
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IConcurrencyThrottleProvider, HostHealthThrottleProvider>());

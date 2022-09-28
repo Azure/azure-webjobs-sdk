@@ -22,7 +22,6 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
     {
         private static readonly MethodInfo JobActivatorCreateMethod = typeof(IJobActivator).GetMethod("CreateInstance", BindingFlags.Public | BindingFlags.Instance).GetGenericMethodDefinition();
         private const string IsDisabledFunctionName = "IsDisabled";
-        private const string TargetBaseScalingEnabled = "TARGET_BASED_SCALING_ENABLED";
         private readonly IEnumerable<IFunctionDefinition> _functionDefinitions;
         private readonly SingletonManager _singletonManager;
         private readonly IJobActivator _activator;

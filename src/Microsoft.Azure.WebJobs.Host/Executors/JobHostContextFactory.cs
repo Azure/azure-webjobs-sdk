@@ -75,7 +75,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             IScaleMonitorManager monitorManager,
             IDrainModeManager drainModeManager,
             IApplicationLifetime applicationLifetime,
-            IOptions<ConcurrencyOptions> concurrencyOptions,
             ITargetScalerManager targetScalerManager)
         {
             _dashboardLoggingSetup = dashboardLoggingSetup;
