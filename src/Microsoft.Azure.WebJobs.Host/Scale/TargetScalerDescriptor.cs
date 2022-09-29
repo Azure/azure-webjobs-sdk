@@ -9,20 +9,15 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
     /// </summary>
     public class TargetScalerDescriptor
     {
-        /// <summary>
-        /// Gets or sets the unique ID for the monitor.
-        /// </summary>
-        /// <remarks>
-        /// This should be constant. It is used to correlate persisted metrics samples
-        /// with their corresponding monitor instance. E.g. for a QueueTrigger, this might
-        /// be of the form "{FunctionId}-QueueTrigger-{QueueName}".
-        /// </remarks>
-        public string Id { get; set; }
+        public TargetScalerDescriptor(string functionId)
+        {
+            FunctionId = functionId;
+        }
 
         /// <summary>
         /// Gets the ID of the function associated with this scaler.
         /// </summary>
-        public string FunctionId { get; set; }
+        public string FunctionId { get; }
 
         /// <summary>
         /// Get or set configuation key name.
