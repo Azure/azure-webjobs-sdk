@@ -47,82 +47,63 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             source.Dispose();
         }
 
-        public void Handler(object sender, TransmissionStatusEventArgs args)
+        internal void Handler(object sender, TransmissionStatusEventArgs args)
         {
-            // Do not block the main thread
-            Task.Run(() =>
+            if (args == null)
             {
-                if (sender != null && args != null)
+                source.Write("TransmissionStatus", "Unable to parse transmission status response, args is null");
+                return;
+            }
+
+            // Always log if the response is non-success or if the feature flag is enabled
+            if (args.Response?.StatusCode != 200 || source.IsEnabled(debugTracingEventName))
+            {
+                // Do not block the main thread
+                Task.Run(() =>
                 {
-                    // Always log if the response is non-success
-                    if (args.Response.StatusCode != 200)
-                    {
-                        var transmission = sender as Transmission;
-                        string id = null;
-                        if (transmission != null)
-                        {                        
-                            id = transmission.Id;
-                        }
-
-                        var log = new
-                        {
-                            statusCode = args.Response?.StatusCode,
-                            description = args.Response?.StatusDescription,
-                            id
-                        };
-                        source.Write("TransmissionStatus", JsonConvert.SerializeObject(log, options));
-                    }
-
-                    // Log everything if the debug trace feature flag is enabled
-                    if (source.IsEnabled(debugTracingEventName))
-                    {
-                        source.Write(debugTracingEventName, FormattedLog(sender, args));
-                    }
-                }
-            });
+                    source.Write("TransmissionStatus", FormattedLog(sender, args));
+                });
+            }
         }
         internal string FormattedLog(object sender, TransmissionStatusEventArgs args)
         {
             var transmission = sender as Transmission;
-            if (transmission != null)
+            var items = transmission?.TelemetryItems.GroupBy(n => n.GetEnvelopeName())
+                        .Select(n => new
+                        {
+                            type = n.Key,
+                            count = n.Count()
+                        });
+
+            BackendResponse backendResponse = null;
+            if (!string.IsNullOrWhiteSpace(args?.Response?.Content))
             {
-                var items = transmission.TelemetryItems.GroupBy(n => n.GetEnvelopeName())
-                            .Select(n => new
-                            {
-                                type = n.Key,
-                                count = n.Count()
-                            });
-
-                BackendResponse backendResponse = null;
-                if (!string.IsNullOrWhiteSpace(args.Response?.Content))
-                {
-                    backendResponse = JsonConvert.DeserializeObject<BackendResponse>(args.Response.Content, options);
-                }
-                string topErrorMessage = null;
-                int? topStatusCode = null;
-                if (backendResponse?.Errors != null && backendResponse.Errors.Count() > 0)
-                {
-                    topErrorMessage = backendResponse.Errors[0].Message;
-                    topStatusCode = backendResponse?.Errors[0].StatusCode;
-                }
-
-                var log = new
-                {
-                    items = items,
-                    statusCode = args.Response?.StatusCode,
-                    statusDescription = args.Response?.StatusDescription,
-                    retryAfterHeader = args.Response?.RetryAfterHeader,
-                    id = transmission.Id,
-                    timeout = transmission.Timeout,
-                    responseTimeInMs = args.ResponseDurationInMs,
-                    received = backendResponse?.ItemsReceived,
-                    accepted = backendResponse?.ItemsAccepted,
-                    errorMessage = topErrorMessage,
-                    errorCode = topStatusCode,
-                };
-                return JsonConvert.SerializeObject(log, options);
+                backendResponse = JsonConvert.DeserializeObject<BackendResponse>(args.Response.Content, options);
             }
-            return "Unable to parse transmission status response";
+
+            string topErrorMessage = null;
+            int? topStatusCode = null;
+            if (backendResponse?.Errors != null && backendResponse.Errors.Length > 0)
+            {
+                topErrorMessage = backendResponse.Errors[0].Message;
+                topStatusCode = backendResponse?.Errors[0].StatusCode;
+            }
+
+            var log = new
+            {                
+                statusCode = args?.Response?.StatusCode,
+                statusDescription = args?.Response?.StatusDescription,
+                id = transmission?.Id,
+                items = items,
+                received = backendResponse?.ItemsReceived,
+                accepted = backendResponse?.ItemsAccepted,
+                errorMessage = topErrorMessage,
+                errorCode = topStatusCode,
+                responseTimeInMs = args?.ResponseDurationInMs,
+                retryAfterHeader = args?.Response?.RetryAfterHeader,
+                timeout = transmission?.Timeout,
+            };
+            return JsonConvert.SerializeObject(log, options);
         }
     }
 
@@ -136,7 +117,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
         [JsonProperty("errors")]
         public Error[] Errors { get; set; }
-        public class Error
+        internal class Error
         {
 
             [JsonProperty("statusCode")]
