@@ -18,13 +18,5 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// Gets the ID of the function associated with this scaler.
         /// </summary>
         public string FunctionId { get; }
-
-        /// <summary>
-        /// Get or set configuation key name.
-        /// </summary>
-        /// <remarks>
-        /// It is used to determinate if ScaleContorller suppots targed base scale on particular stamp.
-        /// </remarks>
-        public string ConfigurationKeyName { get; set; }
     }
 }
