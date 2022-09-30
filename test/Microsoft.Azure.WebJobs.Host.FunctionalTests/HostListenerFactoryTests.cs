@@ -38,7 +38,73 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             DisableProvider_Instance.Method = null;
         }
 
-         [Fact]
+        [Fact]
+        public async Task CreateAsync_RegistersScaleMonitors()
+        {
+            Mock<IFunctionDefinition> mockFunctionDefinition = new Mock<IFunctionDefinition>();
+            Mock<IFunctionInstanceFactory> mockInstanceFactory = new Mock<IFunctionInstanceFactory>(MockBehavior.Strict);
+            Mock<IListenerFactory> mockListenerFactory = new Mock<IListenerFactory>(MockBehavior.Strict);
+            var testListener = new TestListener_Monitor();
+            mockListenerFactory.Setup(p => p.CreateAsync(It.IsAny<CancellationToken>())).ReturnsAsync(testListener);
+            SingletonManager singletonManager = new SingletonManager();
+
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            TestLoggerProvider loggerProvider = new TestLoggerProvider();
+            loggerFactory.AddProvider(loggerProvider);
+
+            List<FunctionDefinition> functions = new List<FunctionDefinition>();
+            var method = typeof(Functions1).GetMethod("TestJob", BindingFlags.Public | BindingFlags.Static);
+            FunctionDescriptor descriptor = FunctionIndexer.FromMethod(method, _configuration, _jobActivator);
+            FunctionDefinition definition = new FunctionDefinition(descriptor, mockInstanceFactory.Object, mockListenerFactory.Object);
+            functions.Add(definition);
+
+            var monitorManager = new ScaleMonitorManager();
+            var targetScaleManager = new TargetScalerManager();
+            var drainModeManagerMock = new Mock<IDrainModeManager>();
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManager, targetScaleManager, () => { }, false, drainModeManagerMock.Object);
+            IListener listener = await factory.CreateAsync(CancellationToken.None);
+
+            var innerListeners = ((IEnumerable<IListener>)listener).ToArray();
+
+            var monitors = monitorManager.GetMonitors().ToArray();
+            Assert.Single(monitors);
+            Assert.Same(testListener, monitors[0]);
+        }
+
+        [Fact]
+        public async Task CreateAsync_RegistersTargetScalers()
+        {
+            Mock<IFunctionDefinition> mockFunctionDefinition = new Mock<IFunctionDefinition>();
+            Mock<IFunctionInstanceFactory> mockInstanceFactory = new Mock<IFunctionInstanceFactory>(MockBehavior.Strict);
+            Mock<IListenerFactory> mockListenerFactory = new Mock<IListenerFactory>(MockBehavior.Strict);
+            var testListener = new TestListener_TargetScaler();
+            mockListenerFactory.Setup(p => p.CreateAsync(It.IsAny<CancellationToken>())).ReturnsAsync(testListener);
+            SingletonManager singletonManager = new SingletonManager();
+
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            TestLoggerProvider loggerProvider = new TestLoggerProvider();
+            loggerFactory.AddProvider(loggerProvider);
+
+            List<FunctionDefinition> functions = new List<FunctionDefinition>();
+            var method = typeof(Functions1).GetMethod("TestJob", BindingFlags.Public | BindingFlags.Static);
+            FunctionDescriptor descriptor = FunctionIndexer.FromMethod(method, _configuration, _jobActivator);
+            FunctionDefinition definition = new FunctionDefinition(descriptor, mockInstanceFactory.Object, mockListenerFactory.Object);
+            functions.Add(definition);
+
+            var monitorManager = new ScaleMonitorManager();
+            var targetScaleManager = new TargetScalerManager();
+            var drainModeManagerMock = new Mock<IDrainModeManager>();
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManager, targetScaleManager, () => { }, false, drainModeManagerMock.Object);
+            IListener listener = await factory.CreateAsync(CancellationToken.None);
+
+            var innerListeners = ((IEnumerable<IListener>)listener).ToArray();
+
+            var targetScalers = targetScaleManager.GetTargetScalers().ToArray();
+            Assert.Single(targetScalers);
+            Assert.Same(testListener, targetScalers[0]);
+        }
+
+        [Fact]
         public void RegisterScaleMonitor_Succeeds()
         {
             // listener is a direct monitor
