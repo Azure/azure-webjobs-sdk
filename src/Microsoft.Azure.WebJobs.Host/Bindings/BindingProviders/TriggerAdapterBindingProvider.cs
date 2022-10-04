@@ -9,26 +9,24 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.Azure.WebJobs.Script.Abstractions.Description.Binding;
 using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    // Regular BindToInput has to do a TAttribute --> Value creation. 
+    // Regular BindToInput has to do a TAttribute --> Value creation.
     // But triggers already have a Listener that provided the initial object; and we're just
-    // converting it to the user's target parameter. 
+    // converting it to the user's target parameter.
     internal class TriggerAdapterBindingProvider<TAttribute, TTriggerValue> :
         FluentBindingProvider<TAttribute>, IBindingProvider, IBindingRuleProvider
-           where TAttribute : Attribute
+            where TAttribute : Attribute
             where TTriggerValue : class
     {
         private readonly INameResolver _nameResolver;
         private readonly IConverterManager _converterManager;
 
         public TriggerAdapterBindingProvider(
-          INameResolver nameResolver,
-          IConverterManager converterManager
-          )
+            INameResolver nameResolver,
+            IConverterManager converterManager)
         {
             _nameResolver = nameResolver;
             _converterManager = converterManager;
