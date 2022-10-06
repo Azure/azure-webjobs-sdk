@@ -24,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// Should only be called after the host has been started and all
         /// instances are registered.
         /// </remarks>
-        /// <returns>The collection of target scaler intances.</returns>
+        /// <returns>The collection of target scaler instances.</returns>
         IEnumerable<ITargetScaler> GetTargetScalers();
     }
 }

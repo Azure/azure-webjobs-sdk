@@ -24,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// Should only be called after the host has been started and all
         /// instances are registered.
         /// </remarks>
-        /// <returns>The collection of monitor intances.</returns>
+        /// <returns>The collection of monitor instances.</returns>
         IEnumerable<IScaleMonitor> GetMonitors();
     }
 }

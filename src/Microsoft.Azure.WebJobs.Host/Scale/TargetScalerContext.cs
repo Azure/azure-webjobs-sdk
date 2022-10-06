@@ -10,7 +10,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
     public class TargetScalerContext
     {
         /// <summary>
-        /// The current worker dyanimc worker concurrency. 
+        /// The current concurrency for the target function.
         /// </summary>
         /// <remarks>
         /// When not specified, the scaler will determine the concurrency based on configuration.

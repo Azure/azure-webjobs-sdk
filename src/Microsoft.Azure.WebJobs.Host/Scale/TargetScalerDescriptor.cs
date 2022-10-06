@@ -3,7 +3,6 @@
 
 namespace Microsoft.Azure.WebJobs.Host.Scale
 {
-
     /// <summary>
     /// Metadata descriptor for an <see cref="ITargetScaler"/>.
     /// </summary>
