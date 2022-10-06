@@ -34,6 +34,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private int _outstandingInvocations;
         private int _outstandingRetries;
 
+        private static ActivitySource _activitySource = new ActivitySource("Microsoft.Azure.WebJobs.FunctionExecutor");
+
         private readonly Dictionary<string, object> _inputBindingScope = new Dictionary<string, object>
         {
             [LogConstants.CategoryNameKey] = LogCategories.Bindings,
@@ -87,7 +89,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             FunctionInstanceLogEntry instanceLogEntry = null;
             Stopwatch sw = Stopwatch.StartNew();
             string concurrencyFunctionId = functionInstanceEx.FunctionDescriptor.SharedListenerId ?? functionInstanceEx.FunctionDescriptor.Id;
-            
+
             try
             {
                 Interlocked.Increment(ref _outstandingInvocations);
@@ -96,6 +98,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     _concurrencyManager.FunctionStarted(concurrencyFunctionId);
                 }
 
+                ActivityContext parentContext = default;
+                if (Activity.Current is not null)
+                {
+                    parentContext = Activity.Current.Context;
+                }
+
+                using (Activity activity = _activitySource.StartActivity("Invoke", ActivityKind.Internal, parentContext, tags: GetTags(functionInstanceEx)))
                 using (_resultsLogger?.BeginFunctionScope(functionInstanceEx, HostOutputMessage.HostInstanceId))
                 using (parameterHelper)
                 {
@@ -174,6 +183,17 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         public void RetryComplete()
         {
             Interlocked.Decrement(ref _outstandingRetries);
+        }
+
+        private static IEnumerable<KeyValuePair<string, object>> GetTags(IFunctionInstance function)
+        {
+            var tags = new Dictionary<string, object>
+            {
+                {"FunctionInvocationId", function.Id },
+                {"FunctionName", function.FunctionDescriptor.LogName }
+            };
+
+            return tags;
         }
 
         private FunctionInstanceLogEntry CreateInstanceLogEntry(FunctionCompletedMessage functionStartedMessage)
@@ -279,6 +299,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     var functionContext = new FunctionBindingContext(instance, functionCancellationTokenSource.Token);
                     var valueBindingContext = new ValueBindingContext(functionContext, cancellationToken);
 
+                    using (Activity activity = _activitySource.StartActivity("InputBindings", ActivityKind.Internal, (ActivityContext)default, tags: GetTags(instance)))
                     using (logger.BeginScope(_inputBindingScope))
                     {
                         var valueProviders = await instance.BindingSource.BindAsync(valueBindingContext);
@@ -539,6 +560,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
             }
 
+            using (Activity activity = _activitySource.StartActivity("OutputBindings", ActivityKind.Internal, (ActivityContext)default, tags: GetTags(instance)))
             using (logger.BeginScope(_outputBindingScope))
             {
                 await parameterHelper.ProcessOutputParameters(functionCancellationTokenSource.Token);
