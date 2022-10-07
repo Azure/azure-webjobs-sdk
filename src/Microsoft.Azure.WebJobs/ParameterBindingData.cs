@@ -13,7 +13,6 @@ namespace Microsoft.Azure.WebJobs
     [JsonConverter(typeof(ParameterBindingData))]
     public class ParameterBindingData
     {
-
         /// <summary> Initializes a new instance of the <see cref="ParameterBindingData"/> class. </summary>
         /// <param name="source"> Identifies the extension this event is coming from </param>
         /// <param name="jsonSerializableData"> An object containing any required information to hydrate an SDK-type object in the out-of-process worker </param>
