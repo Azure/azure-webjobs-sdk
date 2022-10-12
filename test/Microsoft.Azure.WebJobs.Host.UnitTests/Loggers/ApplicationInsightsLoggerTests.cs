@@ -696,7 +696,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 },
                 SnapshotConfiguration = new SnapshotCollectorConfiguration()
                 {
-                    AgentEndpoint = "123",
+                    AgentEndpoint = "http://something",
                     FailedRequestLimit = 42,
                     IsEnabled = false,
                     IsEnabledInDeveloperMode = false,
