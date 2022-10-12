@@ -6,25 +6,25 @@ using System.Collections.Generic;
 namespace Microsoft.Azure.WebJobs.Host.Scale
 {
     /// <summary>
-    /// Manager for registering and accessing <see cref="IScaleMonitor"/> instances for
+    /// Manager for registering and accessing <see cref="ITargetScaler"/> instances for
     /// a <see cref="JobHost"/> instance.
     /// </summary>
-    public interface IScaleMonitorManager
+    public interface ITargetScalerManager
     {
         /// <summary>
-        /// Register an <see cref="IScaleMonitor"/> instance.
+        /// Register an <see cref="ITargetScaler"/> instance.
         /// </summary>
-        /// <param name="monitor">The monitor instance to register.</param>
-        void Register(IScaleMonitor monitor);
+        /// <param name="scaler">The target scaler instance to register.</param>
+        void Register(ITargetScaler scaler);
 
         /// <summary>
-        /// Get all registered monitor instances.
+        /// Get all registered target scaler instances.
         /// </summary>
         /// <remarks>
         /// Should only be called after the host has been started and all
         /// instances are registered.
         /// </remarks>
-        /// <returns>The collection of monitor instances.</returns>
-        IEnumerable<IScaleMonitor> GetMonitors();
+        /// <returns>The collection of target scaler instances.</returns>
+        IEnumerable<ITargetScaler> GetTargetScalers();
     }
 }

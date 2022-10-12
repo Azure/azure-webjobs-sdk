@@ -51,6 +51,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IScaleMonitorManager _monitorManager;
         private readonly IDrainModeManager _drainModeManager;
         private readonly IApplicationLifetime _applicationLifetime;
+        private readonly ITargetScalerManager _targetScalerManager;
 
         public JobHostContextFactory(
             IDashboardLoggingSetup dashboardLoggingSetup,
@@ -73,7 +74,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             IAsyncCollector<FunctionInstanceLogEntry> eventCollector,
             IScaleMonitorManager monitorManager,
             IDrainModeManager drainModeManager,
-            IApplicationLifetime applicationLifetime)
+            IApplicationLifetime applicationLifetime,
+            ITargetScalerManager targetScalerManager)
         {
             _dashboardLoggingSetup = dashboardLoggingSetup;
             _functionExecutor = functionExecutor;
@@ -96,6 +98,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _monitorManager = monitorManager;
             _drainModeManager = drainModeManager;
             _applicationLifetime = applicationLifetime;
+            _targetScalerManager = targetScalerManager;
         }
 
         public async Task<JobHostContext> Create(JobHost host, CancellationToken shutdownToken, CancellationToken cancellationToken)
@@ -124,7 +127,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     // they are started).
                     host.OnHostInitialized();
                 };
-                IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), _singletonManager, _activator, _nameResolver, _loggerFactory, _monitorManager, listenersCreatedCallback, _jobHostOptions.Value.AllowPartialHostStartup, _drainModeManager);
+                IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), _singletonManager, _activator, _nameResolver, _loggerFactory,
+                    _monitorManager, _targetScalerManager, listenersCreatedCallback, _jobHostOptions.Value.AllowPartialHostStartup, _drainModeManager);
 
                 string hostId = await _hostIdProvider.GetHostIdAsync(cancellationToken);
                 bool dashboardLoggingEnabled = _dashboardLoggingSetup.Setup(functions, functionsListenerFactory, out IFunctionExecutor hostCallExecutor,
