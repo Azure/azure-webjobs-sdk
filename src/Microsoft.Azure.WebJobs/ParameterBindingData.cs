@@ -38,18 +38,18 @@ namespace Microsoft.Azure.WebJobs
         /// <summary> Initializes a new instance of the <see cref="ParameterBindingData"/> class using binary event data.</summary>
         /// <param name="source"> Identifies the extension this event is coming from </param>
         /// <param name="content"> Binary data containing any required information to hydrate an SDK-type object in the out-of-process worker </param>
-        /// <param name="dataContentType"> Content type of the payload. A content type different from "application/json" should be specified if payload is not JSON. </param>
-        /// <exception cref="ArgumentNullException">Throws if source, content or dataContentType is null.</exception>
-        public ParameterBindingData(string source, BinaryData content, string dataContentType)
+        /// <param name="contentType"> Content type of the payload. A content type different from "application/json" should be specified if payload is not JSON. </param>
+        /// <exception cref="ArgumentNullException">Throws if source, content or contentType is null.</exception>
+        public ParameterBindingData(string source, BinaryData content, string contentType)
         {
             if (source is null)
             {
                 throw new ArgumentNullException(nameof(source));
             }
 
-            if (dataContentType is null)
+            if (contentType is null)
             {
-                throw new ArgumentNullException(nameof(dataContentType));
+                throw new ArgumentNullException(nameof(contentType));
             }
 
             if (content is null)
@@ -59,7 +59,7 @@ namespace Microsoft.Azure.WebJobs
 
             Version = "1.0";
             Source = source;
-            ContentType = dataContentType;
+            ContentType = contentType;
             Content = content;
         }
 
