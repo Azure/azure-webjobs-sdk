@@ -174,19 +174,19 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         {
             var ext = new OpenTypeTriggerExtension();
             var host = new HostBuilder()
-                 .ConfigureDefaultTestHost(b =>
-                 {
-                     b.AddExtension(ext);
-                 })
-                 .ConfigureTypeLocator() // empty 
-                 .Build();
+                        .ConfigureDefaultTestHost(b =>
+                        {
+                            b.AddExtension(ext);
+                        })
+                        .ConfigureTypeLocator() // empty
+                        .Build();
             IJobHostMetadataProvider metadataProvider = host.CreateMetadataProvider();
 
             var attr = new Test9Attribute(null);
             var type = metadataProvider.GetDefaultType(attr, FileAccess.Write, null);
 
-            // The trigger handles Open type, which means it will first pull byte[]. 
-            Assert.Equal(typeof(byte[]), type);
+            // The trigger handles Open type, which means it will first pull ParameterBindingData.
+            Assert.Equal(typeof(ParameterBindingData), type);
         }
 
         public class OpenTypeTriggerExtension : IExtensionConfigProvider

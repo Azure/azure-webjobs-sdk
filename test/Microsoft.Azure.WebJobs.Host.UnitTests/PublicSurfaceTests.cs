@@ -88,7 +88,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "SingletonMode",
                 "SingletonScope",
                 "StorageAccountAttribute",
-                "TimeoutAttribute"               
+                "TimeoutAttribute",
+                "ParameterBindingData"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);
