@@ -13,21 +13,20 @@ using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    // Regular BindToInput has to do a TAttribute --> Value creation. 
+    // Regular BindToInput has to do a TAttribute --> Value creation.
     // But triggers already have a Listener that provided the initial object; and we're just
-    // converting it to the user's target parameter. 
+    // converting it to the user's target parameter.
     internal class TriggerAdapterBindingProvider<TAttribute, TTriggerValue> :
         FluentBindingProvider<TAttribute>, IBindingProvider, IBindingRuleProvider
-           where TAttribute : Attribute
+            where TAttribute : Attribute
             where TTriggerValue : class
     {
         private readonly INameResolver _nameResolver;
         private readonly IConverterManager _converterManager;
 
         public TriggerAdapterBindingProvider(
-          INameResolver nameResolver,
-          IConverterManager converterManager
-          )
+            INameResolver nameResolver,
+            IConverterManager converterManager)
         {
             _nameResolver = nameResolver;
             _converterManager = converterManager;
@@ -36,6 +35,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         // Listed in precedence for providing via DefaultType.
         // Precedence is more important than how we produce the default type (a direct conversion vs. a converter)
         private static readonly Type[] _defaultTypes = new Type[] {
+            typeof(ParameterBindingData),
             typeof(byte[]),
             typeof(JObject),
             typeof(JArray),
@@ -45,6 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         // Listed in precedence for providing via DefaultType.
         // Precedence is more important than how we produce the default type (a direct conversion vs. a converter)
         private static readonly Type[] _defaultBatchTypes = new Type[] {
+            typeof(ParameterBindingData[]),
             typeof(byte[][]),
             typeof(JObject[]),
             typeof(JArray),
@@ -205,7 +206,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 {
                     if (_directInvoker != null && (value is string str))
                     {
-                        // Direct invoke case. Need to converrt String-->TTriggerValue. 
+                        // Direct invoke case. Need to convert String-->TTriggerValue.
                         val = await _directInvoker(new DirectInvokeString(str), _attribute, context);
                     }
                     else
@@ -224,7 +225,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
             public Task<IValueProvider> BindAsync(BindingContext context)
             {
-                // Never called, since a trigger alreayd has an object. 
+                // Never called, since a trigger already has an object.
                 throw new NotImplementedException();
             }
 
