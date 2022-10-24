@@ -8,7 +8,7 @@ namespace Microsoft.Azure.WebJobs
     /// <summary>
     /// Represents data a parameter binding provides that can be used by a function to perform the bind operation to the target itself.
     /// </summary>
-    sealed public class ParameterBindingData
+    public sealed class ParameterBindingData
     {
         /// <summary>Initializes a new instance of the <see cref="ParameterBindingData"/> class</summary>
         /// <param name="version">The version of the binding data content</param>
