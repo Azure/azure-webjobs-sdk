@@ -10,52 +10,38 @@ namespace Microsoft.Azure.WebJobs
     /// </summary>
     sealed public class ParameterBindingData
     {
-        /// <summary>Initializes a new instance of the <see cref="ParameterBindingData"/> class using the specified BindingData and content type.</summary>
-        /// <param name="source">Identifies the extension this event is coming from</param>
+        /// <summary>Initializes a new instance of the <see cref="ParameterBindingData"/> class</summary>
+        /// <param name="version">The version of the binding data content</param>
+        /// <param name="source">Identifies the extension the binding data is coming from</param>
         /// <param name="content">BinaryData containing the binding data</param>
-        /// <param name="contentType">Content type of the payload. A content type different from "application/json" should be specified if payload is not JSON.</param>
-        /// <exception cref="ArgumentNullException">Throws if source, content or contentType is null.</exception>
-        public ParameterBindingData(string source, BinaryData content, string contentType)
+        /// <param name="contentType">Content type of the binding data payload</param>
+        /// <exception cref="ArgumentNullException">Throws if version, source, content or contentType is null.</exception>
+        public ParameterBindingData(string version, string source, BinaryData content, string contentType)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
-
-            if (contentType is null)
-            {
-                throw new ArgumentNullException(nameof(contentType));
-            }
-
-            if (content is null)
-            {
-                throw new ArgumentNullException(nameof(content));
-            }
-
-            Version = "1.0";
-            Source = source;
-            ContentType = contentType;
-            Content = content;
+            Version = version ?? throw new ArgumentNullException(nameof(version));
+            Source = source ?? throw new ArgumentNullException(nameof(source));
+            Content = content ?? throw new ArgumentNullException(nameof(content));
+            ContentType = contentType ?? throw new ArgumentNullException(nameof(contentType));
         }
 
         /// <summary>
-        /// The schema version of the ParameterBindingData
+        /// The version of the binding data content
         /// </summary>
         public string Version { get; }
 
         /// <summary>
-        /// The extension source of the event i.e CosmosDB, BlobStorage
+        /// The extension source of the binding data i.e CosmosDB, AzureStorageBlobs
         /// </summary>
         public string Source { get; }
-
-        /// <summary>
-        /// The content type of the content data
-        /// </summary>
-        public string ContentType { get; }
 
         /// <summary>
         /// The binding data content.
         /// </summary>
         public BinaryData Content { get; }
+
+        /// <summary>
+        /// The content type of the binding data content i.e. "application/json"
+        /// </summary>
+        public string ContentType { get; }
     }
 }
