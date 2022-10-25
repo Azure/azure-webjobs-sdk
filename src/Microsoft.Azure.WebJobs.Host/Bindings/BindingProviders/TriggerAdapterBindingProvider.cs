@@ -35,7 +35,6 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         // Listed in precedence for providing via DefaultType.
         // Precedence is more important than how we produce the default type (a direct conversion vs. a converter)
         private static readonly Type[] _defaultTypes = new Type[] {
-            typeof(ParameterBindingData),
             typeof(byte[]),
             typeof(JObject),
             typeof(JArray),
@@ -45,19 +44,33 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         // Listed in precedence for providing via DefaultType.
         // Precedence is more important than how we produce the default type (a direct conversion vs. a converter)
         private static readonly Type[] _defaultBatchTypes = new Type[] {
-            typeof(ParameterBindingData[]),
             typeof(byte[][]),
             typeof(JObject[]),
             typeof(JArray),
             typeof(string[])
         };
 
+        // TODO: Refactor GetDefaultType so that a) we don't need a special case for ParameterBindingData
+        // and b) we are taking `requestedType` into account when checking if we have a converter
+        // GitHub issue: https://github.com/Azure/azure-webjobs-sdk/issues/2930
         public Type GetDefaultType(Attribute attribute, FileAccess access, Type requestedType)
         {
             // If the requestedType is a batch type, we need to return the batch version of default types
             IEnumerable<Type> targets = requestedType.IsArray && !_defaultTypes.Contains(requestedType)
                 ? _defaultBatchTypes
                 : _defaultTypes;
+
+            if (requestedType == typeof(ParameterBindingData) || requestedType == typeof(ParameterBindingData[]))
+            {
+                if (_converterManager.HasConverter<TAttribute>(typeof(TTriggerValue), requestedType))
+                {
+                    return requestedType;
+                }
+
+                // We should only be requesting ParameterBindingData if it is supported by the
+                // extension we're binding against. In theory, this should never happen.
+                throw new InvalidOperationException($"Converter for {requestedType} not found.");
+            }
 
             foreach (var target in targets)
             {
