@@ -105,7 +105,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             }
         }
 
-        // Verify for a Jobject-only collector.
+        // Verify for a JObject-only collector.
         [Fact]
         public void DefaultTypeForJObjectCollector()
         {
@@ -135,7 +135,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                     BindToCollector<JObject>(attr => (IAsyncCollector<JObject>)null);
             }
         }
-
 
         [Fact]
         public void DefaultTypeForJArrayTrigger()
@@ -186,7 +185,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             // The trigger handles Open type, which means it will first pull byte[].
             Assert.Equal(typeof(byte[]), type);
         }
-
 
         public class OpenTypeTriggerExtension : IExtensionConfigProvider
         {
@@ -298,7 +296,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             ArgumentException exception = Assert.Throws<ArgumentException>(act);
             Assert.Equal($"Converter for {typeof(ParameterBindingData)} not found.", exception.Message);
         }
-
 
         public class StringTriggerExtension : IExtensionConfigProvider
         {
