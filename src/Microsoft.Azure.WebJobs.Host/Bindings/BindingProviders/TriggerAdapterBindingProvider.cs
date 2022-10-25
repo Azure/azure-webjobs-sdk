@@ -69,7 +69,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 
                 // We should only be requesting ParameterBindingData if it is supported by the
                 // extension we're binding against. In theory, this should never happen.
-                throw new ArgumentException($"Converter for {requestedType} not found.");
+                throw new InvalidOperationException($"Converter for {requestedType} not found.");
             }
 
             foreach (var target in targets)

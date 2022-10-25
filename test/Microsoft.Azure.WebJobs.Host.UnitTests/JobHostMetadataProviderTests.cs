@@ -293,7 +293,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var attr = new Test9Attribute(null);
             Action act = () => metadataProvider.GetDefaultType(attr, FileAccess.Write, typeof(ParameterBindingData));
 
-            ArgumentException exception = Assert.Throws<ArgumentException>(act);
+            var exception = Assert.Throws<InvalidOperationException>(act);
             Assert.Equal($"Converter for {typeof(ParameterBindingData)} not found.", exception.Message);
         }
 
