@@ -13,6 +13,11 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             Id = id;
         }
 
+        public ScaleMonitorDescriptor(string id, string functionId) : this(id)
+        {
+            FunctionId = functionId;
+        }
+
         /// <summary>
         /// Gets the unique ID for the monitor.
         /// </summary>
@@ -22,5 +27,10 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// be of the form "{FunctionId}-QueueTrigger-{QueueName}".
         /// </remarks>
         public string Id { get; }
+
+        /// <summary>
+        /// Gets the ID of the function associated with this scaler.
+        /// </summary>
+        public string FunctionId { get; }
     }
 }
