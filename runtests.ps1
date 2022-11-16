@@ -9,7 +9,12 @@ $projects =
 
 foreach ($project in $projects)
 {
-  $cmd = "test", "$project", "-v", "q", "--no-build"
+  $cmd = "test", "$project", "-v", "m", "--no-build", "--logger", "trx;LogFileName=TEST.xml"
+
+  if ($null -ne $env:Configuration)
+  {
+    $cmd += "--configuration", "$env:Configuration"
+  }
 
   & dotnet $cmd  
 
