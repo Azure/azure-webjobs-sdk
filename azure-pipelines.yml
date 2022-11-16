@@ -1,0 +1,111 @@
+parameters:
+- name: force_artifacts
+  displayName: Force Artifacts
+  type: boolean
+  default: true
+- name: skip_assembly_signing
+  displayName: Skip Assembly Signing
+  type: boolean
+  default: false
+
+variables:
+- group: 'WebJobs SDK Testing'
+- name: buildNumber
+  value: $[ counter('constant', 12000) ]
+- name: buildOutputDirectory
+  value: '$(System.DefaultWorkingDirectory)\buildoutput'
+- name: buildVersion
+  value: '3.0.$(buildNumber)'
+  ## NOTE: This variable denotes the overall build version and is distinct from individual package versions.
+- name: isPr
+  value: $[ eq('$(Build.Reason)', 'PullRequest') ]
+- name: hasTag
+  value: $[ startsWith('$(Build.SourceBranch)', 'refs/tag/') ]
+- name: DOTNET_SKIP_FIRST_TIME_EXPERIENCE
+  value: ${{ true }}
+
+pr:
+  branches:
+    include:
+    - dev
+    - master
+
+trigger:
+  branches:
+    include:
+    - dev
+    - master
+
+jobs:
+- job: BuildAndTest
+  pool:
+    name: '1ES-Hosted-AzFunc'
+    demands:
+    - ImageOverride -equals MMS2019TLS
+
+  steps:
+  - task: 1ESHostedPoolValidation@1
+
+  - pwsh: .\dotnet-install.ps1 -Version 3.1.410 -Architecture x86
+    displayName: "Install .NET Core 3.1.410"
+
+  - pwsh: |
+      $packageSuffix = 0
+      if (-not $$(hasTag)) {
+        $packageSuffix = $(buildNumber)
+        Write-Host "No git tag found. Setting packages suffix to '$packageSuffix'"
+      }
+
+      if ($$(hasTag)) {
+        $config = "Release"
+        Write-Host "Git tag found. Setting Configuration to '$config'"
+        $env:Configuration = $config
+        echo "##vso[task.setvariable variable=Configuration]$config" # let downstream tasks read this variable
+      }
+
+      .\Build.ps1 -buildVersion "$(buildVersion)" -packageSuffix "$packageSuffix" -isPR $$(isPr) -outputDirectory "$(buildOutputDirectory)" -forceArtifacts $${{ parameters.force_artifacts }} -skipAssemblySigning $${{ parameters.skip_assembly_signing }}
+    displayName: "Build source"
+    env:
+      CommitHash: $(Build.SourceVersion)
+      FILES_ACCOUNT_NAME: $(FilesAccountName)
+      FILES_ACCOUNT_KEY: $(FilesAccountKey)
+    ## This task also optionally signs the packages
+
+  - pwsh: .\runtests.ps1
+    displayName: "Run tests"
+    env:
+      AzureWebJobsDashboard: $(Storage)
+      AzureWebJobsStorage: $(Storage)
+      AzureWebJobsSecondaryStorage: $(Storage2)
+      AzureWebJobsServiceBus: $(ServiceBus)
+      AzureWebJobsServiceBusSecondary: $(ServiceBus2)
+      AzureWebJobsTestHubConnection: $(EventHub)
+      AzureWebJobsTestHubConnection2: $(EventHub2)
+      APPINSIGHTS_REPORTER_KEY: $(AppInsights)
+      ConnectionStrings:ServiceBus: $(ServiceBus)
+      ConnectionStrings:ServiceBusSecondary: $(ServiceBus2)
+
+  - task: PublishTestResults@2
+    displayName: "Publish XUnit test results"
+    inputs:
+      testResultsFormat: 'VSTest'
+      testResultsFiles: '**/TEST.xml'
+      mergeTestResults: true
+      buildConfiguration: $(Configuration)
+      testRunTitle: 'XUnit Tests'
+    condition: always()
+
+  - pwsh: .\tools\PollSigningResults.ps1 -buildVersion "$(buildVersion)" -isPr $$(isPr) -artifactDirectory "$(buildOutputDirectory)" -forceArtifacts $${{ parameters.force_artifacts }} -skipAssemblySigning $${{ parameters.skip_assembly_signing }}
+    displayName: "Poll signing results"
+    env:
+      FILES_ACCOUNT_NAME: $(FilesAccountName)
+      FILES_ACCOUNT_KEY: $(FilesAccountKey)
+
+  - task: ManifestGeneratorTask@0
+    displayName: "SBOM Generation"
+    inputs:
+      BuildDropPath: '$(buildOutputDirectory)'
+      Verbosity: 'Information'
+
+  - publish: '$(buildOutputDirectory)'
+    artifact: drop
