@@ -515,6 +515,12 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     else
                     {
                         operation = _telemetryClient.StartOperation<RequestTelemetry>(functionName);
+
+                        //  Mark as useful to record
+                        if (Activity.Current != null && Activity.Current.ActivityTraceFlags == ActivityTraceFlags.None)
+                        {
+                            Activity.Current.ActivityTraceFlags = ActivityTraceFlags.Recorded;
+                        }
                     }
 
                     var triggerDetails = stateValues.GetValueOrDefault<IDictionary<string, string>>(ScopeKeys.TriggerDetails);
