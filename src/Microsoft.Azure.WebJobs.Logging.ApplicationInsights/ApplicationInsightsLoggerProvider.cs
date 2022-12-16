@@ -34,15 +34,13 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 {
                     try
                     {
-                        _client.Flush();
-
-                        // This sleep isn't ideal, but the flush is async so it's the best we have right now. This is
-                        // being tracked at https://github.com/Microsoft/ApplicationInsights-dotnet/issues/407
-                        Thread.Sleep(2000);
+                        // Flushing logs upon disposal should not be canceled
+                        var task = _client.FlushAsync(CancellationToken.None);
+                        task.Wait();
                     }
                     catch
                     {
-                        // Ignore failures on dispose
+                        // Log flushing failures
                     }
                 }
 
