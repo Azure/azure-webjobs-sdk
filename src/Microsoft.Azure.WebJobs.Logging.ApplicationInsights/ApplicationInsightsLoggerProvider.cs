@@ -3,7 +3,6 @@
 
 using System;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
