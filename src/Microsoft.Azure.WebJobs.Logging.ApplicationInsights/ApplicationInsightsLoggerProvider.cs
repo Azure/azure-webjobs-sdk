@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
     public class ApplicationInsightsLoggerProvider : ILoggerProvider
     {
         internal const string Alias = "ApplicationInsights";
-        // Allow SDK to subscribe to flushing exceptions
+        // Allow for subscribing to flushing exceptions
         public const string ApplicationInsightsFlushingExceptions = "ApplicationInsightsFlushingExceptions";
 
         private readonly TelemetryClient _client;
