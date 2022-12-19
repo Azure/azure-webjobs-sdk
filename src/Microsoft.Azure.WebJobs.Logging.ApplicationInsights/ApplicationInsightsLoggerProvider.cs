@@ -2,6 +2,8 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
@@ -13,9 +15,12 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
     public class ApplicationInsightsLoggerProvider : ILoggerProvider
     {
         internal const string Alias = "ApplicationInsights";
+        // Allow SDK to subscribe to flushing exceptions
+        public const string ApplicationInsightsFlushingExceptions = "ApplicationInsightsFlushingExceptions";
 
         private readonly TelemetryClient _client;
         private readonly ApplicationInsightsLoggerOptions _loggerOptions;
+        private DiagnosticListener _source = new DiagnosticListener(ApplicationInsightsFlushingExceptions);
         private bool _disposed;
 
         public ApplicationInsightsLoggerProvider(TelemetryClient client, IOptions<ApplicationInsightsLoggerOptions> loggerOptions)
@@ -38,9 +43,13 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                         var task = _client.FlushAsync(CancellationToken.None);
                         task.Wait();
                     }
-                    catch
+                    catch (Exception e)
                     {
-                        // Log flushing failures
+                        // Log flushing exceptions
+                        if (_source.IsEnabled(ApplicationInsightsFlushingExceptions))
+                        {
+                            _source.Write(ApplicationInsightsFlushingExceptions, e.Message);
+                        }
                     }
                 }
 
