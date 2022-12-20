@@ -15,11 +15,11 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
     {
         internal const string Alias = "ApplicationInsights";
         // Allow for subscribing to flushing exceptions
-        public const string ApplicationInsightsFlushingExceptions = "ApplicationInsightsFlushingExceptions";
+        public const string ApplicationInsightsFlushingIssues = "ApplicationInsightsFlushingIssues";
 
         private readonly TelemetryClient _client;
         private readonly ApplicationInsightsLoggerOptions _loggerOptions;
-        private DiagnosticListener _source = new DiagnosticListener(ApplicationInsightsFlushingExceptions);
+        private DiagnosticListener _source = new DiagnosticListener(ApplicationInsightsFlushingIssues);
         private bool _disposed;
 
         public ApplicationInsightsLoggerProvider(TelemetryClient client, IOptions<ApplicationInsightsLoggerOptions> loggerOptions)
@@ -38,21 +38,41 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 {
                     try
                     {
-                        // Flushing logs upon disposal should not be canceled
-                        var task = _client.FlushAsync(CancellationToken.None);
-                        task.Wait();
+                        // Default timeout of 5 seconds
+                        var timeout = new TimeSpan(hours: 0, minutes: 0, seconds: 5);
+                        var cancellationTokenSource = new CancellationTokenSource();
+                        var task = _client.FlushAsync(cancellationTokenSource.Token);
+
+                        // Wait for the flush to complete or for 5 seconds to pass, whichever comes first
+                        if (!task.Wait(timeout))
+                        {
+                            cancellationTokenSource.Cancel();
+                            WriteDiagnosticFlushingIssue($"Flushing did not complete within {timeout.Seconds}s timeout");
+                        }
+                        // Flush did not complete successfully
+                        else if (!task.Result)
+                        {
+                            WriteDiagnosticFlushingIssue("Flushing did not complete successfully");
+                        }
                     }
                     catch (Exception e)
                     {
                         // Log flushing exceptions
-                        if (_source.IsEnabled(ApplicationInsightsFlushingExceptions))
-                        {
-                            _source.Write(ApplicationInsightsFlushingExceptions, e.Message);
-                        }
+                        WriteDiagnosticFlushingIssue(e.Message);
                     }
                 }
 
                 _disposed = true;
+            }
+        }
+
+        private void WriteDiagnosticFlushingIssue(object value)
+        {
+            // We must include this check, otherwise the payload will be created even though nothing is listening
+            // for the data: see https://github.com/dotnet/runtime/blob/main/src/libraries/System.Diagnostics.DiagnosticSource/src/DiagnosticSourceUsersGuide.md
+            if (_source.IsEnabled(ApplicationInsightsFlushingIssues))
+            {
+                _source.Write(ApplicationInsightsFlushingIssues, value);
             }
         }
     }
