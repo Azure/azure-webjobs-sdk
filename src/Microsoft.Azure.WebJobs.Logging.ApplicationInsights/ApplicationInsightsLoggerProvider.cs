@@ -15,11 +15,11 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
     {
         internal const string Alias = "ApplicationInsights";
         // Allow for subscribing to flushing exceptions
-        public const string ApplicationInsightsFlushingIssues = "ApplicationInsightsFlushingIssues";
+        public const string SourceName = ApplicationInsightsDiagnosticConstants.ApplicationInsightsDiagnosticSourcePrefix + "ApplicationInsightsLoggerProvider";
 
         private readonly TelemetryClient _client;
         private readonly ApplicationInsightsLoggerOptions _loggerOptions;
-        private DiagnosticListener _source = new DiagnosticListener(ApplicationInsightsFlushingIssues);
+        private DiagnosticListener _source = new DiagnosticListener(SourceName);
         private bool _disposed;
 
         public ApplicationInsightsLoggerProvider(TelemetryClient client, IOptions<ApplicationInsightsLoggerOptions> loggerOptions)
@@ -70,9 +70,9 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         {
             // We must include this check, otherwise the payload will be created even though nothing is listening
             // for the data: see https://github.com/dotnet/runtime/blob/main/src/libraries/System.Diagnostics.DiagnosticSource/src/DiagnosticSourceUsersGuide.md
-            if (_source.IsEnabled(ApplicationInsightsFlushingIssues))
+            if (_source.IsEnabled(SourceName))
             {
-                _source.Write(ApplicationInsightsFlushingIssues, value);
+                _source.Write(SourceName, value);
             }
         }
     }
