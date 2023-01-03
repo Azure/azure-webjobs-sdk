@@ -17,15 +17,27 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         // Allow for subscribing to flushing exceptions
         public const string SourceName = ApplicationInsightsDiagnosticConstants.ApplicationInsightsDiagnosticSourcePrefix + "ApplicationInsightsLoggerProvider";
 
+        private CancellationTokenSource _cancellationTokenSource;
         private readonly TelemetryClient _client;
         private readonly ApplicationInsightsLoggerOptions _loggerOptions;
-        private DiagnosticListener _source = new DiagnosticListener(SourceName);
+        private DiagnosticSource _source = new DiagnosticListener(SourceName);
         private bool _disposed;
 
         public ApplicationInsightsLoggerProvider(TelemetryClient client, IOptions<ApplicationInsightsLoggerOptions> loggerOptions)
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));
             _loggerOptions = loggerOptions?.Value ?? throw new ArgumentNullException(nameof(loggerOptions));
+        }
+
+        // Constructor for testing purposes only
+        internal ApplicationInsightsLoggerProvider(
+            TelemetryClient client,
+            DiagnosticSource source,
+            CancellationTokenSource cancellationTokenSource)
+        {
+            _client = client;
+            _source = source;
+            _cancellationTokenSource = cancellationTokenSource;
         }
 
         public ILogger CreateLogger(string categoryName) => new ApplicationInsightsLogger(_client, categoryName, _loggerOptions);
@@ -40,16 +52,16 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     {
                         // Default timeout of 5 seconds
                         var timeout = new TimeSpan(hours: 0, minutes: 0, seconds: 5);
-                        var cancellationTokenSource = new CancellationTokenSource();
-                        var task = _client.FlushAsync(cancellationTokenSource.Token);
+                        _cancellationTokenSource = _cancellationTokenSource ?? new CancellationTokenSource();
+                        var task = _client.FlushAsync(_cancellationTokenSource.Token);
 
                         // Wait for the flush to complete or for 5 seconds to pass, whichever comes first
                         if (!task.Wait(timeout))
                         {
-                            cancellationTokenSource.Cancel();
+                            _cancellationTokenSource.Cancel();
                             WriteDiagnosticFlushingIssue($"Flushing did not complete within {timeout.Seconds}s timeout");
                         }
-                        // Flush did not complete successfully
+                        // Flush did not fully succeed
                         else if (!task.Result)
                         {
                             WriteDiagnosticFlushingIssue("Flushing did not complete successfully");
