@@ -39,7 +39,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
                 "FunctionId",
                 "ActivationEvent",
-                "ApplicationInsightsDiagnosticConstants",
                 "FunctionInstanceLogItem",
                 "FunctionInstanceStatus",
                 "FunctionStatusExtensions",
@@ -319,6 +318,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var expected = new[]
             {
                 "ApplicationInsightsLoggerOptions",
+                "ApplicationInsightsDiagnosticConstants",
                 "HttpAutoCollectionOptions",
                 "ApplicationInsightsLoggerProvider",
                 "ApplicationInsightsLoggingBuilderExtensions",
