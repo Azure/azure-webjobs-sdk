@@ -39,6 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
                 "FunctionId",
                 "ActivationEvent",
+                "ApplicationInsightsDiagnosticConstants",
                 "FunctionInstanceLogItem",
                 "FunctionInstanceStatus",
                 "FunctionStatusExtensions",

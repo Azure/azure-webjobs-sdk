@@ -81,7 +81,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                     break;
                 case FlushResult.Timeout:
                     expectedDiagnosticLog = "Flushing did not complete within 5s timeout";
-                    SetupDelayedFlushAsync(mockChannel, 6000, true);
+                    SetupDelayedFlushAsync(mockChannel, 8000, true);
                     break;
                 case FlushResult.Exception:
                     expectedDiagnosticLog = "Some exception";
