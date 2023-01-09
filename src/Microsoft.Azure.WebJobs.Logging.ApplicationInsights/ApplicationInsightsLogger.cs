@@ -9,11 +9,13 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
+using static Microsoft.ApplicationInsights.MetricDimensionNames;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
@@ -33,7 +35,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         internal const string MetricMinKey = "min";
         internal const string MetricMaxKey = "max";
         internal const string MetricStandardDeviationKey = "standarddeviation";
-
+        
         private static readonly HashSet<string> SystemScopeKeys = new HashSet<string>
             {
                 LogConstants.CategoryNameKey,
@@ -73,50 +75,42 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             // Initialize stateValues so the rest of the methods don't have to worry about null values.
             stateValues = stateValues ?? new Dictionary<string, object>();
 
-            // Add some well-known properties to the scope dictionary so the TelemetryInitializer can add them
+            // Add some well-known
+            // properties to the scope dictionary so the TelemetryInitializer can add them
             // for all telemetry.
-            using (BeginScope(new Dictionary<string, object>
+            if (_isUserFunction && eventId.Id == LogConstants.MetricEventId)
             {
-                [LogConstants.CategoryNameKey] = _categoryName,
-                [LogConstants.LogLevelKey] = (LogLevel?)logLevel,
-                [LogConstants.EventIdKey] = eventId.Id,
-                [LogConstants.EventNameKey] = eventId.Name,
-            }))
+                // Log a metric from user logs only
+                LogMetric(stateValues, logLevel, eventId);
+            }
+            else if (_categoryName == LogCategories.Results)
             {
-                if (_isUserFunction && eventId.Id == LogConstants.MetricEventId)
-                {
-                    // Log a metric from user logs only
-                    LogMetric(stateValues);
-                }
-                else if (_categoryName == LogCategories.Results)
-                {
-                    // Log a function result
-                    LogFunctionResult(stateValues, logLevel, exception);
-                }
-                else if (_categoryName == LogCategories.Aggregator)
-                {
-                    // Log an aggregate record
-                    LogFunctionResultAggregate(stateValues);
-                }
-                else if (exception != null)
-                {
-                    // Log an exception
-                    LogException(logLevel, stateValues, exception, formattedMessage);
-                }
-                else
-                {
-                    // Otherwise, log a trace
-                    LogTrace(logLevel, stateValues, formattedMessage);
-                }
+                // Log a function result
+                LogFunctionResult(stateValues, logLevel, exception, eventId);
+            }
+            else if (_categoryName == LogCategories.Aggregator)
+            {
+                // Log an aggregate record
+                LogFunctionResultAggregate(stateValues, logLevel, eventId);
+            }
+            else if (exception != null)
+            {
+                // Log an exception
+                LogException(logLevel, stateValues, exception, formattedMessage, eventId);
+            }
+            else
+            {
+                // Otherwise, log a trace
+                LogTrace(logLevel, stateValues, formattedMessage, eventId);
             }
         }
 
-        private void LogMetric(IEnumerable<KeyValuePair<string, object>> values)
+        private void LogMetric(IEnumerable<KeyValuePair<string, object>> values, LogLevel logLevel, EventId eventId)
         {
             MetricTelemetry telemetry = new MetricTelemetry();
-
             // Always apply scope first to allow state to override.
-            ApplyScopeProperties(telemetry.Properties);
+            ApplyScopeProperties(telemetry.Properties, telemetry);
+            ApplyKnownProperties(telemetry.Properties, logLevel, eventId);
 
             foreach (var entry in values)
             {
@@ -165,17 +159,29 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         }
 
         // Applies scope properties; filters most system properties, which are used internally
-        private static void ApplyScopeProperties(IDictionary<string, string> properties)
+        private static void ApplyScopeProperties(IDictionary<string, string> properties, ITelemetry telemetry)
         {
-            var scopeProperties = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
+            var scopeProperties = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();            
             if (scopeProperties != null)
             {
-                var customScopeProperties = scopeProperties.Where(p => !SystemScopeKeys.Contains(p.Key, StringComparer.Ordinal));
-                ApplyProperties(properties, customScopeProperties, true);
+                foreach (var scopeProperty in scopeProperties)
+                {
+                    if (!SystemScopeKeys.Contains(scopeProperty.Key))
+                    {
+                        ApplyProperty(properties, scopeProperty.Key, scopeProperty.Value, true);
+                    }
+                }
+
+                string invocationId = scopeProperties.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId);
+                if (invocationId != null)
+                {
+                    properties[LogConstants.InvocationIdKey] = invocationId;
+                }
             }
+            telemetry.Context.Operation.Name = scopeProperties.GetValueOrDefault<string>(ScopeKeys.FunctionName);
         }
 
-        private void LogException(LogLevel logLevel, IEnumerable<KeyValuePair<string, object>> values, Exception exception, string formattedMessage)
+        private void LogException(LogLevel logLevel, IEnumerable<KeyValuePair<string, object>> values, Exception exception, string formattedMessage, EventId eventId)
         {
             ExceptionTelemetry telemetry = new ExceptionTelemetry(exception)
             {
@@ -189,29 +195,33 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
                 // Also log a trace if there's a formattedMessage. This ensures that the error is visible
                 // in both App Insights analytics tables.
-                LogTrace(logLevel, values, formattedMessage);
+                LogTrace(logLevel, values, formattedMessage, eventId);
             }
 
-            ApplyScopeAndStateProperties(telemetry.Properties, values);
+            ApplyScopeAndStateProperties(telemetry.Properties, values, telemetry);
+            ApplyKnownProperties(telemetry.Properties, logLevel, eventId);
 
             _telemetryClient.TrackException(telemetry);
         }
 
-        private void LogTrace(LogLevel logLevel, IEnumerable<KeyValuePair<string, object>> values, string formattedMessage)
+        private void LogTrace(LogLevel logLevel, IEnumerable<KeyValuePair<string, object>> values, string formattedMessage, EventId eventId)
         {
-            var properties = new Dictionary<string, string>();
-            ApplyScopeAndStateProperties(properties, values);
+            TraceTelemetry telemetry = new TraceTelemetry(formattedMessage);
+            
+            ApplyScopeAndStateProperties(telemetry.Properties, values, telemetry);
 
+            ApplyKnownProperties(telemetry.Properties, logLevel, eventId);
+            
             var severityLevel = GetSeverityLevel(logLevel);
+           
+
             if (severityLevel.HasValue)
             {
-                _telemetryClient.TrackTrace(formattedMessage, severityLevel.Value, properties);
+                telemetry.SeverityLevel = severityLevel;
             }
-            else
-            {
-                // LogLevel.None maps to null, so we have to handle that specially
-                _telemetryClient.TrackTrace(formattedMessage, properties);
-            }
+           
+            // LogLevel.None maps to null, so we have to handle that specially
+            _telemetryClient.TrackTrace(telemetry);           
         }
 
         private static SeverityLevel? GetSeverityLevel(LogLevel logLevel)
@@ -236,12 +246,19 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         }
 
         // Makes sure these are done in the correct order. If there are duplicate keys, the last State property wins.
-        private static void ApplyScopeAndStateProperties(IDictionary<string, string> properties, IEnumerable<KeyValuePair<string, object>> state)
+        private static void ApplyScopeAndStateProperties(IDictionary<string, string> properties, IEnumerable<KeyValuePair<string, object>> state, ITelemetry telemetry)
         {
-            ApplyScopeProperties(properties);
+            ApplyScopeProperties(properties, telemetry);
             ApplyProperties(properties, state, true);
         }
 
+        internal void ApplyKnownProperties(IDictionary<string, string> properties, LogLevel logLevel, EventId eventId)
+        {
+            properties[LogConstants.CategoryNameKey] = _categoryName;
+            properties[LogConstants.LogLevelKey] = ((LogLevel?)logLevel).ToString();
+            properties[LogConstants.EventIdKey] = Convert.ToString(eventId.Id);
+            properties[LogConstants.EventNameKey] = eventId.Name;
+        }
         internal static void ApplyProperty(IDictionary<string, string> properties, string key, object value, bool applyPrefix = false)
         {
             // do not apply null values
@@ -288,7 +305,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             }
         }
 
-        private void LogFunctionResultAggregate(IEnumerable<KeyValuePair<string, object>> values)
+        private void LogFunctionResultAggregate(IEnumerable<KeyValuePair<string, object>> values, LogLevel logLevel, EventId eventId)
         {
             // Metric names will be created like "{FunctionName} {MetricName}"
             IDictionary<string, double> metrics = new Dictionary<string, double>();
@@ -323,13 +340,16 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 }
             }
 
+            IDictionary<string, string> properties = new Dictionary<string, string>(4);
+            ApplyKnownProperties(properties, logLevel, eventId);
+
             foreach (KeyValuePair<string, double> metric in metrics)
             {
-                _telemetryClient.TrackMetric($"{functionName} {metric.Key}", metric.Value);
+                _telemetryClient.TrackMetric($"{functionName} {metric.Key}", metric.Value, properties);
             }
         }
 
-        private void LogFunctionResult(IEnumerable<KeyValuePair<string, object>> state, LogLevel logLevel, Exception exception)
+        private void LogFunctionResult(IEnumerable<KeyValuePair<string, object>> state, LogLevel logLevel, Exception exception, EventId eventId)
         {
             IDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
             KeyValuePair<string, object>[] stateProps = state as KeyValuePair<string, object>[] ?? state.ToArray();
@@ -337,10 +357,10 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             // log associated exception details
             if (exception != null)
             {
-                LogException(logLevel, stateProps, exception, null);
+                LogException(logLevel, stateProps, exception, null, eventId);
             }
 
-            ApplyFunctionResultActivityTags(stateProps, scopeProps);
+            ApplyFunctionResultActivityTags(stateProps, scopeProps, logLevel);
 
             IOperationHolder<RequestTelemetry> requestOperation = scopeProps?.GetValueOrDefault<IOperationHolder<RequestTelemetry>>(OperationContext);
             if (requestOperation != null)
@@ -362,7 +382,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// </summary>
         /// <param name="state"></param>
         /// <param name="scope"></param>
-        private void ApplyFunctionResultActivityTags(IEnumerable<KeyValuePair<string, object>> state, IDictionary<string, object> scope)
+        private void ApplyFunctionResultActivityTags(IEnumerable<KeyValuePair<string, object>> state, IDictionary<string, object> scope, LogLevel logLevel)
         {
             // Activity carries tracing context. It is managed by instrumented library (e.g. ServiceBus or Asp.Net Core)
             // and consumed by ApplicationInsights.
@@ -413,18 +433,12 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     }
                 }
 
+                
+                currentActivity.AddTag(LogConstants.CategoryNameKey, _categoryName);
+                currentActivity.AddTag(LogConstants.LogLevelKey, logLevel.ToString());
+                
                 if (scope != null)
                 {
-                    if (scope.TryGetValue(LogConstants.CategoryNameKey, out object category))
-                    {
-                        currentActivity.AddTag(LogConstants.CategoryNameKey, category.ToString());
-                    }
-
-                    if (scope.TryGetValue(LogConstants.LogLevelKey, out object logLevel))
-                    {
-                        currentActivity.AddTag(LogConstants.LogLevelKey, logLevel.ToString());
-                    }
-
                     if (!_loggerOptions.HttpAutoCollectionOptions.EnableHttpTriggerExtendedInfoCollection &&
                         scope.TryGetValue(ApplicationInsightsScopeKeys.HttpRequest, out var request) &&
                         request is HttpRequest httpRequest)

@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading;
 
 namespace Microsoft.Azure.WebJobs.Logging
@@ -17,7 +18,8 @@ namespace Microsoft.Azure.WebJobs.Logging
             State = state;
             Parent = parent;
         }
-
+        private static IDictionary<string, object> _currentScope;
+        private static int _itemCount;
         internal IReadOnlyDictionary<string, object> State { get; private set; }
 
         internal DictionaryLoggerScope Parent { get; private set; }
@@ -37,10 +39,14 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         public static IDisposable Push(object state)
         {
-            IDictionary<string, object> stateValues;
-
-            if (state is IEnumerable<KeyValuePair<string, object>> stateEnum)
+            if (state is IDictionary<string, object> dic)
             {
+                Current = new DictionaryLoggerScope(new ReadOnlyDictionary<string, object>(dic), Current);
+                _itemCount += dic.Count;
+            }
+            else if (state is IEnumerable<KeyValuePair<string, object>> stateEnum)
+            {
+                IDictionary<string, object> stateValues;            
                 // Convert this to a dictionary as we have scenarios where we cannot have duplicates. In this
                 // case, if there are dupes, the later entry wins.
                 stateValues = new Dictionary<string, object>();
@@ -48,14 +54,15 @@ namespace Microsoft.Azure.WebJobs.Logging
                 {
                     stateValues[entry.Key] = entry.Value;
                 }
+                _itemCount += stateValues.Count;
+                Current = new DictionaryLoggerScope(new ReadOnlyDictionary<string, object>(stateValues), Current);
             }
             else
             {
                 // There's nothing we can do with other states.
                 return null;
-            }
-
-            Current = new DictionaryLoggerScope(new ReadOnlyDictionary<string, object>(stateValues), Current);
+            }            
+            _currentScope = null;
             return new DisposableScope();
         }
 
@@ -63,35 +70,42 @@ namespace Microsoft.Azure.WebJobs.Logging
         // contains the same key as an outer scope, it overwrites the value.
         public static IDictionary<string, object> GetMergedStateDictionaryOrNull()
         {
-            IDictionary<string, object> scopeInfo = null;
-
-            var current = Current;
-            while (current != null)
+            if (Current == null)
             {
-                if (scopeInfo == null)
-                {
-                    scopeInfo = new Dictionary<string, object>();
-                }
-
-                foreach (var entry in current.State)
-                {
-                    // inner scopes win
-                    if (!scopeInfo.Keys.Contains(entry.Key))
-                    {
-                        scopeInfo.Add(entry);
-                    }
-                }
-                current = current.Parent;
+                return null;
             }
-
-            return scopeInfo;
+            if (_currentScope == null)
+            {
+                IDictionary<string, object> scopeInfo = new Dictionary<string, object>(_itemCount); 
+                var current = Current;
+                while (current != null)
+                {
+                    foreach (var entry in current.State)
+                    {
+                        // inner scopes win
+                        if (!scopeInfo.Keys.Contains(entry.Key))
+                        {
+                            scopeInfo.Add(entry);
+                        }
+                    }
+                    current = current.Parent;
+                }
+                _currentScope = scopeInfo;
+                return scopeInfo;
+            }
+            else
+            {
+                return _currentScope;
+            }
         }
 
         private class DisposableScope : IDisposable
         {
             public void Dispose()
             {
+                _itemCount -= Current.State.Count;
                 Current = Current.Parent;
+                _currentScope = null;
             }
         }
     }

@@ -52,44 +52,59 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             IDictionary<string, string> telemetryProps = telemetryContext.Properties;
             telemetryProps[LogConstants.ProcessIdKey] = _currentProcessId;
 
-            // Apply our special scope properties
-            IDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
-
-            string invocationId = scopeProps?.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId);
-            if (invocationId != null)
+            if (telemetry is DependencyTelemetry)
             {
-                telemetryProps[LogConstants.InvocationIdKey] = invocationId;
-            }
+                // Apply our special scope properties
+                IDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
 
-            // this could be telemetry tracked in scope of function call - then we should apply the logger scope
-            // or RequestTelemetry tracked by the WebJobs SDK or AppInsight SDK - then we should apply Activity.Tags
-            if (scopeProps != null && scopeProps.Count > 0)
-            {
-                telemetryContext.Operation.Name = scopeProps.GetValueOrDefault<string>(ScopeKeys.FunctionName);
-
-                // Apply Category and LogLevel to all telemetry
-                string category = scopeProps.GetValueOrDefault<string>(LogConstants.CategoryNameKey);
-                if (category != null)
+                string invocationId = scopeProps?.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId);
+                if (invocationId != null)
                 {
-                    telemetryProps[LogConstants.CategoryNameKey] = category;
+                    telemetryProps[LogConstants.InvocationIdKey] = invocationId;
                 }
 
-                LogLevel? logLevel = scopeProps.GetValueOrDefault<LogLevel?>(LogConstants.LogLevelKey);
-                if (logLevel != null)
+                // this could be telemetry tracked in scope of function call - then we should apply the logger scope
+                // or RequestTelemetry tracked by the WebJobs SDK or AppInsight SDK - then we should apply Activity.Tags
+                if (scopeProps != null && scopeProps.Count > 0)
                 {
-                    telemetryProps[LogConstants.LogLevelKey] = logLevel.Value.ToString();
-                }
+                    telemetryContext.Operation.Name = scopeProps.GetValueOrDefault<string>(ScopeKeys.FunctionName);
 
-                int? eventId = scopeProps.GetValueOrDefault<int?>(LogConstants.EventIdKey);
-                if (eventId != null && eventId.HasValue && eventId.Value != 0)
-                {
-                    telemetryProps[LogConstants.EventIdKey] = eventId.Value.ToString();
-                }
+                    // Apply Category, LogLevel event details to all telemetry
+                    if (!telemetryProps.ContainsKey(LogConstants.CategoryNameKey))
+                    {
+                        string category = scopeProps.GetValueOrDefault<string>(LogConstants.CategoryNameKey);
+                        if (category != null)
+                        {
+                            telemetryProps[LogConstants.CategoryNameKey] = category;
+                        }
+                    }
 
-                string eventName = scopeProps.GetValueOrDefault<string>(LogConstants.EventNameKey);
-                if (eventName != null)
-                {
-                    telemetryProps[LogConstants.EventNameKey] = eventName;
+                    if (!telemetryProps.ContainsKey(LogConstants.LogLevelKey))
+                    {
+                        LogLevel? logLevel = scopeProps.GetValueOrDefault<LogLevel?>(LogConstants.LogLevelKey);
+                        if (logLevel != null)
+                        {
+                            telemetryProps[LogConstants.LogLevelKey] = logLevel.Value.ToString();
+                        }
+                    }
+
+                    if (!telemetryProps.ContainsKey(LogConstants.EventIdKey))
+                    {
+                        int? eventId = scopeProps.GetValueOrDefault<int?>(LogConstants.EventIdKey);
+                        if (eventId != null && eventId.HasValue && eventId.Value != 0)
+                        {
+                            telemetryProps[LogConstants.EventIdKey] = eventId.Value.ToString();
+                        }
+                    }
+
+                    if (!telemetryProps.ContainsKey(LogConstants.EventNameKey))
+                    {
+                        string eventName = scopeProps.GetValueOrDefault<string>(LogConstants.EventNameKey);
+                        if (eventName != null)
+                        {
+                            telemetryProps[LogConstants.EventNameKey] = eventName;
+                        }
+                    }
                 }
             }
 
