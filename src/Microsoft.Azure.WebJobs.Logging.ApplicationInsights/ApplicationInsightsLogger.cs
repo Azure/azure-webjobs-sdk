@@ -256,8 +256,17 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         {
             properties[LogConstants.CategoryNameKey] = _categoryName;
             properties[LogConstants.LogLevelKey] = ((LogLevel?)logLevel).ToString();
-            properties[LogConstants.EventIdKey] = Convert.ToString(eventId.Id);
-            properties[LogConstants.EventNameKey] = eventId.Name;
+            if (eventId != null)
+            {
+                if (eventId.Id != 0)
+                {
+                    properties[LogConstants.EventIdKey] = Convert.ToString(eventId.Id);
+                }
+                if (!string.IsNullOrEmpty(eventId.Name))
+                {
+                    properties[LogConstants.EventNameKey] = eventId.Name;
+                }
+            }
         }
         internal static void ApplyProperty(IDictionary<string, string> properties, string key, object value, bool applyPrefix = false)
         {
