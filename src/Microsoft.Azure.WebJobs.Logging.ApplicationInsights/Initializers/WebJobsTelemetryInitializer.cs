@@ -49,8 +49,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 telemetryContext.Location.Ip = LoggingConstants.ZeroIpAddress;
             }
 
-            IDictionary<string, string> telemetryProps = telemetryContext.Properties;
-            telemetryProps[LogConstants.ProcessIdKey] = _currentProcessId;
+            telemetryContext.Properties[LogConstants.ProcessIdKey] = _currentProcessId;
 
             if (telemetry is DependencyTelemetry)
             {
@@ -60,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 string invocationId = scopeProps?.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId);
                 if (invocationId != null)
                 {
-                    telemetryProps[LogConstants.InvocationIdKey] = invocationId;
+                    telemetryContext.Properties[LogConstants.InvocationIdKey] = invocationId;
                 }
 
                 // this could be telemetry tracked in scope of function call - then we should apply the logger scope
@@ -70,39 +69,39 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     telemetryContext.Operation.Name = scopeProps.GetValueOrDefault<string>(ScopeKeys.FunctionName);
 
                     // Apply Category, LogLevel event details to all telemetry
-                    if (!telemetryProps.ContainsKey(LogConstants.CategoryNameKey))
+                    if (!telemetryContext.Properties.ContainsKey(LogConstants.CategoryNameKey))
                     {
                         string category = scopeProps.GetValueOrDefault<string>(LogConstants.CategoryNameKey);
                         if (category != null)
                         {
-                            telemetryProps[LogConstants.CategoryNameKey] = category;
+                            telemetryContext.Properties[LogConstants.CategoryNameKey] = category;
                         }
                     }
 
-                    if (!telemetryProps.ContainsKey(LogConstants.LogLevelKey))
+                    if (!telemetryContext.Properties.ContainsKey(LogConstants.LogLevelKey))
                     {
                         LogLevel? logLevel = scopeProps.GetValueOrDefault<LogLevel?>(LogConstants.LogLevelKey);
                         if (logLevel != null)
                         {
-                            telemetryProps[LogConstants.LogLevelKey] = logLevel.Value.ToString();
+                            telemetryContext.Properties[LogConstants.LogLevelKey] = logLevel.Value.ToString();
                         }
                     }
 
-                    if (!telemetryProps.ContainsKey(LogConstants.EventIdKey))
+                    if (!telemetryContext.Properties.ContainsKey(LogConstants.EventIdKey))
                     {
                         int? eventId = scopeProps.GetValueOrDefault<int?>(LogConstants.EventIdKey);
                         if (eventId != null && eventId.HasValue && eventId.Value != 0)
                         {
-                            telemetryProps[LogConstants.EventIdKey] = eventId.Value.ToString();
+                            telemetryContext.Properties[LogConstants.EventIdKey] = eventId.Value.ToString();
                         }
                     }
 
-                    if (!telemetryProps.ContainsKey(LogConstants.EventNameKey))
+                    if (!telemetryContext.Properties.ContainsKey(LogConstants.EventNameKey))
                     {
                         string eventName = scopeProps.GetValueOrDefault<string>(LogConstants.EventNameKey);
                         if (eventName != null)
                         {
-                            telemetryProps[LogConstants.EventNameKey] = eventName;
+                            telemetryContext.Properties[LogConstants.EventNameKey] = eventName;
                         }
                     }
                 }

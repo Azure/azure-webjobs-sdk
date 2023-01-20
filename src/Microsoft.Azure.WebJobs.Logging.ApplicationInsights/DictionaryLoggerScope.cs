@@ -39,10 +39,10 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         public static IDisposable Push(object state)
         {
-            if (state is IDictionary<string, object> dic)
+            if (state is IDictionary<string, object> currentState)
             {
-                Current = new DictionaryLoggerScope(new ReadOnlyDictionary<string, object>(dic), Current);
-                _itemCount += dic.Count;
+                Current = new DictionaryLoggerScope(new ReadOnlyDictionary<string, object>(currentState), Current);
+                _itemCount += currentState.Count;
             }
             else if (state is IEnumerable<KeyValuePair<string, object>> stateEnum)
             {

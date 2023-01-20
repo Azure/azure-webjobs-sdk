@@ -13,6 +13,7 @@ using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Azure.WebJobs.Logging.ApplicationInsights.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using static Microsoft.ApplicationInsights.MetricDimensionNames;
@@ -124,7 +125,14 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 switch (entry.Key)
                 {
                     case LogConstants.NameKey:
-                        telemetry.Name = entry.Value.ToString();
+                        if (entry.Value is string name)
+                        {
+                            telemetry.Name = name;
+                        }
+                        else
+                        {
+                            telemetry.Name = entry.Value.ToString();
+                        }
                         continue;
                     case LogConstants.MetricValueKey:
                         telemetry.Sum = (double)entry.Value;
@@ -255,7 +263,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         internal void ApplyKnownProperties(IDictionary<string, string> properties, LogLevel logLevel, EventId eventId)
         {
             properties[LogConstants.CategoryNameKey] = _categoryName;
-            properties[LogConstants.LogLevelKey] = ((LogLevel?)logLevel).ToString();
+            properties[LogConstants.LogLevelKey] = LogLevelEnumHelper.ToStringOptimized(logLevel);
             if (eventId != null)
             {
                 if (eventId.Id != 0)
@@ -279,14 +287,17 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             string stringValue = null;
 
             // Format dates
-            Type propertyType = value.GetType();
-            if (propertyType == typeof(DateTime))
+            if (value is string st)
             {
-                stringValue = ((DateTime)value).ToUniversalTime().ToString(DateTimeFormatString);
+                stringValue = st;
             }
-            else if (propertyType == typeof(DateTimeOffset))
+            if (value is DateTime date)
             {
-                stringValue = ((DateTimeOffset)value).UtcDateTime.ToString(DateTimeFormatString);
+                stringValue = date.ToUniversalTime().ToString(DateTimeFormatString);
+            }
+            else if (value is DateTimeOffset dateOffset)
+            {
+                stringValue = dateOffset.UtcDateTime.ToString(DateTimeFormatString);
             }
             else
             {
@@ -317,7 +328,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         private void LogFunctionResultAggregate(IEnumerable<KeyValuePair<string, object>> values, LogLevel logLevel, EventId eventId)
         {
             // Metric names will be created like "{FunctionName} {MetricName}"
-            IDictionary<string, double> metrics = new Dictionary<string, double>();
+            IDictionary<string, double> metrics = new Dictionary<string, double>(7);
             string functionName = LoggingConstants.Unknown;
 
             // build up the collection of metrics to send
@@ -333,17 +344,20 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                         // Timestamp is created automatically
                         // We won't use the format string here
                         break;
-                    default:
-                        if (value.Value is TimeSpan)
+                    default:                        
+                        if (value.Value is int i) 
+                        {
+                            metrics.Add(value.Key, Convert.ToDouble(i));
+                        }
+                        else if (value.Value is double d)
+                        {
+                            metrics.Add(value.Key, d);
+                        }
+                        else if (value.Value is TimeSpan timeSpan)
                         {
                             // if it's a TimeSpan, log the milliseconds
-                            metrics.Add(value.Key, ((TimeSpan)value.Value).TotalMilliseconds);
+                            metrics.Add(value.Key, timeSpan.TotalMilliseconds);
                         }
-                        else if (value.Value is double || value.Value is int)
-                        {
-                            metrics.Add(value.Key, Convert.ToDouble(value.Value));
-                        }
-
                         // do nothing otherwise
                         break;
                 }
@@ -444,7 +458,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
                 
                 currentActivity.AddTag(LogConstants.CategoryNameKey, _categoryName);
-                currentActivity.AddTag(LogConstants.LogLevelKey, logLevel.ToString());
+                currentActivity.AddTag(LogConstants.LogLevelKey, LogLevelEnumHelper.ToStringOptimized(logLevel));
                 
                 if (scope != null)
                 {
