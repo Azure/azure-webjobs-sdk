@@ -18,6 +18,7 @@ namespace Microsoft.Azure.WebJobs.Logging
             State = state;
             Parent = parent;
         }
+        // Cache merged dictionary. Invalidate cache on push/dispose 
         private static IDictionary<string, object> _currentScope;
         private static int _itemCount;
         internal IReadOnlyDictionary<string, object> State { get; private set; }

@@ -16,7 +16,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
-using static Microsoft.ApplicationInsights.MetricDimensionNames;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
@@ -76,9 +75,6 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             // Initialize stateValues so the rest of the methods don't have to worry about null values.
             stateValues = stateValues ?? new Dictionary<string, object>();
 
-            // Add some well-known
-            // properties to the scope dictionary so the TelemetryInitializer can add them
-            // for all telemetry.
             if (_isUserFunction && eventId.Id == LogConstants.MetricEventId)
             {
                 // Log a metric from user logs only
@@ -110,7 +106,9 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         {
             MetricTelemetry telemetry = new MetricTelemetry();
             // Always apply scope first to allow state to override.
-            ApplyScopeProperties(telemetry.Properties, telemetry);
+            ApplyScopeProperties(telemetry);
+
+            // Add known properties like category, logLevel and event
             ApplyKnownProperties(telemetry.Properties, logLevel, eventId);
 
             foreach (var entry in values)
@@ -167,23 +165,23 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         }
 
         // Applies scope properties; filters most system properties, which are used internally
-        private static void ApplyScopeProperties(IDictionary<string, string> properties, ITelemetry telemetry)
+        private static void ApplyScopeProperties(ITelemetry telemetry)
         {
             var scopeProperties = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();            
             if (scopeProperties != null)
             {
                 foreach (var scopeProperty in scopeProperties)
                 {
-                    if (!SystemScopeKeys.Contains(scopeProperty.Key))
+                    if (!SystemScopeKeys.Contains(scopeProperty.Key, StringComparer.Ordinal))
                     {
-                        ApplyProperty(properties, scopeProperty.Key, scopeProperty.Value, true);
+                        ApplyProperty(telemetry.Context.Properties, scopeProperty.Key, scopeProperty.Value, true);
                     }
                 }
 
                 string invocationId = scopeProperties.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId);
                 if (invocationId != null)
                 {
-                    properties[LogConstants.InvocationIdKey] = invocationId;
+                    telemetry.Context.Properties[LogConstants.InvocationIdKey] = invocationId;
                 }
             }
             telemetry.Context.Operation.Name = scopeProperties.GetValueOrDefault<string>(ScopeKeys.FunctionName);
@@ -256,7 +254,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         // Makes sure these are done in the correct order. If there are duplicate keys, the last State property wins.
         private static void ApplyScopeAndStateProperties(IDictionary<string, string> properties, IEnumerable<KeyValuePair<string, object>> state, ITelemetry telemetry)
         {
-            ApplyScopeProperties(properties, telemetry);
+            ApplyScopeProperties(telemetry);
             ApplyProperties(properties, state, true);
         }
 
@@ -276,10 +274,10 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 }
             }
         }
-        internal static void ApplyProperty(IDictionary<string, string> properties, string key, object value, bool applyPrefix = false)
+        internal static void ApplyProperty(IDictionary<string, string> properties, string key, object objectValue, bool applyPrefix = false)
         {
             // do not apply null values
-            if (value == null)
+            if (objectValue == null)
             {
                 return;
             }
@@ -287,21 +285,21 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             string stringValue = null;
 
             // Format dates
-            if (value is string st)
+            if (objectValue is string value)
             {
-                stringValue = st;
+                stringValue = value;
             }
-            if (value is DateTime date)
+            if (objectValue is DateTime date)
             {
                 stringValue = date.ToUniversalTime().ToString(DateTimeFormatString);
             }
-            else if (value is DateTimeOffset dateOffset)
+            else if (objectValue is DateTimeOffset dateOffset)
             {
                 stringValue = dateOffset.UtcDateTime.ToString(DateTimeFormatString);
             }
             else
             {
-                stringValue = value.ToString();
+                stringValue = objectValue.ToString();
             }
 
             string prefixedKey = applyPrefix ? _prefixedProperyNames.GetOrAdd(key, k =>
@@ -345,13 +343,13 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                         // We won't use the format string here
                         break;
                     default:                        
-                        if (value.Value is int i) 
+                        if (value.Value is int intValue) 
                         {
-                            metrics.Add(value.Key, Convert.ToDouble(i));
+                            metrics.Add(value.Key, Convert.ToDouble(intValue));
                         }
-                        else if (value.Value is double d)
+                        else if (value.Value is double doubleValue)
                         {
-                            metrics.Add(value.Key, d);
+                            metrics.Add(value.Key, doubleValue);
                         }
                         else if (value.Value is TimeSpan timeSpan)
                         {
@@ -363,7 +361,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 }
             }
 
-            IDictionary<string, string> properties = new Dictionary<string, string>(4);
+            IDictionary<string, string> properties = new Dictionary<string, string>(2);
             ApplyKnownProperties(properties, logLevel, eventId);
 
             foreach (KeyValuePair<string, double> metric in metrics)
@@ -455,7 +453,6 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                             break;
                     }
                 }
-
                 
                 currentActivity.AddTag(LogConstants.CategoryNameKey, _categoryName);
                 currentActivity.AddTag(LogConstants.LogLevelKey, LogLevelEnumHelper.ToStringOptimized(logLevel));
