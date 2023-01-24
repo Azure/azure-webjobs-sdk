@@ -19,8 +19,9 @@ namespace Microsoft.Azure.WebJobs.Logging
             Parent = parent;
         }
         // Cache merged dictionary. Invalidate cache on push/dispose 
-        private static IDictionary<string, object> _currentScope;
-        private static int _itemCount;
+        private IDictionary<string, object> _currentScope;
+        // Maintain a count of all the items in the nested scope
+        private int _itemCount;
         internal IReadOnlyDictionary<string, object> State { get; private set; }
 
         internal DictionaryLoggerScope Parent { get; private set; }
@@ -40,10 +41,19 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         public static IDisposable Push(object state)
         {
+            int beforeCount = 0;
+            if (Current != null)
+            {
+                Current._currentScope = null;
+                beforeCount = Current._itemCount;
+            }
+            
             if (state is IDictionary<string, object> currentState)
             {
-                Current = new DictionaryLoggerScope(new ReadOnlyDictionary<string, object>(currentState), Current);
-                _itemCount += currentState.Count;
+                Current = new DictionaryLoggerScope(new ReadOnlyDictionary<string, object>(currentState), Current)
+                {
+                    _itemCount = currentState.Count + beforeCount
+                };
             }
             else if (state is IEnumerable<KeyValuePair<string, object>> stateEnum)
             {
@@ -55,15 +65,14 @@ namespace Microsoft.Azure.WebJobs.Logging
                 {
                     stateValues[entry.Key] = entry.Value;
                 }
-                _itemCount += stateValues.Count;
+                Current._itemCount = stateValues.Count + beforeCount;
                 Current = new DictionaryLoggerScope(new ReadOnlyDictionary<string, object>(stateValues), Current);
             }
             else
             {
                 // There's nothing we can do with other states.
                 return null;
-            }            
-            _currentScope = null;
+            }
             return new DisposableScope();
         }
 
@@ -75,9 +84,9 @@ namespace Microsoft.Azure.WebJobs.Logging
             {
                 return null;
             }
-            if (_currentScope == null)
+            if (Current._currentScope == null)
             {
-                IDictionary<string, object> scopeInfo = new Dictionary<string, object>(_itemCount); 
+                 IDictionary<string, object> scopeInfo = new Dictionary<string, object>(Current._itemCount); 
                 var current = Current;
                 while (current != null)
                 {
@@ -91,12 +100,12 @@ namespace Microsoft.Azure.WebJobs.Logging
                     }
                     current = current.Parent;
                 }
-                _currentScope = scopeInfo;
+                Current._currentScope = scopeInfo;
                 return scopeInfo;
             }
             else
             {
-                return _currentScope;
+                return Current._currentScope;
             }
         }
 
@@ -104,9 +113,8 @@ namespace Microsoft.Azure.WebJobs.Logging
         {
             public void Dispose()
             {
-                _itemCount -= Current.State.Count;
-                Current = Current.Parent;
-                _currentScope = null;
+                Current._currentScope = null;
+                Current = Current.Parent;                
             }
         }
     }
