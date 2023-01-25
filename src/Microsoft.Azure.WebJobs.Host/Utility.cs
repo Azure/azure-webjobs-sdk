@@ -95,9 +95,9 @@ namespace Microsoft.Azure.WebJobs
 
         public static int GetEffectiveCoresCount()
         {
-            // When not running on VMSS, the dynamic plan has some limits that mean that a given instance is using effectively a single core,
+            // The dynamic plan has some limits that mean that a given instance is using effectively a single core,
             // so we should not use Environment.Processor count in this case.
-            var effectiveCores = (IsConsumptionSku() && !IsVMSS()) ? 1 : Environment.ProcessorCount;
+            var effectiveCores = IsConsumptionSku() ? 1 : Environment.ProcessorCount;
             return effectiveCores;
         }
 
