@@ -12,12 +12,7 @@ namespace Microsoft.Azure.WebJobs.Logging
     internal class DictionaryLoggerScope
     {
         private static AsyncLocal<DictionaryLoggerScope> _value = new AsyncLocal<DictionaryLoggerScope>();
-
-        private DictionaryLoggerScope(IReadOnlyDictionary<string, object> state, DictionaryLoggerScope parent)
-        {
-            State = state;
-            Parent = parent;
-        }
+        
         // Cache merged dictionary. Invalidate cache on push/dispose 
         private IDictionary<string, object> _currentScope;
         // Maintain a count of all the items in the nested scope
@@ -26,6 +21,11 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         internal DictionaryLoggerScope Parent { get; private set; }
 
+        private DictionaryLoggerScope(IReadOnlyDictionary<string, object> state, DictionaryLoggerScope parent)
+        {
+            State = state;
+            Parent = parent;
+        }
         public static DictionaryLoggerScope Current
         {
             get
