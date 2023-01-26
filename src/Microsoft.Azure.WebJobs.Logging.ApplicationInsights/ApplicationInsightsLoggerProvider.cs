@@ -32,14 +32,12 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         }
 
         // Constructor for testing purposes only
-        public ApplicationInsightsLoggerProvider(
+        internal ApplicationInsightsLoggerProvider(
             TelemetryClient client,
-            DiagnosticSource source,
-            CancellationTokenSource cancellationTokenSource)
+            DiagnosticSource source)
         {
             _client = client;
             _source = source;
-            _cancellationTokenSource = cancellationTokenSource;
         }
 
         public ILogger CreateLogger(string categoryName) => new ApplicationInsightsLogger(_client, categoryName, _loggerOptions);
@@ -52,8 +50,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 {
                     try
                     {
-                        // Default timeout of 5 seconds
-                        _cancellationTokenSource = _cancellationTokenSource ?? new CancellationTokenSource(new TimeSpan(hours: 0, minutes: 0, seconds: 2));
+                        // Default timeout of 2 seconds
+                        _cancellationTokenSource = new CancellationTokenSource(2000);
                         var task = _client.FlushAsync(_cancellationTokenSource.Token);
 
                         // Wait for the flush to complete or for 5 seconds to pass, whichever comes first. This method throws and AggregateException with a
