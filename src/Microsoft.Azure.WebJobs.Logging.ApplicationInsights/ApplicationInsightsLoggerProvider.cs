@@ -3,7 +3,9 @@
 
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -30,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         }
 
         // Constructor for testing purposes only
-        internal ApplicationInsightsLoggerProvider(
+        public ApplicationInsightsLoggerProvider(
             TelemetryClient client,
             DiagnosticSource source,
             CancellationTokenSource cancellationTokenSource)
@@ -51,26 +53,26 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     try
                     {
                         // Default timeout of 5 seconds
-                        var timeout = new TimeSpan(hours: 0, minutes: 0, seconds: 5);
-                        _cancellationTokenSource = _cancellationTokenSource ?? new CancellationTokenSource();
+                        _cancellationTokenSource = _cancellationTokenSource ?? new CancellationTokenSource(new TimeSpan(hours: 0, minutes: 0, seconds: 2));
                         var task = _client.FlushAsync(_cancellationTokenSource.Token);
 
-                        // Wait for the flush to complete or for 5 seconds to pass, whichever comes first
-                        if (!task.Wait(timeout))
-                        {
-                            _cancellationTokenSource.Cancel();
-                            WriteDiagnosticFlushingIssue($"Flushing did not complete within {timeout.Seconds}s timeout");
-                        }
+                        // Wait for the flush to complete or for 5 seconds to pass, whichever comes first. This method throws and AggregateException with a
+                        // TaskCanceledException object in the InnerExceptions collection if the flush is canceled
+                        task.Wait();
+                        
                         // Flush did not fully succeed
-                        else if (!task.Result)
+                        if (!task.Result)
                         {
                             WriteDiagnosticFlushingIssue("Flushing did not complete successfully");
                         }
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
-                        // Log flushing exceptions
-                        WriteDiagnosticFlushingIssue(e.Message);
+                        WriteDiagnosticFlushingIssue($"Flushing failed. CancelationTokenSource.IsCancellationRequested: {_cancellationTokenSource.IsCancellationRequested}");
+                    }
+                    finally
+                    {
+                        _cancellationTokenSource.Dispose();
                     }
                 }
 
