@@ -340,7 +340,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                         // Timestamp is created automatically
                         // We won't use the format string here
                         break;
-                    default:                        
+                    default:
                         if (value.Value is int intValue) 
                         {
                             metrics.Add(value.Key, Convert.ToDouble(intValue));
