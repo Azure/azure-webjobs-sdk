@@ -48,7 +48,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 channel => channel.FlushAsync(It.IsAny<CancellationToken>()))
                     .Returns<CancellationToken>(async cancellationToken =>
                         {
-                            // Sleep for the set amount of time
+                            // Delay for the set amount of time
                             await Task.Delay(millisecondsTimeout, cancellationToken);
                             return flushSucceeded;
                         });
@@ -76,11 +76,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                     SetupDelayedFlushAsync(mockChannel, 0, false);
                     break;
                 case FlushResult.Timeout:
-                    expectedDiagnosticLog = "Flushing failed. CancelationTokenSource.IsCancellationRequested: True";
+                    expectedDiagnosticLog = "Flushing failed. CancellationTokenSource.IsCancellationRequested: True";
                     SetupDelayedFlushAsync(mockChannel, 4000, true);
                     break;
                 case FlushResult.Exception:
-                    expectedDiagnosticLog = "Flushing failed. CancelationTokenSource.IsCancellationRequested: False";
+                    expectedDiagnosticLog = "Flushing failed. CancellationTokenSource.IsCancellationRequested: False";
                     mockChannel.As<IAsyncFlushable>().Setup(
                         channel => channel.FlushAsync(It.IsAny<CancellationToken>()))
                             .Throws(new Exception(expectedDiagnosticLog));

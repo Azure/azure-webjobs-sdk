@@ -3,9 +3,7 @@
 
 using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -30,7 +28,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             _client = client ?? throw new ArgumentNullException(nameof(client));
             _loggerOptions = loggerOptions?.Value ?? throw new ArgumentNullException(nameof(loggerOptions));
         }
-
+            
         // Constructor for testing purposes only
         internal ApplicationInsightsLoggerProvider(
             TelemetryClient client,
@@ -54,7 +52,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                         _cancellationTokenSource = new CancellationTokenSource(2000);
                         var task = _client.FlushAsync(_cancellationTokenSource.Token);
 
-                        // Wait for the flush to complete or for 5 seconds to pass, whichever comes first. This method throws and AggregateException with a
+                        // Wait for the flush to complete or for 2 seconds to pass, whichever comes first. This method throws an AggregateException with a
                         // TaskCanceledException object in the InnerExceptions collection if the flush is canceled
                         task.Wait();
                         
@@ -66,7 +64,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     }
                     catch (Exception)
                     {
-                        WriteDiagnosticFlushingIssue($"Flushing failed. CancelationTokenSource.IsCancellationRequested: {_cancellationTokenSource.IsCancellationRequested}");
+                        WriteDiagnosticFlushingIssue($"Flushing failed. CancellationTokenSource.IsCancellationRequested: {_cancellationTokenSource.IsCancellationRequested}");
                     }
                     finally
                     {
