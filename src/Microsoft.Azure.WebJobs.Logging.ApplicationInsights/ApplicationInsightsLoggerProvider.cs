@@ -69,6 +69,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     finally
                     {
                         _cancellationTokenSource.Dispose();
+                        (_source as IDisposable)?.Dispose();
                     }
                 }
 
