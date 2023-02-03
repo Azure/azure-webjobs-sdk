@@ -54,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             if (telemetry is DependencyTelemetry)
             {
                 // Apply our special scope properties
-                IDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
+                IReadOnlyDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
 
                 string invocationId = scopeProps?.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId);
                 if (invocationId != null)

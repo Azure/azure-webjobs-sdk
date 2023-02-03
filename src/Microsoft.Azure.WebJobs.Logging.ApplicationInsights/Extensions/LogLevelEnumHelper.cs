@@ -8,31 +8,30 @@ using System;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights.Extensions
 {
-    internal class LogLevelEnumHelper
+    internal static class LogLevelEnumHelper
     {
-        private static readonly string[] LogLevelEnumStrings;
-
-        static LogLevelEnumHelper()
-        {
-            LogLevelEnumStrings = GetEnumOrderedStrings();
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string ToStringOptimized(LogLevel enumValue)
+        internal static string ToStringOptimized(this LogLevel logLevel)
         {
-            return LogLevelEnumStrings[(int)enumValue];
-        }
-        private static string[] GetEnumOrderedStrings()
-        {
-            var list = Enum.GetValues(typeof(LogLevel));
-            string[] enumOrderedStrings = new string[list.Length];
-            int index = 0;
-            foreach (var item in list)
+            switch (logLevel)
             {
-                enumOrderedStrings[index] = item.ToString();
-                index++;
+                case LogLevel.Trace:
+                    return "Trace";
+                case LogLevel.Debug:
+                    return "Debug";
+                case LogLevel.Information:
+                    return "Information";
+                case LogLevel.Warning:
+                    return "Warning";
+                case LogLevel.Error:
+                    return "Error";
+                case LogLevel.Critical:
+                    return "Critical";
+                case LogLevel.None:
+                    return "None";
+                default:
+                    return logLevel.ToString();
             }
-            return enumOrderedStrings;
         }
     }
 }

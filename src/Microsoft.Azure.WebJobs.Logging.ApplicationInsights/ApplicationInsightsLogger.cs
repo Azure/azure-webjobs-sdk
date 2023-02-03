@@ -35,7 +35,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         internal const string MetricMinKey = "min";
         internal const string MetricMaxKey = "max";
         internal const string MetricStandardDeviationKey = "standarddeviation";
-        
+
         private static readonly HashSet<string> SystemScopeKeys = new HashSet<string>
             {
                 LogConstants.CategoryNameKey,
@@ -123,14 +123,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 switch (entry.Key)
                 {
                     case LogConstants.NameKey:
-                        if (entry.Value is string name)
-                        {
-                            telemetry.Name = name;
-                        }
-                        else
-                        {
                             telemetry.Name = entry.Value.ToString();
-                        }
                         continue;
                     case LogConstants.MetricValueKey:
                         telemetry.Sum = (double)entry.Value;
@@ -167,12 +160,12 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         // Applies scope properties; filters most system properties, which are used internally
         private static void ApplyScopeProperties(ITelemetry telemetry)
         {
-            var scopeProperties = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
+            var scopeProperties = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();            
             if (scopeProperties != null)
             {
                 foreach (var scopeProperty in scopeProperties)
                 {
-                    if (!SystemScopeKeys.Contains(scopeProperty.Key, StringComparer.Ordinal))
+                    if (scopeProperty.Value != null && !SystemScopeKeys.Contains(scopeProperty.Key, StringComparer.Ordinal))
                     {
                         ApplyProperty(telemetry.Context.Properties, scopeProperty.Key, scopeProperty.Value, true);
                     }
@@ -182,8 +175,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 if (invocationId != null)
                 {
                     telemetry.Context.Properties[LogConstants.InvocationIdKey] = invocationId;
-                }
-            }
+                }               
+            }            
             telemetry.Context.Operation.Name = scopeProperties.GetValueOrDefault<string>(ScopeKeys.FunctionName);
         }
 
@@ -261,7 +254,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         internal void ApplyKnownProperties(IDictionary<string, string> properties, LogLevel logLevel, EventId eventId)
         {
             properties[LogConstants.CategoryNameKey] = _categoryName;
-            properties[LogConstants.LogLevelKey] = LogLevelEnumHelper.ToStringOptimized(logLevel);
+            properties[LogConstants.LogLevelKey] = logLevel.ToStringOptimized();
             
             if (eventId.Id != 0)
             {
@@ -370,7 +363,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
         private void LogFunctionResult(IEnumerable<KeyValuePair<string, object>> state, LogLevel logLevel, Exception exception, EventId eventId)
         {
-            IDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
+            IReadOnlyDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
             KeyValuePair<string, object>[] stateProps = state as KeyValuePair<string, object>[] ?? state.ToArray();
 
             // log associated exception details
@@ -401,7 +394,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// </summary>
         /// <param name="state"></param>
         /// <param name="scope"></param>
-        private void ApplyFunctionResultActivityTags(IEnumerable<KeyValuePair<string, object>> state, IDictionary<string, object> scope, LogLevel logLevel)
+        private void ApplyFunctionResultActivityTags(IEnumerable<KeyValuePair<string, object>> state, IReadOnlyDictionary<string, object> scope, LogLevel logLevel)
         {
             // Activity carries tracing context. It is managed by instrumented library (e.g. ServiceBus or Asp.Net Core)
             // and consumed by ApplicationInsights.
@@ -453,7 +446,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 }
                 
                 currentActivity.AddTag(LogConstants.CategoryNameKey, _categoryName);
-                currentActivity.AddTag(LogConstants.LogLevelKey, LogLevelEnumHelper.ToStringOptimized(logLevel));
+                currentActivity.AddTag(LogConstants.LogLevelKey, logLevel.ToStringOptimized());
                 
                 if (scope != null)
                 {
@@ -482,7 +475,6 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             }
 
             StartTelemetryIfFunctionInvocation(state as IDictionary<string, object>);
-
             return DictionaryLoggerScope.Push(state);
         }
 
