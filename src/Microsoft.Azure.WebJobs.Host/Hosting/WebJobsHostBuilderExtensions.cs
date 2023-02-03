@@ -4,6 +4,7 @@
 using System;
 using System.Linq;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.EnvironmentVariables;
@@ -130,6 +131,22 @@ namespace Microsoft.Extensions.Hosting
                 configure?.Invoke(context, webJobsBuilder);
 
                 services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, JobHostService>());
+            });
+
+            return builder;
+        }
+
+        /// <summary>
+        /// Applies scale configuration to the specified <see cref="IHostBuilder"/>.
+        /// </summary>
+        /// <param name="builder">The <see cref="IHostBuilder"/> to configure.</param>
+        /// <returns>The <see cref="IHostBuilder"/>.</returns>
+        public static IHostBuilder AddScale(this IHostBuilder builder)
+        {
+            builder.ConfigureServices((services) =>
+            {
+                services.TryAddSingleton<IScaleManager, ScaleManager>();
+                services.TryAddSingleton<IHostedService, ScaleMonitorService>();
             });
 
             return builder;

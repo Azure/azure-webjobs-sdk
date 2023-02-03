@@ -17,7 +17,7 @@ using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
-    internal class BlobStorageConcurrencyStatusRepository : IConcurrencyStatusRepository
+    public class BlobStorageConcurrencyStatusRepository : IConcurrencyStatusRepository
     {
         private readonly IHostIdProvider _hostIdProvider;
         private readonly ILogger _logger;
