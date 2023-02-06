@@ -18,6 +18,8 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Microsoft.Extensions.Configuration;
 using System.IO;
+using Microsoft.Azure.WebJobs.Hosting;
+using Microsoft.Azure.WebJobs.Host.Triggers;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
 {
@@ -96,16 +98,21 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
 
             // Iterate through triggers data and add scalers for each trigger
             var jarray = JArray.Parse(triggerData);
+            IConfigureTriggerScale serviceBusHostScaleConfigurator = new ServiceBusHostBuilerExtension() as IConfigureTriggerScale;
+            IConfigureTriggerScale cosmosDbHostScaleConfigurator= new CosmosDbHostBuilderExtension() as IConfigureTriggerScale;
             foreach (var jtoken in jarray)
             {
+                var properties = new Dictionary<object, object>() { { "triggerData", jtoken.ToString() } };
+                HostBuilderContext hostBuilderContext = new HostBuilderContext(properties);
+
                 if (string.Equals(jtoken["type"].ToString(), "serviceBusTrigger", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    hostBuilder.AddScaleForServciceBusTrigger(jtoken.ToString());
+                    serviceBusHostScaleConfigurator.ConfigureTriggerScale(hostBuilder, hostBuilderContext);
                 }
 
                 if (string.Equals(jtoken["type"].ToString(), "cosmosDbTrigger", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    hostBuilder.AddScaleForCosmosDbTrigger(jtoken.ToString());
+                    cosmosDbHostScaleConfigurator.ConfigureTriggerScale(hostBuilder, hostBuilderContext);
                 }
             }
 
@@ -298,14 +305,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
         }
     }
 
-    public static class ServiceBusHostBuilerExtension
+    internal class ServiceBusHostBuilerExtension : IConfigureTriggerScale
     {
-        public static void AddScaleForServciceBusTrigger(this IHostBuilder builder, string triggerData)
+        public void ConfigureTriggerScale(IHostBuilder builder, HostBuilderContext triggerScaleContext)
         {
-            string fucntionName = JObject.Parse(triggerData)["functionName"].ToString();
-
             builder.ConfigureServices((context, services) =>
             {
+                // Getting an property
+                JObject triggerData = JObject.Parse(triggerScaleContext.Properties["triggerData"].ToString());
+                string fucntionName = triggerData["functionName"].ToString();
+
                 var appSetting = context.Configuration.GetValue<string>("app_setting1");
                 Assert.NotNull(appSetting);
                 var hostJsonSetting = context.Configuration.GetValue<int>("extensions:serviceBus:maxConcurrentCalls");
@@ -318,14 +327,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
         }
     }
 
-    public static class CosmosDbHostBuilderExtension
+    internal class CosmosDbHostBuilderExtension : IConfigureTriggerScale
     {
-        public static void AddScaleForCosmosDbTrigger(this IHostBuilder builder, string triggerData)
+        public void ConfigureTriggerScale(IHostBuilder builder, HostBuilderContext triggerScaleContext)
         {
-            string fucntionName = JObject.Parse(triggerData)["functionName"].ToString();
-
-            builder.ConfigureServices(services =>
+            builder.ConfigureServices((context, services) =>
             {
+                // Getting an property
+                JObject triggerData = JObject.Parse(triggerScaleContext.Properties["triggerData"].ToString());
+                string fucntionName = triggerData["functionName"].ToString();
+
                 var provider = new ScaleHostEndToEndTests.ScalerProvider(fucntionName);
                 services.AddSingleton<IScaleMonitorProvider>(provider);
                 services.AddSingleton<ITargetScalerProvider>(provider);
