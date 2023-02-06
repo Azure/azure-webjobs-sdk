@@ -20,6 +20,7 @@ using Microsoft.Extensions.Configuration;
 using System.IO;
 using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Azure.WebJobs.Host.Triggers;
+using System.Reflection;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
 {
@@ -96,10 +97,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
             })
             .AddScale(); // Adding IScaleManager and IScaleMonitorService
 
-            // Iterate through triggers data and add scalers for each trigger
+            // Emulate "dynamic assemly loading" of extensions. In the end we need IConfigureTriggerScale instances.
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            Type extensionType1 = assembly.GetType("Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale.ServiceBusExtension");
+            IConfigureTriggerScale serviceBusHostScaleConfigurator = (IConfigureTriggerScale)Activator.CreateInstance(extensionType1);
+            Type extensionType2 = assembly.GetType("Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale.CosmosDbExtension");
+            IConfigureTriggerScale cosmosDbScaleConfigurator = (IConfigureTriggerScale)Activator.CreateInstance(extensionType2);
+
+            // Iterate through all the triggers and add scalers for each trigger
             var jarray = JArray.Parse(triggerData);
-            IConfigureTriggerScale serviceBusHostScaleConfigurator = new ServiceBusHostBuilerExtension() as IConfigureTriggerScale;
-            IConfigureTriggerScale cosmosDbHostScaleConfigurator= new CosmosDbHostBuilderExtension() as IConfigureTriggerScale;
             foreach (var jtoken in jarray)
             {
                 var properties = new Dictionary<object, object>() { { "triggerData", jtoken.ToString() } };
@@ -112,7 +118,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
 
                 if (string.Equals(jtoken["type"].ToString(), "cosmosDbTrigger", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    cosmosDbHostScaleConfigurator.ConfigureTriggerScale(hostBuilder, hostBuilderContext);
+                    cosmosDbScaleConfigurator.ConfigureTriggerScale(hostBuilder, hostBuilderContext);
                 }
             }
 
@@ -305,7 +311,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
         }
     }
 
-    internal class ServiceBusHostBuilerExtension : IConfigureTriggerScale
+    internal class ServiceBusExtension : IConfigureTriggerScale
     {
         public void ConfigureTriggerScale(IHostBuilder builder, HostBuilderContext triggerScaleContext)
         {
@@ -327,7 +333,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
         }
     }
 
-    internal class CosmosDbHostBuilderExtension : IConfigureTriggerScale
+    internal class CosmosDbExtension : IConfigureTriggerScale
     {
         public void ConfigureTriggerScale(IHostBuilder builder, HostBuilderContext triggerScaleContext)
         {
