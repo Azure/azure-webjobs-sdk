@@ -1,113 +1,101 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host.Executors;
-using Microsoft.Azure.WebJobs.Host.Scale;
-using Microsoft.Azure.WebJobs.Host.Storage;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Threading;
-using Xunit;
+using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
 using Microsoft.Extensions.Configuration;
-using System.IO;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Newtonsoft.Json.Linq;
+using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
 {
     public class ScaleHostEndToEndTests
     {
+        private const string Function1Name = "Function1";
+        private const string Function2Name = "Function2";
+        private const string Function3Name = "Function3";
+
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task ScaleManager_GetScaleStatusAsync_ReturnsExpected(bool tbsEnabled)
         {
-            string triggerData =
-@"[
-{
-  ""type"": ""serviceBusTrigger"",
-  ""functionName"": ""Function1""
-},
-{
-  ""type"": ""serviceBusTrigger"",
-  ""functionName"": ""Function2""
-},
-{
-  ""type"": ""cosmosDbTrigger"",
-  ""functionName"": ""Function3""
-}, 
-]";
+            JArray functionMetadata = new JArray
+            {
+                new JObject
+                {
+                    { "type", "testExtensionATrigger" },
+                    { "functionName", Function1Name }
+                },
+                new JObject
+                {
+                    { "type", "testExtensionATrigger" },
+                    { "functionName", Function2Name }
+                },
+                new JObject
+                {
+                    { "type", "testExtensionBTrigger" },
+                    { "functionName", Function3Name }
+                }
+            };
 
             string hostJson =
-@"{
-  ""extensions"": {
-    ""serviceBus"" : {
-      ""maxConcurrentCalls"": 16
-    },
-    ""cosmosDb"" : {
-      ""maxConcurrentCalls"": 8
-    }
-  }
-}";
+            @"{
+              ""extensions"": {
+                ""testExtensionA"" : {
+                  ""foo"": 16
+                },
+                ""testExtensionB"" : {
+                  ""bar"": 8
+                }
+              }
+            }";
 
-            var loggerFactory = new LoggerFactory();
+            string hostId = "test-host";
             var loggerProvider = new TestLoggerProvider();
-            loggerFactory.AddProvider(loggerProvider);
 
             IHostBuilder hostBuilder = new HostBuilder();
+            hostBuilder.ConfigureLogging(configure =>
+            {
+                configure.SetMinimumLevel(LogLevel.Debug);
+                configure.AddProvider(loggerProvider);
+            });
             hostBuilder.ConfigureAppConfiguration((hostBuilderContext, config) =>
             {
                 // Adding host.json here
                 config.AddJsonStream(new MemoryStream(Encoding.ASCII.GetBytes(hostJson)));
 
-                //Adding app setings
+                // Adding app settings
                 config.AddInMemoryCollection(new List<KeyValuePair<string, string>>()
                 {
                     new KeyValuePair<string, string>("app_setting1", "value1"),
                     new KeyValuePair<string, string>("app_setting2", "value2")
                 });
             })
-            .ConfigureServices(services =>
+            .ConfigureWebJobsScale<TestConcurrencyStatusRepository, TestScaleMetricsRepository>(options =>
             {
-                // Add all the services need to initinate IScaleManager and IScaleMonitorService
-                services.AddSingleton<IScaleMonitorManager, ScaleMonitorManagerImpl>();
-                services.AddSingleton<ITargetScalerManager, TargetScalerManagerImpl>();
-                services.AddSingleton<IHostIdProvider>(new HostIdProviderImpl());
-                services.AddSingleton<IConcurrencyStatusRepository, ConcurrencyStatusRepositoryImpl>();
-                services.AddSingleton<IScaleMetricsRepository>(new ScaleMetricsRepositoryImpl());
-                services.AddSingleton(loggerFactory);
-
-                services.AddOptions<ScaleOptions>().Configure(options =>
+                // configure scale options
+                options.IsTargetScalingEnabled = tbsEnabled;
+                options.CheckTargetScalerEnabled = ts =>
                 {
-                    options.IsTargetBasedScalingEnabled = tbsEnabled;
-                    options.IsTargetBasedScalingEnabledForTriggerFunc = (targetScaler) =>
-                    {
-                        return true;
-                    };
-                });
-            })
-            .AddScale(); // Adding IScaleManager and IScaleMonitorService
-
-            // Iterate through triggers data and add scalers for each trigger
-            var jarray = JArray.Parse(triggerData);
-            foreach (var jtoken in jarray)
-            {
-                if (string.Equals(jtoken["type"].ToString(), "serviceBusTrigger", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    hostBuilder.AddScaleForServciceBusTrigger(jtoken.ToString());
-                }
-
-                if (string.Equals(jtoken["type"].ToString(), "cosmosDbTrigger", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    hostBuilder.AddScaleForCosmosDbTrigger(jtoken.ToString());
-                }
-            }
+                    return true;
+                };
+                options.MetricsPurgeEnabled = false;
+                options.FunctionMetadata = functionMetadata;
+            }, hostId)
+            .ConfigureTestExtensionAScale()
+            .ConfigureTestExtensionBScale();
 
             IHost scaleHost = hostBuilder.Build();
             await scaleHost.StartAsync();
@@ -115,77 +103,53 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
             IHostedService scaleMonitorService = scaleHost.Services.GetService<IHostedService>();
             Assert.NotNull(scaleMonitorService);
 
-            await TestHelpers.Await(() =>
+            await TestHelpers.Await(async () =>
             {
-                IScaleManager scaleMonitor = scaleHost.Services.GetService<IScaleManager>();
-                var scaleStatus = scaleMonitor.GetScaleStatusAsync(new ScaleStatusContext()).GetAwaiter().GetResult();
-                var scaleStatuses = scaleMonitor.GetScaleStatusesAsync(new ScaleStatusContext()).GetAwaiter().GetResult();
+                IScaleManager scaleManager = scaleHost.Services.GetService<IScaleManager>();
+
+                var scaleStatus = await scaleManager.GetScaleStatusAsync(new ScaleStatusContext());
+                var functionScaleStatuses = scaleStatus.FunctionScaleStatuses;
+
+                bool scaledOut = false;
                 if (!tbsEnabled)
                 {
-                    return scaleStatus.Vote == ScaleVote.ScaleOut && scaleStatus.TargetWorkerCount == null
-                     && scaleStatuses["Function1"].Vote == ScaleVote.ScaleOut && scaleStatuses["Function1"].TargetWorkerCount == null
-                     && scaleStatuses["Function2"].Vote == ScaleVote.ScaleOut && scaleStatuses["Function2"].TargetWorkerCount == null
-                     && scaleStatuses["Function3"].Vote == ScaleVote.ScaleOut && scaleStatuses["Function3"].TargetWorkerCount == null;
-                } 
+                    scaledOut = scaleStatus.Vote == ScaleVote.ScaleOut && scaleStatus.TargetWorkerCount == null
+                     && functionScaleStatuses[Function1Name].Vote == ScaleVote.ScaleOut && functionScaleStatuses[Function1Name].TargetWorkerCount == null
+                     && functionScaleStatuses[Function2Name].Vote == ScaleVote.ScaleOut && functionScaleStatuses[Function2Name].TargetWorkerCount == null
+                     && functionScaleStatuses[Function3Name].Vote == ScaleVote.ScaleOut && functionScaleStatuses[Function3Name].TargetWorkerCount == null;
+
+                    if (scaledOut)
+                    {
+                        var logMessages = loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage).ToArray();
+                        Assert.Contains(logMessages, p => p.Contains("3 scale monitors to sample"));
+                    }
+                }
                 else
                 {
-                    return scaleStatus.Vote == ScaleVote.ScaleOut && scaleStatus.TargetWorkerCount == 4
-                     && scaleStatuses["Function1"].Vote == ScaleVote.ScaleOut && scaleStatuses["Function1"].TargetWorkerCount == 2
-                     && scaleStatuses["Function2"].Vote == ScaleVote.ScaleOut && scaleStatuses["Function2"].TargetWorkerCount == 3
-                     && scaleStatuses["Function3"].Vote == ScaleVote.ScaleOut && scaleStatuses["Function3"].TargetWorkerCount == 4;
+                    scaledOut = scaleStatus.Vote == ScaleVote.ScaleOut && scaleStatus.TargetWorkerCount == 4
+                     && functionScaleStatuses[Function1Name].Vote == ScaleVote.ScaleOut && functionScaleStatuses[Function1Name].TargetWorkerCount == 2
+                     && functionScaleStatuses[Function2Name].Vote == ScaleVote.ScaleOut && functionScaleStatuses[Function2Name].TargetWorkerCount == 3
+                     && functionScaleStatuses[Function3Name].Vote == ScaleVote.ScaleOut && functionScaleStatuses[Function3Name].TargetWorkerCount == 4;
+
+                    if (scaledOut)
+                    {
+                        var logMessages = loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage).ToArray();
+                        Assert.Contains(logMessages, p => p.Contains("3 target scalers to sample"));
+                    }
                 }
+
+                if (scaledOut)
+                {
+                    var logMessages = loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage).ToArray();
+                    Assert.Contains(logMessages, p => p.Contains("Scale monitor service started is started."));
+                    Assert.Contains(logMessages, p => p.Contains("Scaling out based on votes"));
+                }
+
+                return scaledOut;
             });
         }
 
-        private class ScaleMonitorManagerImpl : IScaleMonitorManager
-        {
-            private readonly List<IScaleMonitor> _scalers;
-
-            public ScaleMonitorManagerImpl(IEnumerable<IScaleMonitorProvider> providers)
-            {
-                _scalers = providers.Select(x => x.GetMonitor()).ToList();
-            }
-
-            public void Register(IScaleMonitor monitor)
-            {
-                throw new NotImplementedException();
-            }
-
-            public IEnumerable<IScaleMonitor> GetMonitors()
-            {
-                return _scalers;
-            }
-        }
-
-        private class TargetScalerManagerImpl : ITargetScalerManager
-        {
-            private readonly List<ITargetScaler> _scalers;
-
-            public TargetScalerManagerImpl(IEnumerable<ITargetScalerProvider> providers)
-            {
-                _scalers = providers.Select(x => x.GetTargetScaler()).ToList();
-            }
-
-            public void Register(ITargetScaler monitor)
-            {
-                throw new NotImplementedException();
-            }
-
-            public IEnumerable<ITargetScaler> GetTargetScalers()
-            {
-                return _scalers;
-            }
-        }
-
-        private class HostIdProviderImpl : IHostIdProvider
-        {
-            public Task<string> GetHostIdAsync(CancellationToken cancellationToken)
-            {
-                return Task.FromResult("test-host");
-            }
-        }
-
-        private class ConcurrencyStatusRepositoryImpl : IConcurrencyStatusRepository
+        private class TestConcurrencyStatusRepository : IConcurrencyStatusRepository
         {
             public Task WriteAsync(HostConcurrencySnapshot snapshot, CancellationToken cancellationToken)
             {
@@ -198,14 +162,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 {
                     FunctionSnapshots = new Dictionary<string, FunctionConcurrencySnapshot>()
                     {
-                        { "func1", new FunctionConcurrencySnapshot() { Concurrency = 1 } },
-                        { "func2", new FunctionConcurrencySnapshot() { Concurrency = 1 } }
+                        { Function1Name, new FunctionConcurrencySnapshot() { Concurrency = 1 } },
+                        { Function2Name, new FunctionConcurrencySnapshot() { Concurrency = 1 } }
                     }
                 });
             }
         }
 
-        private class ScaleMetricsRepositoryImpl : IScaleMetricsRepository
+        private class TestScaleMetricsRepository : IScaleMetricsRepository
         {
             private IDictionary<IScaleMonitor, ScaleMetrics> _cache;
 
@@ -230,12 +194,74 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 return Task.FromResult(result);
             }
         }
+    }
 
-        private class ScaleMonitorImpl : IScaleMonitor
+    internal abstract class TestExtensionScalerProvider : IScalerProvider
+    {
+        private IOptions<ScaleOptions> _scaleOptions;
+        private List<IScaleMonitor> _scaleMonitors;
+        private List<ITargetScaler> _targetScalers;
+
+        public TestExtensionScalerProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions)
+        {
+            _scaleOptions = scaleOptions;
+        }
+
+        protected abstract string[] TriggerTypes { get; }
+
+        public IEnumerable<IScaleMonitor> GetScaleMonitors()
+        {
+            if (_scaleMonitors == null)
+            {
+                _scaleMonitors = new List<IScaleMonitor>();
+                foreach (JObject function in _scaleOptions.Value.FunctionMetadata)
+                {
+                    if (!MatchTriggerType(function))
+                    {
+                        continue;
+                    }
+
+                    string functionName = function["functionName"].ToString();
+                    _scaleMonitors.Add(new TestScaleMonitor(functionName, functionName));
+                }
+            }
+            return _scaleMonitors.AsReadOnly();
+        }
+
+        public IEnumerable<ITargetScaler> GetTargetScalers()
+        {
+            if (_targetScalers == null)
+            {
+                _targetScalers = new List<ITargetScaler>();
+                foreach (JObject function in _scaleOptions.Value.FunctionMetadata)
+                {
+                    if (!MatchTriggerType(function))
+                    {
+                        continue;
+                    }
+
+                    string functionName = function["functionName"].ToString();
+                    _targetScalers.Add(new TestTargetScaler(functionName));
+                }
+            }
+            return _targetScalers.AsReadOnly();
+        }
+
+        private bool MatchTriggerType(JObject function)
+        {
+            string type = (string)function["type"];
+            if (!TriggerTypes.Contains(type))
+            {
+                return false;
+            }
+            return true;
+        }
+
+        internal class TestScaleMonitor : IScaleMonitor
         {
             public ScaleMonitorDescriptor Descriptor { get; set; }
 
-            public ScaleMonitorImpl(string id, string functionId)
+            public TestScaleMonitor(string id, string functionId)
             {
                 Descriptor = new ScaleMonitorDescriptor(id, functionId);
             }
@@ -257,11 +283,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
             }
         }
 
-        private class TargetScalerImpl : ITargetScaler
+        internal class TestTargetScaler : ITargetScaler
         {
             public TargetScalerDescriptor TargetScalerDescriptor { get; set; }
 
-            public TargetScalerImpl(string functionId)
+            public TestTargetScaler(string functionId)
             {
                 TargetScalerDescriptor = new TargetScalerDescriptor(functionId);
             }
@@ -276,60 +302,56 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 });
             }
         }
-
-        public class ScalerProvider : IScaleMonitorProvider, ITargetScalerProvider
-        {
-            private readonly string _functionName;
-
-            public ScalerProvider(string functionName)
-            {
-                _functionName = functionName;
-            }
-
-            public IScaleMonitor GetMonitor()
-            {
-                return new ScaleMonitorImpl(_functionName, _functionName);
-            }
-
-            public ITargetScaler GetTargetScaler()
-            {
-                return new TargetScalerImpl(_functionName);
-            }
-        }
     }
 
-    public static class ServiceBusHostBuilerExtension
+    public static class TestExtensionAHostBuilderExtensions
     {
-        public static void AddScaleForServciceBusTrigger(this IHostBuilder builder, string triggerData)
+        public static IHostBuilder ConfigureTestExtensionAScale(this IHostBuilder builder)
         {
-            string fucntionName = JObject.Parse(triggerData)["functionName"].ToString();
-
             builder.ConfigureServices((context, services) =>
             {
-                var appSetting = context.Configuration.GetValue<string>("app_setting1");
-                Assert.NotNull(appSetting);
-                var hostJsonSetting = context.Configuration.GetValue<int>("extensions:serviceBus:maxConcurrentCalls");
-                Assert.NotNull(hostJsonSetting);
-
-                var provider = new ScaleHostEndToEndTests.ScalerProvider(fucntionName);
-                services.AddSingleton<IScaleMonitorProvider>(provider);
-                services.AddSingleton<ITargetScalerProvider>(provider);
+                services.AddSingleton<IScalerProvider, TestExtensionAScalerProvider>();
             });
+
+            return builder;
+        }
+
+        private class TestExtensionAScalerProvider : TestExtensionScalerProvider
+        {
+            public TestExtensionAScalerProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions)
+                : base(config, scaleOptions)
+            {
+                // verify we can access configuration settings
+                var appSetting = config.GetValue<string>("app_setting1");
+                Assert.NotNull(appSetting);
+                var hostJsonSetting = config.GetValue<int>("extensions:testExtensionA:foo");
+                Assert.NotNull(hostJsonSetting);
+            }
+
+            protected override string[] TriggerTypes => new string[] { "testExtensionATrigger" };
         }
     }
 
-    public static class CosmosDbHostBuilderExtension
+    public static class TestExtensionBHostBuilderExtensions
     {
-        public static void AddScaleForCosmosDbTrigger(this IHostBuilder builder, string triggerData)
+        public static IHostBuilder ConfigureTestExtensionBScale(this IHostBuilder builder)
         {
-            string fucntionName = JObject.Parse(triggerData)["functionName"].ToString();
-
             builder.ConfigureServices(services =>
             {
-                var provider = new ScaleHostEndToEndTests.ScalerProvider(fucntionName);
-                services.AddSingleton<IScaleMonitorProvider>(provider);
-                services.AddSingleton<ITargetScalerProvider>(provider);
+                services.AddSingleton<IScalerProvider, TestExtensionBScalerProvider>();
             });
+
+            return builder;
+        }
+
+        private class TestExtensionBScalerProvider : TestExtensionScalerProvider
+        {
+            public TestExtensionBScalerProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions)
+                : base(config, scaleOptions)
+            {
+            }
+
+            protected override string[] TriggerTypes => new string[] { "testExtensionBTrigger" };
         }
     }
 }

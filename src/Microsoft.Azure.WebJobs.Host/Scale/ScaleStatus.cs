@@ -1,6 +1,8 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System.Collections.Generic;
+
 namespace Microsoft.Azure.WebJobs.Host.Scale
 {
     /// <summary>
@@ -17,5 +19,10 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// Gets or sets the current target worker count.
         /// </summary>
         public int? TargetWorkerCount { get; set; }
+
+        /// <summary>
+        /// Gets the individual scale statuses for all monitored functions.
+        /// </summary>
+        public IDictionary<string, ScaleStatus> FunctionScaleStatuses { get; set; }
     }
 }

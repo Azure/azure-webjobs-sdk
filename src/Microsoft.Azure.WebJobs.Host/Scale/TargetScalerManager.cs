@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Scale
 {
@@ -14,12 +15,15 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         {
         }
 
-        public TargetScalerManager(IEnumerable<ITargetScaler> targetScalers)
+        public TargetScalerManager(IEnumerable<ITargetScaler> targetScalers, IEnumerable<IScalerProvider> scalerProviders)
         {
             // add any initial target scalers coming from DI
             // additional monitors can be added at runtime
             // via Register
             _targetScalers.AddRange(targetScalers);
+
+            // add scalers coming from any registered providers
+            _targetScalers.AddRange(scalerProviders.SelectMany(p => p.GetTargetScalers()));
         }
 
         public void Register(ITargetScaler targetScaler)

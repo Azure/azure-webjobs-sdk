@@ -4,6 +4,8 @@
 using System;
 using System.Linq;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -137,16 +139,32 @@ namespace Microsoft.Extensions.Hosting
         }
 
         /// <summary>
-        /// Applies scale configuration to the specified <see cref="IHostBuilder"/>.
+        /// Configures the specified <see cref="IHostBuilder"/> as a scale manager host.
         /// </summary>
         /// <param name="builder">The <see cref="IHostBuilder"/> to configure.</param>
+        /// <param name="configureScaleOptions">Configuration action for <see cref="ScaleOptions"/>.</param>
         /// <returns>The <see cref="IHostBuilder"/>.</returns>
-        public static IHostBuilder AddScale(this IHostBuilder builder)
+        public static IHostBuilder ConfigureWebJobsScale<TConcurrencyStatusRepository, TScaleMetricsRepository>(this IHostBuilder builder, Action<ScaleOptions> configureScaleOptions, string hostId)
+            where TConcurrencyStatusRepository : class, IConcurrencyStatusRepository
+            where TScaleMetricsRepository : class, IScaleMetricsRepository
         {
             builder.ConfigureServices((services) =>
             {
+                if (configureScaleOptions != null)
+                {
+                    services.Configure(configureScaleOptions);
+                }
+
+                services.TryAddSingleton<IScaleMonitorManager, ScaleMonitorManager>();
+                services.TryAddSingleton<ITargetScalerManager, TargetScalerManager>();
+
+                services.AddSingleton<IHostIdProvider>(new FixedHostIdProvider(hostId));
+                services.AddSingleton<IConcurrencyStatusRepository, TConcurrencyStatusRepository>();
+                services.AddSingleton<IScaleMetricsRepository, TScaleMetricsRepository>();
+
                 services.TryAddSingleton<IScaleManager, ScaleManager>();
                 services.TryAddSingleton<IHostedService, ScaleMonitorService>();
+                services.AddOptions<ScaleOptions>();
             });
 
             return builder;

@@ -55,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
                 });
             _scaleOptions = Options.Create(new ScaleOptions()
             {
-                IsTargetBasedScalingEnabled= true,
+                IsTargetScalingEnabled = true,
                 ScaleMetricsSampleInterval = TimeSpan.FromSeconds(10)
             });
         }
@@ -131,10 +131,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
 
             _targetScalerManagerMock.Setup(p => p.GetTargetScalers()).Returns(new List<ITargetScaler> { targetScaler1 });
 
-            IOptions<ScaleOptions> options = Options.Create(new CustomScaleOptions()
+            IOptions<ScaleOptions> options = Options.Create(new ScaleOptions
             {
-                IsTargetBasedScalingEnabled = tbsEnabled,
-                TargetBasedScalingEnabledForTrigger = true
+                IsTargetScalingEnabled = tbsEnabled,
+                CheckTargetScalerEnabled = ts => true
             });
 
             ScaleManager scaleManager = new ScaleManager(_monitorManagerMock.Object, _targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, options, _loggerFactory);
@@ -231,10 +231,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             };
             _targetScalerManagerMock.Setup(p => p.GetTargetScalers()).Returns(targetScalers);
 
-            IOptions<ScaleOptions> options = Options.Create(new CustomScaleOptions()
+            IOptions<ScaleOptions> options = Options.Create(new ScaleOptions
             {
-                IsTargetBasedScalingEnabled = true,
-                TargetBasedScalingEnabledForTrigger = true,
+                IsTargetScalingEnabled = true,
+                CheckTargetScalerEnabled = ts => true
             });
 
             ScaleManager scaleManager = new ScaleManager(_monitorManagerMock.Object, _targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, options, _loggerFactory);
@@ -302,10 +302,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             Mock<ITargetScalerManager> targetScalerManagerMock = new Mock<ITargetScalerManager>(MockBehavior.Strict);
             targetScalerManagerMock.Setup(x => x.GetTargetScalers()).Returns(targetScalers);
 
-            IOptions<ScaleOptions> options = Options.Create(new CustomScaleOptions()
+            IOptions<ScaleOptions> options = Options.Create(new ScaleOptions
             {
-                IsTargetBasedScalingEnabled = targetBaseScalingEnabled,
-                TargetBasedScalingEnabledForTrigger = triggerEabled,
+                IsTargetScalingEnabled = targetBaseScalingEnabled,
+                CheckTargetScalerEnabled = ts => triggerEabled
             });
 
             ScaleManager manager = new ScaleManager(scaleMonitorManagerMock.Object, targetScalerManagerMock.Object, _metricsRepositoryMock.Object,
@@ -346,10 +346,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
                 WorkerCount = 1
             };
 
-            IOptions<ScaleOptions> options = Options.Create(new CustomScaleOptions()
+            IOptions<ScaleOptions> options = Options.Create(new ScaleOptions
             {
-                IsTargetBasedScalingEnabled = true,
-                TargetBasedScalingEnabledForTrigger = true
+                IsTargetScalingEnabled = true,
+                CheckTargetScalerEnabled = ts => true
             });
 
             ScaleManager scaleManager = new ScaleManager(scaleMonitorManagerMock.Object, targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, options, _loggerFactory);
@@ -373,21 +373,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             Assert.Equal(resutl2.Vote, ScaleVote.ScaleIn);
             logs = _loggerProvider.GetAllLogMessages().Select(x => x.FormattedMessage).ToArray();
             Assert.Empty(logs.Where(x => x == "Unable to use target based scaling for Function 'function1'. Metrics monitoring will be used."));
-        }
-    }
-
-    public class CustomScaleOptions : ScaleOptions
-    {
-        public CustomScaleOptions() 
-        {
-            IsTargetBasedScalingEnabledForTriggerFunc = IsTargetBasedScalingEnabledForTrigger;
-        }
-
-        public bool TargetBasedScalingEnabledForTrigger { get; set; }
-
-        private bool IsTargetBasedScalingEnabledForTrigger(ITargetScaler targetScaler)
-        {
-            return TargetBasedScalingEnabledForTrigger;
         }
     }
 }

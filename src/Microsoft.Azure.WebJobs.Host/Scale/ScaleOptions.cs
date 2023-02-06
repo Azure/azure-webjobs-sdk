@@ -4,11 +4,12 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Runtime.CompilerServices;
 
 namespace Microsoft.Azure.WebJobs.Host.Scale
 {
     /// <summary>
-    /// Configuration for scaling.
+    /// Configuration options for scaling.
     /// </summary>
     public class ScaleOptions
     {
@@ -24,6 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             ScaleMetricsMaxAge = TimeSpan.FromMinutes(2);
             ScaleMetricsSampleInterval = TimeSpan.FromSeconds(10);
             MetricsPurgeEnabled = true;
+            CheckTargetScalerEnabled = ts => false;
         }
 
         /// <summary>
@@ -78,20 +80,27 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             var options = new JObject
             {
                 { nameof(ScaleMetricsMaxAge), ScaleMetricsMaxAge },
-                { nameof(ScaleMetricsSampleInterval), ScaleMetricsSampleInterval }
+                { nameof(ScaleMetricsSampleInterval), ScaleMetricsSampleInterval },
+                { nameof(MetricsPurgeEnabled), MetricsPurgeEnabled },
+                { nameof(IsTargetScalingEnabled), IsTargetScalingEnabled }
             };
 
             return options.ToString(Formatting.Indented);
         }
 
         /// <summary>
-        /// Gets or sets if target base scale is enabled.
+        /// Gets or sets a value indicating whether target base scaling is enabled at the host level.
         /// </summary>
-        public bool IsTargetBasedScalingEnabled { get; set; }
+        public bool IsTargetScalingEnabled { get; set; }
 
         /// <summary>
-        /// Gets or sets the function to checks if target scaler is supported for specific <see cref="ITargetScaler"/>
+        /// Gets or sets a function to check if a particular <see cref="ITargetScaler"/> is enabled.
         /// </summary>
-        public Func<ITargetScaler, bool> IsTargetBasedScalingEnabledForTriggerFunc { get; set; }
+        public Func<ITargetScaler, bool> CheckTargetScalerEnabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets the function metadata to configure the host with.
+        /// </summary>
+        public JArray FunctionMetadata { get; set; }
     }
 }

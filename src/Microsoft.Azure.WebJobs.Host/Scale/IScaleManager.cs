@@ -8,20 +8,16 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Scale
 {
+    /// <summary>
+    /// Provides scale status.
+    /// </summary>
     public interface IScaleManager
     {
         /// <summary>
-        /// Gets aggrigated <see cref="ScaleStatus"> for all the trigger.
+        /// Gets the current scale status <see cref="ScaleStatus"> for all monitored functions.
         /// </summary>
-        /// <param name="context">The scale status context.</param>
-        /// <returns></returns>
+        /// <param name="context">The <see cref="ScaleStatusContext"/>.</param>
+        /// <returns>The current <see cref="ScaleStatus"/>.</returns>
         Task<ScaleStatus> GetScaleStatusAsync(ScaleStatusContext context);
-
-        /// <summary>
-        /// Gets <see cref="ScaleStatus"> for each trigger.
-        /// </summary>
-        /// <param name="context"></param>
-        /// <returns></returns>
-        Task<IDictionary<string, ScaleStatus>> GetScaleStatusesAsync(ScaleStatusContext context);
     }
 }

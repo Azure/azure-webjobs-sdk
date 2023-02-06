@@ -62,23 +62,9 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             return new ScaleStatus
             {
                 Vote = GetAggregateScaleVote(scaleMonitorStatuses.Values.Select(x => x.Vote).Union(targetScalerStatuses.Select(x => x.Value.Vote)), context, _logger),
-                TargetWorkerCount = targetScalerStatuses.Any() ? targetScalerStatuses.Max(x => x.Value.TargetWorkerCount) : null
+                TargetWorkerCount = targetScalerStatuses.Any() ? targetScalerStatuses.Max(x => x.Value.TargetWorkerCount) : null,
+                FunctionScaleStatuses = scaleMonitorStatuses.Concat(targetScalerStatuses).ToDictionary(s => s.Key, s => s.Value)
             };
-        }
-
-        /// <summary>
-        /// Gets scale status for individual triggers.
-        /// </summary>
-        /// <param name="context">The scale status context</param>
-        /// <returns>A task that returns dictionary of <see cref="ScaleStatus"/> which represents each trigger.</returns>
-        public async Task<IDictionary<string, ScaleStatus>> GetScaleStatusesAsync(ScaleStatusContext context)
-        {
-            GetScalersToSample(out List<IScaleMonitor> scaleMonitorsToProcess, out List<ITargetScaler> targetScalersToProcess);
-
-            var scaleMonitorStatuses = await GetScaleMonitorsResultAsync(context, scaleMonitorsToProcess);
-            var targetScalerStatuses = await GetTargetScalersResultAsync(context, targetScalersToProcess);
-
-            return scaleMonitorStatuses.Concat(targetScalerStatuses).ToDictionary(s => s.Key, s => s.Value);
         }
 
         private async Task<IDictionary<string, ScaleStatus>> GetScaleMonitorsResultAsync(ScaleStatusContext context, IEnumerable<IScaleMonitor> scaleMonitorsToProcess)
@@ -225,7 +211,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             targetScalersToSample = new List<ITargetScaler>();
 
             // Check if TBS enabled on app level
-            if (_scaleOptions.Value.IsTargetBasedScalingEnabled)
+            if (_scaleOptions.Value.IsTargetScalingEnabled)
             {
                 HashSet<string> targetScalerFunctions = new HashSet<string>();
                 foreach (var scaler in targetScalers)
@@ -233,7 +219,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                     string scalerUniqueId = GetTargetScalerFunctionUniqueId(scaler);
                     if (!_targetScalersInError.Contains(scalerUniqueId))
                     {
-                        if (_scaleOptions.Value.IsTargetBasedScalingEnabledForTriggerFunc(scaler))
+                        if (_scaleOptions.Value.CheckTargetScalerEnabled(scaler))
                         {
                             targetScalersToSample.Add(scaler);
                             targetScalerFunctions.Add(scalerUniqueId);
