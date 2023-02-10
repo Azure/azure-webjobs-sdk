@@ -8,6 +8,7 @@ using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Hosting;
+using Microsoft.Azure.WebJobs.Script.Config;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.EnvironmentVariables;
 using Microsoft.Extensions.Configuration.Json;
@@ -165,6 +166,7 @@ namespace Microsoft.Extensions.Hosting
                 services.TryAddSingleton<IScaleManager, ScaleManager>();
                 services.TryAddSingleton<IHostedService, ScaleMonitorService>();
                 services.AddOptions<ScaleOptions>();
+                services.ConfigureOptions<HostingConfigOptionsSetup>();
             });
 
             return builder;

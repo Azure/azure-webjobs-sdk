@@ -82,15 +82,17 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                     new KeyValuePair<string, string>("app_setting1", "value1"),
                     new KeyValuePair<string, string>("app_setting2", "value2")
                 });
+
+                // Adding hosting config features
+                config.AddInMemoryCollection(new List<KeyValuePair<string, string>>()
+                {
+                    new KeyValuePair<string, string>($"{Constants.HostingConfigSectionName}:Microsoft.Azure.WebJobs.Host.EndToEndTests", "1"),
+                });
             })
             .ConfigureWebJobsScale<TestConcurrencyStatusRepository, TestScaleMetricsRepository>(options =>
             {
                 // configure scale options
                 options.IsTargetScalingEnabled = tbsEnabled;
-                options.CheckTargetScalerEnabled = ts =>
-                {
-                    return true;
-                };
                 options.MetricsPurgeEnabled = false;
                 options.FunctionMetadata = functionMetadata;
             }, hostId)

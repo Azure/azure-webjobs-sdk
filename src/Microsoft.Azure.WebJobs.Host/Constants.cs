@@ -15,5 +15,8 @@ namespace Microsoft.Azure.WebJobs.Host
         public const string AzureWebsiteInstanceId = "WEBSITE_INSTANCE_ID";
         public const string AzureWebsiteContainerName = "CONTAINER_NAME";
         public const string DateTimeFormatString = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffK";
+
+        public const string HostingConfigSectionName = "HostingConfig";
+        public const string TiggerDataSectionName = "TriggerData";
     }
 }

@@ -1,6 +1,8 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
@@ -23,6 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         private readonly ILogger _logger;
         private readonly HashSet<string> _targetScalersInError;
         private IOptions<ScaleOptions> _scaleOptions;
+        private IOptions<HostingConfigOptions> _hostingConfig;
 
         public ScaleManager(
             IScaleMonitorManager monitorManager,
@@ -30,6 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             IScaleMetricsRepository metricsRepository,
             IConcurrencyStatusRepository concurrencyStatusRepository,
             IOptions<ScaleOptions> scaleConfiguration,
+            IOptions<HostingConfigOptions> hostingConfig,
             ILoggerFactory loggerFactory)
         {
             _monitorManager = monitorManager;
@@ -39,6 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             _logger = loggerFactory?.CreateLogger<ScaleManager>();
             _targetScalersInError = new HashSet<string>();
             _scaleOptions = scaleConfiguration;
+            _hostingConfig = hostingConfig;
         }
 
         // for mock testing only
@@ -219,7 +224,9 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                     string scalerUniqueId = GetTargetScalerFunctionUniqueId(scaler);
                     if (!_targetScalersInError.Contains(scalerUniqueId))
                     {
-                        if (_scaleOptions.Value.CheckTargetScalerEnabled(scaler))
+                        string assemblyName = GetAssemblyName(scaler.GetType());
+                        string flag = _hostingConfig.Value.GetFeature(assemblyName);
+                        if (flag == "1")
                         {
                             targetScalersToSample.Add(scaler);
                             targetScalerFunctions.Add(scalerUniqueId);

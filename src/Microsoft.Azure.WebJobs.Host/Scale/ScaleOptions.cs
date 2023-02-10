@@ -25,7 +25,6 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             ScaleMetricsMaxAge = TimeSpan.FromMinutes(2);
             ScaleMetricsSampleInterval = TimeSpan.FromSeconds(10);
             MetricsPurgeEnabled = true;
-            CheckTargetScalerEnabled = ts => false;
         }
 
         /// <summary>
@@ -92,11 +91,6 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// Gets or sets a value indicating whether target base scaling is enabled at the host level.
         /// </summary>
         public bool IsTargetScalingEnabled { get; set; }
-
-        /// <summary>
-        /// Gets or sets a function to check if a particular <see cref="ITargetScaler"/> is enabled.
-        /// </summary>
-        public Func<ITargetScaler, bool> CheckTargetScalerEnabled { get; set; }
 
         /// <summary>
         /// Gets or sets the function metadata to configure the host with.
