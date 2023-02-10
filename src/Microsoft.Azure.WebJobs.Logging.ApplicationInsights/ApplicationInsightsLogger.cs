@@ -122,11 +122,11 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 // next entry if found.
                 switch (entry.Key)
                 {
-                    case LogConstants.NameKey:
-                            telemetry.Name = entry.Value.ToString();
+                    case LogConstants.NameKey when entry.Value is string name:
+                        telemetry.Name = name;
                         continue;
-                    case LogConstants.MetricValueKey:
-                        telemetry.Sum = (double)entry.Value;
+                    case LogConstants.MetricValueKey when entry.Value is double sum:
+                        telemetry.Sum = sum;
                         continue;
                     default:
                         break;
@@ -135,17 +135,17 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 // Now check for case-insensitive matches
                 switch (entry.Key.ToLowerInvariant())
                 {
-                    case MetricCountKey:
-                        telemetry.Count = Convert.ToInt32(entry.Value);
+                    case MetricCountKey when entry.Value is int count:
+                        telemetry.Count = count;
                         break;
-                    case MetricMinKey:
-                        telemetry.Min = Convert.ToDouble(entry.Value);
+                    case MetricMinKey when entry.Value is double min:
+                        telemetry.Min = min;
                         break;
-                    case MetricMaxKey:
-                        telemetry.Max = Convert.ToDouble(entry.Value);
+                    case MetricMaxKey when entry.Value is double max:
+                        telemetry.Max = max;
                         break;
-                    case MetricStandardDeviationKey:
-                        telemetry.StandardDeviation = Convert.ToDouble(entry.Value);
+                    case MetricStandardDeviationKey when entry.Value is double dev:
+                        telemetry.StandardDeviation = dev;
                         break;
                     default:
                         // Otherwise, it's a custom property.
@@ -171,8 +171,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     }
                 }
 
-                string invocationId = scopeProperties.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId);
-                if (invocationId != null)
+                if (scopeProperties.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId) is string invocationId)
                 {
                     telemetry.Context.Properties[LogConstants.InvocationIdKey] = invocationId;
                 }               
@@ -325,8 +324,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             {
                 switch (value.Key)
                 {
-                    case LogConstants.NameKey:
-                        functionName = value.Value.ToString();
+                    case LogConstants.NameKey when value.Value is string name:
+                        functionName = name;
                         break;
                     case LogConstants.TimestampKey:
                     case LogConstants.OriginalFormatKey:

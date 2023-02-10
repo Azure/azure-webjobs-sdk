@@ -4,11 +4,13 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
+using Microsoft.Azure.WebJobs.Logging.ApplicationInsights.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
@@ -56,23 +58,21 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 // Apply our special scope properties
                 IReadOnlyDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
 
-                string invocationId = scopeProps?.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId);
-                if (invocationId != null)
-                {
-                    telemetryContext.Properties[LogConstants.InvocationIdKey] = invocationId;
-                }
-
                 // this could be telemetry tracked in scope of function call - then we should apply the logger scope
                 // or RequestTelemetry tracked by the WebJobs SDK or AppInsight SDK - then we should apply Activity.Tags
                 if (scopeProps != null && scopeProps.Count > 0)
                 {
+                    if (scopeProps?.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId) is string invocationId)
+                    {
+                        telemetryContext.Properties[LogConstants.InvocationIdKey] = invocationId;
+                    }
+
                     telemetryContext.Operation.Name = scopeProps.GetValueOrDefault<string>(ScopeKeys.FunctionName);
 
                     // Apply Category, LogLevel event details to all telemetry
                     if (!telemetryContext.Properties.ContainsKey(LogConstants.CategoryNameKey))
                     {
-                        string category = scopeProps.GetValueOrDefault<string>(LogConstants.CategoryNameKey);
-                        if (category != null)
+                        if (scopeProps.GetValueOrDefault<string>(LogConstants.CategoryNameKey) is string category)
                         {
                             telemetryContext.Properties[LogConstants.CategoryNameKey] = category;
                         }
@@ -80,26 +80,23 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
                     if (!telemetryContext.Properties.ContainsKey(LogConstants.LogLevelKey))
                     {
-                        LogLevel? logLevel = scopeProps.GetValueOrDefault<LogLevel?>(LogConstants.LogLevelKey);
-                        if (logLevel != null)
+                        if (scopeProps.GetValueOrDefault<LogLevel?>(LogConstants.LogLevelKey) is LogLevel logLevel)
                         {
-                            telemetryContext.Properties[LogConstants.LogLevelKey] = logLevel.Value.ToString();
+                            telemetryContext.Properties[LogConstants.LogLevelKey] = logLevel.ToStringOptimized();
                         }
                     }
 
                     if (!telemetryContext.Properties.ContainsKey(LogConstants.EventIdKey))
                     {
-                        int? eventId = scopeProps.GetValueOrDefault<int?>(LogConstants.EventIdKey);
-                        if (eventId != null && eventId.HasValue && eventId.Value != 0)
+                        if (scopeProps.GetValueOrDefault<int?>(LogConstants.EventIdKey).Value is int eventId && eventId != 0)
                         {
-                            telemetryContext.Properties[LogConstants.EventIdKey] = eventId.Value.ToString();
+                            telemetryContext.Properties[LogConstants.EventIdKey] = eventId.ToString(CultureInfo.InvariantCulture);
                         }
                     }
 
                     if (!telemetryContext.Properties.ContainsKey(LogConstants.EventNameKey))
                     {
-                        string eventName = scopeProps.GetValueOrDefault<string>(LogConstants.EventNameKey);
-                        if (eventName != null)
+                        if (scopeProps.GetValueOrDefault<string>(LogConstants.EventNameKey) is string eventName)
                         {
                             telemetryContext.Properties[LogConstants.EventNameKey] = eventName;
                         }
@@ -108,8 +105,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             }
 
             // we may track traces/dependencies after function scope ends - we don't want to update those
-            RequestTelemetry request = telemetry as RequestTelemetry;
-            if (request != null)
+            if (telemetry is RequestTelemetry request)
             {
                 UpdateRequestProperties(request);
 
