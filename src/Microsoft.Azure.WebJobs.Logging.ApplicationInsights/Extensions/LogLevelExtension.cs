@@ -5,10 +5,11 @@ using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System;
+using System.Globalization;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights.Extensions
 {
-    internal static class LogLevelEnumHelper
+    internal static class LogLevelExtension
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static string ToStringOptimized(this LogLevel logLevel)
@@ -30,7 +31,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights.Extensions
                 case LogLevel.None:
                     return "None";
                 default:
-                    return logLevel.ToString();
+                    return logLevel.ToString(CultureInfo.InvariantCulture);
             }
         }
     }
