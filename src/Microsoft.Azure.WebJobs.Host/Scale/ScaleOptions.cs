@@ -91,10 +91,5 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// Gets or sets a value indicating whether target base scaling is enabled at the host level.
         /// </summary>
         public bool IsTargetScalingEnabled { get; set; }
-
-        /// <summary>
-        /// Gets or sets the function metadata to configure the host with.
-        /// </summary>
-        public JArray FunctionMetadata { get; set; }
     }
 }

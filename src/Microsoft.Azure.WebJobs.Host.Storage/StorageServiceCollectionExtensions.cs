@@ -31,6 +31,15 @@ namespace Microsoft.Extensions.Hosting
             // Adds necessary Azure services to create clients
             services.AddAzureClientsCore();
 
+            services.AddAzureStorageScaleServices(null);
+        }
+
+        public static void AddAzureStorageScaleServices(this IServiceCollection services, Action<JobHostInternalStorageOptions> configure)
+        {
+            if (configure != null)
+            {
+                services.Configure(configure);
+            }
             services.TryAddSingleton<IAzureBlobStorageProvider, AzureStorageProvider>();
 
             services.AddSingleton<IConcurrencyStatusRepository, BlobStorageConcurrencyStatusRepository>();

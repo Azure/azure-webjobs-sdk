@@ -3,13 +3,19 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Core;
+using Azure.Storage.Blobs;
 using Microsoft.Azure.WebJobs.Host.Scale;
+using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -65,6 +71,18 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
             string hostId = "test-host";
             var loggerProvider = new TestLoggerProvider();
 
+            // We want to associate an object instance with each TriggerMetdata,
+            // for example AzureComponentFactory can be specified as a TriggerMetdata property as it requires a new refference we do not want
+            Dictionary<string, IEnumerable<object>> properties = new Dictionary<string, IEnumerable<object>>();
+            foreach (var function in functionMetadata)
+            {
+                if (function["type"].ToString() == "testExtensionBTrigger")
+                {
+                    properties.Add(function["functionName"].ToString(), new List<object> { new string("some_property") });
+                }
+            }
+            ITriggerMetadataProvider triggerMetadataProvider = new TriggerMetadataProvider(functionMetadata, properties);
+
             IHostBuilder hostBuilder = new HostBuilder();
             hostBuilder.ConfigureLogging(configure =>
             {
@@ -89,13 +107,25 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                     new KeyValuePair<string, string>($"{Constants.HostingConfigSectionName}:Microsoft.Azure.WebJobs.Host.EndToEndTests", "1"),
                 });
             })
-            .ConfigureWebJobsScale<TestConcurrencyStatusRepository, TestScaleMetricsRepository>(options =>
+            .ConfigureServices(service =>
+            {
+                // IConcurrencyStatusRepository needs AzureCompoentFactory
+                service.AddAzureClientsCore();
+                // Adding IConcurrencyStatusRepository/IAzureBlobStorageProvider
+                service.AddAzureStorageScaleServices(options =>
+                {
+                    options.InternalSasBlobContainer = "sas-blob-container";
+                });
+
+                // replace IConcurrencyStatusRepository for the test
+                service.AddSingleton<IConcurrencyStatusRepository, TestConcurrencyStatusRepository>();
+            })
+            .ConfigureWebJobsScale<TestScaleMetricsRepository>(options =>
             {
                 // configure scale options
                 options.IsTargetScalingEnabled = tbsEnabled;
                 options.MetricsPurgeEnabled = false;
-                options.FunctionMetadata = functionMetadata;
-            }, hostId)
+            }, hostId, triggerMetadataProvider)
             .ConfigureTestExtensionAScale()
             .ConfigureTestExtensionBScale();
 
@@ -104,6 +134,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
 
             IHostedService scaleMonitorService = scaleHost.Services.GetService<IHostedService>();
             Assert.NotNull(scaleMonitorService);
+
+            var concurrencyStatusRepositories = scaleHost.Services.GetServices<IConcurrencyStatusRepository>().ToList();
+            Assert.True(concurrencyStatusRepositories.Count == 2);
+            // Validate that internal BlobStorageConcurrencyStatusRepository is available
+            Assert.True(concurrencyStatusRepositories.SingleOrDefault(x => x.GetType().Name == "BlobStorageConcurrencyStatusRepository") != null);
+            Assert.True(concurrencyStatusRepositories.SingleOrDefault(x => x is TestConcurrencyStatusRepository) != null);
 
             await TestHelpers.Await(async () =>
             {
@@ -153,6 +189,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
 
         private class TestConcurrencyStatusRepository : IConcurrencyStatusRepository
         {
+            public TestConcurrencyStatusRepository()
+            {
+            }
+
             public Task WriteAsync(HostConcurrencySnapshot snapshot, CancellationToken cancellationToken)
             {
                 return Task.CompletedTask;
@@ -203,10 +243,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
         private IOptions<ScaleOptions> _scaleOptions;
         private List<IScaleMonitor> _scaleMonitors;
         private List<ITargetScaler> _targetScalers;
+        private ITriggerMetadataProvider _triggerMetadataProvider;
 
-        public TestExtensionScalerProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions)
+        public TestExtensionScalerProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions, ITriggerMetadataProvider triggerMetadataProvider)
         {
             _scaleOptions = scaleOptions;
+            _triggerMetadataProvider = triggerMetadataProvider;
         }
 
         protected abstract string[] TriggerTypes { get; }
@@ -215,15 +257,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
         {
             if (_scaleMonitors == null)
             {
+                var triggersMetadata = TriggerTypes.SelectMany(x => _triggerMetadataProvider.GetTriggersMetadata(x));
                 _scaleMonitors = new List<IScaleMonitor>();
-                foreach (JObject function in _scaleOptions.Value.FunctionMetadata)
+                foreach (var triggerMetadata in triggersMetadata)
                 {
-                    if (!MatchTriggerType(function))
-                    {
-                        continue;
-                    }
-
-                    string functionName = function["functionName"].ToString();
+                    string functionName = triggerMetadata.Value["functionName"].ToString();
                     _scaleMonitors.Add(new TestScaleMonitor(functionName, functionName));
                 }
             }
@@ -234,75 +272,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
         {
             if (_targetScalers == null)
             {
+                var triggersMetadata = TriggerTypes.SelectMany(x => _triggerMetadataProvider.GetTriggersMetadata(x));
                 _targetScalers = new List<ITargetScaler>();
-                foreach (JObject function in _scaleOptions.Value.FunctionMetadata)
+                foreach (var triggerData in triggersMetadata)
                 {
-                    if (!MatchTriggerType(function))
-                    {
-                        continue;
-                    }
-
-                    string functionName = function["functionName"].ToString();
+                    string functionName = triggerData.Value["functionName"].ToString();
                     _targetScalers.Add(new TestTargetScaler(functionName));
                 }
             }
             return _targetScalers.AsReadOnly();
-        }
-
-        private bool MatchTriggerType(JObject function)
-        {
-            string type = (string)function["type"];
-            if (!TriggerTypes.Contains(type))
-            {
-                return false;
-            }
-            return true;
-        }
-
-        internal class TestScaleMonitor : IScaleMonitor
-        {
-            public ScaleMonitorDescriptor Descriptor { get; set; }
-
-            public TestScaleMonitor(string id, string functionId)
-            {
-                Descriptor = new ScaleMonitorDescriptor(id, functionId);
-            }
-
-            public Task<ScaleMetrics> GetMetricsAsync()
-            {
-                return Task.FromResult(new ScaleMetrics());
-            }
-
-            public ScaleStatus GetScaleStatus(ScaleStatusContext context)
-            {
-                int targetWorkerCount = (int)Char.GetNumericValue(Descriptor.FunctionId[Descriptor.FunctionId.Length - 1]);
-
-                return new ScaleStatus()
-                {
-                    TargetWorkerCount = targetWorkerCount,
-                    Vote = ScaleVote.ScaleOut
-                };
-            }
-        }
-
-        internal class TestTargetScaler : ITargetScaler
-        {
-            public TargetScalerDescriptor TargetScalerDescriptor { get; set; }
-
-            public TestTargetScaler(string functionId)
-            {
-                TargetScalerDescriptor = new TargetScalerDescriptor(functionId);
-            }
-
-            public Task<TargetScalerResult> GetScaleResultAsync(TargetScalerContext context)
-            {
-                int targetWorkerCount = (int)Char.GetNumericValue(TargetScalerDescriptor.FunctionId[TargetScalerDescriptor.FunctionId.Length - 1]) + 1;
-
-                return Task.FromResult(new TargetScalerResult()
-                {
-                    TargetWorkerCount = targetWorkerCount
-                });
-            }
         }
     }
 
@@ -320,14 +298,18 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
 
         private class TestExtensionAScalerProvider : TestExtensionScalerProvider
         {
-            public TestExtensionAScalerProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions)
-                : base(config, scaleOptions)
+            public TestExtensionAScalerProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions, ITriggerMetadataProvider triggerMetadataProvider)
+                : base(config, scaleOptions, triggerMetadataProvider)
             {
                 // verify we can access configuration settings
                 var appSetting = config.GetValue<string>("app_setting1");
                 Assert.NotNull(appSetting);
                 var hostJsonSetting = config.GetValue<int>("extensions:testExtensionA:foo");
                 Assert.NotNull(hostJsonSetting);
+
+                // verify we can not access a trigger metadata property
+                var triggersMetadata = TriggerTypes.SelectMany(x => triggerMetadataProvider.GetTriggersMetadata(x)).ToArray();
+                Assert.True(string.IsNullOrEmpty(triggersMetadata[0].GetProperty<string>()));
             }
 
             protected override string[] TriggerTypes => new string[] { "testExtensionATrigger" };
@@ -348,12 +330,65 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
 
         private class TestExtensionBScalerProvider : TestExtensionScalerProvider
         {
-            public TestExtensionBScalerProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions)
-                : base(config, scaleOptions)
+            public TestExtensionBScalerProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions, ITriggerMetadataProvider triggerMetadataProvider)
+                : base(config, scaleOptions, triggerMetadataProvider)
             {
+                // verify we can access a trigger metadata property
+                var triggersMetadata = TriggerTypes.SelectMany(x => triggerMetadataProvider.GetTriggersMetadata(x)).ToArray();
+                Assert.Equal(triggersMetadata[0].GetProperty<string>(), "some_property");
             }
 
             protected override string[] TriggerTypes => new string[] { "testExtensionBTrigger" };
         }
+    }
+
+    internal class TestScaleMonitor : IScaleMonitor
+    {
+        public ScaleMonitorDescriptor Descriptor { get; set; }
+
+        public TestScaleMonitor(string id, string functionId)
+        {
+            Descriptor = new ScaleMonitorDescriptor(id, functionId);
+        }
+
+        public Task<ScaleMetrics> GetMetricsAsync()
+        {
+            return Task.FromResult(new ScaleMetrics());
+        }
+
+        public ScaleStatus GetScaleStatus(ScaleStatusContext context)
+        {
+            int targetWorkerCount = (int)Char.GetNumericValue(Descriptor.FunctionId[Descriptor.FunctionId.Length - 1]);
+
+            return new ScaleStatus()
+            {
+                TargetWorkerCount = targetWorkerCount,
+                Vote = ScaleVote.ScaleOut
+            };
+        }
+    }
+
+    internal class TestTargetScaler : ITargetScaler
+    {
+        public TargetScalerDescriptor TargetScalerDescriptor { get; set; }
+
+        public TestTargetScaler(string functionId)
+        {
+            TargetScalerDescriptor = new TargetScalerDescriptor(functionId);
+        }
+
+        public Task<TargetScalerResult> GetScaleResultAsync(TargetScalerContext context)
+        {
+            int targetWorkerCount = (int)Char.GetNumericValue(TargetScalerDescriptor.FunctionId[TargetScalerDescriptor.FunctionId.Length - 1]) + 1;
+
+            return Task.FromResult(new TargetScalerResult()
+            {
+                TargetWorkerCount = targetWorkerCount
+            });
+        }
+    }
+
+    internal class FakeAzureComponentFactory
+    {
     }
 }

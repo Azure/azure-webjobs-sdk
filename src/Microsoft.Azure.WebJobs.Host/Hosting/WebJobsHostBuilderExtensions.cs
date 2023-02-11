@@ -145,8 +145,10 @@ namespace Microsoft.Extensions.Hosting
         /// <param name="builder">The <see cref="IHostBuilder"/> to configure.</param>
         /// <param name="configureScaleOptions">Configuration action for <see cref="ScaleOptions"/>.</param>
         /// <returns>The <see cref="IHostBuilder"/>.</returns>
-        public static IHostBuilder ConfigureWebJobsScale<TConcurrencyStatusRepository, TScaleMetricsRepository>(this IHostBuilder builder, Action<ScaleOptions> configureScaleOptions, string hostId)
-            where TConcurrencyStatusRepository : class, IConcurrencyStatusRepository
+        public static IHostBuilder ConfigureWebJobsScale<TScaleMetricsRepository>(this IHostBuilder builder, 
+            Action<ScaleOptions> configureScaleOptions, 
+            string hostId,
+            ITriggerMetadataProvider metadataProvider)
             where TScaleMetricsRepository : class, IScaleMetricsRepository
         {
             builder.ConfigureServices((services) =>
@@ -160,8 +162,8 @@ namespace Microsoft.Extensions.Hosting
                 services.TryAddSingleton<ITargetScalerManager, TargetScalerManager>();
 
                 services.AddSingleton<IHostIdProvider>(new FixedHostIdProvider(hostId));
-                services.AddSingleton<IConcurrencyStatusRepository, TConcurrencyStatusRepository>();
                 services.AddSingleton<IScaleMetricsRepository, TScaleMetricsRepository>();
+                services.AddSingleton(metadataProvider);
 
                 services.TryAddSingleton<IScaleManager, ScaleManager>();
                 services.TryAddSingleton<IHostedService, ScaleMonitorService>();
