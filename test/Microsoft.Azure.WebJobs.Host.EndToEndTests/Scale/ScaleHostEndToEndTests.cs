@@ -1,19 +1,8 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Azure.Core;
-using Azure.Storage.Blobs;
+using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Scale;
-using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
@@ -22,6 +11,13 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
@@ -102,30 +98,48 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 });
 
                 // Adding hosting config features
-                config.AddInMemoryCollection(new List<KeyValuePair<string, string>>()
-                {
-                    new KeyValuePair<string, string>($"{Constants.HostingConfigSectionName}:Microsoft.Azure.WebJobs.Host.EndToEndTests", "1"),
-                });
+                //config.AddInMemoryCollection(new List<KeyValuePair<string, string>>()
+                //{
+                //    new KeyValuePair<string, string>($"{Constants.HostingConfigSectionName}:Microsoft.Azure.WebJobs.Host.EndToEndTests", "1"),
+                //});
             })
-            .ConfigureServices(service =>
+            .ConfigureServices(services =>
             {
-                // IConcurrencyStatusRepository needs AzureCompoentFactory
-                service.AddAzureClientsCore();
+                // Set up IConcurrencyStatusRepository for the test
+                // Adding default AzureCompoentFactory
+                services.AddAzureClientsCore();
                 // Adding IConcurrencyStatusRepository/IAzureBlobStorageProvider
-                service.AddAzureStorageScaleServices(options =>
+                services.AddAzureStorageScaleServices(options =>
                 {
                     options.InternalSasBlobContainer = "sas-blob-container";
                 });
-
                 // replace IConcurrencyStatusRepository for the test
-                service.AddSingleton<IConcurrencyStatusRepository, TestConcurrencyStatusRepository>();
+                services.AddSingleton<IConcurrencyStatusRepository, TestConcurrencyStatusRepository>();
+                // Adding services for scale host.
+                services.AddSingleton(triggerMetadataProvider);
+                services.AddSingleton<IScaleMetricsRepository, TestScaleMetricsRepository>();
+
+                // Specific services registrations for scale host
+                services.AddSingleton(triggerMetadataProvider);
+                services.AddSingleton<IScaleMetricsRepository, TestScaleMetricsRepository>();
+
+                // Configure hosting configuration
+                services.Configure<FunctionsHostingConfigOptions>(options =>
+                {
+                    options.Features["Microsoft.Azure.WebJobs.Host.EndToEndTests"] = "1";
+                });
             })
-            .ConfigureWebJobsScale<TestScaleMetricsRepository>(options =>
+            .ConfigureWebJobsScale((context, builder) =>
+            {
+                builder.UseHostId(hostId);
+            },
+            scaleOptions =>
             {
                 // configure scale options
-                options.IsTargetScalingEnabled = tbsEnabled;
-                options.MetricsPurgeEnabled = false;
-            }, hostId, triggerMetadataProvider)
+                scaleOptions.IsTargetScalingEnabled = tbsEnabled;
+                scaleOptions.MetricsPurgeEnabled = false;
+                scaleOptions.ScaleMetricsMaxAge = TimeSpan.FromMinutes(4);
+            })
             .ConfigureTestExtensionAScale()
             .ConfigureTestExtensionBScale();
 
@@ -179,7 +193,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 if (scaledOut)
                 {
                     var logMessages = loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage).ToArray();
-                    Assert.Contains(logMessages, p => p.Contains("Scale monitor service started is started."));
+                    Assert.Contains(logMessages, p => p.Contains("Scale monitor service is started."));
                     Assert.Contains(logMessages, p => p.Contains("Scaling out based on votes"));
                 }
 
@@ -247,6 +261,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
 
         public TestExtensionScalerProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions, ITriggerMetadataProvider triggerMetadataProvider)
         {
+            Assert.Equal(scaleOptions.Value.ScaleMetricsMaxAge, TimeSpan.FromMinutes(4));
+
             _scaleOptions = scaleOptions;
             _triggerMetadataProvider = triggerMetadataProvider;
         }

@@ -1,17 +1,18 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Microsoft.Azure.WebJobs.Host.Config
 {
-    public class HostingConfigOptions
+    /// <summary>
+    /// Represents hosting confgiuration.
+    /// </summary>
+    public class FunctionsHostingConfigOptions
     {
         private readonly Dictionary<string, string> _features;
 
-        public HostingConfigOptions()
+        public FunctionsHostingConfigOptions()
         {
             _features = new Dictionary<string, string>();
         }
@@ -19,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Host.Config
         /// <summary>
         /// Gets all features in the hosting configuration.
         /// </summary>
-        public IReadOnlyDictionary<string, string> GetFeatures => _features;
+        public Dictionary<string, string> Features => _features;
 
         /// <summary>
         /// Gets feature by name.
@@ -34,7 +35,5 @@ namespace Microsoft.Azure.WebJobs.Host.Config
             }
             return null;
         }
-
-        internal Dictionary<string, string> Features => _features;
     }
 }

@@ -5,10 +5,10 @@ using System;
 using System.Linq;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Hosting;
-using Microsoft.Azure.WebJobs.Script.Config;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.EnvironmentVariables;
 using Microsoft.Extensions.Configuration.Json;
@@ -143,16 +143,18 @@ namespace Microsoft.Extensions.Hosting
         /// Configures the specified <see cref="IHostBuilder"/> as a scale manager host.
         /// </summary>
         /// <param name="builder">The <see cref="IHostBuilder"/> to configure.</param>
+        /// <param name="configure">Configuration action to perform as part of service configuration.</param>
         /// <param name="configureScaleOptions">Configuration action for <see cref="ScaleOptions"/>.</param>
         /// <returns>The <see cref="IHostBuilder"/>.</returns>
-        public static IHostBuilder ConfigureWebJobsScale<TScaleMetricsRepository>(this IHostBuilder builder, 
-            Action<ScaleOptions> configureScaleOptions, 
-            string hostId,
-            ITriggerMetadataProvider metadataProvider)
-            where TScaleMetricsRepository : class, IScaleMetricsRepository
+        public static IHostBuilder ConfigureWebJobsScale(this IHostBuilder builder,
+            Action<HostBuilderContext, IWebJobsBuilder> configure,
+            Action<ScaleOptions> configureScaleOptions)
         {
-            builder.ConfigureServices((services) =>
+            builder.ConfigureServices((context, services) =>
             {
+                WebJobsBuilder webJobsBuilder = new WebJobsBuilder(services);
+                configure?.Invoke(context, webJobsBuilder);
+
                 if (configureScaleOptions != null)
                 {
                     services.Configure(configureScaleOptions);
@@ -160,15 +162,9 @@ namespace Microsoft.Extensions.Hosting
 
                 services.TryAddSingleton<IScaleMonitorManager, ScaleMonitorManager>();
                 services.TryAddSingleton<ITargetScalerManager, TargetScalerManager>();
-
-                services.AddSingleton<IHostIdProvider>(new FixedHostIdProvider(hostId));
-                services.AddSingleton<IScaleMetricsRepository, TScaleMetricsRepository>();
-                services.AddSingleton(metadataProvider);
-
                 services.TryAddSingleton<IScaleManager, ScaleManager>();
                 services.TryAddSingleton<IHostedService, ScaleMonitorService>();
-                services.AddOptions<ScaleOptions>();
-                services.ConfigureOptions<HostingConfigOptionsSetup>();
+                services.TryAddSingleton<IPrimaryHostStateProvider>(new PrimaryHostStateProvider() { IsPrimary = true });
             });
 
             return builder;

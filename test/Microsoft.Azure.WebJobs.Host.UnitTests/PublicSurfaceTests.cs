@@ -2,6 +2,8 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using Microsoft.Azure.WebJobs.Description;
+using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
@@ -308,7 +310,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IScaleMetricsRepository",
                 "IScaleManager",
                 "ScaleOptions",
-                "IScalerProvider"
+                "IScalerProvider",
+                "FunctionsHostingConfigOptions",
+                "ITriggerMetadataProvider",
+                "TriggerMetadata"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);

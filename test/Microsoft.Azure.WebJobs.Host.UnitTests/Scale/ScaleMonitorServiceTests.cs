@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.UnitTests.Scale;
+using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -21,6 +22,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
         private readonly ScaleMonitorService _monitor;
         private readonly TestMetricsRepository _metricsRepository;
         private readonly TestLoggerProvider _loggerProvider;
+        private readonly PrimaryHostStateProvider _primaryHostStateProvider;
         private List<IScaleMonitor> _monitors;
         private List<ITargetScaler> _scalers;
 
@@ -42,7 +44,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
                 ScaleMetricsSampleInterval = TimeSpan.FromSeconds(1),
             });
 
-            _monitor = new ScaleMonitorService(functionsScaleManagerMock.Object, _metricsRepository, options, loggerFactory);
+            _primaryHostStateProvider = new PrimaryHostStateProvider() { IsPrimary = true };
+
+            _monitor = new ScaleMonitorService(functionsScaleManagerMock.Object, _metricsRepository, options, _primaryHostStateProvider, loggerFactory);
         }
 
         [Fact]
@@ -73,6 +77,38 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
         }
 
         [Fact]
+        public async Task OnTimer_DoesNotSample_WhenNotPrimaryHost()
+        {
+            _primaryHostStateProvider.IsPrimary = false;
+
+            var monitor = new TestScaleMonitor1();
+            _monitors.Add(monitor);
+
+            await _monitor.StartAsync(CancellationToken.None);
+
+            await Task.Delay(100);
+
+            var logs = _loggerProvider.GetAllLogMessages().ToArray();
+            Assert.Single(logs);
+            Assert.Equal("Scale monitor service is started.", logs[0].FormattedMessage);
+        }
+
+        [Fact]
+        public async Task OnTimer_Sample_WhenPrimaryHost()
+        {
+            var monitor = new TestScaleMonitor1();
+            _monitors.Add(monitor);
+
+            await _monitor.StartAsync(CancellationToken.None);
+
+            await Task.Delay(2000);
+
+            var logs = _loggerProvider.GetAllLogMessages().ToArray();
+            Assert.Equal("Scale monitor service is started.", logs[0].FormattedMessage);
+            Assert.Equal($"Taking metrics samples for 1 monitor(s).", logs[1].FormattedMessage);
+        }
+
+        [Fact]
         public async Task OnTimer_PersistsMetrics()
         {
             var testMetrics = new List<TestScaleMetrics1>
@@ -99,7 +135,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             var logs = _loggerProvider.GetAllLogMessages().ToArray();
 
             var infoLogs = logs.Where(p => p.Level == LogLevel.Information);
-            Assert.Equal("Scale monitor service started is started.", logs[0].FormattedMessage);
+            Assert.Equal("Scale monitor service is started.", logs[0].FormattedMessage);
             Assert.Equal("Taking metrics samples for 1 monitor(s).", logs[1].FormattedMessage);
             Assert.True(logs[2].FormattedMessage.StartsWith("Scale metrics sample for monitor 'testscalemonitor1': {\"Count\":10,"));
 
@@ -148,7 +184,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             var logs = _loggerProvider.GetAllLogMessages().ToArray();
 
             var infoLogs = logs.Where(p => p.Level == LogLevel.Information);
-            Assert.Equal("Scale monitor service started is started.", logs[0].FormattedMessage);
+            Assert.Equal("Scale monitor service is started.", logs[0].FormattedMessage);
             Assert.Equal("Taking metrics samples for 2 monitor(s).", logs[1].FormattedMessage);
 
             // verify the failure logs for the failing monitor

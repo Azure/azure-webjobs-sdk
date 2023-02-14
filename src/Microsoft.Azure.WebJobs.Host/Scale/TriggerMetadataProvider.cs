@@ -25,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             List<TriggerMetadata> scalerContexts = new List<TriggerMetadata>();
             foreach (JObject function in _fucntionMetadata)
             {
-                if (!MatchTriggerType(function, triggerType))
+                if (!string.IsNullOrEmpty(triggerType) && !MatchTriggerType(function, triggerType))
                 {
                     continue;
                 }

@@ -14,6 +14,6 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// Gets triggers metadata by trigger type.
         /// </summary>
         /// <param name="triggerType">Trigger type.</param>
-        public IEnumerable<TriggerMetadata> GetTriggersMetadata(string triggerType);
+        public IEnumerable<TriggerMetadata> GetTriggersMetadata(string triggerType = null);
     }
 }

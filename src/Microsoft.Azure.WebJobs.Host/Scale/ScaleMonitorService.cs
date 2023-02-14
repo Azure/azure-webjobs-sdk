@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System.Linq;
 using Microsoft.Extensions.Options;
+using Microsoft.Azure.WebJobs.Hosting;
 
 namespace Microsoft.Azure.WebJobs.Host.Scale
 {
@@ -19,25 +20,27 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
     internal class ScaleMonitorService : IHostedService, IDisposable
     {
         private readonly Timer _timer;
-        private IScaleManager _scaleManager;
-        private IScaleMetricsRepository _metricsRepository;
+        private readonly IScaleManager _scaleManager;
+        private readonly IScaleMetricsRepository _metricsRepository;
+        private readonly ILogger _logger;
+        private readonly IOptions<ScaleOptions> _scaleOptions;
+        private readonly IPrimaryHostStateProvider _primaryHostStateProvider;
         private bool _disposed;
-        protected readonly ILogger _logger;
-        private IOptions<ScaleOptions> _scaleOptions;
 
-        public ScaleMonitorService(IScaleManager scaleManager, IScaleMetricsRepository metricsRepository, IOptions<ScaleOptions> scaleOptions, ILoggerFactory loggerFactory)
+        public ScaleMonitorService(IScaleManager scaleManager, IScaleMetricsRepository metricsRepository, IOptions<ScaleOptions> scaleOptions, IPrimaryHostStateProvider primaryHostStateProvider, ILoggerFactory loggerFactory)
         {
             _scaleManager = scaleManager;
             _metricsRepository = metricsRepository;
             _timer = new Timer(OnTimer, null, Timeout.Infinite, Timeout.Infinite);
             _logger = loggerFactory.CreateLogger<ScaleMonitorService>();
             _scaleOptions = scaleOptions;
+            _primaryHostStateProvider = primaryHostStateProvider;
         }
 
         public virtual Task StartAsync(CancellationToken cancellationToken)
         {
             // start the timer by setting the due time
-            _logger.LogInformation("Scale monitor service started is started.");
+            _logger.LogInformation("Scale monitor service is started.");
             SetTimerInterval((int)_scaleOptions.Value.ScaleMetricsSampleInterval.TotalMilliseconds);
 
             return Task.CompletedTask;
@@ -53,7 +56,11 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
 
         protected async virtual void OnTimer(object state)
         {
-            await TakeMetricsSamplesAsync();
+            if (_primaryHostStateProvider.IsPrimary)
+            {
+                await TakeMetricsSamplesAsync();
+            }
+
             SetTimerInterval((int)_scaleOptions.Value.ScaleMetricsSampleInterval.TotalMilliseconds);
         }
 

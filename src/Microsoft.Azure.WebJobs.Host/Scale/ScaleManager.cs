@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using Microsoft.Azure.WebJobs.Host.Config;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
@@ -25,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         private readonly ILogger _logger;
         private readonly HashSet<string> _targetScalersInError;
         private IOptions<ScaleOptions> _scaleOptions;
-        private IOptions<HostingConfigOptions> _hostingConfig;
+        private IOptions<FunctionsHostingConfigOptions> _hostingConfig;
 
         public ScaleManager(
             IScaleMonitorManager monitorManager,
@@ -33,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             IScaleMetricsRepository metricsRepository,
             IConcurrencyStatusRepository concurrencyStatusRepository,
             IOptions<ScaleOptions> scaleConfiguration,
-            IOptions<HostingConfigOptions> hostingConfig,
+            IOptions<FunctionsHostingConfigOptions> hostingConfig,
             ILoggerFactory loggerFactory)
         {
             _monitorManager = monitorManager;
