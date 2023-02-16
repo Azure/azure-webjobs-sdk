@@ -8,5 +8,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
         public const string CategoryTraitName = "Category";
 
         public const string DynamicConcurrency = "DynamicConcurrency";
+
+        public const string ScaleMonitoring = "ScaleMonitoring";
     }
 }

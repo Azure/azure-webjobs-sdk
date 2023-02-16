@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
-using Microsoft.Azure.WebJobs.Host.UnitTests.Scale;
 using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -17,6 +16,7 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
 {
+    [Trait(TestTraits.CategoryTraitName, TestTraits.ScaleMonitoring)]
     public class ScaleMonitorServiceTests
     {
         private readonly ScaleMonitorService _monitor;
@@ -37,7 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             loggerFactory.AddProvider(_loggerProvider);
 
             Mock<ScaleManager> functionsScaleManagerMock = new Mock<ScaleManager>();
-            functionsScaleManagerMock.Setup(x => x.GetScalersToSample(out _monitors, out _scalers));
+            functionsScaleManagerMock.Setup(x => x.GetScalersToSampleAsync()).ReturnsAsync(new Tuple<List<IScaleMonitor>, List<ITargetScaler>>(_monitors, _scalers));
 
             IOptions<ScaleOptions> options = Options.Create(new ScaleOptions()
             {

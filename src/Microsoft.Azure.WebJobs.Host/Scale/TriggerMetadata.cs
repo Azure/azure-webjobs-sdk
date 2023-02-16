@@ -1,12 +1,8 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-
-using Newtonsoft.Json.Linq;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Scale
 {
@@ -15,30 +11,31 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
     /// </summary>
     public class TriggerMetadata
     {
-        private readonly List<object> _properties;
-
-        public TriggerMetadata()
+        public TriggerMetadata(string functionName, JObject metadata)
+            : this(functionName, metadata, new Dictionary<string, object>())
         {
-            _properties = new List<object>();
+        }
+
+        public TriggerMetadata(string functionName, JObject metadata, IDictionary<string, object> properties)
+        {
+            Properties = properties;
+            FunctionName = functionName;
+            Metadata = metadata;
         }
 
         /// <summary>
-        /// Gets or sets triggers metadata <see cref="JObject"> value.
+        /// Gets the name of the Function this trigger belongs to.
         /// </summary>
-        public JObject Value { get; set; }
+        public string FunctionName { get; }
 
         /// <summary>
-        /// Gets property by type.
+        /// Gets all the properties tagged to this instance.
         /// </summary>
-        /// <typeparam name="T">Type of the property to get.</typeparam>
-        public T GetProperty<T>()
-        {
-            return (T)_properties.SingleOrDefault(x => x is T);
-        }
+        public IDictionary<string, object> Properties { get; }
 
-        internal void AddProperties(IEnumerable<object> properties)
-        {
-            _properties.AddRange(properties);
-        }
+        /// <summary>
+        /// Gets the trigger metadata.
+        /// </summary>
+        public JObject Metadata { get; }
     }
 }

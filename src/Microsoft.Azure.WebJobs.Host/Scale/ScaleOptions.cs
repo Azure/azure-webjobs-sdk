@@ -74,6 +74,11 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// </summary>
         public bool MetricsPurgeEnabled { get; set; }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether target base scaling is enabled at the host level.
+        /// </summary>
+        public bool IsTargetScalingEnabled { get; set; }
+
         public string Format()
         {
             var options = new JObject
@@ -86,10 +91,5 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
 
             return options.ToString(Formatting.Indented);
         }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether target base scaling is enabled at the host level.
-        /// </summary>
-        public bool IsTargetScalingEnabled { get; set; }
     }
 }

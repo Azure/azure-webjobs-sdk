@@ -14,6 +14,7 @@ using Microsoft.Extensions.Configuration.EnvironmentVariables;
 using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.FeatureManagement;
 
 namespace Microsoft.Extensions.Hosting
 {
@@ -160,6 +161,7 @@ namespace Microsoft.Extensions.Hosting
                     services.Configure(configureScaleOptions);
                 }
 
+                services.AddFeatureManagement();
                 services.TryAddSingleton<IScaleMonitorManager, ScaleMonitorManager>();
                 services.TryAddSingleton<ITargetScalerManager, TargetScalerManager>();
                 services.TryAddSingleton<IScaleManager, ScaleManager>();
