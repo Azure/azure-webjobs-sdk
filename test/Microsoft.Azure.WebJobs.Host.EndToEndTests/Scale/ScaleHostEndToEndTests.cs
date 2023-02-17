@@ -1,7 +1,13 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host.Config;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Azure;
@@ -11,17 +17,11 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
 {
+    [Trait(TestTraits.CategoryTraitName, TestTraits.ScaleMonitoring)]
     public class ScaleHostEndToEndTests
     {
         private const string Function1Name = "Function1";
@@ -33,6 +33,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
         [InlineData(true)]
         public async Task ScaleManager_GetScaleStatusAsync_ReturnsExpected(bool tbsEnabled)
         {
+            var triggerMetadata = new List<TriggerMetadata>()
+            {
+                new TriggerMetadata(Function1Name, new JObject { { "type", "testExtensionATrigger" } }),
+                new TriggerMetadata(Function2Name, new JObject { { "type", "testExtensionATrigger" } }),
+                new TriggerMetadata(Function3Name, new JObject { { "type", "testExtensionBTrigger" } }, new Dictionary<string, object> { { "foo", "bar" } }),
+            };
+
             JArray functionMetadata = new JArray
             {
                 new JObject
@@ -67,18 +74,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
             string hostId = "test-host";
             var loggerProvider = new TestLoggerProvider();
 
-            // We want to associate an object instance with each TriggerMetdata,
-            // for example AzureComponentFactory can be specified as a TriggerMetdata property as it requires a new refference we do not want
-            Dictionary<string, IEnumerable<object>> properties = new Dictionary<string, IEnumerable<object>>();
-            foreach (var function in functionMetadata)
-            {
-                if (function["type"].ToString() == "testExtensionBTrigger")
-                {
-                    properties.Add(function["functionName"].ToString(), new List<object> { new string("some_property") });
-                }
-            }
-            ITriggerMetadataProvider triggerMetadataProvider = new TriggerMetadataProvider(functionMetadata, properties);
-
             IHostBuilder hostBuilder = new HostBuilder();
             hostBuilder.ConfigureLogging(configure =>
             {
@@ -88,58 +83,35 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
             hostBuilder.ConfigureAppConfiguration((hostBuilderContext, config) =>
             {
                 // Adding host.json here
-                config.AddJsonStream(new MemoryStream(Encoding.ASCII.GetBytes(hostJson)));
+                config.AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(hostJson)));
 
                 // Adding app settings
-                config.AddInMemoryCollection(new List<KeyValuePair<string, string>>()
+                config.AddInMemoryCollection(new Dictionary<string, string>
                 {
-                    new KeyValuePair<string, string>("app_setting1", "value1"),
-                    new KeyValuePair<string, string>("app_setting2", "value2")
+                    { "app_setting1", "value1" },
+                    { "app_setting2", "value2"},
+                    { "FeatureManagement:Microsoft.Azure.WebJobs.Host.EndToEndTests", "true" }
                 });
-
-                // Adding hosting config features
-                //config.AddInMemoryCollection(new List<KeyValuePair<string, string>>()
-                //{
-                //    new KeyValuePair<string, string>($"{Constants.HostingConfigSectionName}:Microsoft.Azure.WebJobs.Host.EndToEndTests", "1"),
-                //});
             })
             .ConfigureServices(services =>
             {
-                // Set up IConcurrencyStatusRepository for the test
-                // Adding default AzureCompoentFactory
                 services.AddAzureClientsCore();
-                // Adding IConcurrencyStatusRepository/IAzureBlobStorageProvider
-                services.AddAzureStorageScaleServices(options =>
-                {
-                    options.InternalSasBlobContainer = "sas-blob-container";
-                });
-                // replace IConcurrencyStatusRepository for the test
+                services.AddAzureStorageScaleServices();
+
                 services.AddSingleton<IConcurrencyStatusRepository, TestConcurrencyStatusRepository>();
-                // Adding services for scale host.
-                services.AddSingleton(triggerMetadataProvider);
+                services.AddSingleton<ITriggerMetadataProvider>(new TriggerMetadataProvider(triggerMetadata));
                 services.AddSingleton<IScaleMetricsRepository, TestScaleMetricsRepository>();
-
-                // Specific services registrations for scale host
-                services.AddSingleton(triggerMetadataProvider);
-                services.AddSingleton<IScaleMetricsRepository, TestScaleMetricsRepository>();
-
-                // Configure hosting configuration
-                services.Configure<FunctionsHostingConfigOptions>(options =>
-                {
-                    options.Features["Microsoft.Azure.WebJobs.Host.EndToEndTests"] = "1";
-                });
             })
             .ConfigureWebJobsScale((context, builder) =>
-            {
-                builder.UseHostId(hostId);
-            },
-            scaleOptions =>
-            {
-                // configure scale options
-                scaleOptions.IsTargetScalingEnabled = tbsEnabled;
-                scaleOptions.MetricsPurgeEnabled = false;
-                scaleOptions.ScaleMetricsMaxAge = TimeSpan.FromMinutes(4);
-            })
+                {
+                    builder.UseHostId(hostId);
+                },
+                scaleOptions =>
+                {
+                    scaleOptions.IsTargetScalingEnabled = tbsEnabled;
+                    scaleOptions.MetricsPurgeEnabled = false;
+                    scaleOptions.ScaleMetricsMaxAge = TimeSpan.FromMinutes(4);
+                })
             .ConfigureTestExtensionAScale()
             .ConfigureTestExtensionBScale();
 
@@ -273,12 +245,18 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
         {
             if (_scaleMonitors == null)
             {
-                var triggersMetadata = TriggerTypes.SelectMany(x => _triggerMetadataProvider.GetTriggersMetadata(x));
                 _scaleMonitors = new List<IScaleMonitor>();
-                foreach (var triggerMetadata in triggersMetadata)
+
+                var triggerMetadata = _triggerMetadataProvider.GetTriggerMetadata();
+                foreach (var trigger in triggerMetadata)
                 {
-                    string functionName = triggerMetadata.Value["functionName"].ToString();
-                    _scaleMonitors.Add(new TestScaleMonitor(functionName, functionName));
+                    string type = (string)trigger.Metadata["type"];
+                    if (!MatchTriggerType(type))
+                    {
+                        continue;
+                    }
+
+                    _scaleMonitors.Add(new TestScaleMonitor(trigger.FunctionName, trigger.FunctionName));
                 }
             }
             return _scaleMonitors.AsReadOnly();
@@ -288,15 +266,26 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
         {
             if (_targetScalers == null)
             {
-                var triggersMetadata = TriggerTypes.SelectMany(x => _triggerMetadataProvider.GetTriggersMetadata(x));
                 _targetScalers = new List<ITargetScaler>();
-                foreach (var triggerData in triggersMetadata)
+
+                var triggerMetadata = _triggerMetadataProvider.GetTriggerMetadata();
+                foreach (var trigger in triggerMetadata)
                 {
-                    string functionName = triggerData.Value["functionName"].ToString();
-                    _targetScalers.Add(new TestTargetScaler(functionName));
+                    string type = (string)trigger.Metadata["type"];
+                    if (!MatchTriggerType(type))
+                    {
+                        continue;
+                    }
+
+                    _targetScalers.Add(new TestTargetScaler(trigger.FunctionName));
                 }
             }
             return _targetScalers.AsReadOnly();
+        }
+
+        protected bool MatchTriggerType(string type)
+        {
+            return TriggerTypes.Any(p => string.Compare(p, type, StringComparison.OrdinalIgnoreCase) == 0);
         }
     }
 
@@ -323,9 +312,17 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 var hostJsonSetting = config.GetValue<int>("extensions:testExtensionA:foo");
                 Assert.NotNull(hostJsonSetting);
 
-                // verify we can not access a trigger metadata property
-                var triggersMetadata = TriggerTypes.SelectMany(x => triggerMetadataProvider.GetTriggersMetadata(x)).ToArray();
-                Assert.True(string.IsNullOrEmpty(triggersMetadata[0].GetProperty<string>()));
+                // verify properties are empty
+                var triggerMetadata = triggerMetadataProvider.GetTriggerMetadata();
+                foreach (var trigger in triggerMetadata)
+                {
+                    string type = (string)trigger.Metadata["type"];
+                    if (!MatchTriggerType(type))
+                    {
+                        continue;
+                    }
+                    Assert.Empty(trigger.Properties);
+                }
             }
 
             protected override string[] TriggerTypes => new string[] { "testExtensionATrigger" };
@@ -349,9 +346,17 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
             public TestExtensionBScalerProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions, ITriggerMetadataProvider triggerMetadataProvider)
                 : base(config, scaleOptions, triggerMetadataProvider)
             {
-                // verify we can access a trigger metadata property
-                var triggersMetadata = TriggerTypes.SelectMany(x => triggerMetadataProvider.GetTriggersMetadata(x)).ToArray();
-                Assert.Equal(triggersMetadata[0].GetProperty<string>(), "some_property");
+                // verify expected properties are present
+                var triggerMetadata = triggerMetadataProvider.GetTriggerMetadata();
+                foreach (var trigger in triggerMetadata)
+                {
+                    string type = (string)trigger.Metadata["type"];
+                    if (!MatchTriggerType(type))
+                    {
+                        continue;
+                    }
+                    Assert.Equal(trigger.Properties["foo"], "bar");
+                }
             }
 
             protected override string[] TriggerTypes => new string[] { "testExtensionBTrigger" };

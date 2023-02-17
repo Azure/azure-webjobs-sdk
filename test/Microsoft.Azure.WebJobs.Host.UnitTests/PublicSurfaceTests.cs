@@ -2,8 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using Microsoft.Azure.WebJobs.Description;
-using Microsoft.Azure.WebJobs.Host.Config;
-using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
@@ -16,6 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
     /// fail any time new dependencies or public surface area are added, ensuring
     /// we review such additions carefully.
     /// </summary>
+    [Trait(TestTraits.CategoryTraitName, TestTraits.ScaleMonitoring)]
     public class PublicSurfaceTests
     {
         [Fact]
@@ -311,7 +310,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IScaleManager",
                 "ScaleOptions",
                 "IScalerProvider",
-                "FunctionsHostingConfigOptions",
                 "ITriggerMetadataProvider",
                 "TriggerMetadata"
             };

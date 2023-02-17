@@ -73,7 +73,8 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         {
             try
             {
-                (_scaleManager as ScaleManager).GetScalersToSample(out List<IScaleMonitor> scaleMonitorsToProcess, out List<ITargetScaler> targetScalersToProcess);
+                // TODO: Need to fix this cast to ScaleManager
+                var (scaleMonitorsToProcess, targetScalersToSample) = await (_scaleManager as ScaleManager).GetScalersToSampleAsync();
 
                 if (scaleMonitorsToProcess.Any())
                 {

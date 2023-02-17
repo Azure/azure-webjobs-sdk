@@ -4,6 +4,7 @@
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.FeatureManagement;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,8 +24,8 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         private readonly IConcurrencyStatusRepository _concurrencyStatusRepository;
         private readonly ILogger _logger;
         private readonly HashSet<string> _targetScalersInError;
+        private readonly IFeatureManager _featureManager;
         private IOptions<ScaleOptions> _scaleOptions;
-        private IOptions<FunctionsHostingConfigOptions> _hostingConfig;
 
         public ScaleManager(
             IScaleMonitorManager monitorManager,
@@ -32,8 +33,8 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             IScaleMetricsRepository metricsRepository,
             IConcurrencyStatusRepository concurrencyStatusRepository,
             IOptions<ScaleOptions> scaleConfiguration,
-            IOptions<FunctionsHostingConfigOptions> hostingConfig,
-            ILoggerFactory loggerFactory)
+            ILoggerFactory loggerFactory, 
+            IFeatureManager featureManager)
         {
             _monitorManager = monitorManager;
             _targetScalerManager = targetScalerManager;
@@ -42,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             _logger = loggerFactory?.CreateLogger<ScaleManager>();
             _targetScalersInError = new HashSet<string>();
             _scaleOptions = scaleConfiguration;
-            _hostingConfig = hostingConfig;
+            _featureManager = featureManager;
         }
 
         // for mock testing only
@@ -58,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// <returns>A task that returns <see cref="ScaleStatus"/> for all ther triggers.</returns>
         public async Task<ScaleStatus> GetScaleStatusAsync(ScaleStatusContext context)
         {
-            GetScalersToSample(out List<IScaleMonitor> scaleMonitorsToProcess, out List<ITargetScaler> targetScalersToProcess);
+            var (scaleMonitorsToProcess, targetScalersToProcess) = await GetScalersToSampleAsync();
 
             var scaleMonitorStatuses = await GetScaleMonitorsResultAsync(context, scaleMonitorsToProcess);
             var targetScalerStatuses = await GetTargetScalersResultAsync(context, targetScalersToProcess);
@@ -204,15 +205,13 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// </summary>
         /// <param name="scaleMonitorsToSample">Scale monitor to process.</param>
         /// <param name="targetScalersToSample">Target scaler to process.</param>
-        internal virtual void GetScalersToSample(
-            out List<IScaleMonitor> scaleMonitorsToSample,
-            out List<ITargetScaler> targetScalersToSample)
+        internal virtual async Task<Tuple<List<IScaleMonitor>, List<ITargetScaler>>> GetScalersToSampleAsync()
         {
             var scaleMonitors = _monitorManager.GetMonitors();
             var targetScalers = _targetScalerManager.GetTargetScalers();
 
-            scaleMonitorsToSample = new List<IScaleMonitor>();
-            targetScalersToSample = new List<ITargetScaler>();
+            var scaleMonitorsToSample = new List<IScaleMonitor>();
+            var targetScalersToSample = new List<ITargetScaler>();
 
             // Check if TBS enabled on app level
             if (_scaleOptions.Value.IsTargetScalingEnabled)
@@ -224,8 +223,8 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                     if (!_targetScalersInError.Contains(scalerUniqueId))
                     {
                         string assemblyName = GetAssemblyName(scaler.GetType());
-                        string flag = _hostingConfig.Value.GetFeature(assemblyName);
-                        if (flag == "1")
+                        bool featureEnabled = await _featureManager.IsEnabledAsync(assemblyName);
+                        if (featureEnabled)
                         {
                             targetScalersToSample.Add(scaler);
                             targetScalerFunctions.Add(scalerUniqueId);
@@ -247,6 +246,8 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             {
                 scaleMonitorsToSample.AddRange(scaleMonitors);
             }
+
+            return new (scaleMonitorsToSample, targetScalersToSample);
         }
 
         internal static ScaleVote GetAggregateScaleVote(IEnumerable<ScaleVote> votes, ScaleStatusContext context, ILogger logger)
