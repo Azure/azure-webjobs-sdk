@@ -41,7 +41,8 @@ foreach ($project in $projects)
     $cmd += "--version-suffix", "-$packageSuffix"
   }
 
-  & dotnet $cmd
+  & { dotnet $cmd }
+  if (-not $?) { exit 1 }
 }
 
 ### Sign package if build is not a PR
