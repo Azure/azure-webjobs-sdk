@@ -18,9 +18,9 @@ variables:
   value: '3.0.$(buildNumber)'
   ## NOTE: This variable denotes the overall build version and is distinct from individual package versions.
 - name: isPr
-  value: $[ eq('$(Build.Reason)', 'PullRequest') ]
+  value: $[ eq(variables['Build.Reason'], 'PullRequest') ]
 - name: hasTag
-  value: $[ startsWith('$(Build.SourceBranch)', 'refs/tag/') ]
+  value: $[ startsWith(variables['Build.SourceBranch'], 'refs/tags') ]
 - name: DOTNET_SKIP_FIRST_TIME_EXPERIENCE
   value: ${{ true }}
 
@@ -60,7 +60,7 @@ jobs:
         $config = "Release"
         Write-Host "Git tag found. Setting Configuration to '$config'"
         $env:Configuration = $config
-        echo "##vso[task.setvariable variable=Configuration]$config" # let downstream tasks read this variable
+        Write-Host "##vso[task.setvariable variable=Configuration]$config" # let downstream tasks read this variable
       }
 
       .\Build.ps1 -buildVersion "$(buildVersion)" -packageSuffix "$packageSuffix" -isPR $$(isPr) -outputDirectory "$(buildOutputDirectory)" -forceArtifacts $${{ parameters.force_artifacts }} -skipAssemblySigning $${{ parameters.skip_assembly_signing }}
