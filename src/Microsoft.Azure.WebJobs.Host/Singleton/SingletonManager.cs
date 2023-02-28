@@ -166,7 +166,7 @@ namespace Microsoft.Azure.WebJobs.Host
                 await handle.LeaseRenewalTimer.StopAsync(cancellationToken);
             }
 
-            await _lockManager.ReleaseLockAsync(handle.InnerLock, cancellationToken);
+            await _lockManager.ReleaseLockAsync(handle.InnerLock, CancellationToken.None);
 
             string msg = string.Format(CultureInfo.InvariantCulture, "Singleton lock released ({0})", handle.InnerLock.LockId);
             _logger?.LogDebug(msg);

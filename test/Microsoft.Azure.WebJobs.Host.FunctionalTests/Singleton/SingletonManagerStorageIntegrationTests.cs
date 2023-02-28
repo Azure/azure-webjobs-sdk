@@ -19,6 +19,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using static Microsoft.Azure.WebJobs.Host.BlobLeaseDistributedLockManager;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 {
@@ -303,6 +304,27 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             SingletonAttribute attribute = new SingletonAttribute();
             var lockHandle = await _singletonManager.TryLockAsync(TestLockId, TestInstanceId, attribute, cancellationToken);
             var innerHandle = lockHandle.GetInnerHandle();
+
+            await _singletonManager.ReleaseLockAsync(lockHandle, cancellationToken);
+
+            // Timer should've been stopped
+            await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => await lockHandle.LeaseRenewalTimer.StopAsync(cancellationToken));
+
+            // Verify lease has been released by SingletonManager
+            var lease = await _testContainerClient.GetBlobClient(string.Format("locks/{0}", TestLockId)).GetBlobLeaseClient().AcquireAsync(TimeSpan.FromSeconds(15));
+        }
+
+        [Fact]
+        public async Task ReleaseLockAsync_FunctionCancellationTokenCancelled_ShouldNotThrow()
+        {
+            var cancellationTokenSource = new CancellationTokenSource();
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            SingletonAttribute attribute = new SingletonAttribute();
+            var lockHandle = await _singletonManager.TryLockAsync(TestLockId, TestInstanceId, attribute, cancellationToken);
+
+            // Cancel token source
+            cancellationTokenSource.Cancel();
 
             await _singletonManager.ReleaseLockAsync(lockHandle, cancellationToken);
 
