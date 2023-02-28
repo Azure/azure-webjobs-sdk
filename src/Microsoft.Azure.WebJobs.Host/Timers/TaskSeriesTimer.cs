@@ -72,7 +72,11 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
                 throw new InvalidOperationException("The timer has already been stopped.");
             }
 
-            _cancellationTokenSource.Cancel();
+            if (!_cancellationTokenSource.IsCancellationRequested)
+            {
+                _cancellationTokenSource.Cancel();
+            }
+
             return StopAsyncCore(cancellationToken);
         }
 
