@@ -1,21 +1,21 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Threading;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using System.Linq;
-using Microsoft.Extensions.Options;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Hosting;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Host.Scale
 {
     /// <summary>
-    /// Class to store scale metrics.
+    /// Service responsible for taking periodic scale metrics samples and persisting them.
     /// </summary>
     internal class ScaleMonitorService : IHostedService, IDisposable
     {

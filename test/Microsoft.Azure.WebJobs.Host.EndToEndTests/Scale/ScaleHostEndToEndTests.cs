@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Scale;
+using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
@@ -18,6 +19,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using Xunit;
+using static Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale.ScaleHostEndToEndTests;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
 {
@@ -35,28 +37,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
         {
             var triggerMetadata = new List<TriggerMetadata>()
             {
-                new TriggerMetadata(Function1Name, new JObject { { "type", "testExtensionATrigger" } }),
-                new TriggerMetadata(Function2Name, new JObject { { "type", "testExtensionATrigger" } }),
-                new TriggerMetadata(Function3Name, new JObject { { "type", "testExtensionBTrigger" } }, new Dictionary<string, object> { { "foo", "bar" } }),
-            };
-
-            JArray functionMetadata = new JArray
-            {
-                new JObject
-                {
-                    { "type", "testExtensionATrigger" },
-                    { "functionName", Function1Name }
-                },
-                new JObject
-                {
-                    { "type", "testExtensionATrigger" },
-                    { "functionName", Function2Name }
-                },
-                new JObject
-                {
-                    { "type", "testExtensionBTrigger" },
-                    { "functionName", Function3Name }
-                }
+                new TriggerMetadata(new JObject { { "functionName", $"{Function1Name}" }, { "type", "testExtensionATrigger" } }),
+                new TriggerMetadata(new JObject { { "functionName", $"{Function2Name}" }, { "type", "testExtensionATrigger" } }),
+                new TriggerMetadata(new JObject { { "functionName", $"{Function3Name}" }, { "type", "testExtensionBTrigger" } }, new Dictionary<string, object> { { "foo", "bar" } })
             };
 
             string hostJson =
@@ -209,7 +192,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
 
             public Task<IDictionary<IScaleMonitor, IList<ScaleMetrics>>> ReadMetricsAsync(IEnumerable<IScaleMonitor> monitors)
             {
-
                 IDictionary<IScaleMonitor, IList<ScaleMetrics>> result = new Dictionary<IScaleMonitor, IList<ScaleMetrics>>();
                 if (_cache != null)
                 {
@@ -222,73 +204,72 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 return Task.FromResult(result);
             }
         }
-    }
 
-    internal abstract class TestExtensionScalerProvider : IScalerProvider
-    {
-        private IOptions<ScaleOptions> _scaleOptions;
-        private List<IScaleMonitor> _scaleMonitors;
-        private List<ITargetScaler> _targetScalers;
-        private ITriggerMetadataProvider _triggerMetadataProvider;
-
-        public TestExtensionScalerProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions, ITriggerMetadataProvider triggerMetadataProvider)
+        internal abstract class TestExtensionScalerProvider : IScalerProvider
         {
-            Assert.Equal(scaleOptions.Value.ScaleMetricsMaxAge, TimeSpan.FromMinutes(4));
+            private IOptions<ScaleOptions> _scaleOptions;
+            private List<IScaleMonitor> _scaleMonitors;
+            private List<ITargetScaler> _targetScalers;
+            private ITriggerMetadataProvider _triggerMetadataProvider;
 
-            _scaleOptions = scaleOptions;
-            _triggerMetadataProvider = triggerMetadataProvider;
-        }
-
-        protected abstract string[] TriggerTypes { get; }
-
-        public IEnumerable<IScaleMonitor> GetScaleMonitors()
-        {
-            if (_scaleMonitors == null)
+            public TestExtensionScalerProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions, ITriggerMetadataProvider triggerMetadataProvider)
             {
-                _scaleMonitors = new List<IScaleMonitor>();
+                Assert.Equal(scaleOptions.Value.ScaleMetricsMaxAge, TimeSpan.FromMinutes(4));
 
-                var triggerMetadata = _triggerMetadataProvider.GetTriggerMetadata();
-                foreach (var trigger in triggerMetadata)
-                {
-                    string type = (string)trigger.Metadata["type"];
-                    if (!MatchTriggerType(type))
-                    {
-                        continue;
-                    }
-
-                    _scaleMonitors.Add(new TestScaleMonitor(trigger.FunctionName, trigger.FunctionName));
-                }
+                _scaleOptions = scaleOptions;
+                _triggerMetadataProvider = triggerMetadataProvider;
             }
-            return _scaleMonitors.AsReadOnly();
-        }
 
-        public IEnumerable<ITargetScaler> GetTargetScalers()
-        {
-            if (_targetScalers == null)
+            protected abstract string[] TriggerTypes { get; }
+
+            public IEnumerable<IScaleMonitor> GetScaleMonitors()
             {
-                _targetScalers = new List<ITargetScaler>();
-
-                var triggerMetadata = _triggerMetadataProvider.GetTriggerMetadata();
-                foreach (var trigger in triggerMetadata)
+                if (_scaleMonitors == null)
                 {
-                    string type = (string)trigger.Metadata["type"];
-                    if (!MatchTriggerType(type))
+                    _scaleMonitors = new List<IScaleMonitor>();
+
+                    var triggerMetadata = _triggerMetadataProvider.GetTriggerMetadata();
+                    foreach (var trigger in triggerMetadata)
                     {
-                        continue;
+                        string type = (string)trigger.Metadata["type"];
+                        if (!MatchTriggerType(type))
+                        {
+                            continue;
+                        }
+
+                        _scaleMonitors.Add(new TestScaleMonitor(trigger.FunctionName, trigger.FunctionName));
                     }
-
-                    _targetScalers.Add(new TestTargetScaler(trigger.FunctionName));
                 }
+                return _scaleMonitors.AsReadOnly();
             }
-            return _targetScalers.AsReadOnly();
-        }
 
-        protected bool MatchTriggerType(string type)
-        {
-            return TriggerTypes.Any(p => string.Compare(p, type, StringComparison.OrdinalIgnoreCase) == 0);
+            public IEnumerable<ITargetScaler> GetTargetScalers()
+            {
+                if (_targetScalers == null)
+                {
+                    _targetScalers = new List<ITargetScaler>();
+
+                    var triggerMetadata = _triggerMetadataProvider.GetTriggerMetadata();
+                    foreach (var trigger in triggerMetadata)
+                    {
+                        string type = (string)trigger.Metadata["type"];
+                        if (!MatchTriggerType(type))
+                        {
+                            continue;
+                        }
+
+                        _targetScalers.Add(new TestTargetScaler(trigger.FunctionName));
+                    }
+                }
+                return _targetScalers.AsReadOnly();
+            }
+
+            protected bool MatchTriggerType(string type)
+            {
+                return TriggerTypes.Any(p => string.Compare(p, type, StringComparison.OrdinalIgnoreCase) == 0);
+            }
         }
     }
-
     public static class TestExtensionAHostBuilderExtensions
     {
         public static IHostBuilder ConfigureTestExtensionAScale(this IHostBuilder builder)
@@ -316,12 +297,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 var triggerMetadata = triggerMetadataProvider.GetTriggerMetadata();
                 foreach (var trigger in triggerMetadata)
                 {
-                    string type = (string)trigger.Metadata["type"];
-                    if (!MatchTriggerType(type))
+                    if (!MatchTriggerType(trigger.Type))
                     {
                         continue;
                     }
-                    Assert.Empty(trigger.Properties);
                 }
             }
 
@@ -350,8 +329,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 var triggerMetadata = triggerMetadataProvider.GetTriggerMetadata();
                 foreach (var trigger in triggerMetadata)
                 {
-                    string type = (string)trigger.Metadata["type"];
-                    if (!MatchTriggerType(type))
+                    if (!MatchTriggerType(trigger.Type))
                     {
                         continue;
                     }

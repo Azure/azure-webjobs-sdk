@@ -14,7 +14,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
     /// fail any time new dependencies or public surface area are added, ensuring
     /// we review such additions carefully.
     /// </summary>
-    [Trait(TestTraits.CategoryTraitName, TestTraits.ScaleMonitoring)]
     public class PublicSurfaceTests
     {
         [Fact]

@@ -24,8 +24,6 @@ namespace Microsoft.Extensions.Hosting
             // Add runtime services that depend on storage.
             services.AddSingleton<IDistributedLockManager>(provider => Create(provider));
 
-            services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, CoreWebJobsOptionsSetup<JobHostInternalStorageOptions>>());
-
             services.TryAddSingleton<IDelegatingHandlerProvider, DefaultDelegatingHandlerProvider>();
 
             // Adds necessary Azure services to create clients
@@ -36,6 +34,7 @@ namespace Microsoft.Extensions.Hosting
 
         public static void AddAzureStorageScaleServices(this IServiceCollection services)
         {
+            services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, CoreWebJobsOptionsSetup<JobHostInternalStorageOptions>>());
             services.TryAddSingleton<IAzureBlobStorageProvider, AzureStorageProvider>();
             services.AddSingleton<IConcurrencyStatusRepository, BlobStorageConcurrencyStatusRepository>();
         }
