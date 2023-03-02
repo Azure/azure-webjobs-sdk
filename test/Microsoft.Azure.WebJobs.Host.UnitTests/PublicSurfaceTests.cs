@@ -308,8 +308,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IScaleMetricsRepository",
                 "IScaleManager",
                 "ScaleOptions",
-                "IScalerProvider",
-                "ITriggerMetadataProvider",
                 "TriggerMetadata"
             };
 
