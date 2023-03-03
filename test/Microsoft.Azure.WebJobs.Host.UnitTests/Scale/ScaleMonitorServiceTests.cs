@@ -90,7 +90,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
 
             var logs = _loggerProvider.GetAllLogMessages().ToArray();
             Assert.Single(logs);
-            Assert.Equal("Scale monitor service is started.", logs[0].FormattedMessage);
+            Assert.StartsWith("Scale monitor service is started.", logs[0].FormattedMessage);
         }
 
         [Fact]
@@ -104,7 +104,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             await Task.Delay(2000);
 
             var logs = _loggerProvider.GetAllLogMessages().ToArray();
-            Assert.Equal("Scale monitor service is started.", logs[0].FormattedMessage);
+            Assert.StartsWith("Scale monitor service is started.", logs[0].FormattedMessage);
             Assert.Equal($"Taking metrics samples for 1 monitor(s).", logs[1].FormattedMessage);
         }
 
@@ -135,7 +135,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             var logs = _loggerProvider.GetAllLogMessages().ToArray();
 
             var infoLogs = logs.Where(p => p.Level == LogLevel.Information);
-            Assert.Equal("Scale monitor service is started.", logs[0].FormattedMessage);
+            Assert.StartsWith("Scale monitor service is started.", logs[0].FormattedMessage);
             Assert.Equal("Taking metrics samples for 1 monitor(s).", logs[1].FormattedMessage);
             Assert.True(logs[2].FormattedMessage.StartsWith("Scale metrics sample for monitor 'testscalemonitor1': {\"Count\":10,"));
 
@@ -184,7 +184,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             var logs = _loggerProvider.GetAllLogMessages().ToArray();
 
             var infoLogs = logs.Where(p => p.Level == LogLevel.Information);
-            Assert.Equal("Scale monitor service is started.", logs[0].FormattedMessage);
+            Assert.StartsWith("Scale monitor service is started.", logs[0].FormattedMessage);
             Assert.Equal("Taking metrics samples for 2 monitor(s).", logs[1].FormattedMessage);
 
             // verify the failure logs for the failing monitor

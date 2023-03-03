@@ -40,7 +40,8 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         public virtual Task StartAsync(CancellationToken cancellationToken)
         {
             // start the timer by setting the due time
-            _logger.LogInformation("Scale monitor service is started.");
+            string tbsState = _scaleOptions.Value.IsTargetScalingEnabled ? "enabled" : "disabled";
+            _logger.LogInformation($"Scale monitor service is started. Target base scaling is {tbsState}.");
             SetTimerInterval((int)_scaleOptions.Value.ScaleMetricsSampleInterval.TotalMilliseconds);
 
             return Task.CompletedTask;

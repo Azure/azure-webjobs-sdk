@@ -165,7 +165,7 @@ namespace Microsoft.Extensions.Hosting
                 services.TryAddSingleton<IScaleMonitorManager, ScaleMonitorManager>();
                 services.TryAddSingleton<ITargetScalerManager, TargetScalerManager>();
                 services.TryAddSingleton<IScaleManager, ScaleManager>();
-                services.TryAddSingleton<IHostedService, ScaleMonitorService>();
+                services.AddHostedService<ScaleMonitorService>();
                 services.TryAddSingleton<IPrimaryHostStateProvider>(new PrimaryHostStateProvider() { IsPrimary = true });
             });
 
