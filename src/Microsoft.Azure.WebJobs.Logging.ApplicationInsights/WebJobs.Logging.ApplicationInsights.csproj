@@ -3,7 +3,7 @@
   <Import Project="..\..\build\common.props" />
 
   <PropertyGroup>
-    <Version>3.0.35$(VersionSuffix)</Version>
+    <Version>3.0.36$(VersionSuffix)</Version>
     <InformationalVersion>$(Version) Commit hash: $(CommitHash)</InformationalVersion>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>Microsoft.Azure.WebJobs.Logging.ApplicationInsights</PackageId>
@@ -49,7 +49,7 @@
     without all of the others in this solution. If changes to WebJobs.Host are needed here, re-introduce the
     project reference. 
     -->
-    <PackageReference Include="Microsoft.Azure.WebJobs" Version="3.0.33" />
+    <PackageReference Include="Microsoft.Azure.WebJobs" Version="3.0.36" />
   </ItemGroup>
 
 </Project>
