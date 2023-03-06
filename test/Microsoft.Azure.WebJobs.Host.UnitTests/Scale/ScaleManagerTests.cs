@@ -62,7 +62,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             });
 
             _configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string> { { "FeatureManagement:Microsoft.Azure.WebJobs.Host.UnitTests", "1" } }).Build();
+                .AddInMemoryCollection(new Dictionary<string, string> { { $"{Constants.FunctionsHostingConfigSectionName}:Microsoft.Azure.WebJobs.Host.UnitTests", "1" } }).Build();
         }
 
         [Theory]
@@ -311,7 +311,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             });
 
             var configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string> { { "FeatureManagement:Microsoft.Azure.WebJobs.Host.UnitTests", triggerEnabled ? "1" : "0" } }).Build();
+                .AddInMemoryCollection(new Dictionary<string, string> { { $"{Constants.FunctionsHostingConfigSectionName}:Microsoft.Azure.WebJobs.Host.UnitTests", triggerEnabled ? "1" : "0" } }).Build();
 
             ScaleManager manager = new ScaleManager(scaleMonitorManagerMock.Object, targetScalerManagerMock.Object, _metricsRepositoryMock.Object,
                 _concurrencyStatusRepositoryMock.Object, options, _loggerFactory, configuration);
