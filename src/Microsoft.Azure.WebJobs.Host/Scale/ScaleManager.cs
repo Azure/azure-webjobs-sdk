@@ -2,9 +2,9 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using Microsoft.Azure.WebJobs.Host.Config;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.FeatureManagement;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         private readonly IConcurrencyStatusRepository _concurrencyStatusRepository;
         private readonly ILogger _logger;
         private readonly HashSet<string> _targetScalersInError;
-        private readonly IFeatureManager _featureManager;
+        private readonly IConfiguration _configuration;
         private IOptions<ScaleOptions> _scaleOptions;
 
         public ScaleManager(
@@ -33,8 +33,8 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             IScaleMetricsRepository metricsRepository,
             IConcurrencyStatusRepository concurrencyStatusRepository,
             IOptions<ScaleOptions> scaleConfiguration,
-            ILoggerFactory loggerFactory, 
-            IFeatureManager featureManager)
+            ILoggerFactory loggerFactory,
+            IConfiguration configuration)
         {
             _monitorManager = monitorManager;
             _targetScalerManager = targetScalerManager;
@@ -43,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             _logger = loggerFactory?.CreateLogger<ScaleManager>();
             _targetScalersInError = new HashSet<string>();
             _scaleOptions = scaleConfiguration;
-            _featureManager = featureManager;
+            _configuration = configuration;
         }
 
         // for mock testing only
@@ -59,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// <returns>A task that returns <see cref="ScaleStatus"/> for all ther triggers.</returns>
         public async Task<ScaleStatus> GetScaleStatusAsync(ScaleStatusContext context)
         {
-            var (scaleMonitorsToProcess, targetScalersToProcess) = await GetScalersToSampleAsync();
+            var (scaleMonitorsToProcess, targetScalersToProcess) = GetScalersToSample();
 
             var scaleMonitorStatuses = await GetScaleMonitorsResultAsync(context, scaleMonitorsToProcess);
             var targetScalerStatuses = await GetTargetScalersResultAsync(context, targetScalersToProcess);
@@ -205,7 +205,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// </summary>
         /// <param name="scaleMonitorsToSample">Scale monitor to process.</param>
         /// <param name="targetScalersToSample">Target scaler to process.</param>
-        internal virtual async Task<Tuple<List<IScaleMonitor>, List<ITargetScaler>>> GetScalersToSampleAsync()
+        internal virtual (List<IScaleMonitor>, List<ITargetScaler>) GetScalersToSample()
         {
             var scaleMonitors = _monitorManager.GetMonitors();
             var targetScalers = _targetScalerManager.GetTargetScalers();
@@ -223,7 +223,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                     if (!_targetScalersInError.Contains(scalerUniqueId))
                     {
                         string assemblyName = GetAssemblyName(scaler.GetType());
-                        bool featureEnabled = await _featureManager.IsEnabledAsync(assemblyName);
+                        bool featureEnabled = _configuration.GetSection(Constants.FunctionsHostingConfigSectionName).GetValue<string>(assemblyName) == "1";
                         if (featureEnabled)
                         {
                             targetScalersToSample.Add(scaler);
@@ -247,7 +247,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                 scaleMonitorsToSample.AddRange(scaleMonitors);
             }
 
-            return new (scaleMonitorsToSample, targetScalersToSample);
+            return (scaleMonitorsToSample, targetScalersToSample);
         }
 
         internal static ScaleVote GetAggregateScaleVote(IEnumerable<ScaleVote> votes, ScaleStatusContext context, ILogger logger)

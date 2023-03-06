@@ -37,7 +37,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             loggerFactory.AddProvider(_loggerProvider);
 
             Mock<ScaleManager> functionsScaleManagerMock = new Mock<ScaleManager>();
-            functionsScaleManagerMock.Setup(x => x.GetScalersToSampleAsync()).ReturnsAsync(new Tuple<List<IScaleMonitor>, List<ITargetScaler>>(_monitors, _scalers));
+            functionsScaleManagerMock.Setup(x => x.GetScalersToSample()).Returns(() =>
+            {
+                return (_monitors, _scalers);
+            });
 
             IOptions<ScaleOptions> options = Options.Create(new ScaleOptions()
             {

@@ -9,7 +9,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Scale;
-using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
@@ -76,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 {
                     { "app_setting1", "value1" },
                     { "app_setting2", "value2"},
-                    { "FeatureManagement:Microsoft.Azure.WebJobs.Host.EndToEndTests", "true" }
+                    { $"{Constants.FunctionsHostingConfigSectionName}:Microsoft.Azure.WebJobs.Host.EndToEndTests", "1" }
                 });
             })
             .ConfigureServices(services =>
@@ -121,6 +120,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
             // Validate that internal BlobStorageConcurrencyStatusRepository is available
             Assert.True(concurrencyStatusRepositories.SingleOrDefault(x => x.GetType().Name == "BlobStorageConcurrencyStatusRepository") != null);
             Assert.True(concurrencyStatusRepositories.SingleOrDefault(x => x is TestConcurrencyStatusRepository) != null);
+
+            // Validate IConfiguration
+            var section = scaleHost.Services.GetService<IConfiguration>().GetSection(Constants.FunctionsHostingConfigSectionName);
+            Assert.False(section.GetValue<string>("sovemalue") == "1");
+            Assert.True(section.GetValue<string>("Microsoft.Azure.WebJobs.Host.EndToEndTests") == "1");
+            Assert.True(section.GetValue<string>("microsoft.azure.webJobs.host.endtoendtests") == "1");
 
             await TestHelpers.Await(async () =>
             {

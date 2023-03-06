@@ -8,9 +8,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.FeatureManagement;
 using Moq;
 using Xunit;
 
@@ -29,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
         private readonly List<ITargetScaler> _targetScalers;
         private readonly ILogger _testLogger;
         private readonly IOptions<ScaleOptions> _scaleOptions;
-        private readonly Mock<IFeatureManager> _featureManagerMock;
+        private readonly IConfiguration _configuration;
 
         public ScaleManagerTests()
         {
@@ -61,8 +61,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
                 ScaleMetricsSampleInterval = TimeSpan.FromSeconds(10)
             });
 
-            _featureManagerMock = new Mock<IFeatureManager>(MockBehavior.Strict);
-            _featureManagerMock.Setup(p => p.IsEnabledAsync("test")).ReturnsAsync(true);
+            _configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string> { { "FeatureManagement:Microsoft.Azure.WebJobs.Host.UnitTests", "1" } }).Build();
         }
 
         [Theory]
@@ -74,7 +74,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             {
                 WorkerCount = workerCount
             };
-            ScaleManager scaleManager = new ScaleManager(_monitorManagerMock.Object, _targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, _scaleOptions, _loggerFactory, _featureManagerMock.Object);
+            ScaleManager scaleManager = new ScaleManager(_monitorManagerMock.Object, _targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, _scaleOptions, _loggerFactory, _configuration);
             var status = await scaleManager.GetScaleStatusAsync(context);
 
             Assert.Equal(expected, status.Vote);
@@ -141,9 +141,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
                 IsTargetScalingEnabled = tbsEnabled,
             });
 
-            _featureManagerMock.Setup(p => p.IsEnabledAsync("Microsoft.Azure.WebJobs.Host.UnitTests")).ReturnsAsync(true);
-
-            ScaleManager scaleManager = new ScaleManager(_monitorManagerMock.Object, _targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, options, _loggerFactory, _featureManagerMock.Object);
+            ScaleManager scaleManager = new ScaleManager(_monitorManagerMock.Object, _targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, options, _loggerFactory, _configuration);
 
             var status = await scaleManager.GetScaleStatusAsync(context);
 
@@ -203,7 +201,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             };
             _metricsRepositoryMock.Setup(p => p.ReadMetricsAsync(It.IsAny<IEnumerable<IScaleMonitor>>())).ReturnsAsync(monitorMetrics);
 
-            ScaleManager scaleManager = new ScaleManager(_monitorManagerMock.Object, _targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, _scaleOptions, _loggerFactory, _featureManagerMock.Object);
+            ScaleManager scaleManager = new ScaleManager(_monitorManagerMock.Object, _targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, _scaleOptions, _loggerFactory, _configuration);
             var status = await scaleManager.GetScaleStatusAsync(context);
 
             var logs = _loggerProvider.GetAllLogMessages().ToArray();
@@ -242,9 +240,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
                 IsTargetScalingEnabled = true,
             });
 
-            _featureManagerMock.Setup(p => p.IsEnabledAsync("Microsoft.Azure.WebJobs.Host.UnitTests")).ReturnsAsync(true);
-
-            ScaleManager scaleManager = new ScaleManager(_monitorManagerMock.Object, _targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, options, _loggerFactory, _featureManagerMock.Object);
+            ScaleManager scaleManager = new ScaleManager(_monitorManagerMock.Object, _targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, options, _loggerFactory, _configuration);
 
             var status = await scaleManager.GetScaleStatusAsync(context);
 
@@ -290,7 +286,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
         [InlineData(false, true, 1, 0)]
         [InlineData(true, false, 1, 0)]
         [InlineData(true, true, 0, 1)]
-        public async Task GetScalersToSample_Returns_Expected(bool targetBaseScalingEnabled, bool triggerEnabled, int expectedScaleMonitorCount, int expectedTargetScalerCount)
+        public void GetScalersToSample_Returns_Expected(bool targetBaseScalingEnabled, bool triggerEnabled, int expectedScaleMonitorCount, int expectedTargetScalerCount)
         {
             List<IScaleMonitor> scaleMonitors = new List<IScaleMonitor>
             {
@@ -314,12 +310,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
                 IsTargetScalingEnabled = targetBaseScalingEnabled,
             });
 
-            _featureManagerMock.Setup(p => p.IsEnabledAsync("Microsoft.Azure.WebJobs.Host.UnitTests")).ReturnsAsync(triggerEnabled);
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string> { { "FeatureManagement:Microsoft.Azure.WebJobs.Host.UnitTests", triggerEnabled ? "1" : "0" } }).Build();
 
             ScaleManager manager = new ScaleManager(scaleMonitorManagerMock.Object, targetScalerManagerMock.Object, _metricsRepositoryMock.Object,
-                _concurrencyStatusRepositoryMock.Object, options, _loggerFactory, _featureManagerMock.Object);
+                _concurrencyStatusRepositoryMock.Object, options, _loggerFactory, configuration);
 
-            var (scaleMonitorsToProcess, targetScalesToProcess) = await manager.GetScalersToSampleAsync();
+            var (scaleMonitorsToProcess, targetScalesToProcess) = manager.GetScalersToSample();
 
             Assert.Equal(scaleMonitorsToProcess.Count(), expectedScaleMonitorCount);
             Assert.Equal(targetScalesToProcess.Count(), expectedTargetScalerCount);
@@ -359,11 +356,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
                 IsTargetScalingEnabled = true,
             });
 
-            _featureManagerMock.Setup(p => p.IsEnabledAsync("Microsoft.Azure.WebJobs.Host.UnitTests")).ReturnsAsync(true);
+            ScaleManager scaleManager = new ScaleManager(scaleMonitorManagerMock.Object, targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, options, _loggerFactory, _configuration);
 
-            ScaleManager scaleManager = new ScaleManager(scaleMonitorManagerMock.Object, targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, options, _loggerFactory, _featureManagerMock.Object);
-
-            var (monitors1, scalers1) = await scaleManager.GetScalersToSampleAsync();
+            var (monitors1, scalers1) = scaleManager.GetScalersToSample();
             Assert.Equal(monitors1.Count(), 0);
             Assert.Equal(scalers1.Count(), 2);
             ScaleStatus resutl1 = await scaleManager.GetScaleStatusAsync(context);
@@ -374,7 +369,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             Assert.Single(logs.Where(x => x == "Unable to use target based scaling for Function 'function1'. Metrics monitoring will be used."));
             _loggerProvider.ClearAllLogMessages();
 
-            var (monitors2, scalers2) = await scaleManager.GetScalersToSampleAsync();
+            var (monitors2, scalers2) = scaleManager.GetScalersToSample();
             Assert.Equal(monitors2.Count(), 1);
             Assert.Equal(scalers2.Count(), 1);
             ScaleStatus resutl2 = await scaleManager.GetScaleStatusAsync(context);
