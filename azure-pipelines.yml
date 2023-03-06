@@ -35,6 +35,9 @@ trigger:
     include:
     - dev
     - master
+  tags:
+    include:
+      - '*'
 
 jobs:
 - job: BuildAndTest
