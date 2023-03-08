@@ -13,8 +13,11 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
     /// </summary>
     public class TriggerMetadata
     {
+        private readonly string _name;
+        private readonly string _type;
+
         public TriggerMetadata(JObject metadata)
-            : this(metadata, new Dictionary<string, object>())
+            : this(metadata, new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase))
         {
         }
 
@@ -22,17 +25,20 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         {
             Metadata = metadata;
             Properties = properties;
+
+            _name = Metadata.GetValue("functionName", StringComparison.OrdinalIgnoreCase)?.Value<string>();
+            _type = Metadata.GetValue("type", StringComparison.OrdinalIgnoreCase)?.Value<string>();
         }
 
         /// <summary>
         /// Gets the name of the Function this trigger belongs to.
         /// </summary>
-        public string FunctionName => Metadata.GetValue("functionName", StringComparison.OrdinalIgnoreCase)?.Value<string>();
+        public string FunctionName => _name;
 
         /// <summary>
         /// Gets the type of the trigger.
         /// </summary>
-        public string Type => Metadata.GetValue("type", StringComparison.OrdinalIgnoreCase)?.Value<string>();
+        public string Type => _type;
 
         /// <summary>
         /// Gets all the properties tagged to this instance.

@@ -308,7 +308,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IScaleMetricsRepository",
                 "IScaleManager",
                 "ScaleOptions",
-                "TriggerMetadata"
+                "TriggerMetadata",
+                "AggregatedScaleStatus"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);

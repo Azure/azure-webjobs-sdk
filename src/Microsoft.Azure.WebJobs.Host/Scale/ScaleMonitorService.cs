@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -27,7 +28,12 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         private readonly IPrimaryHostStateProvider _primaryHostStateProvider;
         private bool _disposed;
 
-        public ScaleMonitorService(IScaleManager scaleManager, IScaleMetricsRepository metricsRepository, IOptions<ScaleOptions> scaleOptions, IPrimaryHostStateProvider primaryHostStateProvider, ILoggerFactory loggerFactory)
+        public ScaleMonitorService(
+            IScaleManager scaleManager,
+            IScaleMetricsRepository metricsRepository,
+            IOptions<ScaleOptions> scaleOptions,
+            IPrimaryHostStateProvider primaryHostStateProvider,
+            ILoggerFactory loggerFactory)
         {
             _scaleManager = scaleManager;
             _metricsRepository = metricsRepository;
@@ -37,12 +43,15 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             _primaryHostStateProvider = primaryHostStateProvider;
         }
 
-        public virtual Task StartAsync(CancellationToken cancellationToken)
+        public Task StartAsync(CancellationToken cancellationToken)
         {
-            // start the timer by setting the due time
-            string tbsState = _scaleOptions.Value.IsTargetScalingEnabled ? "enabled" : "disabled";
-            _logger.LogInformation($"Scale monitor service is started. Target base scaling is {tbsState}.");
-            SetTimerInterval((int)_scaleOptions.Value.ScaleMetricsSampleInterval.TotalMilliseconds);
+            if (_scaleOptions.Value.IsRuntimeScalingEnabled)
+            {
+                _logger.LogInformation("Runtime scale monitoring is enabled.");
+
+                // start the timer by setting the due time
+                SetTimerInterval((int)_scaleOptions.Value.ScaleMetricsSampleInterval.TotalMilliseconds);
+            }
 
             return Task.CompletedTask;
         }

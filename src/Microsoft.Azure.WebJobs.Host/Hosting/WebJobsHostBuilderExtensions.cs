@@ -5,8 +5,6 @@ using System;
 using System.Linq;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Azure.WebJobs.Host.Config;
-using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -14,6 +12,8 @@ using Microsoft.Extensions.Configuration.EnvironmentVariables;
 using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.Hosting
 {
@@ -165,6 +165,13 @@ namespace Microsoft.Extensions.Hosting
                 services.TryAddSingleton<IScaleManager, ScaleManager>();
                 services.AddHostedService<ScaleMonitorService>();
                 services.TryAddSingleton<IPrimaryHostStateProvider>(new PrimaryHostStateProvider() { IsPrimary = true });
+
+                // Options logging
+                services.AddTransient(typeof(OptionsFactory<>));
+                services.AddTransient(typeof(IOptionsFactory<>), typeof(WebJobsOptionsFactory<>));
+                services.AddSingleton<IOptionsLoggingSource, OptionsLoggingSource>();
+                services.AddSingleton<IHostedService, OptionsLoggingService>();
+                services.AddSingleton<IOptionsFormatter<LoggerFilterOptions>, LoggerFilterOptionsFormatter>();
             });
 
             return builder;

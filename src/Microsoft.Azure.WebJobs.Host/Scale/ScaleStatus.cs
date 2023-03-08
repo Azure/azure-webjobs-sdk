@@ -14,15 +14,5 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// Gets or sets the current scale decision.
         /// </summary>
         public ScaleVote Vote { get; set; }
-
-        /// <summary>
-        /// Gets or sets the current target worker count.
-        /// </summary>
-        public int? TargetWorkerCount { get; set; }
-
-        /// <summary>
-        /// Gets the individual scale statuses for all monitored functions.
-        /// </summary>
-        public IDictionary<string, ScaleStatus> FunctionScaleStatuses { get; set; }
     }
 }

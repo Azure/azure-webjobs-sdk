@@ -75,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 {
                     { "app_setting1", "value1" },
                     { "app_setting2", "value2"},
-                    { $"{Constants.FunctionsHostingConfigSectionName}:Microsoft.Azure.WebJobs.Host.EndToEndTests", "1" }
+                    { $"{Constants.HostingConfigSectionName}:Microsoft.Azure.WebJobs.Host.EndToEndTests", "1" }
                 });
             })
             .ConfigureServices(services =>
@@ -95,6 +95,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                     scaleOptions.IsTargetScalingEnabled = tbsEnabled;
                     scaleOptions.MetricsPurgeEnabled = false;
                     scaleOptions.ScaleMetricsMaxAge = TimeSpan.FromMinutes(4);
+                    scaleOptions.IsRuntimeScalingEnabled = true;
                 });
 
             foreach (TriggerMetadata t in triggerMetadata)
@@ -122,7 +123,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
             Assert.True(concurrencyStatusRepositories.SingleOrDefault(x => x is TestConcurrencyStatusRepository) != null);
 
             // Validate IConfiguration
-            var section = scaleHost.Services.GetService<IConfiguration>().GetSection(Constants.FunctionsHostingConfigSectionName);
+            var section = scaleHost.Services.GetService<IConfiguration>().GetSection(Constants.HostingConfigSectionName);
             Assert.False(section.GetValue<string>("sovemalue") == "1");
             Assert.True(section.GetValue<string>("Microsoft.Azure.WebJobs.Host.EndToEndTests") == "1");
             Assert.True(section.GetValue<string>("microsoft.azure.webJobs.host.endtoendtests") == "1");
@@ -131,16 +132,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
             {
                 IScaleManager scaleManager = scaleHost.Services.GetService<IScaleManager>();
 
-                var scaleStatus = await scaleManager.GetScaleStatusAsync(new ScaleStatusContext());
-                var functionScaleStatuses = scaleStatus.FunctionScaleStatuses;
+                var scaleStatus = await scaleManager.GetAggrigatedScaleStatusAsync(new ScaleStatusContext());
 
                 bool scaledOut = false;
                 if (!tbsEnabled)
                 {
-                    scaledOut = scaleStatus.Vote == ScaleVote.ScaleOut && scaleStatus.TargetWorkerCount == null
-                     && functionScaleStatuses[Function1Name].Vote == ScaleVote.ScaleOut && functionScaleStatuses[Function1Name].TargetWorkerCount == null
-                     && functionScaleStatuses[Function2Name].Vote == ScaleVote.ScaleOut && functionScaleStatuses[Function2Name].TargetWorkerCount == null
-                     && functionScaleStatuses[Function3Name].Vote == ScaleVote.ScaleOut && functionScaleStatuses[Function3Name].TargetWorkerCount == null;
+                    scaledOut = scaleStatus.Vote == ScaleVote.ScaleOut && scaleStatus.TargetWorkerCount == null && scaleStatus.FunctionsTargetScaleResults.Count == 0
+                        && scaleStatus.FunctionsScaleStatuses[Function1Name].Vote == ScaleVote.ScaleOut
+                        && scaleStatus.FunctionsScaleStatuses[Function2Name].Vote == ScaleVote.ScaleOut
+                        && scaleStatus.FunctionsScaleStatuses[Function3Name].Vote == ScaleVote.ScaleOut;
 
                     if (scaledOut)
                     {
@@ -150,10 +150,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 }
                 else
                 {
-                    scaledOut = scaleStatus.Vote == ScaleVote.ScaleOut && scaleStatus.TargetWorkerCount == 4
-                     && functionScaleStatuses[Function1Name].Vote == ScaleVote.ScaleOut && functionScaleStatuses[Function1Name].TargetWorkerCount == 2
-                     && functionScaleStatuses[Function2Name].Vote == ScaleVote.ScaleOut && functionScaleStatuses[Function2Name].TargetWorkerCount == 3
-                     && functionScaleStatuses[Function3Name].Vote == ScaleVote.ScaleOut && functionScaleStatuses[Function3Name].TargetWorkerCount == 4;
+                    scaledOut = scaleStatus.Vote == ScaleVote.ScaleOut && scaleStatus.TargetWorkerCount == 4 && scaleStatus.FunctionsScaleStatuses.Count == 0
+                     && scaleStatus.FunctionsTargetScaleResults[Function1Name].TargetWorkerCount == 2
+                     && scaleStatus.FunctionsTargetScaleResults[Function2Name].TargetWorkerCount == 3
+                     && scaleStatus.FunctionsTargetScaleResults[Function3Name].TargetWorkerCount == 4;
 
                     if (scaledOut)
                     {
@@ -165,12 +165,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 if (scaledOut)
                 {
                     var logMessages = loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage).ToArray();
-                    Assert.Contains(logMessages, p => p.Contains("Scale monitor service is started."));
+                    Assert.Contains(logMessages, p => p.Contains("Runtime scale monitoring is enabled."));
                     Assert.Contains(logMessages, p => p.Contains("Scaling out based on votes"));
                 }
 
                 return scaledOut;
-            });
+            }, 1000);
         }
 
         private class TestConcurrencyStatusRepository : IConcurrencyStatusRepository
@@ -345,7 +345,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
 
             return new ScaleStatus()
             {
-                TargetWorkerCount = targetWorkerCount,
                 Vote = ScaleVote.ScaleOut
             };
         }

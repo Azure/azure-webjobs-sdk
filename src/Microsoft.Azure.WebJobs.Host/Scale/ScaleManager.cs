@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 namespace Microsoft.Azure.WebJobs.Host.Scale
 {
     /// <summary>
-    /// Class to get scaling votes for all the triggers or for an individual trigger.
+    /// Manages scale monitoring operations.
     /// </summary>
     internal class ScaleManager : IScaleManager
     {
@@ -51,25 +51,33 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         {
         }
 
-
         /// <summary>
         /// Gets overall scale status for all the triggers.
         /// </summary>
         /// <param name="context">The scale status context</param>
         /// <returns>A task that returns <see cref="ScaleStatus"/> for all ther triggers.</returns>
-        public async Task<ScaleStatus> GetScaleStatusAsync(ScaleStatusContext context)
+        public async Task<AggregatedScaleStatus> GetAggrigatedScaleStatusAsync(ScaleStatusContext context)
         {
             var (scaleMonitorsToProcess, targetScalersToProcess) = GetScalersToSample();
 
-            var scaleMonitorStatuses = await GetScaleMonitorsResultAsync(context, scaleMonitorsToProcess);
-            var targetScalerStatuses = await GetTargetScalersResultAsync(context, targetScalersToProcess);
+            var scaleStatuses = await GetScaleMonitorsResultAsync(context, scaleMonitorsToProcess);
+            var targetScalerResults = await GetTargetScalersResultAsync(context, targetScalersToProcess);
 
-            return new ScaleStatus
+            var result = new AggregatedScaleStatus
             {
-                Vote = GetAggregateScaleVote(scaleMonitorStatuses.Values.Select(x => x.Vote).Union(targetScalerStatuses.Select(x => x.Value.Vote)), context, _logger),
-                TargetWorkerCount = targetScalerStatuses.Any() ? targetScalerStatuses.Max(x => x.Value.TargetWorkerCount) : null,
-                FunctionScaleStatuses = scaleMonitorStatuses.Concat(targetScalerStatuses).ToDictionary(s => s.Key, s => s.Value)
+                Vote = GetAggregateScaleVote(scaleStatuses.Values.Select(x => x.Vote), context, _logger),
+                TargetWorkerCount = targetScalerResults.Any() ? targetScalerResults.Max(x => x.Value.TargetWorkerCount) : null,
+                FunctionsScaleStatuses = scaleStatuses,
+                FunctionsTargetScaleResults = targetScalerResults
             };
+
+            // Set correct vote if all the triggers are target
+            if (!scaleStatuses.Any() && result.TargetWorkerCount.HasValue)
+            {
+                result.Vote = (ScaleVote)result.TargetWorkerCount.Value.CompareTo(context.WorkerCount);
+            }
+
+            return result;
         }
 
         private async Task<IDictionary<string, ScaleStatus>> GetScaleMonitorsResultAsync(ScaleStatusContext context, IEnumerable<IScaleMonitor> scaleMonitorsToProcess)
@@ -124,9 +132,9 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             return votes;
         }
 
-        private async Task<IDictionary<string, ScaleStatus>> GetTargetScalersResultAsync(ScaleStatusContext context, IEnumerable<ITargetScaler> targetScalersToProcess)
+        private async Task<IDictionary<string, TargetScalerResult>> GetTargetScalersResultAsync(ScaleStatusContext context, IEnumerable<ITargetScaler> targetScalersToProcess)
         {
-            Dictionary<string, ScaleStatus> targetScaleVotes = new Dictionary<string, ScaleStatus>();
+            Dictionary<string, TargetScalerResult> targetScaleVotes = new Dictionary<string, TargetScalerResult>();
 
             if (targetScalersToProcess != null && targetScalersToProcess.Any())
             {
@@ -173,21 +181,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                         }
                         _logger.LogDebug($"Target worker count for '{targetScaler.TargetScalerDescriptor.FunctionId}' is '{result.TargetWorkerCount}'");
 
-                        ScaleVote vote = ScaleVote.None;
-                        if (context.WorkerCount > result.TargetWorkerCount)
-                        {
-                            vote = ScaleVote.ScaleIn;
-                        }
-                        else if (context.WorkerCount < result.TargetWorkerCount)
-                        {
-                            vote = ScaleVote.ScaleOut;
-                        }
-
-                        targetScaleVotes.Add(targetScaler.TargetScalerDescriptor.FunctionId, new ScaleStatus
-                        {
-                            TargetWorkerCount = result.TargetWorkerCount,
-                            Vote = vote
-                        });
+                        targetScaleVotes.Add(targetScaler.TargetScalerDescriptor.FunctionId, result);
                     }
                     catch (Exception exc) when (!exc.IsFatal())
                     {
@@ -223,7 +217,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                     if (!_targetScalersInError.Contains(scalerUniqueId))
                     {
                         string assemblyName = GetAssemblyName(scaler.GetType());
-                        bool featureEnabled = _configuration.GetSection(Constants.FunctionsHostingConfigSectionName).GetValue<string>(assemblyName) == "1";
+                        bool featureEnabled = _configuration.GetSection(Constants.HostingConfigSectionName).GetValue<string>(assemblyName) == "1";
                         if (featureEnabled)
                         {
                             targetScalersToSample.Add(scaler);

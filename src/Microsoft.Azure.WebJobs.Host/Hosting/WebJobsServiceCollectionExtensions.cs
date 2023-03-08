@@ -90,6 +90,7 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IScaleMonitorManager, ScaleMonitorManager>();
             services.TryAddSingleton<ITargetScalerManager, TargetScalerManager>();
             services.TryAddSingleton<IScaleManager, ScaleManager>();
+            services.AddHostedService<ScaleMonitorService>();
 
             services.AddSingleton<IPrimaryHostStateProvider, PrimaryHostStateProvider>();
             services.AddSingleton<IHostedService, PrimaryHostCoordinator>();

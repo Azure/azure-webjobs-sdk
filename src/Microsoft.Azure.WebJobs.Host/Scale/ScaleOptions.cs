@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using Microsoft.Azure.WebJobs.Hosting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -10,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
     /// <summary>
     /// Configuration options for scaling.
     /// </summary>
-    public class ScaleOptions
+    public class ScaleOptions : IOptionsFormatter
     {
         private TimeSpan _scaleMetricsMaxAge;
         private TimeSpan _scaleMetricsSampleInterval;
@@ -78,6 +79,11 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// </summary>
         public bool IsTargetScalingEnabled { get; set; }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether runtime scale monitoring is enabled at the host level.
+        /// </summary>
+        public bool IsRuntimeScalingEnabled { get; set; }
+
         public string Format()
         {
             var options = new JObject
@@ -85,7 +91,8 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                 { nameof(ScaleMetricsMaxAge), ScaleMetricsMaxAge },
                 { nameof(ScaleMetricsSampleInterval), ScaleMetricsSampleInterval },
                 { nameof(MetricsPurgeEnabled), MetricsPurgeEnabled },
-                { nameof(IsTargetScalingEnabled), IsTargetScalingEnabled }
+                { nameof(IsTargetScalingEnabled), IsTargetScalingEnabled },
+                { nameof(IsRuntimeScalingEnabled), IsRuntimeScalingEnabled }
             };
 
             return options.ToString(Formatting.Indented);
