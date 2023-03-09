@@ -86,16 +86,25 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
 
         public string Format()
         {
-            var options = new JObject
+            // We only want to log ScaleOptions only if RTS is enabled in function host. Logging for clean webjobs does not make sense.
+            if (IsRuntimeScalingEnabled)
             {
-                { nameof(ScaleMetricsMaxAge), ScaleMetricsMaxAge },
-                { nameof(ScaleMetricsSampleInterval), ScaleMetricsSampleInterval },
-                { nameof(MetricsPurgeEnabled), MetricsPurgeEnabled },
-                { nameof(IsTargetScalingEnabled), IsTargetScalingEnabled },
-                { nameof(IsRuntimeScalingEnabled), IsRuntimeScalingEnabled }
-            };
 
-            return options.ToString(Formatting.Indented);
+                var options = new JObject
+                {
+                    { nameof(ScaleMetricsMaxAge), ScaleMetricsMaxAge },
+                    { nameof(ScaleMetricsSampleInterval), ScaleMetricsSampleInterval },
+                    { nameof(MetricsPurgeEnabled), MetricsPurgeEnabled },
+                    { nameof(IsTargetScalingEnabled), IsTargetScalingEnabled },
+                    { nameof(IsRuntimeScalingEnabled), IsRuntimeScalingEnabled }
+                };
+
+                return options.ToString(Formatting.Indented);
+            }
+            else
+            {
+                return null;
+            }
         }
     }
 }
