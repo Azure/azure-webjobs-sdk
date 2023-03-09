@@ -26,6 +26,9 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         private readonly ILogger _logger;
         private readonly IOptions<ScaleOptions> _scaleOptions;
         private readonly IPrimaryHostStateProvider _primaryHostStateProvider;
+        private readonly IScaleMonitorManager _monitorManager;
+        private readonly ITargetScalerManager _targetScalerManager;
+        private readonly IConfiguration _configuration;
         private bool _disposed;
 
         public ScaleMonitorService(
@@ -33,6 +36,9 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             IScaleMetricsRepository metricsRepository,
             IOptions<ScaleOptions> scaleOptions,
             IPrimaryHostStateProvider primaryHostStateProvider,
+            IScaleMonitorManager monitorManager,
+            ITargetScalerManager targetScalerManager,
+            IConfiguration configuration,
             ILoggerFactory loggerFactory)
         {
             _scaleManager = scaleManager;
@@ -41,6 +47,9 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             _logger = loggerFactory.CreateLogger<ScaleMonitorService>();
             _scaleOptions = scaleOptions;
             _primaryHostStateProvider = primaryHostStateProvider;
+            _monitorManager = monitorManager;
+            _targetScalerManager = targetScalerManager;
+            _configuration = configuration;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -84,7 +93,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             try
             {
                 // TODO: Need to fix this cast to ScaleManager
-                var (scaleMonitorsToProcess, targetScalersToSample) = (_scaleManager as ScaleManager).GetScalersToSample();
+                var (scaleMonitorsToProcess, targetScalersToSample) = ScaleManager.GetScalersToSample(_monitorManager, _targetScalerManager, _scaleOptions, _configuration);
 
                 if (scaleMonitorsToProcess.Any())
                 {

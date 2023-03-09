@@ -30,6 +30,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
         private readonly ILogger _testLogger;
         private readonly IOptions<ScaleOptions> _scaleOptions;
         private readonly IConfiguration _configuration;
+        private readonly HashSet<string> _targetScalersInError;
 
         public ScaleManagerTests()
         {
@@ -42,10 +43,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
 
             _monitorManagerMock = new Mock<IScaleMonitorManager>(MockBehavior.Strict);
             _monitorManagerMock.Setup(p => p.GetMonitors()).Returns(() => _monitors);
-            _metricsRepositoryMock = new Mock<IScaleMetricsRepository>(MockBehavior.Strict);
-            _metricsRepositoryMock.Setup(x => x.ReadMetricsAsync(It.IsAny<IEnumerable<IScaleMonitor>>())).ReturnsAsync(new Dictionary<IScaleMonitor, IList<ScaleMetrics>>());
             _targetScalerManagerMock = new Mock<ITargetScalerManager>(MockBehavior.Strict);
             _targetScalerManagerMock.Setup(p => p.GetTargetScalers()).Returns(() => _targetScalers);
+            _metricsRepositoryMock = new Mock<IScaleMetricsRepository>(MockBehavior.Strict);
+            _metricsRepositoryMock.Setup(x => x.ReadMetricsAsync(It.IsAny<IEnumerable<IScaleMonitor>>())).ReturnsAsync(new Dictionary<IScaleMonitor, IList<ScaleMetrics>>());
             _concurrencyStatusRepositoryMock = new Mock<IConcurrencyStatusRepository>(MockBehavior.Strict);
             _concurrencyStatusRepositoryMock.Setup(p => p.ReadAsync(It.IsAny<CancellationToken>())).ReturnsAsync(
                 new HostConcurrencySnapshot()
@@ -63,6 +64,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
 
             _configuration = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string> { { $"{Constants.HostingConfigSectionName}:Microsoft.Azure.WebJobs.Host.UnitTests", "1" } }).Build();
+
+            _targetScalersInError = new HashSet<string>();
         }
 
         [Theory]
@@ -313,10 +316,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             var configuration = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string> { { $"{Constants.HostingConfigSectionName}:Microsoft.Azure.WebJobs.Host.UnitTests", triggerEnabled ? "1" : "0" } }).Build();
 
-            ScaleManager manager = new ScaleManager(scaleMonitorManagerMock.Object, targetScalerManagerMock.Object, _metricsRepositoryMock.Object,
-                _concurrencyStatusRepositoryMock.Object, options, _loggerFactory, configuration);
 
-            var (scaleMonitorsToProcess, targetScalesToProcess) = manager.GetScalersToSample();
+            var (scaleMonitorsToProcess, targetScalesToProcess) = ScaleManager.GetScalersToSample(
+                scaleMonitorManagerMock.Object,
+                targetScalerManagerMock.Object,
+                options,
+                configuration
+                );
 
             Assert.Equal(scaleMonitorsToProcess.Count(), expectedScaleMonitorCount);
             Assert.Equal(targetScalesToProcess.Count(), expectedTargetScalerCount);
@@ -358,10 +364,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
 
             ScaleManager scaleManager = new ScaleManager(scaleMonitorManagerMock.Object, targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, options, _loggerFactory, _configuration);
 
-            var (monitors1, scalers1) = scaleManager.GetScalersToSample();
+            var (monitors1, scalers1) = ScaleManager.GetScalersToSample( //Col1
+                scaleMonitorManagerMock.Object,
+                targetScalerManagerMock.Object,
+                _scaleOptions,
+                _configuration
+                );
             Assert.Equal(monitors1.Count(), 0);
             Assert.Equal(scalers1.Count(), 2);
-            AggregatedScaleStatus resutl1 = await scaleManager.GetAggrigatedScaleStatusAsync(context);
+            AggregatedScaleStatus resutl1 = await scaleManager.GetAggrigatedScaleStatusAsync(context); // Col2
 
             Assert.Equal(resutl1.TargetWorkerCount, 1);
             Assert.Equal(resutl1.Vote, ScaleVote.None);
@@ -369,7 +380,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             Assert.Single(logs.Where(x => x == "Unable to use target based scaling for Function 'function1'. Metrics monitoring will be used."));
             _loggerProvider.ClearAllLogMessages();
 
-            var (monitors2, scalers2) = scaleManager.GetScalersToSample();
+            var (monitors2, scalers2) = ScaleManager.GetScalersToSample(
+                scaleMonitorManagerMock.Object,
+                targetScalerManagerMock.Object,
+                _scaleOptions,
+                _configuration
+                );
             Assert.Equal(monitors2.Count(), 1);
             Assert.Equal(scalers2.Count(), 1);
             AggregatedScaleStatus resutl2 = await scaleManager.GetAggrigatedScaleStatusAsync(context);

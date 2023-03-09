@@ -166,11 +166,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 {
                     var logMessages = loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage).ToArray();
                     Assert.Contains(logMessages, p => p.Contains("Runtime scale monitoring is enabled."));
-                    Assert.Contains(logMessages, p => p.Contains("Scaling out based on votes"));
+                    if (!tbsEnabled)
+                    {
+                        Assert.Contains(logMessages, p => p.Contains("Scaling out based on votes"));
+                    }
                 }
 
                 return scaledOut;
-            }, 1000);
+            }, pollingInterval: 1000);
         }
 
         private class TestConcurrencyStatusRepository : IConcurrencyStatusRepository
