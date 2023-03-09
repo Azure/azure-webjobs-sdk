@@ -15,6 +15,6 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// </summary>
         /// <param name="context">The <see cref="ScaleStatusContext"/>.</param>
         /// <returns>The current <see cref="ScaleStatus"/>.</returns>
-        Task<AggregatedScaleStatus> GetAggrigatedScaleStatusAsync(ScaleStatusContext context);
+        Task<AggregatedScaleStatus> GetAggregatedScaleStatusAsync(ScaleStatusContext context);
     }
 }

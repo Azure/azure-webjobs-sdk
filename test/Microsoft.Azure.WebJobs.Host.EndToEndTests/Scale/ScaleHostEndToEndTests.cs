@@ -132,7 +132,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
             {
                 IScaleManager scaleManager = scaleHost.Services.GetService<IScaleManager>();
 
-                var scaleStatus = await scaleManager.GetAggrigatedScaleStatusAsync(new ScaleStatusContext());
+                var scaleStatus = await scaleManager.GetAggregatedScaleStatusAsync(new ScaleStatusContext());
 
                 bool scaledOut = false;
                 if (!tbsEnabled)

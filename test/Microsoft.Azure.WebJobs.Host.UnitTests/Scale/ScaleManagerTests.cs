@@ -78,7 +78,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
                 WorkerCount = workerCount
             };
             ScaleManager scaleManager = new ScaleManager(_monitorManagerMock.Object, _targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, _scaleOptions, _loggerFactory, _configuration);
-            var status = await scaleManager.GetAggrigatedScaleStatusAsync(context);
+            var status = await scaleManager.GetAggregatedScaleStatusAsync(context);
 
             Assert.Equal(expected, status.Vote);
         }
@@ -146,7 +146,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
 
             ScaleManager scaleManager = new ScaleManager(_monitorManagerMock.Object, _targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, options, _loggerFactory, _configuration);
 
-            var status = await scaleManager.GetAggrigatedScaleStatusAsync(context);
+            var status = await scaleManager.GetAggregatedScaleStatusAsync(context);
 
             var logs = _loggerProvider.GetAllLogMessages().ToArray();
             if (!tbsEnabled)
@@ -205,7 +205,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             _metricsRepositoryMock.Setup(p => p.ReadMetricsAsync(It.IsAny<IEnumerable<IScaleMonitor>>())).ReturnsAsync(monitorMetrics);
 
             ScaleManager scaleManager = new ScaleManager(_monitorManagerMock.Object, _targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, _scaleOptions, _loggerFactory, _configuration);
-            var status = await scaleManager.GetAggrigatedScaleStatusAsync(context);
+            var status = await scaleManager.GetAggregatedScaleStatusAsync(context);
 
             var logs = _loggerProvider.GetAllLogMessages().ToArray();
             Assert.Equal("Computing scale status (WorkerCount=3)", logs[0].FormattedMessage);
@@ -245,7 +245,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
 
             ScaleManager scaleManager = new ScaleManager(_monitorManagerMock.Object, _targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, options, _loggerFactory, _configuration);
 
-            var status = await scaleManager.GetAggrigatedScaleStatusAsync(context);
+            var status = await scaleManager.GetAggregatedScaleStatusAsync(context);
 
             var logs = _loggerProvider.GetAllLogMessages().ToArray();
             Assert.Equal("3 target scalers to sample", logs[0].FormattedMessage);
@@ -372,7 +372,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
                 );
             Assert.Equal(monitors1.Count(), 0);
             Assert.Equal(scalers1.Count(), 2);
-            AggregatedScaleStatus resutl1 = await scaleManager.GetAggrigatedScaleStatusAsync(context); // Col2
+            AggregatedScaleStatus resutl1 = await scaleManager.GetAggregatedScaleStatusAsync(context); // Col2
 
             Assert.Equal(resutl1.TargetWorkerCount, 1);
             Assert.Equal(resutl1.Vote, ScaleVote.None);
@@ -388,7 +388,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
                 );
             Assert.Equal(monitors2.Count(), 1);
             Assert.Equal(scalers2.Count(), 1);
-            AggregatedScaleStatus resutl2 = await scaleManager.GetAggrigatedScaleStatusAsync(context);
+            AggregatedScaleStatus resutl2 = await scaleManager.GetAggregatedScaleStatusAsync(context);
             Assert.Equal(resutl2.TargetWorkerCount, null);
             Assert.Equal(resutl2.Vote, ScaleVote.ScaleIn);
             logs = _loggerProvider.GetAllLogMessages().Select(x => x.FormattedMessage).ToArray();

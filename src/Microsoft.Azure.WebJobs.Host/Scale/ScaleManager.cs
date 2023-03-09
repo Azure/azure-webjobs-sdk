@@ -58,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// </summary>
         /// <param name="context">The scale status context</param>
         /// <returns>A task that returns <see cref="ScaleStatus"/> for all ther triggers.</returns>
-        public async Task<AggregatedScaleStatus> GetAggrigatedScaleStatusAsync(ScaleStatusContext context)
+        public async Task<AggregatedScaleStatus> GetAggregatedScaleStatusAsync(ScaleStatusContext context)
         {
             var (scaleMonitorsToProcess, targetScalersToProcess) = GetScalersToSample(_monitorManager, _targetScalerManager, _scaleOptions, _configuration);
 
