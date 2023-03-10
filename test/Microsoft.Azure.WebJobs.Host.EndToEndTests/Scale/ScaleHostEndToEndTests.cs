@@ -372,8 +372,4 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
             });
         }
     }
-
-    internal class FakeAzureComponentFactory
-    {
-    }
 }

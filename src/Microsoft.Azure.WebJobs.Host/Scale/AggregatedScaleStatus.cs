@@ -6,7 +6,7 @@ using System.Collections.Generic;
 namespace Microsoft.Azure.WebJobs.Host.Scale
 {
     /// <summary>
-    /// Represents aggrigated scale status.
+    /// Represents aggregated scale status.
     /// </summary>
     public class AggregatedScaleStatus 
     {
