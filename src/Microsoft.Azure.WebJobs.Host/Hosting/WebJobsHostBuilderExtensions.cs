@@ -4,7 +4,6 @@
 using System;
 using System.Linq;
 using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -12,8 +11,6 @@ using Microsoft.Extensions.Configuration.EnvironmentVariables;
 using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.Hosting
 {
@@ -152,26 +149,8 @@ namespace Microsoft.Extensions.Hosting
         {
             builder.ConfigureServices((context, services) =>
             {
-                WebJobsBuilder webJobsBuilder = new WebJobsBuilder(services);
+                IWebJobsBuilder webJobsBuilder = services.AddWebJobsScale(configureScaleOptions);
                 configure?.Invoke(context, webJobsBuilder);
-
-                if (configureScaleOptions != null)
-                {
-                    services.Configure(configureScaleOptions);
-                }
-
-                services.TryAddSingleton<IScaleMonitorManager, ScaleMonitorManager>();
-                services.TryAddSingleton<ITargetScalerManager, TargetScalerManager>();
-                services.TryAddSingleton<IScaleManager, ScaleManager>();
-                services.AddHostedService<ScaleMonitorService>();
-                services.TryAddSingleton<IPrimaryHostStateProvider>(new PrimaryHostStateProvider() { IsPrimary = true });
-
-                // Options logging
-                services.AddTransient(typeof(OptionsFactory<>));
-                services.AddTransient(typeof(IOptionsFactory<>), typeof(WebJobsOptionsFactory<>));
-                services.AddSingleton<IOptionsLoggingSource, OptionsLoggingSource>();
-                services.AddSingleton<IHostedService, OptionsLoggingService>();
-                services.AddSingleton<IOptionsFormatter<LoggerFilterOptions>, LoggerFilterOptionsFormatter>();
             });
 
             return builder;

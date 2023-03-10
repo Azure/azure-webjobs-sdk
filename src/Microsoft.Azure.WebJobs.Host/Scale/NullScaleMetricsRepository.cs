@@ -8,6 +8,8 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
 {
     internal class NullScaleMetricsRepository : IScaleMetricsRepository
     {
+        private IDictionary<IScaleMonitor, IList<ScaleMetrics>> _emptyMetrics = new Dictionary<IScaleMonitor, IList<ScaleMetrics>>();
+
         public Task WriteMetricsAsync(IDictionary<IScaleMonitor, ScaleMetrics> monitorMetrics)
         {
             return Task.CompletedTask;
@@ -15,8 +17,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
 
         public Task<IDictionary<IScaleMonitor, IList<ScaleMetrics>>> ReadMetricsAsync(IEnumerable<IScaleMonitor> monitors)
         {
-            var dictionary = new Dictionary<IScaleManager, IList<ScaleMetrics>>();
-            return Task.FromResult((IDictionary<IScaleMonitor, IList<ScaleMetrics>>)dictionary);
+            return Task.FromResult((IDictionary<IScaleMonitor, IList<ScaleMetrics>>)_emptyMetrics);
         }
     }
 }

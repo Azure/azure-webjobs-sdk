@@ -30,7 +30,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
         private List<IScaleMonitor> _monitors;
         private List<ITargetScaler> _scalers;
 
-
         public ScaleMonitorServiceTests()
         {
             _monitors = new List<IScaleMonitor>();

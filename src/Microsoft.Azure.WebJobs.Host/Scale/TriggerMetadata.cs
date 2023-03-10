@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using Microsoft.CodeAnalysis;
 using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Scale
@@ -13,7 +12,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
     /// </summary>
     public class TriggerMetadata
     {
-        private readonly string _name;
+        private readonly string _functionName;
         private readonly string _type;
 
         public TriggerMetadata(JObject metadata)
@@ -26,14 +25,14 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             Metadata = metadata;
             Properties = properties;
 
-            _name = Metadata.GetValue("functionName", StringComparison.OrdinalIgnoreCase)?.Value<string>();
+            _functionName = Metadata.GetValue("functionName", StringComparison.OrdinalIgnoreCase)?.Value<string>();
             _type = Metadata.GetValue("type", StringComparison.OrdinalIgnoreCase)?.Value<string>();
         }
 
         /// <summary>
         /// Gets the name of the Function this trigger belongs to.
         /// </summary>
-        public string FunctionName => _name;
+        public string FunctionName => _functionName;
 
         /// <summary>
         /// Gets the type of the trigger.

@@ -21,7 +21,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
     internal class ScaleMonitorService : IHostedService, IDisposable
     {
         private readonly Timer _timer;
-        private readonly IScaleManager _scaleManager;
+        private readonly ScaleManager _scaleManager;
         private readonly IScaleMetricsRepository _metricsRepository;
         private readonly ILogger _logger;
         private readonly IOptions<ScaleOptions> _scaleOptions;
@@ -32,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         private bool _disposed;
 
         public ScaleMonitorService(
-            IScaleManager scaleManager,
+            ScaleManager scaleManager,
             IScaleMetricsRepository metricsRepository,
             IOptions<ScaleOptions> scaleOptions,
             IPrimaryHostStateProvider primaryHostStateProvider,
@@ -92,7 +92,6 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         {
             try
             {
-                // TODO: Need to fix this cast to ScaleManager
                 var (scaleMonitorsToProcess, targetScalersToSample) = ScaleManager.GetScalersToSample(_monitorManager, _targetScalerManager, _scaleOptions, _configuration);
 
                 if (scaleMonitorsToProcess.Any())

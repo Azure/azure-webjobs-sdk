@@ -1,23 +1,21 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.WebJobs.Host.Config;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Linq;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Host.Scale
 {
     /// <summary>
     /// Manages scale monitoring operations.
     /// </summary>
-    internal class ScaleManager : IScaleManager
+    public class ScaleManager
     {
         private readonly IScaleMonitorManager _monitorManager;
         private readonly ITargetScalerManager _targetScalerManager;
@@ -26,8 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         private readonly ILogger _logger;
         private readonly IConfiguration _configuration;
         private IOptions<ScaleOptions> _scaleOptions;
-
-        private static HashSet<string> targetScalersInError = new HashSet<string>();
+        private static HashSet<string> _targetScalersInError = new HashSet<string>();
 
         public ScaleManager(
             IScaleMonitorManager monitorManager,
@@ -43,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             _metricsRepository = metricsRepository;
             _concurrencyStatusRepository = concurrencyStatusRepository;
             _logger = loggerFactory?.CreateLogger<ScaleManager>();
-            ScaleManager.targetScalersInError = new HashSet<string>();
+            _targetScalersInError = new HashSet<string>();
             _scaleOptions = scaleConfiguration;
             _configuration = configuration;
         }
@@ -54,32 +51,32 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         }
 
         /// <summary>
-        /// Gets overall scale status for all the triggers.
+        /// Gets the scale status for all functions being monitored by the host.
         /// </summary>
-        /// <param name="context">The scale status context</param>
-        /// <returns>A task that returns <see cref="ScaleStatus"/> for all ther triggers.</returns>
-        public async Task<AggregatedScaleStatus> GetAggregatedScaleStatusAsync(ScaleStatusContext context)
+        /// <param name="context">The <see cref="ScaleStatusContext"/>.</param>
+        /// <returns>A task that returns the <see cref="AggregateScaleStatus"/>.</returns>
+        public async Task<AggregateScaleStatus> GetScaleStatusAsync(ScaleStatusContext context)
         {
             var (scaleMonitorsToProcess, targetScalersToProcess) = GetScalersToSample(_monitorManager, _targetScalerManager, _scaleOptions, _configuration);
 
             var scaleStatuses = await GetScaleMonitorsResultAsync(context, scaleMonitorsToProcess);
             var targetScalerResults = await GetTargetScalersResultAsync(context, targetScalersToProcess);
 
-            var result = new AggregatedScaleStatus
+            var aggregateScaleStatus = new AggregateScaleStatus
             {
                 Vote = GetAggregateScaleVote(scaleStatuses.Values.Select(x => x.Vote), context, _logger),
                 TargetWorkerCount = targetScalerResults.Any() ? targetScalerResults.Max(x => x.Value.TargetWorkerCount) : null,
-                FunctionsScaleStatuses = scaleStatuses,
-                FunctionsTargetScaleResults = targetScalerResults
+                FunctionScaleStatuses = scaleStatuses,
+                FunctionTargetScalerResults = targetScalerResults
             };
 
             // Set correct vote if all the triggers are target
-            if (!scaleStatuses.Any() && result.TargetWorkerCount.HasValue)
+            if (!scaleStatuses.Any() && aggregateScaleStatus.TargetWorkerCount.HasValue)
             {
-                result.Vote = (ScaleVote)result.TargetWorkerCount.Value.CompareTo(context.WorkerCount);
+                aggregateScaleStatus.Vote = (ScaleVote)aggregateScaleStatus.TargetWorkerCount.Value.CompareTo(context.WorkerCount);
             }
 
-            return result;
+            return aggregateScaleStatus;
         }
 
         private async Task<IDictionary<string, ScaleStatus>> GetScaleMonitorsResultAsync(ScaleStatusContext context, IEnumerable<IScaleMonitor> scaleMonitorsToProcess)
@@ -173,9 +170,9 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                         {
                             string targetScalerUniqueId = GetTargetScalerFunctionUniqueId(targetScaler);
                             _logger.LogWarning($"Unable to use target based scaling for Function '{targetScaler.TargetScalerDescriptor.FunctionId}'. Metrics monitoring will be used.", ex);
-                            lock (ScaleManager.targetScalersInError)
+                            lock (_targetScalersInError)
                             {
-                                ScaleManager.targetScalersInError.Add(targetScalerUniqueId);
+                                _targetScalersInError.Add(targetScalerUniqueId);
                             }
 
                             // Adding ScaleVote.None vote
@@ -221,7 +218,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                 foreach (var scaler in targetScalers)
                 {
                     string scalerUniqueId = GetTargetScalerFunctionUniqueId(scaler);
-                    if (!targetScalersInError.Contains(scalerUniqueId))
+                    if (!_targetScalersInError.Contains(scalerUniqueId))
                     {
                         string assemblyName = GetAssemblyName(scaler.GetType());
                         bool featureEnabled = configuration.GetSection(Constants.HostingConfigSectionName).GetValue<string>(assemblyName) == "1";

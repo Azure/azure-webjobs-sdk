@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 namespace Microsoft.Azure.WebJobs.Host.Scale
 {
     /// <summary>
-    /// Configuration options for scaling.
+    /// Options used to configure scale monitoring.
     /// </summary>
     public class ScaleOptions : IOptionsFormatter
     {
@@ -86,10 +86,9 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
 
         public string Format()
         {
-            // We only want to log ScaleOptions only if RTS is enabled in function host. Logging for clean webjobs does not make sense.
-            if (IsRuntimeScalingEnabled)
+            // only log options if scaling is enabled
+            if (IsRuntimeScalingEnabled || IsTargetScalingEnabled)
             {
-
                 var options = new JObject
                 {
                     { nameof(ScaleMetricsMaxAge), ScaleMetricsMaxAge },

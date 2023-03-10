@@ -130,17 +130,17 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
 
             await TestHelpers.Await(async () =>
             {
-                IScaleManager scaleManager = scaleHost.Services.GetService<IScaleManager>();
+                ScaleManager scaleManager = scaleHost.Services.GetService<ScaleManager>();
 
-                var scaleStatus = await scaleManager.GetAggregatedScaleStatusAsync(new ScaleStatusContext());
+                var scaleStatus = await scaleManager.GetScaleStatusAsync(new ScaleStatusContext());
 
                 bool scaledOut = false;
                 if (!tbsEnabled)
                 {
-                    scaledOut = scaleStatus.Vote == ScaleVote.ScaleOut && scaleStatus.TargetWorkerCount == null && scaleStatus.FunctionsTargetScaleResults.Count == 0
-                        && scaleStatus.FunctionsScaleStatuses[Function1Name].Vote == ScaleVote.ScaleOut
-                        && scaleStatus.FunctionsScaleStatuses[Function2Name].Vote == ScaleVote.ScaleOut
-                        && scaleStatus.FunctionsScaleStatuses[Function3Name].Vote == ScaleVote.ScaleOut;
+                    scaledOut = scaleStatus.Vote == ScaleVote.ScaleOut && scaleStatus.TargetWorkerCount == null && scaleStatus.FunctionTargetScalerResults.Count == 0
+                        && scaleStatus.FunctionScaleStatuses[Function1Name].Vote == ScaleVote.ScaleOut
+                        && scaleStatus.FunctionScaleStatuses[Function2Name].Vote == ScaleVote.ScaleOut
+                        && scaleStatus.FunctionScaleStatuses[Function3Name].Vote == ScaleVote.ScaleOut;
 
                     if (scaledOut)
                     {
@@ -150,10 +150,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 }
                 else
                 {
-                    scaledOut = scaleStatus.Vote == ScaleVote.ScaleOut && scaleStatus.TargetWorkerCount == 4 && scaleStatus.FunctionsScaleStatuses.Count == 0
-                     && scaleStatus.FunctionsTargetScaleResults[Function1Name].TargetWorkerCount == 2
-                     && scaleStatus.FunctionsTargetScaleResults[Function2Name].TargetWorkerCount == 3
-                     && scaleStatus.FunctionsTargetScaleResults[Function3Name].TargetWorkerCount == 4;
+                    scaledOut = scaleStatus.Vote == ScaleVote.ScaleOut && scaleStatus.TargetWorkerCount == 4 && scaleStatus.FunctionScaleStatuses.Count == 0
+                     && scaleStatus.FunctionTargetScalerResults[Function1Name].TargetWorkerCount == 2
+                     && scaleStatus.FunctionTargetScalerResults[Function2Name].TargetWorkerCount == 3
+                     && scaleStatus.FunctionTargetScalerResults[Function3Name].TargetWorkerCount == 4;
 
                     if (scaledOut)
                     {
