@@ -315,7 +315,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         }
 
         [Fact]
-        public async Task ReleaseLockAsync_FunctionCancellationTokenCancelled_ShouldNotThrow()
+        public async Task ReleaseLockAsync_FunctionCancellationTokenCancelled_ThrowsCancellationException()
         {
             var cancellationTokenSource = new CancellationTokenSource();
             CancellationToken cancellationToken = cancellationTokenSource.Token;
@@ -326,7 +326,23 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             // Cancel token source
             cancellationTokenSource.Cancel();
 
-            await _singletonManager.ReleaseLockAsync(lockHandle, cancellationToken);
+            // ReleaseLockAsync should throw an exception
+            await Assert.ThrowsAnyAsync<TaskCanceledException>(async () => await _singletonManager.ReleaseLockAsync(lockHandle, cancellationToken));
+
+            // Timer should've been stopped
+            await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => await lockHandle.LeaseRenewalTimer.StopAsync(cancellationToken));
+        }
+
+        [Fact]
+        public async Task ReleaseLockAsync_CancellationTokenNone_ReleasesLease_DoesNotThrow()
+        {
+            var cancellationTokenSource = new CancellationTokenSource();
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            SingletonAttribute attribute = new SingletonAttribute();
+            var lockHandle = await _singletonManager.TryLockAsync(TestLockId, TestInstanceId, attribute, cancellationToken);
+
+            await _singletonManager.ReleaseLockAsync(lockHandle, CancellationToken.None);
 
             // Timer should've been stopped
             await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => await lockHandle.LeaseRenewalTimer.StopAsync(cancellationToken));
