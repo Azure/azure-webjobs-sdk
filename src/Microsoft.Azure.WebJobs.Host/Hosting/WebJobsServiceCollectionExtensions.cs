@@ -90,7 +90,7 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IDistributedLockManager, InMemoryDistributedLockManager>();
 
             services.AddCommonScaleServices();
-            services.AddSingleton<IScaleMetricsRepository, NullScaleMetricsRepository>();
+            services.TryAddSingleton<IScaleMetricsRepository, NullScaleMetricsRepository>();
 
             services.AddSingleton<IPrimaryHostStateProvider, PrimaryHostStateProvider>();
             services.AddSingleton<IHostedService, PrimaryHostCoordinator>();
