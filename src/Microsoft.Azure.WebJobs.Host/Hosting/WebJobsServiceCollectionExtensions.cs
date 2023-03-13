@@ -118,12 +118,7 @@ namespace Microsoft.Azure.WebJobs
             services.AddSingleton(typeof(IWebJobsExtensionConfiguration<>), typeof(WebJobsExtensionConfiguration<>));
 
             // Options logging
-            services.AddTransient(typeof(OptionsFactory<>));
-            services.AddTransient(typeof(IOptionsFactory<>), typeof(WebJobsOptionsFactory<>));
-            services.AddSingleton<IOptionsLoggingSource, OptionsLoggingSource>();
-            services.AddSingleton<IHostedService, OptionsLoggingService>();
-            services.AddSingleton<IOptionsFormatter<LoggerFilterOptions>, LoggerFilterOptionsFormatter>();
-
+            services.AddOptionsLogging();
             // Concurrency management
             services.TryAddSingleton<IConcurrencyStatusRepository, NullConcurrencyStatusRepository>();
             services.TryAddSingleton<IHostProcessMonitor, DefaultHostProcessMonitor>();
@@ -182,12 +177,7 @@ namespace Microsoft.Azure.WebJobs
                 services.Configure(configure);
             }
 
-            // Options logging
-            services.AddTransient(typeof(OptionsFactory<>));
-            services.AddTransient(typeof(IOptionsFactory<>), typeof(WebJobsOptionsFactory<>));
-            services.AddSingleton<IOptionsLoggingSource, OptionsLoggingSource>();
-            services.AddSingleton<IHostedService, OptionsLoggingService>();
-            services.AddSingleton<IOptionsFormatter<LoggerFilterOptions>, LoggerFilterOptionsFormatter>();
+            services.AddOptionsLogging();
 
             var builder = new WebJobsBuilder(services);
             return builder;
@@ -209,6 +199,15 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<ITargetScalerManager, TargetScalerManager>();
             services.TryAddSingleton<ScaleManager>();
             services.AddHostedService<ScaleMonitorService>();
+        }
+
+        private static void AddOptionsLogging(this IServiceCollection services)
+        {
+            services.AddOptions();
+            services.AddTransient(typeof(IOptionsFactory<>), typeof(WebJobsOptionsFactory<>));
+            services.AddSingleton<IOptionsLoggingSource, OptionsLoggingSource>();
+            services.AddSingleton<IHostedService, OptionsLoggingService>();
+            services.AddSingleton<IOptionsFormatter<LoggerFilterOptions>, LoggerFilterOptionsFormatter>();
         }
     }
 }

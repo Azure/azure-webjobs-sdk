@@ -137,7 +137,7 @@ namespace Microsoft.Extensions.Hosting
         }
 
         /// <summary>
-        /// Configures the specified <see cref="IHostBuilder"/> as a scale manager host.
+        /// Configures the specified <see cref="IHostBuilder"/> as a scale manager host. This method is used for internal infrastructure only.
         /// </summary>
         /// <param name="builder">The <see cref="IHostBuilder"/> to configure.</param>
         /// <param name="configure">Configuration action to perform as part of service configuration.</param>
