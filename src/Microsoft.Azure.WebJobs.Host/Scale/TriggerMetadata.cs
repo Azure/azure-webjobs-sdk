@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         public TriggerMetadata(JObject metadata, IDictionary<string, object> properties)
         {
             Metadata = metadata ?? throw new ArgumentNullException(nameof(metadata));
-            Properties = properties;
+            Properties = properties ?? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
             _functionName = Metadata.GetValue("functionName", StringComparison.OrdinalIgnoreCase)?.Value<string>();
             _type = Metadata.GetValue("type", StringComparison.OrdinalIgnoreCase)?.Value<string>();
