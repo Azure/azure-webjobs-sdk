@@ -345,7 +345,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                             SingletonLock singleton = await parameterHelper.GetSingletonLockAsync();
                             if (singleton != null && singleton.IsHeld)
                             {
-                                await singleton.ReleaseAsync(cancellationToken);
+                                await singleton.ReleaseAsync(CancellationToken.None);
                             }
                         }
 

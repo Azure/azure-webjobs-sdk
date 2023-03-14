@@ -19,6 +19,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using static Microsoft.Azure.WebJobs.Host.BlobLeaseDistributedLockManager;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 {
@@ -305,6 +306,43 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
             var innerHandle = lockHandle.GetInnerHandle();
 
             await _singletonManager.ReleaseLockAsync(lockHandle, cancellationToken);
+
+            // Timer should've been stopped
+            await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => await lockHandle.LeaseRenewalTimer.StopAsync(cancellationToken));
+
+            // Verify lease has been released by SingletonManager
+            var lease = await _testContainerClient.GetBlobClient(string.Format("locks/{0}", TestLockId)).GetBlobLeaseClient().AcquireAsync(TimeSpan.FromSeconds(15));
+        }
+
+        [Fact]
+        public async Task ReleaseLockAsync_FunctionCancellationTokenCancelled_ThrowsCancellationException()
+        {
+            var cancellationTokenSource = new CancellationTokenSource();
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            SingletonAttribute attribute = new SingletonAttribute();
+            var lockHandle = await _singletonManager.TryLockAsync(TestLockId, TestInstanceId, attribute, cancellationToken);
+
+            // Cancel token source
+            cancellationTokenSource.Cancel();
+
+            // ReleaseLockAsync should throw an exception
+            await Assert.ThrowsAnyAsync<TaskCanceledException>(async () => await _singletonManager.ReleaseLockAsync(lockHandle, cancellationToken));
+
+            // Timer should've been stopped
+            await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => await lockHandle.LeaseRenewalTimer.StopAsync(cancellationToken));
+        }
+
+        [Fact]
+        public async Task ReleaseLockAsync_CancellationTokenNone_ReleasesLease_DoesNotThrow()
+        {
+            var cancellationTokenSource = new CancellationTokenSource();
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            SingletonAttribute attribute = new SingletonAttribute();
+            var lockHandle = await _singletonManager.TryLockAsync(TestLockId, TestInstanceId, attribute, cancellationToken);
+
+            await _singletonManager.ReleaseLockAsync(lockHandle, CancellationToken.None);
 
             // Timer should've been stopped
             await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => await lockHandle.LeaseRenewalTimer.StopAsync(cancellationToken));
