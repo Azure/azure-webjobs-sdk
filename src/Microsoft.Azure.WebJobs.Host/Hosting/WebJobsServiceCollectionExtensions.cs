@@ -203,7 +203,7 @@ namespace Microsoft.Azure.WebJobs
 
         private static void AddOptionsLogging(this IServiceCollection services)
         {
-            services.AddOptions();
+            services.AddTransient(typeof(OptionsFactory<>));
             services.AddTransient(typeof(IOptionsFactory<>), typeof(WebJobsOptionsFactory<>));
             services.AddSingleton<IOptionsLoggingSource, OptionsLoggingSource>();
             services.AddSingleton<IHostedService, OptionsLoggingService>();
