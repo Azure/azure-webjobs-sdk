@@ -53,7 +53,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             telemetryProps[LogConstants.ProcessIdKey] = _currentProcessId;
 
             // Apply our special scope properties
-            IDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
+            IDictionary<string, object> scopeProps = new Dictionary<string, object>();//DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
 
             string invocationId = scopeProps?.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId);
             if (invocationId != null)

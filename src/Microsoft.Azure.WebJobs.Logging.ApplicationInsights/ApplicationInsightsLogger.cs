@@ -24,6 +24,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         private readonly string _categoryName;
         private readonly bool _isUserFunction = false;
         private static readonly ConcurrentDictionary<string, string> _prefixedProperyNames = new ConcurrentDictionary<string, string>();
+        private readonly IExternalScopeProvider _scopeProvider;
 
         private const string DefaultCategoryName = "Default";
         private const string DateTimeFormatString = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffK";
@@ -50,12 +51,13 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 ScopeKeys.TriggerDetails
             };
 
-        public ApplicationInsightsLogger(TelemetryClient client, string categoryName, ApplicationInsightsLoggerOptions loggerOptions)
+        public ApplicationInsightsLogger(TelemetryClient client, string categoryName, ApplicationInsightsLoggerOptions loggerOptions, IExternalScopeProvider scopeProvider)
         {
             _telemetryClient = client;
             _loggerOptions = loggerOptions;
             _categoryName = categoryName ?? DefaultCategoryName;
             _isUserFunction = LogCategories.IsFunctionUserCategory(categoryName);
+            _scopeProvider = scopeProvider;
         }
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
@@ -165,9 +167,10 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         }
 
         // Applies scope properties; filters most system properties, which are used internally
-        private static void ApplyScopeProperties(IDictionary<string, string> properties)
+        private void ApplyScopeProperties(IDictionary<string, string> properties)
         {
-            var scopeProperties = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
+            //var scopeProperties = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
+            var scopeProperties = _scopeProvider.GetScopeDictionaryOrNull();
             if (scopeProperties != null)
             {
                 var customScopeProperties = scopeProperties.Where(p => !SystemScopeKeys.Contains(p.Key, StringComparer.Ordinal));
@@ -236,13 +239,13 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         }
 
         // Makes sure these are done in the correct order. If there are duplicate keys, the last State property wins.
-        private static void ApplyScopeAndStateProperties(IDictionary<string, string> properties, IEnumerable<KeyValuePair<string, object>> state)
+        private void ApplyScopeAndStateProperties(IDictionary<string, string> properties, IEnumerable<KeyValuePair<string, object>> state)
         {
             ApplyScopeProperties(properties);
             ApplyProperties(properties, state, true);
         }
 
-        internal static void ApplyProperty(IDictionary<string, string> properties, string key, object value, bool applyPrefix = false)
+        internal void ApplyProperty(IDictionary<string, string> properties, string key, object value, bool applyPrefix = false)
         {
             // do not apply null values
             if (value == null)
@@ -274,13 +277,13 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             properties[prefixedKey] = stringValue;
         }
 
-        private static void ApplyProperty(ISupportProperties telemetry, KeyValuePair<string, object> value, bool applyPrefix = false)
+        private void ApplyProperty(ISupportProperties telemetry, KeyValuePair<string, object> value, bool applyPrefix = false)
         {
             ApplyProperty(telemetry.Properties, value.Key, value.Value, applyPrefix);
         }
 
         // Inserts properties into the telemetry's properties. Properly formats dates, removes nulls, applies prefix, etc.
-        private static void ApplyProperties(IDictionary<string, string> properties, IEnumerable<KeyValuePair<string, object>> values, bool applyPrefix = false)
+        private void ApplyProperties(IDictionary<string, string> properties, IEnumerable<KeyValuePair<string, object>> values, bool applyPrefix = false)
         {
             foreach (var property in values)
             {
@@ -331,7 +334,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
         private void LogFunctionResult(IEnumerable<KeyValuePair<string, object>> state, LogLevel logLevel, Exception exception)
         {
-            IDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
+            IDictionary<string, object> scopeProps = _scopeProvider.GetScopeDictionaryOrNull();
             KeyValuePair<string, object>[] stateProps = state as KeyValuePair<string, object>[] ?? state.ToArray();
 
             // log associated exception details
@@ -451,7 +454,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
             StartTelemetryIfFunctionInvocation(state as IDictionary<string, object>);
 
-            return DictionaryLoggerScope.Push(state);
+            return _scopeProvider.Push(state);
         }
 
         private void StartTelemetryIfFunctionInvocation(IDictionary<string, object> stateValues)
@@ -461,7 +464,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 return;
             }
 
-            var allScopes = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
+            var allScopes = _scopeProvider.GetScopeDictionaryOrNull();
             // HTTP and ServiceBus triggers are tracked automatically by the ApplicationInsights SDK
             // In such case a current Activity is present.
             // We won't track and only stamp function specific details on the RequestTelemetry

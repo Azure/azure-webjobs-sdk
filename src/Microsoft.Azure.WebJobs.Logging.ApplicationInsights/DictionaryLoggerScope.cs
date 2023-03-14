@@ -8,11 +8,11 @@ using System.Threading;
 
 namespace Microsoft.Azure.WebJobs.Logging
 {
-    internal class DictionaryLoggerScope
+    internal class DictionaryLoggerScope1
     {
-        private static AsyncLocal<DictionaryLoggerScope> _value = new AsyncLocal<DictionaryLoggerScope>();
+        private static AsyncLocal<DictionaryLoggerScope1> _value = new AsyncLocal<DictionaryLoggerScope1>();
 
-        private DictionaryLoggerScope(IReadOnlyDictionary<string, object> state, DictionaryLoggerScope parent)
+        private DictionaryLoggerScope1(IReadOnlyDictionary<string, object> state, DictionaryLoggerScope1 parent)
         {
             State = state;
             Parent = parent;
@@ -20,9 +20,9 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         internal IReadOnlyDictionary<string, object> State { get; private set; }
 
-        internal DictionaryLoggerScope Parent { get; private set; }
+        internal DictionaryLoggerScope1 Parent { get; private set; }
 
-        public static DictionaryLoggerScope Current
+        public static DictionaryLoggerScope1 Current
         {
             get
             {
@@ -55,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Logging
                 return null;
             }
 
-            Current = new DictionaryLoggerScope(new ReadOnlyDictionary<string, object>(stateValues), Current);
+            Current = new DictionaryLoggerScope1(new ReadOnlyDictionary<string, object>(stateValues), Current);
             return new DisposableScope();
         }
 

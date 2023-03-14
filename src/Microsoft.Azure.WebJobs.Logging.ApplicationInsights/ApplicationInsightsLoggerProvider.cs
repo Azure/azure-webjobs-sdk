@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using Microsoft.ApplicationInsights;
@@ -11,7 +12,7 @@ using Microsoft.Extensions.Options;
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
     [ProviderAlias(Alias)]
-    public class ApplicationInsightsLoggerProvider : ILoggerProvider
+    public class ApplicationInsightsLoggerProvider : ILoggerProvider, ISupportExternalScope
     {
         internal const string Alias = "ApplicationInsights";
         // Allow for subscribing to flushing exceptions
@@ -22,6 +23,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         private readonly ApplicationInsightsLoggerOptions _loggerOptions;
         private DiagnosticSource _source = new DiagnosticListener(SourceName);
         private bool _disposed;
+        private IExternalScopeProvider _scopeProvider;
 
         public ApplicationInsightsLoggerProvider(TelemetryClient client, IOptions<ApplicationInsightsLoggerOptions> loggerOptions)
         {
@@ -38,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             _source = source;
         }
 
-        public ILogger CreateLogger(string categoryName) => new ApplicationInsightsLogger(_client, categoryName, _loggerOptions);
+        public ILogger CreateLogger(string categoryName) => new ApplicationInsightsLogger(_client, categoryName, _loggerOptions, _scopeProvider);
 
         public void Dispose()
         {
@@ -85,6 +87,34 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             {
                 _source.Write(SourceName, value);
             }
+        }
+
+        public void SetScopeProvider(IExternalScopeProvider scopeProvider)
+        {
+            _scopeProvider = scopeProvider;
+        }
+    }
+
+    internal static class IExternalScopeProviderExtensions
+    {
+        public static IDictionary<string, object> GetScopeDictionaryOrNull(this IExternalScopeProvider scopeProvider)
+        {
+            IDictionary<string, object> result = null;
+
+            scopeProvider.ForEachScope((scope, _) =>
+            {
+                if (scope is IEnumerable<KeyValuePair<string, object>> kvps)
+                {
+                    result = result ?? new Dictionary<string, object>(16, StringComparer.OrdinalIgnoreCase);
+
+                    foreach (var kvp in kvps)
+                    {
+                        result[kvp.Key] = kvp.Value;
+                    }
+                }
+            }, (object)null);
+
+            return result;
         }
     }
 }
