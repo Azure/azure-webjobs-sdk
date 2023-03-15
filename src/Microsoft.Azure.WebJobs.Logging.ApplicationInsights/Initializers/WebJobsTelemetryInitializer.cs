@@ -87,7 +87,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
                     if (!telemetryContext.Properties.ContainsKey(LogConstants.EventIdKey))
                     {
-                        if (scopeProps.GetValueOrDefault<int?>(LogConstants.EventIdKey).Value is int eventId && eventId != 0)
+                        if (scopeProps.GetValueOrDefault<int>(LogConstants.EventIdKey) is int eventId && eventId != 0)
                         {
                             telemetryContext.Properties[LogConstants.EventIdKey] = eventId.ToString(CultureInfo.InvariantCulture);
                         }
