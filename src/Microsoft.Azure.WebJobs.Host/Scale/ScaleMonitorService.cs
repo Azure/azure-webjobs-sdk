@@ -21,7 +21,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
     internal class ScaleMonitorService : IHostedService, IDisposable
     {
         private readonly Timer _timer;
-        private readonly ScaleManager _scaleManager;
+        private readonly IScaleStatusProvider _scaleStausProvider;
         private readonly IScaleMetricsRepository _metricsRepository;
         private readonly ILogger _logger;
         private readonly IOptions<ScaleOptions> _scaleOptions;
@@ -32,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         private bool _disposed;
 
         public ScaleMonitorService(
-            ScaleManager scaleManager,
+            IScaleStatusProvider scaleStausProvider,
             IScaleMetricsRepository metricsRepository,
             IOptions<ScaleOptions> scaleOptions,
             IPrimaryHostStateProvider primaryHostStateProvider,
@@ -41,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             IConfiguration configuration,
             ILoggerFactory loggerFactory)
         {
-            _scaleManager = scaleManager;
+            _scaleStausProvider = scaleStausProvider;
             _metricsRepository = metricsRepository;
             _timer = new Timer(OnTimer, null, Timeout.Infinite, Timeout.Infinite);
             _logger = loggerFactory.CreateLogger<ScaleMonitorService>();

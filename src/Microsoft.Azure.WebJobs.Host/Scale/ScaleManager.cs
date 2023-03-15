@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
     /// <summary>
     /// Manages scale monitoring operations.
     /// </summary>
-    public class ScaleManager
+    internal class ScaleManager : IScaleStatusProvider
     {
         private readonly IScaleMonitorManager _monitorManager;
         private readonly ITargetScalerManager _targetScalerManager;

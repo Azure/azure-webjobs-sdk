@@ -307,7 +307,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "TargetScalerResult",
                 "TargetScalerContext",
                 "IScaleMetricsRepository",
-                "ScaleManager",
+                "IScaleStatusProvider",
                 "ScaleOptions",
                 "TriggerMetadata",
                 "AggregateScaleStatus"
