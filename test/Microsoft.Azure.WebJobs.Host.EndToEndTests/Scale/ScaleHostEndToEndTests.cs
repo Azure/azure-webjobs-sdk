@@ -130,7 +130,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
 
             await TestHelpers.Await(async () =>
             {
-                ScaleManager scaleManager = scaleHost.Services.GetService<ScaleManager>();
+                IScaleStatusProvider scaleManager = scaleHost.Services.GetService<IScaleStatusProvider>();
 
                 var scaleStatus = await scaleManager.GetScaleStatusAsync(new ScaleStatusContext());
 
