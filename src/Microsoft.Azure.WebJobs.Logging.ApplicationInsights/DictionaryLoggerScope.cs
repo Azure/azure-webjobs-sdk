@@ -72,8 +72,7 @@ namespace Microsoft.Azure.WebJobs.Logging
 
                 foreach (var entry in Current.CurrentScope)
                 {
-                    scopeInfo[entry.Key] = entry.Value;
-                    //scopeInfo.Add(entry);
+                    scopeInfo.Add(entry);
                 }
                 // If the state contains the same key as current scope, it overwrites the value.
                 foreach (var entry in state)
