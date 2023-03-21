@@ -63,32 +63,34 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         private static void BuildCurrentScope(IDictionary<string, object> state)
         {
-            int itemCount = state.Count;
-            if (Current != null)
-            {
-                itemCount += Current.CurrentScope.Count;
-            }
-            IDictionary<string, object> scopeInfo = new Dictionary<string, object>(itemCount);
+            IDictionary<string, object> scopeInfo;
 
             // Copy the current scope to the new scope dictionary
             if (Current != null && Current.CurrentScope != null)
             {
+                scopeInfo = new Dictionary<string, object>(state.Count + Current.CurrentScope.Count, StringComparer.Ordinal);
+
                 foreach (var entry in Current.CurrentScope)
                 {
-                    scopeInfo.Add(entry);
+                    scopeInfo[entry.Key] = entry.Value;
+                    //scopeInfo.Add(entry);
+                }
+                // If the state contains the same key as current scope, it overwrites the value.
+                foreach (var entry in state)
+                {
+                    scopeInfo[entry.Key] = entry.Value;
                 }
             }
-            // If the state contains the same key as current scope, it overwrites the value.
-            foreach (var entry in state)
+            else
             {
-                scopeInfo[entry.Key] = entry.Value;
+                scopeInfo = new Dictionary<string, object>(state, StringComparer.Ordinal);
             }
             Current = new DictionaryLoggerScope(new ReadOnlyDictionary<string, object>(scopeInfo), Current);
         }
                 
         public static IReadOnlyDictionary<string, object> GetMergedStateDictionaryOrNull()
         {
-            if (Current == null || Current.CurrentScope == null)
+            if (Current == null)
             {
                 return null;
             }
