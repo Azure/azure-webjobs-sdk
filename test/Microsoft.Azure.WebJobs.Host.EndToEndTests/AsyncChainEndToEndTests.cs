@@ -150,7 +150,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     "Executed 'AsyncChainEndToEndTests.QueueToQueueAsync' (Succeeded, Id=",
                     $"Executing 'AsyncChainEndToEndTests.QueueToBlobAsync' (Reason='New queue message detected on '{secondQueueName}'.', Id=",
                     "Executed 'AsyncChainEndToEndTests.QueueToBlobAsync' (Succeeded, Id=",
-                    $"Executing 'AsyncChainEndToEndTests.BlobToBlobAsync' (Reason='New blob detected: {blobContainerName}/Blob1', Id=",
+                    $"Executing 'AsyncChainEndToEndTests.BlobToBlobAsync' (Reason='New blob detected(LogsAndContainerScan): {blobContainerName}/Blob1', Id=",
                     "Executed 'AsyncChainEndToEndTests.BlobToBlobAsync' (Succeeded, Id=",
                     "Job host stopped",
                     "Executing 'AsyncChainEndToEndTests.ReadResultBlob' (Reason='This function was programmatically called via the host APIs.', Id=",
