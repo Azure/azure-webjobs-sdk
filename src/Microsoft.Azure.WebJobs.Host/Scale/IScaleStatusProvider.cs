@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Microsoft.Azure.WebJobs.Host.Scale
 {
     /// <summary>
-    /// Interface for providing a scale status
+    /// Interface for providing aggregate scale status across all functions being monitored by the host.
     /// </summary>
     public interface IScaleStatusProvider
     {
