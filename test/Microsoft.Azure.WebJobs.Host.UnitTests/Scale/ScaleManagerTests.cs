@@ -39,7 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             _loggerProvider = new TestLoggerProvider();
             _loggerFactory = new LoggerFactory();
             _loggerFactory.AddProvider(_loggerProvider);
-            _testLogger = _loggerFactory.CreateLogger("Test");
+            _testLogger = _loggerFactory.CreateLogger<ScaleManagerTests>();
 
             _monitorManagerMock = new Mock<IScaleMonitorManager>(MockBehavior.Strict);
             _monitorManagerMock.Setup(p => p.GetMonitors()).Returns(() => _monitors);
