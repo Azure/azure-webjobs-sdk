@@ -46,7 +46,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             _targetScalerManagerMock = new Mock<ITargetScalerManager>(MockBehavior.Strict);
             _targetScalerManagerMock.Setup(p => p.GetTargetScalers()).Returns(() => _scalers);
             _configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string> { { $"{Constants.HostingConfigSectionName}:Microsoft.Azure.WebJobs.Host.UnitTests", "1" } }).Build();
+                .AddInMemoryCollection(new Dictionary<string, string> { { $"Microsoft.Azure.WebJobs.Host.UnitTests", "1" } }).Build();
 
             IOptions<ScaleOptions> options = Options.Create(new ScaleOptions()
             {

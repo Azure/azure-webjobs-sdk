@@ -63,7 +63,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             });
 
             _configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string> { { $"{Constants.HostingConfigSectionName}:Microsoft.Azure.WebJobs.Host.UnitTests", "1" } }).Build();
+                .AddInMemoryCollection(new Dictionary<string, string> { { "Microsoft.Azure.WebJobs.Host.UnitTests", "1" } }).Build();
 
             _targetScalersInError = new HashSet<string>();
         }
@@ -314,7 +314,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             });
 
             var configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string> { { $"{Constants.HostingConfigSectionName}:Microsoft.Azure.WebJobs.Host.UnitTests", triggerEnabled ? "1" : "0" } }).Build();
+                .AddInMemoryCollection(new Dictionary<string, string> { { "Microsoft.Azure.WebJobs.Host.UnitTests", triggerEnabled ? "1" : "0" } }).Build();
 
 
             var (scaleMonitorsToProcess, targetScalesToProcess) = ScaleManager.GetScalersToSample(
