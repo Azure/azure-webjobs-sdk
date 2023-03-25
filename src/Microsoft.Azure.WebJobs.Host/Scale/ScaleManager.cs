@@ -221,8 +221,8 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                     if (!_targetScalersInError.Contains(scalerUniqueId))
                     {
                         string assemblyName = GetAssemblyName(scaler.GetType());
-                        bool featureEnabled = configuration.GetSection(Constants.HostingConfigSectionName).GetValue<string>(assemblyName) == "1";
-                        if (featureEnabled)
+                        bool featureDisabled = configuration.GetValue<string>(assemblyName) == "0";
+                        if (!featureDisabled)
                         {
                             targetScalersToSample.Add(scaler);
                             targetScalerFunctions.Add(scalerUniqueId);

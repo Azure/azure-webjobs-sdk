@@ -75,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 {
                     { "app_setting1", "value1" },
                     { "app_setting2", "value2"},
-                    { $"{Constants.HostingConfigSectionName}:Microsoft.Azure.WebJobs.Host.EndToEndTests", "1" }
+                    { "Microsoft.Azure.WebJobs.Host.EndToEndTests", "1" }
                 });
             })
             .ConfigureServices(services =>
@@ -123,10 +123,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
             Assert.True(concurrencyStatusRepositories.SingleOrDefault(x => x is TestConcurrencyStatusRepository) != null);
 
             // Validate IConfiguration
-            var section = scaleHost.Services.GetService<IConfiguration>().GetSection(Constants.HostingConfigSectionName);
-            Assert.False(section.GetValue<string>("sovemalue") == "1");
-            Assert.True(section.GetValue<string>("Microsoft.Azure.WebJobs.Host.EndToEndTests") == "1");
-            Assert.True(section.GetValue<string>("microsoft.azure.webJobs.host.endtoendtests") == "1");
+            var config = scaleHost.Services.GetService<IConfiguration>();
+            Assert.False(config.GetValue<string>("sovemalue") == "1");
+            Assert.True(config.GetValue<string>("Microsoft.Azure.WebJobs.Host.EndToEndTests") == "1");
+            Assert.True(config.GetValue<string>("microsoft.azure.webJobs.host.endtoendtests") == "1");
 
             await TestHelpers.Await(async () =>
             {
