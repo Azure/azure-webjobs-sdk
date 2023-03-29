@@ -138,14 +138,14 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     case MetricCountKey when entry.Value is int count:
                         telemetry.Count = count;
                         break;
-                    case MetricMinKey when entry.Value is double min:
-                        telemetry.Min = min;
+                    case MetricMinKey:
+                        telemetry.Min = Convert.ToDouble(entry.Value);
                         break;
-                    case MetricMaxKey when entry.Value is double max:
-                        telemetry.Max = max;
+                    case MetricMaxKey:
+                        telemetry.Max = Convert.ToDouble(entry.Value);
                         break;
-                    case MetricStandardDeviationKey when entry.Value is double dev:
-                        telemetry.StandardDeviation = dev;
+                    case MetricStandardDeviationKey:
+                        telemetry.StandardDeviation = Convert.ToDouble(entry.Value);
                         break;
                     default:
                         // Otherwise, it's a custom property.
