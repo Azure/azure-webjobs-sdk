@@ -35,11 +35,12 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                 DateTime threshold = DateTime.UtcNow - _scaleOptions.Value.ScaleMetricsMaxAge;
                 foreach (var pair in _monitorMetrics)
                 {
-                    foreach (ScaleMetrics metric in pair.Value)
+
+                    for (int i = pair.Value.Count - 1; i >= 0; i--)
                     {
-                        if (metric.Timestamp < threshold)
+                        if (pair.Value[i].Timestamp < threshold)
                         {
-                            bool removed = _monitorMetrics.TryRemove(pair.Key, out _);
+                            pair.Value.RemoveAt(i);
                         }
                     }
                 }

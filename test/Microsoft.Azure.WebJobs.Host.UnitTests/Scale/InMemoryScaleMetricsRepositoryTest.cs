@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
@@ -16,7 +15,6 @@ using Xunit;
 
 namespace ScaleController.Tests
 {
-
     public class InMemoryScaleMetricsRepositoryTest
     {
         private readonly InMemoryScaleMetricsRepository _repository;
@@ -140,6 +138,35 @@ namespace ScaleController.Tests
 
             var result = await repository.ReadMetricsAsync(new IScaleMonitor[] { monitor1 });
             Assert.Equal(result.ToArray()[0].Value.Count(), expectedCount);
+        }
+
+        [Fact]
+        public async Task ReadMetricsAsync_LeaveMetrics()
+        {
+            ScaleOptions options = new ScaleOptions()
+            {
+                MetricsPurgeEnabled = true
+            };
+            FieldInfo fieldInfo = typeof(ScaleOptions).GetField("_scaleMetricsMaxAge", BindingFlags.NonPublic | BindingFlags.Instance);
+            fieldInfo.SetValue(options, TimeSpan.FromMilliseconds(1000));
+            var repository = new InMemoryScaleMetricsRepository(Options.Create(options), _loggerFactory);
+            var monitor1 = new TestScaleMonitor1();
+
+            // write metrics
+            Dictionary<IScaleMonitor, ScaleMetrics> metrics1 = new Dictionary<IScaleMonitor, ScaleMetrics>()
+            {
+                { monitor1, new TestScaleMetrics1 { Count = 1 } }
+            };
+            await repository.WriteMetricsAsync(metrics1);
+            await Task.Delay(TimeSpan.FromMilliseconds(1100));
+            Dictionary<IScaleMonitor, ScaleMetrics> metrics2 = new Dictionary<IScaleMonitor, ScaleMetrics>()
+            {
+                { monitor1, new TestScaleMetrics1 { Count = 2 } }
+            };
+            await repository.WriteMetricsAsync(metrics2);
+
+            var result = await repository.ReadMetricsAsync(new IScaleMonitor[] { monitor1 });
+            Assert.Equal(((TestScaleMetrics1)result.ToArray()[0].Value[0]).Count, 2);
         }
     }
 }
