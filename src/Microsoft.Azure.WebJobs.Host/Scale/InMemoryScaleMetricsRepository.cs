@@ -16,13 +16,13 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
     /// </summary>
     public class InMemoryScaleMetricsRepository : IScaleMetricsRepository
     {
-        private readonly ConcurrentDictionary<IScaleMonitor, IList<ScaleMetrics>> _monitorMetrics;
+        private readonly ConcurrentDictionary<IScaleMonitor, ConcurrentDictionary<ScaleMetrics, object>> _monitorMetrics;
         private readonly ILogger _logger;
         private readonly IOptions<ScaleOptions> _scaleOptions;
 
         public InMemoryScaleMetricsRepository(IOptions<ScaleOptions> scaleOptions, ILoggerFactory loggerFactory)
         {
-            _monitorMetrics = new ConcurrentDictionary<IScaleMonitor, IList<ScaleMetrics>>();
+            _monitorMetrics = new ConcurrentDictionary<IScaleMonitor, ConcurrentDictionary<ScaleMetrics, object>>();
             _scaleOptions = scaleOptions;
             _logger = loggerFactory.CreateLogger<InMemoryScaleMetricsRepository>();
         }
@@ -33,14 +33,20 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             if (_scaleOptions.Value.MetricsPurgeEnabled)
             {
                 DateTime threshold = DateTime.UtcNow - _scaleOptions.Value.ScaleMetricsMaxAge;
+
                 foreach (var pair in _monitorMetrics)
                 {
-
-                    for (int i = pair.Value.Count - 1; i >= 0; i--)
+                    if (_monitorMetrics.TryGetValue(pair.Key, out var metrics))
                     {
-                        if (pair.Value[i].Timestamp < threshold)
+                        foreach (var metric in metrics.Keys)
                         {
-                            pair.Value.RemoveAt(i);
+                            if (metric.Timestamp < threshold)
+                            {
+                                if (!metrics.TryRemove(metric, out _))
+                                {
+                                    _logger.LogWarning($"A metric for ${pair.Key.Descriptor.Id} was not removed successfully");
+                                }
+                            }
                         }
                     }
                 }
@@ -53,7 +59,10 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                 IList<ScaleMetrics> metrics = null;
                 if (metricsType != null)
                 {
-                    _monitorMetrics.TryGetValue(monitor, out metrics);
+                    if (_monitorMetrics.TryGetValue(monitor, out var exisitngMetrics))
+                    {
+                        metrics = exisitngMetrics.Keys.OrderBy(x => x.Timestamp).ToList();
+                    }
                 }
                 result.Add(monitor, metrics ?? new List<ScaleMetrics>());
             }
@@ -62,17 +71,22 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
 
         public Task WriteMetricsAsync(IDictionary<IScaleMonitor, ScaleMetrics> monitorMetrics)
         {
-            foreach (IScaleMonitor scaleMonitor in monitorMetrics.Keys)
+            foreach (var pair in monitorMetrics)
             {
-                if (_monitorMetrics.TryGetValue(scaleMonitor, out IList<ScaleMetrics> metrics))
+                if (_monitorMetrics.TryGetValue(pair.Key, out ConcurrentDictionary<ScaleMetrics, object> existingMetrics))
                 {
-                    metrics.Add(monitorMetrics[scaleMonitor]);
+                    if (!existingMetrics.TryAdd(pair.Value, null))
+                    {
+                        _logger.LogWarning($"A metric for ${pair.Key.Descriptor.Id} was not added successfully");
+                    }
                 }
                 else
                 {
-                    if (!_monitorMetrics.TryAdd(scaleMonitor, new List<ScaleMetrics>() { monitorMetrics[scaleMonitor] }))
+                    var metrics = new ConcurrentDictionary<ScaleMetrics, object>();
+                    metrics.TryAdd(pair.Value, null);
+                    if (_monitorMetrics.TryAdd(pair.Key, metrics))
                     {
-                        _logger.LogWarning($"Monitor {scaleMonitor.Descriptor.Id} already exists.");
+                        _logger.LogWarning($"A metric for ${pair.Key.Descriptor.Id} was not added successfully");
                     }
                 }
             }

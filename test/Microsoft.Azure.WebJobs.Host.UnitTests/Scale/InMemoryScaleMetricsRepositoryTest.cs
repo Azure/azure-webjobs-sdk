@@ -141,7 +141,7 @@ namespace ScaleController.Tests
         }
 
         [Fact]
-        public async Task ReadMetricsAsync_LeaveMetrics()
+        public async Task ReadMetricsAsync_ThreadSafe()
         {
             ScaleOptions options = new ScaleOptions()
             {
@@ -151,22 +151,52 @@ namespace ScaleController.Tests
             fieldInfo.SetValue(options, TimeSpan.FromMilliseconds(1000));
             var repository = new InMemoryScaleMetricsRepository(Options.Create(options), _loggerFactory);
             var monitor1 = new TestScaleMonitor1();
+            int count = 100000;
 
-            // write metrics
-            Dictionary<IScaleMonitor, ScaleMetrics> metrics1 = new Dictionary<IScaleMonitor, ScaleMetrics>()
+            Task writeTask1 = Task.Run(async () =>
             {
-                { monitor1, new TestScaleMetrics1 { Count = 1 } }
-            };
-            await repository.WriteMetricsAsync(metrics1);
+                for (int i = 0; i < count/2; i++)
+                {
+                    Dictionary<IScaleMonitor, ScaleMetrics> metrics1 = new Dictionary<IScaleMonitor, ScaleMetrics>()
+                    {
+                        { monitor1, new TestScaleMetrics1 { Count = 1 } }
+                    };
+                    await repository.WriteMetricsAsync(metrics1);
+                }
+            });
+            Task writeTask2 = Task.Run(async () =>
+            {
+                Dictionary<IScaleMonitor, ScaleMetrics> metrics1 = new Dictionary<IScaleMonitor, ScaleMetrics>()
+                {
+                    { monitor1, new TestScaleMetrics1 { Count = 1 } }
+                };
+                for (int i = 0; i < count/2; i++)
+                {
+                    await repository.WriteMetricsAsync(metrics1);
+                }
+            });
+            await Task.WhenAll(writeTask1, writeTask2);
+
             await Task.Delay(TimeSpan.FromMilliseconds(1100));
-            Dictionary<IScaleMonitor, ScaleMetrics> metrics2 = new Dictionary<IScaleMonitor, ScaleMetrics>()
-            {
-                { monitor1, new TestScaleMetrics1 { Count = 2 } }
-            };
-            await repository.WriteMetricsAsync(metrics2);
 
-            var result = await repository.ReadMetricsAsync(new IScaleMonitor[] { monitor1 });
-            Assert.Equal(((TestScaleMetrics1)result.ToArray()[0].Value[0]).Count, 2);
+            for (int i = 0; i < count; i++)
+            {
+                Dictionary<IScaleMonitor, ScaleMetrics> metrics2 = new Dictionary<IScaleMonitor, ScaleMetrics>()
+                {
+                    { monitor1, new TestScaleMetrics1 { Count = 2 } }
+                };
+                await repository.WriteMetricsAsync(metrics2);
+            }
+
+           var readTask1 = repository.ReadMetricsAsync(new IScaleMonitor[] { monitor1 });
+           var readTask2 = repository.ReadMetricsAsync(new IScaleMonitor[] { monitor1 });
+
+           await Task.WhenAll(readTask1, readTask2);
+
+           Assert.Equal(readTask1.Result.ToArray()[0].Value.Count, count);
+           Assert.Equal(((TestScaleMetrics1)readTask1.Result.ToArray()[0].Value[0]).Count, 2);
+           Assert.Equal(readTask2.Result.ToArray()[0].Value.Count, count);
+           Assert.Equal(((TestScaleMetrics1)readTask2.Result.ToArray()[0].Value[0]).Count, 2);
         }
     }
 }
