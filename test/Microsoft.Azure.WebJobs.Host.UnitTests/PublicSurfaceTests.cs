@@ -308,7 +308,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "TargetScalerResult",
                 "TargetScalerContext",
                 "IScaleMetricsRepository",
-                "InMemoryScaleMetricsRepository",
                 "IScaleStatusProvider",
                 "ScaleOptions",
                 "TriggerMetadata",

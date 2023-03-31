@@ -199,6 +199,7 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<ITargetScalerManager, TargetScalerManager>();
             services.TryAddSingleton<IScaleStatusProvider, ScaleManager>();
             services.AddHostedService<ScaleMonitorService>();
+            services.AddSingleton<IScaleMetricsRepository, InMemoryScaleMetricsRepository>();
         }
 
         private static void AddOptionsLogging(this IServiceCollection services)

@@ -14,7 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
     /// <summary>
     /// Class that implements <see cref="IScaleMetricsRepository"/> to reading/writing scale metrics from memory.
     /// </summary>
-    public class InMemoryScaleMetricsRepository : IScaleMetricsRepository
+    internal class InMemoryScaleMetricsRepository : IScaleMetricsRepository
     {
         private readonly ConcurrentDictionary<IScaleMonitor, ConcurrentDictionary<ScaleMetrics, object>> _monitorMetrics;
         private readonly ILogger _logger;
