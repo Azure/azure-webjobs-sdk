@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using Microsoft.Azure.WebJobs.Description;
-using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
