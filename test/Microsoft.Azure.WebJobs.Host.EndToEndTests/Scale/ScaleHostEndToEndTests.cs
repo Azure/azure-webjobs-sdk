@@ -84,7 +84,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 services.AddAzureStorageScaleServices();
 
                 services.AddSingleton<IConcurrencyStatusRepository, TestConcurrencyStatusRepository>();
-                services.AddSingleton<IScaleMetricsRepository, TestScaleMetricsRepository>();
             })
             .ConfigureWebJobsScale((context, builder) =>
                 {
@@ -197,31 +196,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                         { Function2Name, new FunctionConcurrencySnapshot() { Concurrency = 1 } }
                     }
                 });
-            }
-        }
-
-        private class TestScaleMetricsRepository : IScaleMetricsRepository
-        {
-            private IDictionary<IScaleMonitor, ScaleMetrics> _cache;
-
-            public Task WriteMetricsAsync(IDictionary<IScaleMonitor, ScaleMetrics> monitorMetrics)
-            {
-                _cache = monitorMetrics;
-                return Task.CompletedTask;
-            }
-
-            public Task<IDictionary<IScaleMonitor, IList<ScaleMetrics>>> ReadMetricsAsync(IEnumerable<IScaleMonitor> monitors)
-            {
-                IDictionary<IScaleMonitor, IList<ScaleMetrics>> result = new Dictionary<IScaleMonitor, IList<ScaleMetrics>>();
-                if (_cache != null)
-                {
-                    foreach (var pair in _cache)
-                    {
-                        result[pair.Key] = new List<ScaleMetrics>();
-                    }
-                }
-
-                return Task.FromResult(result);
             }
         }
 
