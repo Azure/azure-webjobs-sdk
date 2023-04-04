@@ -160,7 +160,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         // Applies scope properties; filters most system properties, which are used internally
         private static void ApplyScopeProperties(ITelemetry telemetry)
         {
-            var scopeProperties = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();            
+            var scopeProperties = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
             if (scopeProperties != null)
             {
                 foreach (var scopeProperty in scopeProperties)

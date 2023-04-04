@@ -22,6 +22,7 @@ namespace Microsoft.Azure.WebJobs.Logging
             CurrentScope = currentScope;
             Parent = parent;
         }
+
         public static DictionaryLoggerScope Current
         {
             get
