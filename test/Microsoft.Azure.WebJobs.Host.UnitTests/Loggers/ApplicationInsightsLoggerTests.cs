@@ -933,7 +933,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             var level1 = new Dictionary<string, object>
             {
                 ["AsyncLocal"] = asyncLocalSetting,
-                ["1"] = 1
+                ["1"] = 1,
+                ["shared"] = "Level1"
             };
 
             ILogger logger = CreateLogger(_functionCategoryName);
@@ -953,14 +954,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             var level2 = new Dictionary<string, object>
             {
-                ["2"] = 2
+                ["2"] = 2,
+                ["shared"] = "Level2"
             };
 
             var expectedLevel2 = new Dictionary<string, object>
             {
                 ["1"] = 1,
                 ["2"] = 2,
-                ["AsyncLocal"] = asyncLocalSetting
+                ["AsyncLocal"] = asyncLocalSetting,
+                ["shared"] = "Level2"
             };
 
             ILogger logger2 = CreateLogger(_functionCategoryName);
@@ -982,7 +985,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             var level3 = new Dictionary<string, object>
             {
                 ["1"] = 11,
-                ["3"] = 3
+                ["3"] = 3,
+                ["shared"] = "Level3"
             };
 
             var expectedLevel3 = new Dictionary<string, object>
@@ -990,7 +994,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 ["1"] = 11,
                 ["2"] = 2,
                 ["3"] = 3,
-                ["AsyncLocal"] = asyncLocalSetting
+                ["AsyncLocal"] = asyncLocalSetting,
+                ["shared"] = "Level3"
             };
 
             ILogger logger3 = CreateLogger(_functionCategoryName);
