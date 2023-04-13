@@ -5,7 +5,7 @@
     <HostStorageVersion>5.0.0$(VersionSuffix)</HostStorageVersion>
     <LoggingVersion>4.0.3$(VersionSuffix)</LoggingVersion>
     
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <!-- <TargetFramework>netstandard2.0</TargetFramework> -->
     <DebugType>embedded</DebugType>      
     <LatestCommit Condition="$(LatestCommit) == ''">$(CommitHash)</LatestCommit>
     <CommitHash Condition="$(CommitHash) == ''">N/A</CommitHash>
