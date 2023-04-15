@@ -33,6 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly ConcurrencyManager _concurrencyManager;
         private int _outstandingInvocations;
         private int _outstandingRetries;
+        private readonly Func<FunctionInstanceLogEntry, bool> _resultsLoggerFilter;
 
         private readonly Dictionary<string, object> _inputBindingScope = new Dictionary<string, object>
         {
@@ -57,7 +58,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 ConcurrencyManager concurrencyManager,
                 ILoggerFactory loggerFactory = null,
                 IEnumerable<IFunctionFilter> globalFunctionFilters = null,
-                IDrainModeManager drainModeManager = null)
+                IDrainModeManager drainModeManager = null,
+                Func<FunctionInstanceLogEntry, bool> resultsLoggerFilter = null)
         {
             _functionInstanceLogger = functionInstanceLogger ?? throw new ArgumentNullException(nameof(functionInstanceLogger));
             _functionOutputLogger = functionOutputLogger;
@@ -68,6 +70,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _globalFunctionFilters = globalFunctionFilters ?? Enumerable.Empty<IFunctionFilter>();
             _drainModeManager = drainModeManager;
             _concurrencyManager = concurrencyManager ?? throw new ArgumentNullException(nameof(concurrencyManager));
+            _resultsLoggerFilter = resultsLoggerFilter;
         }
 
         public HostOutputMessage HostOutputMessage
@@ -127,7 +130,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     {
                         CompleteInstanceLogEntry(instanceLogEntry, functionStartedMessage.Arguments, exceptionInfo);
                         await _functionEventCollector.AddAsync(instanceLogEntry);
-                        _resultsLogger?.LogFunctionResult(instanceLogEntry);
+                        if (_resultsLoggerFilter == null || _resultsLoggerFilter(instanceLogEntry))
+                        {
+                            _resultsLogger?.LogFunctionResult(instanceLogEntry);
+                        }
                     }
 
                     if (loggedStartedEvent)
