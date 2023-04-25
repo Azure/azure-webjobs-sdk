@@ -24,6 +24,27 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         public string ConnectionString { get; set; }
 
         /// <summary>
+        /// Gets or sets Application Insights Authentication Mode. If set, this will
+        /// take precedence over the default connection string based ingestion.
+        /// </summary>
+        public string AuthenticationMode { get; set; }
+                
+        /// <summary>
+        /// The Azure Active Directory tenant (directory) Id of the service principal.
+        /// </summary>
+        public string TenantId { get; set; }
+
+        /// <summary>
+        /// A client secret that was generated for the App Registration used to authenticate the client.
+        /// </summary>
+        public string ClientId { get; set; }
+
+        /// <summary>
+        /// The client (application) ID of the service principal.
+        /// </summary>
+        public string ClientSecret { get; set; }
+
+        /// <summary>
         /// Gets or sets sampling settings.
         /// </summary>
         public SamplingPercentageEstimatorSettings SamplingSettings { get; set; }
@@ -193,6 +214,10 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(LiveMetricsInitializationDelay), LiveMetricsInitializationDelay },
                 { nameof(EnableLiveMetrics), EnableLiveMetrics },
                 { nameof(EnableDependencyTracking), EnableDependencyTracking },
+                { nameof(AuthenticationMode), AuthenticationMode },
+                { nameof(ClientId), string.IsNullOrEmpty(ClientId)? null : "*******" },
+                { nameof(ClientSecret), string.IsNullOrEmpty(ClientSecret)? null : "*******" },
+                { nameof(TenantId), string.IsNullOrEmpty(TenantId)? null : "*******" },
                 { nameof(DependencyTrackingOptions), dependencyTrackingOptions }
             };
 

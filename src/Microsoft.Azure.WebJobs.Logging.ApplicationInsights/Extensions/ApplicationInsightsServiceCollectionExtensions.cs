@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Azure.Identity;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.AspNetCore;
 using Microsoft.ApplicationInsights.AspNetCore.Extensions;
@@ -297,6 +298,16 @@ namespace Microsoft.Extensions.DependencyInjection
             else if (options.InstrumentationKey != null)
             {
                 configuration.InstrumentationKey = options.InstrumentationKey;
+            }
+
+            // Default is connection string based ingestion
+            if (options.AuthenticationMode == AuthConstants.AppInsightsAuthManagedIdentityCredential)
+            {
+                configuration.SetAzureTokenCredential(new ManagedIdentityCredential());
+            }
+            else if (options.AuthenticationMode == AuthConstants.AppInsightsAuthClientSecretCredential)
+            {                
+                configuration.SetAzureTokenCredential(new ClientSecretCredential(options.TenantId, options.ClientId, options.ClientSecret));
             }
 
             configuration.TelemetryChannel = channel;
