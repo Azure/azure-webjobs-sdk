@@ -7,7 +7,7 @@ using Microsoft.Azure.WebJobs.Host.Rpc.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace Microsoft.Azure.WebJobs.Rpc
+namespace Microsoft.Azure.WebJobs.Extensions.Rpc
 {
     /// <summary>
     /// Extensions for registering host/worker RPC extensions on a <see cref="IWebJobsExtensionBuilder" />.

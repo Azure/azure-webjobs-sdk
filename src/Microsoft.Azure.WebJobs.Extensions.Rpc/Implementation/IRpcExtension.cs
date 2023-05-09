@@ -4,7 +4,7 @@
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.Azure.WebJobs.Rpc
+namespace Microsoft.Azure.WebJobs.Extensions.Rpc
 {
     /// <summary>
     /// Represents an extension for host/worker RPC communication.

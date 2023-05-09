@@ -4,7 +4,7 @@
 using System;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.Azure.WebJobs.Rpc
+namespace Microsoft.Azure.WebJobs.Extensions.Rpc
 {
     /// <summary>
     /// Log messages.

@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.Azure.WebJobs.Rpc
+namespace Microsoft.Azure.WebJobs.Extensions.Rpc
 {
     /// <summary>
     /// A gRPC-based host/worker RPC extension.

@@ -12,7 +12,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 
-namespace Microsoft.Azure.WebJobs.Rpc
+namespace Microsoft.Azure.WebJobs.Extensions.Rpc
 {
     /// <summary>
     /// EndpointDataSource for WebJobs extensions. This class is responsible for collecting endpoints
