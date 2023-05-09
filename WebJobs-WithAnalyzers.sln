@@ -57,7 +57,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExtensionViewer", "src\Anal
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{CC31FC25-60FC-43E1-96CC-034D8266241F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebJobs.Host.Grpc", "src\Microsoft.Azure.WebJobs.Host.Grpc\WebJobs.Host.Grpc.csproj", "{C2FF56AF-F29B-4244-8ABA-0EB1D6D4A571}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebJobs.Host.Rpc", "src\Microsoft.Azure.WebJobs.Host.Rpc\WebJobs.Host.Rpc.csproj", "{C2FF56AF-F29B-4244-8ABA-0EB1D6D4A571}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebJobs.Extensions.Rpc", "src\Microsoft.Azure.WebJobs.Extensions.Rpc\WebJobs.Extensions.Rpc.csproj", "{1AD3F506-416A-4685-9736-CF5EA80403FF}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
@@ -148,6 +150,10 @@ Global
 		{C2FF56AF-F29B-4244-8ABA-0EB1D6D4A571}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C2FF56AF-F29B-4244-8ABA-0EB1D6D4A571}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C2FF56AF-F29B-4244-8ABA-0EB1D6D4A571}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1AD3F506-416A-4685-9736-CF5EA80403FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1AD3F506-416A-4685-9736-CF5EA80403FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1AD3F506-416A-4685-9736-CF5EA80403FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1AD3F506-416A-4685-9736-CF5EA80403FF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -165,6 +171,7 @@ Global
 		{5745C753-CFD5-4BF6-B446-7C98F040D492} = {07D2801E-DFE3-4B62-856A-B7F3127AAA5F}
 		{DBA4C5BA-70D0-445E-9380-9FD3E1FB8926} = {07D2801E-DFE3-4B62-856A-B7F3127AAA5F}
 		{C2FF56AF-F29B-4244-8ABA-0EB1D6D4A571} = {CC31FC25-60FC-43E1-96CC-034D8266241F}
+		{1AD3F506-416A-4685-9736-CF5EA80403FF} = {CC31FC25-60FC-43E1-96CC-034D8266241F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {371BFA14-0980-4A43-A18A-CA1C1A9CB784}
