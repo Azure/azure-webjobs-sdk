@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27004.2010
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33627.172
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{639967B0-0544-4C52-94AC-9A3D25E33256}"
 EndProject
@@ -53,18 +53,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebJobs.VSAnalyzer.Core", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Analyzer2.Vsix", "src\Analyzer\WebJobs.VSAnalyzer.Vsix\Analyzer2.Vsix.csproj", "{5745C753-CFD5-4BF6-B446-7C98F040D492}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExtensionViewer", "src\Analyzer\ExtensionViewer\ExtensionViewer.csproj", "{DBA4C5BA-70D0-445E-9380-9FD3E1FB8926}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ExtensionViewer", "src\Analyzer\ExtensionViewer\ExtensionViewer.csproj", "{DBA4C5BA-70D0-445E-9380-9FD3E1FB8926}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{CC31FC25-60FC-43E1-96CC-034D8266241F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.Host.Rpc", "src\Microsoft.Azure.WebJobs.Host.Rpc\WebJobs.Host.Rpc.csproj", "{C2FF56AF-F29B-4244-8ABA-0EB1D6D4A571}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebJobs.Host.Rpc", "src\Microsoft.Azure.WebJobs.Host.Rpc\WebJobs.Host.Rpc.csproj", "{C2FF56AF-F29B-4244-8ABA-0EB1D6D4A571}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebJobs.Extensions.Rpc", "src\Microsoft.Azure.WebJobs.Extensions.Rpc\WebJobs.Extensions.Rpc.csproj", "{1AD3F506-416A-4685-9736-CF5EA80403FF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.Extensions.Rpc", "src\Microsoft.Azure.WebJobs.Extensions.Rpc\WebJobs.Extensions.Rpc.csproj", "{1AD3F506-416A-4685-9736-CF5EA80403FF}"
 EndProject
 Global
-	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.projitems*{add036f5-2170-4b05-9e0a-c2ed0a08a929}*SharedItemsImports = 13
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
@@ -170,10 +165,13 @@ Global
 		{D8D0281F-583F-4BA4-89CD-ECAFD6BD22A8} = {07D2801E-DFE3-4B62-856A-B7F3127AAA5F}
 		{5745C753-CFD5-4BF6-B446-7C98F040D492} = {07D2801E-DFE3-4B62-856A-B7F3127AAA5F}
 		{DBA4C5BA-70D0-445E-9380-9FD3E1FB8926} = {07D2801E-DFE3-4B62-856A-B7F3127AAA5F}
-		{C2FF56AF-F29B-4244-8ABA-0EB1D6D4A571} = {CC31FC25-60FC-43E1-96CC-034D8266241F}
-		{1AD3F506-416A-4685-9736-CF5EA80403FF} = {CC31FC25-60FC-43E1-96CC-034D8266241F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {371BFA14-0980-4A43-A18A-CA1C1A9CB784}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.projitems*{32f7d43d-1dd6-46f3-90fe-99b914de8daa}*SharedItemsImports = 5
+		src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.projitems*{39554abe-d7b7-45ff-8d7c-56432abcde3d}*SharedItemsImports = 5
+		src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.projitems*{add036f5-2170-4b05-9e0a-c2ed0a08a929}*SharedItemsImports = 13
 	EndGlobalSection
 EndGlobal
