@@ -14,6 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
     /// fail any time new dependencies or public surface area are added, ensuring
     /// we review such additions carefully.
     /// </summary>
+    [Trait(TestTraits.CategoryTraitName, TestTraits.ScaleMonitoring)]
     public class PublicSurfaceTests
     {
         [Fact]
@@ -304,7 +305,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "ITargetScalerProvider",
                 "TargetScalerDescriptor",
                 "TargetScalerResult",
-                "TargetScalerContext"
+                "TargetScalerContext",
+                "IScaleMetricsRepository",
+                "IScaleStatusProvider",
+                "ScaleOptions",
+                "TriggerMetadata",
+                "AggregateScaleStatus"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);
@@ -318,6 +324,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var expected = new[]
             {
                 "ApplicationInsightsLoggerOptions",
+                "ApplicationInsightsDiagnosticConstants",
                 "HttpAutoCollectionOptions",
                 "ApplicationInsightsLoggerProvider",
                 "ApplicationInsightsLoggingBuilderExtensions",

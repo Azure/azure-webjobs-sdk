@@ -1,8 +1,16 @@
 ﻿param (
+  [string]$buildVersion,
   [string]$packageSuffix = "0",
   [bool]$isLocal = $false,
-  [string]$outputDirectory = "..\..\buildoutput"
+  [bool]$isPr = $false,
+  [string]$outputDirectory = (Join-Path -Path $PSScriptRoot -ChildPath "buildoutput"),
+  [bool]$forceArtifacts = $false,
+  [bool]$skipAssemblySigning = $false
 )
+
+if ($null -eq $buildVersion) {
+  throw "Parameter $buildVersion cannot be null or empty. Exiting script."
+}
 
 if ($isLocal){
   $packageSuffix = "dev" + [datetime]::UtcNow.Ticks.ToString()
@@ -33,12 +41,12 @@ foreach ($project in $projects)
     $cmd += "--version-suffix", "-$packageSuffix"
   }
 
-  & dotnet $cmd
+  & { dotnet $cmd }
+  if (-not $?) { exit 1 }
 }
 
 ### Sign package if build is not a PR
-$isPr = Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER
-if ((-not $isPr -and -not $isLocal) -or $env:ForceArtifacts -eq "1") {
-  & ".\tools\RunSigningJob.ps1"
+if ((-not $isPr -and -not $isLocal) -or $forceArtifacts) {
+  & { .\tools\RunSigningJob.ps1 -isPr $isPr -artifactDirectory $outputDirectory -buildVersion $buildVersion -forceArtifacts $forceArtifacts -skipAssemblySigning $skipAssemblySigning}
   if (-not $?) { exit 1 }
 }

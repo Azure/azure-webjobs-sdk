@@ -1,30 +1,45 @@
-$isPr = Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER
-$directoryPath = Split-Path $MyInvocation.MyCommand.Path -Parent
+param (
+  [string]$buildVersion,
+  [bool]$isPr = $false,
+  [string]$artifactDirectory,
+  [bool]$forceArtifacts = $false,
+  [bool]$skipAssemblySigning = $false
+)
 
-if (-not $isPr -or $env:ForceArtifacts -eq "1") {
-  Write-Host "Zipping output for signing"
+if ($null -eq $buildVersion) {
+  throw "Parameter $buildVersion cannot be null or empty. Exiting script."
+}
 
-  Compress-Archive -Force $directoryPath\..\..\..\buildoutput\* $directoryPath\..\..\..\buildoutput\tosign.zip
-  Write-Host "Signing payload created at " $directoryPath\..\..\..\buildoutput\tosign.zip
+if (-not (Test-Path $artifactDirectory)) {
+  throw "Artifact directory '$artifactDirectory' not found. Exiting script."
+}
 
-  if ($env:SkipAssemblySigning -eq "true") {
+if (-not $isPr -or $forceArtifacts) {
+  $toSignPath = Join-Path -Path $artifactDirectory -ChildPath "*"
+  $toSignZipPath = Join-Path -Path $artifactDirectory -ChildPath "tosign.zip"
+
+  Write-Host "Zipping files for signing matching path: $toSignPath"
+  Compress-Archive -Force -Path $toSignPath -DestinationPath $toSignZipPath
+  Write-Host "Signing payload created at:" $toSignZipPath
+
+  if ($skipAssemblySigning) {
     "Assembly signing disabled. Skipping signing process."
     exit 0;
   }
 
-  if ($env:FILES_ACCOUNT_NAME -eq $null -or $env:FILES_ACCOUNT_KEY -eq $null) {
+  if ($null -eq $env:FILES_ACCOUNT_NAME -or $null -eq $env:FILES_ACCOUNT_KEY ) {
     "Assembly signing credentials not present. Skipping signing process."
     exit 0;
   }
 
-  Write-Host "Uploading signing job to storage"
+  Write-Host "Uploading signing job to storage."
+  # This will fail if the artifacts already exist.
+  $ctx = New-AzureStorageContext -StorageAccountName $env:FILES_ACCOUNT_NAME -StorageAccountKey $env:FILES_ACCOUNT_KEY
+  Set-AzureStorageBlobContent -File $toSignZipPath -Container "webjobs" -Blob "$buildVersion.zip" -Context $ctx
 
-  $ctx = New-AzureStorageContext $env:FILES_ACCOUNT_NAME $env:FILES_ACCOUNT_KEY
-  Set-AzureStorageBlobContent "$directoryPath/../../../buildoutput/tosign.zip" "webjobs" -Blob "$env:APPVEYOR_BUILD_VERSION.zip" -Context $ctx
+  $queue = Get-AzureStorageQueue -Name "signing-jobs" -Context $ctx
 
-  $queue = Get-AzureStorageQueue "signing-jobs" -Context $ctx
-
-  $messageBody = "SignNupkgs;webjobs;$env:APPVEYOR_BUILD_VERSION.zip"
+  $messageBody = "SignNupkgs;webjobs;$buildVersion.zip"
   # $message = New-Object -TypeName Microsoft.WindowsAzure.Storage.Queue.CloudQueueMessage -ArgumentList $messageBody
   $queue.CloudQueue.AddMessage($messageBody)
 }

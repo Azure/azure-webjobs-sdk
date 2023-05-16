@@ -36,6 +36,13 @@ namespace Microsoft.Extensions.Hosting
             services.AddSingleton<IConcurrencyStatusRepository, BlobStorageConcurrencyStatusRepository>();
         }
 
+        public static void AddAzureStorageScaleServices(this IServiceCollection services)
+        {
+            services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, CoreWebJobsOptionsSetup<JobHostInternalStorageOptions>>());
+            services.TryAddSingleton<IAzureBlobStorageProvider, AzureStorageProvider>();
+            services.AddSingleton<IConcurrencyStatusRepository, BlobStorageConcurrencyStatusRepository>();
+        }
+
         // This is only called if the host didn't already provide an implementation
         private static IDistributedLockManager Create(IServiceProvider provider)
         {
