@@ -301,13 +301,27 @@ namespace Microsoft.Extensions.DependencyInjection
             }
 
             // Default is connection string based ingestion
-            if (options.AuthenticationMode == AuthConstants.AppInsightsAuthManagedIdentityCredential)
+            if (string.Equals(options.AuthenticationMode, AuthConstants.AppInsightsAuthManagedIdentityCredential, StringComparison.OrdinalIgnoreCase))
             {
                 configuration.SetAzureTokenCredential(new ManagedIdentityCredential());
             }
-            else if (options.AuthenticationMode == AuthConstants.AppInsightsAuthClientSecretCredential)
-            {                
-                configuration.SetAzureTokenCredential(new ClientSecretCredential(options.TenantId, options.ClientId, options.ClientSecret));
+            else if (string.Equals(options.AuthenticationMode, AuthConstants.AppInsightsAuthClientSecretCredential, StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrEmpty(options.AuthClientSecretCredentialTenantId))
+                {
+                    throw new ArgumentNullException(nameof(options.AuthClientSecretCredentialTenantId));
+                }
+
+                if (string.IsNullOrEmpty(options.AuthClientSecretCredentialClientId))
+                {
+                    throw new ArgumentNullException(nameof(options.AuthClientSecretCredentialClientId));
+                }
+
+                if (string.IsNullOrEmpty(options.AuthClientSecretCredentialClientSecret))
+                {
+                    throw new ArgumentNullException(nameof(options.AuthClientSecretCredentialClientSecret));
+                }
+                configuration.SetAzureTokenCredential(new ClientSecretCredential(options.AuthClientSecretCredentialTenantId, options.AuthClientSecretCredentialClientId, options.AuthClientSecretCredentialClientSecret));
             }
 
             configuration.TelemetryChannel = channel;

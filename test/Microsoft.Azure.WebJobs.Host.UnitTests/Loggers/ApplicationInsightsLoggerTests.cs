@@ -730,7 +730,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                     EnableLegacyCorrelationHeadersInjection = true,
                     EnableRequestIdHeaderInjectionInW3CMode = true,
                     SetComponentCorrelationHttpHeaders = true
-                }
+                },
+                AuthenticationMode = "ClientSecretCredential",
+                AuthClientSecretCredentialClientId = "1",
+                AuthClientSecretCredentialClientSecret = "2",
+                AuthClientSecretCredentialTenantId = "3",
             };
 
             var deserializedOptions = JsonConvert.DeserializeObject<ApplicationInsightsLoggerOptions>(options.Format());
@@ -773,6 +777,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(options.DependencyTrackingOptions.EnableLegacyCorrelationHeadersInjection, deserializedOptions.DependencyTrackingOptions.EnableLegacyCorrelationHeadersInjection);
             Assert.Equal(options.DependencyTrackingOptions.EnableRequestIdHeaderInjectionInW3CMode, deserializedOptions.DependencyTrackingOptions.EnableRequestIdHeaderInjectionInW3CMode);
             Assert.Equal(options.DependencyTrackingOptions.EnableSqlCommandTextInstrumentation, deserializedOptions.DependencyTrackingOptions.EnableSqlCommandTextInstrumentation);
+            Assert.Equal(deserializedOptions.AuthClientSecretCredentialClientId, "*******");
+            Assert.Equal(deserializedOptions.AuthClientSecretCredentialClientSecret, "*******");
+            Assert.Equal(deserializedOptions.AuthClientSecretCredentialTenantId, "*******");
+            Assert.Equal(options.AuthenticationMode, deserializedOptions.AuthenticationMode);
         }
 
         [Fact]

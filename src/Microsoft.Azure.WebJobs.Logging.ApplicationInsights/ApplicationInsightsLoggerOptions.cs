@@ -32,17 +32,17 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// <summary>
         /// The Azure Active Directory tenant (directory) Id of the service principal.
         /// </summary>
-        public string TenantId { get; set; }
-
-        /// <summary>
-        /// A client secret that was generated for the App Registration used to authenticate the client.
-        /// </summary>
-        public string ClientId { get; set; }
+        public string AuthClientSecretCredentialTenantId { get; set; }
 
         /// <summary>
         /// The client (application) ID of the service principal.
         /// </summary>
-        public string ClientSecret { get; set; }
+        public string AuthClientSecretCredentialClientId { get; set; }
+
+        /// <summary>
+        /// A client secret that was generated for the App Registration used to authenticate the client.
+        /// </summary>
+        public string AuthClientSecretCredentialClientSecret { get; set; }
 
         /// <summary>
         /// Gets or sets sampling settings.
@@ -215,9 +215,9 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(EnableLiveMetrics), EnableLiveMetrics },
                 { nameof(EnableDependencyTracking), EnableDependencyTracking },
                 { nameof(AuthenticationMode), AuthenticationMode },
-                { nameof(ClientId), string.IsNullOrEmpty(ClientId)? null : "*******" },
-                { nameof(ClientSecret), string.IsNullOrEmpty(ClientSecret)? null : "*******" },
-                { nameof(TenantId), string.IsNullOrEmpty(TenantId)? null : "*******" },
+                { nameof(AuthClientSecretCredentialClientId), string.IsNullOrEmpty(AuthClientSecretCredentialClientId)? null : "*******" },
+                { nameof(AuthClientSecretCredentialClientSecret), string.IsNullOrEmpty(AuthClientSecretCredentialClientSecret)? null : "*******" },
+                { nameof(AuthClientSecretCredentialTenantId), string.IsNullOrEmpty(AuthClientSecretCredentialTenantId)? null : "*******" },
                 { nameof(DependencyTrackingOptions), dependencyTrackingOptions }
             };
 
