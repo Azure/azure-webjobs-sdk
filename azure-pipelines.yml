@@ -47,11 +47,9 @@ jobs:
     - ImageOverride -equals MMS2019TLS
 
   steps:
+  - template: build/install-dotnet.yml
+  
   - task: 1ESHostedPoolValidation@1
-
-  - pwsh: .\dotnet-install.ps1 -Version 3.1.410 -Architecture x86
-    displayName: "Install .NET Core 3.1.410"
-
   - pwsh: |
       $packageSuffix = 0
       if (-not $$(hasTag)) {
