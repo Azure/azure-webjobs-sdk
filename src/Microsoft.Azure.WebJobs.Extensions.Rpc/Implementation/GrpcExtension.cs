@@ -16,16 +16,13 @@ namespace Microsoft.Azure.WebJobs.Extensions.Rpc
         where TService : class
     {
         private readonly ExtensionInfo _extension;
-        private readonly Action<GrpcServiceEndpointConventionBuilder> _configure;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GrpcExtension{TService}" /> class.
         /// </summary>
-        /// <param name="configure"></param>
-        public GrpcExtension(ExtensionInfo extension, Action<GrpcServiceEndpointConventionBuilder> configure)
+        public GrpcExtension(ExtensionInfo extension)
         {
             _extension = extension;
-            _configure = configure;
         }
 
         /// <inheritdoc />
@@ -34,8 +31,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Rpc
             ArgumentNullException.ThrowIfNull(builder);
 
             logger?.GrpcServiceApplied(_extension.Name, typeof(TService).Name);
-            GrpcServiceEndpointConventionBuilder b = builder.MapGrpcService<TService>();
-            _configure?.Invoke(b);
+            builder.MapGrpcService<TService>();
         }
     }
 }

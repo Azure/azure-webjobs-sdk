@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Rpc
         [Fact]
         public void MapGrpcService_Maps()
         {
-            _extension.MapGrpcService<Service>();
+            _extension.MapWorkerGrpcService<Service>();
 
             ServiceDescriptor descriptor = _services.FirstOrDefault(x => x.ServiceType == typeof(IRpcExtension));
 
