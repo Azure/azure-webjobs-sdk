@@ -28,7 +28,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Rpc.Implementation.UnitTests
         [Fact]
         public void Apply_AddsGrpc()
         {
-            GrpcExtension<Service> extension = new(ExtensionInfo.FromExtension<TestExtension>(), null);
+            GrpcExtension<Service> extension = new(ExtensionInfo.FromExtension<TestExtension>());
             TestEndpointRouteBuilder builder = new(_serviceProvider);
             extension.Apply(builder, NullLogger.Instance);
 
@@ -41,28 +41,6 @@ namespace Microsoft.Azure.WebJobs.Extensions.Rpc.Implementation.UnitTests
                 .Zip(ExpectedDisplayNames()))
             {
                 Assert.Equal(expected, actual);
-            }
-        }
-
-        [Fact]
-        public void Apply_Configure_AddsGrpc()
-        {
-            GrpcExtension<Service> extension = new(ExtensionInfo.FromExtension<TestExtension>(), b =>
-            {
-                b.WithDisplayName("Test DisplayName");
-            });
-
-            TestEndpointRouteBuilder builder = new(_serviceProvider);
-            extension.Apply(builder, NullLogger.Instance);
-
-            Assert.Single(builder.DataSources);
-
-            EndpointDataSource source = builder.DataSources.First();
-            Assert.Equal(3, source.Endpoints.Count);
-
-            foreach (string actual in source.Endpoints.Select(x => x.DisplayName))
-            {
-                Assert.Equal("Test DisplayName", actual);
             }
         }
 
