@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.Azure.WebJobs.Host.Rpc\WebJobs.Host.Rpc.csproj" />
+    <ProjectReference Include="..\Microsoft.Azure.WebJobs.Rpc.Core\WebJobs.Rpc.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

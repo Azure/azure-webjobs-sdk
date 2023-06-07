@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using Microsoft.Azure.WebJobs.Host.Rpc.Internal;
+using Microsoft.Azure.WebJobs.Rpc.Core.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -22,7 +22,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Rpc
         /// <exception cref="ArgumentNullException">If <paramref name="builder" /> is null.</exception>
         /// <remarks>
         /// This gRPC service is <b>not</b> for external gRPC communication. It is only for RPC between the
-        /// out-of-prov worker and the host.
+        /// out-of-proc worker and the host.
         /// </remarks>
         public static IWebJobsExtensionBuilder MapWorkerGrpcService<T>(this IWebJobsExtensionBuilder builder)
             where T : class

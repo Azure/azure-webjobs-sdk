@@ -20,7 +20,6 @@ namespace Microsoft.Azure.WebJobs.Extensions.Rpc
         [LoggerMessage(EventId = 1402, Level = LogLevel.Error, Message = "Error applying RPC host/worker extensions.")]
         public static partial void ApplyRpcExtensionsError(this ILogger logger, Exception ex);
 
-
         [LoggerMessage(EventId = 1403, Level = LogLevel.Debug, Message = "gRPC extension added for host/worker communication. Extension: {extension}, service: {service}.")]
         public static partial void GrpcServiceApplied(this ILogger logger, string extension, string service);
     }

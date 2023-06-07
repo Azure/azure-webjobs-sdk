@@ -4,9 +4,9 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <LangVersion>latest</LangVersion>
-    <PackageId>Microsoft.Azure.WebJobs.Host.Rpc</PackageId>
-    <AssemblyName>Microsoft.Azure.WebJobs.Host.Rpc</AssemblyName>
-    <RootNamespace>Microsoft.Azure.WebJobs.Host.Rpc</RootNamespace>
+    <PackageId>Microsoft.Azure.WebJobs.Rpc.Core</PackageId>
+    <AssemblyName>Microsoft.Azure.WebJobs.Rpc.Core</AssemblyName>
+    <RootNamespace>Microsoft.Azure.WebJobs.Rpc.Core</RootNamespace>
     <Description>This package contains the runtime assemblies for Microsoft.Azure.WebJobs.Host.Rpc. For more information, please visit http://go.microsoft.com/fwlink/?LinkID=320971</Description>
   </PropertyGroup>
 

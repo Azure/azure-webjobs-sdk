@@ -4,7 +4,7 @@
 using System;
 using Microsoft.AspNetCore.Routing;
 
-namespace Microsoft.Azure.WebJobs.Host.Rpc.Internal
+namespace Microsoft.Azure.WebJobs.Rpc.Core.Internal
 {
     /// <summary>
     /// This is an internal API that supports the WebJobs infrastructure and not subject to the same compatibility
