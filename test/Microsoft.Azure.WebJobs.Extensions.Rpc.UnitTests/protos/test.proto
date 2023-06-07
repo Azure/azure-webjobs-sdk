@@ -1,0 +1,17 @@
+// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the MIT License. See License.txt in the project root for license information.
+syntax = "proto3";
+
+option csharp_namespace = "Microsoft.Azure.WebJobs.Extensions.Rpc";
+
+service TestService {
+  rpc Test (TestRequest) returns (TestReply) {}
+}
+
+message TestRequest {
+  string input = 1;
+}
+
+message TestReply {
+  string output = 1;
+}
