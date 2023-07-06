@@ -3,6 +3,7 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
+    <Version>3.0.37$(VersionSuffix)</Version>
     <LangVersion>latest</LangVersion>
     <PackageId>Microsoft.Azure.WebJobs.Rpc.Core</PackageId>
     <AssemblyName>Microsoft.Azure.WebJobs.Rpc.Core</AssemblyName>
@@ -11,7 +12,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj" />
+    <PackageReference Include="Microsoft.Azure.WebJobs" Version="3.0.37" />
+    <!-- <ProjectReference Include="..\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj" /> -->
   </ItemGroup>
 
   <ItemGroup>
