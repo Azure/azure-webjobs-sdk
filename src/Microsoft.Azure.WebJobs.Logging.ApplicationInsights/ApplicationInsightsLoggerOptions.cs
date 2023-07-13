@@ -112,6 +112,13 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         public DependencyTrackingOptions DependencyTrackingOptions { get; set; }
 
         /// <summary>
+        /// Gets or sets a value that filters logs before they are sent to Live Metrics. False by default.
+        /// When false, all logs are sent to Live Metrics, regardless of any log filter configuration. When true,
+        /// the logs are filtered before they are sent. Setting to true may yield better performance.
+        /// </summary>
+        public bool EnableLiveMetricsFilters { get; set; } = false;
+
+        /// <summary>
         /// Gets or sets HTTP request collection options. 
         /// </summary>
         public HttpAutoCollectionOptions HttpAutoCollectionOptions { get; set; } = new HttpAutoCollectionOptions();

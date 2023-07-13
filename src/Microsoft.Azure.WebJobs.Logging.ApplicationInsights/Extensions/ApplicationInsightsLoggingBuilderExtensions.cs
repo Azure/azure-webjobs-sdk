@@ -61,8 +61,17 @@ namespace Microsoft.Extensions.Logging
             builder.AddConfiguration();
             builder.Services.AddApplicationInsights(loggerOptionsConfiguration, additionalTelemetryConfiguration);
 
-            builder.Services.PostConfigure<LoggerFilterOptions>(o =>
+            builder.Services.AddOptions<LoggerFilterOptions>()
+                .PostConfigure<ApplicationInsightsLoggerOptions>((o, appInsightsOptions) =>
             {
+                // The custom filtering below is only needed if we are sending all logs to Live Metrics.
+                // If we are filtering (or not using Live Metrics) we don't need to do this.
+                if (!appInsightsOptions.EnableLiveMetrics ||
+                    appInsightsOptions.EnableLiveMetricsFilters)
+                {
+                    return;
+                }
+
                 // We want all logs to flow through the logger so they show up in QuickPulse.
                 // To do that, we'll hide all registered rules inside of this one. They will be re-populated
                 // and used by the FilteringTelemetryProcessor further down the pipeline.
