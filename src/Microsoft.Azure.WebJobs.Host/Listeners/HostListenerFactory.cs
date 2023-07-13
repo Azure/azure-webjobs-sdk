@@ -14,7 +14,6 @@ using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Host.Listeners
 {
@@ -23,31 +22,24 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         private static readonly MethodInfo JobActivatorCreateMethod = typeof(IJobActivator).GetMethod("CreateInstance", BindingFlags.Public | BindingFlags.Instance).GetGenericMethodDefinition();
         private const string IsDisabledFunctionName = "IsDisabled";
         private readonly IEnumerable<IFunctionDefinition> _functionDefinitions;
-        private readonly SingletonManager _singletonManager;
-        private readonly IJobActivator _activator;
-        private readonly INameResolver _nameResolver;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger _logger;
-        private readonly bool _allowPartialHostStartup;
         private readonly Action _listenersCreatedCallback;
         private readonly IScaleMonitorManager _monitorManager;
         private readonly ITargetScalerManager _targetScalerManager;
         private readonly IDrainModeManager _drainModeManager;
+        private readonly IEnumerable<IListenerDecorator> _listenerDecorators;
 
-        public HostListenerFactory(IEnumerable<IFunctionDefinition> functionDefinitions, SingletonManager singletonManager, IJobActivator activator,
-            INameResolver nameResolver, ILoggerFactory loggerFactory, IScaleMonitorManager monitorManager, ITargetScalerManager targetScalerManager, Action listenersCreatedCallback, bool allowPartialHostStartup = false, IDrainModeManager drainModeManager = null)
+        public HostListenerFactory(IEnumerable<IFunctionDefinition> functionDefinitions, ILoggerFactory loggerFactory, IScaleMonitorManager monitorManager, ITargetScalerManager targetScalerManager, IEnumerable<IListenerDecorator> listenerDecorators, Action listenersCreatedCallback, IDrainModeManager drainModeManager = null)
         {
             _functionDefinitions = functionDefinitions;
-            _singletonManager = singletonManager;
-            _activator = activator;
-            _nameResolver = nameResolver;
             _loggerFactory = loggerFactory;
             _logger = _loggerFactory?.CreateLogger(LogCategories.Startup);
-            _allowPartialHostStartup = allowPartialHostStartup;
             _monitorManager = monitorManager;
             _targetScalerManager = targetScalerManager;
             _listenersCreatedCallback = listenersCreatedCallback;
             _drainModeManager = drainModeManager;
+            _listenerDecorators = listenerDecorators;
         }
 
         public async Task<IListener> CreateAsync(CancellationToken cancellationToken)
@@ -59,31 +51,22 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                 // Determine if the function is disabled
                 if (functionDefinition.Descriptor.IsDisabled)
                 {
-                    string msg = string.Format("Function '{0}' is disabled", functionDefinition.Descriptor.ShortName);
-                    _logger?.LogInformation(msg);
+                    _logger?.LogInformation($"Function '{functionDefinition.Descriptor.ShortName}' is disabled");
                     continue;
                 }
 
+                // Create the listener
                 IListenerFactory listenerFactory = functionDefinition.ListenerFactory;
                 if (listenerFactory == null)
                 {
                     continue;
                 }
-
                 IListener listener = await listenerFactory.CreateAsync(cancellationToken);
 
-                RegisterScaleMonitor(listener, _monitorManager);
-                RegisterTargetScaler(listener, _targetScalerManager);
-                
-                // if the listener is a Singleton, wrap it with our SingletonListener
-                SingletonAttribute singletonAttribute = SingletonManager.GetListenerSingletonOrNull(listener.GetType(), functionDefinition.Descriptor);
-                if (singletonAttribute != null)
-                {
-                    listener = new SingletonListener(functionDefinition.Descriptor, singletonAttribute, _singletonManager, listener, _loggerFactory);
-                }
+                RegisterScalers(listener);
 
-                // wrap the listener with a function listener to handle exceptions
-                listener = new FunctionListener(listener, functionDefinition.Descriptor, _loggerFactory, _allowPartialHostStartup);
+                listener = ApplyDecorators(listener, functionDefinition);
+
                 listeners.Add(listener);
             }
 
@@ -91,7 +74,14 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 
             var compositeListener = new CompositeListener(listeners);
             _drainModeManager?.RegisterListener(compositeListener);
+
             return compositeListener;
+        }
+
+        internal void RegisterScalers(IListener listener)
+        {
+            RegisterScaleMonitor(listener, _monitorManager);
+            RegisterTargetScaler(listener, _targetScalerManager);
         }
 
         /// <summary>
@@ -228,6 +218,43 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                 object instance = createMethod.Invoke(activator, null);
                 return (bool)methodInfo.Invoke(instance, new object[] { jobFunction });
             }
+        }
+
+        /// <summary>
+        /// Applies any user registered decorators, followed by any platform decorators.
+        /// See <see cref="WebJobsServiceCollectionExtensions.AddListenerDecorators(Extensions.DependencyInjection.IServiceCollection)"/>.
+        /// </summary>
+        /// <param name="listener">The listener to apply decorators to.</param>
+        /// <param name="functionDefinition">The function the the listener is for.</param>
+        /// <returns>The resulting listener with decorators applied.</returns>
+        private IListener ApplyDecorators(IListener listener, IFunctionDefinition functionDefinition)
+        {
+            Type rootListenerType = listener.GetType();
+            var platformDecorators = _listenerDecorators.Where(p => p.GetType().Assembly == typeof(HostListenerFactory).Assembly);
+            var userDecorators = _listenerDecorators.Except(platformDecorators);
+
+            listener = ApplyDecorators(userDecorators, listener, functionDefinition, rootListenerType, writeLog: true);
+
+            // Order is important - platform decorators must be applied AFTER any user decorators, in order.
+            listener = ApplyDecorators(platformDecorators, listener, functionDefinition, rootListenerType);
+
+            return listener;
+        }
+
+        private IListener ApplyDecorators(IEnumerable<IListenerDecorator> decorators, IListener listener, IFunctionDefinition functionDefinition, Type rootListenerType, bool writeLog = false)
+        {
+            foreach (var decorator in decorators)
+            {
+                var context = new ListenerDecoratorContext(functionDefinition, rootListenerType, listener);
+                listener = decorator.Decorate(context);
+
+                if (writeLog)
+                {
+                    _logger.LogDebug($"Applying IListenerDecorator '{decorator.GetType().FullName}'");
+                }
+            }
+
+            return listener;
         }
     }
 }

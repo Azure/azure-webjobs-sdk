@@ -13,10 +13,12 @@ using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -25,17 +27,52 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
     public class HostListenerFactoryTests
     {
         private readonly IJobActivator _jobActivator;
-        private IConfiguration _configuration = new ConfigurationBuilder().Build();
+        private readonly IHost _testHost;
+        private IConfiguration _configuration;
 
         public HostListenerFactoryTests()
         {
-            var hostBuilder = new HostBuilder();
-            var host = hostBuilder.Build();
-            var serviceProvider = (IServiceProvider)host.Services.GetService(typeof(IServiceProvider));
-            _jobActivator = new DefaultJobActivator(serviceProvider);
-
             DisableProvider_Static.Method = null;
             DisableProvider_Instance.Method = null;
+
+            _testHost = CreateTestJobHost<Functions1>();
+            _jobActivator = _testHost.Services.GetService<IJobActivator>();
+            _configuration = _testHost.Services.GetService<IConfiguration>();
+        }
+
+        [Fact]
+        public async Task CreateAsync_AppliesListenerDecorators()
+        {
+            HostListenerFactory factory = await CreateHostListenerFactoryAsync();
+            IListener listener = await factory.CreateAsync(CancellationToken.None);
+
+            // access the root inner listener
+            var innerListeners = ((IEnumerable<IListener>)listener).ToArray();
+            var innerListener = innerListeners[0];
+
+            // expect the first two outer listeners to be our platform listeners
+            FunctionListener functionListener = (FunctionListener)innerListener;
+            var innerListenerField = typeof(FunctionListener).GetField("_listener", BindingFlags.NonPublic | BindingFlags.Instance);
+            innerListener = (SingletonListener)innerListenerField.GetValue(functionListener);
+
+            innerListenerField = typeof(SingletonListener).GetField("_innerListener", BindingFlags.NonPublic | BindingFlags.Instance);
+            innerListener = (IListener)innerListenerField.GetValue(innerListener);
+
+            TestListenerDecorator.DecoratorListener decoratorListener = (TestListenerDecorator.DecoratorListener)innerListener;
+
+            // verify all decorators were consulted, resulting in a nested stack of listeners
+            Assert.Equal("C", decoratorListener.Tag);
+            decoratorListener = (TestListenerDecorator.DecoratorListener)decoratorListener.InnerListener;
+            Assert.Equal("B", decoratorListener.Tag);
+            decoratorListener = (TestListenerDecorator.DecoratorListener)decoratorListener.InnerListener;
+            Assert.Equal("A", decoratorListener.Tag);
+
+            var logProvider = _testHost.GetTestLoggerProvider();
+            var logs = logProvider.GetAllLogMessages().Where(p => p.Category == LogCategories.Startup && p.FormattedMessage.Contains(nameof(IListenerDecorator))).ToArray();
+            Assert.Equal(3, logs.Length);
+            Assert.Equal($"Applying IListenerDecorator '{typeof(TestListenerDecoratorA).FullName}'", logs[0].FormattedMessage);
+            Assert.Equal($"Applying IListenerDecorator '{typeof(TestListenerDecoratorB).FullName}'", logs[1].FormattedMessage);
+            Assert.Equal($"Applying IListenerDecorator '{typeof(TestListenerDecoratorC).FullName}'", logs[2].FormattedMessage);
         }
 
         [Fact]
@@ -61,7 +98,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             var monitorManager = new ScaleMonitorManager();
             var targetScaleManager = new TargetScalerManager();
             var drainModeManagerMock = new Mock<IDrainModeManager>();
-            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManager, targetScaleManager, () => { }, false, drainModeManagerMock.Object);
+            var listenerDecorators = _testHost.Services.GetServices<IListenerDecorator>();
+            HostListenerFactory factory = new HostListenerFactory(functions, loggerFactory, monitorManager, targetScaleManager, listenerDecorators, () => { }, drainModeManagerMock.Object);
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 
             var innerListeners = ((IEnumerable<IListener>)listener).ToArray();
@@ -94,7 +132,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             var monitorManager = new ScaleMonitorManager();
             var targetScaleManager = new TargetScalerManager();
             var drainModeManagerMock = new Mock<IDrainModeManager>();
-            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManager, targetScaleManager, () => { }, false, drainModeManagerMock.Object);
+            var listenerDecorators = _testHost.Services.GetServices<IListenerDecorator>();
+            HostListenerFactory factory = new HostListenerFactory(functions, loggerFactory, monitorManager, targetScaleManager, listenerDecorators, () => { }, drainModeManagerMock.Object);
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 
             var innerListeners = ((IEnumerable<IListener>)listener).ToArray();
@@ -204,7 +243,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             var monitorManagerMock = new Mock<IScaleMonitorManager>(MockBehavior.Strict);
             var targetScalerManagerMock = new Mock<ITargetScalerManager>(MockBehavior.Strict);
             var drainModeManagerMock = new Mock<IDrainModeManager>();
-            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManagerMock.Object, targetScalerManagerMock.Object, () => { }, false, drainModeManagerMock.Object);
+            var listenerDecorators = _testHost.Services.GetServices<IListenerDecorator>();
+            HostListenerFactory factory = new HostListenerFactory(functions, loggerFactory, monitorManagerMock.Object, targetScalerManagerMock.Object, listenerDecorators, () => { }, drainModeManagerMock.Object);
 
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 
@@ -271,7 +311,71 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             Assert.Equal(result, disabled);
         }
 
-        public static class Functions1
+        private async Task<HostListenerFactory> CreateHostListenerFactoryAsync()
+        {
+            var indexProvider = _testHost.Services.GetService<IFunctionIndexProvider>();
+            var index = await indexProvider.GetAsync(CancellationToken.None);
+            List<IFunctionDefinition> functions = new List<IFunctionDefinition>();
+            functions.Add(index.LookupByName("TestJob"));
+
+            // create the listener
+            ILoggerFactory loggerFactory = _testHost.Services.GetService<ILoggerFactory>();
+            var monitorManager = _testHost.Services.GetService<IScaleMonitorManager>();
+            var targetScaleManager = _testHost.Services.GetService<ITargetScalerManager>();
+            var drainModeManager = _testHost.Services.GetService<IDrainModeManager>();
+            var listenerDecorators = _testHost.Services.GetServices<IListenerDecorator>();
+            HostListenerFactory factory = new HostListenerFactory(functions, loggerFactory, monitorManager, targetScaleManager, listenerDecorators, () => { }, drainModeManager);
+
+            return factory;
+        }
+
+        private IHost CreateTestJobHost<TProg>(Action<IHostBuilder> extraConfig = null)
+        {
+            var hostBuilder = new HostBuilder()
+                .ConfigureDefaultTestHost<TProg>(b =>
+                {
+                    // For Queue and Blob Triggers
+                    b.AddAzureStorageBlobs();
+                    b.AddAzureStorageQueues();
+
+                    b.AddAzureStorageCoreServices();
+                })
+                .ConfigureLogging((context, b) =>
+                {
+                    b.SetMinimumLevel(LogLevel.Debug);
+                })
+                .ConfigureServices(services =>
+                {
+                    // add some custom decorators that we expect to be applied in order, before any platform
+                    // decorators
+                    services.TryAddEnumerable(ServiceDescriptor.Singleton<IListenerDecorator, TestListenerDecoratorA>());
+                    services.TryAddEnumerable(ServiceDescriptor.Singleton<IListenerDecorator, TestListenerDecoratorB>());
+                    services.TryAddEnumerable(ServiceDescriptor.Singleton<IListenerDecorator, TestListenerDecoratorC>());
+                });
+
+            extraConfig?.Invoke(hostBuilder); // test hook gets final say to replace. 
+
+            IHost host = hostBuilder.Build();
+
+            return host;
+        }
+
+        private class TestJobActivator : IJobActivator
+        {
+            private int _hostId;
+
+            public TestJobActivator(int hostId)
+            {
+                _hostId = hostId;
+            }
+
+            public T CreateInstance<T>()
+            {
+                return (T)Activator.CreateInstance(typeof(T), _hostId);
+            }
+        }
+
+        public class Functions1
         {
             public static void DisabledAtParameterLevel(
                 [Disable("DisableSettingTrue")]
@@ -338,6 +442,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             {
             }
 
+            [Singleton(Mode = SingletonMode.Listener)]
             public static void TestJob(
                     [QueueTrigger("test")] string message)
             {
@@ -383,6 +488,95 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
         {
             public static void IsDisabled(MethodInfo method)
             {
+            }
+        }
+
+        public class TestListenerDecoratorA : TestListenerDecorator
+        {
+            public TestListenerDecoratorA() : base("A")
+            {
+            }
+        }
+
+        public class TestListenerDecoratorB : TestListenerDecorator
+        {
+            public TestListenerDecoratorB() : base("B")
+            {
+            }
+        }
+
+        public class TestListenerDecoratorC : TestListenerDecorator
+        {
+            public TestListenerDecoratorC() : base("C")
+            {
+            }
+        }
+
+
+        public abstract class TestListenerDecorator : IListenerDecorator
+        {
+            private string _tag;
+
+            public TestListenerDecorator(string tag)
+            {
+                _tag = tag;
+            }
+
+            public IListener Decorate(ListenerDecoratorContext context)
+            {
+                return new DecoratorListener(context.Listener, _tag);
+            }
+
+            public class DecoratorListener : IListener
+            {
+                public DecoratorListener(IListener innerListener, string tag)
+                {
+                    InnerListener = innerListener;
+                    Tag = tag;
+                }
+
+                internal string Tag { get; }
+
+                internal IListener InnerListener { get; set; }
+
+                public void Cancel()
+                {
+                }
+
+                public void Dispose()
+                {
+                }
+
+                public Task StartAsync(CancellationToken cancellationToken)
+                {
+                    return Task.CompletedTask;
+                }
+
+                public Task StopAsync(CancellationToken cancellationToken)
+                {
+                    return Task.CompletedTask;
+                }
+            }
+        }
+
+        public class TestListener : IListener
+        {
+            public void Cancel()
+            {
+            }
+
+            public void Dispose()
+            {
+            }
+
+            public Task StartAsync(CancellationToken cancellationToken)
+            {
+                return Task.CompletedTask;
+            }
+
+            public Task StopAsync(CancellationToken cancellationToken)
+            {
+                return Task.CompletedTask;
             }
         }
 
