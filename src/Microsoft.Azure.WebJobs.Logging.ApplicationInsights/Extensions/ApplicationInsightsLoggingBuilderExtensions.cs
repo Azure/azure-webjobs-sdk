@@ -8,6 +8,7 @@ using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.Logging
 {
@@ -62,14 +63,17 @@ namespace Microsoft.Extensions.Logging
             builder.Services.AddApplicationInsights(loggerOptionsConfiguration, additionalTelemetryConfiguration);
 
             builder.Services.AddOptions<LoggerFilterOptions>()
-                .PostConfigure<ApplicationInsightsLoggerOptions>((o, appInsightsOptions) =>
-            {
+                .PostConfigure<IOptions<ApplicationInsightsLoggerOptions>>((o, appInsightsOptions) =>
+                {
                 // The custom filtering below is only needed if we are sending all logs to Live Metrics.
                 // If we are filtering (or not using Live Metrics) we don't need to do this.
-                if (!appInsightsOptions.EnableLiveMetrics ||
-                    appInsightsOptions.EnableLiveMetricsFilters)
+                if (appInsightsOptions != null)
                 {
-                    return;
+                    if (!appInsightsOptions.Value.EnableLiveMetrics ||
+                        appInsightsOptions.Value.EnableLiveMetricsFilters)
+                    {
+                        return;
+                    }
                 }
 
                 // We want all logs to flow through the logger so they show up in QuickPulse.
