@@ -344,7 +344,10 @@ namespace Microsoft.Extensions.DependencyInjection
                 .Use((next) => new OperationFilteringTelemetryProcessor(next))
                 .Use((next) =>
                 {
-                    quickPulseProcessor = new QuickPulseTelemetryProcessor(next);
+                    if (options.EnableLiveMetrics)
+                    {
+                        quickPulseProcessor = new QuickPulseTelemetryProcessor(next);
+                    }
                     return quickPulseProcessor;
                 });
 
