@@ -341,15 +341,16 @@ namespace Microsoft.Extensions.DependencyInjection
 
             QuickPulseTelemetryProcessor quickPulseProcessor = null;
             configuration.TelemetryProcessorChainBuilder
-                .Use((next) => new OperationFilteringTelemetryProcessor(next))
-                .Use((next) =>
+                .Use((next) => new OperationFilteringTelemetryProcessor(next));
+
+            if (options.EnableLiveMetrics)
+            {
+                configuration.TelemetryProcessorChainBuilder.Use((next) =>
                 {
-                    if (options.EnableLiveMetrics)
-                    {
-                        quickPulseProcessor = new QuickPulseTelemetryProcessor(next);
-                    }
+                    quickPulseProcessor = new QuickPulseTelemetryProcessor(next);
                     return quickPulseProcessor;
                 });
+            }
 
             // No need to "late filter" as the logs will already be filtered before they are sent to the Logger.
             if (filterOptions != null)
