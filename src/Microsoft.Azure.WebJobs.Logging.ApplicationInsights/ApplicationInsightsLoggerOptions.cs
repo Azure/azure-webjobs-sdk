@@ -114,7 +114,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// <summary>
         /// Gets or sets a value that filters logs before they are sent to Live Metrics. False by default.
         /// When false, all logs are sent to Live Metrics, regardless of any log filter configuration. When true,
-        /// the logs are filtered before they are sent. Setting to true may yield better performance.
+        /// the logs are filtered before they are sent.
         /// </summary>
         public bool EnableLiveMetricsFilters { get; set; } = false;
 
