@@ -199,6 +199,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(HttpAutoCollectionOptions), httpOptions },
                 { nameof(LiveMetricsInitializationDelay), LiveMetricsInitializationDelay },
                 { nameof(EnableLiveMetrics), EnableLiveMetrics },
+                { nameof(EnableLiveMetricsFilters), EnableLiveMetricsFilters },
                 { nameof(EnableDependencyTracking), EnableDependencyTracking },
                 { nameof(DependencyTrackingOptions), dependencyTrackingOptions }
             };
