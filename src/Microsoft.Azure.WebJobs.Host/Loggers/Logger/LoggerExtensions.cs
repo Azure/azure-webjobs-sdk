@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Logging;
@@ -196,41 +195,36 @@ namespace Microsoft.Extensions.Logging
         /// <param name="properties">Named string values for classifying and filtering metrics.</param>
         public static void LogMetric(this ILogger logger, string name, double value, IDictionary<string, object> properties = null)
         {
-            IDictionary<string, object> state = properties == null ? new Dictionary<string, object>() : new Dictionary<string, object>(properties);
-
-            state[LogConstants.NameKey] = name;
-            state[LogConstants.MetricValueKey] = value;
-
-            IDictionary<string, object> payload = new ReadOnlyDictionary<string, object>(state);
-            logger?.Log(LogLevel.Information, LogConstants.MetricEventId, payload, null, (s, e) => null);
+            logger?.Log(
+                LogLevel.Information,
+                LogConstants.MetricEventId,
+                new MetricState(name, value, properties),
+                null,
+                (s, e) => s.ToString());
         }
 
         internal static void LogFunctionResult(this ILogger logger, FunctionInstanceLogEntry logEntry)
         {
             bool succeeded = logEntry.Exception == null;
 
-            IDictionary<string, object> payload = new Dictionary<string, object>(8)
-            {
-                { LogConstants.FullNameKey, logEntry.FunctionName },
-                { LogConstants.InvocationIdKey, logEntry.FunctionInstanceId },
-                { LogConstants.NameKey, logEntry.LogName },
-                { LogConstants.TriggerReasonKey, logEntry.TriggerReason },
-                { LogConstants.StartTimeKey, logEntry.StartTime },
-                { LogConstants.EndTimeKey, logEntry.EndTime },
-                { LogConstants.DurationKey, logEntry.Duration },
-                { LogConstants.SucceededKey, succeeded }
-            };
-
             LogLevel level = succeeded ? LogLevel.Information : LogLevel.Error;
 
-            // Only pass the state dictionary; no string message.
-            logger.Log(level, 0, payload, logEntry.Exception, (s, e) => null);
+            logger.Log(
+                level,
+                0,
+                new FunctionResultState(logEntry, succeeded),
+                logEntry.Exception,
+                static (s, e) => s.ToString());
         }
 
         internal static void LogFunctionResultAggregate(this ILogger logger, FunctionResultAggregate resultAggregate)
         {
-            // we won't output any string here, just the data
-            logger.Log(LogLevel.Information, 0, resultAggregate.ToReadOnlyDictionary(), null, (s, e) => null);
+            logger.Log(
+                LogLevel.Information,
+                0,
+                new FunctionResultAggregateState(resultAggregate),
+                null,
+                (s, e) => s.ToString());
         }
 
         internal static IDisposable BeginFunctionScope(this ILogger logger, IFunctionInstance functionInstance, Guid hostInstanceId)

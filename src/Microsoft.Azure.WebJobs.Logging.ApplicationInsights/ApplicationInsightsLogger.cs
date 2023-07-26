@@ -63,17 +63,16 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
             Exception exception, Func<TState, Exception, string> formatter)
         {
-            string formattedMessage = formatter?.Invoke(state, exception);
             IEnumerable<KeyValuePair<string, object>> stateValues = state as IEnumerable<KeyValuePair<string, object>>;
 
             // If we don't have anything here, there's nothing to log.
-            if (stateValues == null && string.IsNullOrEmpty(formattedMessage) && exception == null)
+            if (stateValues == null && formatter == null && exception == null)
             {
                 return;
             }
 
             // Initialize stateValues so the rest of the methods don't have to worry about null values.
-            stateValues = stateValues ?? new Dictionary<string, object>();
+            stateValues = stateValues ?? Array.Empty<KeyValuePair<string, object>>();
 
             if (_isUserFunction && eventId.Id == LogConstants.MetricEventId)
             {
@@ -90,15 +89,20 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 // Log an aggregate record
                 LogFunctionResultAggregate(stateValues, logLevel, eventId);
             }
-            else if (exception != null)
-            {
-                // Log an exception
-                LogException(logLevel, stateValues, exception, formattedMessage, eventId);
-            }
             else
             {
-                // Otherwise, log a trace
-                LogTrace(logLevel, stateValues, formattedMessage, eventId);
+                string formattedMessage = formatter?.Invoke(state, exception);
+
+                if (exception != null)
+                {
+                    // Log an exception
+                    LogException(logLevel, stateValues, exception, formattedMessage, eventId);
+                }
+                else
+                {
+                    // Otherwise, log a trace
+                    LogTrace(logLevel, stateValues, formattedMessage, eventId);
+                }
             }
         }
 
@@ -127,6 +131,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                         continue;
                     case LogConstants.MetricValueKey when entry.Value is double sum:
                         telemetry.Sum = sum;
+                        continue;
+                    case LogConstants.OriginalFormatKey:
                         continue;
                     default:
                         break;
@@ -174,8 +180,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 if (scopeProperties.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId) is string invocationId)
                 {
                     telemetry.Context.Properties[LogConstants.InvocationIdKey] = invocationId;
-                }               
-            }            
+                }
+            }
             telemetry.Context.Operation.Name = scopeProperties.GetValueOrDefault<string>(ScopeKeys.FunctionName);
         }
 
@@ -205,21 +211,21 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         private void LogTrace(LogLevel logLevel, IEnumerable<KeyValuePair<string, object>> values, string formattedMessage, EventId eventId)
         {
             TraceTelemetry telemetry = new TraceTelemetry(formattedMessage);
-            
+
             ApplyScopeAndStateProperties(telemetry.Properties, values, telemetry);
 
             ApplyKnownProperties(telemetry.Properties, logLevel, eventId);
-            
+
             var severityLevel = GetSeverityLevel(logLevel);
-           
+
 
             if (severityLevel.HasValue)
             {
                 telemetry.SeverityLevel = severityLevel;
             }
-           
+
             // LogLevel.None maps to null, so we have to handle that specially
-            _telemetryClient.TrackTrace(telemetry);           
+            _telemetryClient.TrackTrace(telemetry);
         }
 
         private static SeverityLevel? GetSeverityLevel(LogLevel logLevel)
@@ -254,7 +260,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         {
             properties[LogConstants.CategoryNameKey] = _categoryName;
             properties[LogConstants.LogLevelKey] = logLevel.ToStringOptimized();
-            
+
             if (eventId.Id != 0)
             {
                 properties[LogConstants.EventIdKey] = Convert.ToString(eventId.Id);
@@ -333,7 +339,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                         // We won't use the format string here
                         break;
                     default:
-                        if (value.Value is int intValue) 
+                        if (value.Value is int intValue)
                         {
                             metrics.Add(value.Key, Convert.ToDouble(intValue));
                         }
@@ -376,7 +382,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             IOperationHolder<RequestTelemetry> requestOperation = scopeProps?.GetValueOrDefault<IOperationHolder<RequestTelemetry>>(OperationContext);
             if (requestOperation != null)
             {
-                // We somehow never started the operation, perhaps, it was auto-tracked by the AI SDK 
+                // We somehow never started the operation, perhaps, it was auto-tracked by the AI SDK
                 // so there's no way to complete it.
 
                 RequestTelemetry requestTelemetry = requestOperation.Telemetry;
@@ -443,10 +449,10 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                             break;
                     }
                 }
-                
+
                 currentActivity.AddTag(LogConstants.CategoryNameKey, _categoryName);
                 currentActivity.AddTag(LogConstants.LogLevelKey, logLevel.ToStringOptimized());
-                
+
                 if (scope != null)
                 {
                     if (!_loggerOptions.HttpAutoCollectionOptions.EnableHttpTriggerExtendedInfoCollection &&
@@ -563,10 +569,10 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                     // We'll need to store this operation context so we can stop it when the function completes
                     stateValues[OperationContext] = operation;
                 }
-            } 
-            // If there is a current activity, it is assumed that Application Insights will track it so we do not start an operation. 
+            }
+            // If there is a current activity, it is assumed that Application Insights will track it so we do not start an operation.
             // However, in some cases (such as Durable functions), this is not the case. This allows the scope to decide whether
-            // an operation should be started, even when the current activity is not null. 
+            // an operation should be started, even when the current activity is not null.
             else if (allScopes != null && allScopes.ContainsKey("MS_TrackActivity"))
             {
                 var operation = _telemetryClient.StartOperation<RequestTelemetry>(currentActivity);
@@ -582,9 +588,9 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             // we'll populate link information on the request telemetry, but don't touch parent for this request
             PopulateLinks(activities, request);
 
-            // If any of the links is sampled in (on upstream) we also preliminary sample in 
-            // request telemetry and everything that happens in this request scope. 
-            // There will be additional level of sampling applied to limit rate to one 
+            // If any of the links is sampled in (on upstream) we also preliminary sample in
+            // request telemetry and everything that happens in this request scope.
+            // There will be additional level of sampling applied to limit rate to one
             // configured on this Function/WebJob
             if (request.ProactiveSamplingDecision == SamplingDecision.SampledIn)
             {
@@ -631,7 +637,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             if (linksJson.Length > 0)
             {
                 // remove last comma - trailing commas are not allowed
-                linksJson.Remove(linksJson.Length - 1, 1); 
+                linksJson.Remove(linksJson.Length - 1, 1);
             }
 
             linksJson.Append("]");
@@ -646,7 +652,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             // ApplicationInsights Activity is called "ActivityCreatedByHostingDiagnosticListener"
             // Here we check if activity passed is one of those.
             return activity != null &&
-                   (activity.OperationName == "Microsoft.AspNetCore.Hosting.HttpRequestIn" || 
+                   (activity.OperationName == "Microsoft.AspNetCore.Hosting.HttpRequestIn" ||
                     activity.OperationName == "ActivityCreatedByHostingDiagnosticListener");
         }
 
