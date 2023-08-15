@@ -9,7 +9,7 @@ namespace Microsoft.Azure.WebJobs.Logging
 {
     internal readonly struct FunctionResultAggregateState : IReadOnlyList<KeyValuePair<string, object>>
     {
-        public const string OriginalFormatString = "FunctionResultAggregate {Name} {Count} {Timestamp} {AvgDurationMs}ms {MaxDurationMs}ms {MinDurationMs}ms {Successes} {Failures} {SuccessRate}";
+        public const string OriginalFormatString = "Aggregate result (function={Name}, count={Count}, time={Timestamp}, duration={AverageDuration}ms, maxDuration={MaxDuration}ms, minDuration={MinDuration}ms, success={Successes}, failure={Failures}, rate={SuccessRate})";
         private readonly FunctionResultAggregate _resultAggregate;
 
         public FunctionResultAggregateState(FunctionResultAggregate resultAggregate)
@@ -50,7 +50,7 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         public override string ToString()
         {
-            return $"FunctionResultAggregate {_resultAggregate.Name} {_resultAggregate.Count} {_resultAggregate.Timestamp} {_resultAggregate.AverageDuration}ms {_resultAggregate.MaxDuration}ms {_resultAggregate.MinDuration}ms {_resultAggregate.Successes} {_resultAggregate.Failures} {_resultAggregate.SuccessRate}";
+            return $"Aggregate result (function={_resultAggregate.Name}, count={_resultAggregate.Count}, time={_resultAggregate.Timestamp}, duration={_resultAggregate.AverageDuration}ms, maxDuration={_resultAggregate.MaxDuration}ms, minDuration={_resultAggregate.MinDuration}ms, success={_resultAggregate.Successes}, failure={_resultAggregate.Failures}, rate={_resultAggregate.SuccessRate})";
         }
 
         public struct Enumerator : IEnumerator<KeyValuePair<string, object>>
