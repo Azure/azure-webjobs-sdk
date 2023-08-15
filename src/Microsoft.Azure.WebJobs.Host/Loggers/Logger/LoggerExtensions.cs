@@ -200,7 +200,7 @@ namespace Microsoft.Extensions.Logging
                 LogConstants.MetricEventId,
                 new MetricState(name, value, properties),
                 null,
-                static (s, e) => s.ToString());
+                static (s, e) => null);
         }
 
         internal static void LogFunctionResult(this ILogger logger, FunctionInstanceLogEntry logEntry)
@@ -214,7 +214,7 @@ namespace Microsoft.Extensions.Logging
                 0,
                 new FunctionResultState(logEntry, succeeded),
                 logEntry.Exception,
-                static (s, e) => s.ToString());
+                static (s, e) => null);
         }
 
         internal static void LogFunctionResultAggregate(this ILogger logger, FunctionResultAggregate resultAggregate)
@@ -224,7 +224,7 @@ namespace Microsoft.Extensions.Logging
                 0,
                 new FunctionResultAggregateState(resultAggregate),
                 null,
-                static (s, e) => s.ToString());
+                static (s, e) => null);
         }
 
         internal static IDisposable BeginFunctionScope(this ILogger logger, IFunctionInstance functionInstance, Guid hostInstanceId)
