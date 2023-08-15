@@ -10,7 +10,7 @@ namespace Microsoft.Azure.WebJobs.Logging
 {
     internal readonly struct FunctionResultState : IReadOnlyList<KeyValuePair<string, object>>
     {
-        public const string OriginalFormatString = "FunctionResult {FullName} {InvocationId} {Name} {TriggerReason} {StartTime} {EndTime} {Duration} {Succeeded}";
+        public const string OriginalFormatString = "Result '{FunctionName}' (started at={StartTime}, duration={Duration}, succeeded={Succeeded})";
         private readonly FunctionInstanceLogEntry _logEntry;
         private readonly bool _succeeded;
 
@@ -52,7 +52,7 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         public override string ToString()
         {
-            return $"FunctionResult {_logEntry.FunctionName} {_logEntry.FunctionInstanceId} {_logEntry.LogName} {_logEntry.TriggerReason} {_logEntry.StartTime} {_logEntry.EndTime} {_logEntry.Duration} {_succeeded}";
+            return $"Result '{_logEntry.FunctionName}' (started at={_logEntry.StartTime}, duration={_logEntry.Duration}, succeeded={_succeeded})";
         }
 
         public struct Enumerator : IEnumerator<KeyValuePair<string, object>>
