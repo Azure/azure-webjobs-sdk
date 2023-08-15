@@ -43,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                  Assert.Equal(LogLevel.Information, l);
                  Assert.Equal(0, e);
                  Assert.Null(ex);
-                 Assert.NotNull(f(o, ex));
+                 Assert.Null(f(o, ex));
 
                  var payload = VerifyResultDefaultsAndConvert(o);
                  Assert.True((bool)payload[LogConstants.SucceededKey]);
@@ -67,7 +67,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                  Assert.Equal(0, e);
                  Assert.NotNull(ex);
                  Assert.IsType<FunctionInvocationException>(ex);
-                 Assert.NotNull(f(o, ex));
+                 Assert.Null(f(o, ex));
 
                  var payload = VerifyResultDefaultsAndConvert(o);
                  Assert.False((bool)payload[LogConstants.SucceededKey]);
@@ -97,7 +97,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Assert.Equal(LogLevel.Information, l);
                 Assert.Equal(0, e);
                 Assert.Null(ex);
-                Assert.NotNull(f(s, ex));
+                Assert.Null(f(s, ex));
 
                 Assert.Equal(10, payload.Count);
                 Assert.Equal(_functionShortName, payload[LogConstants.NameKey]);
