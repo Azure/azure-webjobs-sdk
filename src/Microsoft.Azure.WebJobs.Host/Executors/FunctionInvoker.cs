@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Loggers;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
@@ -49,6 +50,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // Return a task immediately in case the method is not async.
             await Task.Yield();
 
+            using var disposable = SystemLog.Disable();
             return await _methodInvoker.InvokeAsync((TReflected)instance, arguments);
         }
     }
