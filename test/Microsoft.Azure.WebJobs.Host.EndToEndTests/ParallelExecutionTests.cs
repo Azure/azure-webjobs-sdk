@@ -2,21 +2,18 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Diagnostics.Tracing;
-using System.Reflection.Metadata;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Azure.Storage.Queues;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Azure.Storage.Queue;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
-    public class ParallelExecutionTests : IDisposable
+    public class ParallelExecutionTests : IAsyncLifetime
     {
         private const string TestArtifactPrefix = "e2etestparallelqueue";
         private const string TestQueueName = TestArtifactPrefix + "-%rnd%";
@@ -30,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         private static int _maxSimultaneouslyRunningFunctions;
 
         private static ManualResetEvent _allMessagesProcessed;
-        private CloudQueueClient _queueClient;
+        private QueueServiceClient _queueServiceClient;
 
         public static async Task ParallelQueueTrigger([QueueTrigger(TestQueueName)] int sleepTimeInSeconds)
         {
@@ -81,32 +78,35 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
             else
             {
-                Environment.SetEnvironmentVariable(Constants.AzureWebsiteSku, "dynamic");
+                Environment.SetEnvironmentVariable(Constants.AzureWebsiteSku, "Dynamic");
             }
 
             RandomNameResolver nameResolver = new RandomNameResolver();
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost<ParallelExecutionTests>(b =>
                 {
-                    b.AddAzureStorage();
+                    b.AddAzureStorageQueues(o =>
+                    {
+                        o.BatchSize = batchSize;
+                        o.MessageEncoding = QueueMessageEncoding.None;
+                        o.NewBatchThreshold = isDynamicSku ? (batchSize / 2) : (batchSize / 2) * processorCount; // To get around static isDynamicSku variable in T2 storage extensions
+                    });
                 })
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<INameResolver>(nameResolver);
-                    services.Configure<QueuesOptions>(o => o.BatchSize = batchSize);
                 })
+                .ConfigureAppConfiguration(c => c.AddEnvironmentVariables())
                 .Build();
 
-            StorageAccount storageAccount = host.GetStorageAccount();
-            _queueClient = storageAccount.CreateCloudQueueClient();
-            CloudQueue queue = _queueClient.GetQueueReference(nameResolver.ResolveInString(TestQueueName));
-
-            await queue.CreateIfNotExistsAsync();
+            _queueServiceClient = TestHelpers.GetTestQueueServiceClient();
+            var queueClient = _queueServiceClient.GetQueueClient(nameResolver.ResolveInString(TestQueueName));
+            await queueClient.CreateIfNotExistsAsync();
 
             for (int i = 0; i < _numberOfQueueMessages; i++)
             {
                 int sleepTimeInSeconds = i % 2 == 0 ? 5 : 1;
-                await queue.AddMessageAsync(new CloudQueueMessage(sleepTimeInSeconds.ToString()));
+                await queueClient.SendMessageAsync(sleepTimeInSeconds.ToString());
             }
 
             using (_allMessagesProcessed = new ManualResetEvent(initialState: false))
@@ -130,13 +130,20 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
-        public void Dispose()
+        public Task InitializeAsync() => Task.CompletedTask;
+
+        public async Task DisposeAsync()
         {
-            if (_queueClient != null)
+            await CleanQueuesAsync();
+        }
+
+        private async Task CleanQueuesAsync()
+        {
+            if (_queueServiceClient != null)
             {
-                foreach (var testQueue in _queueClient.ListQueuesSegmentedAsync(TestArtifactPrefix, null).Result.Results)
+                await foreach (var testQueue in _queueServiceClient.GetQueuesAsync(prefix: TestArtifactPrefix))
                 {
-                    testQueue.DeleteAsync().Wait();
+                    await _queueServiceClient.DeleteQueueAsync(testQueue.Name);
                 }
             }
         }

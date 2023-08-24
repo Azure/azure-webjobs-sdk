@@ -13,7 +13,9 @@ namespace Microsoft.Azure.WebJobs
     /// </summary>
     public class ExponentialBackoffRetryAttribute : RetryAttribute
     {
-        private IDelayStrategy _delayStrategy;
+        private TimeSpan _parsedMinimumInterval;
+        private TimeSpan _parsedMaximumInterval;
+        private static string _delayStrategyKeyName = "MS_DelayStratagy";
 
         /// <summary>
         /// Constructs a new instance.
@@ -23,18 +25,19 @@ namespace Microsoft.Azure.WebJobs
         /// <param name="maximumInterval">The maximum delay interval.</param>
         public ExponentialBackoffRetryAttribute(int maxRetryCount, string minimumInterval, string maximumInterval) : base(maxRetryCount)
         {
-            if (!TimeSpan.TryParse(minimumInterval, out TimeSpan parsedMinimumInterval))
+            if (!TimeSpan.TryParse(minimumInterval, out _parsedMinimumInterval))
             {
                 throw new ArgumentOutOfRangeException(nameof(minimumInterval));
             }
-            if (!TimeSpan.TryParse(maximumInterval, out TimeSpan parsedMaximumInterval))
+            if (!TimeSpan.TryParse(maximumInterval, out _parsedMaximumInterval))
             {
                 throw new ArgumentOutOfRangeException(nameof(maximumInterval));
             }
-            MinimumInterval = minimumInterval;
-            MaxmumInterval = maximumInterval;
 
-            _delayStrategy = new RandomizedExponentialBackoffStrategy(parsedMinimumInterval, parsedMaximumInterval);
+            RandomizedExponentialBackoffStrategy.ValidateIntervals(_parsedMinimumInterval, _parsedMaximumInterval);
+
+            MinimumInterval = minimumInterval;
+            MaximumInterval = maximumInterval;
         }
 
         /// <summary>
@@ -45,13 +48,25 @@ namespace Microsoft.Azure.WebJobs
         /// <summary>
         /// Gets the maximum retry delay.
         /// </summary>
-        public string MaxmumInterval { get; }
+        public string MaximumInterval { get; }
 
         public override TimeSpan GetNextDelay(RetryContext context)
         {
-            if (MaxRetryCount == -1 || context.RetryCount < MaxRetryCount)
+            IDelayStrategy delayStrategy;
+
+            if (context.State.TryGetValue(_delayStrategyKeyName, out object stateObject))
             {
-                return _delayStrategy.GetNextDelay(false);
+                delayStrategy = stateObject as IDelayStrategy;
+            }
+            else
+            {
+                delayStrategy = new RandomizedExponentialBackoffStrategy(_parsedMinimumInterval, _parsedMaximumInterval);
+                context.State.Add(_delayStrategyKeyName, delayStrategy);
+            }
+
+            if (MaxRetryCount == -1 || context.RetryCount <= MaxRetryCount)
+            {
+                return delayStrategy.GetNextDelay(false);
             }
             return TimeSpan.Zero;
         }

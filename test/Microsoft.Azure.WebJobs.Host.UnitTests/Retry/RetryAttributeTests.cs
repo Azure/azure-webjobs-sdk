@@ -38,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             RetryContext lastRetryContext = new RetryContext
             {
-                RetryCount = 5
+                RetryCount = 6
             };
             Assert.Equal(TimeSpan.Zero, retry.GetNextDelay(lastRetryContext));
         }
@@ -49,12 +49,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var retry = new ExponentialBackoffRetryAttribute(5, "01:02:25", "02:00:10");
             Assert.Equal(5, retry.MaxRetryCount);
             Assert.Equal("01:02:25", retry.MinimumInterval);
-            Assert.Equal("02:00:10", retry.MaxmumInterval);
+            Assert.Equal("02:00:10", retry.MaximumInterval);
 
             retry = new ExponentialBackoffRetryAttribute(-1, "00:00:10", "00:00:30");
             Assert.Equal(-1, retry.MaxRetryCount);
             Assert.Equal("00:00:10", retry.MinimumInterval);
-            Assert.Equal("00:00:30", retry.MaxmumInterval);
+            Assert.Equal("00:00:30", retry.MaximumInterval);
         }
 
         [Fact]
@@ -77,9 +77,37 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             RetryContext lastRetryContext = new RetryContext
             {
-                RetryCount = 5
+                RetryCount = 6
             };
             Assert.Equal(TimeSpan.Zero, retry.GetNextDelay(lastRetryContext));
+        }
+
+        [Fact]
+        public void ExponentialBackOffDelay_GetNextDelay_Is_Stateless()
+        {
+            var retry = new ExponentialBackoffRetryAttribute(5, "01:02:25", "02:00:10");
+            RetryContext retryContext1 = new RetryContext
+            {
+                RetryCount = 1
+            };
+            RetryContext retryContext2 = new RetryContext
+            {
+                RetryCount = 1
+            };
+            Assert.Equal(retry.GetNextDelay(retryContext1), retry.GetNextDelay(retryContext2));
+        }
+
+        [Fact]
+        public void ExponentialBackOffDelay_GetNextDelay_Is_Increased()
+        {
+            var retry = new ExponentialBackoffRetryAttribute(5, "01:02:25", "02:00:10");
+            RetryContext retryContext = new RetryContext
+            {
+                RetryCount = 1
+            };
+            var delay1 = retry.GetNextDelay(retryContext);
+            var delay2 = retry.GetNextDelay(retryContext);
+            Assert.True(delay2 > delay1);
         }
     }
 }

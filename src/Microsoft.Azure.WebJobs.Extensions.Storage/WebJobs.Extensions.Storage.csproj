@@ -5,6 +5,7 @@
   
   <PropertyGroup>
     <Version>$(ExtensionsStorageVersion)</Version>
+    <Description>This package extends the Microsoft.Azure.WebJobs library with Blob, Queue, and Table triggers using Microsoft Azure Storage.</Description>
     <InformationalVersion>$(Version) Commit hash: $(CommitHash)</InformationalVersion>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>Microsoft.Azure.WebJobs.Extensions.Storage</AssemblyName>

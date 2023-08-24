@@ -17,15 +17,14 @@ namespace Microsoft.Azure.WebJobs.Hosting
         private readonly IOptionsLoggingSource _logSource;
         private readonly IOptionsFormatter<TOptions> _optionsFormatter;
 
-        public WebJobsOptionsFactory(IEnumerable<IConfigureOptions<TOptions>> setups, IEnumerable<IPostConfigureOptions<TOptions>> postConfigures, IOptionsLoggingSource logSource) :
-            this(setups, postConfigures, logSource, null)
+        public WebJobsOptionsFactory(OptionsFactory<TOptions> innerFactory, IOptionsLoggingSource logSource) :
+            this(innerFactory, logSource, null)
         {
         }
 
-        public WebJobsOptionsFactory(IEnumerable<IConfigureOptions<TOptions>> setups, IEnumerable<IPostConfigureOptions<TOptions>> postConfigures,
-            IOptionsLoggingSource logSource, IOptionsFormatter<TOptions> optionsFormatter)
+        public WebJobsOptionsFactory(OptionsFactory<TOptions> innerFactory, IOptionsLoggingSource logSource, IOptionsFormatter<TOptions> optionsFormatter)
         {
-            _innerFactory = new OptionsFactory<TOptions>(setups, postConfigures);
+            _innerFactory = innerFactory;
             _logSource = logSource;
 
             // This allows us to wrap behavior around an existing type. It will be null for types we don't log.

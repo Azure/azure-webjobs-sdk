@@ -1,9 +1,9 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using Microsoft.Azure.WebJobs.Host.Bindings;
 using System;
 using System.Collections.Generic;
-using Microsoft.Azure.WebJobs.Host.Bindings;
 using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Host.Triggers
@@ -14,17 +14,17 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
     /// </summary>
     /// <typeparam name="TMessage"></typeparam>
     /// <typeparam name="TTriggerValue"></typeparam>
-    /// <typeparam name="TUserType"></typeparam>
-    internal class CustomTriggerArgumentBinding<TMessage, TTriggerValue, TUserType> : 
+    internal class CustomTriggerArgumentBinding<TMessage, TTriggerValue> :
         SimpleTriggerArgumentBinding<TMessage, TTriggerValue>
     {
-        private IBindingDataProvider _bindingDataProvider;
-        private readonly FuncAsyncConverter<TMessage, TUserType> _converter;
+        private readonly IBindingDataProvider _bindingDataProvider;
+        private readonly FuncAsyncConverter _converter;
 
         public CustomTriggerArgumentBinding(
-            ITriggerBindingStrategy<TMessage, TTriggerValue> bindingStrategy, 
+            ITriggerBindingStrategy<TMessage, TTriggerValue> bindingStrategy,
             IConverterManager converterManager,
-            FuncAsyncConverter<TMessage, TUserType> converter) :
+            FuncAsyncConverter converter,
+            Type userType) :
             base(bindingStrategy, converterManager)
         {
             if (converter == null)
@@ -32,14 +32,14 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                 throw new ArgumentNullException(nameof(converter));
             }
             this._converter = converter;
-            this.ElementType = typeof(TUserType);
+            this.ElementType = userType;
 
             _bindingDataProvider = BindingDataProvider.FromType(ElementType);
             AddToBindingContract(_bindingDataProvider);
         }
 
         internal override async Task<object> ConvertAsync(
-            TMessage value, 
+            TMessage value,
             Dictionary<string, object> bindingData,
             ValueBindingContext context)
         {

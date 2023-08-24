@@ -93,5 +93,43 @@ namespace Microsoft.Extensions.Configuration
             
             return false;
         }
+
+        /// <summary>
+        /// Looks for an <see cref="IConfigurationSection"/> corresponding to the connectionName parameter.
+        /// </summary>
+        /// <param name="configuration">The <see cref="IConfiguration"/> instance to use.</param>
+        /// <param name="connectionName">Name of the section to search for.</param>
+        /// <returns></returns>
+        public static IConfigurationSection GetWebJobsConnectionSection(this IConfiguration configuration, string connectionName)
+        {
+            // first try prefixing
+            string prefixedConnectionStringName = GetPrefixedConnectionStringName(connectionName);
+            IConfigurationSection section = GetConnectionStringOrSettingSection(configuration, prefixedConnectionStringName);
+
+            if (!section.Exists())
+            {
+                // next try a direct unprefixed lookup
+                section = GetConnectionStringOrSettingSection(configuration, connectionName);
+            }
+
+            return section;
+        }
+
+        /// <summary>
+        /// Looks for a connection string by first checking the ConnectionStrings section, and then the root.
+        /// </summary>
+        /// <param name="configuration">The configuration.</param>
+        /// <param name="connectionName">The connection string key.</param>
+        /// <returns>Configuration section corresponding to the connectionName</returns>
+        private static IConfigurationSection GetConnectionStringOrSettingSection(this IConfiguration configuration, string connectionName)
+        {
+            var connectionStringSection = configuration?.GetSection("ConnectionStrings").GetSection(connectionName);
+
+            if (connectionStringSection.Exists())
+            {
+                return connectionStringSection;
+            }
+            return configuration?.GetSection(connectionName);
+        }
     }
 }

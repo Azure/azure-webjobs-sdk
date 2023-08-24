@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Moq;
 using Xunit;
-using SingletonLockHandle = Microsoft.Azure.WebJobs.Host.StorageBaseDistributedLockManager.SingletonLockHandle;
+using SingletonLockHandle = Microsoft.Azure.WebJobs.Host.BlobLeaseDistributedLockManager.SingletonLockHandle;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 {
@@ -30,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         }
 
         [Fact]
-        public async Task AquireAsync_InvokesSingletonManager_WithExpectedValues()
+        public async Task AcquireAsync_InvokesSingletonManager_WithExpectedValues()
         {
             CancellationToken cancellationToken = new CancellationToken();
             SingletonAttribute attribute = new SingletonAttribute();

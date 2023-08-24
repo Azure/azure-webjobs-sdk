@@ -31,17 +31,23 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     internal static class ApplicationInsightsServiceCollectionExtensions
     {
-        public static IServiceCollection AddApplicationInsights(this IServiceCollection services, Action<ApplicationInsightsLoggerOptions> configure)
+
+        public static IServiceCollection AddApplicationInsights(this IServiceCollection services)
         {
-            services.AddApplicationInsights();
-            if (configure != null)
-            {
-                services.Configure<ApplicationInsightsLoggerOptions>(configure);
-            }
+            return services.AddApplicationInsights(_ => { }, _ => { });
+        }
+
+
+        public static IServiceCollection AddApplicationInsights(this IServiceCollection services,
+            Action<ApplicationInsightsLoggerOptions> loggerOptionsConfiguration)
+        {
+            services.AddApplicationInsights(loggerOptionsConfiguration, _ => { });
             return services;
         }
 
-        public static IServiceCollection AddApplicationInsights(this IServiceCollection services)
+        internal static IServiceCollection AddApplicationInsights(this IServiceCollection services,
+            Action<ApplicationInsightsLoggerOptions> loggerOptionsConfiguration,
+            Action<TelemetryConfiguration> additionalTelemetryConfig)
         {
             services.TryAddSingleton<ISdkVersionProvider, WebJobsSdkVersionProvider>();
             services.TryAddSingleton<IRoleInstanceProvider, WebJobsRoleInstanceProvider>();
@@ -70,7 +76,6 @@ namespace Microsoft.Extensions.DependencyInjection
             });
 
             services.AddSingleton<ITelemetryInitializer, WebJobsRoleEnvironmentTelemetryInitializer>();
-            services.AddSingleton<ITelemetryInitializer, WebJobsSanitizingInitializer>();
             services.AddSingleton<ITelemetryInitializer, WebJobsTelemetryInitializer>();
             services.AddSingleton<ITelemetryInitializer, MetricSdkVersionTelemetryInitializer>();
             services.AddSingleton<QuickPulseInitializationScheduler>();
@@ -108,9 +113,10 @@ namespace Microsoft.Extensions.DependencyInjection
             {
                 var options = provider.GetService<IOptions<ApplicationInsightsLoggerOptions>>().Value;
 
+                DependencyTrackingTelemetryModule dependencyCollector = null;
                 if (options.EnableDependencyTracking)
                 {
-                    var dependencyCollector = new DependencyTrackingTelemetryModule();
+                    dependencyCollector = new DependencyTrackingTelemetryModule();
                     var excludedDomains = dependencyCollector.ExcludeComponentCorrelationHttpHeadersOnDomains;
                     excludedDomains.Add("core.windows.net");
                     excludedDomains.Add("core.chinacloudapi.cn");
@@ -122,6 +128,17 @@ namespace Microsoft.Extensions.DependencyInjection
                     var includedActivities = dependencyCollector.IncludeDiagnosticSourceActivities;
                     includedActivities.Add("Microsoft.Azure.ServiceBus");
                     includedActivities.Add("Microsoft.Azure.EventHubs");
+
+                    if (options.DependencyTrackingOptions != null)
+                    {
+                        dependencyCollector.DisableRuntimeInstrumentation = options.DependencyTrackingOptions.DisableRuntimeInstrumentation;
+                        dependencyCollector.DisableDiagnosticSourceInstrumentation = options.DependencyTrackingOptions.DisableDiagnosticSourceInstrumentation;
+                        dependencyCollector.EnableLegacyCorrelationHeadersInjection = options.DependencyTrackingOptions.EnableLegacyCorrelationHeadersInjection;
+                        dependencyCollector.EnableRequestIdHeaderInjectionInW3CMode = options.DependencyTrackingOptions.EnableRequestIdHeaderInjectionInW3CMode;
+                        dependencyCollector.EnableSqlCommandTextInstrumentation = options.DependencyTrackingOptions.EnableSqlCommandTextInstrumentation;
+                        dependencyCollector.SetComponentCorrelationHttpHeaders = options.DependencyTrackingOptions.SetComponentCorrelationHttpHeaders;
+                        dependencyCollector.EnableAzureSdkTelemetryListener = options.DependencyTrackingOptions.EnableAzureSdkTelemetryListener;
+                    }
 
                     return dependencyCollector;
                 }
@@ -161,7 +178,13 @@ namespace Microsoft.Extensions.DependencyInjection
                     : ActivityIdFormat.Hierarchical;
                 Activity.ForceDefaultIdFormat = true;
 
-                LoggerFilterOptions filterOptions = CreateFilterOptions(provider.GetService<IOptions<LoggerFilterOptions>>().Value);
+                // If we do not want to filter LiveMetrics logs, we need to "late filter" using the 
+                // custom filter options that were passed in during initialization.
+                LoggerFilterOptions filterOptions = null;
+                if (options.EnableLiveMetrics && !options.EnableLiveMetricsFilters)
+                {
+                    filterOptions = CreateFilterOptions(provider.GetService<IOptions<LoggerFilterOptions>>().Value);
+                }
 
                 ITelemetryChannel channel = provider.GetService<ITelemetryChannel>();
                 TelemetryConfiguration config = TelemetryConfiguration.CreateDefault();
@@ -206,7 +229,8 @@ namespace Microsoft.Extensions.DependencyInjection
                     appIdProvider,
                     filterOptions,
                     roleInstanceProvider,
-                    provider.GetService<QuickPulseInitializationScheduler>());
+                    provider.GetService<QuickPulseInitializationScheduler>(),
+                    additionalTelemetryConfig);
 
                 return config;
             });
@@ -223,6 +247,11 @@ namespace Microsoft.Extensions.DependencyInjection
             });
 
             services.AddSingleton<ILoggerProvider, ApplicationInsightsLoggerProvider>();
+
+            if (loggerOptionsConfiguration != null)
+            {
+                services.Configure<ApplicationInsightsLoggerOptions>(loggerOptionsConfiguration);
+            }
 
             return services;
         }
@@ -264,7 +293,8 @@ namespace Microsoft.Extensions.DependencyInjection
             IApplicationIdProvider applicationIdProvider,
             LoggerFilterOptions filterOptions,
             IRoleInstanceProvider roleInstanceProvider,
-            QuickPulseInitializationScheduler delayer)
+            QuickPulseInitializationScheduler delayer,
+            Action<TelemetryConfiguration> additionalTelemetryConfig)
         {
             if (options.ConnectionString != null)
             {
@@ -311,13 +341,22 @@ namespace Microsoft.Extensions.DependencyInjection
 
             QuickPulseTelemetryProcessor quickPulseProcessor = null;
             configuration.TelemetryProcessorChainBuilder
-                .Use((next) => new OperationFilteringTelemetryProcessor(next))
-                .Use((next) =>
+                .Use((next) => new OperationFilteringTelemetryProcessor(next));
+
+            if (options.EnableLiveMetrics)
+            {
+                configuration.TelemetryProcessorChainBuilder.Use((next) =>
                 {
                     quickPulseProcessor = new QuickPulseTelemetryProcessor(next);
                     return quickPulseProcessor;
-                })
-                .Use((next) => new FilteringTelemetryProcessor(filterOptions, next));
+                });
+            }
+
+            // No need to "late filter" as the logs will already be filtered before they are sent to the Logger.
+            if (filterOptions != null)
+            {
+                configuration.TelemetryProcessorChainBuilder.Use((next) => new FilteringTelemetryProcessor(filterOptions, next));
+            }
 
             if (options.SamplingSettings != null)
             {
@@ -335,6 +374,8 @@ namespace Microsoft.Extensions.DependencyInjection
                     return processor;
                 });
             }
+
+            additionalTelemetryConfig?.Invoke(configuration);
 
             if (options.SnapshotConfiguration != null)
             {

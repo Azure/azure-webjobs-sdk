@@ -304,7 +304,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
             {
                 foreach (var funcName in new string[]
                 {
-                    "StreamRead", "StringRead", "ByteArrayRead", "TextReaderRead"
+                    "StreamRead", "StringRead", "ByteArrayRead", "BinaryDataRead", "TextReaderRead"
                 })
                 {
                     _log = null;
@@ -321,7 +321,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                    "WriteTextWriter2",
                    "WriteTextWriter3",
                    "WriteString",
-                   "WriteByteArray"
+                   "WriteByteArray",
+                   "WriteBinaryData"
                 })
                 {
                     _writeStream = null;
@@ -368,6 +369,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 )
             {
                 _log = Encoding.UTF8.GetString(bytes);
+            }
+
+            // Read as BinaryData
+            public void BinaryDataRead(
+                [TestStream] BinaryData binaryData
+                )
+            {
+                _log = binaryData.ToString();
             }
 
             public void TextReaderRead(
@@ -437,6 +446,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Common
                 )
             {
                 x = Encoding.UTF8.GetBytes(_writeMessage);
+            }
+
+            public void WriteBinaryData(
+                [TestStream] out BinaryData x
+                )
+            {
+                x = BinaryData.FromString(_writeMessage);
             }
 
 

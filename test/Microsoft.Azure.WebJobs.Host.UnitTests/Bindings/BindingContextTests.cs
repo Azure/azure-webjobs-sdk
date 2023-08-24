@@ -50,7 +50,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
             Assert.Equal(functionCancellationToken, context.FunctionCancellationToken);
             Assert.Equal(functionBindingContext.FunctionInstanceId, context.FunctionInstanceId);
 
+            var ambientContext = context.AmbientContext;
+            Assert.Equal(0, invokeCount);
+
             Assert.Same(bindingData, context.BindingData);
+            Assert.Equal(1, invokeCount);
+
+            Assert.Same(context.BindingData, ambientContext.BindingData);
             Assert.Equal(1, invokeCount);
 
             // factory only called once

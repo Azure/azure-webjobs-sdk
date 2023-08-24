@@ -1,16 +1,21 @@
 $success = $true
 
 $projects = 
+  "test\Microsoft.Azure.WebJobs.Extensions.Rpc.UnitTests",
   "test\Microsoft.Azure.WebJobs.Host.UnitTests",
   "test\Microsoft.Azure.WebJobs.Host.FunctionalTests",
   "test\Microsoft.Azure.WebJobs.Logging.FunctionalTests",
-  "test\Microsoft.Azure.WebJobs.Host.EndToEndTests",
-  "test\Microsoft.Azure.Webjobs.Extensions.Storage.UnitTests"
+  "test\Microsoft.Azure.WebJobs.Host.EndToEndTests"
   
 
 foreach ($project in $projects)
 {
-  $cmd = "test", "$project", "-v", "q", "--no-build"
+  $cmd = "test", "$project", "-v", "m", "--no-build", "--logger", "trx;LogFileName=TEST.xml"
+
+  if ($null -ne $env:Configuration)
+  {
+    $cmd += "--configuration", "$env:Configuration"
+  }
 
   & dotnet $cmd  
 

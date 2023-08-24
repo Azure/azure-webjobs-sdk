@@ -3,15 +3,17 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Xunit;
+using Microsoft.Azure.WebJobs.Hosting;
+using Newtonsoft.Json;
+using Microsoft.Azure.WebJobs.Description;
+using System.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Configuration
 {
@@ -102,6 +104,45 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Configuration
             Assert.Equal("fromconfigureoptions", options.Value.Config3);
         }
 
+        [Fact]
+        public void ConfigureExtensionOptionsInfo_BindToEnumeration()
+        {
+            var host = new HostBuilder()
+                .ConfigureAppConfiguration(b =>
+                {
+                    b.AddInMemoryCollection(new Dictionary<string, string>
+                    {
+                        { "AzureWebJobs:extensions:test:config1", "test1" },
+                        { "AzureWebJobs:extensions:eventHubs:config1", "test1" },
+                        { "AzureWebJobs:extensions:noInterface:config1", "test1" }
+                    });
+                })
+                .ConfigureDefaultTestHost(b =>
+                {
+                    b.AddExtension<TestExtensionConfigProvider>()
+                    .BindOptions<TestOptions>();
+
+                    b.AddExtension<TestEventHubExtensionConfigProvider>()
+                    .BindOptions<TestEventHubOptions>();
+
+                    b.AddExtension<TestNoInterfaceExtensionConfigProvider>()
+                    .BindOptions<TestNoInterfaceOptions>();
+
+                    b.AddExtension<TestExtensionConfigProvider>()
+                    .BindOptions<TestOptions>()
+                    .BindOptions<TestOptions>();
+                }).Build();
+            
+            var extensionOptionsProvider = host.Services.GetServices<IExtensionOptionsProvider>().ToArray();
+            Assert.Equal(3, extensionOptionsProvider.Count());
+            Assert.Equal("Test", extensionOptionsProvider[0].ExtensionInfo.ConfigurationSectionName);
+            Assert.Equal("test1", ((TestOptions)extensionOptionsProvider[0].GetOptions()).Config1);
+            Assert.Equal("EventHubs", extensionOptionsProvider[1].ExtensionInfo.ConfigurationSectionName);
+            Assert.Equal("test1", ((TestEventHubOptions)extensionOptionsProvider[1].GetOptions()).Config1);
+            Assert.Equal("NoInterface", extensionOptionsProvider[2].ExtensionInfo.ConfigurationSectionName);
+            Assert.Equal("test1", ((TestNoInterfaceOptions)extensionOptionsProvider[2].GetOptions()).Config1);
+        }
+
         private class TestExtensionConfigProvider : IExtensionConfigProvider
         {
             public void Initialize(ExtensionConfigContext context)
@@ -109,7 +150,50 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests.Configuration
             }
         }
         
-        private class TestOptions
+        private class TestOptions : IOptionsFormatter
+        {
+            public string Config1 { get; set; }
+
+            public string Config2 { get; set; }
+
+            public string Config3 { get; set; }
+            public string Format()
+            {
+                return JsonConvert.SerializeObject(this);
+            }
+        }
+
+        [Extension("EventHubs", "EventHubs")]
+        private class TestEventHubExtensionConfigProvider : IExtensionConfigProvider
+        {
+            public void Initialize(ExtensionConfigContext context)
+            {
+            }
+        }
+
+        private class TestEventHubOptions : IOptionsFormatter
+        {
+            public string Config1 { get; set; }
+
+            public string Config2 { get; set; }
+
+            public string Config3 { get; set; }
+
+            public string Format()
+            {
+                return JsonConvert.SerializeObject(this);
+            }
+        }
+
+        [Extension("NoInterface", "NoInterface")]
+        private class TestNoInterfaceExtensionConfigProvider : IExtensionConfigProvider
+        {
+            public void Initialize(ExtensionConfigContext context)
+            {
+            }
+        }
+
+        private class TestNoInterfaceOptions
         {
             public string Config1 { get; set; }
 

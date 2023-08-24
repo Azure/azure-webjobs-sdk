@@ -140,7 +140,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost(b =>
                 {
-                    b.AddAzureStorage();
+                    b.AddAzureStorageBlobs();
+                    b.AddAzureStorageQueues();
                 })
                 .Build();
             
@@ -194,40 +195,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
             var queueTriggerAttr = GetAttr<QueueTriggerAttribute>(metadataProvider, new { QueueName = "q1" });
             Assert.Equal("q1", queueTriggerAttr.QueueName);
-
-            // Table
-            var tableAttr = GetAttr<TableAttribute>(metadataProvider, new { TableName = "t1" });
-            Assert.Equal("t1", tableAttr.TableName);
-
-            tableAttr = GetAttr<TableAttribute>(metadataProvider, new { TableName = "t1", partitionKey = "pk", Filter = "f1" });
-            Assert.Equal("t1", tableAttr.TableName);
-            Assert.Equal("pk", tableAttr.PartitionKey);
-            Assert.Equal(null, tableAttr.RowKey);
-            Assert.Equal("f1", tableAttr.Filter);
         }
-
-        [Fact]
-        public void DefaultTypeForTable()
-        {
-            var host = new HostBuilder()
-                .ConfigureDefaultTestHost(b =>
-                {
-                    b.AddAzureStorage();
-                })
-                .Build();
-
-            var metadataProvider = host.CreateMetadataProvider();
-
-            var t1 = metadataProvider.GetDefaultType(new TableAttribute("table1"), FileAccess.Read, null);
-            Assert.Equal(typeof(JArray), t1);
-
-            var t2 = metadataProvider.GetDefaultType(new TableAttribute("table1", "pk", "rk"), FileAccess.Read, null);
-            Assert.Equal(typeof(JObject), t2);
-
-            var t3 = metadataProvider.GetDefaultType(new TableAttribute("table1"), FileAccess.Write, null);
-            Assert.Equal(typeof(IAsyncCollector<JObject>), t3);
-        }
-
 
         [Fact]
         public void DefaultTypeForQueue()
@@ -235,7 +203,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var host = new HostBuilder()
                 .ConfigureDefaultTestHost(b =>
                 {
-                    b.AddAzureStorage();
+                    b.AddAzureStorageQueues();
                 })
                 .Build();
 

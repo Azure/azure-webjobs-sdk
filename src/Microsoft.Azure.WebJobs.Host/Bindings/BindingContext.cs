@@ -110,7 +110,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             {
                 if (_ambientContext == null)
                 {
-                    _ambientContext = new AmbientBindingContext(_functionContext, _bindingData);
+                    _ambientContext = new AmbientBindingContext(_functionContext, () => BindingData);
                 }
 
                 return _ambientContext;

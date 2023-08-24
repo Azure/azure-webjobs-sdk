@@ -8,15 +8,16 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.ServiceBus.Core;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Indexers;
+using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Properties;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Extensions.Logging;
-using Microsoft.Azure.Storage;
 using Moq;
 using Xunit;
 
@@ -43,6 +44,32 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             InvalidOperationException innerException = exception.InnerException as InvalidOperationException;
             Assert.NotNull(innerException);
             Assert.Equal($"Cannot bind parameter 'parsed' to type Foo&. Make sure the parameter Type is supported by the binding. {Resource.ExtensionInitializationMessage}", innerException.Message);
+        }
+
+        [Fact]
+        public async Task IndexMethod_ProvidesBindingContractHelp_WhenParameterFailsToBind()
+        {
+            FunctionIndexer product = CreateProductUnderTest();
+
+            // QueueTrigger example
+            FunctionIndexingException exception = await Assert.ThrowsAsync<FunctionIndexingException>(async () =>
+            {
+                var methodToIndex = typeof(FunctionIndexerTests).GetMethod(nameof(FunctionIndexerTests.QueueTrigger_ContractParameterBindingFailsIndexing));
+                await product.IndexMethodAsync(methodToIndex, null, CancellationToken.None);
+            });
+            InvalidOperationException innerException = exception.InnerException as InvalidOperationException;
+            Assert.NotNull(innerException);
+            Assert.Equal("Cannot bind parameter 'expiryTime' to type DateTimeOffset. Make sure the parameter Type is supported by the binding. The binding supports the following parameter names for type DateTimeOffset: (ExpirationTime, InsertionTime, NextVisibleTime). If you're trying to bind to one of those values, rename your parameter to match the contract name (case insensitive). If you're using binding extensions (e.g. Azure Storage, ServiceBus, Timers, etc.) make sure you've called the registration method for the extension(s) in your startup code (e.g. builder.AddAzureStorage(), builder.AddServiceBus(), builder.AddTimers(), etc.).", innerException.Message);
+
+            // ServiceBusTrigger example
+            exception = await Assert.ThrowsAsync<FunctionIndexingException>(async () =>
+            {
+                var methodToIndex = typeof(FunctionIndexerTests).GetMethod(nameof(FunctionIndexerTests.ServiceBusTrigger_ContractParameterBindingFailsIndexing));
+                await product.IndexMethodAsync(methodToIndex, null, CancellationToken.None);
+            });
+            innerException = exception.InnerException as InvalidOperationException;
+            Assert.NotNull(innerException);
+            Assert.Equal("Cannot bind parameter 'receiver' to type MessageReceiver. Make sure the parameter Type is supported by the binding. The binding supports the following parameter names for type MessageReceiver: (MessageReceiver). If you're trying to bind to one of those values, rename your parameter to match the contract name (case insensitive). If you're using binding extensions (e.g. Azure Storage, ServiceBus, Timers, etc.) make sure you've called the registration method for the extension(s) in your startup code (e.g. builder.AddAzureStorage(), builder.AddServiceBus(), builder.AddTimers(), etc.).", innerException.Message);
         }
 
         [Theory]
@@ -262,6 +289,87 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             Assert.Equal(false, actual);
         }
 
+        [Fact]
+        public async Task IndexMethod_SameName_Succeeds()
+        {
+            FunctionIndex index = new FunctionIndex();
+            FunctionIndexer product = CreateProductUnderTest();
+
+            await product.IndexMethodAsync(typeof(ClassA).GetMethod("Test"), index, CancellationToken.None);
+            await product.IndexMethodAsync(typeof(ClassB).GetMethod("Test"), index, CancellationToken.None);
+
+            var functions = index.ReadAll().ToArray();
+            Assert.Equal(2, functions.Length);
+
+            Assert.Equal("ClassA.Test", index.LookupByName("Test").Descriptor.ShortName);
+            Assert.Equal("ClassA.Test", index.LookupByName("ClassA.Test").Descriptor.ShortName);
+            Assert.Equal("ClassB.Test", index.LookupByName("ClassB.Test").Descriptor.ShortName);
+        }
+
+        [Fact]
+        public void GetSharedListenerIdOrNull_ReturnsExpectedValue()
+        {
+            string result = FunctionIndexer.GetSharedListenerIdOrNull(new TestTriggerBinding());
+            Assert.Null(result);
+
+            result = FunctionIndexer.GetSharedListenerIdOrNull(new TestSharedListenerTriggerBinding());
+            Assert.Equal("TestSharedListenerId", result);
+        }
+
+        [Fact]        
+        public void CheckRetrySupport_DoesNotSetRetryToNull()
+        {
+            // Arrange
+            var loggerProvider = new TestLoggerProvider();
+            var logger = loggerProvider.CreateLogger("test");
+
+            FunctionDescriptor desc = new FunctionDescriptor()
+            {
+                RetryStrategy = new FixedDelayRetryAttribute(5, "00:00:01")
+            };
+
+            // Act & Assert
+            FunctionIndexer.CheckRetrySupport(new TestTriggerBinding(), desc, logger);
+            Assert.NotNull(desc.RetryStrategy);
+            Assert.Contains(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Soon retries will not be supported for function ") && x.Level == LogLevel.Warning);
+        }
+
+        [Fact]
+        public void CheckRetrySupport_LeavesRetry()
+        {
+            // Arrange
+            var loggerProvider = new TestLoggerProvider();
+            var logger = loggerProvider.CreateLogger("test");
+
+            FunctionDescriptor desc = new FunctionDescriptor()
+            {
+                RetryStrategy = new FixedDelayRetryAttribute(5, "00:00:01")
+            };
+
+            // Act & Assert
+            FunctionIndexer.CheckRetrySupport(new SupportRetryTestTriggerBinding(), desc, logger);
+            Assert.NotNull(desc.RetryStrategy);
+            Assert.DoesNotContain(loggerProvider.GetAllLogMessages(), x => x.FormattedMessage.Contains("Retries are not supported by the trigger binding for "));
+        }
+
+        public class ClassA
+        {
+            [NoAutomaticTrigger]
+            public void Test(string test, ILogger logger)
+            {
+                logger.LogInformation("Test invoked!");
+            }
+        }
+
+        public class ClassB
+        {
+            [NoAutomaticTrigger]
+            public void Test(string test, ILogger logger)
+            {
+                logger.LogInformation("Test invoked!");
+            }
+        }
+
         private class TestExtensionBindingProvider : IBindingProvider
         {
             public Task<IBinding> TryCreateAsync(BindingProviderContext context)
@@ -329,6 +437,20 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
         [NoAutomaticTrigger]
         public static void FailIndexing(string input, out Foo parsed)
+        {
+            throw new NotImplementedException();
+        }
+
+        // Attempt to bind to a QueueTrigger binding contract member with the wrong name
+        // In this case, we're trying to bind to ExpirationTime
+        public static void QueueTrigger_ContractParameterBindingFailsIndexing([QueueTrigger("queue")] string input, DateTimeOffset expiryTime)
+        {
+            throw new NotImplementedException();
+        }
+
+        // Attempt to bind to a QueueTrigger binding contract member with the wrong name
+        // In this case, we're trying to bind to MessageReceiver
+        public static void ServiceBusTrigger_ContractParameterBindingFailsIndexing([ServiceBusTrigger("queue")] string input, MessageReceiver receiver)
         {
             throw new NotImplementedException();
         }
@@ -449,6 +571,63 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             }
         }
 
+        [SharedListener("TestSharedListenerId")]
+        public class TestSharedListenerTriggerBinding : ITriggerBinding
+        {
+            public Type TriggerValueType => throw new NotImplementedException();
+
+            public IReadOnlyDictionary<string, Type> BindingDataContract => throw new NotImplementedException();
+
+            public Task<ITriggerData> BindAsync(object value, ValueBindingContext context)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Task<IListener> CreateListenerAsync(ListenerFactoryContext context)
+            {
+                throw new NotImplementedException();
+            }
+
+            public ParameterDescriptor ToParameterDescriptor()
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public class TestTriggerBinding : ITriggerBinding
+        {
+            public Type TriggerValueType => throw new NotImplementedException();
+
+            public IReadOnlyDictionary<string, Type> BindingDataContract => throw new NotImplementedException();
+
+            public Task<ITriggerData> BindAsync(object value, ValueBindingContext context)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Task<IListener> CreateListenerAsync(ListenerFactoryContext context)
+            {
+                throw new NotImplementedException();
+            }
+
+            public ParameterDescriptor ToParameterDescriptor()
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        [SupportsRetry]
+        public class SupportRetryTestTriggerBinding : TestTriggerBinding
+        {
+        }
+
+        public class TestTriggerBinsingProvider : ITriggerBindingProvider
+        {
+            public Task<ITriggerBinding> TryCreateAsync(TriggerBindingProviderContext context)
+            {
+                return Task.FromResult(new SupportRetryTestTriggerBinding() as ITriggerBinding);
+            }
+        }
 
         [Fact]
         public async Task FSharpTasks_AreCorrectlyIndexed()
@@ -458,7 +637,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                 BindingFlags.Static | BindingFlags.Public);
             Assert.NotNull(method); // Guard
 
-            FunctionIndexer indexer = FunctionIndexerFactory.Create(CloudStorageAccount.DevelopmentStorageAccount);
+            FunctionIndexer indexer = FunctionIndexerFactory.Create();
             var indexCollector = new TestIndexCollector();
 
             // Act & Assert

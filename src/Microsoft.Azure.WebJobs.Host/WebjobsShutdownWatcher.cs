@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
+using Microsoft.Azure.WebJobs.Host;
 
 namespace Microsoft.Azure.WebJobs
 {
@@ -32,7 +33,7 @@ namespace Microsoft.Azure.WebJobs
         {
             // http://blog.amitapple.com/post/2014/05/webjobs-graceful-shutdown/#.U3aIXRFOVaQ
             // Antares will set this file to signify shutdown
-            _shutdownFile = Environment.GetEnvironmentVariable("WEBJOBS_SHUTDOWN_FILE");
+            _shutdownFile = Environment.GetEnvironmentVariable(Constants.AzureWebJobsShutdownFile);
             if (_shutdownFile == null)
             {
                 // If env var is not set, then no shutdown support

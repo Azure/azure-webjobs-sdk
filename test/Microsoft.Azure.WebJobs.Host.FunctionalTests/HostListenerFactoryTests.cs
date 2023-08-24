@@ -16,6 +16,7 @@ using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -58,8 +59,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             functions.Add(definition);
 
             var monitorManager = new ScaleMonitorManager();
+            var targetScaleManager = new TargetScalerManager();
             var drainModeManagerMock = new Mock<IDrainModeManager>();
-            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManager, () => { }, false, drainModeManagerMock.Object);
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManager, targetScaleManager, () => { }, false, drainModeManagerMock.Object);
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 
             var innerListeners = ((IEnumerable<IListener>)listener).ToArray();
@@ -67,6 +69,39 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             var monitors = monitorManager.GetMonitors().ToArray();
             Assert.Single(monitors);
             Assert.Same(testListener, monitors[0]);
+        }
+
+        [Fact]
+        public async Task CreateAsync_RegistersTargetScalers()
+        {
+            Mock<IFunctionDefinition> mockFunctionDefinition = new Mock<IFunctionDefinition>();
+            Mock<IFunctionInstanceFactory> mockInstanceFactory = new Mock<IFunctionInstanceFactory>(MockBehavior.Strict);
+            Mock<IListenerFactory> mockListenerFactory = new Mock<IListenerFactory>(MockBehavior.Strict);
+            var testListener = new TestListener_TargetScaler();
+            mockListenerFactory.Setup(p => p.CreateAsync(It.IsAny<CancellationToken>())).ReturnsAsync(testListener);
+            SingletonManager singletonManager = new SingletonManager();
+
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            TestLoggerProvider loggerProvider = new TestLoggerProvider();
+            loggerFactory.AddProvider(loggerProvider);
+
+            List<FunctionDefinition> functions = new List<FunctionDefinition>();
+            var method = typeof(Functions1).GetMethod("TestJob", BindingFlags.Public | BindingFlags.Static);
+            FunctionDescriptor descriptor = FunctionIndexer.FromMethod(method, _configuration, _jobActivator);
+            FunctionDefinition definition = new FunctionDefinition(descriptor, mockInstanceFactory.Object, mockListenerFactory.Object);
+            functions.Add(definition);
+
+            var monitorManager = new ScaleMonitorManager();
+            var targetScaleManager = new TargetScalerManager();
+            var drainModeManagerMock = new Mock<IDrainModeManager>();
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManager, targetScaleManager, () => { }, false, drainModeManagerMock.Object);
+            IListener listener = await factory.CreateAsync(CancellationToken.None);
+
+            var innerListeners = ((IEnumerable<IListener>)listener).ToArray();
+
+            var targetScalers = targetScaleManager.GetTargetScalers().ToArray();
+            Assert.Single(targetScalers);
+            Assert.Same(testListener, targetScalers[0]);
         }
 
         [Fact]
@@ -96,6 +131,35 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             Assert.Equal(2, monitors.Length);
             Assert.Same(testListener, monitors[0]);
             Assert.Same(testListenerMonitorProvider.GetMonitor(), monitors[1]);
+        }
+
+        [Fact]
+        public void RegisterTargetScaler_Succeeds()
+        {
+            // listener is a direct target scaler
+            var manager = new TargetScalerManager();
+            var testListener = new TestListener_TargetScaler();
+            HostListenerFactory.RegisterTargetScaler(testListener, manager);
+            var targetScalers = manager.GetTargetScalers().ToArray();
+            Assert.Single(targetScalers);
+            Assert.Same(testListener, targetScalers[0]);
+
+            // listener is a target scaler provider
+            manager = new TargetScalerManager();
+            var providerListener = new TestListener_TargetScalerProvider();
+            HostListenerFactory.RegisterTargetScaler(providerListener, manager);
+            targetScalers = manager.GetTargetScalers().ToArray();
+            Assert.Single(targetScalers);
+            Assert.Same(providerListener.GetTargetScaler(), targetScalers[0]);
+
+            // listener is composite, so we expect recursion
+            manager = new TargetScalerManager();
+            var compositListener = new CompositeListener(testListener, providerListener);
+            HostListenerFactory.RegisterTargetScaler(compositListener, manager);
+            targetScalers = manager.GetTargetScalers().ToArray();
+            Assert.Equal(2, targetScalers.Length);
+            Assert.Same(testListener, targetScalers[0]);
+            Assert.Same(providerListener.GetTargetScaler(), targetScalers[1]);
         }
 
         [Theory]
@@ -138,8 +202,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             // Create the composite listener - this will fail if any of the
             // function definitions indicate that they are not disabled
             var monitorManagerMock = new Mock<IScaleMonitorManager>(MockBehavior.Strict);
+            var targetScalerManagerMock = new Mock<ITargetScalerManager>(MockBehavior.Strict);
             var drainModeManagerMock = new Mock<IDrainModeManager>();
-            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManagerMock.Object, () => { }, false, drainModeManagerMock.Object);
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManagerMock.Object, targetScalerManagerMock.Object, () => { }, false, drainModeManagerMock.Object);
 
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 
@@ -196,7 +261,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
                     { "Disable_TestJob", "False" },
                 })
                 .Build();
-            
+
             Mock<INameResolver> mockNameResolver = new Mock<INameResolver>(MockBehavior.Strict);
             mockNameResolver.Setup(p => p.Resolve("Test")).Returns("TestValue");
 
@@ -403,6 +468,96 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
                 {
                     throw new NotImplementedException();
                 }
+            }
+        }
+
+        public class TestListener_TargetScaler : IListener, ITargetScaler
+        {
+            public TargetScalerDescriptor TargetScalerDescriptor => throw new NotImplementedException();
+
+            public void Cancel()
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Dispose()
+            {
+                throw new NotImplementedException();
+            }
+
+            public Task<TargetScalerResult> GetScaleResultAsync(TargetScalerContext context)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Task StartAsync(CancellationToken cancellationToken)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Task StopAsync(CancellationToken cancellationToken)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public class TestListener_TargetScalerProvider : IListener, ITargetScalerProvider
+        {
+            private readonly ITargetScaler _targetScaler;
+
+            public TestListener_TargetScalerProvider()
+            {
+                _targetScaler = new TestListener_TargetScalerImpl();
+            }
+
+            public void Cancel()
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Dispose()
+            {
+                throw new NotImplementedException();
+            }
+
+            public ITargetScaler GetTargetScaler()
+            {
+                return _targetScaler;
+            }
+
+            public Task StartAsync(CancellationToken cancellationToken)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Task StopAsync(CancellationToken cancellationToken)
+            {
+                throw new NotImplementedException();
+            }
+
+            public class TestListener_TargetScalerImpl : ITargetScaler
+            {
+                public TargetScalerDescriptor TargetScalerDescriptor => throw new NotImplementedException();
+
+                public Task<ScaleMetrics> GetMetricsAsync()
+                {
+                    throw new NotImplementedException();
+                }
+
+                public Task<TargetScalerResult> GetScaleResultAsync(TargetScalerContext context)
+                {
+                    throw new NotImplementedException();
+                }
+            }
+        }
+
+        public class TestListener_MonitorAndTargetScaler : TestListener_Monitor, ITargetScaler
+        {
+            public TargetScalerDescriptor TargetScalerDescriptor => throw new NotImplementedException();
+
+            public Task<TargetScalerResult> GetScaleResultAsync(TargetScalerContext context)
+            {
+                throw new NotImplementedException();
             }
         }
     }

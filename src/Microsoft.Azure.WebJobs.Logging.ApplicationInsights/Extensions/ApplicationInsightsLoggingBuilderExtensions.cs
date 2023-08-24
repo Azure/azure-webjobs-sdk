@@ -4,9 +4,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.Logging
 {
@@ -43,14 +45,37 @@ namespace Microsoft.Extensions.Logging
         /// Registers Application Insights and <see cref="ApplicationInsightsLoggerProvider"/> with an <see cref="ILoggingBuilder"/>.
         /// </summary>        
         public static ILoggingBuilder AddApplicationInsightsWebJobs(
+             this ILoggingBuilder builder,
+             Action<ApplicationInsightsLoggerOptions> loggerOptionsConfiguration)
+        {
+            return builder.AddApplicationInsightsWebJobs(loggerOptionsConfiguration, null);
+        }
+
+        /// <summary>
+        /// Registers Application Insights and <see cref="ApplicationInsightsLoggerProvider"/> with an <see cref="ILoggingBuilder"/>.
+        /// </summary>  
+        public static ILoggingBuilder AddApplicationInsightsWebJobs(
             this ILoggingBuilder builder,
-            Action<ApplicationInsightsLoggerOptions> configure)
+            Action<ApplicationInsightsLoggerOptions> loggerOptionsConfiguration,
+            Action<TelemetryConfiguration> additionalTelemetryConfiguration)
         {
             builder.AddConfiguration();
-            builder.Services.AddApplicationInsights(configure);
+            builder.Services.AddApplicationInsights(loggerOptionsConfiguration, additionalTelemetryConfiguration);
 
-            builder.Services.PostConfigure<LoggerFilterOptions>(o =>
-            {
+            builder.Services.AddOptions<LoggerFilterOptions>()
+                .PostConfigure<IOptions<ApplicationInsightsLoggerOptions>>((o, appInsightsOptions) =>
+                {
+                // The custom filtering below is only needed if we are sending all logs to Live Metrics.
+                // If we are filtering (or not using Live Metrics) we don't need to do this.
+                if (appInsightsOptions != null)
+                {
+                    if (!appInsightsOptions.Value.EnableLiveMetrics ||
+                        appInsightsOptions.Value.EnableLiveMetricsFilters)
+                    {
+                        return;
+                    }
+                }
+
                 // We want all logs to flow through the logger so they show up in QuickPulse.
                 // To do that, we'll hide all registered rules inside of this one. They will be re-populated
                 // and used by the FilteringTelemetryProcessor further down the pipeline.

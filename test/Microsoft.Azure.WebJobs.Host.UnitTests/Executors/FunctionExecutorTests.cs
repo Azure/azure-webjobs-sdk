@@ -13,6 +13,7 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Host.Protocols;
+using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Extensions.Configuration;
@@ -141,7 +142,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             var shutdownSource = new CancellationTokenSource();
             bool throwOnTimeout = true;
 
-            await FunctionExecutor.InvokeAsync(mockInvoker.Object, NewArgs(new object[0]), timeoutSource, shutdownSource,
+            await FunctionExecutor.InvokeWithTimeoutAsync(mockInvoker.Object, NewArgs(new object[0]), timeoutSource, shutdownSource,
                 throwOnTimeout, TimeSpan.MinValue, null);
 
             Assert.True(called);
@@ -170,7 +171,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             bool throwOnTimeout = false;
 
             timeoutSource.CancelAfter(500);
-            await FunctionExecutor.InvokeAsync(mockInvoker.Object, NewArgs(parameters), timeoutSource, shutdownSource,
+            await FunctionExecutor.InvokeWithTimeoutAsync(mockInvoker.Object, NewArgs(parameters), timeoutSource, shutdownSource,
                 throwOnTimeout, TimeSpan.FromMilliseconds(1), null);
 
             Assert.True(called);
@@ -204,7 +205,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             TimeSpan timeoutInterval = TimeSpan.FromMilliseconds(500);
             timeoutSource.CancelAfter(timeoutInterval);
-            var ex = await Assert.ThrowsAsync<FunctionTimeoutException>(() => FunctionExecutor.InvokeAsync(mockInvoker.Object, NewArgs(parameters), timeoutSource, shutdownSource,
+            var ex = await Assert.ThrowsAsync<FunctionTimeoutException>(() => FunctionExecutor.InvokeWithTimeoutAsync(mockInvoker.Object, NewArgs(parameters), timeoutSource, shutdownSource,
                 throwOnTimeout, timeoutInterval, _mockFunctionInstance.Object));
 
             var expectedMessage = string.Format("Timeout value of {0} was exceeded by function: {1}", timeoutInterval, _mockFunctionInstance.Object.FunctionDescriptor.ShortName);
@@ -234,7 +235,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             bool throwOnTimeout = false;
 
             shutdownSource.CancelAfter(500);
-            await FunctionExecutor.InvokeAsync(mockInvoker.Object, NewArgs(parameters), timeoutSource, shutdownSource,
+            await FunctionExecutor.InvokeWithTimeoutAsync(mockInvoker.Object, NewArgs(parameters), timeoutSource, shutdownSource,
                 throwOnTimeout, TimeSpan.MinValue, null);
 
             Assert.True(called);
@@ -264,7 +265,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             shutdownSource.CancelAfter(500);
             timeoutSource.CancelAfter(1000);
-            await FunctionExecutor.InvokeAsync(mockInvoker.Object, NewArgs(parameters), timeoutSource, shutdownSource,
+            await FunctionExecutor.InvokeWithTimeoutAsync(mockInvoker.Object, NewArgs(parameters), timeoutSource, shutdownSource,
                 throwOnTimeout, TimeSpan.MinValue, null);
 
             Assert.True(called);
@@ -299,7 +300,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             TimeSpan timeoutInterval = TimeSpan.FromMilliseconds(1000);
             shutdownSource.CancelAfter(500);
             timeoutSource.CancelAfter(timeoutInterval);
-            var ex = await Assert.ThrowsAsync<FunctionTimeoutException>(() => FunctionExecutor.InvokeAsync(mockInvoker.Object, NewArgs(parameters), timeoutSource, shutdownSource,
+            var ex = await Assert.ThrowsAsync<FunctionTimeoutException>(() => FunctionExecutor.InvokeWithTimeoutAsync(mockInvoker.Object, NewArgs(parameters), timeoutSource, shutdownSource,
                  throwOnTimeout, timeoutInterval, _mockFunctionInstance.Object));
 
             var expectedMessage = string.Format("Timeout value of {0} was exceeded by function: {1}", timeoutInterval, _mockFunctionInstance.Object.FunctionDescriptor.ShortName);
@@ -312,12 +313,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             var mockFunctionOutputLogger = new NullFunctionOutputLogger();
             var mockExceptionHandler = new Mock<IWebJobsExceptionHandler>();
             var mockFunctionEventCollector = new Mock<IAsyncCollector<FunctionInstanceLogEntry>>();
+            var mockConcurrencyManager = new Mock<ConcurrencyManager>();
 
             var functionExecutor = new FunctionExecutor(
                 mockFunctionInstanceLogger.Object,
                 mockFunctionOutputLogger,
                 mockExceptionHandler.Object,
                 mockFunctionEventCollector.Object,
+                mockConcurrencyManager.Object,
                 NullLoggerFactory.Instance,
                 null,
                 drainModeManager);
@@ -373,37 +376,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         }
 
         [Fact]
-        public async Task ExecuteLoggingAsync_WithDrainModeManagerEnabled_RequestsCancellation()
-        {
-            var loggerFactory = new LoggerFactory();
-            var loggerProvider = new TestLoggerProvider();
-            loggerFactory.AddProvider(loggerProvider);
-            var drainModeLogger = loggerFactory.CreateLogger<DrainModeManager>();
-
-            var logger = new TestLogger("Tests.FunctionExecutor");
-            var mockFunctionInstanceEx = GetFunctionInstanceExMockInstance();
-            var parameterHelper = new FunctionExecutor.ParameterHelper(mockFunctionInstanceEx);
-
-            var drainModeManager = new DrainModeManager(drainModeLogger);
-            await drainModeManager.EnableDrainModeAsync(CancellationToken.None);
-            var functionExecutor = GetTestFunctionExecutor(drainModeManager);
-
-            try
-            {
-                await functionExecutor.ExecuteWithLoggingAsync(mockFunctionInstanceEx, new FunctionStartedMessage(), new FunctionInstanceLogEntry(), parameterHelper, logger, CancellationToken.None);
-            }
-            // Function Invocation Exception is expected
-            catch (FunctionInvocationException)
-            {
-            }
-            finally
-            {
-                var messages = logger.GetLogMessages().Select(p => p.FormattedMessage);
-                Assert.Equal(messages.ElementAt(0), "Requesting cancellation for function invocation '00000000-0000-0000-0000-000000000000'");
-            }
-        }
-
-        [Fact]
         public void OnFunctionTimeout_PerformsExpectedOperations()
         {
             RunOnFunctionTimeoutTest(false, "Initiating cancellation.");
@@ -413,6 +385,60 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         public void OnFunctionTimeout_DoesNotCancel_IfDebugging()
         {
             RunOnFunctionTimeoutTest(true, "Function will not be cancelled while debugging.");
+        }
+
+        [Fact]
+        public async Task GetStatus_Returns_Expected()
+        {
+            var triggerData = new TriggeredFunctionData
+            {
+                TriggerValue = 123,
+                TriggerDetails = new Dictionary<string, string>()
+            };
+            var functionDescriptor = FunctionExecutorTestHelper.GetFunctionDescriptor();
+            var functionInstance = FunctionExecutorTestHelper.CreateFunctionInstance(Guid.NewGuid(), triggerData.TriggerDetails, false, functionDescriptor, 1000);
+            FunctionExecutor executor = GetTestFunctionExecutor();
+
+            // Arrange
+            HostStartedMessage testMessage = new HostStartedMessage();
+            executor.HostOutputMessage = testMessage;
+
+            FunctionActivityStatus status = executor.GetStatus();
+
+            Assert.Equal(status.OutstandingInvocations, 0);
+            Assert.Equal(status.OutstandingRetries, 0);
+
+            ManualResetEvent resetEvent = new ManualResetEvent(false);
+            Task monitoringTask = Task.Run(async () =>
+            {
+                // validate that we have 2 active invocation and 2 retries
+                await TestHelpers.Await(() =>
+                {
+                    var status = (executor as IFunctionActivityStatusProvider).GetStatus();
+                    return status.OutstandingInvocations == 2 && status.OutstandingRetries == 2;
+                }, 5000);
+            });
+
+            Task executionTask1 = Task.Run(async () =>
+            {
+                (executor as IRetryNotifier).RetryPending();
+                await executor.TryExecuteAsync(functionInstance, CancellationToken.None);
+                (executor as IRetryNotifier).RetryComplete();
+            });
+
+            Task executionTask2 = Task.Run(async () =>
+            {
+                (executor as IRetryNotifier).RetryPending();
+                await executor.TryExecuteAsync(functionInstance, CancellationToken.None);
+                (executor as IRetryNotifier).RetryComplete();
+            });
+
+            await Task.WhenAll(monitoringTask, executionTask1, executionTask2);
+
+            // validate that there are no active invocations or retries in 
+            status = executor.GetStatus();
+            Assert.Equal(status.OutstandingInvocations, 0);
+            Assert.Equal(status.OutstandingRetries, 0);
         }
 
         private void RunOnFunctionTimeoutTest(bool isDebugging, string expectedMessage)

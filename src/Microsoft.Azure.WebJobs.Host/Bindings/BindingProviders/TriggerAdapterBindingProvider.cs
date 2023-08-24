@@ -13,21 +13,20 @@ using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
-    // Regular BindToInput has to do a TAttribute --> Value creation. 
+    // Regular BindToInput has to do a TAttribute --> Value creation.
     // But triggers already have a Listener that provided the initial object; and we're just
-    // converting it to the user's target parameter. 
+    // converting it to the user's target parameter.
     internal class TriggerAdapterBindingProvider<TAttribute, TTriggerValue> :
         FluentBindingProvider<TAttribute>, IBindingProvider, IBindingRuleProvider
-           where TAttribute : Attribute
+            where TAttribute : Attribute
             where TTriggerValue : class
     {
         private readonly INameResolver _nameResolver;
         private readonly IConverterManager _converterManager;
 
         public TriggerAdapterBindingProvider(
-          INameResolver nameResolver,
-          IConverterManager converterManager
-          )
+            INameResolver nameResolver,
+            IConverterManager converterManager)
         {
             _nameResolver = nameResolver;
             _converterManager = converterManager;
@@ -51,12 +50,27 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
             typeof(string[])
         };
 
+        // TODO: Refactor GetDefaultType so that a) we don't need a special case for ParameterBindingData
+        // and b) we are taking `requestedType` into account when checking if we have a converter
+        // GitHub issue: https://github.com/Azure/azure-webjobs-sdk/issues/2930
         public Type GetDefaultType(Attribute attribute, FileAccess access, Type requestedType)
         {
             // If the requestedType is a batch type, we need to return the batch version of default types
-            IEnumerable<Type> targets = requestedType.IsArray && !_defaultTypes.Contains(requestedType) 
+            IEnumerable<Type> targets = requestedType.IsArray && !_defaultTypes.Contains(requestedType)
                 ? _defaultBatchTypes
                 : _defaultTypes;
+
+            if (requestedType == typeof(ParameterBindingData) || requestedType == typeof(ParameterBindingData[]))
+            {
+                if (_converterManager.HasConverter<TAttribute>(typeof(TTriggerValue), requestedType))
+                {
+                    return requestedType;
+                }
+
+                // We should only be requesting ParameterBindingData if it is supported by the
+                // extension we're binding against. In theory, this should never happen.
+                throw new InvalidOperationException($"Converter for {requestedType} not found.");
+            }
 
             foreach (var target in targets)
             {
@@ -116,46 +130,47 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 return Task.FromResult<IBinding>(null);
             }
 
-            var type = typeof(ExactBinding<>).MakeGenericType(typeof(TAttribute), typeof(TTriggerValue), parameterType);
-            var method = type.GetMethod("TryBuild", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
-            var binding = BindingFactoryHelpers.MethodInvoke<IBinding>(method, this, context);
+            var binding = ExactBinding.TryBuild(this, context);
 
             return Task.FromResult<IBinding>(binding);
         }
 
-        private class ExactBinding<TUserType> : IBinding
+        private class ExactBinding : IBinding
         {
-            private FuncAsyncConverter<TTriggerValue, TUserType> _converter;
+            private FuncAsyncConverter _converter;
 
             private FuncAsyncConverter<DirectInvokeString, TTriggerValue> _directInvoker;
             private FuncAsyncConverter<TTriggerValue, DirectInvokeString> _getInvokeString;
+            private Type _userType;
 
             private TAttribute _attribute;
 
             public bool FromAttribute => true;
 
-            public static ExactBinding<TUserType> TryBuild(
+            public static ExactBinding TryBuild(
                 TriggerAdapterBindingProvider<TAttribute, TTriggerValue> parent,
                 BindingProviderContext context)
             {
+                var parameter = context.Parameter;
+                var userType = parameter.ParameterType;
                 IConverterManager cm = parent._converterManager;
 
-                var converter = cm.GetConverter<TTriggerValue, TUserType, TAttribute>();
+                var converter = cm.GetConverter<TAttribute>(typeof(TTriggerValue), userType);
 
                 if (converter == null)
                 {
                     return null;
                 }
 
-                var parameter = context.Parameter;
                 var attributeSource = TypeUtility.GetResolvedAttribute<TAttribute>(parameter);
 
-                return new ExactBinding<TUserType>
+                return new ExactBinding
                 {
                     _converter = converter,
                     _directInvoker = GetDirectInvoker(cm),
                     _getInvokeString = GetDirectInvokeString(cm),
-                    _attribute = attributeSource
+                    _attribute = attributeSource,
+                    _userType = userType
                 };
             }
 
@@ -204,7 +219,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                 {
                     if (_directInvoker != null && (value is string str))
                     {
-                        // Direct invoke case. Need to converrt String-->TTriggerValue. 
+                        // Direct invoke case. Need to convert String-->TTriggerValue.
                         val = await _directInvoker(new DirectInvokeString(str), _attribute, context);
                     }
                     else
@@ -214,16 +229,16 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     }
                 }
 
-                TUserType result = await _converter(val, _attribute, context);
+                var result = await _converter(val, _attribute, context);
 
                 DirectInvokeString invokeString = await _getInvokeString(val, _attribute, context);
-                IValueProvider vp = new ConstantValueProvider(result, typeof(TUserType), invokeString.Value);
+                IValueProvider vp = new ConstantValueProvider(result, _userType, invokeString.Value);
                 return vp;
             }
 
             public Task<IValueProvider> BindAsync(BindingContext context)
             {
-                // Never called, since a trigger alreayd has an object. 
+                // Never called, since a trigger already has an object.
                 throw new NotImplementedException();
             }
 

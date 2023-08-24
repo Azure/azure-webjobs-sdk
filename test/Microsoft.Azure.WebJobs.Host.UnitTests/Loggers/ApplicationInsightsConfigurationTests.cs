@@ -60,13 +60,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 var config = host.Services.GetService<TelemetryConfiguration>();
 
                 // Verify Initializers
-                Assert.Equal(6, config.TelemetryInitializers.Count);
+                Assert.Equal(5, config.TelemetryInitializers.Count);
                 // These will throw if there are not exactly one
                 Assert.Single(config.TelemetryInitializers.OfType<OperationCorrelationTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<HttpDependenciesParsingTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<WebJobsTelemetryInitializer>());
-                Assert.Single(config.TelemetryInitializers.OfType<WebJobsSanitizingInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<MetricSdkVersionTelemetryInitializer>());
 
                 var sdkVersionProvider = host.Services.GetServices<ISdkVersionProvider>().ToList();
@@ -137,13 +136,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Assert.Equal("somekey", config.InstrumentationKey);
 
                 // Verify Initializers
-                Assert.Equal(6, config.TelemetryInitializers.Count);
+                Assert.Equal(5, config.TelemetryInitializers.Count);
                 // These will throw if there are not exactly one
                 Assert.Single(config.TelemetryInitializers.OfType<OperationCorrelationTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<HttpDependenciesParsingTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<WebJobsTelemetryInitializer>());
-                Assert.Single(config.TelemetryInitializers.OfType<WebJobsSanitizingInitializer>());
                 Assert.Single(config.TelemetryInitializers.OfType<MetricSdkVersionTelemetryInitializer>());
 
                 var sdkVersionProvider = host.Services.GetServices<ISdkVersionProvider>().ToList();
@@ -232,6 +230,27 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             }
         }
 
+        
+        [Fact]
+        public void DependencyInjectionConfiguration_EnableLiveMetricsFilters()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsightsWebJobs(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                        o.EnableLiveMetricsFilters = true;
+                    });
+                })
+                .Build())
+            {
+                var config = host.Services.GetService<TelemetryConfiguration>();
+                Assert.Equal(3, config.TelemetryProcessors.Count);
+                Assert.IsType<OperationFilteringTelemetryProcessor>(config.TelemetryProcessors[0]);
+                Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[1]);
+              }
+        }
 
         [Fact]
         public void DependencyInjectionConfiguration_ConfiguresRequestCollectionOptions()
@@ -275,7 +294,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         public void DependencyInjectionConfiguration_NoClientIpInitializerWithoutExtendedHttpOptions()
         {
             using (var host = new HostBuilder()
-                .ConfigureServices(b => 
+                .ConfigureServices(b =>
                     b.AddHttpContextAccessor())
                 .ConfigureLogging(b =>
                 {
@@ -296,7 +315,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         public void DependencyInjectionConfiguration_ConfiguresClientIpInitializer()
         {
             using (var host = new HostBuilder()
-                .ConfigureServices(b => 
+                .ConfigureServices(b =>
                     b.AddHttpContextAccessor())
                 .ConfigureLogging(b =>
                 {
@@ -308,7 +327,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 .Build())
             {
                 var config = host.Services.GetServices<TelemetryConfiguration>().Single();
-                
+
                 Assert.Contains(config.TelemetryInitializers, ti => ti is ClientIpHeaderTelemetryInitializer);
             }
         }
@@ -395,6 +414,50 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                     {
                         o.InstrumentationKey = "KI";
                         o.EnableDependencyTracking = false;
+                    });
+                })
+                .Build())
+            {
+                var modules = host.Services.GetServices<ITelemetryModule>();
+                Assert.True(modules.Count(m => m is DependencyTrackingTelemetryModule) == 0);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_EnableSqlCommandTextInstrumentation()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsights(o =>
+                    {
+                        o.InstrumentationKey = "KI";
+                        o.EnableDependencyTracking = true;
+                        o.DependencyTrackingOptions = new DependencyTrackingOptions() { EnableSqlCommandTextInstrumentation = true };
+                    });
+                })
+                .Build())
+            {
+                var modules = host.Services.GetServices<ITelemetryModule>();
+                var matchingModules = modules.Where(m => m is DependencyTrackingTelemetryModule);
+                Assert.True(matchingModules.Count() == 1);
+
+                var module = matchingModules.First() as DependencyTrackingTelemetryModule;
+                Assert.True(module.EnableSqlCommandTextInstrumentation);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_SqlCommandTextInstrumentation_DisabledByDefault()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsights(o =>
+                    {
+                        o.InstrumentationKey = "KI";
+                        o.EnableDependencyTracking = false;
+                        o.DependencyTrackingOptions = new DependencyTrackingOptions() { EnableSqlCommandTextInstrumentation = true };
                     });
                 })
                 .Build())
@@ -634,6 +697,46 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
                 // ikey should still be set
                 Assert.Equal("some key", TelemetryConfiguration.Active.InstrumentationKey);
+            }
+        }
+
+        [Fact]
+        public void CreateFilterOptions_EnableLiveMetricsFilters()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsightsWebJobs(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                        o.EnableLiveMetricsFilters = true;
+                    });
+                })
+                .Build())
+            {
+                var filterOptions = host.Services.GetService<IOptions<LoggerFilterOptions>>().Value;
+                var rule = SelectAppInsightsRule(filterOptions, "Category");
+                Assert.Equal(null, rule.Filter);
+            }
+        }
+
+        [Fact]
+        public void CreateFilterOptions_DisableLiveMetrics()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsightsWebJobs(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                        o.EnableLiveMetrics = false;
+                    });
+                })
+                .Build())
+            {
+                var filterOptions = host.Services.GetService<IOptions<LoggerFilterOptions>>().Value;
+                var rule = SelectAppInsightsRule(filterOptions, "Category");
+                Assert.Equal(null, rule.Filter);
             }
         }
 

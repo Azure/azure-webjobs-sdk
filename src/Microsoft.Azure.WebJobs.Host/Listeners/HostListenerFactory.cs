@@ -14,6 +14,7 @@ using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Host.Listeners
 {
@@ -30,11 +31,11 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         private readonly bool _allowPartialHostStartup;
         private readonly Action _listenersCreatedCallback;
         private readonly IScaleMonitorManager _monitorManager;
+        private readonly ITargetScalerManager _targetScalerManager;
         private readonly IDrainModeManager _drainModeManager;
 
-
         public HostListenerFactory(IEnumerable<IFunctionDefinition> functionDefinitions, SingletonManager singletonManager, IJobActivator activator,
-            INameResolver nameResolver, ILoggerFactory loggerFactory, IScaleMonitorManager monitorManager, Action listenersCreatedCallback, bool allowPartialHostStartup = false, IDrainModeManager drainModeManager = null)
+            INameResolver nameResolver, ILoggerFactory loggerFactory, IScaleMonitorManager monitorManager, ITargetScalerManager targetScalerManager, Action listenersCreatedCallback, bool allowPartialHostStartup = false, IDrainModeManager drainModeManager = null)
         {
             _functionDefinitions = functionDefinitions;
             _singletonManager = singletonManager;
@@ -44,6 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             _logger = _loggerFactory?.CreateLogger(LogCategories.Startup);
             _allowPartialHostStartup = allowPartialHostStartup;
             _monitorManager = monitorManager;
+            _targetScalerManager = targetScalerManager;
             _listenersCreatedCallback = listenersCreatedCallback;
             _drainModeManager = drainModeManager;
         }
@@ -71,7 +73,8 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                 IListener listener = await listenerFactory.CreateAsync(cancellationToken);
 
                 RegisterScaleMonitor(listener, _monitorManager);
-
+                RegisterTargetScaler(listener, _targetScalerManager);
+                
                 // if the listener is a Singleton, wrap it with our SingletonListener
                 SingletonAttribute singletonAttribute = SingletonManager.GetListenerSingletonOrNull(listener.GetType(), functionDefinition.Descriptor);
                 if (singletonAttribute != null)
@@ -119,6 +122,27 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                 foreach (var innerListener in ((IEnumerable<IListener>)listener))
                 {
                     RegisterScaleMonitor(innerListener, monitorManager);
+                }
+            }
+        }
+
+        internal static void RegisterTargetScaler(IListener listener, ITargetScalerManager targetScalerManager)
+        {
+            if (listener is ITargetScaler targetScaler)
+            {
+                targetScalerManager.Register(targetScaler);
+            }
+            else if (listener is ITargetScalerProvider targetScalerProvider)
+            {
+                var scaler = ((ITargetScalerProvider)listener).GetTargetScaler();
+                targetScalerManager.Register(scaler);
+            }
+            else if (listener is IEnumerable<IListener>)
+            {
+                // for composite listeners, we need to check all the inner listeners
+                foreach (var innerListener in ((IEnumerable<IListener>)listener))
+                {
+                    RegisterTargetScaler(innerListener, targetScalerManager);
                 }
             }
         }

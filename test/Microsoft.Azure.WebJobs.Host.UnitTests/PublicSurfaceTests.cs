@@ -14,6 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
     /// fail any time new dependencies or public surface area are added, ensuring
     /// we review such additions carefully.
     /// </summary>
+    [Trait(TestTraits.CategoryTraitName, TestTraits.ScaleMonitoring)]
     public class PublicSurfaceTests
     {
         [Fact]
@@ -88,7 +89,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "SingletonMode",
                 "SingletonScope",
                 "StorageAccountAttribute",
-                "TimeoutAttribute"               
+                "TimeoutAttribute",
+                "ParameterBindingData"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);
@@ -166,6 +168,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IEventCollectorFactory",
                 "IEventCollectorProvider",
                 "IExtensionConfigProvider",
+                "IExtensionOptionsProvider",
                 "IExtensionRegistry",
                 "IExtensionRegistryExtensions",
                 "IExtensionRegistryFactory",
@@ -269,7 +272,45 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "RetryAttribute",
                 "FixedDelayRetryAttribute",
                 "ExponentialBackoffRetryAttribute",
-                "RetryContext"
+                "RetryContext",
+                "ConcurrencyManager",
+                "ConcurrencyOptions",
+                "ConcurrencyStatus",
+                "HostConcurrencySnapshot",
+                "ConcurrencyThrottleStatus",
+                "ConcurrencyThrottleAggregateStatus",
+                "FunctionConcurrencySnapshot",
+                "HostHealthState",
+                "HostProcessStatus",
+                "IConcurrencyStatusRepository",
+                "IConcurrencyThrottleManager",
+                "IConcurrencyThrottleProvider",
+                "IHostProcessMonitor",
+                "IPrimaryHostStateProvider",
+                "PrimaryHostCoordinatorOptions",
+                "ThrottleState",
+                "SharedListenerAttribute",
+                "FunctionDataCacheKey",
+                "ICacheAwareReadObject",
+                "ICacheAwareWriteObject",
+                "IFunctionDataCache",
+                "SharedMemoryAttribute",
+                "SharedMemoryMetadata",
+                "FunctionActivityStatus",
+                "IFunctionActivityStatusProvider",
+                "SupportsRetryAttribute",
+                "AppServicesHostingUtility",
+                "ITargetScaler",
+                "ITargetScalerManager",
+                "ITargetScalerProvider",
+                "TargetScalerDescriptor",
+                "TargetScalerResult",
+                "TargetScalerContext",
+                "IScaleMetricsRepository",
+                "IScaleStatusProvider",
+                "ScaleOptions",
+                "TriggerMetadata",
+                "AggregateScaleStatus"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);
@@ -283,10 +324,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var expected = new[]
             {
                 "ApplicationInsightsLoggerOptions",
+                "ApplicationInsightsDiagnosticConstants",
                 "HttpAutoCollectionOptions",
                 "ApplicationInsightsLoggerProvider",
                 "ApplicationInsightsLoggingBuilderExtensions",
-                "ISdkVersionProvider"
+                "ISdkVersionProvider",
+                "DependencyTrackingOptions"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);

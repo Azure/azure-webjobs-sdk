@@ -15,4 +15,17 @@ namespace System.Collections.Generic
             return default(T);
         }
     }
+
+    internal static class ReadOnlyDictionaryExtensions
+    {
+        public static T GetValueOrDefault<T>(this IReadOnlyDictionary<string, object> dictionary, string key)
+        {
+            object value;
+            if (dictionary != null && dictionary.TryGetValue(key, out value))
+            {
+                return (T)value;
+            }
+            return default(T);
+        }
+    }
 }

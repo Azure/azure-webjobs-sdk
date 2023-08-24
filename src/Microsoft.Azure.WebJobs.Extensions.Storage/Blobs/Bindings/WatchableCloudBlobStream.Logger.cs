@@ -12,13 +12,13 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Bindings
           LoggerMessage.Define<string, string, string, TimeSpan, long>(
               LogLevel.Debug,
               new EventId(2, nameof(BlobWriteAccess)),
-              "BlobWriteAccess - Name: {name}, Type: {type}, ETag: {etag}, WriteTime: {writeTime}, BytesWritten: {bytesWritten}");
+              "BlobWriteAccess - Name: {blobName}, Type: {type}, ETag: {etag}, WriteTime: {writeTime}, BytesWritten: {bytesWritten}");
 
         // Name is of the format <ContainerName>/<BlobName>
         // Type is of the format <BlobType>/<ContentType>
-        public static void BlobWriteAccess(this ILogger logger, string name, string type, string etag, TimeSpan writeTime, long bytesWritten)
+        public static void BlobWriteAccess(this ILogger logger, string blobName, string type, string etag, TimeSpan writeTime, long bytesWritten)
         {
-            _blobWriteAccess(logger, name, type, etag, writeTime, bytesWritten, null);
+            _blobWriteAccess(logger, blobName, type, etag, writeTime, bytesWritten, null);
         }
     }
 }

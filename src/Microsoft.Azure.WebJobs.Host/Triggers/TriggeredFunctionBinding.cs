@@ -46,7 +46,8 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
 
         private async Task<IReadOnlyDictionary<string, IValueProvider>> BindCoreAsync(ValueBindingContext context, object value, IDictionary<string, object> parameters)
         {
-            Dictionary<string, IValueProvider> valueProviders = new Dictionary<string, IValueProvider>();
+            // Account for below: 1 + _nonTriggerBindings + maybe 1 more, to avoid a resize in this hot path
+            Dictionary<string, IValueProvider> valueProviders = new Dictionary<string, IValueProvider>(1 + _nonTriggerBindings.Count + 1);
             IValueProvider triggerProvider;
             IReadOnlyDictionary<string, object> bindingData;
 

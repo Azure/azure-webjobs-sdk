@@ -583,6 +583,35 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         }
 
         [Fact]
+        public void Log_LogLevelNone_Succeeds()
+        {
+            Guid scopeGuid = Guid.NewGuid();
+
+            ILogger logger = CreateLogger(_functionCategoryName);
+
+            using (logger.BeginFunctionScope(CreateFunctionInstance(scopeGuid), _hostInstanceId))
+            {
+                logger.Log(LogLevel.None, "None");
+            }
+
+            Assert.Single(_channel.Telemetries);
+            Assert.Single(_channel.Telemetries.OfType<TraceTelemetry>());
+            foreach (var telemetry in _channel.Telemetries.Cast<TraceTelemetry>())
+            {
+                Enum.TryParse(telemetry.Message, out LogLevel expectedLogLevel);
+                Assert.Equal(expectedLogLevel.ToString(), telemetry.Properties[LogConstants.LogLevelKey]);
+                Assert.Null(telemetry.SeverityLevel);
+
+                Assert.Equal(5, telemetry.Properties.Count);
+                Assert.Equal(Process.GetCurrentProcess().Id.ToString(), telemetry.Properties[LogConstants.ProcessIdKey]);
+                Assert.Equal(_functionCategoryName, telemetry.Properties[LogConstants.CategoryNameKey]);
+                Assert.Equal(telemetry.Message, telemetry.Properties[LogConstants.CustomPropertyPrefix + LogConstants.OriginalFormatKey]);
+                Assert.Equal(scopeGuid.ToString(), telemetry.Properties[LogConstants.InvocationIdKey]);
+                Assert.Equal(telemetry.Message, telemetry.Properties[LogConstants.LogLevelKey]);
+            }
+        }
+
+        [Fact]
         public void DuplicateProperties_LastStateWins()
         {
             var logger = CreateLogger(_functionCategoryName);
@@ -654,6 +683,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         {
             var options = new ApplicationInsightsLoggerOptions
             {
+                EnableLiveMetrics = true,
+                EnableLiveMetricsFilters = true,
                 SamplingSettings = new SamplingPercentageEstimatorSettings()
                 {
                     EvaluationInterval = TimeSpan.FromHours(1),
@@ -667,7 +698,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 },
                 SnapshotConfiguration = new SnapshotCollectorConfiguration()
                 {
-                    AgentEndpoint = "123",
+                    AgentEndpoint = "http://something",
                     FailedRequestLimit = 42,
                     IsEnabled = false,
                     IsEnabledInDeveloperMode = false,
@@ -691,6 +722,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                     EnableResponseHeaderInjection = false,
                     EnableW3CDistributedTracing = false,
                     EnableHttpTriggerExtendedInfoCollection = true
+                },
+                DependencyTrackingOptions = new DependencyTrackingOptions()
+                {
+                    DisableDiagnosticSourceInstrumentation = true,
+                    DisableRuntimeInstrumentation = true,
+                    EnableSqlCommandTextInstrumentation = true,
+                    EnableAzureSdkTelemetryListener = true,
+                    EnableLegacyCorrelationHeadersInjection = true,
+                    EnableRequestIdHeaderInjectionInW3CMode = true,
+                    SetComponentCorrelationHttpHeaders = true
                 }
             };
 
@@ -726,6 +767,17 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(options.SnapshotConfiguration.SnapshotsPerTenMinutesLimit, deserializedOptions.SnapshotConfiguration.SnapshotsPerTenMinutesLimit);
             Assert.Equal(options.SnapshotConfiguration.TempFolder, deserializedOptions.SnapshotConfiguration.TempFolder);
             Assert.Equal(options.SnapshotConfiguration.ThresholdForSnapshotting, deserializedOptions.SnapshotConfiguration.ThresholdForSnapshotting);
+
+            Assert.Equal(options.DependencyTrackingOptions.SetComponentCorrelationHttpHeaders, deserializedOptions.DependencyTrackingOptions.SetComponentCorrelationHttpHeaders);
+            Assert.Equal(options.DependencyTrackingOptions.DisableDiagnosticSourceInstrumentation, deserializedOptions.DependencyTrackingOptions.DisableDiagnosticSourceInstrumentation);
+            Assert.Equal(options.DependencyTrackingOptions.DisableRuntimeInstrumentation, deserializedOptions.DependencyTrackingOptions.DisableRuntimeInstrumentation);
+            Assert.Equal(options.DependencyTrackingOptions.EnableAzureSdkTelemetryListener, deserializedOptions.DependencyTrackingOptions.EnableAzureSdkTelemetryListener);
+            Assert.Equal(options.DependencyTrackingOptions.EnableLegacyCorrelationHeadersInjection, deserializedOptions.DependencyTrackingOptions.EnableLegacyCorrelationHeadersInjection);
+            Assert.Equal(options.DependencyTrackingOptions.EnableRequestIdHeaderInjectionInW3CMode, deserializedOptions.DependencyTrackingOptions.EnableRequestIdHeaderInjectionInW3CMode);
+            Assert.Equal(options.DependencyTrackingOptions.EnableSqlCommandTextInstrumentation, deserializedOptions.DependencyTrackingOptions.EnableSqlCommandTextInstrumentation);
+
+            Assert.Equal(options.EnableLiveMetrics, deserializedOptions.EnableLiveMetrics);
+            Assert.Equal(options.EnableLiveMetricsFilters, deserializedOptions.EnableLiveMetricsFilters);
         }
 
         [Fact]
@@ -853,6 +905,32 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal("images", telemetry.Source);
         }
 
+        [Fact]
+        public static void ApplicationInsights_ApplyProperty_CaseSensitive()
+        {
+            Dictionary<string, string> properties = new Dictionary<string, string>();
+
+            // when applying prefixing, each different case pattern will be its own property
+            ApplicationInsightsLogger.ApplyProperty(properties, "Test", "1", applyPrefix: true);
+            ApplicationInsightsLogger.ApplyProperty(properties, "test", "2", applyPrefix: true);
+
+            // last one wins
+            ApplicationInsightsLogger.ApplyProperty(properties, "tEsT", "3", applyPrefix: true);
+            ApplicationInsightsLogger.ApplyProperty(properties, "tEsT", "4", applyPrefix: true);
+
+            // no prefixing - still case sensitive
+            ApplicationInsightsLogger.ApplyProperty(properties, "TEST", "5", applyPrefix: false);
+            ApplicationInsightsLogger.ApplyProperty(properties, "TESt", "6", applyPrefix: false);
+
+            Assert.Equal(5, properties.Count);
+
+            Assert.Equal("1", properties["prop__Test"]);
+            Assert.Equal("2", properties["prop__test"]);
+            Assert.Equal("4", properties["prop__tEsT"]);
+            Assert.Equal("5", properties["TEST"]);
+            Assert.Equal("6", properties["TESt"]);
+        }
+
         private async Task Level1(Guid asyncLocalSetting)
         {
             // Push and pop values onto the dictionary at various levels. Make sure they
@@ -860,7 +938,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             var level1 = new Dictionary<string, object>
             {
                 ["AsyncLocal"] = asyncLocalSetting,
-                ["1"] = 1
+                ["1"] = 1,
+                ["shared"] = "Level1"
             };
 
             ILogger logger = CreateLogger(_functionCategoryName);
@@ -880,14 +959,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             var level2 = new Dictionary<string, object>
             {
-                ["2"] = 2
+                ["2"] = 2,
+                ["shared"] = "Level2"
             };
 
             var expectedLevel2 = new Dictionary<string, object>
             {
                 ["1"] = 1,
                 ["2"] = 2,
-                ["AsyncLocal"] = asyncLocalSetting
+                ["AsyncLocal"] = asyncLocalSetting,
+                ["shared"] = "Level2"
             };
 
             ILogger logger2 = CreateLogger(_functionCategoryName);
@@ -909,7 +990,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             var level3 = new Dictionary<string, object>
             {
                 ["1"] = 11,
-                ["3"] = 3
+                ["3"] = 3,
+                ["shared"] = "Level3"
             };
 
             var expectedLevel3 = new Dictionary<string, object>
@@ -917,7 +999,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 ["1"] = 11,
                 ["2"] = 2,
                 ["3"] = 3,
-                ["AsyncLocal"] = asyncLocalSetting
+                ["AsyncLocal"] = asyncLocalSetting,
+                ["shared"] = "Level3"
             };
 
             ILogger logger3 = CreateLogger(_functionCategoryName);
@@ -948,7 +1031,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
         private static void ValidateScope(IDictionary<string, object> expected)
         {
-            var scopeDict = DictionaryLoggerScope.GetMergedStateDictionary();
+            var scopeDict = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
             Assert.Equal(expected.Count, scopeDict.Count);
             foreach (var entry in expected)
             {

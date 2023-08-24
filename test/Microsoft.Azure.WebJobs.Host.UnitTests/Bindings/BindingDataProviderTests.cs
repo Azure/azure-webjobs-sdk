@@ -42,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
             // Assert
             Assert.NotNull(provider);
             Assert.NotNull(provider.Contract);
-            
+
             var names = provider.Contract.Keys.ToArray();
             Array.Sort(names);
             var expected = new string[] { "IntProp", "Nested", "StringProp" };
@@ -50,13 +50,45 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
         }
 
         [Fact]
-        public void FromType_DuplicatePropertiesDetected_Throws()
+        public void FromType_ShadowedPropertiesInParent_ReturnsValidBindingData()
         {
-            var ex = Assert.Throws<InvalidOperationException>(() =>
-            {
-                BindingDataProvider.FromType(typeof(DerivedWithNew));
-            });
-            Assert.Equal("Multiple properties named 'A' found in type 'DerivedWithNew'.", ex.Message);
+            var provider = BindingDataProvider.FromType(typeof(DerivedWithShadowParent));
+            var json = @"{""a"":27, ""b"" : 123}";
+            var value = JsonConvert.DeserializeObject(json, typeof(DerivedWithShadowParent));
+            var bindingData = provider.GetBindingData(value);
+
+            Assert.NotNull(bindingData);
+            Assert.Equal(2, bindingData.Count);
+            Assert.Equal(27, bindingData["a"]);
+            Assert.Equal(123, bindingData["b"]);
+        }
+
+        [Fact]
+        public void FromType_ShadowedPropertiesInHierarchy_ReturnsValidBindingData()
+        {
+            var provider = BindingDataProvider.FromType(typeof(DerivedWithShadowHierarchy));
+            var json = @"{""a"":27, ""b"" : ""string-value""}";
+            var value = JsonConvert.DeserializeObject(json, typeof(DerivedWithShadowHierarchy));
+            var bindingData = provider.GetBindingData(value);
+
+            Assert.NotNull(bindingData);
+            Assert.Equal(2, bindingData.Count);
+            Assert.Equal(27, bindingData["a"]);
+            Assert.Equal("string-value", bindingData["b"]);
+        }
+
+        [Fact]
+        public void FromType_ShadowedPropertiesOnType_ReturnsValidBindingData()
+        {
+            var provider = BindingDataProvider.FromType(typeof(DerivedWithShadow));
+            var json = @"{""a"":27, ""b"" : 123}";
+            var value = JsonConvert.DeserializeObject(json, typeof(DerivedWithShadow));
+            var bindingData = provider.GetBindingData(value);
+
+            Assert.NotNull(bindingData);
+            Assert.Equal(2, bindingData.Count);
+            Assert.Equal(27, bindingData["a"]);
+            Assert.Equal(123, bindingData["b"]);
         }
 
         [Fact]
@@ -76,6 +108,24 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
             Assert.NotNull(bindingData);
             Assert.Equal(1, bindingData.Count);
             Assert.Equal(12, bindingData["Name"]);
+        }
+
+        [Fact]
+        public void GetBindingData_IfPropertyThrows_SkipsThrowingProperty()
+        {
+            // Arrange
+            IBindingDataProvider provider = BindingDataProvider.FromType(typeof(DataTypeWithThrowingProperty));
+            string json = @"{ ""ABeforeThrow"" : 10, ""BAfterThrow"" : 20 }";
+            object value = JsonConvert.DeserializeObject(json, typeof(DataTypeWithThrowingProperty));
+
+            // Act
+            var bindingData = provider.GetBindingData(value);
+
+            // Assert
+            Assert.NotNull(bindingData);
+            Assert.Equal(2, bindingData.Count);
+            Assert.Equal(10, bindingData["ABeforeThrow"]);
+            Assert.Equal(20, bindingData["BAfterThrow"]);
         }
 
         [Fact]
@@ -142,7 +192,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
 
             // Get binding data for the type used when creating the provider
             Assert.Equal(1, bindingData.Count);
-            Assert.Equal(1, bindingData["a"]);
+            Assert.Equal(1L, bindingData["a"]);
         }
 
         [Fact]
@@ -183,6 +233,19 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
             public int Name { get; set; }
         }
 
+        private class DataTypeWithThrowingProperty
+        {
+            public int ABeforeThrow { get; set; } // Yes
+
+            public bool IThrow // skip: throws on get
+            {
+                get { throw new Exception("Can't get this property");  }
+                set { IThrow = value; }
+            }
+
+            public int BAfterThrow { get; set; } // Yes
+        }
+
         private class ComplexDataType
         {
             public int a { get; set; }
@@ -214,17 +277,26 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
 
         private class Base
         {
-            public int? A { get; set; }
-        }
-
-        private class DerivedWithNew : Base
-        {
-            new public int A { get; set; }
+            public long? A { get; set; }
         }
 
         private class Derived : Base
         {
             public int B { get; set; }
+        }
+
+        private class DerivedWithShadow : Derived
+        {
+            new public int A { get; set; }
+        }
+
+        private class DerivedWithShadowParent : DerivedWithShadow
+        {
+        }
+
+        private class DerivedWithShadowHierarchy : DerivedWithShadowParent
+        {
+            new public string B { get; set; }
         }
     }
 }

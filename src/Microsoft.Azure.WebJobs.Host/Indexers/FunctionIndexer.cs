@@ -188,8 +188,10 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             Dictionary<string, IBinding> nonTriggerBindings = new Dictionary<string, IBinding>();
             IReadOnlyDictionary<string, Type> bindingDataContract;
 
+            string sharedListenerId = null;
             if (triggerBinding != null)
             {
+                sharedListenerId = GetSharedListenerIdOrNull(triggerBinding);
                 bindingDataContract = triggerBinding.BindingDataContract;
 
                 // See if a regular binding can handle it. 
@@ -251,9 +253,24 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
                     if (triggerBinding != null && !hasNoAutomaticTriggerAttribute)
                     {
-                        throw new InvalidOperationException(
-                            string.Format(Resource.UnableToBindParameterFormat,
-                            parameter.Name, parameter.ParameterType.Name, Resource.ExtensionInitializationMessage));
+                        string extendedBindingErrorHelpText = Resource.ExtensionInitializationMessage;
+
+                        if (bindingDataContract != null)
+                        {
+                            // If a non-trigger/non-attributed parameter binding fails, check to see if we've successfully bound
+                            // a trigger parameter and have a binding contract. If so, it might be that the customer is trying to
+                            // bind to a contract member. If the parameter type matches one of the binding contract members,
+                            // extend the binding error by indicating the valid parameter names for that Type.
+                            string[] matchingContractNames = bindingDataContract.Where(p => parameter.ParameterType == p.Value).Select(p => p.Key).ToArray();
+                            if (matchingContractNames.Length > 0)
+                            {
+                                string bindingContractHelpText = $"The binding supports the following parameter names for type {parameter.ParameterType.Name}: ({string.Join(", ", matchingContractNames)}). If you're trying to bind to one of those values, rename your parameter to match the contract name (case insensitive).";
+                                extendedBindingErrorHelpText = $"{bindingContractHelpText} {extendedBindingErrorHelpText}";
+                            }
+                        }
+
+                        string bindingError = string.Format(Resource.UnableToBindParameterFormat, parameter.Name, parameter.ParameterType.Name, extendedBindingErrorHelpText);
+                        throw new InvalidOperationException(bindingError);
                     }
                     else
                     {
@@ -308,7 +325,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
 
             string triggerParameterName = triggerParameter != null ? triggerParameter.Name : null;
-            FunctionDescriptor functionDescriptor = CreateFunctionDescriptor(method, triggerParameterName, triggerBinding, nonTriggerBindings);
+            FunctionDescriptor functionDescriptor = CreateFunctionDescriptor(method, triggerParameterName, triggerBinding, nonTriggerBindings, sharedListenerId);
             IFunctionInvoker invoker = FunctionInvokerFactory.Create(method, _activator);
             IFunctionDefinition functionDefinition;
 
@@ -330,6 +347,19 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
 
             index.Add(functionDefinition, functionDescriptor, method);
+        }
+
+        internal static string GetSharedListenerIdOrNull(ITriggerBinding triggerBinding)
+        {
+            // see if the trigger binding uses the shared listener pattern and if so
+            // capture the shared ID for application to the FunctionDescriptor below
+            var sharedListenerAttribute = triggerBinding.GetType().GetCustomAttribute<SharedListenerAttribute>();
+            if (sharedListenerAttribute != null && !string.IsNullOrEmpty(sharedListenerAttribute.SharedListenerId))
+            {
+                return sharedListenerAttribute.SharedListenerId;
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -378,7 +408,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
 
             IRetryStrategy retryStrategy = TypeUtility.GetHierarchicalAttributeOrNull<RetryAttribute>(method) ?? defaultRetryStrategy;
-
+ 
             return new FunctionDescriptor
             {
                 Id = method.GetFullName(),
@@ -396,9 +426,11 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         }
 
         private FunctionDescriptor CreateFunctionDescriptor(MethodInfo method, string triggerParameterName,
-            ITriggerBinding triggerBinding, IReadOnlyDictionary<string, IBinding> nonTriggerBindings)
+            ITriggerBinding triggerBinding, IReadOnlyDictionary<string, IBinding> nonTriggerBindings, string sharedListenerId)
         {
             var descr = FromMethod(method, _configuration, this._activator, _nameResolver, _defaultTimeout, _defaultRetryStrategy);
+
+            CheckRetrySupport(triggerBinding, descr, _logger);
 
             List<ParameterDescriptor> parameters = new List<ParameterDescriptor>();
 
@@ -418,8 +450,18 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
 
             descr.Parameters = parameters;
             descr.TriggerParameterDescriptor = parameters.OfType<TriggerParameterDescriptor>().FirstOrDefault();
+            descr.SharedListenerId = sharedListenerId;
 
             return descr;
+        }
+
+        internal static void CheckRetrySupport(ITriggerBinding triggerBinding, FunctionDescriptor descr, ILogger logger)
+        {
+            if (descr.RetryStrategy != null && triggerBinding != null && triggerBinding.GetType().GetCustomAttribute<SupportsRetryAttribute>() == null)
+            {
+                logger?.LogWarning($"Soon retries will not be supported for function '{ descr.ShortName}'. For more information, please visit http://aka.ms/func-retry-policies.");
+                // descr.RetryStrategy = null; This need to uncommented after "Retry policy" GA
+            }
         }
 
         private class ListenerFactory : IListenerFactory

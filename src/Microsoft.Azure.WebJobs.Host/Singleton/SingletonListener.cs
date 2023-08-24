@@ -74,18 +74,20 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
+            if (_isListening)
+            {
+                // first stop the inner listener, to ensure that its work is complete
+                // BEFORE we release the lock
+                await _innerListener.StopAsync(cancellationToken);
+                _isListening = false;
+            }
+
             if (LockTimer != null)
             {
                 LockTimer.Stop();
             }
 
             await ReleaseLockAsync(cancellationToken);
-
-            if (_isListening)
-            {
-                await _innerListener.StopAsync(cancellationToken);
-                _isListening = false;
-            }
         }
 
         public void Cancel()

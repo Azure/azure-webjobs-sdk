@@ -12,15 +12,16 @@ namespace Microsoft.Azure.WebJobs.Logging
     {
         private static AsyncLocal<DictionaryLoggerScope> _value = new AsyncLocal<DictionaryLoggerScope>();
 
-        private DictionaryLoggerScope(IReadOnlyDictionary<string, object> state, DictionaryLoggerScope parent)
-        {
-            State = state;
-            Parent = parent;
-        }
-
-        internal IReadOnlyDictionary<string, object> State { get; private set; }
+        // Cache merged dictionary.  
+        internal IReadOnlyDictionary<string, object> CurrentScope { get; private set; }
 
         internal DictionaryLoggerScope Parent { get; private set; }
+
+        private DictionaryLoggerScope(IReadOnlyDictionary<string, object> currentScope, DictionaryLoggerScope parent)
+        {
+            CurrentScope = currentScope;
+            Parent = parent;
+        }
 
         public static DictionaryLoggerScope Current
         {
@@ -37,49 +38,63 @@ namespace Microsoft.Azure.WebJobs.Logging
 
         public static IDisposable Push(object state)
         {
-            IDictionary<string, object> stateValues;
-
-            if (state is IEnumerable<KeyValuePair<string, object>> stateEnum)
+            if (state is IDictionary<string, object> currentState)
             {
-                // Convert this to a dictionary as we have scenarios where we cannot have duplicates. In this
-                // case, if there are dupes, the later entry wins.
+                BuildCurrentScope(currentState);
+            }
+            else if (state is IEnumerable<KeyValuePair<string, object>> stateEnum)
+            {
+                IDictionary<string, object> stateValues;
+                // Convert this to a dictionary as we have scenarios where we cannot have duplicates.
+                // In this case, if there are dupes, the later entry wins.
                 stateValues = new Dictionary<string, object>();
                 foreach (var entry in stateEnum)
                 {
                     stateValues[entry.Key] = entry.Value;
                 }
+                BuildCurrentScope(stateValues);
             }
             else
             {
                 // There's nothing we can do with other states.
                 return null;
             }
-
-            Current = new DictionaryLoggerScope(new ReadOnlyDictionary<string, object>(stateValues), Current);
             return new DisposableScope();
         }
 
-        // Builds a state dictionary of all scopes. If an inner scope
-        // contains the same key as an outer scope, it overwrites the value.
-        public static IDictionary<string, object> GetMergedStateDictionary()
+        private static void BuildCurrentScope(IDictionary<string, object> state)
         {
-            IDictionary<string, object> scopeInfo = new Dictionary<string, object>();
+            IDictionary<string, object> scopeInfo;
 
-            var current = Current;
-            while (current != null)
+            // Copy the current scope to the new scope dictionary
+            if (Current != null && Current.CurrentScope != null)
             {
-                foreach (var entry in current.State)
-                {
-                    // inner scopes win
-                    if (!scopeInfo.Keys.Contains(entry.Key))
-                    {
-                        scopeInfo.Add(entry);
-                    }
-                }
-                current = current.Parent;
-            }
+                scopeInfo = new Dictionary<string, object>(state.Count + Current.CurrentScope.Count, StringComparer.Ordinal);
 
-            return scopeInfo;
+                foreach (var entry in Current.CurrentScope)
+                {
+                    scopeInfo.Add(entry);
+                }
+                // If the state contains the same key as current scope, it overwrites the value.
+                foreach (var entry in state)
+                {
+                    scopeInfo[entry.Key] = entry.Value;
+                }
+            }
+            else
+            {
+                scopeInfo = new Dictionary<string, object>(state, StringComparer.Ordinal);
+            }
+            Current = new DictionaryLoggerScope(new ReadOnlyDictionary<string, object>(scopeInfo), Current);
+        }
+                
+        public static IReadOnlyDictionary<string, object> GetMergedStateDictionaryOrNull()
+        {
+            if (Current == null)
+            {
+                return null;
+            }
+            return Current.CurrentScope;
         }
 
         private class DisposableScope : IDisposable

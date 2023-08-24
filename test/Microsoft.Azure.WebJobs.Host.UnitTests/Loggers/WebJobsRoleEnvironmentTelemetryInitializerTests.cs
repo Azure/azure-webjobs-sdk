@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
@@ -9,63 +10,77 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 {
-    public class WebJobsRoleEnvironmentTelemetryInitializerTests : IDisposable
+    public class WebJobsRoleEnvironmentTelemetryInitializerTests
     {
-        public WebJobsRoleEnvironmentTelemetryInitializerTests()
-        {
-            // make sure these are clear before each test
-            SetEnvironmentVariables(null, null);
-        }
+        public WebJobsRoleEnvironmentTelemetryInitializerTests() { }
 
         [Fact]
         public void Initialize_DoesNotThrow_WhenNoEnvironmentVariables()
         {
-            var initializer = new WebJobsRoleEnvironmentTelemetryInitializer();
+            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteName, null))
+            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteSlotName, null))
+            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteCloudRoleName, null))
+            {
+                var initializer = new WebJobsRoleEnvironmentTelemetryInitializer();
 
-            var telemetry = new TraceTelemetry();
-            initializer.Initialize(telemetry);
+                var telemetry = new TraceTelemetry();
+                initializer.Initialize(telemetry);
 
-            Assert.Null(telemetry.Context.Cloud.RoleName);
-            Assert.Null(telemetry.Context.GetInternalContext().NodeName);
+                Assert.Null(telemetry.Context.Cloud.RoleName);
+                Assert.Null(telemetry.Context.GetInternalContext().NodeName);
+            }
         }
 
         [Fact]
         public void Initialize_WithSlot()
         {
-            SetEnvironmentVariables("mytestsite", "Staging");
+            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteName, "mytestsite"))
+            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteSlotName, "Staging"))
+            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteCloudRoleName, null))
+            {
+                var initializer = new WebJobsRoleEnvironmentTelemetryInitializer();
 
-            var initializer = new WebJobsRoleEnvironmentTelemetryInitializer();
+                var telemetry = new TraceTelemetry();
+                initializer.Initialize(telemetry);
 
-            var telemetry = new TraceTelemetry();
-            initializer.Initialize(telemetry);
-
-            Assert.Equal("mytestsite-staging", telemetry.Context.Cloud.RoleName);
-            Assert.Equal("mytestsite-staging.azurewebsites.net", telemetry.Context.GetInternalContext().NodeName);
+                Assert.Equal("mytestsite-staging", telemetry.Context.Cloud.RoleName);
+                Assert.Equal("mytestsite-staging.azurewebsites.net", telemetry.Context.GetInternalContext().NodeName);
+            }
         }
 
         [Fact]
         public void Initialize_WithProductionSlot()
         {
-            SetEnvironmentVariables("mytestsite", "Production");
+            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteName, "mytestsite"))
+            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteSlotName, "Production"))
+            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteCloudRoleName, null))
+            {
+                var initializer = new WebJobsRoleEnvironmentTelemetryInitializer();
 
-            var initializer = new WebJobsRoleEnvironmentTelemetryInitializer();
+                var telemetry = new TraceTelemetry();
+                initializer.Initialize(telemetry);
 
-            var telemetry = new TraceTelemetry();
-            initializer.Initialize(telemetry);
-
-            Assert.Equal("mytestsite", telemetry.Context.Cloud.RoleName);
-            Assert.Equal("mytestsite.azurewebsites.net", telemetry.Context.GetInternalContext().NodeName);
+                Assert.Equal("mytestsite", telemetry.Context.Cloud.RoleName);
+                Assert.Equal("mytestsite.azurewebsites.net", telemetry.Context.GetInternalContext().NodeName);
+            }
         }
 
-        private static void SetEnvironmentVariables(string websiteName, string slotName)
+        [Fact]
+        public void Initialize_WithWebsiteCloudRoleName()
         {
-            Environment.SetEnvironmentVariable(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteName, websiteName);
-            Environment.SetEnvironmentVariable(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteSlotName, slotName);
-        }
+            var testCloudRoleName = "mycloudrolename";
 
-        public void Dispose()
-        {
-            SetEnvironmentVariables(null, null);
+            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteName, "mytestsite"))
+            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteSlotName, "Production"))
+            using (EnvVarHolder.Set(WebJobsRoleEnvironmentTelemetryInitializer.AzureWebsiteCloudRoleName, testCloudRoleName))
+            {
+                var initializer = new WebJobsRoleEnvironmentTelemetryInitializer();
+
+                var telemetry = new TraceTelemetry();
+                initializer.Initialize(telemetry);
+
+                Assert.Equal(testCloudRoleName, telemetry.Context.Cloud.RoleName);
+            }
         }
     }
 }

@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Concurrent;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
@@ -18,8 +19,11 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
     {
         internal const string AzureWebsiteName = "WEBSITE_SITE_NAME";
         internal const string AzureWebsiteSlotName = "WEBSITE_SLOT_NAME";
+        internal const string AzureWebsiteCloudRoleName = "WEBSITE_CLOUD_ROLENAME";
         private const string DefaultProductionSlotName = "production";
         private const string WebAppSuffix = ".azurewebsites.net";
+
+        private ConcurrentDictionary<string, string> _siteNodeNames = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Initializes <see cref="ITelemetry" /> device context.
@@ -32,34 +36,34 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 return;
             }
 
-            // We cannot cache these values as the environment variables can change on the fly.
+            Lazy<string> siteSlotName = new Lazy<string>(() =>
+            {
+                // We cannot cache these values as the environment variables can change on the fly.
+                return GetAzureWebsiteUniqueSlotName();
+            });
+
+            var websiteCloudRoleName = Environment.GetEnvironmentVariable(AzureWebsiteCloudRoleName);
+
+            if (!string.IsNullOrEmpty(websiteCloudRoleName))
+            {
+                telemetry.Context.Cloud.RoleName = websiteCloudRoleName;
+            }
+
             if (string.IsNullOrEmpty(telemetry.Context.Cloud.RoleName))
             {
-                telemetry.Context.Cloud.RoleName = GetRoleName();
+                telemetry.Context.Cloud.RoleName = siteSlotName.Value;
             }
 
-            if (string.IsNullOrEmpty(telemetry.Context.GetInternalContext().NodeName))
+            var internalContext = telemetry.Context.GetInternalContext();
+            if (string.IsNullOrEmpty(internalContext.NodeName) &&
+                !string.IsNullOrEmpty(siteSlotName.Value))
             {
-                telemetry.Context.GetInternalContext().NodeName = GetNodeName();
+                internalContext.NodeName = _siteNodeNames.GetOrAdd(siteSlotName.Value, p =>
+                {
+                    // maintain previous behavior of node having the full url
+                    return p += WebAppSuffix;
+                });
             }
-        }
-
-        private static string GetRoleName()
-        {
-            return GetAzureWebsiteUniqueSlotName();
-        }
-
-        private static string GetNodeName()
-        {
-            string name = GetAzureWebsiteUniqueSlotName();
-
-            if (!string.IsNullOrEmpty(name))
-            {
-                // maintain previous behavior of node having the full url
-                name = name + WebAppSuffix;
-            }
-
-            return name;
         }
 
         /// <summary>

@@ -21,6 +21,7 @@ using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Host.Triggers;
 using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -49,6 +50,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IDashboardLoggingSetup _dashboardLoggingSetup;
         private readonly IScaleMonitorManager _monitorManager;
         private readonly IDrainModeManager _drainModeManager;
+        private readonly IApplicationLifetime _applicationLifetime;
+        private readonly ITargetScalerManager _targetScalerManager;
 
         public JobHostContextFactory(
             IDashboardLoggingSetup dashboardLoggingSetup,
@@ -70,7 +73,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             IConverterManager converterManager,
             IAsyncCollector<FunctionInstanceLogEntry> eventCollector,
             IScaleMonitorManager monitorManager,
-            IDrainModeManager drainModeManager)
+            IDrainModeManager drainModeManager,
+            IApplicationLifetime applicationLifetime,
+            ITargetScalerManager targetScalerManager)
         {
             _dashboardLoggingSetup = dashboardLoggingSetup;
             _functionExecutor = functionExecutor;
@@ -92,10 +97,19 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _eventCollector = eventCollector;
             _monitorManager = monitorManager;
             _drainModeManager = drainModeManager;
+            _applicationLifetime = applicationLifetime;
+            _targetScalerManager = targetScalerManager;
         }
 
         public async Task<JobHostContext> Create(JobHost host, CancellationToken shutdownToken, CancellationToken cancellationToken)
         {
+            shutdownToken.Register(() =>
+            {
+                // when a shutdown is triggered we want to stop the application, to ensure the host
+                // shuts down gracefully
+                _applicationLifetime.StopApplication();
+            });
+
             using (CancellationTokenSource combinedCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, shutdownToken))
             {
                 CancellationToken combinedCancellationToken = combinedCancellationSource.Token;
@@ -113,7 +127,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     // they are started).
                     host.OnHostInitialized();
                 };
-                IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), _singletonManager, _activator, _nameResolver, _loggerFactory, _monitorManager, listenersCreatedCallback, _jobHostOptions.Value.AllowPartialHostStartup, _drainModeManager);
+                IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), _singletonManager, _activator, _nameResolver, _loggerFactory,
+                    _monitorManager, _targetScalerManager, listenersCreatedCallback, _jobHostOptions.Value.AllowPartialHostStartup, _drainModeManager);
 
                 string hostId = await _hostIdProvider.GetHostIdAsync(cancellationToken);
                 bool dashboardLoggingEnabled = _dashboardLoggingSetup.Setup(functions, functionsListenerFactory, out IFunctionExecutor hostCallExecutor,

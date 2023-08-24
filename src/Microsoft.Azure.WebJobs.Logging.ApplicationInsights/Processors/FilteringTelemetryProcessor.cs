@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.Azure.WebJobs.Logging.ApplicationInsights.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
@@ -47,9 +48,9 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
                 // Extract the log level and apply the filter
                 if (telemetry.Properties.TryGetValue(LogConstants.LogLevelKey, out string logLevelString) &&
-                    Enum.TryParse(logLevelString, out LogLevel logLevel))
+                    LogLevelExtension.TryParseOptimized(logLevelString, out LogLevel logLevel))
                 {
-                    LoggerFilterRule filterRule = _ruleMap.GetOrAdd(categoryName, SelectRule(categoryName));
+                    LoggerFilterRule filterRule = _ruleMap.GetOrAdd(categoryName, c => SelectRule(c));
 
                     if (filterRule.LogLevel != null && logLevel < filterRule.LogLevel)
                     {

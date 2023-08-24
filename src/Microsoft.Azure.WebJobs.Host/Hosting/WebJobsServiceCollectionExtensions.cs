@@ -8,7 +8,6 @@ using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Configuration;
 using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Executors;
-using Microsoft.Azure.WebJobs.Host.Hosting;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Loggers;
@@ -32,6 +31,8 @@ namespace Microsoft.Azure.WebJobs
     public static class WebJobsServiceCollectionExtensions
     {
         private const string SingletonConfigSectionName = "Singleton";
+        private const string ConcurrencyConfigSectionName = "Concurrency";
+        private const string ScaleConfigSectionName = "Scale";
 
         /// <summary>
         /// Adds the WebJobs services to the provided <see cref="IServiceCollection"/>.
@@ -63,7 +64,9 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<SingletonManager>();
             services.TryAddSingleton<IHostSingletonManager>(provider => provider.GetRequiredService<SingletonManager>());
             services.TryAddSingleton<SharedQueueHandler>();
-            services.TryAddSingleton<IFunctionExecutor, FunctionExecutor>();
+            services.TryAddSingleton<FunctionExecutor>();
+            services.TryAddSingleton<IFunctionExecutor>(x => x.GetRequiredService<FunctionExecutor>());
+            services.TryAddSingleton<IFunctionActivityStatusProvider>(x => x.GetRequiredService<FunctionExecutor>());
             services.TryAddSingleton<IDrainModeManager, DrainModeManager>();
             services.TryAddSingleton<IJobHostContextFactory, JobHostContextFactory>();
 
@@ -85,7 +88,12 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<IFunctionInstanceLogger, FunctionInstanceLogger>();
             services.TryAddSingleton<IHostInstanceLogger, NullHostInstanceLogger>();
             services.TryAddSingleton<IDistributedLockManager, InMemoryDistributedLockManager>();
-            services.TryAddSingleton<IScaleMonitorManager, ScaleMonitorManager>();
+
+            services.AddCommonScaleServices();
+            services.TryAddSingleton<IScaleMetricsRepository, NullScaleMetricsRepository>();
+
+            services.AddSingleton<IPrimaryHostStateProvider, PrimaryHostStateProvider>();
+            services.AddSingleton<IHostedService, PrimaryHostCoordinator>();
 
             // $$$ Can we remove these completely? 
             services.TryAddSingleton<DefaultTriggerBindingFactory>();
@@ -110,10 +118,24 @@ namespace Microsoft.Azure.WebJobs
             services.AddSingleton(typeof(IWebJobsExtensionConfiguration<>), typeof(WebJobsExtensionConfiguration<>));
 
             // Options logging
-            services.AddTransient(typeof(IOptionsFactory<>), typeof(WebJobsOptionsFactory<>));
-            services.AddSingleton<IOptionsLoggingSource, OptionsLoggingSource>();
-            services.AddSingleton<IHostedService, OptionsLoggingService>();
-            services.AddSingleton<IOptionsFormatter<LoggerFilterOptions>, LoggerFilterOptionsFormatter>();
+            services.AddOptionsLogging();
+            // Concurrency management
+            services.TryAddSingleton<IConcurrencyStatusRepository, NullConcurrencyStatusRepository>();
+            services.TryAddSingleton<IHostProcessMonitor, DefaultHostProcessMonitor>();
+            services.TryAddSingleton<IConcurrencyThrottleManager, DefaultConcurrencyThrottleManager>();
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IConcurrencyThrottleProvider, HostHealthThrottleProvider>());
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IConcurrencyThrottleProvider, ThreadPoolStarvationThrottleProvider>());
+            services.TryAddSingleton<ConcurrencyManager>();
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ConcurrencyManagerService>());
+
+            services.ConfigureOptions<ConcurrencyOptionsSetup>();
+            services.ConfigureOptions<PrimaryHostCoordinatorOptionsSetup>();
+            services.AddOptions<ConcurrencyOptions>()
+                .Configure<IConfiguration>((options, config) =>
+                {
+                    var section = config.GetWebJobsRootConfiguration().GetSection(ConcurrencyConfigSectionName);
+                    section.Bind(options);
+                });
 
             services.AddOptions<SingletonOptions>()
                 .Configure<IHostingEnvironment>((options, env) =>
@@ -133,6 +155,60 @@ namespace Microsoft.Azure.WebJobs
             builder.AddBuiltInBindings();
 
             return builder;
+        }
+
+        /// <summary>
+        /// Adds the WebJobs scale services to the provided <see cref="IServiceCollection"/>.
+        /// </summary>
+        /// <param name="services"></param>
+        /// <returns></returns>
+        public static IWebJobsBuilder AddWebJobsScale(this IServiceCollection services, Action<ScaleOptions> configure)
+        {
+            if (services == null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
+            services.AddCommonScaleServices();
+            services.TryAddSingleton<IPrimaryHostStateProvider>(new PrimaryHostStateProvider() { IsPrimary = true });
+
+            if (configure != null)
+            {
+                services.Configure(configure);
+            }
+
+            services.AddOptionsLogging();
+
+            var builder = new WebJobsBuilder(services);
+            return builder;
+        }
+
+        /// <summary>
+        /// Adds scale services common to both normal WebJobs and ScaleHost scenarios.
+        /// </summary>
+        /// <param name="services"></param>
+        private static void AddCommonScaleServices(this IServiceCollection services)
+        {
+            services.AddOptions<ScaleOptions>()
+                .Configure<IConfiguration>((options, config) =>
+                {
+                    var section = config.GetWebJobsRootConfiguration().GetSection(ScaleConfigSectionName);
+                    section.Bind(options);
+                });
+            services.TryAddSingleton<IScaleMonitorManager, ScaleMonitorManager>();
+            services.TryAddSingleton<ITargetScalerManager, TargetScalerManager>();
+            services.TryAddSingleton<IScaleStatusProvider, ScaleManager>();
+            services.AddHostedService<ScaleMonitorService>();
+            services.AddSingleton<IScaleMetricsRepository, InMemoryScaleMetricsRepository>();
+        }
+
+        private static void AddOptionsLogging(this IServiceCollection services)
+        {
+            services.AddTransient(typeof(OptionsFactory<>));
+            services.AddTransient(typeof(IOptionsFactory<>), typeof(WebJobsOptionsFactory<>));
+            services.AddSingleton<IOptionsLoggingSource, OptionsLoggingSource>();
+            services.AddSingleton<IHostedService, OptionsLoggingService>();
+            services.AddSingleton<IOptionsFormatter<LoggerFilterOptions>, LoggerFilterOptionsFormatter>();
         }
     }
 }

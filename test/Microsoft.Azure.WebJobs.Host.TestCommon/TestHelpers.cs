@@ -8,11 +8,15 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Storage.Blobs;
+using Azure.Storage.Queues;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.FunctionalTests.TestDoubles;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Loggers;
+using Microsoft.Azure.WebJobs.Host.Storage;
 using Microsoft.Azure.WebJobs.Host.Timers;
+using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -243,6 +247,11 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
             return host.Services.GetServices<ILoggerProvider>().OfType<TestLoggerProvider>().Single();
         }
 
+        public static TService GetServiceOrNull<TService>(this IHost host)
+        {
+            return host.Services.GetServices<TService>().SingleOrDefault();
+        }
+
         public static TExtension GetExtension<TExtension>(this IHost host)
         {
             return host.Services.GetServices<IExtensionConfigProvider>().OfType<TExtension>().SingleOrDefault();
@@ -335,6 +344,39 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
         public static IConfiguration BuildConfiguration(this IDictionary<string, string> dict)
         {
             return new ConfigurationBuilder().AddInMemoryCollection(dict).Build();
+        }
+
+        public static void SetupStopwatch(Stopwatch sw, TimeSpan elapsed)
+        {
+            sw.Restart();
+
+            // set elapsed so to simulate time having passed
+            FieldInfo elapsedFieldInfo = typeof(Stopwatch).GetField("_elapsed", BindingFlags.NonPublic | BindingFlags.Instance);
+            elapsedFieldInfo.SetValue(sw, elapsed.Ticks);
+        }
+
+        public static BlobServiceClient GetTestBlobServiceClient(string connection = "Storage")
+        {
+            var host = new HostBuilder().ConfigureDefaultTestHost(builder => builder.AddAzureStorageCoreServices()).Build();
+            var componentFactory = host.Services.GetRequiredService<AzureComponentFactory>();
+            var logForwarder = host.Services.GetRequiredService<AzureEventSourceLogForwarder>();
+            var provider = new BlobServiceClientProvider(componentFactory, logForwarder);
+            return provider.Create(connection, host.Services.GetRequiredService<IConfiguration>());
+        }
+
+        public static QueueServiceClient GetTestQueueServiceClient(string connection = "Storage")
+        {
+            var host = new HostBuilder().ConfigureDefaultTestHost(builder => builder.AddAzureStorageCoreServices()).Build();
+            var componentFactory = host.Services.GetRequiredService<AzureComponentFactory>();
+            var logForwarder = host.Services.GetRequiredService<AzureEventSourceLogForwarder>();
+            var provider = new QueueServiceClientProvider(componentFactory, logForwarder);
+            return provider.Create(connection, host.Services.GetRequiredService<IConfiguration>());
+        }
+
+        public static IAzureBlobStorageProvider GetTestAzureBlobStorageProvider()
+        {
+            var host = new HostBuilder().ConfigureDefaultTestHost(builder => builder.AddAzureStorageCoreServices()).Build();
+            return host.Services.GetRequiredService<IAzureBlobStorageProvider>();
         }
     }
 

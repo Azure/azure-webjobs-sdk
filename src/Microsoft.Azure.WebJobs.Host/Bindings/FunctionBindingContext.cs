@@ -3,6 +3,7 @@
 
 using System;
 using System.Threading;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -18,6 +19,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         private readonly CancellationToken _functionCancellationToken;
         private readonly IServiceProvider _functionInvocationServices;
         private static Lazy<IServiceProvider> _emptyServiceProvider = new Lazy<IServiceProvider>(CreateEmptyServiceProvider);
+        private readonly RetryContext _retryContext;
 
         /// <summary>
         /// Creates a new instance.
@@ -53,6 +55,23 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         }
 
         /// <summary>
+        /// Creates a new instance.
+        /// </summary>
+        /// <param name="functionInstance">The function instance being bound to.</param>
+        /// <param name="functionCancellationToken">The <see cref="CancellationToken"/> to use.</param>
+        public FunctionBindingContext(IFunctionInstanceEx functionInstance, CancellationToken functionCancellationToken)
+        {
+            _functionInstanceId = functionInstance.Id;
+            _functionCancellationToken = functionCancellationToken;
+            _functionInvocationServices = functionInstance.InstanceServices ?? _emptyServiceProvider.Value;
+            if (functionInstance is FunctionInstance fi)
+            {
+                _retryContext = fi.RetryContext;
+            }
+            MethodName = functionInstance.FunctionDescriptor?.LogName;
+        }
+
+        /// <summary>
         /// Gets the instance ID of the function being bound to.
         /// </summary>
         public Guid FunctionInstanceId => _functionInstanceId;
@@ -71,6 +90,11 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// The service provider for the current function invocation scope.
         /// </summary>
         public IServiceProvider InstanceServices { get; set; }
+
+        /// <summary>
+        /// Gets the retry context if this invocation is being retried.
+        /// </summary>
+        public RetryContext RetryContext => _retryContext;
 
         /// <summary>
         /// Creates an object instance with constructor arguments provided in the

@@ -221,8 +221,16 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
                     finalObj = await _converter(obj, attrResolved, context);
                 }
 
-                IValueProvider vp = new ConstantValueProvider(finalObj, _parameterType, invokeString);
-
+                IValueProvider vp;
+                if (_parameterType == typeof(ICacheAwareReadObject) ||
+                    _parameterType == typeof(ICacheAwareWriteObject))
+                {
+                    vp = new CacheAwareValueProvider(finalObj, _parameterType, invokeString);
+                }
+                else
+                {
+                    vp = new ConstantValueProvider(finalObj, _parameterType, invokeString);
+                }
                 return vp;
             }
         }

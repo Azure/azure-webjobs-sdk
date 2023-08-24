@@ -3,9 +3,9 @@
 
 |Branch|Status|
 |---|:---:|
-|master|[![Build status](https://ci.appveyor.com/api/projects/status/3qmk6ukn942q220j/branch/master?svg=true)](https://ci.appveyor.com/project/appsvc/azure-webjobs-sdk-rqm4t/branch/master)|
-|dev|[![Build status](https://ci.appveyor.com/api/projects/status/3qmk6ukn942q220j/branch/dev?svg=true)](https://ci.appveyor.com/project/appsvc/azure-webjobs-sdk-rqm4t/branch/dev)|
-|v2.x|[![Build status](https://ci.appveyor.com/api/projects/status/3qmk6ukn942q220j/branch/v2.x?svg=true)](https://ci.appveyor.com/project/appsvc/azure-webjobs-sdk-rqm4t/branch/v2.x)|
+|master|[![Build Status](https://azfunc.visualstudio.com/Azure%20Functions/_apis/build/status/Azure.azure-webjobs-sdk?branchName=master)](https://azfunc.visualstudio.com/Azure%20Functions/_build/latest?definitionId=162&branchName=master)|
+|dev|[![Build Status](https://azfunc.visualstudio.com/Azure%20Functions/_apis/build/status/Azure.azure-webjobs-sdk?branchName=dev)](https://azfunc.visualstudio.com/Azure%20Functions/_build/latest?definitionId=162&branchName=dev)|
+|v2.x|[![Build Status](https://azfunc.visualstudio.com/Azure%20Functions/_apis/build/status/Azure.azure-webjobs-sdk?branchName=v2.x)](https://azfunc.visualstudio.com/Azure%20Functions/_build/latest?definitionId=162&branchName=v2.x)|
 
 
 The **Azure WebJobs SDK** is a framework that simplifies the task of writing background processing code that runs in Azure. The Azure WebJobs SDK includes a declarative **binding** and **trigger** system that works with Azure Storage Blobs, Queues and Tables as well as Service Bus. The binding system makes it incredibly easy to write code that reads or writes Azure Storage objects. The trigger system automatically invokes a function in your code whenever any new data is received in a queue or blob.
@@ -26,6 +26,14 @@ We welcome outside contributions. If you are interested in contributing, please 
 For details on development prereqs and running tests see [here](https://github.com/Azure/azure-webjobs-sdk/wiki/Development).
 
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
+## Reporting a Vulnerability
+
+Security issues and bugs should be reported privately, via email, to the Microsoft Security Response Center (MSRC) through https://msrc.microsoft.com or by emailing secure@microsoft.com. 
+You should receive a response within 24 hours. If for some reason you do not, please follow up via email to ensure we received your 
+original message. Further information, including the MSRC PGP key, can be found in the [MSRC Report an Issue FAQ](https://www.microsoft.com/en-us/msrc/faqs-report-an-issue).
+
+Please do not open issues for anything you think might have a security implication.
 
 ## License
 

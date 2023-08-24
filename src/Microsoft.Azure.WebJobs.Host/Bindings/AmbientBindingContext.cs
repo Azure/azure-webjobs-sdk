@@ -13,7 +13,8 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
     internal class AmbientBindingContext
     {
         private readonly FunctionBindingContext _functionContext;
-        private readonly IReadOnlyDictionary<string, object> _bindingData;
+        private readonly Func<IReadOnlyDictionary<string, object>> _bindingDataFactory;
+        private IReadOnlyDictionary<string, object> _bindingData;
 
         /// <summary>
         /// Constructs a new instance.
@@ -24,6 +25,12 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         {
             _functionContext = functionContext;
             _bindingData = bindingData;
+        }
+
+        internal AmbientBindingContext(FunctionBindingContext functionContext, Func<IReadOnlyDictionary<string, object>> bindingDataFactory)
+        {
+            _functionContext = functionContext;
+            _bindingDataFactory = bindingDataFactory;
         }
 
         /// <summary>
@@ -55,7 +62,15 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
         /// </summary>
         public IReadOnlyDictionary<string, object> BindingData
         {
-            get { return _bindingData; }
+            get 
+            {
+                if (_bindingData == null && _bindingDataFactory != null)
+                {
+                    _bindingData = _bindingDataFactory();
+                }
+
+                return _bindingData;
+            }
         }
     }
 }

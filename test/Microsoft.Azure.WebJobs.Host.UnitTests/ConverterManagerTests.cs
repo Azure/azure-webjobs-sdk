@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using System.Reflection;
 using System.Collections.Generic;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using System.IO;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
@@ -46,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Assert.Equal("*x*", x1);
         }
 
-        private T TestDefaultConverter<F, T>(F from, T to, ConverterManager cm = null)
+        private T TestDefaultConverter<F, T>(F from, T to, ConverterManager cm = null, Action<T> assertion = null)
         {
             if (cm == null) {
                 cm = new ConverterManager();
@@ -54,7 +55,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             var converter = cm.GetSyncConverter<F, T, Attribute>();
             Assert.NotNull(converter);
             var result = converter(from, null, null);
-            Assert.Equal(to, result);
+            if (assertion == null)
+            {
+                Assert.Equal(to, result);
+            } else
+            {
+                assertion(result);
+            }
             return result;
         }
 
@@ -176,7 +183,18 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             Wrapper obj3 = fromBytes(bytes, null, context);
             Assert.Equal("ABC", obj3.Value);
         }
-               
+
+        // BinaryData converters. 
+        [Fact]
+        public void BinaryData()
+        {
+            byte[] data = new byte[124];
+            new Random().NextBytes(data);
+            TestDefaultConverter(data, new BinaryData(data), assertion: result => Assert.Equal(data, result.ToArray()));
+
+            TestDefaultConverter(new BinaryData(data), data);
+        }
+
         // Overload conversions on type if they're using different attributes. 
         [Fact]
         public void AttributeOverloads()

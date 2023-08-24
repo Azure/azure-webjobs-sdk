@@ -407,7 +407,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost<ServiceBusRequestAndDependencyCollectionTests>(b =>
                 {
-                    b.AddAzureStorage();
                     b.AddServiceBus(o =>
                     {
                         // We'll complete these ourselves as we don't

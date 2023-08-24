@@ -1,13 +1,12 @@
 <Project>
   <PropertyGroup>
     <!-- Packages can have independent versions and only increment when released -->
-    <Version>3.0.24$(VersionSuffix)</Version>
-    <ExtensionsStorageVersion>4.0.3$(VersionSuffix)</ExtensionsStorageVersion>
-    <HostStorageVersion>4.0.1$(VersionSuffix)</HostStorageVersion>
-    <LoggingVersion>4.0.1$(VersionSuffix)</LoggingVersion>
+    <Version>3.0.38$(VersionSuffix)</Version>
+    <HostStorageVersion>5.0.0$(VersionSuffix)</HostStorageVersion>
+    <LoggingVersion>4.0.3$(VersionSuffix)</LoggingVersion>
     
     <TargetFramework>netstandard2.0</TargetFramework>
-    <DebugType>embedded</DebugType>      
+    <DebugType>embedded</DebugType>
     <LatestCommit Condition="$(LatestCommit) == ''">$(CommitHash)</LatestCommit>
     <CommitHash Condition="$(CommitHash) == ''">N/A</CommitHash>
     <InformationalVersion>$(Version) Commit hash: $(CommitHash)</InformationalVersion>
@@ -18,8 +17,8 @@
     <RepositoryType>git</RepositoryType>
     <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-    <PackageLicenseUrl>https://go.microsoft.com/fwlink/?linkid=2028464</PackageLicenseUrl>
-    <PackageIconUrl>https://raw.githubusercontent.com/Azure/azure-webjobs-sdk/dev/webjobs.png</PackageIconUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>webjobs.png</PackageIcon>
     <PackageTags>Microsoft Azure WebJobs AzureFunctions</PackageTags>
     <CodeAnalysisRuleSet>..\..\src.ruleset</CodeAnalysisRuleSet>
     <UseSourceLink Condition="$(UseSourceLink) == '' And $(CI) != ''">true</UseSourceLink>
@@ -54,5 +53,6 @@
 
   <ItemGroup>
     <AdditionalFiles Include="$(MSBuildThisFileDirectory)..\stylecop.json" Link="stylecop.json" />
+    <None Include="$(MSBuildThisFileDirectory)..\webjobs.png" Pack="true" PackagePath="" />
   </ItemGroup>
 </Project>

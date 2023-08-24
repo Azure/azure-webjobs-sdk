@@ -1,7 +1,6 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.Storage;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Indexers;
@@ -16,32 +15,22 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 {
     internal static class FunctionIndexerFactory
     {
-        public class FakeStorageAccountProvider : StorageAccountProvider
-        {
-            public FakeStorageAccountProvider()
-                : base(null)
-            {
-            }
-
-            public override StorageAccount Get(string name)
-            {
-                return StorageAccount.New(CloudStorageAccount.DevelopmentStorageAccount);
-            }
-        }
-
-        public static FunctionIndexer Create(CloudStorageAccount account = null, INameResolver nameResolver = null,
-            IExtensionRegistry extensionRegistry = null, ILoggerFactory loggerFactory = null)
+        public static FunctionIndexer Create(INameResolver nameResolver = null,
+            IExtensionRegistry extensionRegistry = null, ITriggerBindingProvider triggerBindingProvider = null, ILoggerFactory loggerFactory = null)
         {
             IHost host = new HostBuilder()
                 .ConfigureDefaultTestHost(b =>
                 {
-                    b.UseHostId("testhost")
-                    .AddAzureStorage();
+                    b.UseHostId("testhost");
+
+                    // Needed for Blob/Queue triggers and bindings
+                    b.AddAzureStorageBlobs();
+                    b.AddAzureStorageQueues();
+
+                    b.AddServiceBus();
                 })
                 .ConfigureServices(services =>
                 {
-                    services.AddSingleton<StorageAccountProvider>(new FakeStorageAccountProvider());
-
                     if (nameResolver != null)
                     {
                         services.AddSingleton<INameResolver>(nameResolver);
@@ -54,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 })
                 .Build();
 
-            ITriggerBindingProvider triggerBindingProvider = host.Services.GetService<ITriggerBindingProvider>();
+            triggerBindingProvider = triggerBindingProvider ?? host.Services.GetService<ITriggerBindingProvider>();
             IBindingProvider bindingProvider = host.Services.GetService<CompositeBindingProvider>();
             IJobActivator activator = host.Services.GetService<IJobActivator>();
             extensionRegistry = host.Services.GetService<IExtensionRegistry>();

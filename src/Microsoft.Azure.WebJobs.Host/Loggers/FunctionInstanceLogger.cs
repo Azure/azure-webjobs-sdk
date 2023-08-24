@@ -4,8 +4,6 @@
 using System;
 using System.Linq;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
@@ -21,7 +19,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             _loggerFactory = loggerFactory;
         }
 
-        public Task<string> LogFunctionStartedAsync(FunctionStartedMessage message, CancellationToken cancellationToken)
+        public string LogFunctionStarted(FunctionStartedMessage message)
         {
             var logger = GetLogger(message.Function);
             Log.FunctionStarted(
@@ -35,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
                 LogTemplatizedTriggerDetails(logger, message);
             }
 
-            return Task.FromResult<string>(null);
+            return null;
         }
 
         private static void LogTemplatizedTriggerDetails(ILogger logger, FunctionStartedMessage message)
@@ -58,7 +56,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             logger.LogInformation(messageTemplate, templateValues);
         }
 
-        public Task LogFunctionCompletedAsync(FunctionCompletedMessage message, CancellationToken cancellationToken)
+        public void LogFunctionCompleted(FunctionCompletedMessage message)
         {
             var logger = GetLogger(message.Function);
             Log.FunctionCompleted(
@@ -68,13 +66,10 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
                 message.EndTime.Subtract(message.StartTime),
                 message.Succeeded,
                 message.Failure);
-
-            return Task.CompletedTask;
         }
 
-        public Task DeleteLogFunctionStartedAsync(string startedMessageId, CancellationToken cancellationToken)
+        public void DeleteLogFunctionStarted(string startedMessageId)
         {
-            return Task.CompletedTask;
         }
 
         private ILogger GetLogger(FunctionDescriptor descriptor)

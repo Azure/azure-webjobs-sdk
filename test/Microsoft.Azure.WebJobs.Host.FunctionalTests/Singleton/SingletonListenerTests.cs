@@ -2,7 +2,9 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
@@ -12,7 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
-using SingletonLockHandle = Microsoft.Azure.WebJobs.Host.StorageBaseDistributedLockManager.SingletonLockHandle;
+using SingletonLockHandle = Microsoft.Azure.WebJobs.Host.BlobLeaseDistributedLockManager.SingletonLockHandle;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 {
@@ -181,6 +183,31 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             _mockSingletonManager.VerifyAll();
             _mockInnerListener.VerifyAll();
+        }
+
+        [Fact]
+        public async Task StopAsync_StopsListener_BeforeReleasingLock()
+        {
+            CancellationToken cancellationToken = new CancellationToken();
+            var lockHandle = new RenewableLockHandle(new SingletonLockHandle(), null);
+            _mockSingletonManager.Setup(p => p.TryLockAsync(_lockId, null, _attribute, cancellationToken, false))
+                .ReturnsAsync(lockHandle);
+            _mockInnerListener.Setup(p => p.StartAsync(cancellationToken)).Returns(Task.FromResult(true));
+
+            await _listener.StartAsync(cancellationToken);
+
+            List<string> trace = new List<string>();
+            _mockSingletonManager.Setup(p => p.ReleaseLockAsync(lockHandle, cancellationToken)).Callback(() => trace.Add("Lock released")).Returns(Task.FromResult(true));
+            _mockInnerListener.Setup(p => p.StopAsync(cancellationToken)).Callback(() => trace.Add("Inner listener stopped")).Returns(Task.FromResult(true));
+
+            await _listener.StopAsync(cancellationToken);
+
+            _mockSingletonManager.VerifyAll();
+            _mockInnerListener.VerifyAll();
+
+            Assert.Equal(2, trace.Count);
+            Assert.Equal("Inner listener stopped", trace[0]);
+            Assert.Equal("Lock released", trace[1]);
         }
 
         [Fact]

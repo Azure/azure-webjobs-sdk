@@ -12,7 +12,9 @@ using Microsoft.Azure.WebJobs.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
-    /// <summary>Provides extension methods for the <see cref="IFunctionExecutor"/> interface.</summary>
+    /// <summary>
+    /// Provides extension methods for the <see cref="IFunctionExecutor"/> interface.
+    /// </summary>
     internal static class FunctionExecutorExtensions
     {
         public static async Task<IDelayedException> TryExecuteAsync(this IFunctionExecutor executor, Func<IFunctionInstance> instanceFactory, ILoggerFactory loggerFactory, CancellationToken cancellationToken)
@@ -20,44 +22,84 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             var attempt = 0;
             IDelayedException functionResult = null;
             ILogger logger = null;
-            while (true)
+            RetryContext retryContext = null;
+            bool isRetryPendingSet = false;
+            IRetryNotifier retryNotifier = executor as IRetryNotifier;
+
+            try
             {
-                IFunctionInstance functionInstance = instanceFactory.Invoke();
-                if (logger == null)
+                while (true)
                 {
-                    logger = loggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(functionInstance.FunctionDescriptor.LogName));
-                }
-                functionResult = await executor.TryExecuteAsync(functionInstance, cancellationToken);
-                if (functionResult == null)
-                {
-                    // function invocation succeeded
-                    break;
-                }
-                if (functionInstance.FunctionDescriptor.RetryStrategy == null)
-                {
-                    //retry is not configured
-                    break;
-                }
+                    IFunctionInstance functionInstance = instanceFactory.Invoke();
+                    if (logger == null)
+                    {
+                        logger = loggerFactory.CreateLogger(LogCategories.CreateFunctionCategory(functionInstance.FunctionDescriptor.LogName));
+                    }
 
-                IRetryStrategy retryStrategy = functionInstance.FunctionDescriptor.RetryStrategy;
-                if (retryStrategy.MaxRetryCount != -1 && ++attempt > retryStrategy.MaxRetryCount)
-                {
-                    // no.of retries exceeded
-                    break;
+                    if (retryContext == null && functionInstance.FunctionDescriptor.RetryStrategy != null)
+                    {
+                        retryContext = new RetryContext();
+                        retryContext.MaxRetryCount = functionInstance.FunctionDescriptor.RetryStrategy.MaxRetryCount;
+                    }
+
+                    if (retryContext != null && functionInstance is FunctionInstance instance)
+                    {
+                        retryContext.Instance = instance;
+                        instance.RetryContext = retryContext;
+                    }
+                    functionResult = await executor.TryExecuteAsync(functionInstance, cancellationToken);
+
+                    if (functionResult == null)
+                    {
+                        // function invocation succeeded
+                        break;
+                    }
+                    if (functionInstance.FunctionDescriptor.RetryStrategy == null)
+                    {
+                        // retry is not configured
+                        break;
+                    }
+
+                    IRetryStrategy retryStrategy = functionInstance.FunctionDescriptor.RetryStrategy;
+                    if (retryStrategy.MaxRetryCount != -1 && attempt == retryStrategy.MaxRetryCount)
+                    {
+                        // retry count exceeded
+                        logger.LogFunctionRetriesFailed(attempt, functionResult);
+                        break;
+                    }
+
+                    retryContext.RetryCount = ++attempt;
+                    retryContext.Exception = functionResult?.Exception;
+
+                    TimeSpan nextDelay = retryStrategy.GetNextDelay(retryContext);
+                    logger.LogFunctionRetryAttempt(nextDelay, attempt, retryStrategy.MaxRetryCount);
+
+                    if (retryNotifier != null && !isRetryPendingSet)
+                    {
+                        isRetryPendingSet = true;
+                        retryNotifier.RetryPending();
+                    }
+
+                    try
+                    {
+                        // If the invocation is cancelled retries must stop.
+                        await Task.Delay(nextDelay, cancellationToken);
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        logger.LogExitFromRetryLoop();
+                        break;
+                    }
                 }
-
-                // Build retry context
-                var retryContext = new RetryContext
-                {
-                    RetryCount = attempt,
-                    Exception = functionResult.Exception,
-                    Instance = functionInstance
-                };
-
-                TimeSpan nextDelay = retryStrategy.GetNextDelay(retryContext);
-                logger.LogFunctionRetryAttempt(nextDelay, attempt, retryStrategy.MaxRetryCount);
-                await Task.Delay(nextDelay);
             }
+            finally
+            {
+                if (retryNotifier != null && isRetryPendingSet)
+                {
+                    retryNotifier.RetryComplete();
+                }
+            }
+
             return functionResult;
         }
     }
