@@ -214,6 +214,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             // if starting the cycle, reset the sweep time
             if (continuationToken == null)
             {
+                containerScanInfo.CurrentScanBeginTime = DateTime.UtcNow;
                 containerScanInfo.CurrentSweepCycleLatestModified = DateTime.MinValue;
             }
 
@@ -259,7 +260,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 var properties = currentBlob.Properties;
                 DateTime lastModifiedTimestamp = properties.LastModified.Value.UtcDateTime;
 
-                if (lastModifiedTimestamp > containerScanInfo.CurrentSweepCycleLatestModified)
+                if (lastModifiedTimestamp > containerScanInfo.CurrentSweepCycleLatestModified && (continuationToken is null || lastModifiedTimestamp< containerScanInfo.CurrentScanBeginTime))
                 {
                     containerScanInfo.CurrentSweepCycleLatestModified = lastModifiedTimestamp;
                 }
