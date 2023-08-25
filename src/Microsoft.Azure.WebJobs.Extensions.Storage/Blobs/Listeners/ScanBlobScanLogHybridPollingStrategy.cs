@@ -76,8 +76,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 {
                     Registrations = new List<ITriggerExecutor<BlobTriggerExecutorContext>>(),
                     LastSweepCycleLatestModified = latestStoredScan ?? DateTime.MinValue,
-                    CurrentSweepCycleStartTime = DateTime.MinValue,
-                    CurrentSweepCycleLatestModified = DateTime.MinValue, // value not used as it is set on first use when the continuationToken is null.
+                    CurrentSweepCycleStartTime = DateTime.MinValue, // value not used as it is set on first use when the continuationToken is null.
+                    CurrentSweepCycleLatestModified = DateTime.MinValue,
                     ContinuationToken = null
                 };
 
