@@ -17,6 +17,6 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
         public DateTime CurrentSweepCycleLatestModified { get; set; }
 
         public BlobContinuationToken ContinuationToken { get; set; }
-        public DateTime CurrentScanBeginTime { get; set; }
+        public DateTime CurrentSweepCycleStartTime { get; set; }
     }
 }
