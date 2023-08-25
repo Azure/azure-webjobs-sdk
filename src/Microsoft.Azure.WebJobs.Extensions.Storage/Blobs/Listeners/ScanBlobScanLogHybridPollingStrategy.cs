@@ -260,7 +260,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 var properties = currentBlob.Properties;
                 DateTime lastModifiedTimestamp = properties.LastModified.Value.UtcDateTime;
 
-                if (lastModifiedTimestamp > containerScanInfo.CurrentSweepCycleLatestModified && (continuationToken is null || lastModifiedTimestamp< containerScanInfo.CurrentScanBeginTime))
+                // if we are not the first page of this scan (ie, we have a continuation token), then we can not advance past the time the first page was called, otherwise we might miss updates to those blobs
+                if (lastModifiedTimestamp > containerScanInfo.CurrentSweepCycleLatestModified && (continuationToken == null || lastModifiedTimestamp < containerScanInfo.CurrentScanBeginTime))
                 {
                     containerScanInfo.CurrentSweepCycleLatestModified = lastModifiedTimestamp;
                 }
