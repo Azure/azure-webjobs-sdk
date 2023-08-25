@@ -128,6 +128,8 @@ namespace Microsoft.Azure.WebJobs
             services.TryAddSingleton<ConcurrencyManager>();
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ConcurrencyManagerService>());
 
+            AddListenerDecorators(services);
+
             services.ConfigureOptions<ConcurrencyOptionsSetup>();
             services.ConfigureOptions<PrimaryHostCoordinatorOptionsSetup>();
             services.AddOptions<ConcurrencyOptions>()
@@ -209,6 +211,14 @@ namespace Microsoft.Azure.WebJobs
             services.AddSingleton<IOptionsLoggingSource, OptionsLoggingSource>();
             services.AddSingleton<IHostedService, OptionsLoggingService>();
             services.AddSingleton<IOptionsFormatter<LoggerFilterOptions>, LoggerFilterOptionsFormatter>();
+        }
+
+        private static void AddListenerDecorators(IServiceCollection services)
+        {
+            // Order is important for these platform decorator registrations!
+            // They will be applied in this order after any user registered decorators.
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IListenerDecorator, SingletonListenerDecorator>());
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IListenerDecorator, FunctionListenerDecorator>());
         }
     }
 }
