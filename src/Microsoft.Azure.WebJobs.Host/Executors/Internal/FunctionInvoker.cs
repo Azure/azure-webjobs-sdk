@@ -14,7 +14,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors.Internal
     /// directly in your code with extreme caution and knowing that doing so can result in application failures when
     /// updating to a new WebJobs release.
     /// </summary>
-    public enum FunctionScope
+    public enum FunctionInvocationScope
     {
         /// <summary>
         /// In a system-owned scope.
@@ -36,15 +36,15 @@ namespace Microsoft.Azure.WebJobs.Host.Executors.Internal
     [Obsolete("Not for public consumption.")]
     public static class FunctionInvoker
     {
-        private static readonly AsyncLocal<FunctionScope> Local = new AsyncLocal<FunctionScope>()
+        private static readonly AsyncLocal<FunctionInvocationScope> Local = new AsyncLocal<FunctionInvocationScope>()
         {
-            Value = FunctionScope.System
+            Value = FunctionInvocationScope.System
         };
 
         /// <summary>
         /// Gets the function scope for the current execution context.
         /// </summary>
-        public static FunctionScope CurrentScope => Local.Value;
+        public static FunctionInvocationScope CurrentScope => Local.Value;
 
         /// <summary>
         /// Enters a user scope in the current execution context.
@@ -55,8 +55,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors.Internal
             [CallerFilePath] string filePath = "",
             [CallerLineNumber] int lineNumber = 0)
         {
-            Source.Log.BeginScope(FunctionScope.User, CurrentScope, memberName, filePath, lineNumber);
-            return new Scope(FunctionScope.User);
+            Source.Log.BeginScope(FunctionInvocationScope.User, CurrentScope, memberName, filePath, lineNumber);
+            return new Scope(FunctionInvocationScope.User);
         }
 
         /// <summary>
@@ -68,8 +68,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors.Internal
             [CallerFilePath] string filePath = "",
             [CallerLineNumber] int lineNumber = 0)
         {
-            Source.Log.BeginScope(FunctionScope.System, CurrentScope, memberName, filePath, lineNumber);
-            return new Scope(FunctionScope.System);
+            Source.Log.BeginScope(FunctionInvocationScope.System, CurrentScope, memberName, filePath, lineNumber);
+            return new Scope(FunctionInvocationScope.System);
         }
 
         /// <summary>
@@ -77,9 +77,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors.Internal
         /// </summary>
         public readonly struct Scope : IDisposable
         {
-            private readonly FunctionScope _original;
+            private readonly FunctionInvocationScope _original;
 
-            public Scope(FunctionScope target)
+            public Scope(FunctionInvocationScope target)
             {
                 _original = Local.Value;
                 Local.Value = target;
@@ -98,13 +98,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors.Internal
             public static Source Log { get; } = new Source();
 
             [Event(1)]
-            public void BeginScope(FunctionScope newScope, FunctionScope currentScope, string memberName, string filePath, int lineNumber)
+            public void BeginScope(FunctionInvocationScope newScope, FunctionInvocationScope currentScope, string memberName, string filePath, int lineNumber)
             {
                 WriteEvent(1, newScope, currentScope, memberName, filePath, lineNumber);
             }
 
             [Event(2)]
-            public void EndScope(FunctionScope newScope, FunctionScope currentScope)
+            public void EndScope(FunctionInvocationScope newScope, FunctionInvocationScope currentScope)
             {
                 WriteEvent(1, newScope, currentScope);
             }
