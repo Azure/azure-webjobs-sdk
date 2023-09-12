@@ -300,12 +300,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
         {
             static string GetName(Type t)
             {
-                if (t.IsNested)
-                {
-                    return $"{GetName(t.DeclaringType)}+{t.Name}";
-                }
-
-                return t.Name;
+                return t.IsNested ? $"{GetName(t.DeclaringType)}+{t.Name}" : t.Name;
             }
 
             var publicTypes = assembly.GetExportedTypes()
