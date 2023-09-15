@@ -25,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Hosting
                 throw new ArgumentNullException(nameof(startupType));
             }
 
-            if (!typeof(IWebJobsStartup).IsAssignableFrom(startupType) && !typeof(IWebJobsConfigurationStartup).IsAssignableFrom(startupType))
+            if (!typeof(IWebJobsStartup).IsAssignableFrom(startupType) && !typeof(IWebJobsConfigurationStartup).IsAssignableFrom(startupType) && !typeof(IWebJobsTriggerStartup).IsAssignableFrom(startupType))
             {
                 throw new ArgumentException($@"""{startupType}"" does not implement {typeof(IWebJobsStartup)} or {typeof(IWebJobsConfigurationStartup)}.", nameof(startupType));
             }

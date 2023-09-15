@@ -5,20 +5,27 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities;
 using Newtonsoft.Json.Linq;
 using Xunit;
 using static Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale.ScaleHostEndToEndTests;
+
+[assembly: WebJobsStartup(typeof(TestExtensionA), "testExtensionATrigger")]
+[assembly: WebJobsStartup(typeof(TestExtensionB), "testExtensionBTrigger")]
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
 {
@@ -86,26 +93,45 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 services.AddSingleton<IConcurrencyStatusRepository, TestConcurrencyStatusRepository>();
             })
             .ConfigureWebJobsScale((context, builder) =>
+            {
+                builder.UseHostId(hostId);
+            },
+            scaleOptions =>
+            {
+                scaleOptions.IsTargetScalingEnabled = tbsEnabled;
+                scaleOptions.MetricsPurgeEnabled = false;
+                scaleOptions.ScaleMetricsMaxAge = TimeSpan.FromMinutes(4);
+                scaleOptions.IsRuntimeScalingEnabled = true;
+            });
+
+            // Get the interface type you want to find
+            Type interfaceType = typeof(IWebJobsTriggerStartup);
+
+            // Get all the loaded assemblies in the current app domain
+            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+            // Loop through each assembly and create startup mapping
+            Dictionary<string, IWebJobsTriggerStartup> startups = new Dictionary<string, IWebJobsTriggerStartup>();
+            foreach (Assembly assembly in assemblies)
+            {                
+                var attributes = assembly.GetCustomAttributes<WebJobsStartupAttribute>();
+
+                foreach (var attribute in attributes)
                 {
-                    builder.UseHostId(hostId);
-                },
-                scaleOptions =>
-                {
-                    scaleOptions.IsTargetScalingEnabled = tbsEnabled;
-                    scaleOptions.MetricsPurgeEnabled = false;
-                    scaleOptions.ScaleMetricsMaxAge = TimeSpan.FromMinutes(4);
-                    scaleOptions.IsRuntimeScalingEnabled = true;
-                });
+                    if (interfaceType.IsAssignableFrom(attribute.WebJobsStartupType))
+                    {
+                        var instance = (IWebJobsTriggerStartup)Activator.CreateInstance(attribute.WebJobsStartupType);
+                        startups.Add(attribute.Name, instance);
+                    }
+                }
+            }
 
             foreach (TriggerMetadata t in triggerMetadata)
             {
-                if (t.Type == ATriggerType)
+                var startup = startups[t.Type];
+                if (startup != null)
                 {
-                    hostBuilder.ConfigureTestExtensionAScale(t);
-                }
-                else
-                {
-                    hostBuilder.ConfigureTestExtensionBScale(t);
+                    startup.Configure(hostBuilder, t);
                 }
             }
 
@@ -233,9 +259,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
             }
         }
     }
-    public static class TestExtensionAHostBuilderExtensions
+
+    public class TestExtensionA : IWebJobsTriggerStartup
     {
-        public static IHostBuilder ConfigureTestExtensionAScale(this IHostBuilder builder, TriggerMetadata triggerMetadata)
+        public void Configure(IHostBuilder builder, TriggerMetadata triggerMetadata)
         {
             builder.ConfigureServices((context, services) =>
             {
@@ -252,8 +279,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                     return new TestExtensionAScalerProvider(config, scaleOptions, triggerMetadata);
                 });
             });
-
-            return builder;
         }
 
         private class TestExtensionAScalerProvider : TestExtensionScalerProvider
@@ -270,9 +295,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
         }
     }
 
-    public static class TestExtensionBHostBuilderExtensions
+    public class TestExtensionB : IWebJobsTriggerStartup
     {
-        public static IHostBuilder ConfigureTestExtensionBScale(this IHostBuilder builder, TriggerMetadata triggerMetadata)
+        public void Configure(IHostBuilder builder, TriggerMetadata triggerMetadata)
         {
             builder.ConfigureServices((context, services) =>
             {
@@ -289,8 +314,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                     return new TestExtensionBScalerProvider(config, scaleOptions, triggerMetadata);
                 });
             });
-
-            return builder;
         }
 
         private class TestExtensionBScalerProvider : TestExtensionScalerProvider
