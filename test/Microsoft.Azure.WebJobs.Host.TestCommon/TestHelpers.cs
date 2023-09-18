@@ -298,9 +298,14 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 
         public static void AssertPublicTypes(IEnumerable<string> expected, Assembly assembly)
         {
-            var publicTypes = (assembly.GetExportedTypes()
-                .Select(type => type.Name)
-                .OrderBy(n => n));
+            static string GetName(Type t)
+            {
+                return t.IsNested ? $"{GetName(t.DeclaringType)}+{t.Name}" : t.Name;
+            }
+
+            var publicTypes = assembly.GetExportedTypes()
+                .Select(type => GetName(type))
+                .OrderBy(n => n);
 
             AssertPublicTypes(expected.ToArray(), publicTypes.ToArray());
         }

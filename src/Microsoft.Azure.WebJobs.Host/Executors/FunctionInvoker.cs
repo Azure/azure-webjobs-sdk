@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Executors.Internal;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
@@ -33,7 +34,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             get { return _parameterNames; }
         }
 
-
         public object CreateInstance()
         {
             throw new NotSupportedException($"{nameof(CreateInstance)} is not supported, please use the overload that accepts an {nameof(IFunctionInstance)} argument.");
@@ -49,6 +49,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // Return a task immediately in case the method is not async.
             await Task.Yield();
 
+            using var scope = FunctionInvoker.BeginUserScope();
             return await _methodInvoker.InvokeAsync((TReflected)instance, arguments);
         }
     }
