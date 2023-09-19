@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <!-- Packages can have independent versions and only increment when released -->
-    <Version>3.0.39$(VersionSuffix)</Version>
+    <Version>3.0.40$(VersionSuffix)</Version>
     <HostStorageVersion>5.0.0$(VersionSuffix)</HostStorageVersion>
     <LoggingVersion>4.0.3$(VersionSuffix)</LoggingVersion>
     
