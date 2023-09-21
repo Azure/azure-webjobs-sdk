@@ -97,6 +97,12 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
                     new EventId(3, nameof(FunctionCompleted)),
                     "Executed '{functionName}' ({status}, Id={invocationId}, Duration={executionDuration}ms)");
 
+            private static readonly Action<ILogger, string, string, Guid, int, Exception> _functionCanceled =
+                LoggerMessage.Define<string, string, Guid, int>(
+                    LogLevel.Warning,
+                    new EventId(4, nameof(FunctionCompleted)),
+                    "Executed '{functionName}' ({status}, Id={invocationId}, Duration={executionDuration}ms)");
+
             public static void FunctionStarted(ILogger logger, string functionName, string reason, Guid invocationId)
             {
                 _functionStarted(logger, functionName, reason, invocationId, null);
@@ -111,7 +117,14 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
                 }
                 else
                 {
-                    _functionFailed(logger, functionName, status, invocationId, (int)executionDuration.TotalMilliseconds, failure?.Exception);
+                    if (failure.Exception.InnerException.GetType() == typeof(FunctionInvocationCanceledException))
+                    {
+                        _functionCanceled(logger, functionName, "Canceled", invocationId, (int)executionDuration.TotalMilliseconds, null);
+                    }
+                    else
+                    {
+                        _functionFailed(logger, functionName, status, invocationId, (int)executionDuration.TotalMilliseconds, failure?.Exception);
+                    }
                 }
             }
         }
