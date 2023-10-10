@@ -37,6 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             _logger = _loggerFactory?.CreateLogger(LogCategories.Startup);
             _monitorManager = monitorManager;
             _targetScalerManager = targetScalerManager;
+            _listenerDecorators = listenerDecorators;
             _listenersCreatedCallback = listenersCreatedCallback;
             _drainModeManager = drainModeManager;
             _listenerDecorators = listenerDecorators;
@@ -66,7 +67,6 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                 RegisterScalers(listener);
 
                 listener = ApplyDecorators(listener, functionDefinition);
-
                 listeners.Add(listener);
             }
 

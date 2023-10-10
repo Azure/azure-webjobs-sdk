@@ -10,7 +10,6 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Azure.WebJobs.Host.Dispatch;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Listeners;
@@ -130,6 +129,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                     // they are started).
                     host.OnHostInitialized();
                 };
+
                 IListenerFactory functionsListenerFactory = new HostListenerFactory(functions.ReadAll(), _loggerFactory, _monitorManager, _targetScalerManager, _listenerDecorators, listenersCreatedCallback, _drainModeManager);
 
                 string hostId = await _hostIdProvider.GetHostIdAsync(cancellationToken);

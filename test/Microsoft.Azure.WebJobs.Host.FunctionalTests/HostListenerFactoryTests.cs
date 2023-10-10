@@ -98,6 +98,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             var monitorManager = new ScaleMonitorManager();
             var targetScaleManager = new TargetScalerManager();
             var drainModeManagerMock = new Mock<IDrainModeManager>();
+
             var listenerDecorators = _testHost.Services.GetServices<IListenerDecorator>();
             HostListenerFactory factory = new HostListenerFactory(functions, loggerFactory, monitorManager, targetScaleManager, listenerDecorators, () => { }, drainModeManagerMock.Object);
             IListener listener = await factory.CreateAsync(CancellationToken.None);
@@ -132,6 +133,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             var monitorManager = new ScaleMonitorManager();
             var targetScaleManager = new TargetScalerManager();
             var drainModeManagerMock = new Mock<IDrainModeManager>();
+
             var listenerDecorators = _testHost.Services.GetServices<IListenerDecorator>();
             HostListenerFactory factory = new HostListenerFactory(functions, loggerFactory, monitorManager, targetScaleManager, listenerDecorators, () => { }, drainModeManagerMock.Object);
             IListener listener = await factory.CreateAsync(CancellationToken.None);
@@ -243,9 +245,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             var monitorManagerMock = new Mock<IScaleMonitorManager>(MockBehavior.Strict);
             var targetScalerManagerMock = new Mock<ITargetScalerManager>(MockBehavior.Strict);
             var drainModeManagerMock = new Mock<IDrainModeManager>();
+
             var listenerDecorators = _testHost.Services.GetServices<IListenerDecorator>();
             HostListenerFactory factory = new HostListenerFactory(functions, loggerFactory, monitorManagerMock.Object, targetScalerManagerMock.Object, listenerDecorators, () => { }, drainModeManagerMock.Object);
-
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 
             string expectedMessage = $"Function '{descriptor.ShortName}' is disabled";
