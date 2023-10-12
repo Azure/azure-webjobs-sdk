@@ -15,6 +15,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Core;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.AspNetCore;
 using Microsoft.ApplicationInsights.Channel;
@@ -100,6 +101,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         o.LiveMetricsInitializationDelay = TimeSpan.FromSeconds(1);
                         if (applicationInsightsOptions != null)
                         {
+                            o.SanitizeRequestURL = applicationInsightsOptions.SanitizeRequestURL;
                             o.EnableLiveMetricsFilters = applicationInsightsOptions.EnableLiveMetricsFilters;
                             o.EnableLiveMetrics = applicationInsightsOptions.EnableLiveMetrics;
                         }
@@ -562,6 +564,81 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.True(functionRequest.Duration.TotalMilliseconds >= functionDuration);
                 Assert.Equal("0.0.0.0", functionRequest.Context.Location.Ip);
                 ValidateRequest(functionRequest, testName, testName, "GET", "/api/func-name", true, "0");
+            }
+        }
+
+        [Fact]
+        public async Task ApplicationInsights_DefaultRequestParamsNotLogged()
+        {
+            string testName = nameof(TestApplicationInsightsInformation);
+            Uri requestUrl = new Uri("http://my-func/api/func-name?name=123");
+            using (IHost host = ConfigureHost())
+            {
+                TelemetryClient telemetryClient = host.Services.GetService<TelemetryClient>();
+                await host.StartAsync();
+                MethodInfo methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+
+                RequestTelemetry outerRequest = null;
+
+                // simulate auto tracked HTTP incoming call
+                using (IOperationHolder<RequestTelemetry> operation = telemetryClient.StartOperation<RequestTelemetry>("request name"))
+                {
+                    outerRequest = operation.Telemetry;
+                    outerRequest.Url = requestUrl;
+                    outerRequest.Success = true;
+                    await host.GetJobHost().CallAsync(methodInfo, new { input = "input" });
+                }
+
+                await host.StopAsync();
+
+                // Validate the request
+                // There must be only one reported by the AppInsights request collector
+                RequestTelemetry[] requestTelemetries = _channel.Telemetries.OfType<RequestTelemetry>().ToArray();
+                Assert.Single(requestTelemetries);
+
+                RequestTelemetry functionRequest = requestTelemetries.Single();
+                Assert.Same(outerRequest, functionRequest);
+
+                Assert.Equal(functionRequest.Url, new Uri(requestUrl.GetLeftPart(UriPartial.Path)));
+            }
+        }
+
+        [Fact]
+        public async Task ApplicationInsights_DisableSanitizationRequestParamsLogged()
+        {
+            string testName = nameof(TestApplicationInsightsInformation);
+            Uri requestUrl = new Uri("http://my-func/api/func-name?name=123");
+            using (IHost host = ConfigureHost(applicationInsightsOptions: new ApplicationInsightsLoggerOptions()
+            {
+                SanitizeRequestURL = false
+            }))
+            {
+                TelemetryClient telemetryClient = host.Services.GetService<TelemetryClient>();
+                await host.StartAsync();
+                MethodInfo methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+
+                RequestTelemetry outerRequest = null;
+
+                // simulate auto tracked HTTP incoming call
+                using (IOperationHolder<RequestTelemetry> operation = telemetryClient.StartOperation<RequestTelemetry>("request name"))
+                {
+                    outerRequest = operation.Telemetry;
+                    outerRequest.Url = requestUrl;
+                    outerRequest.Success = true;
+                    await host.GetJobHost().CallAsync(methodInfo, new { input = "input" });
+                }
+
+                await host.StopAsync();
+
+                // Validate the request
+                // There must be only one reported by the AppInsights request collector
+                RequestTelemetry[] requestTelemetries = _channel.Telemetries.OfType<RequestTelemetry>().ToArray();
+                Assert.Single(requestTelemetries);
+
+                RequestTelemetry functionRequest = requestTelemetries.Single();
+                Assert.Same(outerRequest, functionRequest);
+
+                Assert.Equal(functionRequest.Url, requestUrl);
             }
         }
 

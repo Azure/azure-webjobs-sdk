@@ -33,13 +33,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 ResponseCode = status,
                 Name = "POST /api/somemethod",
             };
+            
+            var options = new ApplicationInsightsLoggerOptions();
 
             Activity requestActivity = new Activity("dummy");
             requestActivity.Start();
             requestActivity.AddTag(LogConstants.NameKey, functionName);
             requestActivity.AddTag(LogConstants.SucceededKey, "true");
 
-            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new WebJobsRoleInstanceProvider());
+            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new WebJobsRoleInstanceProvider(), options);
 
             initializer.Initialize(request);
             initializer.Initialize(request);
@@ -75,7 +77,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             requestActivity.AddTag(LogConstants.NameKey, functionName);
             requestActivity.AddTag(LogConstants.SucceededKey, "true");
 
-            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new WebJobsRoleInstanceProvider());
+            var options = new ApplicationInsightsLoggerOptions();
+
+            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new WebJobsRoleInstanceProvider(), options);
 
             initializer.Initialize(request);
             initializer.Initialize(request);
@@ -91,7 +95,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         public void Initializer_SetsRoleInstance()
         {
             var request = new RequestTelemetry { Name = "custom" };
-            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new TestRoleInstanceProvider("my custom role instance"));
+            var options = new ApplicationInsightsLoggerOptions();
+            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new TestRoleInstanceProvider("my custom role instance"), options);
 
             initializer.Initialize(request);
 

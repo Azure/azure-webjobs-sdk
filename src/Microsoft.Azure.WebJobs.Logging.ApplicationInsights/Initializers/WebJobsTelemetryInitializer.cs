@@ -19,8 +19,9 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         private static readonly string _currentProcessId = Process.GetCurrentProcess().Id.ToString();
         private readonly string _sdkVersion;
         private readonly string _roleInstanceName;
+        private readonly ApplicationInsightsLoggerOptions _options;
 
-        public WebJobsTelemetryInitializer(ISdkVersionProvider versionProvider, IRoleInstanceProvider roleInstanceProvider)
+        public WebJobsTelemetryInitializer(ISdkVersionProvider versionProvider, IRoleInstanceProvider roleInstanceProvider, ApplicationInsightsLoggerOptions options)
         {
             if (versionProvider == null)
             {
@@ -34,6 +35,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
             _sdkVersion = versionProvider.GetSdkVersion();
             _roleInstanceName = roleInstanceProvider.GetRoleInstanceName();
+            _options = options;
         }
 
         public void Initialize(ITelemetry telemetry)
@@ -159,7 +161,10 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 }
 
                 // sanitize request Url - remove query string
-                request.Url = new Uri(request.Url.GetLeftPart(UriPartial.Path));
+                if (_options.SanitizeRequestURL)
+                {
+                    request.Url = new Uri(request.Url.GetLeftPart(UriPartial.Path));
+                }
             }
         }
 

@@ -76,7 +76,11 @@ namespace Microsoft.Extensions.DependencyInjection
             });
 
             services.AddSingleton<ITelemetryInitializer, WebJobsRoleEnvironmentTelemetryInitializer>();
-            services.AddSingleton<ITelemetryInitializer, WebJobsTelemetryInitializer>();
+            services.AddSingleton<ITelemetryInitializer, WebJobsTelemetryInitializer>(provider =>
+            {
+                var options = provider.GetService<IOptions<ApplicationInsightsLoggerOptions>>().Value;
+                return new WebJobsTelemetryInitializer(provider.GetService<ISdkVersionProvider>(), provider.GetService<IRoleInstanceProvider>(), options);
+            });
             services.AddSingleton<ITelemetryInitializer, MetricSdkVersionTelemetryInitializer>();
             services.AddSingleton<QuickPulseInitializationScheduler>();
             services.AddSingleton<QuickPulseTelemetryModule>();
@@ -217,7 +221,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 if (!activeConfig.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>().Any())
                 {
                     activeConfig.TelemetryInitializers.Add(new WebJobsRoleEnvironmentTelemetryInitializer());
-                    activeConfig.TelemetryInitializers.Add(new WebJobsTelemetryInitializer(sdkVersionProvider, roleInstanceProvider));
+                    activeConfig.TelemetryInitializers.Add(new WebJobsTelemetryInitializer(sdkVersionProvider, roleInstanceProvider, options));
                 }
 
                 SetupTelemetryConfiguration(

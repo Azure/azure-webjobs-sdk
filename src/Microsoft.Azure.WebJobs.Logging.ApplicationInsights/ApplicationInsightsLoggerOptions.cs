@@ -123,6 +123,13 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// </summary>
         public HttpAutoCollectionOptions HttpAutoCollectionOptions { get; set; } = new HttpAutoCollectionOptions();
 
+        /// <summary>
+        /// Gets or sets a value that removes the query parameters from functions URLs. True by default.
+        /// When true, the query parameters are stripped off of the functions URL for logging HTTP trigger calls.
+        /// When false, query parameters are logged.
+        /// </summary>
+        public bool SanitizeRequestURL { get; set; } = true;
+
         public string Format()
         {
             JObject sampling = null;
@@ -200,6 +207,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(LiveMetricsInitializationDelay), LiveMetricsInitializationDelay },
                 { nameof(EnableLiveMetrics), EnableLiveMetrics },
                 { nameof(EnableLiveMetricsFilters), EnableLiveMetricsFilters },
+                { nameof(SanitizeRequestURL), SanitizeRequestURL },
                 { nameof(EnableDependencyTracking), EnableDependencyTracking },
                 { nameof(DependencyTrackingOptions), dependencyTrackingOptions }
             };
