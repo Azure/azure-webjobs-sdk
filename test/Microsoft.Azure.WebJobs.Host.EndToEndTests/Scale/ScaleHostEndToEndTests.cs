@@ -102,7 +102,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 // Get all the loaded assemblies in the current app domain
                 Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
 
-                // Loop through each assembly and create startup mapping
                 foreach (Assembly assembly in assemblies)
                 {
                     var attributes = assembly.GetCustomAttributes<WebJobsStartupAttribute>();
