@@ -19,13 +19,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using Xunit;
 using static Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale.ScaleHostEndToEndTests;
 
-[assembly: WebJobsStartup(typeof(TestExtensionA), "testExtensionATrigger")]
-[assembly: WebJobsStartup(typeof(TestExtensionB), "testExtensionBTrigger")]
+[assembly: WebJobsStartup(typeof(TestExtensionA))]
+[assembly: WebJobsStartup(typeof(TestExtensionB))]
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
 {
@@ -36,8 +37,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
         private const string Function2Name = "Function2";
         private const string Function3Name = "Function3";
 
-        private const string ATriggerType = "testExtensionATrigger";
-        private const string BTriggerType = "testExtensionBTrigger";
+        internal const string ATriggerType = "testExtensionATrigger";
+        internal const string BTriggerType = "testExtensionBTrigger";
 
         [Theory]
         [InlineData(false)]
@@ -96,27 +97,11 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
             {
                 builder.UseHostId(hostId);
 
-                // Get the interface type you want to find
-                Type interfaceType = typeof(IWebJobsStartup2);
+                Assembly assembly = Assembly.GetExecutingAssembly();
 
-                // Get all the loaded assemblies in the current app domain
-                Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
-
-                foreach (Assembly assembly in assemblies)
-                {
-                    var attributes = assembly.GetCustomAttributes<WebJobsStartupAttribute>();
-
-                    foreach (var attribute in attributes)
-                    {
-                        if (interfaceType.IsAssignableFrom(attribute.WebJobsStartupType))
-                        {
-                            // Filter out triggers needed to be be configured
-                            var triggersToConfigure = triggerMetadata.Where(x => x.Type == attribute.Name);
-                            var instance = (IWebJobsStartup2)Activator.CreateInstance(attribute.WebJobsStartupType);
-                            instance.Configure(new ScaleHostBuilderContext() { TriggersMetadata = triggersToConfigure }, builder);
-                        }
-                    }
-                }
+                var scaleHostBuilderContext = new ScaleHostBuilderContext(triggerMetadata);
+                new DefaultStartupTypeLocator(assembly);
+                builder.UseExternalStartup(new DefaultStartupTypeLocator(assembly), scaleHostBuilderContext, NullLoggerFactory.Instance);
             },
             scaleOptions =>
             {
@@ -260,20 +245,27 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
         public void Configure(WebJobsBuilderContext context, IWebJobsBuilder builder)
         {
             var scaleHostBuilderContext = context as ScaleHostBuilderContext;
-            foreach (var triggerMetadata in scaleHostBuilderContext.TriggersMetadata)
+            if (scaleHostBuilderContext != null)
             {
-                builder.Services.AddSingleton<IScaleMonitorProvider>(serviceProvider =>
+                foreach (var triggerMetadata in scaleHostBuilderContext.GetTriggersMetadata(ATriggerType))
                 {
-                    IConfiguration config = serviceProvider.GetService<IConfiguration>();
-                    IOptions<ScaleOptions> scaleOptions = serviceProvider.GetService<IOptions<ScaleOptions>>();
-                    return new TestExtensionAScalerProvider(config, scaleOptions, triggerMetadata);
-                });
-                builder.Services.AddSingleton<ITargetScalerProvider>(serviceProvider =>
-                {
-                    IConfiguration config = serviceProvider.GetService<IConfiguration>();
-                    IOptions<ScaleOptions> scaleOptions = serviceProvider.GetService<IOptions<ScaleOptions>>();
-                    return new TestExtensionAScalerProvider(config, scaleOptions, triggerMetadata);
-                });
+                    builder.Services.AddSingleton<IScaleMonitorProvider>(serviceProvider =>
+                    {
+                        IConfiguration config = serviceProvider.GetService<IConfiguration>();
+                        IOptions<ScaleOptions> scaleOptions = serviceProvider.GetService<IOptions<ScaleOptions>>();
+                        return new TestExtensionAScalerProvider(config, scaleOptions, triggerMetadata);
+                    });
+                    builder.Services.AddSingleton<ITargetScalerProvider>(serviceProvider =>
+                    {
+                        IConfiguration config = serviceProvider.GetService<IConfiguration>();
+                        IOptions<ScaleOptions> scaleOptions = serviceProvider.GetService<IOptions<ScaleOptions>>();
+                        return new TestExtensionAScalerProvider(config, scaleOptions, triggerMetadata);
+                    });
+                }
+            }
+            else
+            {
+                Configure(builder);
             }
         }
 
@@ -300,22 +292,28 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
         public void Configure(WebJobsBuilderContext context, IWebJobsBuilder builder)
         {
             var scaleHostBuilderContext = context as ScaleHostBuilderContext;
-            foreach (var triggerMetadata in scaleHostBuilderContext.TriggersMetadata)
+            if (scaleHostBuilderContext != null)
             {
-
-                builder.Services.AddSingleton<IScaleMonitorProvider>(serviceProvider =>
+                foreach (var triggerMetadata in scaleHostBuilderContext.GetTriggersMetadata(BTriggerType))
                 {
-                    IConfiguration config = serviceProvider.GetService<IConfiguration>();
-                    IOptions<ScaleOptions> scaleOptions = serviceProvider.GetService<IOptions<ScaleOptions>>();
-                    return new TestExtensionBScalerProvider(config, scaleOptions, triggerMetadata);
-                });
+                    builder.Services.AddSingleton<IScaleMonitorProvider>(serviceProvider =>
+                    {
+                        IConfiguration config = serviceProvider.GetService<IConfiguration>();
+                        IOptions<ScaleOptions> scaleOptions = serviceProvider.GetService<IOptions<ScaleOptions>>();
+                        return new TestExtensionBScalerProvider(config, scaleOptions, triggerMetadata);
+                    });
 
-                builder.Services.AddSingleton<ITargetScalerProvider>(serviceProvider =>
-                {
-                    IConfiguration config = serviceProvider.GetService<IConfiguration>();
-                    IOptions<ScaleOptions> scaleOptions = serviceProvider.GetService<IOptions<ScaleOptions>>();
-                    return new TestExtensionBScalerProvider(config, scaleOptions, triggerMetadata);
-                });
+                    builder.Services.AddSingleton<ITargetScalerProvider>(serviceProvider =>
+                    {
+                        IConfiguration config = serviceProvider.GetService<IConfiguration>();
+                        IOptions<ScaleOptions> scaleOptions = serviceProvider.GetService<IOptions<ScaleOptions>>();
+                        return new TestExtensionBScalerProvider(config, scaleOptions, triggerMetadata);
+                    });
+                }
+            }
+            else
+            {
+                Configure(builder);
             }
         }
 

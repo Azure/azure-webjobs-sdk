@@ -1,7 +1,9 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Azure.WebJobs.Host.Scale;
 
 namespace Microsoft.Azure.WebJobs.Host.Hosting
@@ -11,9 +13,18 @@ namespace Microsoft.Azure.WebJobs.Host.Hosting
     /// </summary>
     public class ScaleHostBuilderContext : WebJobsBuilderContext
     {
+        private IEnumerable<TriggerMetadata> _triggersMetadata;
+
+        public ScaleHostBuilderContext(IEnumerable<TriggerMetadata> triggersMetadata)
+        {
+            _triggersMetadata = triggersMetadata;
+        }
+
         /// <summary>
-        /// Gets or sets <see cref="IEnumerable"/> of <see cref="TriggerMetadata"/> needed to be configured for scale.
+        /// Returns <see cref="IEnumerable"> of <see cref="TriggerMetadata"/> by trigger type.
         /// </summary>
-        public IEnumerable<TriggerMetadata> TriggersMetadata{ get; set; }
+        /// <param name="type"></param>
+        /// <returns></returns>
+        public IEnumerable<TriggerMetadata> GetTriggersMetadata(string type) => _triggersMetadata.Where(x => x.Type == type);
     }
 }
