@@ -124,9 +124,9 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         public HttpAutoCollectionOptions HttpAutoCollectionOptions { get; set; } = new HttpAutoCollectionOptions();
 
         /// <summary>
-        /// Gets or sets a value that removes the query parameters from functions URLs. True by default.
-        /// When true, the query parameters are stripped off of the functions URL for logging HTTP trigger calls.
-        /// When false, query parameters are logged.
+        /// Gets or sets a value that removes the query parameters from functions URLs. False by default.
+        /// When false (default), the query parameters are stripped off of the functions URL for logging HTTP trigger calls.
+        /// When true, query parameters are logged.
         /// </summary>
         public bool EnableQueryStringTracing { get; set; } = false;
 
