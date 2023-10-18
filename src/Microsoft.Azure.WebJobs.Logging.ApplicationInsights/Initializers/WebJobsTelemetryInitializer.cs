@@ -11,6 +11,7 @@ using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
@@ -21,7 +22,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         private readonly string _roleInstanceName;
         private readonly ApplicationInsightsLoggerOptions _options;
 
-        public WebJobsTelemetryInitializer(ISdkVersionProvider versionProvider, IRoleInstanceProvider roleInstanceProvider, ApplicationInsightsLoggerOptions options)
+        public WebJobsTelemetryInitializer(ISdkVersionProvider versionProvider, IRoleInstanceProvider roleInstanceProvider, IOptions<ApplicationInsightsLoggerOptions> options)
         {
             if (versionProvider == null)
             {
@@ -35,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
             _sdkVersion = versionProvider.GetSdkVersion();
             _roleInstanceName = roleInstanceProvider.GetRoleInstanceName();
-            _options = options;
+            _options = options.Value;
         }
 
         public void Initialize(ITelemetry telemetry)
@@ -161,7 +162,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 }
 
                 // sanitize request Url - remove query string
-                if (_options.SanitizeRequestURL)
+                if (!_options.EnableQueryStringTracing)
                 {
                     request.Url = new Uri(request.Url.GetLeftPart(UriPartial.Path));
                 }

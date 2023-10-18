@@ -101,7 +101,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         o.LiveMetricsInitializationDelay = TimeSpan.FromSeconds(1);
                         if (applicationInsightsOptions != null)
                         {
-                            o.SanitizeRequestURL = applicationInsightsOptions.SanitizeRequestURL;
+                            o.EnableQueryStringTracing = applicationInsightsOptions.EnableQueryStringTracing;
                             o.EnableLiveMetricsFilters = applicationInsightsOptions.EnableLiveMetricsFilters;
                             o.EnableLiveMetrics = applicationInsightsOptions.EnableLiveMetrics;
                         }
@@ -610,7 +610,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Uri requestUrl = new Uri("http://my-func/api/func-name?name=123");
             using (IHost host = ConfigureHost(applicationInsightsOptions: new ApplicationInsightsLoggerOptions()
             {
-                SanitizeRequestURL = false
+                EnableQueryStringTracing = true
             }))
             {
                 TelemetryClient telemetryClient = host.Services.GetService<TelemetryClient>();

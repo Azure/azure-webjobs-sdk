@@ -6,6 +6,7 @@ using System.Diagnostics;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
@@ -41,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             requestActivity.AddTag(LogConstants.NameKey, functionName);
             requestActivity.AddTag(LogConstants.SucceededKey, "true");
 
-            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new WebJobsRoleInstanceProvider(), options);
+            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new WebJobsRoleInstanceProvider(), Options.Create(options));
 
             initializer.Initialize(request);
             initializer.Initialize(request);
@@ -79,7 +80,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
             var options = new ApplicationInsightsLoggerOptions();
 
-            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new WebJobsRoleInstanceProvider(), options);
+            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new WebJobsRoleInstanceProvider(), Options.Create(options));
 
             initializer.Initialize(request);
             initializer.Initialize(request);
@@ -96,7 +97,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         {
             var request = new RequestTelemetry { Name = "custom" };
             var options = new ApplicationInsightsLoggerOptions();
-            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new TestRoleInstanceProvider("my custom role instance"), options);
+            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new TestRoleInstanceProvider("my custom role instance"), Options.Create(options));
 
             initializer.Initialize(request);
 

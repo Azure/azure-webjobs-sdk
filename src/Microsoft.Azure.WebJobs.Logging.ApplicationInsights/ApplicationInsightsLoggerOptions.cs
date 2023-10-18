@@ -128,7 +128,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// When true, the query parameters are stripped off of the functions URL for logging HTTP trigger calls.
         /// When false, query parameters are logged.
         /// </summary>
-        public bool SanitizeRequestURL { get; set; } = true;
+        public bool EnableQueryStringTracing { get; set; } = false;
 
         public string Format()
         {
@@ -207,7 +207,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(LiveMetricsInitializationDelay), LiveMetricsInitializationDelay },
                 { nameof(EnableLiveMetrics), EnableLiveMetrics },
                 { nameof(EnableLiveMetricsFilters), EnableLiveMetricsFilters },
-                { nameof(SanitizeRequestURL), SanitizeRequestURL },
+                { nameof(EnableQueryStringTracing), EnableQueryStringTracing },
                 { nameof(EnableDependencyTracking), EnableDependencyTracking },
                 { nameof(DependencyTrackingOptions), dependencyTrackingOptions }
             };
