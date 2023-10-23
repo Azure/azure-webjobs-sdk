@@ -217,7 +217,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 if (!activeConfig.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>().Any())
                 {
                     activeConfig.TelemetryInitializers.Add(new WebJobsRoleEnvironmentTelemetryInitializer());
-                    activeConfig.TelemetryInitializers.Add(new WebJobsTelemetryInitializer(sdkVersionProvider, roleInstanceProvider));
+                    activeConfig.TelemetryInitializers.Add(new WebJobsTelemetryInitializer(sdkVersionProvider, roleInstanceProvider, provider.GetService<IOptions<ApplicationInsightsLoggerOptions>>()));
                 }
 
                 SetupTelemetryConfiguration(
