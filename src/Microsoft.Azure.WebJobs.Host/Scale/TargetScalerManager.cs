@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         {
         }
 
-        public TargetScalerManager(IEnumerable<ITargetScaler> targetScalers, IEnumerable<ITargetScalerProvider> scalerProviders)
+        public TargetScalerManager(IEnumerable<ITargetScaler> targetScalers, IEnumerable<ITargetScalerProvider> scalerProviders, IEnumerable<ITargetScalerCollectionProvider> scalerCollectionProvider)
         {
             // add any initial target scalers coming from DI
             // additional monitors can be added at runtime
@@ -24,6 +24,9 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
 
             // add scalers coming from any registered providers
             _targetScalers.AddRange(scalerProviders.Select(p => p.GetTargetScaler()));
+
+            // add scalers coming from any registered collection providers
+            _targetScalers.AddRange(scalerCollectionProvider.SelectMany(p => p.GetTargetScalers()));
         }
 
         public void Register(ITargetScaler targetScaler)
