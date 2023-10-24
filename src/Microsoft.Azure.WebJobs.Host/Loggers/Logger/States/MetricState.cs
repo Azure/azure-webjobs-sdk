@@ -10,7 +10,7 @@ namespace Microsoft.Azure.WebJobs.Logging
 {
     internal readonly struct MetricState : IReadOnlyList<KeyValuePair<string, object>>
     {
-        public const string OriginalFormatString = "Metric {Name} {Value}";
+        public const string OriginalFormatString = $"Metric {{{LogConstants.NameKey}}} {{{LogConstants.MetricValueKey}}}";
         private readonly string _name;
         private readonly double _value;
         private readonly IReadOnlyList<KeyValuePair<string, object>> _properties;

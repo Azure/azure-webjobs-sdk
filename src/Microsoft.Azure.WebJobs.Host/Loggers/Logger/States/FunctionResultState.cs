@@ -10,7 +10,7 @@ namespace Microsoft.Azure.WebJobs.Logging
 {
     internal readonly struct FunctionResultState : IReadOnlyList<KeyValuePair<string, object>>
     {
-        public const string OriginalFormatString = "Result '{FunctionName}' (started at={StartTime}, duration={Duration}, succeeded={Succeeded})";
+        public const string OriginalFormatString = $"Result '{{{LogConstants.NameKey}}}' (started at={{{LogConstants.StartTimeKey}}}, duration={{{LogConstants.DurationKey}}}, succeeded={{{LogConstants.SucceededKey}}})";
         private readonly FunctionInstanceLogEntry _logEntry;
         private readonly bool _succeeded;
 

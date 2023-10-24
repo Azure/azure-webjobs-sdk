@@ -9,7 +9,7 @@ namespace Microsoft.Azure.WebJobs.Logging
 {
     internal readonly struct FunctionResultAggregateState : IReadOnlyList<KeyValuePair<string, object>>
     {
-        public const string OriginalFormatString = "Aggregate result (function={Name}, count={Count}, time={Timestamp}, duration={AverageDuration}ms, maxDuration={MaxDuration}ms, minDuration={MinDuration}ms, success={Successes}, failure={Failures}, rate={SuccessRate})";
+        public const string OriginalFormatString = $"Aggregate result (function={{{LogConstants.NameKey}}}, count={{{LogConstants.CountKey}}}, time={{{LogConstants.TimestampKey}}}, duration={{{LogConstants.AverageDurationKey}}}ms, maxDuration={{{LogConstants.MaxDurationKey}}}ms, minDuration={{{LogConstants.MinDurationKey}}}ms, success={{{LogConstants.SuccessesKey}}}, failure={{{LogConstants.FailuresKey}}}, rate={{{LogConstants.SuccessRateKey}}})";
         private readonly FunctionResultAggregate _resultAggregate;
 
         public FunctionResultAggregateState(FunctionResultAggregate resultAggregate)
