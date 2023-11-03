@@ -101,6 +101,12 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         public bool EnableLiveMetrics { get; set; } = true;
 
         /// <summary>
+        /// Gets or sets the event level that enables diagnostic logging by event listener.
+        /// Disabled by default.
+        /// </summary>
+        public string DiagnosticsEventListenerLogLevel { get; set; }
+
+        /// <summary>
         /// Gets or sets the flag that enables dependency tracking.
         /// Enabled by default.
         /// </summary>
@@ -209,7 +215,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(EnableLiveMetricsFilters), EnableLiveMetricsFilters },
                 { nameof(EnableQueryStringTracing), EnableQueryStringTracing },
                 { nameof(EnableDependencyTracking), EnableDependencyTracking },
-                { nameof(DependencyTrackingOptions), dependencyTrackingOptions }
+                { nameof(DependencyTrackingOptions), dependencyTrackingOptions },
+                { nameof(DiagnosticsEventListenerLogLevel), DiagnosticsEventListenerLogLevel },
             };
 
             return options.ToString(Formatting.Indented);

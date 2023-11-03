@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Tracing;
 using System.Linq;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.AspNetCore;
@@ -296,6 +297,14 @@ namespace Microsoft.Extensions.DependencyInjection
             QuickPulseInitializationScheduler delayer,
             Action<TelemetryConfiguration> additionalTelemetryConfig)
         {
+            if (!string.IsNullOrEmpty(options.DiagnosticsEventListenerLogLevel)) 
+            {
+                if (Enum.TryParse(options.DiagnosticsEventListenerLogLevel, true, out EventLevel level))
+                {
+                    _ = new ApplicationInsightsEventListener(level);
+                }
+            }
+            
             if (options.ConnectionString != null)
             {
                 configuration.ConnectionString = options.ConnectionString;
