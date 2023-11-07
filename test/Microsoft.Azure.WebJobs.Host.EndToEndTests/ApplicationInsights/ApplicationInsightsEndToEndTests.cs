@@ -15,6 +15,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Core;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.AspNetCore;
 using Microsoft.ApplicationInsights.Channel;
@@ -70,7 +71,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             _requestModuleForFirstRequest = new RequestTrackingTelemetryModule();
         }
 
-        private IHost ConfigureHost(LogLevel minLevel = LogLevel.Information, HttpAutoCollectionOptions httpOptions = null)
+        private IHost ConfigureHost(
+            LogLevel minLevel = LogLevel.Information,
+            HttpAutoCollectionOptions httpOptions = null,
+            ApplicationInsightsLoggerOptions applicationInsightsOptions = null)
         {
             if (httpOptions == null)
             {
@@ -95,6 +99,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         o.InstrumentationKey = _mockApplicationInsightsKey;
                         o.HttpAutoCollectionOptions = httpOptions;
                         o.LiveMetricsInitializationDelay = TimeSpan.FromSeconds(1);
+                        if (applicationInsightsOptions != null)
+                        {
+                            o.EnableQueryStringTracing = applicationInsightsOptions.EnableQueryStringTracing;
+                            o.EnableLiveMetricsFilters = applicationInsightsOptions.EnableLiveMetricsFilters;
+                            o.EnableLiveMetrics = applicationInsightsOptions.EnableLiveMetrics;
+                        }
                     });
                 })
                 .ConfigureServices(services =>
@@ -326,6 +336,110 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string GetFailureString()
                 {
                     return string.Join(Environment.NewLine, _channel.Telemetries.OrderBy(p => p.Timestamp).Select(t =>
+                    {
+                        string timestamp = $"[{t.Timestamp.ToString(_dateFormat)}] ";
+                        switch (t)
+                        {
+                            case DependencyTelemetry dependency:
+                                return timestamp + $"[Dependency] {dependency.Name}; {dependency.Target}; {dependency.Data}";
+                            case TraceTelemetry trace:
+                                return timestamp + $"[Trace] {trace.Message}";
+                            case RequestTelemetry request:
+                                return timestamp + $"[Request] {request.Name}: {request.Success}";
+                            default:
+                                return timestamp + $"[{t.GetType().Name}]";
+                        }
+                    }));
+                }
+
+                int expectedTelemetryItems = additionalTraces + (functionsCalled * tracesPerRequest);
+
+                // Filter out the odd auto-tracked request that we occassionally see from AppVeyor. 
+                // From here: https://github.com/xunit/xunit/blob/9d10262a3694bb099ddd783d735aba2a7aac759d/src/xunit.runner.reporters/AppVeyorClient.cs#L21
+                var actualTelemetries = _channel.Telemetries
+                    .Where(p => !(p is DependencyTelemetry d && d.Name == "POST /api/tests/batch"))
+                    .ToArray();
+
+                Assert.True(actualTelemetries.Length == expectedTelemetryItems,
+                    $"Expected: {expectedTelemetryItems}; Actual: {actualTelemetries.Length}{Environment.NewLine}{GetFailureString()}");
+            }
+        }
+
+
+        [Theory]
+        [InlineData(LogLevel.Information, 5, 10)] // 5 start, 2 stop, 4x traces per request, 1x requests
+        public async Task QuickPulse_Works_EnableLiveMetricsFilters(LogLevel defaultLevel, int tracesPerRequest, int additionalTraces)
+        {
+            using (QuickPulseEventListener qpListener = new QuickPulseEventListener())
+            using (IHost host = ConfigureHost(
+                                    defaultLevel,
+                                    applicationInsightsOptions: new ApplicationInsightsLoggerOptions()
+                                    {
+                                        EnableLiveMetricsFilters = true,
+                                        EnableLiveMetrics = true
+                                    }))
+            {
+                ApplicationInsightsTestListener listener = new ApplicationInsightsTestListener();
+                int functionsCalled = 0;
+                bool keepRunning = true;
+                Task functionTask = null;
+
+                try
+                {
+                    listener.StartListening();
+
+                    JobHost jobHost = host.GetJobHost();
+                    {
+                        await host.StartAsync();
+
+                        await TestHelpers.Await(() => listener.IsReady);
+
+                        MethodInfo methodInfo = GetType().GetMethod(nameof(TestApplicationInsightsWarning), BindingFlags.Public | BindingFlags.Static);
+
+                        // Start a task to make calls in a loop.
+                        functionTask = Task.Run(async () =>
+                        {
+                            while (keepRunning)
+                            {
+                                await Task.Delay(100);
+                                await jobHost.CallAsync(methodInfo);
+                                functionsCalled++;
+                            }
+                        });
+
+                        // Wait until we're seeing telemetry come through the QuickPulse service
+                        double? sum = null;
+                        await TestHelpers.Await(() =>
+                        {
+                            // Sum up all req/sec calls that we've received.
+                            IEnumerable<QuickPulseMetric> reqPerSec = listener.GetQuickPulseItems()
+                               .Select(p => p.Metrics.Where(q => q.Name == @"\ApplicationInsights\Requests/Sec").Single());
+                            sum = reqPerSec.Sum(p => p.Value);
+
+                            // All requests will go to QuickPulse.
+                            // Just make sure we have some coming through. Choosing 5 as an arbitrary number.
+                            return sum >= 5;
+                        }, timeout: 5000,
+                        userMessageCallback: () =>
+                        {
+                            IEnumerable<QuickPulsePayload> items = listener.GetQuickPulseItems().OrderBy(i => i.Timestamp).Take(10);
+                            IEnumerable<string> s = items.Select(i => $"[{i.Timestamp.ToString(_dateFormat)}] {i.Metrics.Single(p => p.Name == @"\ApplicationInsights\Requests/Sec")}");
+                            return $"Actual QuickPulse sum: '{sum}'. DefaultLevel: '{defaultLevel}'.{Environment.NewLine}QuickPulse items ({items.Count()}): {string.Join(Environment.NewLine, s)}{Environment.NewLine}QuickPulse Logs:{qpListener.GetLog(20)}{Environment.NewLine}Logs: {host.GetTestLoggerProvider().GetLogString()}";
+                        });
+                    }
+                }
+                finally
+                {
+                    keepRunning = false;
+                    await functionTask;
+                    await host.StopAsync();
+                    listener.StopListening();
+                    listener.Dispose();
+                }
+
+                string GetFailureString()
+                {
+                    return string.Join(Environment.NewLine, _channel.Telemetries.OrderBy(p => p.Timestamp).Select(t =>
                       {
                           string timestamp = $"[{t.Timestamp.ToString(_dateFormat)}] ";
                           switch (t)
@@ -450,6 +564,81 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 Assert.True(functionRequest.Duration.TotalMilliseconds >= functionDuration);
                 Assert.Equal("0.0.0.0", functionRequest.Context.Location.Ip);
                 ValidateRequest(functionRequest, testName, testName, "GET", "/api/func-name", true, "0");
+            }
+        }
+
+        [Fact]
+        public async Task ApplicationInsights_DefaultRequestParamsNotLogged()
+        {
+            string testName = nameof(TestApplicationInsightsInformation);
+            Uri requestUrl = new Uri("http://my-func/api/func-name?name=123");
+            using (IHost host = ConfigureHost())
+            {
+                TelemetryClient telemetryClient = host.Services.GetService<TelemetryClient>();
+                await host.StartAsync();
+                MethodInfo methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+
+                RequestTelemetry outerRequest = null;
+
+                // simulate auto tracked HTTP incoming call
+                using (IOperationHolder<RequestTelemetry> operation = telemetryClient.StartOperation<RequestTelemetry>("request name"))
+                {
+                    outerRequest = operation.Telemetry;
+                    outerRequest.Url = requestUrl;
+                    outerRequest.Success = true;
+                    await host.GetJobHost().CallAsync(methodInfo, new { input = "input" });
+                }
+
+                await host.StopAsync();
+
+                // Validate the request
+                // There must be only one reported by the AppInsights request collector
+                RequestTelemetry[] requestTelemetries = _channel.Telemetries.OfType<RequestTelemetry>().ToArray();
+                Assert.Single(requestTelemetries);
+
+                RequestTelemetry functionRequest = requestTelemetries.Single();
+                Assert.Same(outerRequest, functionRequest);
+
+                Assert.Equal(functionRequest.Url, new Uri(requestUrl.GetLeftPart(UriPartial.Path)));
+            }
+        }
+
+        [Fact]
+        public async Task ApplicationInsights_DisableSanitizationRequestParamsLogged()
+        {
+            string testName = nameof(TestApplicationInsightsInformation);
+            Uri requestUrl = new Uri("http://my-func/api/func-name?name=123");
+            using (IHost host = ConfigureHost(applicationInsightsOptions: new ApplicationInsightsLoggerOptions()
+            {
+                EnableQueryStringTracing = true
+            }))
+            {
+                TelemetryClient telemetryClient = host.Services.GetService<TelemetryClient>();
+                await host.StartAsync();
+                MethodInfo methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+
+                RequestTelemetry outerRequest = null;
+
+                // simulate auto tracked HTTP incoming call
+                using (IOperationHolder<RequestTelemetry> operation = telemetryClient.StartOperation<RequestTelemetry>("request name"))
+                {
+                    outerRequest = operation.Telemetry;
+                    outerRequest.Url = requestUrl;
+                    outerRequest.Success = true;
+                    await host.GetJobHost().CallAsync(methodInfo, new { input = "input" });
+                }
+
+                await host.StopAsync();
+
+                // Validate the request
+                // There must be only one reported by the AppInsights request collector
+                RequestTelemetry[] requestTelemetries = _channel.Telemetries.OfType<RequestTelemetry>().ToArray();
+                Assert.Single(requestTelemetries);
+
+                RequestTelemetry functionRequest = requestTelemetries.Single();
+                Assert.Same(outerRequest, functionRequest);
+
+                Assert.Equal(functionRequest.Url, requestUrl);
             }
         }
 

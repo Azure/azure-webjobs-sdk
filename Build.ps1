@@ -30,6 +30,8 @@ $projects =
   "src\Microsoft.Azure.WebJobs.Logging\WebJobs.Logging.csproj",
   "src\Microsoft.Azure.WebJobs.Logging.ApplicationInsights\WebJobs.Logging.ApplicationInsights.csproj",
   "src\Microsoft.Azure.WebJobs.Host.Storage\WebJobs.Host.Storage.csproj",
+  "src\Microsoft.Azure.WebJobs.Rpc.Core\WebJobs.Rpc.Core.csproj",
+  "src\Microsoft.Azure.WebJobs.Extensions.Rpc\WebJobs.Extensions.Rpc.csproj",
   "test\Microsoft.Azure.WebJobs.Host.TestCommon\WebJobs.Host.TestCommon.csproj"
 
 foreach ($project in $projects)

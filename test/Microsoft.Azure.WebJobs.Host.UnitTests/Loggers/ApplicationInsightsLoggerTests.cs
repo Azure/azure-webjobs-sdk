@@ -683,6 +683,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         {
             var options = new ApplicationInsightsLoggerOptions
             {
+                EnableLiveMetrics = true,
+                EnableLiveMetricsFilters = true,
                 SamplingSettings = new SamplingPercentageEstimatorSettings()
                 {
                     EvaluationInterval = TimeSpan.FromHours(1),
@@ -776,6 +778,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(options.DependencyTrackingOptions.EnableSqlCommandTextInstrumentation, deserializedOptions.DependencyTrackingOptions.EnableSqlCommandTextInstrumentation);
             Assert.Equal(options.TokenCredentialOptions.Authorization, deserializedOptions.TokenCredentialOptions.Authorization);
             Assert.Equal("*******", deserializedOptions.TokenCredentialOptions.ClientId);
+            Assert.Equal(options.EnableLiveMetrics, deserializedOptions.EnableLiveMetrics);
+            Assert.Equal(options.EnableLiveMetricsFilters, deserializedOptions.EnableLiveMetricsFilters);
         }
 
         [Fact]

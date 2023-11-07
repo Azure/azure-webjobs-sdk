@@ -232,6 +232,27 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             }
         }
 
+        
+        [Fact]
+        public void DependencyInjectionConfiguration_EnableLiveMetricsFilters()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsightsWebJobs(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                        o.EnableLiveMetricsFilters = true;
+                    });
+                })
+                .Build())
+            {
+                var config = host.Services.GetService<TelemetryConfiguration>();
+                Assert.Equal(3, config.TelemetryProcessors.Count);
+                Assert.IsType<OperationFilteringTelemetryProcessor>(config.TelemetryProcessors[0]);
+                Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[1]);
+              }
+        }
 
         [Fact]
         public void DependencyInjectionConfiguration_ConfiguresRequestCollectionOptions()
@@ -678,6 +699,46 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
 
                 // ikey should still be set
                 Assert.Equal("some key", TelemetryConfiguration.Active.InstrumentationKey);
+            }
+        }
+
+        [Fact]
+        public void CreateFilterOptions_EnableLiveMetricsFilters()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsightsWebJobs(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                        o.EnableLiveMetricsFilters = true;
+                    });
+                })
+                .Build())
+            {
+                var filterOptions = host.Services.GetService<IOptions<LoggerFilterOptions>>().Value;
+                var rule = SelectAppInsightsRule(filterOptions, "Category");
+                Assert.Equal(null, rule.Filter);
+            }
+        }
+
+        [Fact]
+        public void CreateFilterOptions_DisableLiveMetrics()
+        {
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsightsWebJobs(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                        o.EnableLiveMetrics = false;
+                    });
+                })
+                .Build())
+            {
+                var filterOptions = host.Services.GetService<IOptions<LoggerFilterOptions>>().Value;
+                var rule = SelectAppInsightsRule(filterOptions, "Category");
+                Assert.Equal(null, rule.Filter);
             }
         }
 

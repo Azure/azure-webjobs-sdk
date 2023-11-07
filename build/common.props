@@ -1,12 +1,12 @@
 <Project>
   <PropertyGroup>
     <!-- Packages can have independent versions and only increment when released -->
-    <Version>3.0.37$(VersionSuffix)</Version>
+    <Version>3.0.40$(VersionSuffix)</Version>
     <HostStorageVersion>5.0.0$(VersionSuffix)</HostStorageVersion>
     <LoggingVersion>4.0.3$(VersionSuffix)</LoggingVersion>
     
     <TargetFramework>netstandard2.0</TargetFramework>
-    <DebugType>embedded</DebugType>      
+    <DebugType>embedded</DebugType>
     <LatestCommit Condition="$(LatestCommit) == ''">$(CommitHash)</LatestCommit>
     <CommitHash Condition="$(CommitHash) == ''">N/A</CommitHash>
     <InformationalVersion>$(Version) Commit hash: $(CommitHash)</InformationalVersion>

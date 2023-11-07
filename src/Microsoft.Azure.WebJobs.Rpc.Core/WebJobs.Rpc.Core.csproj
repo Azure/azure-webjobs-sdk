@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\build\common.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <PackageId>Microsoft.Azure.WebJobs.Rpc.Core</PackageId>
+    <AssemblyName>Microsoft.Azure.WebJobs.Rpc.Core</AssemblyName>
+    <RootNamespace>Microsoft.Azure.WebJobs.Rpc.Core</RootNamespace>
+    <Description>This package contains the runtime assemblies for Microsoft.Azure.WebJobs.Host.Rpc. For more information, please visit http://go.microsoft.com/fwlink/?LinkID=320971</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

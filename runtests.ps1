@@ -1,6 +1,7 @@
 $success = $true
 
 $projects = 
+  "test\Microsoft.Azure.WebJobs.Extensions.Rpc.UnitTests",
   "test\Microsoft.Azure.WebJobs.Host.UnitTests",
   "test\Microsoft.Azure.WebJobs.Host.FunctionalTests",
   "test\Microsoft.Azure.WebJobs.Logging.FunctionalTests",
