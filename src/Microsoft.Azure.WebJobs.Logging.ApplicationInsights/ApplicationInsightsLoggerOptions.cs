@@ -27,22 +27,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// Gets or sets Application Insights Authentication Mode. If set, this will
         /// take precedence over the default connection string based ingestion.
         /// </summary>
-        public string AuthenticationMode { get; set; }
-                
-        /// <summary>
-        /// The Azure Active Directory tenant (directory) Id of the service principal.
-        /// </summary>
-        public string AuthClientSecretCredentialTenantId { get; set; }
-
-        /// <summary>
-        /// The client (application) ID of the service principal.
-        /// </summary>
-        public string AuthClientSecretCredentialClientId { get; set; }
-
-        /// <summary>
-        /// A client secret that was generated for the App Registration used to authenticate the client.
-        /// </summary>
-        public string AuthClientSecretCredentialClientSecret { get; set; }
+        public TokenCredentialOptions TokenCredentialOptions { get; set; }   
 
         /// <summary>
         /// Gets or sets sampling settings.
@@ -201,6 +186,16 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 };
             }
 
+            JObject tokenCredentialOptions = null;
+            if (TokenCredentialOptions != null)
+            {
+                tokenCredentialOptions = new JObject
+                {
+                    { nameof(TokenCredentialOptions.ClientId), string.IsNullOrEmpty(TokenCredentialOptions.ClientId)? null : "*******" },
+                    { nameof(TokenCredentialOptions.Authorization), TokenCredentialOptions.Authorization }
+                };
+            }
+
 
 
             JObject options = new JObject
@@ -214,11 +209,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(LiveMetricsInitializationDelay), LiveMetricsInitializationDelay },
                 { nameof(EnableLiveMetrics), EnableLiveMetrics },
                 { nameof(EnableDependencyTracking), EnableDependencyTracking },
-                { nameof(AuthenticationMode), AuthenticationMode },
-                { nameof(AuthClientSecretCredentialClientId), string.IsNullOrEmpty(AuthClientSecretCredentialClientId)? null : "*******" },
-                { nameof(AuthClientSecretCredentialClientSecret), string.IsNullOrEmpty(AuthClientSecretCredentialClientSecret)? null : "*******" },
-                { nameof(AuthClientSecretCredentialTenantId), string.IsNullOrEmpty(AuthClientSecretCredentialTenantId)? null : "*******" },
-                { nameof(DependencyTrackingOptions), dependencyTrackingOptions }
+                { nameof(DependencyTrackingOptions), dependencyTrackingOptions },
+                { nameof(TokenCredentialOptions), tokenCredentialOptions }
             };
 
             return options.ToString(Formatting.Indented);

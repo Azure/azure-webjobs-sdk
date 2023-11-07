@@ -863,7 +863,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             var builder = new HostBuilder()
                 .ConfigureLogging(b =>
                 {
-                    b.AddApplicationInsightsWebJobs(o => { o.InstrumentationKey = "some key"; o.AuthenticationMode = "ManagedIdentityCredential"; });
+                    b.AddApplicationInsightsWebJobs(o => { o.InstrumentationKey = "some key"; o.TokenCredentialOptions = new Logging.ApplicationInsights.TokenCredentialOptions("Authorization=AAD;ClientId=123"); });
                 });
 
             using (var host = builder.Build())
@@ -874,48 +874,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 var propertyValue = property.GetValue(config);
 
                 var credentialProperty = propertyValue.GetType().GetProperty("Credential", BindingFlags.NonPublic | BindingFlags.Instance);
-                var credentialValue = credentialProperty.GetValue(propertyValue);
-
+                var credentialValue = credentialProperty.GetValue(propertyValue);                
                 Assert.IsType<ManagedIdentityCredential>(credentialValue);
             }
-        }
-
-        [Fact]
-        public void ClientSecretCredential()
-        {
-            string clientId = "clientId";
-            string clientSecret = "clientSecret";
-            string tenantId = "tenantId";
-
-            var builder = new HostBuilder()
-                .ConfigureLogging(b =>
-                {
-                    b.AddApplicationInsightsWebJobs(o => 
-                    { 
-                        o.InstrumentationKey = "some key"; 
-                        o.AuthenticationMode = "ClientSecretCredential";
-                        o.AuthClientSecretCredentialClientId = clientId;
-                        o.AuthClientSecretCredentialClientSecret = clientSecret;
-                        o.AuthClientSecretCredentialTenantId = tenantId;
-                    });
-                });
-
-            using (var host = builder.Build())
-            {
-                var config = host.Services.GetService<TelemetryConfiguration>();
-
-                var property = typeof(TelemetryConfiguration).GetProperty("CredentialEnvelope", BindingFlags.NonPublic | BindingFlags.Instance);
-                var propertyValue = property.GetValue(config);
-
-                var credentialProperty = propertyValue.GetType().GetProperty("Credential", BindingFlags.NonPublic | BindingFlags.Instance);
-                var credentialValue = credentialProperty.GetValue(propertyValue);
-
-                Assert.Equal(clientId, (string)credentialValue.GetType().GetProperty("ClientId", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(credentialValue));
-                Assert.Equal(clientSecret, (string)credentialValue.GetType().GetProperty("ClientSecret", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(credentialValue));
-                Assert.Equal(tenantId, (string)credentialValue.GetType().GetProperty("TenantId", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(credentialValue));
-                Assert.IsType<ClientSecretCredential>(credentialValue);
-            }
-        }
+        }       
 
         [Fact]
         public void DefaultAuth()

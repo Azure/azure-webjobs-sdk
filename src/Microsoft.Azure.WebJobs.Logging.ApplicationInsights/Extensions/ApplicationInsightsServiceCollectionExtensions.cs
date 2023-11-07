@@ -301,29 +301,12 @@ namespace Microsoft.Extensions.DependencyInjection
             }
 
             // Default is connection string based ingestion
-            if (string.Equals(options.AuthenticationMode, AuthConstants.AppInsightsAuthManagedIdentityCredential, StringComparison.OrdinalIgnoreCase))
+            var tokenCredential = options.TokenCredentialOptions?.CreateTokenCredential();
+            if (tokenCredential != null)
             {
-                configuration.SetAzureTokenCredential(new ManagedIdentityCredential());
-            }
-            else if (string.Equals(options.AuthenticationMode, AuthConstants.AppInsightsAuthClientSecretCredential, StringComparison.OrdinalIgnoreCase))
-            {
-                if (string.IsNullOrEmpty(options.AuthClientSecretCredentialTenantId))
-                {
-                    throw new ArgumentNullException(nameof(options.AuthClientSecretCredentialTenantId));
-                }
-
-                if (string.IsNullOrEmpty(options.AuthClientSecretCredentialClientId))
-                {
-                    throw new ArgumentNullException(nameof(options.AuthClientSecretCredentialClientId));
-                }
-
-                if (string.IsNullOrEmpty(options.AuthClientSecretCredentialClientSecret))
-                {
-                    throw new ArgumentNullException(nameof(options.AuthClientSecretCredentialClientSecret));
-                }
-                configuration.SetAzureTokenCredential(new ClientSecretCredential(options.AuthClientSecretCredentialTenantId, options.AuthClientSecretCredentialClientId, options.AuthClientSecretCredentialClientSecret));
-            }
-
+                configuration.SetAzureTokenCredential(tokenCredential);
+            }            
+           
             configuration.TelemetryChannel = channel;
 
             foreach (ITelemetryInitializer initializer in telemetryInitializers)
