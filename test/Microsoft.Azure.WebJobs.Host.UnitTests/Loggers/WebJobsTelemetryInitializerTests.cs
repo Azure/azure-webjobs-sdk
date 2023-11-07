@@ -6,6 +6,7 @@ using System.Diagnostics;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
@@ -33,13 +34,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 ResponseCode = status,
                 Name = "POST /api/somemethod",
             };
+            
+            var options = new ApplicationInsightsLoggerOptions();
 
             Activity requestActivity = new Activity("dummy");
             requestActivity.Start();
             requestActivity.AddTag(LogConstants.NameKey, functionName);
             requestActivity.AddTag(LogConstants.SucceededKey, "true");
 
-            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new WebJobsRoleInstanceProvider());
+            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new WebJobsRoleInstanceProvider(), Options.Create(options));
 
             initializer.Initialize(request);
             initializer.Initialize(request);
@@ -68,14 +71,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             {
                 ResponseCode = string.Empty,
                 Name = "",
-            };
+                Url = new Uri("http://localhost/api/somemethod?secret=secret")
+        };
 
             Activity requestActivity = new Activity("dummy");
             requestActivity.Start();
             requestActivity.AddTag(LogConstants.NameKey, functionName);
             requestActivity.AddTag(LogConstants.SucceededKey, "true");
 
-            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new WebJobsRoleInstanceProvider());
+            var options = new ApplicationInsightsLoggerOptions();
+            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new WebJobsRoleInstanceProvider(), Options.Create(options));
 
             initializer.Initialize(request);
             initializer.Initialize(request);
@@ -83,7 +88,41 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(functionName, request.Name);
             Assert.Equal("0", request.ResponseCode);
             Assert.Equal(true, request.Success);
-            Assert.Null(request.Url);
+            Assert.Equal(request.Url, new Uri("http://localhost/api/somemethod")); 
+            Assert.DoesNotContain(request.Properties, p => p.Key == LogConstants.SucceededKey);
+        }
+
+
+        [Fact]
+        public void Initializer_IsIdempotent_ServiceBusRequest_EnableQueryStringTracing()
+        {
+            string functionName = "MyFunction";
+
+            // Simulate an HttpRequest
+            var request = new RequestTelemetry
+            {
+                ResponseCode = string.Empty,
+                Name = "",
+                Url = new Uri("http://localhost/api/somemethod?secret=secret")
+            };
+
+            Activity requestActivity = new Activity("dummy");
+            requestActivity.Start();
+            requestActivity.AddTag(LogConstants.NameKey, functionName);
+            requestActivity.AddTag(LogConstants.SucceededKey, "true");
+
+            var options = new ApplicationInsightsLoggerOptions();
+            IOptions<ApplicationInsightsLoggerOptions> aiOptions = Options.Create(options);
+            aiOptions.Value.EnableQueryStringTracing = true;
+            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new WebJobsRoleInstanceProvider(), aiOptions);
+
+            initializer.Initialize(request);
+            initializer.Initialize(request);
+
+            Assert.Equal(functionName, request.Name);
+            Assert.Equal("0", request.ResponseCode);
+            Assert.Equal(true, request.Success);
+            Assert.Equal(request.Url, new Uri("http://localhost/api/somemethod?secret=secret"));
             Assert.DoesNotContain(request.Properties, p => p.Key == LogConstants.SucceededKey);
         }
 
@@ -91,7 +130,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         public void Initializer_SetsRoleInstance()
         {
             var request = new RequestTelemetry { Name = "custom" };
-            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new TestRoleInstanceProvider("my custom role instance"));
+            var options = new ApplicationInsightsLoggerOptions();
+            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new TestRoleInstanceProvider("my custom role instance"), Options.Create(options));
 
             initializer.Initialize(request);
 

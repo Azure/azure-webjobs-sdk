@@ -118,9 +118,23 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         public DependencyTrackingOptions DependencyTrackingOptions { get; set; }
 
         /// <summary>
+        /// Gets or sets a value that filters logs before they are sent to Live Metrics. False by default.
+        /// When false, all logs are sent to Live Metrics, regardless of any log filter configuration. When true,
+        /// the logs are filtered before they are sent.
+        /// </summary>
+        public bool EnableLiveMetricsFilters { get; set; } = false;
+
+        /// <summary>
         /// Gets or sets HTTP request collection options. 
         /// </summary>
         public HttpAutoCollectionOptions HttpAutoCollectionOptions { get; set; } = new HttpAutoCollectionOptions();
+
+        /// <summary>
+        /// Gets or sets a value that removes the query parameters from functions URLs. False by default.
+        /// When false (default), the query parameters are stripped off of the functions URL for logging HTTP trigger calls.
+        /// When true, query parameters are logged.
+        /// </summary>
+        public bool EnableQueryStringTracing { get; set; } = false;
 
         public string Format()
         {
@@ -208,6 +222,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(HttpAutoCollectionOptions), httpOptions },
                 { nameof(LiveMetricsInitializationDelay), LiveMetricsInitializationDelay },
                 { nameof(EnableLiveMetrics), EnableLiveMetrics },
+                { nameof(EnableLiveMetricsFilters), EnableLiveMetricsFilters },
+                { nameof(EnableQueryStringTracing), EnableQueryStringTracing },
                 { nameof(EnableDependencyTracking), EnableDependencyTracking },
                 { nameof(DependencyTrackingOptions), dependencyTrackingOptions },
                 { nameof(TokenCredentialOptions), tokenCredentialOptions }

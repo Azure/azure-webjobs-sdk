@@ -37,7 +37,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         public void LogFunctionResult_Succeeded_CreatesCorrectState()
         {
             int logCount = 0;
-            ILogger logger = CreateMockLogger<IDictionary<string, object>>((l, e, o, ex, f) =>
+            ILogger logger = CreateMockLogger<FunctionResultState>((l, e, o, ex, f) =>
              {
                  logCount++;
                  Assert.Equal(LogLevel.Information, l);
@@ -60,7 +60,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         public void LogFunctionResult_Failed_CreatesCorrectState()
         {
             int logCount = 0;
-            ILogger logger = CreateMockLogger<IDictionary<string, object>>((l, e, o, ex, f) =>
+            ILogger logger = CreateMockLogger<FunctionResultState>((l, e, o, ex, f) =>
              {
                  logCount++;
                  Assert.Equal(LogLevel.Error, l);
@@ -86,17 +86,20 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         {
             DateTimeOffset now = DateTimeOffset.Now;
             int logCount = 0;
-            ILogger logger = CreateMockLogger<IReadOnlyDictionary<string, object>>((l, e, payload, ex, f) =>
+            ILogger logger = CreateMockLogger<FunctionResultAggregateState>((l, e, s, ex, f) =>
             {
+                var enumerable = s as IEnumerable<KeyValuePair<string, object>>;
+                Assert.NotNull(enumerable);
+
+                var payload = enumerable.ToDictionary(k => k.Key, v => v.Value);
+
                 logCount++;
                 Assert.Equal(LogLevel.Information, l);
                 Assert.Equal(0, e);
                 Assert.Null(ex);
+                Assert.Null(f(s, ex));
 
-                // nothing logged
-                Assert.Null(f(payload, ex));
-
-                Assert.Equal(9, payload.Count);
+                Assert.Equal(10, payload.Count);
                 Assert.Equal(_functionShortName, payload[LogConstants.NameKey]);
                 Assert.Equal(4, payload[LogConstants.FailuresKey]);
                 Assert.Equal(116, payload[LogConstants.SuccessesKey]);
@@ -106,6 +109,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Assert.Equal(now, payload[LogConstants.TimestampKey]);
                 Assert.Equal(120, payload[LogConstants.CountKey]);
                 Assert.Equal(96.67, payload[LogConstants.SuccessRateKey]);
+                Assert.Equal(FunctionResultAggregateState.OriginalFormatString, payload[LogConstants.OriginalFormatKey]);
             });
 
             var resultAggregate = new FunctionResultAggregate
@@ -143,14 +147,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             };
         }
 
-        private IDictionary<string, object> VerifyResultDefaultsAndConvert<TState>(TState state)
+        private IDictionary<string, object> VerifyResultDefaultsAndConvert(FunctionResultState state)
         {
             var enumerable = state as IEnumerable<KeyValuePair<string, object>>;
             Assert.NotNull(enumerable);
 
             var payload = enumerable.ToDictionary(k => k.Key, v => v.Value);
 
-            Assert.Equal(8, payload.Count);
+            Assert.Equal(9, payload.Count);
             Assert.Equal(_functionFullName, payload[LogConstants.FullNameKey]);
             Assert.Equal(_functionShortName, payload[LogConstants.NameKey]);
             Assert.Equal(_invocationId, payload[LogConstants.InvocationIdKey]);
@@ -158,6 +162,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(_endTime, payload[LogConstants.EndTimeKey]);
             Assert.Equal(_duration, payload[LogConstants.DurationKey]);
             Assert.Equal(_triggerReason, payload[LogConstants.TriggerReasonKey]);
+            Assert.Equal(FunctionResultState.OriginalFormatString, payload[LogConstants.OriginalFormatKey]);
 
             // verify that we no longer log parameters
             var args = payload.Where(kvp => kvp.Key.ToString().StartsWith(LogConstants.ParameterPrefix));

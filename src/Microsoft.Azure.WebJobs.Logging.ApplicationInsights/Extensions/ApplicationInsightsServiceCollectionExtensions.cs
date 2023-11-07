@@ -39,14 +39,14 @@ namespace Microsoft.Extensions.DependencyInjection
         }
 
 
-        public static IServiceCollection AddApplicationInsights(this IServiceCollection services, 
+        public static IServiceCollection AddApplicationInsights(this IServiceCollection services,
             Action<ApplicationInsightsLoggerOptions> loggerOptionsConfiguration)
         {
             services.AddApplicationInsights(loggerOptionsConfiguration, _ => { });
             return services;
         }
 
-        internal static IServiceCollection AddApplicationInsights(this IServiceCollection services, 
+        internal static IServiceCollection AddApplicationInsights(this IServiceCollection services,
             Action<ApplicationInsightsLoggerOptions> loggerOptionsConfiguration,
             Action<TelemetryConfiguration> additionalTelemetryConfig)
         {
@@ -179,7 +179,13 @@ namespace Microsoft.Extensions.DependencyInjection
                     : ActivityIdFormat.Hierarchical;
                 Activity.ForceDefaultIdFormat = true;
 
-                LoggerFilterOptions filterOptions = CreateFilterOptions(provider.GetService<IOptions<LoggerFilterOptions>>().Value);
+                // If we do not want to filter LiveMetrics logs, we need to "late filter" using the 
+                // custom filter options that were passed in during initialization.
+                LoggerFilterOptions filterOptions = null;
+                if (options.EnableLiveMetrics && !options.EnableLiveMetricsFilters)
+                {
+                    filterOptions = CreateFilterOptions(provider.GetService<IOptions<LoggerFilterOptions>>().Value);
+                }
 
                 ITelemetryChannel channel = provider.GetService<ITelemetryChannel>();
                 TelemetryConfiguration config = TelemetryConfiguration.CreateDefault();
@@ -212,7 +218,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 if (!activeConfig.TelemetryInitializers.OfType<WebJobsRoleEnvironmentTelemetryInitializer>().Any())
                 {
                     activeConfig.TelemetryInitializers.Add(new WebJobsRoleEnvironmentTelemetryInitializer());
-                    activeConfig.TelemetryInitializers.Add(new WebJobsTelemetryInitializer(sdkVersionProvider, roleInstanceProvider));
+                    activeConfig.TelemetryInitializers.Add(new WebJobsTelemetryInitializer(sdkVersionProvider, roleInstanceProvider, provider.GetService<IOptions<ApplicationInsightsLoggerOptions>>()));
                 }
 
                 SetupTelemetryConfiguration(
@@ -343,13 +349,22 @@ namespace Microsoft.Extensions.DependencyInjection
 
             QuickPulseTelemetryProcessor quickPulseProcessor = null;
             configuration.TelemetryProcessorChainBuilder
-                .Use((next) => new OperationFilteringTelemetryProcessor(next))
-                .Use((next) =>
+                .Use((next) => new OperationFilteringTelemetryProcessor(next));
+
+            if (options.EnableLiveMetrics)
+            {
+                configuration.TelemetryProcessorChainBuilder.Use((next) =>
                 {
                     quickPulseProcessor = new QuickPulseTelemetryProcessor(next);
                     return quickPulseProcessor;
-                })
-                .Use((next) => new FilteringTelemetryProcessor(filterOptions, next));
+                });
+            }
+
+            // No need to "late filter" as the logs will already be filtered before they are sent to the Logger.
+            if (filterOptions != null)
+            {
+                configuration.TelemetryProcessorChainBuilder.Use((next) => new FilteringTelemetryProcessor(filterOptions, next));
+            }
 
             if (options.SamplingSettings != null)
             {

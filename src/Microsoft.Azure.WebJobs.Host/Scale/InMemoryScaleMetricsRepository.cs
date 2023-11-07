@@ -84,7 +84,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                 {
                     var metrics = new ConcurrentDictionary<ScaleMetrics, object>();
                     metrics.TryAdd(pair.Value, null);
-                    if (_monitorMetrics.TryAdd(pair.Key, metrics))
+                    if (!_monitorMetrics.TryAdd(pair.Key, metrics))
                     {
                         _logger.LogWarning($"A metric for ${pair.Key.Descriptor.Id} was not added successfully");
                     }

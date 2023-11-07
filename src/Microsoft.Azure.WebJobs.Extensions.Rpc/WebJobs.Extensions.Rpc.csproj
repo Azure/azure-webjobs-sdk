@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\build\common.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <PackageId>Microsoft.Azure.WebJobs.Extensions.Rpc</PackageId>
+    <AssemblyName>Microsoft.Azure.WebJobs.Extensions.Rpc</AssemblyName>
+    <RootNamespace>Microsoft.Azure.WebJobs.Extensions.Rpc</RootNamespace>
+    <Description>This package contains the runtime assemblies for Microsoft.Azure.WebJobs.Extensions.Rpc. For more information, please visit http://go.microsoft.com/fwlink/?LinkID=320971</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.Azure.WebJobs.Rpc.Core\WebJobs.Rpc.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" Version="2.49.0" />
+  </ItemGroup>
+
+</Project>
