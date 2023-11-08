@@ -50,8 +50,17 @@ jobs:
     env:
       CommitHash: $(Build.SourceVersion)
 
-  - pwsh: .\runtests.ps1
-    displayName: "Run tests"
+  - task: DotNetCoreCLI@2
+    displayName: 'Run tests'
+    inputs:
+      command: 'test'
+      arguments: '--no-build -c Release'
+      projects: |
+        test\Microsoft.Azure.WebJobs.Extensions.Rpc.UnitTests\*.csproj
+        test\Microsoft.Azure.WebJobs.Host.UnitTests\*.csproj
+        test\Microsoft.Azure.WebJobs.Host.FunctionalTests\*.csproj
+        test\Microsoft.Azure.WebJobs.Logging.FunctionalTests\*.csproj
+        test\Microsoft.Azure.WebJobs.Host.EndToEndTests\*.csproj
     env:
       AzureWebJobsDashboard: $(Storage)
       AzureWebJobsStorage: $(Storage)
@@ -63,17 +72,7 @@ jobs:
       APPINSIGHTS_REPORTER_KEY: $(AppInsights)
       ConnectionStrings:ServiceBus: $(ServiceBus)
       ConnectionStrings:ServiceBusSecondary: $(ServiceBus2)
-
-  - task: PublishTestResults@2
-    displayName: "Publish XUnit test results"
-    inputs:
-      testResultsFormat: 'VSTest'
-      testResultsFiles: '**/TEST.xml'
-      mergeTestResults: true
-      buildConfiguration: $(Configuration)
-      testRunTitle: 'XUnit Tests'
-    condition: always()
-
+      
   - task: SFP.build-tasks.custom-build-task-1.EsrpCodeSigning@2
     displayName: 'ESRP CodeSigning - Authenticode'
     condition: eq(variables.isPr, false)
