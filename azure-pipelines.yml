@@ -72,7 +72,7 @@ jobs:
       APPINSIGHTS_REPORTER_KEY: $(AppInsights)
       ConnectionStrings:ServiceBus: $(ServiceBus)
       ConnectionStrings:ServiceBusSecondary: $(ServiceBus2)
-      
+
   - task: SFP.build-tasks.custom-build-task-1.EsrpCodeSigning@2
     displayName: 'ESRP CodeSigning - Authenticode'
     condition: eq(variables.isPr, false)
@@ -127,7 +127,7 @@ jobs:
       ${{ if eq(variables.hasTag, true) }}:
         arguments: '--no-build -c Release -o $(buildOutputDirectory)'
       ${{ else }}:
-        arguments: '--no-build -c Release -o $(buildOutputDirectory) --version-suffix $(buildNumber)'
+        arguments: '--no-build -c Release -o $(buildOutputDirectory) --version-suffix -$(buildNumber)'
       projects: |
         src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj
         src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.Sources.csproj
