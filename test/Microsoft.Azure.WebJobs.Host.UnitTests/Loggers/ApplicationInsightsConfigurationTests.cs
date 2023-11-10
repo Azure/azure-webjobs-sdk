@@ -60,7 +60,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             using (var host = builder.Build())
             {
                 var config = host.Services.GetService<TelemetryConfiguration>();
-                
+
                 // Verify Initializers
                 Assert.Equal(5, config.TelemetryInitializers.Count);
                 // These will throw if there are not exactly one
@@ -924,7 +924,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             var builder = new HostBuilder()
                 .ConfigureLogging(b =>
                 {
-                    b.AddApplicationInsightsWebJobs(o => { o.InstrumentationKey = "some key"; o.TokenCredentialOptions = new Logging.ApplicationInsights.TokenCredentialOptions("Authorization=AAD;ClientId=123"); });
+                    b.AddApplicationInsightsWebJobs(o => { o.InstrumentationKey = "some key"; o.TokenCredentialOptions = Logging.ApplicationInsights.TokenCredentialOptions.ParseAuthenticationString($"Authorization=AAD;ClientId={Guid.NewGuid()}"); });
                 });
 
             using (var host = builder.Build())

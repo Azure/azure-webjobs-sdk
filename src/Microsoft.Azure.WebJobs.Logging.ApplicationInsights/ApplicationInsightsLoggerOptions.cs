@@ -205,8 +205,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             {
                 tokenCredentialOptions = new JObject
                 {
-                    { nameof(TokenCredentialOptions.ClientId), string.IsNullOrEmpty(TokenCredentialOptions.ClientId)? null : "*******" },
-                    { nameof(TokenCredentialOptions.Authorization), TokenCredentialOptions.Authorization }
+                    { nameof(TokenCredentialOptions.ClientId), string.IsNullOrEmpty(TokenCredentialOptions.ClientId)? null : "*******" }
                 };
             }
 

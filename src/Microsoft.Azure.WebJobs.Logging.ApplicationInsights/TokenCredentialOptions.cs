@@ -5,6 +5,7 @@ using Azure.Core;
 using Azure.Identity;
 using System;
 using System.Collections.Generic;
+using System.Security.Authentication;
 
 namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
@@ -14,65 +15,42 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         private const string AuthAuthorizationKey = "Authorization";
         private const string AuthClientIdKey = "ClientId";
 
-        public TokenCredentialOptions(string authenticationString)
-        {
-            if (!string.IsNullOrWhiteSpace(authenticationString))
-            {
-                var tokens = ParseAuthenticationString(authenticationString);
-
-                if (tokens.ContainsKey(AuthAuthorizationKey))
-                {
-                    Authorization = tokens[AuthAuthorizationKey];
-                }
-                if (tokens.ContainsKey(AuthClientIdKey))
-                {
-                    ClientId = tokens[AuthClientIdKey];
-                }
-            }
-        }
-        /// <summary>
-        /// The authentication kind.
-        /// </summary>
-        public string Authorization { get; set; }
-
         /// <summary>
         /// The client ID of an user-assigned identity.
         /// </summary>
         /// <remarks>
-        /// This must be specified if you're using user-assigned managed
-        /// identity.
+        /// This must be specified if you're using user-assigned managed identity.
         /// </remarks>
         public string ClientId { get; set; }
 
         /// <summary>
         /// Create an <see cref="TokenCredential"/> from an authentication string.
         /// </summary>
-        /// <param name="value">
-        /// The authentication string containing semi-colon separated key=value tokens.</param>
         /// <returns>New <see cref="ManagedIdentityCredential"/> from the authentication string.</returns>
-        public TokenCredential CreateTokenCredential()
+        internal TokenCredential CreateTokenCredential()
         {
-            switch (Authorization)
-            {
-                case AuthToken when string.IsNullOrWhiteSpace(ClientId):
-                    return new ManagedIdentityCredential();
-                case AuthToken when !string.IsNullOrWhiteSpace(ClientId):
-                    return new ManagedIdentityCredential(ClientId);
-                default:
-                    return null;
-            }
+            return new ManagedIdentityCredential(ClientId);
         }
 
-        private IReadOnlyDictionary<string, string> ParseAuthenticationString(string value)
-        {            
-            var tokens = new Dictionary<string, string>(2, StringComparer.OrdinalIgnoreCase);            
+        /// <summary>
+        /// Create an <see cref="TokenCredentialOptions"/> from an authentication string.
+        /// </summary>
+        /// <returns>New <see cref="TokenCredentialOptions"/> from the authentication string.</returns>
+        public static TokenCredentialOptions ParseAuthenticationString(string applicationInsightsAuthenticationString)
+        {
+            if (string.IsNullOrWhiteSpace(applicationInsightsAuthenticationString))
+            {
+                throw new ArgumentNullException(nameof(applicationInsightsAuthenticationString), "Authentication string cannot be null or empty.");
+            }
 
-            foreach ((int, int) split in Tokenize(value))
+            var tokenCredentialOptions = new TokenCredentialOptions();
+            bool isValidConfiguration = false;
+            foreach ((int, int) split in Tokenize(applicationInsightsAuthenticationString))
             {
                 (int start, int length) = split;
 
                 // Trim whitespace from start
-                while (length > 0 && char.IsWhiteSpace(value[start]))
+                while (length > 0 && char.IsWhiteSpace(applicationInsightsAuthenticationString[start]))
                 {
                     start++;
                     length--;
@@ -85,7 +63,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 }
 
                 // Find key-value separator.
-                int indexOfEquals = value.IndexOf('=', start, length);
+                int indexOfEquals = applicationInsightsAuthenticationString.IndexOf('=', start, length);
                 if (indexOfEquals < 0)
                 {
                     continue;
@@ -93,17 +71,39 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
                 // Extract key
                 int keyLength = indexOfEquals - start;
-                string key = value.Substring(start, keyLength).TrimEnd();
+                string key = applicationInsightsAuthenticationString.Substring(start, keyLength).TrimEnd();
                 if (key.Length == 0)
                 {
                     // Key is blank
                     continue;
                 }
 
-                // Add token and allow for duplicate keys
-                tokens[key] = value.Substring(indexOfEquals + 1, length - keyLength - 1).Trim();
+                if (key.Equals(AuthAuthorizationKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!applicationInsightsAuthenticationString.Substring(indexOfEquals + 1, length - keyLength - 1).Trim().Equals(AuthToken, StringComparison.OrdinalIgnoreCase))
+                    { 
+                        throw new InvalidCredentialException("Credential supplied is not valid for the authorization mechanism being used in ApplicationInsights.");
+                    }
+                    isValidConfiguration = true;
+                    continue;
+                }
+                if (key.Equals(AuthClientIdKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    string clientId = applicationInsightsAuthenticationString.Substring(indexOfEquals + 1, length - keyLength - 1).Trim();
+                    if (!Guid.TryParse(clientId, out Guid clientIdGuid))
+                    {
+                        throw new FormatException($"The Application Insights AuthenticationString {AuthClientIdKey} is not a valid GUID.");
+                    }
+                    tokenCredentialOptions.ClientId = clientId;
+                    continue;
+                }
+            }     
+            // Throw if the Authorization key is not present in the authentication string
+            if (!isValidConfiguration)
+            {
+                throw new InvalidCredentialException("Authorization key is missing in the authentication string for ApplicationInsights.");
             }
-            return tokens;
+            return tokenCredentialOptions;
         }
 
         private static IEnumerable<(int start, int length)> Tokenize(string value, char separator = ';')

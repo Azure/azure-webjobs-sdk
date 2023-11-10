@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Azure.Identity;
+using Azure.Core;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.AspNetCore;
 using Microsoft.ApplicationInsights.AspNetCore.Extensions;
@@ -307,12 +307,11 @@ namespace Microsoft.Extensions.DependencyInjection
             }
 
             // Default is connection string based ingestion
-            var tokenCredential = options.TokenCredentialOptions?.CreateTokenCredential();
-            if (tokenCredential != null)
+            if (options.TokenCredentialOptions?.CreateTokenCredential() is TokenCredential credential)
             {
-                configuration.SetAzureTokenCredential(tokenCredential);
-            }            
-           
+                configuration.SetAzureTokenCredential(credential);
+            }
+
             configuration.TelemetryChannel = channel;
 
             foreach (ITelemetryInitializer initializer in telemetryInitializers)
