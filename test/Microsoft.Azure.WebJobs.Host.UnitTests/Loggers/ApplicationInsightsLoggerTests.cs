@@ -750,7 +750,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(options.SamplingSettings.SamplingPercentageDecreaseTimeout, deserializedOptions.SamplingSettings.SamplingPercentageDecreaseTimeout);
             Assert.Equal(options.SamplingSettings.SamplingPercentageIncreaseTimeout, deserializedOptions.SamplingSettings.SamplingPercentageIncreaseTimeout);
 
-
             Assert.Equal(options.SnapshotConfiguration.FailedRequestLimit, deserializedOptions.SnapshotConfiguration.FailedRequestLimit);
             Assert.Equal(options.SnapshotConfiguration.IsEnabled, deserializedOptions.SnapshotConfiguration.IsEnabled);
             Assert.Equal(options.SnapshotConfiguration.IsEnabledInDeveloperMode, deserializedOptions.SnapshotConfiguration.IsEnabledInDeveloperMode);

@@ -209,8 +209,6 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 };
             }
 
-
-
             JObject options = new JObject
             {
                 { nameof(SamplingSettings), sampling },
