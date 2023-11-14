@@ -1,13 +1,3 @@
-parameters:
-- name: force_artifacts
-  displayName: Force Artifacts
-  type: boolean
-  default: true
-- name: skip_assembly_signing
-  displayName: Skip Assembly Signing
-  type: boolean
-  default: false
-
 variables:
 - group: 'WebJobs SDK Testing'
 - name: buildNumber
@@ -48,32 +38,29 @@ jobs:
 
   steps:
   - template: build/install-dotnet.yml
-  
+
   - task: 1ESHostedPoolValidation@1
-  - pwsh: |
-      $packageSuffix = 0
-      if (-not $$(hasTag)) {
-        $packageSuffix = $(buildNumber)
-        Write-Host "No git tag found. Setting packages suffix to '$packageSuffix'"
-      }
 
-      if ($$(hasTag)) {
-        $config = "Release"
-        Write-Host "Git tag found. Setting Configuration to '$config'"
-        $env:Configuration = $config
-        Write-Host "##vso[task.setvariable variable=Configuration]$config" # let downstream tasks read this variable
-      }
-
-      .\Build.ps1 -buildVersion "$(buildVersion)" -packageSuffix "$packageSuffix" -isPR $$(isPr) -outputDirectory "$(buildOutputDirectory)" -forceArtifacts $${{ parameters.force_artifacts }} -skipAssemblySigning $${{ parameters.skip_assembly_signing }}
-    displayName: "Build source"
+  - task: DotNetCoreCLI@2
+    displayName: 'Build source'
+    inputs:
+      command: 'build'
+      arguments: '-c Release'
+      projects: 'Webjobs.sln'
     env:
       CommitHash: $(Build.SourceVersion)
-      FILES_ACCOUNT_NAME: $(FilesAccountName)
-      FILES_ACCOUNT_KEY: $(FilesAccountKey)
-    ## This task also optionally signs the packages
 
-  - pwsh: .\runtests.ps1
-    displayName: "Run tests"
+  - task: DotNetCoreCLI@2
+    displayName: 'Run tests'
+    inputs:
+      command: 'test'
+      arguments: '--no-build -c Release'
+      projects: |
+        test\Microsoft.Azure.WebJobs.Extensions.Rpc.UnitTests\*.csproj
+        test\Microsoft.Azure.WebJobs.Host.UnitTests\*.csproj
+        test\Microsoft.Azure.WebJobs.Host.FunctionalTests\*.csproj
+        test\Microsoft.Azure.WebJobs.Logging.FunctionalTests\*.csproj
+        test\Microsoft.Azure.WebJobs.Host.EndToEndTests\*.csproj
     env:
       AzureWebJobsDashboard: $(Storage)
       AzureWebJobsStorage: $(Storage)
@@ -86,21 +73,96 @@ jobs:
       ConnectionStrings:ServiceBus: $(ServiceBus)
       ConnectionStrings:ServiceBusSecondary: $(ServiceBus2)
 
-  - task: PublishTestResults@2
-    displayName: "Publish XUnit test results"
+  - task: SFP.build-tasks.custom-build-task-1.EsrpCodeSigning@2
+    displayName: 'ESRP CodeSigning - Authenticode'
+    condition: eq(variables.isPr, false)
     inputs:
-      testResultsFormat: 'VSTest'
-      testResultsFiles: '**/TEST.xml'
-      mergeTestResults: true
-      buildConfiguration: $(Configuration)
-      testRunTitle: 'XUnit Tests'
-    condition: always()
+      ConnectedServiceName: 'ESRP Service'
+      FolderPath: 'src'
+      Pattern: Microsoft.Azure.WebJobs.*.dll
+      signConfigType: inlineSignParams
+      inlineOperation: |
+        [
+          {
+              "KeyCode" : "CP-233863-SN",
+              "OperationCode" : "StrongNameSign",
+              "Parameters" : {},
+              "ToolName" : "sign",
+              "ToolVersion" : "1.0"
+          },
+          {
+              "KeyCode" : "CP-233863-SN",
+              "OperationCode" : "StrongNameVerify",
+              "Parameters" : {},
+              "ToolName" : "sign",
+              "ToolVersion" : "1.0"
+          },
+          {
+            "KeyCode": "CP-230012",
+            "OperationCode": "SigntoolSign",
+            "Parameters": {
+              "OpusName": "Microsoft",
+              "OpusInfo": "http://www.microsoft.com",
+              "FileDigest": "/fd \"SHA256\"",
+              "PageHash": "/NPH",
+              "TimeStamp": "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
+            },
+            "ToolName": "sign",
+            "ToolVersion": "1.0"
+          },
+          {
+            "KeyCode": "CP-230012",
+            "OperationCode": "SigntoolVerify",
+            "Parameters": {},
+            "ToolName": "sign",
+            "ToolVersion": "1.0"
+          }
+        ]
+  
+  - task: DotNetCoreCLI@2
+    displayName: 'Pack'
+    inputs:
+      command: 'custom'
+      custom: 'pack'
+      ${{ if eq(variables.hasTag, true) }}:
+        arguments: '--no-build -c Release -o $(buildOutputDirectory)'
+      ${{ else }}:
+        arguments: '--no-build -c Release -o $(buildOutputDirectory) --version-suffix -$(buildNumber)'
+      projects: |
+        src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj
+        src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.Sources.csproj
+        src\Microsoft.Azure.WebJobs.Logging\WebJobs.Logging.csproj
+        src\Microsoft.Azure.WebJobs.Logging.ApplicationInsights\WebJobs.Logging.ApplicationInsights.csproj
+        src\Microsoft.Azure.WebJobs.Host.Storage\WebJobs.Host.Storage.csproj
+        src\Microsoft.Azure.WebJobs.Rpc.Core\WebJobs.Rpc.Core.csproj
+        src\Microsoft.Azure.WebJobs.Extensions.Rpc\WebJobs.Extensions.Rpc.csproj
+        test\Microsoft.Azure.WebJobs.Host.TestCommon\WebJobs.Host.TestCommon.csproj
 
-  - pwsh: .\tools\PollSigningResults.ps1 -buildVersion "$(buildVersion)" -isPr $$(isPr) -artifactDirectory "$(buildOutputDirectory)" -forceArtifacts $${{ parameters.force_artifacts }} -skipAssemblySigning $${{ parameters.skip_assembly_signing }}
-    displayName: "Poll signing results"
-    env:
-      FILES_ACCOUNT_NAME: $(FilesAccountName)
-      FILES_ACCOUNT_KEY: $(FilesAccountKey)
+  - task: SFP.build-tasks.custom-build-task-1.EsrpCodeSigning@2
+    displayName: 'ESRP CodeSigning: Nupkg'
+    condition: eq(variables.isPr, false)
+    inputs:
+      ConnectedServiceName: 'ESRP Service'
+      FolderPath: '$(buildOutputDirectory)'
+      Pattern: 'Microsoft.Azure.WebJobs*.nupkg'
+      signConfigType: inlineSignParams
+      inlineOperation: |
+        [
+            {
+              "KeyCode": "CP-401405",
+              "OperationCode": "NuGetSign",
+              "Parameters": {},
+              "ToolName": "sign",
+              "ToolVersion": "1.0"
+            },
+            {
+              "KeyCode": "CP-401405",
+              "OperationCode": "NuGetVerify",
+              "Parameters": {},
+              "ToolName": "sign",
+              "ToolVersion": "1.0"
+            }
+        ]
 
   - task: ManifestGeneratorTask@0
     displayName: "SBOM Generation"

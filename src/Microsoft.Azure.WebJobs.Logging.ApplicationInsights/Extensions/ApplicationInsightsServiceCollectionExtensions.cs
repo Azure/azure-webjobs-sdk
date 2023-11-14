@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Azure.Core;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.AspNetCore;
 using Microsoft.ApplicationInsights.AspNetCore.Extensions;
@@ -303,6 +304,12 @@ namespace Microsoft.Extensions.DependencyInjection
             else if (options.InstrumentationKey != null)
             {
                 configuration.InstrumentationKey = options.InstrumentationKey;
+            }
+
+            // Default is connection string based ingestion
+            if (options.TokenCredentialOptions?.CreateTokenCredential() is TokenCredential credential)
+            {
+                configuration.SetAzureTokenCredential(credential);
             }
 
             configuration.TelemetryChannel = channel;

@@ -732,7 +732,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                     EnableLegacyCorrelationHeadersInjection = true,
                     EnableRequestIdHeaderInjectionInW3CMode = true,
                     SetComponentCorrelationHttpHeaders = true
-                }
+                },                
+                TokenCredentialOptions = TokenCredentialOptions.ParseAuthenticationString($"Authorization=AAD;ClientId={Guid.NewGuid()}")
             };
 
             var deserializedOptions = JsonConvert.DeserializeObject<ApplicationInsightsLoggerOptions>(options.Format());
@@ -740,7 +741,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(options.HttpAutoCollectionOptions.EnableHttpTriggerExtendedInfoCollection, deserializedOptions.HttpAutoCollectionOptions.EnableHttpTriggerExtendedInfoCollection);
             Assert.Equal(options.HttpAutoCollectionOptions.EnableW3CDistributedTracing, deserializedOptions.HttpAutoCollectionOptions.EnableW3CDistributedTracing);
             Assert.Equal(options.HttpAutoCollectionOptions.EnableResponseHeaderInjection, deserializedOptions.HttpAutoCollectionOptions.EnableResponseHeaderInjection);
-
             Assert.Equal(options.SamplingSettings.EvaluationInterval, deserializedOptions.SamplingSettings.EvaluationInterval);
             Assert.Equal(options.SamplingSettings.InitialSamplingPercentage, deserializedOptions.SamplingSettings.InitialSamplingPercentage);
             Assert.Equal(options.SamplingSettings.MaxSamplingPercentage, deserializedOptions.SamplingSettings.MaxSamplingPercentage);
@@ -749,7 +749,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(options.SamplingSettings.MovingAverageRatio, deserializedOptions.SamplingSettings.MovingAverageRatio);
             Assert.Equal(options.SamplingSettings.SamplingPercentageDecreaseTimeout, deserializedOptions.SamplingSettings.SamplingPercentageDecreaseTimeout);
             Assert.Equal(options.SamplingSettings.SamplingPercentageIncreaseTimeout, deserializedOptions.SamplingSettings.SamplingPercentageIncreaseTimeout);
-
 
             Assert.Equal(options.SnapshotConfiguration.FailedRequestLimit, deserializedOptions.SnapshotConfiguration.FailedRequestLimit);
             Assert.Equal(options.SnapshotConfiguration.IsEnabled, deserializedOptions.SnapshotConfiguration.IsEnabled);
@@ -775,7 +774,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal(options.DependencyTrackingOptions.EnableLegacyCorrelationHeadersInjection, deserializedOptions.DependencyTrackingOptions.EnableLegacyCorrelationHeadersInjection);
             Assert.Equal(options.DependencyTrackingOptions.EnableRequestIdHeaderInjectionInW3CMode, deserializedOptions.DependencyTrackingOptions.EnableRequestIdHeaderInjectionInW3CMode);
             Assert.Equal(options.DependencyTrackingOptions.EnableSqlCommandTextInstrumentation, deserializedOptions.DependencyTrackingOptions.EnableSqlCommandTextInstrumentation);
-
+            Assert.Equal("*******", deserializedOptions.TokenCredentialOptions.ClientId);
             Assert.Equal(options.EnableLiveMetrics, deserializedOptions.EnableLiveMetrics);
             Assert.Equal(options.EnableLiveMetricsFilters, deserializedOptions.EnableLiveMetricsFilters);
         }
