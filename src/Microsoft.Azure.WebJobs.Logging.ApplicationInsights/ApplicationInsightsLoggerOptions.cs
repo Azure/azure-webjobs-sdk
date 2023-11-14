@@ -24,6 +24,12 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         public string ConnectionString { get; set; }
 
         /// <summary>
+        /// Gets or sets Application Insights Authentication Mode. If set, this will
+        /// take precedence over the default connection string based ingestion.
+        /// </summary>
+        public TokenCredentialOptions TokenCredentialOptions { get; set; }   
+
+        /// <summary>
         /// Gets or sets sampling settings.
         /// </summary>
         public SamplingPercentageEstimatorSettings SamplingSettings { get; set; }
@@ -194,7 +200,14 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 };
             }
 
-
+            JObject tokenCredentialOptions = null;
+            if (TokenCredentialOptions != null)
+            {
+                tokenCredentialOptions = new JObject
+                {
+                    { nameof(TokenCredentialOptions.ClientId), string.IsNullOrEmpty(TokenCredentialOptions.ClientId)? null : "*******" }
+                };
+            }
 
             JObject options = new JObject
             {
@@ -209,7 +222,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(EnableLiveMetricsFilters), EnableLiveMetricsFilters },
                 { nameof(EnableQueryStringTracing), EnableQueryStringTracing },
                 { nameof(EnableDependencyTracking), EnableDependencyTracking },
-                { nameof(DependencyTrackingOptions), dependencyTrackingOptions }
+                { nameof(DependencyTrackingOptions), dependencyTrackingOptions },
+                { nameof(TokenCredentialOptions), tokenCredentialOptions }
             };
 
             return options.ToString(Formatting.Indented);

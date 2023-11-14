@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
+using Azure.Identity;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.AspNetCore;
 using Microsoft.ApplicationInsights.AspNetCore.TelemetryInitializers;
@@ -913,6 +915,49 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             public string GetRoleInstanceName()
             {
                 return _roleInstance;
+            }
+        }
+
+        [Fact]
+        public void ManagedIdentityCredential()
+        {
+            var builder = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsightsWebJobs(o => { o.InstrumentationKey = "some key"; o.TokenCredentialOptions = Logging.ApplicationInsights.TokenCredentialOptions.ParseAuthenticationString($"Authorization=AAD;ClientId={Guid.NewGuid()}"); });
+                });
+
+            using (var host = builder.Build())
+            {
+                var config = host.Services.GetService<TelemetryConfiguration>();
+                
+                var property = typeof(TelemetryConfiguration).GetProperty("CredentialEnvelope", BindingFlags.NonPublic | BindingFlags.Instance);
+                var propertyValue = property.GetValue(config);
+
+                var credentialProperty = propertyValue.GetType().GetProperty("Credential", BindingFlags.NonPublic | BindingFlags.Instance);
+                var credentialValue = credentialProperty.GetValue(propertyValue);                
+                Assert.IsType<ManagedIdentityCredential>(credentialValue);
+            }
+        }       
+
+        [Fact]
+        public void DefaultAuth()
+        {
+            var builder = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsightsWebJobs(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                    });
+                });
+
+            using (var host = builder.Build())
+            {
+                var config = host.Services.GetService<TelemetryConfiguration>();
+                var property = typeof(TelemetryConfiguration).GetProperty("CredentialEnvelope", BindingFlags.NonPublic | BindingFlags.Instance);
+                var propertyValue = property.GetValue(config);
+                Assert.Null(propertyValue);
             }
         }
     }
