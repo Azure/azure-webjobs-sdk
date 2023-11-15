@@ -56,6 +56,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             }
             base.OnEventSourceCreated(eventSource);
         }
+
         protected override void OnEventWritten(EventWrittenEventArgs eventData)
         {
             if (!string.IsNullOrWhiteSpace(eventData.Message))
