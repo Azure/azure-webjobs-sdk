@@ -73,18 +73,27 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             {
                 return;
             }
+
+            ConcurrentQueue<string> currentBuffer = null;
             lock (_syncLock)
             {
-                // batch up to 30 events in one log
-                StringBuilder sb = new StringBuilder();
-                // start with a new line
-                sb.AppendLine(string.Empty);
-                while (_logBuffer.TryDequeue(out string line))
+                if (_logBuffer.Count == 0)
                 {
-                    sb.AppendLine(line);
+                    return;
                 }
-                _source.Write(EventName, sb.ToString());
+                currentBuffer = _logBuffer;
+                _logBuffer = new ConcurrentQueue<string>();
             }
+
+            // batch up to 30 events in one log
+            StringBuilder sb = new StringBuilder();
+            // start with a new line
+            sb.AppendLine(string.Empty);
+            while (currentBuffer.TryDequeue(out string line))
+            {
+                sb.AppendLine(line);
+            }
+            _source.Write(EventName, sb.ToString());            
         }
 
         protected virtual void Dispose(bool disposing)
