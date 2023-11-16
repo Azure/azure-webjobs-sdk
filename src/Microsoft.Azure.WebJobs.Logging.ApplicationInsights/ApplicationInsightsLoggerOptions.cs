@@ -231,7 +231,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(EnableDependencyTracking), EnableDependencyTracking },
                 { nameof(DependencyTrackingOptions), dependencyTrackingOptions },
                 { nameof(TokenCredentialOptions), tokenCredentialOptions },
-                { nameof(DiagnosticsEventListenerLogLevel), DiagnosticsEventListenerLogLevel?.ToString() }
+                { nameof(DiagnosticsEventListenerLogLevel), DiagnosticsEventListenerLogLevel?.ToString() },
             };
 
             return options.ToString(Formatting.Indented);
