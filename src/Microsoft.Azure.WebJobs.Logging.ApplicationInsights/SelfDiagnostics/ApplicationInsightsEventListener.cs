@@ -19,7 +19,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
     /// </summary>
     internal class ApplicationInsightsEventListener : EventListener
     {
-        private static readonly DiagnosticListener _source = new DiagnosticListener(string.Concat(ApplicationInsightsDiagnosticConstants.DiagnosticSourcePrefix, nameof(ApplicationInsightsEventListener)));
+        private static readonly DiagnosticListener _source = new DiagnosticListener(string.Concat(ApplicationInsightsDiagnosticConstants.ApplicationInsightsDiagnosticSourcePrefix, nameof(ApplicationInsightsEventListener)));
         private readonly EventLevel _eventLevel;
 
         private const int LogFlushIntervalMs = 10 * 1000;

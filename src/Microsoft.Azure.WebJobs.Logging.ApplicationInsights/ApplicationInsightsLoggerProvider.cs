@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
     {
         internal const string Alias = "ApplicationInsights";
         // Allow for subscribing to flushing exceptions
-        public const string SourceName = ApplicationInsightsDiagnosticConstants.DiagnosticSourcePrefix + "ApplicationInsightsLoggerProvider";
+        public const string SourceName = ApplicationInsightsDiagnosticConstants.ApplicationInsightsDiagnosticSourcePrefix + "ApplicationInsightsLoggerProvider";
 
         private CancellationTokenSource _cancellationTokenSource;
         private readonly TelemetryClient _client;

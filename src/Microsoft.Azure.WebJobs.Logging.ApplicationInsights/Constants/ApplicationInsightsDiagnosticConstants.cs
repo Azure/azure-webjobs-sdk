@@ -5,6 +5,6 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 {
     public static class ApplicationInsightsDiagnosticConstants
     {
-        public const string DiagnosticSourcePrefix = "Microsoft.Azure.WebJobs.Logging.ApplicationInsights.";
+        public const string ApplicationInsightsDiagnosticSourcePrefix = "Microsoft.Azure.WebJobs.Logging.ApplicationInsights.";
     }
 }

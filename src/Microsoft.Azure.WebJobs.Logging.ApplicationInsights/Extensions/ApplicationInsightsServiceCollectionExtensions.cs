@@ -109,6 +109,18 @@ namespace Microsoft.Extensions.DependencyInjection
                 return NullTelemetryModule.Instance;
             });
 
+            services.AddSingleton<ITelemetryModule>(provider =>
+            {
+                ApplicationInsightsLoggerOptions options = provider.GetService<IOptions<ApplicationInsightsLoggerOptions>>().Value;
+
+                if (options.DiagnosticsEventListenerLogLevel != null)
+                {
+                    return new SelfDiagnosticsTelemetryModule((EventLevel)options.DiagnosticsEventListenerLogLevel);
+                }
+
+                return NullTelemetryModule.Instance;
+            });
+
             services.AddSingleton<IApplicationIdProvider, ApplicationInsightsApplicationIdProvider>();
 
             services.AddSingleton<ITelemetryModule>(provider =>
@@ -297,11 +309,7 @@ namespace Microsoft.Extensions.DependencyInjection
             IRoleInstanceProvider roleInstanceProvider,
             QuickPulseInitializationScheduler delayer,
             Action<TelemetryConfiguration> additionalTelemetryConfig)
-        {
-            if (options.DiagnosticsEventListenerLogLevel != null)
-            {
-                _ = new ApplicationInsightsEventListener((EventLevel)options.DiagnosticsEventListenerLogLevel);
-            }
+        {            
             if (options.ConnectionString != null)
             {
                 configuration.ConnectionString = options.ConnectionString;
