@@ -142,6 +142,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// Disabled by default.
         /// </summary>
         public EventLevel? DiagnosticsEventListenerLogLevel { get; set; }
+        
         public string Format()
         {
             JObject sampling = null;
