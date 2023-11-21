@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Tracing;
 using System.Linq;
 using Azure.Core;
 using Microsoft.ApplicationInsights;
@@ -103,6 +104,17 @@ namespace Microsoft.Extensions.DependencyInjection
                         // Disabling this can improve cold start times
                         EnableIISExpressPerformanceCounters = false
                     };
+                }
+
+                return NullTelemetryModule.Instance;
+            });
+
+            services.AddSingleton<ITelemetryModule>(provider =>
+            {
+                ApplicationInsightsLoggerOptions options = provider.GetService<IOptions<ApplicationInsightsLoggerOptions>>().Value;
+                if (options.DiagnosticsEventListenerLogLevel != null)
+                {
+                    return new SelfDiagnosticsTelemetryModule((EventLevel)options.DiagnosticsEventListenerLogLevel);
                 }
 
                 return NullTelemetryModule.Instance;

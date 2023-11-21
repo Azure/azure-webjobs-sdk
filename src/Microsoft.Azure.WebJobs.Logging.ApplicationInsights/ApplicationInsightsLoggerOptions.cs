@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Diagnostics.Tracing;
 using Microsoft.ApplicationInsights.SnapshotCollector;
 using Microsoft.ApplicationInsights.WindowsServer.Channel.Implementation;
 using Microsoft.Azure.WebJobs.Hosting;
@@ -136,6 +137,12 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// </summary>
         public bool EnableQueryStringTracing { get; set; } = false;
 
+        /// <summary>
+        /// Gets or sets the event level that enables diagnostic logging by event listener.
+        /// Disabled by default.
+        /// </summary>
+        public EventLevel? DiagnosticsEventListenerLogLevel { get; set; }
+        
         public string Format()
         {
             JObject sampling = null;
@@ -223,7 +230,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(EnableQueryStringTracing), EnableQueryStringTracing },
                 { nameof(EnableDependencyTracking), EnableDependencyTracking },
                 { nameof(DependencyTrackingOptions), dependencyTrackingOptions },
-                { nameof(TokenCredentialOptions), tokenCredentialOptions }
+                { nameof(TokenCredentialOptions), tokenCredentialOptions },
+                { nameof(DiagnosticsEventListenerLogLevel), DiagnosticsEventListenerLogLevel?.ToString() },
             };
 
             return options.ToString(Formatting.Indented);
