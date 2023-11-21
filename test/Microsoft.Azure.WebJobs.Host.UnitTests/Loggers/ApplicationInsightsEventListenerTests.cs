@@ -59,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
     {
         public void OnNext(DiagnosticListener value)
         {
-            if (value.Name == "Microsoft.Azure.Functions.Host.ApplicationInsightsEventListener")
+            if (value.Name == "Microsoft.Azure.WebJobs.Logging.ApplicationInsights.ApplicationInsightsEventListener")
             {
                 value.Subscribe(new TestKeyValueObserver());
             }
