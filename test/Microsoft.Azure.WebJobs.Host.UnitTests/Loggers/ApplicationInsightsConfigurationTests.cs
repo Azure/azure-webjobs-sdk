@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Reflection;
 using Azure.Identity;
@@ -84,13 +85,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 var modules = host.Services.GetServices<ITelemetryModule>().ToList();
 
                 // Verify Modules
-                Assert.Equal(5, modules.Count);
+                Assert.Equal(6, modules.Count);
                 Assert.Single(modules.OfType<DependencyTrackingTelemetryModule>());
 
                 Assert.Single(modules.OfType<QuickPulseTelemetryModule>());
                 Assert.Single(modules.OfType<PerformanceCollectorModule>());
                 Assert.Single(modules.OfType<AppServicesHeartbeatTelemetryModule>());
                 Assert.Single(modules.OfType<RequestTrackingTelemetryModule>());
+                // SelfDiagnosticsTelemetryModule is dabled by default and instead NullTelemetryModule is added
+                Assert.Single(modules.OfType<NullTelemetryModule>());
 
                 var dependencyModule = modules.OfType<DependencyTrackingTelemetryModule>().Single();
 
@@ -128,7 +131,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             var builder = new HostBuilder()
                 .ConfigureLogging(b =>
                 {
-                    b.AddApplicationInsightsWebJobs(o => o.ConnectionString = "InstrumentationKey=somekey;EndpointSuffix=applicationinsights.us");
+                    b.AddApplicationInsightsWebJobs(o =>
+                    {
+                        o.ConnectionString = "InstrumentationKey=somekey;EndpointSuffix=applicationinsights.us";
+                        o.DiagnosticsEventListenerLogLevel = EventLevel.Verbose;
+                    }); 
                 });
 
             using (var host = builder.Build())
@@ -161,13 +168,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 var modules = host.Services.GetServices<ITelemetryModule>().ToList();
 
                 // Verify Modules
-                Assert.Equal(5, modules.Count);
+                Assert.Equal(6, modules.Count);
                 Assert.Single(modules.OfType<DependencyTrackingTelemetryModule>());
 
                 Assert.Single(modules.OfType<QuickPulseTelemetryModule>());
                 Assert.Single(modules.OfType<PerformanceCollectorModule>());
                 Assert.Single(modules.OfType<AppServicesHeartbeatTelemetryModule>());
                 Assert.Single(modules.OfType<RequestTrackingTelemetryModule>());
+                Assert.Single(modules.OfType<SelfDiagnosticsTelemetryModule>());
 
                 var dependencyModule = modules.OfType<DependencyTrackingTelemetryModule>().Single();
 
