@@ -92,7 +92,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Assert.Single(modules.OfType<PerformanceCollectorModule>());
                 Assert.Single(modules.OfType<AppServicesHeartbeatTelemetryModule>());
                 Assert.Single(modules.OfType<RequestTrackingTelemetryModule>());
-                // SelfDiagnosticsTelemetryModule is dabled by default and instead NullTelemetryModule is added
+                // SelfDiagnosticsTelemetryModule is disabled by default and instead NullTelemetryModule is added
                 Assert.Single(modules.OfType<NullTelemetryModule>());
 
                 var dependencyModule = modules.OfType<DependencyTrackingTelemetryModule>().Single();
@@ -135,6 +135,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                     {
                         o.ConnectionString = "InstrumentationKey=somekey;EndpointSuffix=applicationinsights.us";
                         o.DiagnosticsEventListenerLogLevel = EventLevel.Verbose;
+                        o.EnableAutocollectedMetricsExtractor = true;
                     }); 
                 });
 
@@ -195,10 +196,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 Assert.NotNull(providers[0]);
 
                 // Verify Processors
-                Assert.Equal(4, config.TelemetryProcessors.Count);
-                Assert.IsType<OperationFilteringTelemetryProcessor>(config.TelemetryProcessors[0]);
-                Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[1]);
-                Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[2]);
+                Assert.Equal(5, config.TelemetryProcessors.Count);
+                Assert.IsType<AutocollectedMetricsExtractor>(config.TelemetryProcessors[0]);
+                Assert.IsType<OperationFilteringTelemetryProcessor>(config.TelemetryProcessors[1]);
+                Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[2]);
+                Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[3]);
                 Assert.Empty(config.TelemetryProcessors.OfType<AdaptiveSamplingTelemetryProcessor>());
 
                 // Verify ApplicationIdProvider

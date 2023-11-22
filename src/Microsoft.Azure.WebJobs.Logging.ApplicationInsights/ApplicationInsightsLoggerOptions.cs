@@ -142,7 +142,13 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// Disabled by default.
         /// </summary>
         public EventLevel? DiagnosticsEventListenerLogLevel { get; set; }
-        
+
+        /// <summary>
+        /// Gets or sets the flag that enables standard metrics collection in ApplicationInsights.
+        /// Disabled by default.
+        /// </summary>
+        public bool EnableAutocollectedMetricsExtractor { get; set; } = false;        
+
         public string Format()
         {
             JObject sampling = null;
@@ -232,6 +238,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(DependencyTrackingOptions), dependencyTrackingOptions },
                 { nameof(TokenCredentialOptions), tokenCredentialOptions },
                 { nameof(DiagnosticsEventListenerLogLevel), DiagnosticsEventListenerLogLevel?.ToString() },
+                { nameof(EnableAutocollectedMetricsExtractor), EnableAutocollectedMetricsExtractor },
             };
 
             return options.ToString(Formatting.Indented);
