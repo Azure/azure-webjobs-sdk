@@ -358,7 +358,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 }
             }
 
-            // metrics extractor must be added before filtering and adaptive sampling telemetry processor to account for all the data.
+            // Metrics extractor must be added before filtering and adaptive sampling telemetry processor to account for all the data.
             if (options.EnableAutocollectedMetricsExtractor)
             {
                 configuration.TelemetryProcessorChainBuilder
