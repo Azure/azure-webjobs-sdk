@@ -358,6 +358,13 @@ namespace Microsoft.Extensions.DependencyInjection
                 }
             }
 
+            // Metrics extractor must be added before filtering and adaptive sampling telemetry processor to account for all the data.
+            if (options.EnableAutocollectedMetricsExtractor)
+            {
+                configuration.TelemetryProcessorChainBuilder
+                    .Use((next) => new AutocollectedMetricsExtractor(next));
+            }
+
             QuickPulseTelemetryProcessor quickPulseProcessor = null;
             configuration.TelemetryProcessorChainBuilder
                 .Use((next) => new OperationFilteringTelemetryProcessor(next));
