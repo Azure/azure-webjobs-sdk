@@ -50,15 +50,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             var innerListeners = ((IEnumerable<IListener>)listener).ToArray();
             var innerListener = innerListeners[0];
 
-            // expect the first two outer listeners to be our platform listeners
+            // expect the first listener to be our platform FunctionListener
             FunctionListener functionListener = (FunctionListener)innerListener;
             var innerListenerField = typeof(FunctionListener).GetField("_listener", BindingFlags.NonPublic | BindingFlags.Instance);
-            innerListener = (SingletonListener)innerListenerField.GetValue(functionListener);
-
-            innerListenerField = typeof(SingletonListener).GetField("_innerListener", BindingFlags.NonPublic | BindingFlags.Instance);
-            innerListener = (IListener)innerListenerField.GetValue(innerListener);
-
-            TestListenerDecorator.DecoratorListener decoratorListener = (TestListenerDecorator.DecoratorListener)innerListener;
+            TestListenerDecorator.DecoratorListener decoratorListener = (TestListenerDecorator.DecoratorListener)innerListenerField.GetValue(functionListener);
 
             // verify all decorators were consulted, resulting in a nested stack of listeners
             Assert.Equal("C", decoratorListener.Tag);
@@ -66,6 +61,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             Assert.Equal("B", decoratorListener.Tag);
             decoratorListener = (TestListenerDecorator.DecoratorListener)decoratorListener.InnerListener;
             Assert.Equal("A", decoratorListener.Tag);
+
+            // after decorators, we expect the Singleton listener
+            SingletonListener singletonListener = (SingletonListener)decoratorListener.InnerListener;
+
+            // finally, the QueueListener
+            innerListenerField = typeof(SingletonListener).GetField("_innerListener", BindingFlags.NonPublic | BindingFlags.Instance);
+            innerListener = (IListener)innerListenerField.GetValue(singletonListener);
+            Assert.Equal("QueueListener", innerListener.GetType().Name);
 
             var logProvider = _testHost.GetTestLoggerProvider();
             var logs = logProvider.GetAllLogMessages().Where(p => p.Category == LogCategories.Startup && p.FormattedMessage.Contains(nameof(IListenerDecorator))).ToArray();
