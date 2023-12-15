@@ -376,7 +376,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             ITriggeredFunctionBinding<TTriggerValue> functionBinding = new TriggeredFunctionBinding<TTriggerValue>(descriptor, parameterName, triggerBinding, nonTriggerBindings, _singletonManager);
             ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory = new TriggeredFunctionInstanceFactory<TTriggerValue>(functionBinding, invoker, descriptor, _serviceScopeFactory);
             ITriggeredFunctionExecutor triggerExecutor = new TriggeredFunctionExecutor<TTriggerValue>(descriptor, _executor, instanceFactory, _loggerFactory);
-            IListenerFactory listenerFactory = new ListenerFactory(descriptor, triggerExecutor, triggerBinding, _sharedQueue);
+            IListenerFactory listenerFactory = new ListenerFactory(descriptor, triggerExecutor, triggerBinding, _sharedQueue, _singletonManager, _loggerFactory);
 
             return new FunctionDefinition(descriptor, instanceFactory, listenerFactory);
         }
@@ -470,19 +470,36 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             private readonly ITriggeredFunctionExecutor _executor;
             private readonly ITriggerBinding _binding;
             private readonly SharedQueueHandler _sharedQueue;
+            private readonly SingletonManager _singletonManager;
+            private readonly ILoggerFactory _loggerFactory;
 
-            public ListenerFactory(FunctionDescriptor descriptor, ITriggeredFunctionExecutor executor, ITriggerBinding binding, SharedQueueHandler sharedQueue)
+            public ListenerFactory(FunctionDescriptor descriptor, ITriggeredFunctionExecutor executor, ITriggerBinding binding, SharedQueueHandler sharedQueue, SingletonManager singletonManager, ILoggerFactory loggerFactory)
             {
                 _descriptor = descriptor;
                 _executor = executor;
                 _binding = binding;
                 _sharedQueue = sharedQueue;
+                _singletonManager = singletonManager;
+                _loggerFactory = loggerFactory;
             }
 
             public async Task<IListener> CreateAsync(CancellationToken cancellationToken)
             {
                 ListenerFactoryContext context = new ListenerFactoryContext(_descriptor, _executor, _sharedQueue, cancellationToken);
-                return await _binding.CreateListenerAsync(context);
+                IListener listener = await _binding.CreateListenerAsync(context);
+
+                if (listener != null)
+                {
+                    // if the listener is a Singleton, wrap it with our SingletonListener
+                    Type listenerType = listener.GetType();
+                    SingletonAttribute singletonAttribute = SingletonManager.GetListenerSingletonOrNull(listenerType, _descriptor);
+                    if (singletonAttribute != null)
+                    {
+                        listener = new SingletonListener(_descriptor, singletonAttribute, _singletonManager, listener, _loggerFactory);
+                    }
+                }
+
+                return listener;
             }
         }
 

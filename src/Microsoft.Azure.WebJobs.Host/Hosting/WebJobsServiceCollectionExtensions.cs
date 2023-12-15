@@ -217,7 +217,6 @@ namespace Microsoft.Azure.WebJobs
         {
             // Order is important for these platform decorator registrations!
             // They will be applied in this order after any user registered decorators.
-            services.TryAddEnumerable(ServiceDescriptor.Singleton<IListenerDecorator, SingletonListenerDecorator>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IListenerDecorator, FunctionListenerDecorator>());
         }
     }
