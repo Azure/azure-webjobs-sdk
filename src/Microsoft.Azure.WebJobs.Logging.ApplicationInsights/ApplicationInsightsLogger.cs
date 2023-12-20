@@ -112,8 +112,12 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             // Always apply scope first to allow state to override.
             ApplyScopeProperties(telemetry);
 
-            // Add known properties like category, logLevel and event
-            ApplyKnownProperties(telemetry.Properties, logLevel, eventId);
+            // Do not apply state properties if optimization is enabled
+            if (!_loggerOptions.EnableMetricsCustomDimensionOptimization)
+            {
+                // Add known properties like category, logLevel and event
+                ApplyKnownProperties(telemetry.Properties, logLevel, eventId);
+            }
 
             foreach (var entry in values)
             {
@@ -357,8 +361,14 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 }
             }
 
-            IDictionary<string, string> properties = new Dictionary<string, string>(2);
-            ApplyKnownProperties(properties, logLevel, eventId);
+            IDictionary<string, string> properties = null;
+
+            // Do not apply state properties if optimization is enabled
+            if (!_loggerOptions.EnableMetricsCustomDimensionOptimization)
+            {
+                properties = new Dictionary<string, string>(2);
+                ApplyKnownProperties(properties, logLevel, eventId);
+            }
 
             foreach (KeyValuePair<string, double> metric in metrics)
             {

@@ -52,59 +52,69 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             {
                 telemetryContext.Location.Ip = LoggingConstants.ZeroIpAddress;
             }
-            telemetryContext.Properties[LogConstants.ProcessIdKey] = _currentProcessId;
-            
-            // Apply our special scope properties
-            IReadOnlyDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
 
-            // this could be telemetry tracked in scope of function call - then we should apply the logger scope
-            // or RequestTelemetry tracked by the WebJobs SDK or AppInsight SDK - then we should apply Activity.Tags
-            if (scopeProps?.Count > 0)
+            // Do not apply state properties if optimization is enabled.
+            if (_options.EnableMetricsCustomDimensionOptimization && telemetry is MetricTelemetry)
             {
-                if (!telemetryContext.Properties.ContainsKey(LogConstants.InvocationIdKey))
+                // Remove the Host instance ID property, since it's not needed.
+                telemetryContext.Properties.Remove(LoggingConstants.HostInstanceIdKey);
+                return;
+            }
+            else
+            { 
+                telemetryContext.Properties[LogConstants.ProcessIdKey] = _currentProcessId;
+
+                // Apply our special scope properties
+                IReadOnlyDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionaryOrNull();
+
+                // this could be telemetry tracked in scope of function call - then we should apply the logger scope
+                // or RequestTelemetry tracked by the WebJobs SDK or AppInsight SDK - then we should apply Activity.Tags
+                if (scopeProps?.Count > 0)
                 {
-                    if (scopeProps?.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId) is string invocationId)
+                    if (!telemetryContext.Properties.ContainsKey(LogConstants.InvocationIdKey))
                     {
-                        telemetryContext.Properties[LogConstants.InvocationIdKey] = invocationId;
+                        if (scopeProps?.GetValueOrDefault<string>(ScopeKeys.FunctionInvocationId) is string invocationId)
+                        {
+                            telemetryContext.Properties[LogConstants.InvocationIdKey] = invocationId;
+                        }
                     }
-                }
 
-                telemetryContext.Operation.Name = scopeProps.GetValueOrDefault<string>(ScopeKeys.FunctionName);
+                    telemetryContext.Operation.Name = scopeProps.GetValueOrDefault<string>(ScopeKeys.FunctionName);
 
-                // Apply Category, LogLevel event details to all telemetry
-                if (!telemetryContext.Properties.ContainsKey(LogConstants.CategoryNameKey))
-                {
-                    if (scopeProps.GetValueOrDefault<string>(LogConstants.CategoryNameKey) is string category)
+                    // Apply Category, LogLevel event details to all telemetry
+                    if (!telemetryContext.Properties.ContainsKey(LogConstants.CategoryNameKey))
                     {
-                        telemetryContext.Properties[LogConstants.CategoryNameKey] = category;
+                        if (scopeProps.GetValueOrDefault<string>(LogConstants.CategoryNameKey) is string category)
+                        {
+                            telemetryContext.Properties[LogConstants.CategoryNameKey] = category;
+                        }
                     }
-                }
 
-                if (!telemetryContext.Properties.ContainsKey(LogConstants.LogLevelKey))
-                {
-                    if (scopeProps.GetValueOrDefault<LogLevel?>(LogConstants.LogLevelKey) is LogLevel logLevel)
+                    if (!telemetryContext.Properties.ContainsKey(LogConstants.LogLevelKey))
                     {
-                        telemetryContext.Properties[LogConstants.LogLevelKey] = logLevel.ToStringOptimized();
+                        if (scopeProps.GetValueOrDefault<LogLevel?>(LogConstants.LogLevelKey) is LogLevel logLevel)
+                        {
+                            telemetryContext.Properties[LogConstants.LogLevelKey] = logLevel.ToStringOptimized();
+                        }
                     }
-                }
 
-                if (!telemetryContext.Properties.ContainsKey(LogConstants.EventIdKey))
-                {
-                    if (scopeProps.GetValueOrDefault<int>(LogConstants.EventIdKey) is int eventId && eventId != 0)
+                    if (!telemetryContext.Properties.ContainsKey(LogConstants.EventIdKey))
                     {
-                        telemetryContext.Properties[LogConstants.EventIdKey] = eventId.ToString(CultureInfo.InvariantCulture);
+                        if (scopeProps.GetValueOrDefault<int>(LogConstants.EventIdKey) is int eventId && eventId != 0)
+                        {
+                            telemetryContext.Properties[LogConstants.EventIdKey] = eventId.ToString(CultureInfo.InvariantCulture);
+                        }
                     }
-                }
 
-                if (!telemetryContext.Properties.ContainsKey(LogConstants.EventNameKey))
-                {
-                    if (scopeProps.GetValueOrDefault<string>(LogConstants.EventNameKey) is string eventName)
+                    if (!telemetryContext.Properties.ContainsKey(LogConstants.EventNameKey))
                     {
-                        telemetryContext.Properties[LogConstants.EventNameKey] = eventName;
+                        if (scopeProps.GetValueOrDefault<string>(LogConstants.EventNameKey) is string eventName)
+                        {
+                            telemetryContext.Properties[LogConstants.EventNameKey] = eventName;
+                        }
                     }
                 }
             }
-
             // we may track traces/dependencies after function scope ends - we don't want to update those
             if (telemetry is RequestTelemetry request)
             {

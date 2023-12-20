@@ -104,6 +104,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                             o.EnableQueryStringTracing = applicationInsightsOptions.EnableQueryStringTracing;
                             o.EnableLiveMetricsFilters = applicationInsightsOptions.EnableLiveMetricsFilters;
                             o.EnableLiveMetrics = applicationInsightsOptions.EnableLiveMetrics;
+                            o.EnableMetricsCustomDimensionOptimization = applicationInsightsOptions.EnableMetricsCustomDimensionOptimization;
                         }
                     });
                 })
@@ -1308,6 +1309,63 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                         "00f067aa0ba902b7");
 
                     Assert.Equal(_expectedResponseCode.ToString(), functionRequest.ResponseCode);
+                }
+            }
+        }
+
+
+        [Theory]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        public async Task ApplicationInsights_CustomDimensionOptimization(bool customDimensionOptimization, bool customDimension)
+        {
+            string testName = nameof(TestApplicationInsightsInformation);
+            using (IHost host = ConfigureHost(applicationInsightsOptions: new ApplicationInsightsLoggerOptions { EnableMetricsCustomDimensionOptimization = customDimensionOptimization }))
+            {
+                await host.StartAsync();
+                MethodInfo methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+                await host.GetJobHost().CallAsync(methodInfo, new { input = "function input" });
+                await host.StopAsync();
+
+                var metrics = _channel.Telemetries
+                    .OfType<MetricTelemetry>();
+                if (!customDimension)
+                {
+                    foreach (var item in metrics)
+                    {
+                        Assert.Equal(3, item.Properties.Count);
+                        Assert.True(item.Properties.Keys.Contains("prop__MyCustomMetricProperty"));
+                        Assert.True(item.Properties.Keys.Contains("prop__MyCustomScopeKey"));
+                        Assert.True(item.Properties.Keys.Contains("InvocationId"));
+                    }
+                }
+                else
+                {
+                    foreach (var item in metrics)
+                    {
+                        Assert.Equal(7, item.Properties.Count);
+                    }
+                }   
+            }
+        }
+
+        [Fact]
+        public async Task ApplicationInsights_CustomDimensionOptimization_Default()
+        {
+            string testName = nameof(TestApplicationInsightsInformation);
+            using (IHost host = ConfigureHost())
+            {
+                await host.StartAsync();
+                MethodInfo methodInfo = GetType().GetMethod(testName, BindingFlags.Public | BindingFlags.Static);
+                await host.GetJobHost().CallAsync(methodInfo, new { input = "function input" });
+                await host.StopAsync();
+
+                var metrics = _channel.Telemetries
+                    .OfType<MetricTelemetry>();
+                
+                foreach (var item in metrics)
+                {
+                    Assert.Equal(7, item.Properties.Count);
                 }
             }
         }

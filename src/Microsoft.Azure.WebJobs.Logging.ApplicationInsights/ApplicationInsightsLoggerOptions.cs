@@ -147,7 +147,14 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// Gets or sets the flag that enables standard metrics collection in ApplicationInsights.
         /// Disabled by default.
         /// </summary>
-        public bool EnableAutocollectedMetricsExtractor { get; set; } = false;        
+        public bool EnableAutocollectedMetricsExtractor { get; set; } = false;
+
+
+        /// <summary>
+        /// Gets or sets the flag that bypass custom dimensions in Metrics telemetry.
+        /// Disabled by default.
+        /// </summary>
+        public bool EnableMetricsCustomDimensionOptimization { get; set; } = false;
 
         public string Format()
         {
@@ -239,6 +246,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(TokenCredentialOptions), tokenCredentialOptions },
                 { nameof(DiagnosticsEventListenerLogLevel), DiagnosticsEventListenerLogLevel?.ToString() },
                 { nameof(EnableAutocollectedMetricsExtractor), EnableAutocollectedMetricsExtractor },
+                { nameof(EnableMetricsCustomDimensionOptimization), EnableMetricsCustomDimensionOptimization },
             };
 
             return options.ToString(Formatting.Indented);
