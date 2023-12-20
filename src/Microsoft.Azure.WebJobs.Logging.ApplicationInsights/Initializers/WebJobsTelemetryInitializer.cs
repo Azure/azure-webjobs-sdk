@@ -78,7 +78,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                             telemetryContext.Properties[LogConstants.InvocationIdKey] = invocationId;
                         }
                     }
-
+                    
                     telemetryContext.Operation.Name = scopeProps.GetValueOrDefault<string>(ScopeKeys.FunctionName);
 
                     // Apply Category, LogLevel event details to all telemetry

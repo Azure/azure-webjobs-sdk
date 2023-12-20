@@ -149,7 +149,6 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// </summary>
         public bool EnableAutocollectedMetricsExtractor { get; set; } = false;
 
-
         /// <summary>
         /// Gets or sets the flag that bypass custom dimensions in Metrics telemetry.
         /// Disabled by default.

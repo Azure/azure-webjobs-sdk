@@ -1313,7 +1313,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             }
         }
 
-
         [Theory]
         [InlineData(true, false)]
         [InlineData(false, true)]
