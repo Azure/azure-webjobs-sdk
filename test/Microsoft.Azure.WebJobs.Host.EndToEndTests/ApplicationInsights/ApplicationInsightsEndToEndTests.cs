@@ -856,7 +856,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                     traceId,
                     parentSpanId);
 
-                Assert.Equal(sampledIn ? SamplingDecision.SampledIn : SamplingDecision.None, functionRequest.ProactiveSamplingDecision);                    
+                Assert.Equal(SamplingDecision.None, functionRequest.ProactiveSamplingDecision);                    
 
                 // Make sure operation ids match
                 var traces = _channel.Telemetries.OfType<TraceTelemetry>().Where(t => t.Context.Operation.Id == functionRequest.Context.Operation.Id);
@@ -962,7 +962,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
                 foreach (var trace in traces)
                 {
-                    Assert.Equal(anySampledIn ? SamplingDecision.SampledIn : SamplingDecision.None, trace.ProactiveSamplingDecision);
+                    Assert.Equal(SamplingDecision.None, trace.ProactiveSamplingDecision);
                 }
 
                 Assert.Equal(anySampledIn ? SamplingDecision.SampledIn : SamplingDecision.None,
