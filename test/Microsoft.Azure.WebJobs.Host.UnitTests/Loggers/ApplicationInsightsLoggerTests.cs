@@ -777,6 +777,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             Assert.Equal("*******", deserializedOptions.TokenCredentialOptions.ClientId);
             Assert.Equal(options.EnableLiveMetrics, deserializedOptions.EnableLiveMetrics);
             Assert.Equal(options.EnableLiveMetricsFilters, deserializedOptions.EnableLiveMetricsFilters);
+            Assert.Equal(false, deserializedOptions.EnableMetricsCustomDimensionOptimization);
         }
 
         [Fact]
