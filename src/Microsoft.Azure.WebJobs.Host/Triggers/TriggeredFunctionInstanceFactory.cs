@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Protocols;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Azure.WebJobs.Host.Triggers
 {
@@ -15,15 +14,15 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
         private readonly ITriggeredFunctionBinding<TTriggerValue> _binding;
         private readonly IFunctionInvokerEx _invoker;
         private readonly FunctionDescriptor _descriptor;
-        private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly IInstanceServicesProviderFactory _instanceServicesProviderFactory;
 
         public TriggeredFunctionInstanceFactory(ITriggeredFunctionBinding<TTriggerValue> binding,
-            IFunctionInvokerEx invoker, FunctionDescriptor descriptor, IServiceScopeFactory serviceScopeFactory)
+            IFunctionInvokerEx invoker, FunctionDescriptor descriptor, IInstanceServicesProviderFactory instanceServicesProviderFactory)
         {
             _binding = binding;
             _invoker = invoker;
             _descriptor = descriptor;
-            _serviceScopeFactory = serviceScopeFactory;
+            _instanceServicesProviderFactory = instanceServicesProviderFactory;
         }
 
         public IFunctionInstance Create(FunctionInstanceFactoryContext<TTriggerValue> context)
@@ -33,10 +32,10 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
                 throw new ArgumentNullException(nameof(context));
             }
 
-            IBindingSource bindingSource = new TriggerBindingSource<TTriggerValue>(_binding, context.TriggerValue);
+            var bindingSource = new TriggerBindingSource<TTriggerValue>(_binding, context.TriggerValue);
             var invoker = CreateInvoker(context);
 
-            return new FunctionInstance(Guid.NewGuid(), context.TriggerDetails, context.ParentId, ExecutionReason.AutomaticTrigger, bindingSource, invoker, _descriptor, _serviceScopeFactory);
+            return new FunctionInstance(context, bindingSource, invoker, _descriptor, _instanceServicesProviderFactory);
         }
 
         public IFunctionInstance Create(FunctionInstanceFactoryContext context)
@@ -44,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Host.Triggers
             IBindingSource bindingSource = new BindingSource(_binding, context.Parameters);
             var invoker = CreateInvoker(context);
 
-            return new FunctionInstance(context.Id, context.TriggerDetails, context.ParentId, context.ExecutionReason, bindingSource, invoker, _descriptor, _serviceScopeFactory);
+            return new FunctionInstance(context, bindingSource, invoker, _descriptor, _instanceServicesProviderFactory);
         }
 
         private IFunctionInvokerEx CreateInvoker(FunctionInstanceFactoryContext context)

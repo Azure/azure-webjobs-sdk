@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using Microsoft.Azure.WebJobs.Description;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
@@ -187,6 +188,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "IFunctionInvoker",
                 "IHostIdProvider",
                 "IHostSingletonManager",
+                "IInstanceServicesProvider",
+                "IInstanceServicesProviderFactory",
                 "IJobActivator",
                 "IJobActivatorEx",
                 "IJobHost",

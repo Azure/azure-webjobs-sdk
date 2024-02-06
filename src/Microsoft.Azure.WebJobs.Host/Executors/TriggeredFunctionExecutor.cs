@@ -38,6 +38,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         {
             var context = new FunctionInstanceFactoryContext<TTriggerValue>()
             {
+                Id = Guid.NewGuid(),
                 TriggerValue = (TTriggerValue)input.TriggerValue,
                 ParentId = input.ParentId,
                 TriggerDetails = input.TriggerDetails

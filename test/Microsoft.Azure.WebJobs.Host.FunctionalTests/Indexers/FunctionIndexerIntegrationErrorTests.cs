@@ -28,6 +28,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                 Mock<IServiceScopeFactory> scopeFactoryMock = new Mock<IServiceScopeFactory>(MockBehavior.Strict);
                 IFunctionIndexCollector stubIndex = new Mock<IFunctionIndexCollector>().Object;
                 IConfiguration configuration = new ConfigurationBuilder().Build();
+                var instanceServicesFactory = new DefaultInstanceServicesProviderFactory(scopeFactoryMock.Object);
 
                 FunctionIndexer indexer = new FunctionIndexer(
                     new Mock<ITriggerBindingProvider>(MockBehavior.Strict).Object,
@@ -37,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
                     new SingletonManager(),
                     null,
                     configuration,
-                    scopeFactoryMock.Object);
+                    instanceServicesFactory);
 
                 Assert.Throws<FunctionIndexingException>(() => indexer.IndexMethodAsync(method, stubIndex, CancellationToken.None).GetAwaiter().GetResult());
             }

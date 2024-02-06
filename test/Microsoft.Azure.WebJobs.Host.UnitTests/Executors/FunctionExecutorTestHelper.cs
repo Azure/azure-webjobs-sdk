@@ -51,7 +51,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                 return red;
             });
             mockBindingSource.Setup(p => p.BindAsync(It.IsAny<ValueBindingContext>())).Returns(valueProviders);
-            return new FunctionInstance(id, triggerDetails, null, new ExecutionReason(), mockBindingSource.Object, mockInvoker.Object, descriptor, serviceScopeFactoryMock.Object);
+
+            var instanceServicesProviderFactory = new DefaultInstanceServicesProviderFactory(serviceScopeFactoryMock.Object);
+
+            var context = new FunctionInstanceFactoryContext
+            {
+                Id = id,
+                TriggerDetails = triggerDetails
+            };
+
+            return new FunctionInstance(context, mockBindingSource.Object, mockInvoker.Object, descriptor, instanceServicesProviderFactory);
         }
 
         [FixedDelayRetry(5, "00:00:01")]

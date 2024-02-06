@@ -42,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly IRetryStrategy _defaultRetryStrategy;
         private readonly bool _allowPartialHostStartup;
         private readonly IConfiguration _configuration;
-        private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly IInstanceServicesProviderFactory _instanceServicesFactory;
         private readonly ILoggerFactory _loggerFactory;
 
         public FunctionIndexer(
@@ -53,7 +53,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             SingletonManager singletonManager,
             ILoggerFactory loggerFactory,
             IConfiguration configuration,
-            IServiceScopeFactory serviceScopeFactory,
+            IInstanceServicesProviderFactory instanceServicesFactory,
             INameResolver nameResolver = null,
             SharedQueueHandler sharedQueue = null,
             TimeoutAttribute defaultTimeout = null,
@@ -73,7 +73,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _allowPartialHostStartup = allowPartialHostStartup;
             _defaultRetryStrategy = defaultRetryStrategy;
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-            _serviceScopeFactory = serviceScopeFactory;
+            _instanceServicesFactory = instanceServicesFactory;
         }
 
         public async Task IndexTypeAsync(Type type, IFunctionIndexCollector index, CancellationToken cancellationToken)
@@ -342,7 +342,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             }
             else
             {
-                IFunctionInstanceFactory instanceFactory = new FunctionInstanceFactory(new FunctionBinding(functionDescriptor, nonTriggerBindings, _singletonManager), invoker, functionDescriptor, _serviceScopeFactory);
+                IFunctionInstanceFactory instanceFactory = new FunctionInstanceFactory(new FunctionBinding(functionDescriptor, nonTriggerBindings, _singletonManager), invoker, functionDescriptor, _instanceServicesFactory);
                 functionDefinition = new FunctionDefinition(functionDescriptor, instanceFactory, listenerFactory: null);
             }
 
@@ -374,7 +374,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             IReadOnlyDictionary<string, IBinding> nonTriggerBindings, IFunctionInvokerEx invoker)
         {
             ITriggeredFunctionBinding<TTriggerValue> functionBinding = new TriggeredFunctionBinding<TTriggerValue>(descriptor, parameterName, triggerBinding, nonTriggerBindings, _singletonManager);
-            ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory = new TriggeredFunctionInstanceFactory<TTriggerValue>(functionBinding, invoker, descriptor, _serviceScopeFactory);
+            ITriggeredFunctionInstanceFactory<TTriggerValue> instanceFactory = new TriggeredFunctionInstanceFactory<TTriggerValue>(functionBinding, invoker, descriptor, _instanceServicesFactory);
             ITriggeredFunctionExecutor triggerExecutor = new TriggeredFunctionExecutor<TTriggerValue>(descriptor, _executor, instanceFactory, _loggerFactory);
             IListenerFactory listenerFactory = new ListenerFactory(descriptor, triggerExecutor, triggerBinding, _sharedQueue, _singletonManager, _loggerFactory);
 
