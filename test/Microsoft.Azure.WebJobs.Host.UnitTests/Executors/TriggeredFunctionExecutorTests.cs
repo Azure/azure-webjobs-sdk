@@ -60,7 +60,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             var mockTriggerBinding = new Mock<ITriggeredFunctionBinding<int>>();
             var functionDescriptor = new FunctionDescriptor();
             var serviceScopeFactoryMock = new Mock<IServiceScopeFactory>(MockBehavior.Strict);
-            var instanceFactory = new TriggeredFunctionInstanceFactory<int>(mockTriggerBinding.Object, mockInvoker.Object, functionDescriptor, serviceScopeFactoryMock.Object);
+            var instanceServicesFactory = new DefaultInstanceServicesProviderFactory(serviceScopeFactoryMock.Object);
+            var instanceFactory = new TriggeredFunctionInstanceFactory<int>(mockTriggerBinding.Object, mockInvoker.Object, functionDescriptor, instanceServicesFactory);
             var triggerExecutor = new TriggeredFunctionExecutor<int>(functionDescriptor, mockExecutor.Object, instanceFactory, NullLoggerFactory.Instance);
 
             // specify a custom handler on the trigger data and

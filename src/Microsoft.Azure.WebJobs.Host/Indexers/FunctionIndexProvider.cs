@@ -30,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly IRetryStrategy _defaultRetryStrategy;
         private readonly bool _allowPartialHostStartup;
         private readonly IConfiguration _configuration;
-        private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly IInstanceServicesProviderFactory _instanceServicesFactory;
         private IFunctionIndex _index;
 
         public FunctionIndexProvider(ITypeLocator typeLocator,
@@ -44,7 +44,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             IOptions<JobHostFunctionTimeoutOptions> timeoutOptions,
             IOptions<JobHostOptions> hostOptions,
             IConfiguration configuration,
-            IServiceScopeFactory serviceScopeFactory,
+            IInstanceServicesProviderFactory instanceServicesFactory,
             IRetryStrategy defaultRetryStrategy = null)
         {
             _typeLocator = typeLocator ?? throw new ArgumentNullException(nameof(typeLocator));
@@ -54,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _executor = executor ?? throw new ArgumentNullException(nameof(executor));
             _singletonManager = singletonManager ?? throw new ArgumentNullException(nameof(singletonManager));
             _sharedQueue = sharedQueue ?? throw new ArgumentNullException(nameof(sharedQueue));
-            _serviceScopeFactory = serviceScopeFactory ?? throw new ArgumentNullException(nameof(serviceScopeFactory));
+            _instanceServicesFactory = instanceServicesFactory ?? throw new ArgumentNullException(nameof(instanceServicesFactory));
             _loggerFactory = loggerFactory;
             _defaultTimeout = timeoutOptions.Value.ToAttribute();
             _allowPartialHostStartup = hostOptions.Value.AllowPartialHostStartup;
@@ -83,7 +83,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 _singletonManager, 
                 _loggerFactory, 
                 _configuration, 
-                _serviceScopeFactory, 
+                _instanceServicesFactory, 
                 null, 
                 _sharedQueue, 
                 _defaultTimeout, 
