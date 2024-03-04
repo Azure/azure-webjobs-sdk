@@ -129,6 +129,7 @@ jobs:
       ${{ else }}:
         arguments: '--no-build -c Release -o $(buildOutputDirectory) --version-suffix -$(buildNumber)'
       projects: |
+        src\Microsoft.Azure.WebJobs\WebJobs.csproj
         src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj
         src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.Sources.csproj
         src\Microsoft.Azure.WebJobs.Logging\WebJobs.Logging.csproj
