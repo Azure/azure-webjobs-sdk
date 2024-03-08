@@ -5,20 +5,27 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
+using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using Xunit;
 using static Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale.ScaleHostEndToEndTests;
+
+[assembly: WebJobsStartup(typeof(TestExtensionAStartup))]
+[assembly: WebJobsStartup(typeof(TestExtensionBStartup))]
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
 {
@@ -29,8 +36,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
         private const string Function2Name = "Function2";
         private const string Function3Name = "Function3";
 
-        private const string ATriggerType = "testExtensionATrigger";
-        private const string BTriggerType = "testExtensionBTrigger";
+        internal const string ExtensionTypeA = "testExtensionATrigger";
+        internal const string ExtensionTypeB = "testExtensionBTrigger";
 
         [Theory]
         [InlineData(false)]
@@ -39,9 +46,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
         {
             var triggerMetadata = new List<TriggerMetadata>()
             {
-                new TriggerMetadata(new JObject { { "functionName", $"{Function1Name}" }, { "type", $"{ATriggerType}" } }),
-                new TriggerMetadata(new JObject { { "functionName", $"{Function2Name}" }, { "type", $"{ATriggerType}" } }),
-                new TriggerMetadata(new JObject { { "functionName", $"{Function3Name}" }, { "type", $"{BTriggerType}" } }, new Dictionary<string, object> { { "foo", "bar" } })
+                new TriggerMetadata(new JObject { { "functionName", $"{Function1Name}" }, { "type", $"{ExtensionTypeA}" } }),
+                new TriggerMetadata(new JObject { { "functionName", $"{Function2Name}" }, { "type", $"{ExtensionTypeA}" } }),
+                new TriggerMetadata(new JObject { { "functionName", $"{Function3Name}" }, { "type", $"{ExtensionTypeB}" } }, new Dictionary<string, object> { { "foo", "bar" } })
             };
 
             string hostJson =
@@ -84,34 +91,37 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 services.AddAzureStorageScaleServices();
 
                 services.AddSingleton<IConcurrencyStatusRepository, TestConcurrencyStatusRepository>();
+                services.AddSingleton<ITriggerMetadataProvider>(new TestTriggerMetadataProvider(triggerMetadata));
             })
             .ConfigureWebJobsScale((context, builder) =>
-                {
-                    builder.UseHostId(hostId);
-                },
-                scaleOptions =>
-                {
-                    scaleOptions.IsTargetScalingEnabled = tbsEnabled;
-                    scaleOptions.MetricsPurgeEnabled = false;
-                    scaleOptions.ScaleMetricsMaxAge = TimeSpan.FromMinutes(4);
-                    scaleOptions.IsRuntimeScalingEnabled = true;
-                });
-
-            foreach (TriggerMetadata t in triggerMetadata)
             {
-                if (t.Type == ATriggerType)
+                builder.UseHostId(hostId);
+
+                var webJobsBuilderContext = new WebJobsBuilderContext
                 {
-                    hostBuilder.ConfigureTestExtensionAScale(t);
-                }
-                else
-                {
-                    hostBuilder.ConfigureTestExtensionBScale(t);
-                }
-            }
+                    Configuration = context.Configuration,
+                    EnvironmentName = context.HostingEnvironment.EnvironmentName
+                };
+                webJobsBuilderContext.Properties["IsAzureWebJobsScaleHost"] = true;
+                builder.UseExternalStartup(new DefaultStartupTypeLocator(Assembly.GetExecutingAssembly()), webJobsBuilderContext, NullLoggerFactory.Instance);
+            },
+            scaleOptions =>
+            {
+                scaleOptions.IsTargetScalingEnabled = tbsEnabled;
+                scaleOptions.MetricsPurgeEnabled = false;
+                scaleOptions.ScaleMetricsMaxAge = TimeSpan.FromMinutes(4);
+                scaleOptions.IsRuntimeScalingEnabled = true;
+            });
 
             IHost scaleHost = hostBuilder.Build();
             await scaleHost.StartAsync();
 
+            VerifyHostConfiguration(scaleHost);
+            await VerifyScaleLogsAsync(scaleHost, tbsEnabled, loggerProvider);
+        }
+
+        private void VerifyHostConfiguration(IHost scaleHost)
+        {
             IHostedService scaleMonitorService = scaleHost.Services.GetService<IHostedService>();
             Assert.NotNull(scaleMonitorService);
 
@@ -123,10 +133,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
 
             // Validate IConfiguration
             var config = scaleHost.Services.GetService<IConfiguration>();
-            Assert.False(config.GetValue<string>("sovemalue") == "1");
+            Assert.False(config.GetValue<string>("somevalue") == "1");
             Assert.True(config.GetValue<string>("Microsoft.Azure.WebJobs.Host.EndToEndTests") == "1");
             Assert.True(config.GetValue<string>("microsoft.azure.webJobs.host.endtoendtests") == "1");
+        }
 
+        private async Task VerifyScaleLogsAsync(IHost scaleHost, bool tbsEnabled, TestLoggerProvider loggerProvider)
+        {
             await TestHelpers.Await(async () =>
             {
                 IScaleStatusProvider scaleManager = scaleHost.Services.GetService<IScaleStatusProvider>();
@@ -172,7 +185,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 }
 
                 return scaledOut;
-            }, pollingInterval: 1000);
+            }, timeout: 5000, pollingInterval: 1000);
         }
 
         private class TestConcurrencyStatusRepository : IConcurrencyStatusRepository
@@ -198,108 +211,185 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.Scale
                 });
             }
         }
-
-        internal abstract class TestExtensionScalerProvider : IScaleMonitorProvider, ITargetScalerProvider
-        {
-            private IOptions<ScaleOptions> _scaleOptions;
-            private IScaleMonitor _scaleMonitor;
-            private ITargetScaler _targetScaler;
-            private TriggerMetadata _triggerMetadata;
-
-            public TestExtensionScalerProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions, TriggerMetadata triggerMetadata)
-            {
-                Assert.Equal(scaleOptions.Value.ScaleMetricsMaxAge, TimeSpan.FromMinutes(4));
-
-                _scaleOptions = scaleOptions;
-                _triggerMetadata = triggerMetadata;
-            }
-
-            public IScaleMonitor GetMonitor()
-            {
-                if (_scaleMonitor == null)
-                {
-                    _scaleMonitor = new TestScaleMonitor(_triggerMetadata.FunctionName, _triggerMetadata.FunctionName);
-                }
-                return _scaleMonitor;
-            }
-
-            public ITargetScaler GetTargetScaler()
-            {
-                if (_targetScaler == null)
-                {
-                    _targetScaler = new TestTargetScaler(_triggerMetadata.FunctionName);
-                }
-                return _targetScaler;
-            }
-        }
     }
-    public static class TestExtensionAHostBuilderExtensions
-    {
-        public static IHostBuilder ConfigureTestExtensionAScale(this IHostBuilder builder, TriggerMetadata triggerMetadata)
-        {
-            builder.ConfigureServices((context, services) =>
-            {
-                services.AddSingleton<IScaleMonitorProvider>(serviceProvider =>
-                {
-                    IConfiguration config = serviceProvider.GetService<IConfiguration>();
-                    IOptions<ScaleOptions> scaleOptions = serviceProvider.GetService<IOptions<ScaleOptions>>();
-                    return new TestExtensionAScalerProvider(config, scaleOptions, triggerMetadata);
-                });
-                services.AddSingleton<ITargetScalerProvider>(serviceProvider =>
-                {
-                    IConfiguration config = serviceProvider.GetService<IConfiguration>();
-                    IOptions<ScaleOptions> scaleOptions = serviceProvider.GetService<IOptions<ScaleOptions>>();
-                    return new TestExtensionAScalerProvider(config, scaleOptions, triggerMetadata);
-                });
-            });
 
-            return builder;
+    public class TestExtensionAStartup : IWebJobsStartup2
+    {
+        public void Configure(IWebJobsBuilder builder)
+        {
         }
 
-        private class TestExtensionAScalerProvider : TestExtensionScalerProvider
+        public void Configure(WebJobsBuilderContext context, IWebJobsBuilder builder)
         {
-            public TestExtensionAScalerProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions, TriggerMetadata triggerMetadata)
-                : base(config, scaleOptions, triggerMetadata)
+            if (context.Properties.ContainsKey("IsAzureWebJobsScaleHost"))
             {
-                // verify we can access configuration settings
-                var appSetting = config.GetValue<string>("app_setting1");
-                Assert.NotNull(appSetting);
-                var hostJsonSetting = config.GetValue<int>("extensions:testExtensionA:foo");
-                Assert.NotNull(hostJsonSetting);
+                builder.Services.AddSingleton<ITargetScalerCollectionProvider, TestExtensionATargetScalerCollectionProvider>();
+                builder.Services.AddSingleton<IScaleMonitorCollectionProvider, TestExtensionAScaleMonitorCollectionProvider>();
+            }
+            else
+            {
+                Configure(builder);
             }
         }
     }
 
-    public static class TestExtensionBHostBuilderExtensions
+    public class TestExtensionBStartup : IWebJobsStartup2
     {
-        public static IHostBuilder ConfigureTestExtensionBScale(this IHostBuilder builder, TriggerMetadata triggerMetadata)
+        public void Configure(IWebJobsBuilder builder)
         {
-            builder.ConfigureServices((context, services) =>
-            {
-                services.AddSingleton<IScaleMonitorProvider>(serviceProvider =>
-                {
-                    IConfiguration config = serviceProvider.GetService<IConfiguration>();
-                    IOptions<ScaleOptions> scaleOptions = serviceProvider.GetService<IOptions<ScaleOptions>>();
-                    return new TestExtensionBScalerProvider(config, scaleOptions, triggerMetadata);
-                });
-                services.AddSingleton<ITargetScalerProvider>(serviceProvider =>
-                {
-                    IConfiguration config = serviceProvider.GetService<IConfiguration>();
-                    IOptions<ScaleOptions> scaleOptions = serviceProvider.GetService<IOptions<ScaleOptions>>();
-                    return new TestExtensionBScalerProvider(config, scaleOptions, triggerMetadata);
-                });
-            });
-
-            return builder;
         }
 
-        private class TestExtensionBScalerProvider : TestExtensionScalerProvider
+        public void Configure(WebJobsBuilderContext context, IWebJobsBuilder builder)
         {
-            public TestExtensionBScalerProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions, TriggerMetadata triggerMetadata)
-                : base(config, scaleOptions, triggerMetadata)
+            if (context.Properties.ContainsKey("IsAzureWebJobsScaleHost"))
             {
+                builder.Services.AddSingleton<ITargetScalerCollectionProvider, TestExtensionBTargetScalerCollectionProvider>();
+                builder.Services.AddSingleton<IScaleMonitorCollectionProvider, TestExtensionBScaleMonitorCollectionProvider>();
+            }
+            else
+            {
+                Configure(builder);
             }
         }
+    }
+
+    internal class TestTriggerMetadataProvider : ITriggerMetadataProvider
+    {
+        private readonly IReadOnlyCollection<TriggerMetadata> _triggerMetadata;
+
+        public TestTriggerMetadataProvider(List<TriggerMetadata> triggerMetadata)
+        {
+            _triggerMetadata = triggerMetadata.AsReadOnly();
+        }
+
+        public IEnumerable<TriggerMetadata> GetTriggerMetadata()
+        {
+            return _triggerMetadata;
+        }
+    }
+
+    internal abstract class TestTargetScalerCollectionProvider : ITargetScalerCollectionProvider
+    {
+        private readonly TriggerMetadata[] _triggerMetadata;
+        private readonly object _lock = new object();
+        private ITargetScaler[] _targetScalers;
+
+        public TestTargetScalerCollectionProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions, ITriggerMetadataProvider triggerMetadataProvider)
+        {
+            Assert.Equal(scaleOptions.Value.ScaleMetricsMaxAge, TimeSpan.FromMinutes(4));
+
+            _triggerMetadata = triggerMetadataProvider.GetTriggerMetadata().Where(p => string.Compare(p.Type, ExtensionType, StringComparison.OrdinalIgnoreCase) == 0).ToArray();
+        }
+
+        public abstract string ExtensionType { get; }
+
+        public IEnumerable<ITargetScaler> GetTargetScalers()
+        {
+            if (_targetScalers == null)
+            {
+                lock (_lock)
+                {
+                    if (_targetScalers == null)
+                    {
+                        List<ITargetScaler> targetScalers = new List<ITargetScaler>();
+                        foreach (var triggerMetadata in _triggerMetadata)
+                        {
+                            var targetScaler = new TestTargetScaler(triggerMetadata.FunctionName);
+                            targetScalers.Add(targetScaler);
+                        }
+                        _targetScalers = targetScalers.ToArray();
+                    }
+                }
+            }
+            return _targetScalers;
+        }
+    }
+
+    internal abstract class TestScaleMonitorCollectionProvider : IScaleMonitorCollectionProvider
+    {
+        private readonly TriggerMetadata[] _triggerMetadata;
+        private readonly object _lock = new object();
+        private IScaleMonitor[] _scaleMonitors;
+
+        public TestScaleMonitorCollectionProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions, ITriggerMetadataProvider triggerMetadataProvider)
+        {
+            Assert.Equal(scaleOptions.Value.ScaleMetricsMaxAge, TimeSpan.FromMinutes(4));
+
+            _triggerMetadata = triggerMetadataProvider.GetTriggerMetadata().Where(p => string.Compare(p.Type, ExtensionType, StringComparison.OrdinalIgnoreCase) == 0).ToArray();
+        }
+
+        public abstract string ExtensionType { get; }
+
+        public IEnumerable<IScaleMonitor> GetScaleMonitors()
+        {
+            if (_scaleMonitors == null)
+            {
+                lock (_lock)
+                {
+                    if (_scaleMonitors == null)
+                    {
+                        List<IScaleMonitor> scaleMonitors = new List<IScaleMonitor>();
+                        foreach (var triggerMetadata in _triggerMetadata)
+                        {
+                            var monitor = new TestScaleMonitor(triggerMetadata.FunctionName, triggerMetadata.FunctionName);
+                            scaleMonitors.Add(monitor);
+                        }
+                        _scaleMonitors = scaleMonitors.ToArray();
+                    }
+                }
+            }
+            return _scaleMonitors;
+        }
+    }
+
+    internal class TestExtensionATargetScalerCollectionProvider : TestTargetScalerCollectionProvider
+    {
+        public TestExtensionATargetScalerCollectionProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions, ITriggerMetadataProvider triggerMetadataProvider)
+            : base(config, scaleOptions, triggerMetadataProvider)
+        {
+            // verify we can access configuration settings
+            var appSetting = config.GetValue<string>("app_setting1");
+            Assert.NotNull(appSetting);
+            var hostJsonSetting = config.GetValue<int>("extensions:testExtensionA:foo");
+            Assert.NotNull(hostJsonSetting);
+        }
+
+        public override string ExtensionType => ExtensionTypeA;
+    }
+
+    internal class TestExtensionAScaleMonitorCollectionProvider : TestScaleMonitorCollectionProvider
+    {
+        public TestExtensionAScaleMonitorCollectionProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions, ITriggerMetadataProvider triggerMetadataProvider)
+            : base(config, scaleOptions, triggerMetadataProvider)
+        {
+            // verify we can access configuration settings
+            var appSetting = config.GetValue<string>("app_setting1");
+            Assert.NotNull(appSetting);
+            var hostJsonSetting = config.GetValue<int>("extensions:testExtensionA:foo");
+            Assert.NotNull(hostJsonSetting);
+        }
+
+        public override string ExtensionType => ExtensionTypeA;
+    }
+
+    internal class TestExtensionBTargetScalerCollectionProvider : TestTargetScalerCollectionProvider
+    {
+        public TestExtensionBTargetScalerCollectionProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions, ITriggerMetadataProvider triggerMetadataProvider)
+            : base(config, scaleOptions, triggerMetadataProvider)
+        {
+        }
+
+        public override string ExtensionType => ExtensionTypeB;
+    }
+
+    internal class TestExtensionBScaleMonitorCollectionProvider : TestScaleMonitorCollectionProvider
+    {
+        public TestExtensionBScaleMonitorCollectionProvider(IConfiguration config, IOptions<ScaleOptions> scaleOptions, ITriggerMetadataProvider triggerMetadataProvider)
+            : base(config, scaleOptions, triggerMetadataProvider)
+        {
+        }
+
+        public override string ExtensionType => ExtensionTypeB;
     }
 
     internal class TestScaleMonitor : IScaleMonitor

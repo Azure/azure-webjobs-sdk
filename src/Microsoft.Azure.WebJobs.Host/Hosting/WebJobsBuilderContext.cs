@@ -1,6 +1,8 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
+using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Azure.WebJobs
@@ -10,6 +12,11 @@ namespace Microsoft.Azure.WebJobs
     /// </summary>
     public class WebJobsBuilderContext
     {
+        public WebJobsBuilderContext() 
+        {
+            Properties = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        }
+
         /// <summary>
         /// Gets or sets the <see cref="IConfiguration"/> containing the merged configuration of the application and the host.
         /// </summary>
@@ -24,5 +31,10 @@ namespace Microsoft.Azure.WebJobs
         /// Gets or sets the absolute path to the directory that contains the application content files.
         /// </summary>
         public string ApplicationRootPath { get; set; }
+
+        /// <summary>
+        /// A central location for sharing state between components during the host building process.
+        /// </summary>
+        public IDictionary<string, object> Properties { get; }
     }
 }

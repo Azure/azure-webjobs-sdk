@@ -318,7 +318,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "TriggerMetadata",
                 "AggregateScaleStatus",
                 "IListenerDecorator",
-                "ListenerDecoratorContext"
+                "ListenerDecoratorContext",
+                "ITriggerMetadataProvider",
+                "ITargetScalerCollectionProvider",
+                "IScaleMonitorCollectionProvider"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);
