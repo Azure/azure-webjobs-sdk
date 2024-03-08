@@ -76,6 +76,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 {
                     Registrations = new List<ITriggerExecutor<BlobTriggerExecutorContext>>(),
                     LastSweepCycleLatestModified = latestStoredScan ?? DateTime.MinValue,
+                    CurrentSweepCycleStartTime = DateTime.MinValue, // value not used as it is set on first use when the continuationToken is null.
                     CurrentSweepCycleLatestModified = DateTime.MinValue,
                     ContinuationToken = null
                 };
@@ -214,6 +215,7 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
             // if starting the cycle, reset the sweep time
             if (continuationToken == null)
             {
+                containerScanInfo.CurrentSweepCycleStartTime = DateTime.UtcNow;
                 containerScanInfo.CurrentSweepCycleLatestModified = DateTime.MinValue;
             }
 
@@ -259,7 +261,8 @@ namespace Microsoft.Azure.WebJobs.Host.Blobs.Listeners
                 var properties = currentBlob.Properties;
                 DateTime lastModifiedTimestamp = properties.LastModified.Value.UtcDateTime;
 
-                if (lastModifiedTimestamp > containerScanInfo.CurrentSweepCycleLatestModified)
+                // if we are not the first page of this scan (ie, we have a continuation token), then we can not advance past the time the first page was called, otherwise we might miss updates to those blobs
+                if (lastModifiedTimestamp > containerScanInfo.CurrentSweepCycleLatestModified && (continuationToken == null || lastModifiedTimestamp < containerScanInfo.CurrentSweepCycleStartTime))
                 {
                     containerScanInfo.CurrentSweepCycleLatestModified = lastModifiedTimestamp;
                 }
