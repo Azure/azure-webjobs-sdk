@@ -95,7 +95,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         }
 
         /// <summary>
-        /// Inquality 
+        /// Inequality 
         /// </summary>
         /// <param name="left"></param>
         /// <param name="right"></param>

@@ -56,7 +56,7 @@ namespace Microsoft.Azure.WebJobs.Logging
             return -1;
         }
 
-        // Epoch must be positive, orderd integers.
+        // Epoch must be positive, ordered integers.
         // Use YYYYMM 
         private static long GetEpochSuffixNumber(DateTime epoch)
         {

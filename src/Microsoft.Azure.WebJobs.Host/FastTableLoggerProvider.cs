@@ -72,7 +72,7 @@ namespace Microsoft.Azure.WebJobs.Host.Loggers
             }
 
             // These can be null. They're copied to the old log messages.
-            // They're magically in sync with where the fuctions write. 
+            // They're magically in sync with where the functions write. 
 
             public LocalBlobDescriptor OutputBlob
             {

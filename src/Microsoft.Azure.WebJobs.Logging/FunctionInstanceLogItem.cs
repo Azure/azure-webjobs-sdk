@@ -8,7 +8,7 @@ using System.Text;
 namespace Microsoft.Azure.WebJobs.Logging
 {
     /// <summary>
-    /// Publically visible. 
+    /// Publicly visible. 
     /// Represent a function invocation. 
     /// </summary>
     public class FunctionInstanceLogItem : IFunctionInstanceBaseEntry
@@ -47,8 +47,8 @@ namespace Microsoft.Azure.WebJobs.Logging
         public DateTime? EndTime { get; set; }
 
         /// <summary>A function outputs a heartbeat while it's running. 
-        /// If EndTime = null and heartbeat is "old", then the function is likley abandoned (machine killed).
-        /// It's always possible a node loses network connectity, and so we appear abandoned, but 
+        /// If EndTime = null and heartbeat is "old", then the function is likely abandoned (machine killed).
+        /// It's always possible a node loses network connectivity, and so we appear abandoned, but 
         /// the function successfully completes</summary>
         /// <inheritdoc/>
         public DateTime? FunctionInstanceHeartbeatExpiry { get; set; }

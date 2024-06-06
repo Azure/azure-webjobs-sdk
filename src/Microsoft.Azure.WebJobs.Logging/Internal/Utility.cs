@@ -218,7 +218,7 @@ namespace Microsoft.Azure.WebJobs.Logging
 
             int batchSize = 90;
 
-            // Batches must be within a single table partition, so Key is "tableName + ParitionKey". 
+            // Batches must be within a single table partition, so Key is "tableName + PartitionKey". 
             var batches = new Dictionary<string, Tuple<CloudTable, TableBatchOperation>>();
 
             List<Task> t = new List<Task>();

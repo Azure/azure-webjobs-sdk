@@ -94,7 +94,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         public DateTime? EndTime { get; set; }
 
         // Last heart beat. When EndTime is missing, this lets us guess if the function is still alive. 
-        // Whereas Start and End are written very determinsitically in the lifecycle, 
+        // Whereas Start and End are written very deterministically in the lifecycle, 
         // heartbeat is special because it's written at potentially random times by a background poller thread. 
         public DateTime? FunctionInstanceHeartbeatExpiry { get; set; }
 
