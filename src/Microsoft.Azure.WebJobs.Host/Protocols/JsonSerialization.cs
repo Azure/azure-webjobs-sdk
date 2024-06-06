@@ -21,7 +21,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
     {
         private static readonly JsonSerializerSettings JsonSerializerSettings = new JsonSerializerSettings
         {
-            // The default value, DateParseHandling.DateTime, drops time zone information from DateTimeOffets.
+            // The default value, DateParseHandling.DateTime, drops time zone information from DateTimeOffsets.
             // This value appears to work well with both DateTimes (without time zone information) and DateTimeOffsets.
             DateParseHandling = DateParseHandling.DateTimeOffset,
             NullValueHandling = NullValueHandling.Ignore,
