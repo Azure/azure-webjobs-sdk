@@ -77,6 +77,26 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             await VerifyServiceAvailable(client);
         }
 
+        [Fact]
+        public void Create_SanitizesErrorMessages()
+        {
+            string connectionString = Environment.GetEnvironmentVariable(StorageConnection);
+
+            var testData = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "AzureWebJobsStorage", connectionString }
+            };
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(testData)
+                .AddTestSettings()
+                .Build();
+
+            // here we simulate a case where a customer has mistakenly put their actual connection string
+            // inline in code/config, instead of pointing at an app setting name
+            var ex = Assert.Throws<InvalidOperationException>(() => _blobServiceClientProvider.Create(connectionString, configuration));
+
+            Assert.Equal("Storage account connection string 'AzureWebJobs[Hidden Credential]' does not exist. Make sure that it is a defined App Setting.", ex.Message);
+        }
 
         private async Task VerifyServiceAvailable(BlobServiceClient client)
         {
