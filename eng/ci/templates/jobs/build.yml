@@ -57,7 +57,7 @@ jobs:
     - task: DotNetCoreCLI@2
       displayName: Unit tests
       inputs:
-        command: 'test'
+        command: test
         arguments: -c $(configuration) --no-build
         projects: |
           test\Microsoft.Azure.WebJobs.Extensions.Rpc.UnitTests\*.csproj

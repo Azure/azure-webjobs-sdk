@@ -21,10 +21,19 @@ jobs:
       secretsFilter: '*'
 
   - task: DotNetCoreCLI@2
-    displayName: 'Run tests'
+    displayName: Build source
+    inputs:
+      command: build
+      arguments: -c $(configuration)
+      projects: $(project)
+    env:
+      CommitHash: $(Build.SourceVersion)
+
+  - task: DotNetCoreCLI@2
+    displayName: Run tests
     inputs:
       command: test
-      arguments: -c $(configuration)
+      arguments: -c $(configuration) --no-build
       projects: |
         test\Microsoft.Azure.WebJobs.Host.FunctionalTests\*.csproj
         test\Microsoft.Azure.WebJobs.Logging.FunctionalTests\*.csproj
