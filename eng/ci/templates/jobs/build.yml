@@ -76,7 +76,7 @@ jobs:
       inputs:
         command: custom
         custom: pack
-        arguments: -c $(configuration) -v m -bl:$(log_dir)/pack.binlog --no-build $(version_suffix)
+        arguments: -c $(configuration) -v m -o $(pack_dir) -bl:$(log_dir)/pack.binlog --no-build $(version_suffix)
         projects: |
           src\Microsoft.Azure.WebJobs\WebJobs.csproj
           src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj
@@ -91,7 +91,7 @@ jobs:
     - ${{ if eq(parameters.official, true) }}:
       - template: ci/sign-files.yml@eng
         parameters:
-          displayName: Sign assemblies
+          displayName: Sign nuget packages
           folderPath: $(pack_dir)
           pattern: Microsoft.Azure.WebJobs*.nupkg
           signType: nuget
