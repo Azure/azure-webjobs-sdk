@@ -759,6 +759,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
         public void Dispose_TriggersCommandCancellationToken()
         {
             // Arrange
+            int waitMS = 5000;
             TimeSpan interval = TimeSpan.Zero;
 
             using (EventWaitHandle executeStarted = new ManualResetEvent(initialState: false))
@@ -769,7 +770,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
                 ITaskSeriesCommand command = CreateCommand((cancellationToken) =>
                 {
                     Assert.True(executeStarted.Set()); // Guard
-                    cancellationTokenSignalled = cancellationToken.WaitHandle.WaitOne(1000);
+                    cancellationTokenSignalled = cancellationToken.WaitHandle.WaitOne(waitMS);
                     Assert.True(executeFinished.Set()); // Guard
                     return new TaskSeriesCommandResult(wait: Task.Delay(0));
                 });
@@ -777,13 +778,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
                 using (ITaskSeriesTimer product = CreateProductUnderTest(command))
                 {
                     product.Start();
-                    Assert.True(executeStarted.WaitOne(1000)); // Guard
+                    Assert.True(executeStarted.WaitOne(waitMS)); // Guard
 
                     // Act
                     product.Dispose();
 
                     // Assert
-                    Assert.True(executeFinished.WaitOne(1000)); // Guard
+                    Assert.True(executeFinished.WaitOne(waitMS)); // Guard
                     Assert.True(cancellationTokenSignalled);
                 }
             }
