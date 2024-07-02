@@ -38,5 +38,6 @@ extends:
           official: true
 
     - stage: Test
+      dependsOn: '' # Run in parallel
       jobs:
       - template: /eng/ci/templates/jobs/run-integration-tests.yml@self
