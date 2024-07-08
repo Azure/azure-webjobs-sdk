@@ -17,10 +17,10 @@ jobs:
     value: $[ counter('constant', 12000) ]
   - ${{ if and(eq(parameters.official, true), startsWith(variables['Build.SourceBranch'], 'refs/tags')) }}:
     - name: version_suffix
-      value: --version-suffix -$(buildNumber)
+      value: ''
   - ${{ else }}:
     - name: version_suffix
-      value: ''
+      value: --version-suffix -$(buildNumber)
 
   templateContext:
     outputParentDirectory: $(Build.ArtifactStagingDirectory)
