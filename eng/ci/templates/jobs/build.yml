@@ -68,7 +68,7 @@ jobs:
         parameters:
           displayName: Sign assemblies
           folderPath: src
-          pattern: Microsoft.Azure.WebJobs.*.dll
+          pattern: Microsoft.Azure.WebJobs*.dll
           signType: dll-strong-name
 
     - task: DotNetCoreCLI@2
