@@ -6,11 +6,19 @@ trigger:
     include:
     - dev
 
+schedules:
+# Ensure we build nightly to catch any new CVEs and report SDL often.
+- cron: "0 0 * * *"
+  displayName: Nightly Build
+  branches:
+    include:
+    - dev
+  always: true
+
 pr:
   branches:
     include:
-    - v3.x
-    - release/3.*
+    - dev
 
 resources:
   repositories:
@@ -29,6 +37,16 @@ extends:
       name: 1es-pool-azfunc-public
       image: 1es-windows-2022
       os: windows
+
+    sdl:
+      codeql:
+        compiled:
+          enabled: true
+        runSourceLanguagesInSourceAnalysis: true
+
+    settings:
+      # PR's from forks do not have sufficient permissions to set tags.
+      skipBuildTagsForGitHubPullRequests: ${{ variables['System.PullRequest.IsFork'] }}
 
     stages:
       - stage: Build
