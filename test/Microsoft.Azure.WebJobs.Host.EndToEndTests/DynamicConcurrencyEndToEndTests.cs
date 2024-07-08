@@ -36,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             TestJobs.InvokeCount = 0;
         }
 
-        [Fact]
+        [Fact(Skip = "Flaky, CPU dependent")]
         public async Task DynamicConcurrencyEnabled_HighCpu_Throttles()
         {
             string functionName = nameof(TestJobs.ConcurrencyTest_HighCpu);

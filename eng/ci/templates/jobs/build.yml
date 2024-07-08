@@ -1,0 +1,97 @@
+parameters:
+- name: official
+  type: boolean
+  default: false
+  displayName: Official build
+
+jobs:
+- job: build
+  displayName: Build
+
+  variables:
+  - name: log_dir
+    value: $(Build.ArtifactStagingDirectory)/log
+  - name: pack_dir
+    value: $(Build.ArtifactStagingDirectory)/pkg
+  - name: buildNumber
+    value: $[ counter('constant', 12000) ]
+  - ${{ if and(eq(parameters.official, true), startsWith(variables['Build.SourceBranch'], 'refs/tags')) }}:
+    - name: version_suffix
+      value: --version-suffix -$(buildNumber)
+  - ${{ else }}:
+    - name: version_suffix
+      value: ''
+
+  templateContext:
+    outputParentDirectory: $(Build.ArtifactStagingDirectory)
+    outputs:
+    - output: pipelineArtifact
+      displayName: Publish logs
+      path: $(pack_dir)
+      artifact: drop
+    - output: pipelineArtifact
+      displayName: Publish logs
+      path: $(log_dir)
+      artifact: Build_Log
+      sbomEnabled: false
+      condition: always()
+
+  steps:
+    - template: /eng/ci/templates/steps/install-dotnet.yml@self
+
+    - task: DotNetCoreCLI@2
+      displayName: Restore $(project)
+      inputs:
+        command: custom
+        custom: restore
+        projects: $(project)
+        arguments: -v m -bl:$(log_dir)/restore.binlog
+
+    - task: DotNetCoreCLI@2
+      displayName: Build $(project)
+      inputs:
+        command: build
+        projects: $(project)
+        arguments: -c $(configuration) -v m -bl:$(log_dir)/build.binlog --no-restore -p:CommitHash=$(Build.SourceVersion)
+
+    - task: DotNetCoreCLI@2
+      displayName: Unit tests
+      inputs:
+        command: test
+        arguments: -c $(configuration) --no-build
+        projects: |
+          test\Microsoft.Azure.WebJobs.Extensions.Rpc.UnitTests\*.csproj
+          test\Microsoft.Azure.WebJobs.Host.UnitTests\*.csproj
+
+    - ${{ if eq(parameters.official, true) }}:
+      - template: ci/sign-files.yml@eng
+        parameters:
+          displayName: Sign assemblies
+          folderPath: src
+          pattern: Microsoft.Azure.WebJobs.*.dll
+          signType: dll-strong-name
+
+    - task: DotNetCoreCLI@2
+      displayName: Pack
+      inputs:
+        command: custom
+        custom: pack
+        arguments: -c $(configuration) -v m -o $(pack_dir) -bl:$(log_dir)/pack.binlog --no-build $(version_suffix)
+        projects: |
+          src\Microsoft.Azure.WebJobs\WebJobs.csproj
+          src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj
+          src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.Sources.csproj
+          src\Microsoft.Azure.WebJobs.Logging\WebJobs.Logging.csproj
+          src\Microsoft.Azure.WebJobs.Logging.ApplicationInsights\WebJobs.Logging.ApplicationInsights.csproj
+          src\Microsoft.Azure.WebJobs.Host.Storage\WebJobs.Host.Storage.csproj
+          src\Microsoft.Azure.WebJobs.Rpc.Core\WebJobs.Rpc.Core.csproj
+          src\Microsoft.Azure.WebJobs.Extensions.Rpc\WebJobs.Extensions.Rpc.csproj
+          test\Microsoft.Azure.WebJobs.Host.TestCommon\WebJobs.Host.TestCommon.csproj
+
+    - ${{ if eq(parameters.official, true) }}:
+      - template: ci/sign-files.yml@eng
+        parameters:
+          displayName: Sign nuget packages
+          folderPath: $(pack_dir)
+          pattern: Microsoft.Azure.WebJobs*.nupkg
+          signType: nuget
