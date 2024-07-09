@@ -755,7 +755,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
             ExceptionAssert.DoesNotThrow(() => product.Dispose());
         }
 
-        [Fact]
+        [Fact(Skip = "Flaky: https://github.com/azure/azure-webjobs-sdk/issues/3087")]
         public void Dispose_TriggersCommandCancellationToken()
         {
             // Arrange
