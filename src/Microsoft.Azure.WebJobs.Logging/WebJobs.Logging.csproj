@@ -5,7 +5,7 @@
     <InformationalVersion>$(Version) Commit hash: $(CommitHash)</InformationalVersion>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>Microsoft.Azure.WebJobs.Logging</PackageId>
-    <Description>This package contains the runtime assemblies for Microsoft.Azure.WebJobs.Logging. For more information, please visit http://go.microsoft.com/fwlink/?LinkID=320971</Description>
+    <Description>This package provides logging related Types and capabilities to the WebJobs SDK. For more information, please visit https://go.microsoft.com/fwlink/?linkid=2279708.</Description>
     <AssemblyName>Microsoft.Azure.WebJobs.Logging</AssemblyName>
     <RootNamespace>Microsoft.Azure.WebJobs.Logging</RootNamespace>
   </PropertyGroup>
@@ -19,9 +19,13 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
   </PropertyGroup>
-
+	
   <ItemGroup>
     <AdditionalFiles Include="..\..\stylecop.json" Link="stylecop.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="README.md" Pack="true" PackagePath="/" />
   </ItemGroup>
   
   <ItemGroup>
