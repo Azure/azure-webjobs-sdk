@@ -13,8 +13,8 @@ namespace SampleHost
     {
         public static async Task Main(string[] args)
         {
-            var builder = new HostBuilder()
-                .UseEnvironment("Development")
+            var builder = Host.CreateDefaultBuilder(args)
+                .UseEnvironment(EnvironmentName.Development)
                 .ConfigureWebJobs(b =>
                 {
                     b.AddAzureStorageCoreServices()
@@ -48,11 +48,8 @@ namespace SampleHost
                 })
                 .UseConsoleLifetime();
 
-            var host = builder.Build();
-            using (host)
-            {
-                await host.RunAsync();
-            }
+            using var host = builder.Build();
+            await host.RunAsync();
         }
     }
 }

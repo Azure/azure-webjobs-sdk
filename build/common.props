@@ -20,6 +20,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageIcon>webjobs.png</PackageIcon>
     <PackageTags>Microsoft Azure WebJobs AzureFunctions</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <CodeAnalysisRuleSet>..\..\src.ruleset</CodeAnalysisRuleSet>
     <UseSourceLink Condition="$(UseSourceLink) == '' And $(CI) != ''">true</UseSourceLink>
     <SignAssembly>true</SignAssembly>

@@ -5,6 +5,7 @@
 
   <PropertyGroup>
     <PackageId>Microsoft.Azure.WebJobs.Sources</PackageId>
+    <Description>This package contains source for the runtime host components of the WebJobs SDK. For more information, please visit https://go.microsoft.com/fwlink/?linkid=2279708.</Description>
     <IsPackable>true</IsPackable>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <ContentTargetFolders>contentFiles</ContentTargetFolders>
@@ -16,6 +17,10 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Content Include="README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+	
   <ItemGroup>
     <Compile Update="Converters\AsyncConverter.cs">
       <Pack>true</Pack>

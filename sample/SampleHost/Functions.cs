@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Threading.Tasks;
-using Microsoft.Azure.EventHubs;
+using Azure.Messaging.EventHubs;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
@@ -71,7 +71,7 @@ namespace SampleHost
         {
             foreach (var evt in events)
             {
-                log.LogInformation($"Event processed (Offset={evt.SystemProperties.Offset}, SequenceNumber={evt.SystemProperties.SequenceNumber})");
+                log.LogInformation($"Event processed (Offset={evt.Offset}, SequenceNumber={evt.SequenceNumber})");
             }
         }
     }

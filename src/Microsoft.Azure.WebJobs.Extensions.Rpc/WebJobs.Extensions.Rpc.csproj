@@ -5,9 +5,9 @@
     <TargetFramework>net6.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <PackageId>Microsoft.Azure.WebJobs.Extensions.Rpc</PackageId>
+    <Description>This package provides RPC capabilities to the WebJobs SDK, allowing extensions to communicate between the host and worker via RPC. For more information, please visit https://go.microsoft.com/fwlink/?linkid=2279708.</Description>
     <AssemblyName>Microsoft.Azure.WebJobs.Extensions.Rpc</AssemblyName>
     <RootNamespace>Microsoft.Azure.WebJobs.Extensions.Rpc</RootNamespace>
-    <Description>This package contains the runtime assemblies for Microsoft.Azure.WebJobs.Extensions.Rpc. For more information, please visit http://go.microsoft.com/fwlink/?LinkID=320971</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,5 +17,8 @@
   <ItemGroup>
     <PackageReference Include="Grpc.AspNetCore" Version="2.49.0" />
   </ItemGroup>
-
+  <ItemGroup>
+    <Content Include="README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+	
 </Project>
