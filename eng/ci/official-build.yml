@@ -3,6 +3,9 @@ trigger:
   branches:
     include:
     - dev
+  tags:
+    include:
+    - 'v*'
 
 schedules:
 # Ensure we build nightly to catch any new CVEs and report SDL often.
