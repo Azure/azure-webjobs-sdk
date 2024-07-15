@@ -8,7 +8,7 @@ resources:
   - repository: eng
     type: git
     name: engineering
-    ref: refs/tags/release
+    ref: refs/heads/jviau/mirror-tags
 
 variables:
   - template: ci/variables/cfs.yml@eng
