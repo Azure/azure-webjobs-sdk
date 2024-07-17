@@ -19,7 +19,7 @@ namespace Microsoft.Azure.WebJobs.Host.Protocols
     {
         /// <summary>Dequeues the next message in the queue, if any.</summary>
         /// <returns>The dequeued message, if any.</returns>
-        /// <remarks>Dequeuing marks the message as temorarly invisible.</remarks>
+        /// <remarks>Dequeuing marks the message as temporarily invisible.</remarks>
         Task<T> DequeueAsync();
 
         /// <summary>Deletes a message from the queue.</summary>

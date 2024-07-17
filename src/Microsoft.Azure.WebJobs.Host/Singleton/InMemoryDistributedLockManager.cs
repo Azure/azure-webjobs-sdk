@@ -9,7 +9,7 @@ using Microsoft.Azure.WebJobs.Host.Executors;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
-    // $$$ An Inmemory implementation of IDistributedLockManager. 
+    // $$$ An In-memory implementation of IDistributedLockManager. 
     // Can use this when running on a single node and don't need to coordinate across multiple machines. 
     internal class InMemoryDistributedLockManager : IDistributedLockManager
     {

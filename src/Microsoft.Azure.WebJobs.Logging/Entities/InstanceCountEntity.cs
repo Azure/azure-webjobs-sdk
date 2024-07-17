@@ -17,7 +17,7 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
         const string RowKeyPrefix = "{0:D20}-";
         const string RowKeyFormat = "{0:D20}-{1}-{2}"; // timestamp ticks, container name, salt
 
-        // Have a salt value for writing to avoid collisions since timeBucket is not gauranteed to be unique
+        // Have a salt value for writing to avoid collisions since timeBucket is not guaranteed to be unique
         // when many functions are quickly run within a single time tick. 
         static int _salt;
 

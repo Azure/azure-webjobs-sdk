@@ -128,7 +128,7 @@ namespace Microsoft.Azure.WebJobs.Host
             var attributeConnectionProvider = attribute as IConnectionProvider;
             if (attributeConnectionProvider != null && string.IsNullOrEmpty(attributeConnectionProvider.Connection))
             {
-                // if the attribute doesn't specify an explicit connnection, walk up
+                // if the attribute doesn't specify an explicit connection, walk up
                 // the hierarchy looking for an override specified via attribute
                 var connectionProviderAttribute = attribute.GetType().GetCustomAttribute<ConnectionProviderAttribute>();
                 if (connectionProviderAttribute?.ProviderType != null)

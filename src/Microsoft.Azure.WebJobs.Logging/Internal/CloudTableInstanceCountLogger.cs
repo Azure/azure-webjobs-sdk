@@ -61,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
         /// <summary>
         /// Poll, return the ticks. 
         /// </summary>
-        /// <param name="token">cancellation token to interupt the poll. Don't throw when cancelled, just return early.</param>
+        /// <param name="token">cancellation token to interrupt the poll. Don't throw when cancelled, just return early.</param>
         /// <returns>Tick counter after the poll.</returns>
         protected override async Task<long> WaitOnPoll(CancellationToken token)
         {

@@ -18,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Logging
     internal class LogWriter : ILogWriter
     {
         // Logs from AddAsync() are batched up. They can be explicitly flushed via FlushAsync() and 
-        // they get autotmatically flushed at Interval. 
+        // they get automatically flushed at Interval. 
         // Calling AddAsync() will startup the background flusher. Calling FlushAsync() explicitly will disable it.
         private CancellationTokenSource _cancelBackgroundFlusher = null;
         private Task _backgroundFlusherTask = null;
