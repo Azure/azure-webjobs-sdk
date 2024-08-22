@@ -148,7 +148,7 @@ namespace Microsoft.Azure.WebJobs.Host.Timers
 
                     try
                     {
-                        TaskSeriesCommandResult result = await _command.ExecuteAsync(cancellationToken);
+                        TaskSeriesCommandResult result = await _command.ExecuteAsync(cancellationToken).ConfigureAwait(false);
                         wait = result.Wait;
                     }
                     catch (Exception ex) when (ex.InnerException is OperationCanceledException)
