@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using Microsoft.Azure.WebJobs.Logging;
 using System;
 using System.Runtime.Serialization;
 
@@ -18,12 +19,13 @@ namespace Microsoft.Azure.WebJobs.Host
         }
 
         /// <inheritdoc/>
-        public FunctionInvocationException(string message) : base(message)
+        public FunctionInvocationException(string message) : base(Sanitizer.Sanitize(message))
         {
         }
 
         /// <inheritdoc/>
-        public FunctionInvocationException(string message, Exception innerException) : base(message, innerException)
+        public FunctionInvocationException(string message, Exception innerException) 
+            : base(Sanitizer.Sanitize(message), new Exception(Sanitizer.Sanitize(innerException.Message)))
         {
         }
 
@@ -50,7 +52,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="methodName">The fully qualified method name.</param>
         /// <param name="innerException">The exception that is the cause of the current exception (or null).</param>
         public FunctionInvocationException(string message, Guid instanceId, string methodName, Exception innerException)
-            : base(message, methodName, innerException)
+            : base(Sanitizer.Sanitize(message), methodName, new Exception(Sanitizer.Sanitize(innerException.Message)))
         {
             InstanceId = instanceId;
         }

@@ -159,6 +159,52 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         }
 
         [Fact]
+        public void LogFunctionResult_Sanitized_SendsCorrectTelemetry()
+        {
+            FunctionInvocationException fex = new FunctionInvocationException("Failed AccountKey=", new Exception("Text 'key':'secret'"));
+            var result = CreateDefaultInstanceLogEntry(fex);
+            ILogger logger = CreateLogger(LogCategories.Results);
+
+            string expectedOperationId, expectedRequestId;
+            using (logger.BeginFunctionScope(CreateFunctionInstance(_invocationId), _hostInstanceId))
+            {
+                expectedRequestId = Activity.Current.SpanId.ToHexString();
+                expectedOperationId = Activity.Current.TraceId.ToHexString();
+
+                logger.LogFunctionResult(result);
+            }
+
+            // Errors log an associated Exception
+            RequestTelemetry requestTelemetry = _channel.Telemetries.OfType<RequestTelemetry>().Single();
+            ExceptionTelemetry exceptionTelemetry = _channel.Telemetries.OfType<ExceptionTelemetry>().Single();
+
+            Assert.Equal(2, _channel.Telemetries.Count);
+            Assert.Equal(expectedRequestId, requestTelemetry.Id);
+            Assert.Equal(expectedOperationId, requestTelemetry.Context.Operation.Id);
+            Assert.Null(requestTelemetry.Context.Operation.ParentId);
+            Assert.Equal(_functionShortName, requestTelemetry.Name);
+            Assert.Equal(_functionShortName, requestTelemetry.Context.Operation.Name);
+            Assert.Equal(defaultIp, requestTelemetry.Context.Location.Ip);
+            Assert.Contains(LogConstants.InvocationIdKey, requestTelemetry.Properties.Keys);
+            Assert.Contains(LogConstants.ProcessIdKey, requestTelemetry.Properties.Keys);
+            Assert.Equal(_invocationId.ToString(), requestTelemetry.Properties[LogConstants.InvocationIdKey]);
+            Assert.Equal(LogCategories.Results, requestTelemetry.Properties[LogConstants.CategoryNameKey]);
+            Assert.Equal(LogLevel.Error.ToString(), requestTelemetry.Properties[LogConstants.LogLevelKey]);
+            // TODO: Beef up validation to include properties
+
+            // Exception needs to have associated id
+            Assert.Equal(expectedOperationId, exceptionTelemetry.Context.Operation.Id);
+            Assert.Equal(expectedRequestId, exceptionTelemetry.Context.Operation.ParentId);
+            Assert.Equal(_functionShortName, exceptionTelemetry.Context.Operation.Name);
+            Assert.Same(fex, exceptionTelemetry.Exception);
+            Assert.Equal("Failed [Hidden Credential]", exceptionTelemetry.Exception.Message);
+            Assert.Equal("Text '[Hidden Credential]'", exceptionTelemetry.Exception.InnerException.Message);
+            Assert.Equal(LogCategories.Results, exceptionTelemetry.Properties[LogConstants.CategoryNameKey]);
+            Assert.Equal(LogLevel.Error.ToString(), exceptionTelemetry.Properties[LogConstants.LogLevelKey]);
+            // TODO: Beef up validation to include properties
+        }
+
+        [Fact]
         public void LogFunctionAggregate_SendsCorrectTelemetry()
         {
             DateTime now = DateTime.UtcNow;
