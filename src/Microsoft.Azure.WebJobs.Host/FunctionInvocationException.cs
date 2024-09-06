@@ -3,6 +3,7 @@
 
 using Microsoft.Azure.WebJobs.Logging;
 using System;
+using System.Reflection;
 using System.Runtime.Serialization;
 
 namespace Microsoft.Azure.WebJobs.Host
@@ -24,8 +25,8 @@ namespace Microsoft.Azure.WebJobs.Host
         }
 
         /// <inheritdoc/>
-        public FunctionInvocationException(string message, Exception innerException) 
-            : base(Sanitizer.Sanitize(message), new Exception(Sanitizer.Sanitize(innerException?.Message), innerException?.InnerException))
+        public FunctionInvocationException(string message, Exception innerException)
+            : base(Sanitizer.Sanitize(message), UpdateMessage(innerException, Sanitizer.Sanitize(innerException?.Message)))
         {
         }
 
@@ -52,7 +53,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="methodName">The fully qualified method name.</param>
         /// <param name="innerException">The exception that is the cause of the current exception (or null).</param>
         public FunctionInvocationException(string message, Guid instanceId, string methodName, Exception innerException)
-            : base(Sanitizer.Sanitize(message), methodName, new Exception(Sanitizer.Sanitize(innerException?.Message), innerException?.InnerException))
+            : base(Sanitizer.Sanitize(message), UpdateMessage(innerException, Sanitizer.Sanitize(innerException?.Message)))
         {
             InstanceId = instanceId;
         }
@@ -74,6 +75,23 @@ namespace Microsoft.Azure.WebJobs.Host
             info.AddValue("InstanceId", this.InstanceId);
 
             base.GetObjectData(info, context);
+        }
+
+        private static Exception UpdateMessage(Exception exception, string message)
+        {
+            if (string.IsNullOrEmpty(message))
+            {
+                return exception;
+            }
+
+            // Use reflection to set the private '_message' field of the Exception object
+            FieldInfo messageField = typeof(Exception).GetField("_message", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (messageField != null)
+            {
+                messageField.SetValue(exception, message);
+            }
+
+            return exception;
         }
     }
 }
