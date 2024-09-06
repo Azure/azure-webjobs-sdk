@@ -79,7 +79,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
         private static Exception UpdateMessage(Exception exception, string message)
         {
-            if (string.IsNullOrEmpty(message))
+            if (string.IsNullOrEmpty(message) || exception is null)
             {
                 return exception;
             }
