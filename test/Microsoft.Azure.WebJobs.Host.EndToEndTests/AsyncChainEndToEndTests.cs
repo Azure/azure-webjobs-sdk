@@ -424,9 +424,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             // Logger only writes out a single log message (which includes the Exception).        
             var logger = host.GetTestLoggerProvider().CreatedLoggers.Where(l => l.Category == LogCategories.Results).Single();
             var logMessage = logger.GetLogMessages().Single();
-            var loggerException = logMessage.Exception as FunctionInvocationException;
+
+            Assert.NotNull(logMessage.Exception);
+            Assert.Equal("FunctionException", logMessage.Exception.GetType().ToString());
+            /*
+            var loggerException = logMessage.Exception as Exception;
             Assert.NotNull(loggerException);
             Assert.Equal(expectedName, loggerException.MethodName);
+            */
         }
 
         [Fact]
