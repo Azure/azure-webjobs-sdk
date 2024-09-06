@@ -25,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
         /// <inheritdoc/>
         public FunctionInvocationException(string message, Exception innerException) 
-            : base(Sanitizer.Sanitize(message), new Exception(Sanitizer.Sanitize(innerException.Message), innerException.InnerException))
+            : base(Sanitizer.Sanitize(message), new Exception(Sanitizer.Sanitize(innerException?.Message), innerException?.InnerException))
         {
         }
 
@@ -52,7 +52,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="methodName">The fully qualified method name.</param>
         /// <param name="innerException">The exception that is the cause of the current exception (or null).</param>
         public FunctionInvocationException(string message, Guid instanceId, string methodName, Exception innerException)
-            : base(Sanitizer.Sanitize(message), methodName, new Exception(Sanitizer.Sanitize(innerException.Message), innerException.InnerException))
+            : base(Sanitizer.Sanitize(message), methodName, new Exception(Sanitizer.Sanitize(innerException?.Message), innerException?.InnerException))
         {
             InstanceId = instanceId;
         }
