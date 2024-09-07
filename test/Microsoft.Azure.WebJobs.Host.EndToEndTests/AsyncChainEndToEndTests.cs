@@ -426,12 +426,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var logMessage = logger.GetLogMessages().Single();
 
             Assert.NotNull(logMessage.Exception);
-            Assert.Equal("FunctionException", logMessage.Exception.GetType().ToString());
-            /*
-            var loggerException = logMessage.Exception as Exception;
+            Assert.True(logMessage.Exception.GetType().ToString().Contains("FunctionInvocationException"));
+            var loggerException = logMessage.Exception as FunctionInvocationException;
             Assert.NotNull(loggerException);
             Assert.Equal(expectedName, loggerException.MethodName);
-            */
         }
 
         [Fact]
