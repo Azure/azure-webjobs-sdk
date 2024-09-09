@@ -430,7 +430,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.NotNull(loggerException);
             Assert.True(loggerException is FunctionException);
             Assert.Equal(loggerException.GetType(), typeof(FunctionInvocationException));
-            FunctionInvocationException e = (FunctionInvocationException)loggerException;
+            var e = loggerException as FunctionInvocationException;
             Assert.NotNull(e);
             Assert.Equal(expectedName, e.MethodName);
         }
