@@ -53,7 +53,7 @@ namespace Microsoft.Azure.WebJobs.Host
         /// <param name="methodName">The fully qualified method name.</param>
         /// <param name="innerException">The exception that is the cause of the current exception (or null).</param>
         public FunctionInvocationException(string message, Guid instanceId, string methodName, Exception innerException)
-            : base(Sanitizer.Sanitize(message), UpdateMessage(innerException, Sanitizer.Sanitize(innerException?.Message)))
+            : base(Sanitizer.Sanitize(message), methodName, UpdateMessage(innerException, Sanitizer.Sanitize(innerException?.Message)))
         {
             InstanceId = instanceId;
         }
@@ -79,7 +79,7 @@ namespace Microsoft.Azure.WebJobs.Host
 
         private static Exception UpdateMessage(Exception exception, string message)
         {
-            if (string.IsNullOrEmpty(message) || exception is null)
+            if (exception is null)
             {
                 return exception;
             }
