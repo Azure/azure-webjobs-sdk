@@ -155,6 +155,18 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// </summary>
         public bool EnableMetricsCustomDimensionOptimization { get; set; } = false;
 
+        /// <summary>
+        /// Gets or sets the flag that enables Adaptive Sampling delay.
+        /// Enabled by default.
+        /// </summary>
+        public bool EnableAdaptiveSamplingDelay { get; set; } = true;
+
+        /// <summary>
+        /// Specifies the delay time for initializing Adaptive Sampling, allowing more initialization logs to be sent to Application Insights.
+        /// The default value is 15 seconds.
+        /// </summary>
+        public TimeSpan AdaptiveSamplingInitializationDelay { get; set; } = TimeSpan.FromSeconds(15);
+
         public string Format()
         {
             JObject sampling = null;

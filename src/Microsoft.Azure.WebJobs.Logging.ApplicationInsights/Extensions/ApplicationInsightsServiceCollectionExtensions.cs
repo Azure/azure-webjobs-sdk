@@ -388,16 +388,23 @@ namespace Microsoft.Extensions.DependencyInjection
             {
                 configuration.TelemetryProcessorChainBuilder.Use((next) =>
                 {
-                    var processor = new AdaptiveSamplingTelemetryProcessor(options.SamplingSettings, null, next);
-                    if (options.SamplingExcludedTypes != null)
+                    if (options.EnableAdaptiveSamplingDelay)
                     {
-                        processor.ExcludedTypes = options.SamplingExcludedTypes;
+                        return new DelayedSamplingProcessor(next, options);
                     }
-                    if (options.SamplingIncludedTypes != null)
+                    else
                     {
-                        processor.IncludedTypes = options.SamplingIncludedTypes;
+                        var processor = new AdaptiveSamplingTelemetryProcessor(options.SamplingSettings, null, next);
+                        if (options.SamplingExcludedTypes != null)
+                        {
+                            processor.ExcludedTypes = options.SamplingExcludedTypes;
+                        }
+                        if (options.SamplingIncludedTypes != null)
+                        {
+                            processor.IncludedTypes = options.SamplingIncludedTypes;
+                        }
+                        return processor;
                     }
-                    return processor;
                 });
             }
 
