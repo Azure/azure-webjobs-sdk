@@ -11,14 +11,13 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
     internal class DelayedSamplingProcessor : ITelemetryProcessor
     {
         private readonly AdaptiveSamplingTelemetryProcessor _samplingProcessor;
-        private ITelemetryProcessor next;
-        private bool isSamplingEnabled = false;        
+        private ITelemetryProcessor _next;
+        private bool _isSamplingEnabled = false;        
 
-        public DelayedSamplingProcessor(ITelemetryProcessor next, ApplicationInsightsLoggerOptions options, AdaptiveSamplingTelemetryProcessor samplingProcessor = null)
+        public DelayedSamplingProcessor(ITelemetryProcessor next, ApplicationInsightsLoggerOptions options)
         {
-            this.next = next;
-
-            _samplingProcessor = samplingProcessor ?? new AdaptiveSamplingTelemetryProcessor(options.SamplingSettings, null, next);
+            _next = next;
+            _samplingProcessor = new AdaptiveSamplingTelemetryProcessor(options.SamplingSettings, null, next);
 
             if (options.SamplingExcludedTypes != null)
             {
@@ -35,7 +34,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
         public void Process(ITelemetry item)
         {
-            if (isSamplingEnabled)
+            if (_isSamplingEnabled)
             {
                 // Forward to Adaptive Sampling processor
                 _samplingProcessor.Process(item);
@@ -43,13 +42,13 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             else
             {
                 // Bypass sampling
-                next.Process(item);
+                _next.Process(item);
             }
         }
 
         private void EnableSampling()
         {
-            isSamplingEnabled = true;
+            _isSamplingEnabled = true;
         }
     }
 }
