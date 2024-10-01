@@ -258,6 +258,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(DiagnosticsEventListenerLogLevel), DiagnosticsEventListenerLogLevel?.ToString() },
                 { nameof(EnableAutocollectedMetricsExtractor), EnableAutocollectedMetricsExtractor },
                 { nameof(EnableMetricsCustomDimensionOptimization), EnableMetricsCustomDimensionOptimization },
+                { nameof(EnableAdaptiveSamplingDelay), EnableAdaptiveSamplingDelay },
+                { nameof(AdaptiveSamplingInitializationDelay), AdaptiveSamplingInitializationDelay },
             };
 
             return options.ToString(Formatting.Indented);
