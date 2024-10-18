@@ -38,8 +38,8 @@ namespace Microsoft.Azure.WebJobs.Extensions.Rpc.Implementation.UnitTests
 
             IReadOnlyList<Endpoint> endpoints = source.Endpoints;
             Assert.Equal(2, endpoints.Count);
-            Assert.Equal("first/endpoint HTTP: GET", endpoints[0].DisplayName);
-            Assert.Equal("second/endpoint HTTP: POST", endpoints[1].DisplayName);
+            Assert.Equal("HTTP: GET first/endpoint", endpoints[0].DisplayName);
+            Assert.Equal("HTTP: POST second/endpoint", endpoints[1].DisplayName);
 
             foreach (TestRpcExtension ext in extensions)
             {
