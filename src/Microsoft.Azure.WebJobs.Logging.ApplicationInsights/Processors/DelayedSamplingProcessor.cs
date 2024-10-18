@@ -16,17 +16,8 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
 
         public DelayedSamplingProcessor(ITelemetryProcessor next, ApplicationInsightsLoggerOptions options)
         {
-            _next = next;
-            _samplingProcessor = new AdaptiveSamplingTelemetryProcessor(options.SamplingSettings, null, next);
-
-            if (options.SamplingExcludedTypes != null)
-            {
-                _samplingProcessor.ExcludedTypes = options.SamplingExcludedTypes;
-            }
-            if (options.SamplingIncludedTypes != null)
-            {
-                _samplingProcessor.IncludedTypes = options.SamplingIncludedTypes;
-            }
+            _next = next;            
+            _samplingProcessor = TelemetryProcessorFactory.CreateAdaptiveSamplingProcessor(options, next);
 
             // Start a timer to enable sampling after a delay        
             Task.Delay(options.AdaptiveSamplingInitializationDelay).ContinueWith(t => EnableSampling());

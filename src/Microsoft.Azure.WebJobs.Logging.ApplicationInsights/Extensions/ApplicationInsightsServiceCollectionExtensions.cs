@@ -394,16 +394,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     }
                     else
                     {
-                        var processor = new AdaptiveSamplingTelemetryProcessor(options.SamplingSettings, null, next);
-                        if (options.SamplingExcludedTypes != null)
-                        {
-                            processor.ExcludedTypes = options.SamplingExcludedTypes;
-                        }
-                        if (options.SamplingIncludedTypes != null)
-                        {
-                            processor.IncludedTypes = options.SamplingIncludedTypes;
-                        }
-                        return processor;
+                        return TelemetryProcessorFactory.CreateAdaptiveSamplingProcessor(options, next);
                     }
                 });
             }
