@@ -225,6 +225,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                         o.SamplingSettings = samplingSettings;
                         o.SamplingExcludedTypes = samplingExcludedTypes;
                         o.SamplingIncludedTypes = samplingIncludedTypes;
+                        o.EnableAdaptiveSamplingDelay = false;
                     });
                 })
                 .Build())
@@ -242,7 +243,43 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             }
         }
 
-        
+        [Fact]
+        public void DependencyInjectionConfiguration_ConfiguresDelayedSampling()
+        {
+            var samplingSettings = new SamplingPercentageEstimatorSettings { MaxTelemetryItemsPerSecond = 1 };
+            var samplingExcludedTypes = "PageView;Request";
+            var samplingIncludedTypes = "Trace";
+            using (var host = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsightsWebJobs(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                        o.SamplingSettings = samplingSettings;
+                        o.SamplingExcludedTypes = samplingExcludedTypes;
+                        o.SamplingIncludedTypes = samplingIncludedTypes;
+                    });
+                })
+                .Build())
+            {
+                var config = host.Services.GetService<TelemetryConfiguration>();
+                Assert.Equal(5, config.TelemetryProcessors.Count);
+                Assert.IsType<OperationFilteringTelemetryProcessor>(config.TelemetryProcessors[0]);
+                Assert.IsType<QuickPulseTelemetryProcessor>(config.TelemetryProcessors[1]);
+                Assert.IsType<FilteringTelemetryProcessor>(config.TelemetryProcessors[2]);
+                Assert.IsType<DelayedSamplingProcessor>(config.TelemetryProcessors[3]);
+
+                // Use reflection to access the private field "_samplingProcessor"
+                var samplingProcessorField = typeof(DelayedSamplingProcessor)
+                    .GetField("_samplingProcessor", BindingFlags.NonPublic | BindingFlags.Instance);
+                var samplingProcessorInstance = (AdaptiveSamplingTelemetryProcessor)samplingProcessorField.GetValue(config.TelemetryProcessors[3]);
+
+                Assert.Equal(samplingSettings.MaxTelemetryItemsPerSecond, samplingProcessorInstance.MaxTelemetryItemsPerSecond);
+                Assert.Equal(samplingExcludedTypes, samplingProcessorInstance.ExcludedTypes);
+                Assert.Equal(samplingIncludedTypes, samplingProcessorInstance.IncludedTypes);
+            }
+        }
+
         [Fact]
         public void DependencyInjectionConfiguration_EnableLiveMetricsFilters()
         {
@@ -589,6 +626,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                     {
                         o.InstrumentationKey = "some key";
                         o.SamplingSettings = samplingSettings;
+                        o.EnableAdaptiveSamplingDelay = false;
                     });
                 }).Build())
             {
