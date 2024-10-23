@@ -9,12 +9,12 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Messaging.ServiceBus;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.Azure.ServiceBus;
-using Microsoft.Azure.ServiceBus.Core;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -31,6 +31,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
         private readonly string _endpoint;
         private readonly string _connectionString;
         private readonly TestTelemetryChannel _channel = new TestTelemetryChannel();
+        private readonly ServiceBusClient _client;
         private static readonly AutoResetEvent _functionWaitHandle = new AutoResetEvent(false);
 
         public ServiceBusRequestAndDependencyCollectionTests()
@@ -40,10 +41,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 .AddTestSettings()
                 .Build();
 
-            _connectionString = config.GetConnectionStringOrSetting(ServiceBus.Constants.DefaultConectionSettingStringName);
-
-            var connStringBuilder = new ServiceBusConnectionStringBuilder(_connectionString);
-            _endpoint = connStringBuilder.Endpoint;
+            _connectionString = config.GetConnectionStringOrSetting("AzureWebJobsServiceBus");
+            _endpoint = ServiceBusConnectionStringProperties.Parse(_connectionString).Endpoint.ToString();
+            _client = new ServiceBusClient(_connectionString);
         }
 
         [Theory]
@@ -124,9 +124,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
         [Fact]
         public async Task ServiceBusRequestMultiHost()
         {
-            var sender = new MessageSender(_connectionString, _queueName);
-            await sender.SendAsync(new Message { Body = Encoding.UTF8.GetBytes("message"), ContentType = "text/plain" });
+            var sender = _client.CreateSender(_queueName);
+            var message = new ServiceBusMessage("message")
+            {
+                ContentType = "text/plain",
+            };
 
+            await sender.SendMessageAsync(message);
             using (var host1 = ConfigureHost())
             using (var host2 = ConfigureHost())
             {
@@ -153,9 +157,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
         [Fact]
         public async Task ServiceBusRequestWithoutParent()
         {
-            var sender = new MessageSender(_connectionString, _queueName);
-            await sender.SendAsync(new Message { Body = Encoding.UTF8.GetBytes("message"), ContentType = "text/plain" });
+            var sender = _client.CreateSender(_queueName);
+            var message = new ServiceBusMessage("message")
+            {
+                ContentType = "text/plain",
+            };
 
+            await sender.SendMessageAsync(message);
             using (var host = ConfigureHost())
             {
                 await host.StartAsync();
@@ -207,18 +215,17 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
         [Fact]
         public async Task ServiceBusRequestLegacyCompatibleParent()
         {
-            var sender = new MessageSender(_connectionString, _queueName);
+            var sender = _client.CreateSender(_queueName);
 
             var compatibleRoot = ActivityTraceId.CreateRandom().ToHexString();
             var legacyParent = $"|{compatibleRoot}.1.2.3.";
-            var message = new Message
+            var message = new ServiceBusMessage("message")
             {
-                Body = Encoding.UTF8.GetBytes("message"),
                 ContentType = "text/plain",
-                UserProperties = { ["Diagnostic-Id"] = legacyParent }
+                ApplicationProperties = { ["Diagnostic-Id"] = legacyParent }
             };
 
-            await sender.SendAsync(message);
+            await sender.SendMessageAsync(message);
 
             using (var host = ConfigureHost())
             {
@@ -271,17 +278,16 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
         [Fact]
         public async Task ServiceBusRequestLegacyNotCompatibleParent()
         {
-            var sender = new MessageSender(_connectionString, _queueName);
+            var sender = _client.CreateSender(_queueName);
 
             var legacyParent = "|legacyId.1.2.3.";
-            var message = new Message
+            var message = new ServiceBusMessage("message")
             {
-                Body = Encoding.UTF8.GetBytes("message"),
                 ContentType = "text/plain",
-                UserProperties = {["Diagnostic-Id"] = legacyParent}
+                ApplicationProperties = { ["Diagnostic-Id"] = legacyParent }
             };
 
-            await sender.SendAsync(message);
+            await sender.SendMessageAsync(message);
 
             using (var host = ConfigureHost())
             {
@@ -343,23 +349,22 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
         }
 
         public static async Task ServiceBusTrigger(
-            [ServiceBusTrigger(_queueName)] string message,
-            MessageReceiver messageReceiver,
-            string lockToken,
+            [ServiceBusTrigger(_queueName)] ServiceBusReceivedMessage message,
+            ServiceBusMessageActions messageReceiver,
             TextWriter logger)
         {
             try
             {
                 logger.WriteLine($"C# script processed queue message: '{message}'");
 
-                if (message == "throw")
+                if (message.Body.ToString() == "throw")
                 {
                     throw new InvalidOperationException("boom!");
                 }
             }
             finally
             {
-                await messageReceiver.CompleteAsync(lockToken);
+                await messageReceiver.CompleteMessageAsync(message);
                 _functionWaitHandle.Set();
             }
         }
@@ -411,7 +416,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                     {
                         // We'll complete these ourselves as we don't
                         // want failures constantly retrying.
-                        o.MessageHandlerOptions.AutoComplete = false;
+                        o.AutoCompleteMessages = false;
                     });
                 })
                 .ConfigureLogging(b =>
@@ -435,14 +440,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
         private async Task<int> CleanUpEntity()
         {
-            var messageReceiver = new MessageReceiver(_connectionString, _queueName, ReceiveMode.ReceiveAndDelete);
+            var messageReceiver = _client.CreateReceiver(
+                _queueName, new ServiceBusReceiverOptions { ReceiveMode = ServiceBusReceiveMode.ReceiveAndDelete });
             int count = 0;
             do
             {
-                var message = await messageReceiver.ReceiveAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
-                if (message != null)
+                var messages = await messageReceiver.ReceiveMessagesAsync(10, TimeSpan.FromSeconds(3)).ConfigureAwait(false);
+                if (messages != null && messages.Count > 0)
                 {
-                    count++;
+                    count += messages.Count;
                 }
                 else
                 {
