@@ -62,7 +62,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Converters
 
             // Assert
             Assert.NotNull(converter);
-            ExceptionAssert.ThrowsFormat(() => converter.Convert(" 255 "), "Input string was not in a correct format.");
+            ExceptionAssert.ThrowsFormat(() => converter.Convert(" 255 "),
+                "The input string ' 255 ' was not in a correct format.");
         }
 
         [Fact]
@@ -90,7 +91,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Converters
 
             // Assert
             Assert.NotNull(converter);
-            ExceptionAssert.ThrowsFormat(() => converter.Convert(" 127 "), "Input string was not in a correct format.");
+            ExceptionAssert.ThrowsFormat(() => converter.Convert(" 127 "),
+                "The input string ' 127 ' was not in a correct format.");
         }
 
         [Fact]
@@ -119,7 +121,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Converters
             // Assert
             Assert.NotNull(converter);
             ExceptionAssert.ThrowsFormat(() => converter.Convert(" 32767 "),
-                "Input string was not in a correct format.");
+                "The input string ' 32767 ' was not in a correct format.");
         }
 
         [Fact]
@@ -148,7 +150,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Converters
             // Assert
             Assert.NotNull(converter);
             ExceptionAssert.ThrowsFormat(() => converter.Convert(" 65535 "),
-                "Input string was not in a correct format.");
+                "The input string ' 65535 ' was not in a correct format.");
         }
 
         [Fact]
@@ -177,7 +179,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Converters
             // Assert
             Assert.NotNull(converter);
             ExceptionAssert.ThrowsFormat(() => converter.Convert(" 2147483647 "),
-                "Input string was not in a correct format.");
+                "The input string ' 2147483647 ' was not in a correct format.");
         }
 
         [Fact]
@@ -206,7 +208,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Converters
             // Assert
             Assert.NotNull(converter);
             ExceptionAssert.ThrowsFormat(() => converter.Convert(" 4294967295 "),
-                "Input string was not in a correct format.");
+                "The input string ' 4294967295 ' was not in a correct format.");
         }
 
         [Fact]
@@ -235,7 +237,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Converters
             // Assert
             Assert.NotNull(converter);
             ExceptionAssert.ThrowsFormat(() => converter.Convert(" 9223372036854775807 "),
-                "Input string was not in a correct format.");
+                "The input string ' 9223372036854775807 ' was not in a correct format.");
         }
 
         [Fact]
@@ -264,7 +266,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Converters
             // Assert
             Assert.NotNull(converter);
             ExceptionAssert.ThrowsFormat(() => converter.Convert(" 18446744073709551615 "),
-                "Input string was not in a correct format.");
+                "The input string ' 18446744073709551615 ' was not in a correct format.");
         }
 
         [Fact]
@@ -293,7 +295,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Converters
             // Assert
             Assert.NotNull(converter);
             ExceptionAssert.ThrowsFormat(() => converter.Convert(" 3.40282e+038 "),
-                "Input string was not in a correct format.");
+                "The input string ' 3.40282e+038 ' was not in a correct format.");
         }
 
         [Fact]
@@ -322,7 +324,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Converters
             // Assert
             Assert.NotNull(converter);
             ExceptionAssert.ThrowsFormat(() => converter.Convert(" 1.79769e+308 "),
-                "Input string was not in a correct format.");
+                "The input string ' 1.79769e+308 ' was not in a correct format.");
         }
 
         [Fact]
@@ -368,7 +370,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Converters
             // Assert
             Assert.NotNull(converter);
             ExceptionAssert.ThrowsFormat(() => converter.Convert(" 79228162514264337593543950335 "),
-                "Input string was not in a correct format.");
+                "The input string ' 79228162514264337593543950335 ' was not in a correct format.");
         }
 
         [Fact]
