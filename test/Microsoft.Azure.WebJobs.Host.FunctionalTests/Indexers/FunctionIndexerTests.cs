@@ -8,7 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.ServiceBus.Core;
+using Azure.Messaging.ServiceBus;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Indexers;
@@ -450,7 +450,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
 
         // Attempt to bind to a QueueTrigger binding contract member with the wrong name
         // In this case, we're trying to bind to MessageReceiver
-        public static void ServiceBusTrigger_ContractParameterBindingFailsIndexing([ServiceBusTrigger("queue")] string input, MessageReceiver receiver)
+        public static void ServiceBusTrigger_ContractParameterBindingFailsIndexing([ServiceBusTrigger("queue")] string input, ServiceBusReceiver receiver)
         {
             throw new NotImplementedException();
         }
