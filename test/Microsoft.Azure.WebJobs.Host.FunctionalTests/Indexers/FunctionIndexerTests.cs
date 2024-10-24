@@ -69,7 +69,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             });
             innerException = exception.InnerException as InvalidOperationException;
             Assert.NotNull(innerException);
-            Assert.Equal("Cannot bind parameter 'receiver' to type ServiceBusReceiver. Make sure the parameter Type is supported by the binding. The binding supports the following parameter names for type ServiceBusReceiver: (ServiceBusReceiver). If you're trying to bind to one of those values, rename your parameter to match the contract name (case insensitive). If you're using binding extensions (e.g. Azure Storage, ServiceBus, Timers, etc.) make sure you've called the registration method for the extension(s) in your startup code (e.g. builder.AddAzureStorage(), builder.AddServiceBus(), builder.AddTimers(), etc.).", innerException.Message);
+            Assert.Equal("Cannot bind parameter 'receiver' to type ServiceBusReceiver. Make sure the parameter Type is supported by the binding. If you're using binding extensions (e.g. Azure Storage, ServiceBus, Timers, etc.) make sure you've called the registration method for the extension(s) in your startup code (e.g. builder.AddAzureStorage(), builder.AddServiceBus(), builder.AddTimers(), etc.).", innerException.Message);
         }
 
         [Theory]
