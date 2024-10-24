@@ -8,7 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.ServiceBus.Core;
+using Azure.Messaging.ServiceBus;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Indexers;
@@ -69,7 +69,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             });
             innerException = exception.InnerException as InvalidOperationException;
             Assert.NotNull(innerException);
-            Assert.Equal("Cannot bind parameter 'receiver' to type MessageReceiver. Make sure the parameter Type is supported by the binding. The binding supports the following parameter names for type MessageReceiver: (MessageReceiver). If you're trying to bind to one of those values, rename your parameter to match the contract name (case insensitive). If you're using binding extensions (e.g. Azure Storage, ServiceBus, Timers, etc.) make sure you've called the registration method for the extension(s) in your startup code (e.g. builder.AddAzureStorage(), builder.AddServiceBus(), builder.AddTimers(), etc.).", innerException.Message);
+            Assert.Equal("Cannot bind parameter 'receiver' to type ServiceBusReceiver. Make sure the parameter Type is supported by the binding. If you're using binding extensions (e.g. Azure Storage, ServiceBus, Timers, etc.) make sure you've called the registration method for the extension(s) in your startup code (e.g. builder.AddAzureStorage(), builder.AddServiceBus(), builder.AddTimers(), etc.).", innerException.Message);
         }
 
         [Theory]
@@ -449,8 +449,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         }
 
         // Attempt to bind to a QueueTrigger binding contract member with the wrong name
-        // In this case, we're trying to bind to MessageReceiver
-        public static void ServiceBusTrigger_ContractParameterBindingFailsIndexing([ServiceBusTrigger("queue")] string input, MessageReceiver receiver)
+        // In this case, we're trying to bind to ServiceBusReceiver
+        public static void ServiceBusTrigger_ContractParameterBindingFailsIndexing([ServiceBusTrigger("queue")] string input, ServiceBusReceiver receiver)
         {
             throw new NotImplementedException();
         }
