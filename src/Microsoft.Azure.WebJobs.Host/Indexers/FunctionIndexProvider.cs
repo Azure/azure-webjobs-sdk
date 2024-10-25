@@ -31,6 +31,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
         private readonly bool _allowPartialHostStartup;
         private readonly IConfiguration _configuration;
         private readonly IInstanceServicesProviderFactory _instanceServicesFactory;
+        private readonly INameResolver _nameResolver;
         private IFunctionIndex _index;
 
         public FunctionIndexProvider(ITypeLocator typeLocator,
@@ -45,6 +46,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             IOptions<JobHostOptions> hostOptions,
             IConfiguration configuration,
             IInstanceServicesProviderFactory instanceServicesFactory,
+            INameResolver nameResolver,
             IRetryStrategy defaultRetryStrategy = null)
         {
             _typeLocator = typeLocator ?? throw new ArgumentNullException(nameof(typeLocator));
@@ -60,6 +62,7 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
             _allowPartialHostStartup = hostOptions.Value.AllowPartialHostStartup;
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _defaultRetryStrategy = defaultRetryStrategy;
+            _nameResolver = nameResolver;
         }
 
         public async Task<IFunctionIndex> GetAsync(CancellationToken cancellationToken)
@@ -83,8 +86,8 @@ namespace Microsoft.Azure.WebJobs.Host.Indexers
                 _singletonManager, 
                 _loggerFactory, 
                 _configuration, 
-                _instanceServicesFactory, 
-                null, 
+                _instanceServicesFactory,
+                _nameResolver, 
                 _sharedQueue, 
                 _defaultTimeout, 
                 _allowPartialHostStartup,
