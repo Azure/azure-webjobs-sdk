@@ -73,7 +73,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.Equal(requestName, request.Name);
 
             Assert.True(request.Properties.ContainsKey(LogConstants.InvocationIdKey));
-            Assert.True(request.Properties.ContainsKey(LogConstants.TriggerReasonKey));
+
+            if (request.Name != "ServiceBusTrigger") // SB 5.x does not have a trigger
+            {
+                Assert.True(request.Properties.ContainsKey(LogConstants.TriggerReasonKey));
+            }
+
             Assert.StartsWith("webjobs:", request.Context.GetInternalContext().SdkVersion);
 
             Assert.Equal(success, request.Success);

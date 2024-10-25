@@ -9,12 +9,12 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Messaging.ServiceBus;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.Azure.ServiceBus;
-using Microsoft.Azure.ServiceBus.Core;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -28,9 +28,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
     {
         private const string _queueName = "core-test-queue1";
         private const string _mockApplicationInsightsKey = "some_key";
-        private readonly string _endpoint;
+        private readonly Uri _endpoint;
         private readonly string _connectionString;
         private readonly TestTelemetryChannel _channel = new TestTelemetryChannel();
+        private readonly ServiceBusClient _client;
         private static readonly AutoResetEvent _functionWaitHandle = new AutoResetEvent(false);
 
         public ServiceBusRequestAndDependencyCollectionTests()
@@ -40,10 +41,9 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 .AddTestSettings()
                 .Build();
 
-            _connectionString = config.GetConnectionStringOrSetting(ServiceBus.Constants.DefaultConectionSettingStringName);
-
-            var connStringBuilder = new ServiceBusConnectionStringBuilder(_connectionString);
-            _endpoint = connStringBuilder.Endpoint;
+            _connectionString = config.GetConnectionStringOrSetting("AzureWebJobsServiceBus");
+            _endpoint = ServiceBusConnectionStringProperties.Parse(_connectionString).Endpoint;
+            _client = new ServiceBusClient(_connectionString);
         }
 
         [Theory]
@@ -72,12 +72,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
             // One dependency for the 'Send' from ServiceBusOut
             // One dependency for the 'Complete' call in ServiceBusTrigger
-            Assert.Equal(2, dependencies.Count);
-            Assert.Single(dependencies, d => d.Name == "Complete");
-            Assert.Single(dependencies, d => d.Name == "Send");
+            // A final dependency from Azure ServiceBus SDK
+            Assert.Equal(3, dependencies.Count);
+            Assert.Single(dependencies, d => d.Name == "ServiceBusReceiver.Complete");
+            Assert.Single(dependencies, d => d.Name == "ServiceBusSender.Send");
 
-            var sbOutDependency = dependencies.Single(d => d.Name == "Send");
-            var completeDependency = dependencies.Single(d => d.Name == "Complete");
+            var sbOutDependency = dependencies.Single(d => d.Name == "ServiceBusSender.Send");
+            var messageDependency = dependencies.Single(d => d.Name == "Message");
+            var completeDependency = dependencies.Single(d => d.Name == "ServiceBusReceiver.Complete");
 
             var sbTriggerRequest = requests.Single(r => r.Context.Operation.Name == nameof(ServiceBusTrigger));
             var manualCallRequest = requests.Single(r => r.Context.Operation.Name == nameof(ServiceBusOut));
@@ -85,12 +87,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             var operationId = manualCallRequest.Context.Operation.Id;
             Assert.Equal(operationId, sbTriggerRequest.Context.Operation.Id);
 
-            ValidateServiceBusRequest(sbTriggerRequest, success, _endpoint, _queueName, nameof(ServiceBusTrigger), operationId, sbOutDependency.Id);
+            ValidateServiceBusRequest(sbTriggerRequest, success, _endpoint, _queueName, nameof(ServiceBusTrigger), operationId, messageDependency.Id);
             ValidateServiceBusDependency(
                 sbOutDependency,
                 _endpoint,
                 _queueName, 
-                "Send", 
+                "ServiceBusSender.Send",
                 nameof(ServiceBusOut),
                 operationId, 
                 manualCallRequest.Id,
@@ -100,7 +102,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 completeDependency,
                 _endpoint,
                 _queueName,
-                "Complete",
+                "ServiceBusReceiver.Complete",
                 nameof(ServiceBusTrigger),
                 operationId,
                 sbTriggerRequest.Id,
@@ -112,21 +114,25 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
             var triggerFunctionTraces = traces.Where(t => t.Context.Operation.Id == sbTriggerRequest.Context.Operation.Id &&
                                                           t.Context.Operation.ParentId == sbTriggerRequest.Id).ToList();
-            Assert.Equal(success ? 6 : 8, allFunctionTraces.Count);
+            Assert.Equal(success ? 15 : 16, allFunctionTraces.Count);
 
-            // manual function only writes 'executing' and 'executed'
-            Assert.Equal(2, manualFunctionTraces.Count);
+            // manual function writes 'executing' and 'executed', and one more from SB SDK.
+            Assert.Equal(3, manualFunctionTraces.Count);
 
             // trigger writes 'executing', 'executed', trigger and log inside function + 2 errors on exception
-            Assert.Equal(success ? 4 : 6, triggerFunctionTraces.Count);
+            Assert.Equal(success ? 8 : 9, triggerFunctionTraces.Count);
         }
 
         [Fact]
         public async Task ServiceBusRequestMultiHost()
         {
-            var sender = new MessageSender(_connectionString, _queueName);
-            await sender.SendAsync(new Message { Body = Encoding.UTF8.GetBytes("message"), ContentType = "text/plain" });
+            var sender = _client.CreateSender(_queueName);
+            var message = new ServiceBusMessage("message")
+            {
+                ContentType = "text/plain",
+            };
 
+            await sender.SendMessageAsync(message);
             using (var host1 = ConfigureHost())
             using (var host2 = ConfigureHost())
             {
@@ -147,15 +153,19 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
             Assert.Single(requests);
             Assert.Single(dependencies);
-            Assert.Equal(4, traces.Count);
+            Assert.Equal(16, traces.Count);
         }
 
         [Fact]
         public async Task ServiceBusRequestWithoutParent()
         {
-            var sender = new MessageSender(_connectionString, _queueName);
-            await sender.SendAsync(new Message { Body = Encoding.UTF8.GetBytes("message"), ContentType = "text/plain" });
+            var sender = _client.CreateSender(_queueName);
+            var message = new ServiceBusMessage("message")
+            {
+                ContentType = "text/plain",
+            };
 
+            await sender.SendMessageAsync(message);
             using (var host = ConfigureHost())
             {
                 await host.StartAsync();
@@ -175,8 +185,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             // The call to Complete the message registers as a dependency
             Assert.Single(dependencies);
 
-            Assert.Single(dependencies, d => d.Name == "Complete");
-            var completeDependency = dependencies.Single(d => d.Name == "Complete");
+            Assert.Single(dependencies, d => d.Name == "ServiceBusReceiver.Complete");
+            var completeDependency = dependencies.Single(d => d.Name == "ServiceBusReceiver.Complete");
 
             var request = requests.Single();
 
@@ -187,7 +197,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 completeDependency,
                 _endpoint, 
                 _queueName, 
-                "Complete",
+                "ServiceBusReceiver.Complete",
                 nameof(ServiceBusTrigger), 
                 request.Context.Operation.Id,
                 request.Id,
@@ -195,30 +205,36 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
             // Make sure that the trigger traces are correlated
             traces = _channel.Telemetries.OfType<TraceTelemetry>().Where(t => t.Context.Operation.Id == request.Context.Operation.Id).ToList();
-            Assert.Equal(4, traces.Count());
+            Assert.Equal(9, traces.Count);
 
             foreach (var trace in traces)
             {
                 Assert.Equal(request.Context.Operation.Id, trace.Context.Operation.Id);
+
+                if (trace.Properties.TryGetValue("EventName", out string value) && value == "CompleteMessageCompleteCore")
+                {
+                    // This message is a child
+                    continue;
+                }
+
                 Assert.Equal(request.Id, trace.Context.Operation.ParentId);
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Azure SDK ID handling has changed")]
         public async Task ServiceBusRequestLegacyCompatibleParent()
         {
-            var sender = new MessageSender(_connectionString, _queueName);
+            var sender = _client.CreateSender(_queueName);
 
             var compatibleRoot = ActivityTraceId.CreateRandom().ToHexString();
             var legacyParent = $"|{compatibleRoot}.1.2.3.";
-            var message = new Message
+            var message = new ServiceBusMessage("message")
             {
-                Body = Encoding.UTF8.GetBytes("message"),
                 ContentType = "text/plain",
-                UserProperties = { ["Diagnostic-Id"] = legacyParent }
+                ApplicationProperties = { ["Diagnostic-Id"] = legacyParent }
             };
 
-            await sender.SendAsync(message);
+            await sender.SendMessageAsync(message);
 
             using (var host = ConfigureHost())
             {
@@ -239,8 +255,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             // The call to Complete the message registers as a dependency
             Assert.Single(dependencies);
 
-            Assert.Single(dependencies, d => d.Name == "Complete");
-            var completeDependency = dependencies.Single(d => d.Name == "Complete");
+            Assert.Single(dependencies, d => d.Name == "ServiceBusReceiver.Complete");
+            var completeDependency = dependencies.Single(d => d.Name == "ServiceBusReceiver.Complete");
 
             var request = requests.Single();
 
@@ -251,7 +267,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 completeDependency,
                 _endpoint,
                 _queueName,
-                "Complete",
+                "ServiceBusReceiver.Complete",
                 nameof(ServiceBusTrigger),
                 request.Context.Operation.Id,
                 request.Id,
@@ -268,20 +284,19 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Azure SDK ID handling has changed")]
         public async Task ServiceBusRequestLegacyNotCompatibleParent()
         {
-            var sender = new MessageSender(_connectionString, _queueName);
+            var sender = _client.CreateSender(_queueName);
 
             var legacyParent = "|legacyId.1.2.3.";
-            var message = new Message
+            var message = new ServiceBusMessage("message")
             {
-                Body = Encoding.UTF8.GetBytes("message"),
                 ContentType = "text/plain",
-                UserProperties = {["Diagnostic-Id"] = legacyParent}
+                ApplicationProperties = { ["Diagnostic-Id"] = legacyParent }
             };
 
-            await sender.SendAsync(message);
+            await sender.SendMessageAsync(message);
 
             using (var host = ConfigureHost())
             {
@@ -302,8 +317,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             // The call to Complete the message registers as a dependency
             Assert.Single(dependencies);
 
-            Assert.Single(dependencies, d => d.Name == "Complete");
-            var completeDependency = dependencies.Single(d => d.Name == "Complete");
+            Assert.Single(dependencies, d => d.Name == "ServiceBusReceiver.Complete");
+            var completeDependency = dependencies.Single(d => d.Name == "ServiceBusReceiver.Complete");
 
             var request = requests.Single();
 
@@ -316,7 +331,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 completeDependency,
                 _endpoint,
                 _queueName,
-                "Complete",
+                "ServiceBusReceiver.Complete",
                 nameof(ServiceBusTrigger),
                 request.Context.Operation.Id,
                 request.Id,
@@ -343,23 +358,22 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
         }
 
         public static async Task ServiceBusTrigger(
-            [ServiceBusTrigger(_queueName)] string message,
-            MessageReceiver messageReceiver,
-            string lockToken,
+            [ServiceBusTrigger(_queueName)] ServiceBusReceivedMessage message,
+            ServiceBusMessageActions messageReceiver,
             TextWriter logger)
         {
             try
             {
                 logger.WriteLine($"C# script processed queue message: '{message}'");
 
-                if (message == "throw")
+                if (message.Body.ToString() == "throw")
                 {
                     throw new InvalidOperationException("boom!");
                 }
             }
             finally
             {
-                await messageReceiver.CompleteAsync(lockToken);
+                await messageReceiver.CompleteMessageAsync(message);
                 _functionWaitHandle.Set();
             }
         }
@@ -367,13 +381,13 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
         private void ValidateServiceBusRequest(
             RequestTelemetry request,
             bool success,
-            string endpoint,
+            Uri endpoint,
             string queueName,
             string operationName,
             string operationId,
             string parentId)
         {
-            Assert.Equal($"type:Azure Service Bus | name:{queueName} | endpoint:{endpoint}/", request.Source);
+            Assert.Equal($"{endpoint.Host}/{queueName}", request.Source);
             Assert.Null(request.Url);
 
             Assert.True(request.Properties.ContainsKey(LogConstants.FunctionExecutionTimeKey));
@@ -386,7 +400,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
         private void ValidateServiceBusDependency(
             DependencyTelemetry dependency,
-            string endpoint,
+            Uri endpoint,
             string queueName,
             string name,
             string operationName,
@@ -394,7 +408,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             string parentId,
             string category)
         {
-            Assert.Equal($"{endpoint}/ | {queueName}", dependency.Target);
+            Assert.Equal($"{endpoint.Host}/{queueName}", dependency.Target);
             Assert.Equal("Azure Service Bus", dependency.Type);
             Assert.Equal(name, dependency.Name);
             Assert.True(dependency.Success);
@@ -411,7 +425,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                     {
                         // We'll complete these ourselves as we don't
                         // want failures constantly retrying.
-                        o.MessageHandlerOptions.AutoComplete = false;
+                        o.AutoCompleteMessages = false;
                     });
                 })
                 .ConfigureLogging(b =>
@@ -435,14 +449,15 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
         private async Task<int> CleanUpEntity()
         {
-            var messageReceiver = new MessageReceiver(_connectionString, _queueName, ReceiveMode.ReceiveAndDelete);
+            var messageReceiver = _client.CreateReceiver(
+                _queueName, new ServiceBusReceiverOptions { ReceiveMode = ServiceBusReceiveMode.ReceiveAndDelete });
             int count = 0;
             do
             {
-                var message = await messageReceiver.ReceiveAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
-                if (message != null)
+                var messages = await messageReceiver.ReceiveMessagesAsync(10, TimeSpan.FromSeconds(3)).ConfigureAwait(false);
+                if (messages != null && messages.Count > 0)
                 {
-                    count++;
+                    count += messages.Count;
                 }
                 else
                 {
