@@ -94,6 +94,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 .ConfigureLogging(b =>
                 {
                     b.SetMinimumLevel(minLevel);
+                    b.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.None);
                     b.AddApplicationInsightsWebJobs(o =>
                     {
                         o.InstrumentationKey = _mockApplicationInsightsKey;
