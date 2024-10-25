@@ -38,7 +38,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Xunit;
 
-namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
+namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 {
     public class ApplicationInsightsEndToEndTests : IDisposable, IClassFixture<ApplicationInsightsEndToEndTests.CustomTestWebHostFactory>
     {
