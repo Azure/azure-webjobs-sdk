@@ -86,7 +86,7 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
         /// <summary>
         /// Poll, return the ticks. 
         /// </summary>
-        /// <param name="token">cancellation token to interupt the poll. 
+        /// <param name="token">cancellation token to interrupt the poll. 
         /// Don't throw when cancelled, just return early because we still need a tick counter returned.</param>
         /// <returns>Tick counter after the poll. </returns>
         protected abstract Task<long> WaitOnPoll(CancellationToken token);        
@@ -100,7 +100,7 @@ namespace Microsoft.Azure.WebJobs.Logging.Internal
         /// <returns></returns>
         protected abstract Task WriteEntry(long ticks, int currentActive, int totalThisPeriod);
 
-        // Wrap cancellation token and task in a separate class so that StopAsync()  doesn't reccyle them. 
+        // Wrap cancellation token and task in a separate class so that StopAsync()  doesn't recycle them. 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable")]
         class Worker
         {

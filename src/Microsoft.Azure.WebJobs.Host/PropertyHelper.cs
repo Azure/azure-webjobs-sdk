@@ -444,7 +444,7 @@ namespace Microsoft.Azure.WebJobs.Host
                 // the type to see if we should include it.
                 var ignoreProperty = false;
 
-                // Walk up the hierarchy until we find the type that actally declares this
+                // Walk up the hierarchy until we find the type that actually declares this
                 // PropertyInfo.
                 var currentTypeInfo = type.GetTypeInfo();
                 var declaringTypeInfo = declaringType.GetTypeInfo();

@@ -287,7 +287,7 @@ namespace Microsoft.Azure.WebJobs.Logging
                     throw new InvalidOperationException("illegal time range");
                 }
 
-                // Shrink to phsyical. 
+                // Shrink to physical. 
                 var epochs = _tables.Keys.ToArray();
                 if (epochs.Length == 0)
                 {

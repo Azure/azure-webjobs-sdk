@@ -18,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         Unknown = 0,
 
         /// <summary>
-        /// Function has been triggered and ready to run, but is blocked on some prerequeisite. 
+        /// Function has been triggered and ready to run, but is blocked on some prerequisite. 
         /// </summary>
         Blocked,
 

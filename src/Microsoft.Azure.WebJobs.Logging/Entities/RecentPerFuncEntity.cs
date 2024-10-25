@@ -8,8 +8,8 @@ using System.Threading;
 
 namespace Microsoft.Azure.WebJobs.Logging
 {
-    // Index that provides list of recention invocations per function type.
-    // 1 entity per Intance of a function that's executed. 
+    // Index that provides list of recent invocations per function type.
+    // 1 entity per Instance of a function that's executed. 
     internal class RecentPerFuncEntity : TableEntity, IRecentFunctionEntry, IEntityWithEpoch
     {
         const string PartitionKeyFormat = TableScheme.RecentFuncIndexPK;

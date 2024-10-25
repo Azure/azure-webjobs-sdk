@@ -138,7 +138,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         // Normalize must be one-to-one to avoid collisions. 
         // Escape any non-alphanumeric characters so that we 
         //  a) have a valid rowkey name 
-        //  b) don't have characeters that conflict with separators in the row key (like '-')
+        //  b) don't have characters that conflict with separators in the row key (like '-')
         public static string NormalizeFunctionName(string functionName)
         {
             StringBuilder sb = new StringBuilder();

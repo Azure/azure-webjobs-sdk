@@ -59,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// This value is used in conjunction with <see cref="MemoryThreshold"/> to
         /// determine when memory based throttling will kick in.
         /// A value of -1 indicates that the available memory limit is unknown, and
-        /// memory based throtting will be disabled.
+        /// memory based throttling will be disabled.
         /// </summary>
         /// <remarks>
         /// When deployed to App Service, this value will be defaulted based on the SKU

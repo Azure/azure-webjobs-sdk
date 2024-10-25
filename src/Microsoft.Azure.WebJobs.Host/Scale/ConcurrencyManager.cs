@@ -176,7 +176,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                 // based on number of cores. When running in an App Service plan, all instances will have
                 // the same VM specs. When running in the Consumption plan, VMs may differ. In the latter case,
                 // if the snapshot was taken on a VM with a different core count than ours, the adjusted
-                // concurency we compute may not be optimal, but it's a starting point that we'll dynamically
+                // concurrency we compute may not be optimal, but it's a starting point that we'll dynamically
                 // adjust from as needed.
                 float concurrencyPerCore = (float)concurrency / otherCores;
                 int adjustedConcurrency = (int)(cores * concurrencyPerCore);

@@ -25,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Logging
         /// Create a new log writer. 
         /// Pass in machineName to facilitate multiple compute instances writing to the same table simultaneously without interference. 
         /// </summary>
-        /// <param name="hostName">name of host. A host is a homegenous collection of compute containers, like an Azure Website / appservice. 
+        /// <param name="hostName">name of host. A host is a homogenous collection of compute containers, like an Azure Website / appservice. 
         /// Multiple hosts can share a single set of azure tables. Logging is scoped per-host.</param>
         /// <param name="machineName">name of the compute container. Likely %COMPUTERNAME%. </param>
         /// <param name="logTableProvider">callback interface that gets invoked to get azure tables to write logging to.</param>
