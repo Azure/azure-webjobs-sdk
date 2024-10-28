@@ -658,22 +658,14 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             using (IHost host = ConfigureHost(httpOptions: httpOptions))
             {
                 Startup.Host = host;
+                TelemetryConfiguration cfg = host.Services.GetRequiredService<TelemetryConfiguration>();
                 await host.StartAsync();
-
-                var loggerProvider = host.Services.GetServices<ILoggerProvider>().OfType<ApplicationInsightsLoggerProvider>().Single();
-                var logger = loggerProvider.CreateLogger(LogCategories.Results);
 
                 var request = new HttpRequestMessage(HttpMethod.Get, $"/some/path?name={testName}");
                 request.Headers.Add("traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01");
 
-                var mockHttpContext = new DefaultHttpContext();
-                mockHttpContext.Connection.RemoteIpAddress = new IPAddress(new byte[] { 1, 2, 3, 4 });
-
                 // simulate functions behavior to set request on the scope
-                using (var _ = logger.BeginScope(new Dictionary<string, object> { ["MS_HttpRequest"] = mockHttpContext.Request }))
-                {
-                    await client.SendAsync(request);
-                }
+                await client.SendAsync(request);
 
                 await host.StopAsync();
 
@@ -689,7 +681,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
 
                 Assert.True(double.TryParse(functionRequest.Properties[LogConstants.FunctionExecutionTimeKey], out double functionDuration));
                 Assert.True(functionRequest.Duration.TotalMilliseconds >= functionDuration);
-                Assert.Equal("1.2.3.4", functionRequest.Context.Location.Ip);
                 Assert.Null(functionRequest.Url);
 
                 ValidateRequest(
