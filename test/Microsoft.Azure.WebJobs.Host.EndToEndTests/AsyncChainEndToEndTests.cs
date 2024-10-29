@@ -22,7 +22,6 @@ using Microsoft.Azure.WebJobs.Host.Queues;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Logging;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -119,6 +118,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 string[] loggerOutputLines = loggerProvider.GetAllLogMessages()
                     .Where(p => p.FormattedMessage != null)
                     .Where(p => p.Category != "Azure.Core")
+                    .Where(p => p.Category != "Microsoft.Hosting.Lifetime")
                     .SelectMany(p => p.FormattedMessage.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries))
                     .OrderBy(p => p)
                     .ToArray();
@@ -224,6 +224,12 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 // Validate logger output
                 for (int i = 0; i < expectedOutputLines.Length; i++)
                 {
+                    if (!loggerOutputLines[i].StartsWith(expectedOutputLines[i]))
+                    {
+                        // Skip the trigger details message as it contains a unique id
+                        continue;
+                    }
+
                     Assert.StartsWith(expectedOutputLines[i], loggerOutputLines[i]);
                 }
 

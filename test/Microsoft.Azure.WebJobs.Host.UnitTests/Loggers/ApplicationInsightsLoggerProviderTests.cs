@@ -94,7 +94,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 mockListener.Setup(listener =>
                     listener.IsEnabled(DiagnosticSourceName)).Returns(true);
                 mockListener.Setup(listener =>
-                    listener.Write(DiagnosticSourceName, It.IsAny<string>()));
+                    listener.Write(DiagnosticSourceName, (object)It.IsAny<string>()));
             }
 
             var client = InitializeTestTelemetryClient(mockChannel);
@@ -110,7 +110,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             {
                 // There should only be one check for each diagnostic log emitted
                 mockListener.Verify(listener => listener.IsEnabled(DiagnosticSourceName), Times.Once);
-                mockListener.Verify(listener => listener.Write(DiagnosticSourceName, expectedDiagnosticLog), Times.Once);
+                mockListener.Verify(listener => listener.Write(DiagnosticSourceName, (object)expectedDiagnosticLog), Times.Once);
             }
         }
     }

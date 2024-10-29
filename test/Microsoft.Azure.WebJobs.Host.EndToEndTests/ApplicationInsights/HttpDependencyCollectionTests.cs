@@ -210,7 +210,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             }
 
             Assert.Single(_channel.Telemetries.OfType<RequestTelemetry>());
-            Assert.Single(_channel.Telemetries.OfType<DependencyTelemetry>());
+            Assert.Equal(3, _channel.Telemetries.OfType<DependencyTelemetry>().Count()); // 3 due to HTTP redirects
         }
 
         // TODO: Analyze Track2 changes for differences in this test from Track1
