@@ -10,13 +10,6 @@
     <Description>This package adds Application Insights based logging capabilities to the WebJobs SDK. For more information, please visit https://go.microsoft.com/fwlink/?linkid=2279708.</Description>
     <AssemblyName>Microsoft.Azure.WebJobs.Logging.ApplicationInsights</AssemblyName>
     <RootNamespace>Microsoft.Azure.WebJobs.Logging.ApplicationInsights</RootNamespace>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <WarningsAsErrors />
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
@@ -31,30 +24,30 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!--
+    Explicitly referencing a package rather than using a project reference to allow us to release this package 
+    without all of the others in this solution. If changes to WebJobs.Host are needed here, re-introduce the
+    project reference.
+    -->
+    <PackageReference Include="Microsoft.Azure.WebJobs" Version="3.0.39" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.11.4" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.22.0" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.21.0" />
     <PackageReference Include="Microsoft.ApplicationInsights.PerfCounterCollector" Version="2.21.0" />
     <PackageReference Include="Microsoft.ApplicationInsights.SnapshotCollector" Version="1.4.4" />
     <PackageReference Include="Microsoft.ApplicationInsights.WindowsServer" Version="2.21.0" />
     <PackageReference Include="Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel" Version="2.21.0" />
-    <PackageReference Include="StyleCop.Analyzers" Version="1.1.0-beta004">
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.22.0" />
     <PackageReference Include="Microsoft.ApplicationInsights.DependencyCollector" Version="2.21.0" />
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.1.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" Version="2.1.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.1.1" />
     <PackageReference Include="System.Diagnostics.TraceSource" Version="4.3.0" />
     <PackageReference Include="System.Threading" Version="4.3.0" />
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" Version="2.1.1" />
-
-    <!-- 
-    Explicitly referencing a package rather than using a project reference to allow us to release this package 
-    without all of the others in this solution. If changes to WebJobs.Host are needed here, re-introduce the
-    project reference. 
-    -->
-    <PackageReference Include="Microsoft.Azure.WebJobs" Version="3.0.39" />
+    <PackageReference Include="StyleCop.Analyzers" Version="1.1.0-beta004" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>
