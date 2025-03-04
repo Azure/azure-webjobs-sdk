@@ -14,7 +14,7 @@ pipelines:
         credscan:
           lastModifiedDate: 2025-01-28
         binskim:
-          lastModifiedDate: 2025-01-28
+          lastModifiedDate: 2025-03-04
   857:
     usedNonDefaultBranch: true
     retail:
