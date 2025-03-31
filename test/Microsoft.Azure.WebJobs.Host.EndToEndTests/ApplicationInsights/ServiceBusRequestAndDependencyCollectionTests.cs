@@ -46,7 +46,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             _client = new ServiceBusClient(_connectionString);
         }
 
-        [Theory]
+        [Theory(Skip = "Authentication blocked by policy")]
         [InlineData("message", true)]
         [InlineData("throw", false)]
         public async Task ServiceBusDependenciesAndRequestAreTracked(string message, bool success)
@@ -91,10 +91,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             ValidateServiceBusDependency(
                 sbOutDependency,
                 _endpoint,
-                _queueName, 
+                _queueName,
                 "ServiceBusSender.Send",
                 nameof(ServiceBusOut),
-                operationId, 
+                operationId,
                 manualCallRequest.Id,
                 LogCategories.Bindings);
 
@@ -109,7 +109,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 LogCategories.CreateFunctionCategory(nameof(ServiceBusTrigger)));
 
             var allFunctionTraces = traces.Where(t => t.Context.Operation.Id == sbTriggerRequest.Context.Operation.Id).ToList();
-            var manualFunctionTraces = traces.Where(t => t.Context.Operation.Id == sbTriggerRequest.Context.Operation.Id && 
+            var manualFunctionTraces = traces.Where(t => t.Context.Operation.Id == sbTriggerRequest.Context.Operation.Id &&
                                                          t.Context.Operation.ParentId == manualCallRequest.Id).ToList();
 
             var triggerFunctionTraces = traces.Where(t => t.Context.Operation.Id == sbTriggerRequest.Context.Operation.Id &&
@@ -123,7 +123,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.Equal(success ? 8 : 9, triggerFunctionTraces.Count);
         }
 
-        [Fact]
+        [Fact(Skip = "Authentication blocked by policy")]
         public async Task ServiceBusRequestMultiHost()
         {
             var sender = _client.CreateSender(_queueName);
@@ -156,7 +156,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             Assert.Equal(16, traces.Count);
         }
 
-        [Fact]
+        [Fact(Skip = "Authentication blocked by policy")]
         public async Task ServiceBusRequestWithoutParent()
         {
             var sender = _client.CreateSender(_queueName);
@@ -195,10 +195,10 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
             ValidateServiceBusRequest(request, true, _endpoint, _queueName, nameof(ServiceBusTrigger), null, null);
             ValidateServiceBusDependency(
                 completeDependency,
-                _endpoint, 
-                _queueName, 
+                _endpoint,
+                _queueName,
                 "ServiceBusReceiver.Complete",
-                nameof(ServiceBusTrigger), 
+                nameof(ServiceBusTrigger),
                 request.Context.Operation.Id,
                 request.Id,
                 LogCategories.CreateFunctionCategory(nameof(ServiceBusTrigger)));
