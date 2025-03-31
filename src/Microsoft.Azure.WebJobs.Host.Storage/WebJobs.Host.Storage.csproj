@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\build\common.props" />
 
   <PropertyGroup>
     <Version>$(HostStorageVersion)</Version>
@@ -9,9 +8,6 @@
     <PackageId>Microsoft.Azure.WebJobs.Host.Storage</PackageId>
     <Description>This package contains Azure Storage based implementations of some WebJobs SDK component interfaces. For more information, please visit https://go.microsoft.com/fwlink/?linkid=2279708.</Description>
     <AssemblyName>Microsoft.Azure.WebJobs.Host.Storage</AssemblyName>
-    <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <WarningsAsErrors />
   </PropertyGroup>
 
   <ItemGroup>
