@@ -1,0 +1,4 @@
+{
+    "sarif-viewer.connectToGithubCodeScanning": "off",
+    "dotnet.defaultSolution": "WebJobs.sln"
+}

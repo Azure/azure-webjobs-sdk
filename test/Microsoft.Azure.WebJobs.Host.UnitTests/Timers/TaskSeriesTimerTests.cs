@@ -290,7 +290,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
         }
 
         [Fact]
-        public void StopAsync_TriggersCommandCancellationToken()
+        public async Task StopAsync_TriggersCommandCancellationToken()
         {
             // Arrange
             using (EventWaitHandle executeStarted = new ManualResetEvent(initialState: false))
@@ -318,7 +318,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
 
                     // Assert
                     Assert.NotNull(task);
-                    task.GetAwaiter().GetResult();
+                    await task;
                     Assert.True(executeFinished.WaitOne(1000)); // Guard
                     Assert.True(cancellationTokenSignalled);
                 }
@@ -326,7 +326,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
         }
 
         [Fact]
-        public void StopAsync_WaitsForExecuteToFinishToCompleteTask()
+        public async Task StopAsync_WaitsForExecuteToFinishToCompleteTask()
         {
             // Arrange
             bool executeFinished = false;
@@ -357,7 +357,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
 
                     // Assert
                     Assert.NotNull(task);
-                    task.GetAwaiter().GetResult();
+                    await task;
                     Assert.True(executeFinished);
                 }
             }
@@ -452,7 +452,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
         }
 
         [Fact]
-        public void StopAsync_TriggersNotExecutingAgain()
+        public async Task StopAsync_TriggersNotExecutingAgain()
         {
             // Arrange
             using (EventWaitHandle executedOnceWaitHandle = new ManualResetEvent(initialState: false))
@@ -488,14 +488,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
                     // Assert
                     Assert.True(executed); // Guard
                     Assert.NotNull(stop);
-                    stop.GetAwaiter().GetResult();
+                    await stop;
                     Assert.False(executedTwice);
                 }
             }
         }
 
         [Fact]
-        public void StopAsync_WaitsForTaskCompletionToCompleteTask()
+        public async Task StopAsync_WaitsForTaskCompletionToCompleteTask()
         {
             // Arrange
             bool executedOnce = false;
@@ -532,14 +532,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
 
                     // Assert
                     Assert.NotNull(stopTask);
-                    stopTask.GetAwaiter().GetResult();
+                    await stopTask;
                     Assert.True(taskCompleted);
                 }
             }
         }
 
         [Fact]
-        public void StopAsync_WhenExecuteTaskCompletesCanceled_DoesNotThrowOrFault()
+        public async Task StopAsync_WhenExecuteTaskCompletesCanceled_DoesNotThrowOrFault()
         {
             // Arrange
             bool executedOnce = false;
@@ -575,13 +575,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
 
                     // Assert
                     Assert.NotNull(task);
-                    task.GetAwaiter().GetResult();
+                    await task;
                 }
             }
         }
 
         [Fact]
-        public void StopAsync_WhenExecuteTaskCompletesFaulted_DoesNotThrowOrFault()
+        public async Task StopAsync_WhenExecuteTaskCompletesFaulted_DoesNotThrowOrFault()
         {
             // Arrange
             bool executedOnce = false;
@@ -618,7 +618,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
 
                     // Assert
                     Assert.NotNull(task);
-                    task.GetAwaiter().GetResult();
+                    await task;
                 }
             }
         }
@@ -654,7 +654,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
         }
 
         [Fact]
-        public void StopAsync_IfAlreadyStopped_Throws()
+        public async Task StopAsync_IfAlreadyStopped_Throws()
         {
             // Arrange
             ITaskSeriesCommand command = CreateStubCommand(TimeSpan.Zero);
@@ -662,7 +662,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
             using (ITaskSeriesTimer product = CreateProductUnderTest(command))
             {
                 product.Start();
-                product.StopAsync(CancellationToken.None).GetAwaiter().GetResult();
+                await product.StopAsync(CancellationToken.None);
 
                 CancellationToken cancellationToken = CancellationToken.None;
 
@@ -673,7 +673,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
         }
 
         [Fact]
-        public void Cancel_TriggersCommandCancellationToken()
+        public async Task Cancel_TriggersCommandCancellationToken()
         {
             // Arrange
             using (EventWaitHandle executeStarted = new ManualResetEvent(initialState: false))
@@ -702,7 +702,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
                     Assert.True(cancellationTokenSignalled);
 
                     // Cleanup
-                    product.StopAsync(CancellationToken.None).GetAwaiter().GetResult();
+                    await product.StopAsync(CancellationToken.None);
                 }
             }
         }
@@ -743,13 +743,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
         }
 
         [Fact]
-        public void Dispose_IfStopped_DoesNotThrow()
+        public async Task Dispose_IfStopped_DoesNotThrow()
         {
             // Arrange
             ITaskSeriesCommand command = CreateStubCommand(TimeSpan.Zero);
             ITaskSeriesTimer product = CreateProductUnderTest(command);
             product.Start();
-            product.StopAsync(CancellationToken.None).GetAwaiter().GetResult();
+            await product.StopAsync(CancellationToken.None);
 
             // Act & Assert
             ExceptionAssert.DoesNotThrow(() => product.Dispose());

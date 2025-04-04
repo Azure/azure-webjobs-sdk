@@ -91,7 +91,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
                 Assert.Equal("456", config["def"]);
 
                 var messages = provider.GetAllLogMessages();
-                Assert.Single(messages.Where(m => m.FormattedMessage.Contains(nameof(MemoryConfigurationSource))));
+                Assert.Single(messages, m => m.FormattedMessage.Contains(nameof(MemoryConfigurationSource)));
             }
         }
 

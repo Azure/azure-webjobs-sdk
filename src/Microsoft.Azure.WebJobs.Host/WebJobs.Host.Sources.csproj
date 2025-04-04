@@ -15,10 +15,6 @@
     <NoBuild>true</NoBuild>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Content Include="README.md" Pack="true" PackagePath="/" />
-  </ItemGroup>
 	
   <ItemGroup>
     <Compile Update="Converters\AsyncConverter.cs">

@@ -101,7 +101,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
                 Assert.NotNull(loggingService);
 
                 var messages = provider.GetAllLogMessages();
-                Assert.NotEmpty(messages.Where(m => m.FormattedMessage.Contains("ITestLoggingService")));
+                Assert.Contains(messages, m => m.FormattedMessage.Contains("ITestLoggingService"));
             }
         }
 
@@ -125,8 +125,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             Assert.NotNull(host.Services.GetService<TestExternalServiceWithConfig>());
 
             var messages = provider.GetAllLogMessages();
-            Assert.NotEmpty(messages.Where(m => m.FormattedMessage.Contains("TestExternalService:")));
-            Assert.NotEmpty(messages.Where(m => m.FormattedMessage.Contains("TestExternalServiceWithConfig:")));
+            Assert.Contains(messages, m => m.FormattedMessage.Contains("TestExternalService:"));
+            Assert.Contains(messages, m => m.FormattedMessage.Contains("TestExternalServiceWithConfig:"));
         }
 
         [Fact]

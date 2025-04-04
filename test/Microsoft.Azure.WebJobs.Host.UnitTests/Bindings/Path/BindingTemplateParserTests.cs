@@ -27,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Path
         {
             var tokens = BindingTemplateParser.ParseTemplate("path-with-no-parameters");
 
-            Assert.Equal(1, tokens.Count);
+            Assert.Single(tokens);
             Assert.Equal("path-with-no-parameters", tokens[0].AsLiteral);
         }
 

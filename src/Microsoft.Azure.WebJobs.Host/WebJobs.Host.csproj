@@ -95,9 +95,5 @@
       <LastGenOutput>Resource.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="README.md" Pack="true" PackagePath="/" />
-  </ItemGroup>
 	
 </Project>

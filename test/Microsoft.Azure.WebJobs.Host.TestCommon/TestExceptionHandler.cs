@@ -25,13 +25,13 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
 
         public Task OnTimeoutExceptionAsync(ExceptionDispatchInfo exceptionInfo, TimeSpan timeoutGracePeriod)
         {
-            Assert.True(false, $"Timeout exception in test exception handler: {exceptionInfo.SourceException}");
+            Assert.Fail($"Timeout exception in test exception handler: {exceptionInfo.SourceException}");
             return Task.CompletedTask;
         }
 
         public Task OnUnhandledExceptionAsync(ExceptionDispatchInfo exceptionInfo)
         {
-            Assert.True(false, $"Error in test exception handler: {exceptionInfo.SourceException}");
+            Assert.Fail($"Error in test exception handler: {exceptionInfo.SourceException}");
             return Task.CompletedTask;
         }
     }

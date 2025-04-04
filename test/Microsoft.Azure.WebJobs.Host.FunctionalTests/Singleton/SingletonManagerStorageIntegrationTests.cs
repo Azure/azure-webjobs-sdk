@@ -114,7 +114,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             await foreach (var _ in _testContainerClient.GetBlobsAsync())
             {
-                Assert.False(true, "Blob already exists. This shouldn't happen.");
+                Assert.Fail("Blob already exists. This shouldn't happen.");
             }
 
             SingletonAttribute attribute = new SingletonAttribute();
@@ -264,14 +264,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
                 Assert.Null(lockHandle);
             });
 
-            if (task.Wait(1500))
-            {
-                await task;
-            }
-            else
-            {
-                throw new TimeoutException("Test ran too long. The SingletonManager is likely retrying to get lease");
-            }
+            await task.WaitAsync(TimeSpan.FromMilliseconds(1500));
         }
 
         [Fact]

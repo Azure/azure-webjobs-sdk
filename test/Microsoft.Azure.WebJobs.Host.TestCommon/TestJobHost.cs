@@ -72,7 +72,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                 Assert.True(e.InnerException.Message.Contains(expectedErrorMessage));
                 return;
             }
-            Assert.True(false, "Invoker should have failed");
+            Assert.Fail("Invoker should have failed");
         }
     }
 

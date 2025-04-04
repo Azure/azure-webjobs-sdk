@@ -151,7 +151,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
                 // Replace (and cleanup) the exsiting runner to hook StopAsync.
                 IListener oldListener = host.Listener;
-                oldListener.StopAsync(CancellationToken.None).GetAwaiter().GetResult();
+                await oldListener.StopAsync(CancellationToken.None);
 
                 TaskCompletionSource<object> stopTaskSource = new TaskCompletionSource<object>();
                 Mock<IListener> listenerMock = new Mock<IListener>(MockBehavior.Strict);
@@ -167,7 +167,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
                 // Cleanup
                 stopTaskSource.SetResult(null);
-                stopping.GetAwaiter().GetResult();
+                await stopping;
             }
         }
 
@@ -182,7 +182,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 await host.StartAsync();
 
                 // Act & Assert
-                host.StopAsync().GetAwaiter().GetResult();
+                await host.StopAsync();
             }
         }
 
@@ -244,7 +244,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
                 // Cleanup
                 createTaskSource.SetResult(new JobHostContext(null, null, new Mock<IListener>().Object, null, null));
-                starting.GetAwaiter().GetResult();
+                await starting;
             }
         }
 
@@ -260,7 +260,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
                 // Replace (and cleanup) the existing listener to hook StopAsync.
                 IListener oldListener = host.Listener;
-                oldListener.StopAsync(CancellationToken.None).GetAwaiter().GetResult();
+                await oldListener.StopAsync(CancellationToken.None);
 
                 TaskCompletionSource<object> stopTaskSource = new TaskCompletionSource<object>();
                 Mock<IListener> listenerMock = new Mock<IListener>(MockBehavior.Strict);
@@ -276,7 +276,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
                 // Cleanup
                 stopTaskSource.SetResult(null);
-                stopping.GetAwaiter().GetResult();
+                await stopping;
             }
         }
 
@@ -292,7 +292,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
                 // Replace (and cleanup) the existing listener to hook StopAsync.
                 IListener oldRunner = host.Listener;
-                oldRunner.StopAsync(CancellationToken.None).GetAwaiter().GetResult();
+                await oldRunner.StopAsync(CancellationToken.None);
 
                 TaskCompletionSource<object> stopTaskSource = new TaskCompletionSource<object>();
                 Mock<IListener> listenerMock = new Mock<IListener>(MockBehavior.Strict);
@@ -309,8 +309,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
                 // Cleanup
                 stopTaskSource.SetResult(null);
-                alreadyStopping.GetAwaiter().GetResult();
-                stoppingAgain.GetAwaiter().GetResult();
+                await alreadyStopping;
+                await stoppingAgain;
             }
         }
 
@@ -410,7 +410,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 ProgramWithCancellationToken.CancellationTokenSource = source;
 
                 // Act
-                host.CallAsync("BindCancellationToken", null, source.Token).GetAwaiter().GetResult();
+                host.CallAsync("BindCancellationToken", null, source.Token);
 
                 // Assert
                 Assert.True(ProgramWithCancellationToken.IsCancellationRequested);

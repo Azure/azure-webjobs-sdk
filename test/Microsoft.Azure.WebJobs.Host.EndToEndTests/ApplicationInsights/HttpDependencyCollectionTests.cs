@@ -107,7 +107,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                     request.Context.Operation.Id,
                     inputDep.Context.Operation.ParentId); // ParentId won't be the parentId of the RequestTelemetry since it is Dependency Tree
 
-                // Check that the ParentId for inputDep can be traced back to RequestTelemtry
+                // Check that the ParentId for inputDep can be traced back to RequestTelemetry
                 Assert.Contains(leafDependencies, d => d.Id == inputDep.Id);
             }
 
@@ -121,7 +121,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                     request.Context.Operation.Id,
                     outputDep.Context.Operation.ParentId); // ParentId won't be the parentId of the RequestTelemetry since it is Dependency Tree
 
-                // Check that the ParentId for outputDep can be traced back to RequestTelemtry
+                // Check that the ParentId for outputDep can be traced back to RequestTelemetry
                 Assert.Contains(leafDependencies, d => d.Id == outputDep.Id);
             }
 
@@ -228,7 +228,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 var containerClient = _blobServiceClient.GetBlobContainerClient(_triggerContainerName);
                 await containerClient.CreateIfNotExistsAsync();
                 var blobClient = containerClient.GetBlobClient("triggerBlob");
-                blobClient.UploadTextAsync("TestData", overwrite: true).Wait();
+                await blobClient.UploadTextAsync("TestData", overwrite: true);
 
                 _functionWaitHandle.WaitOne();
                 // let host run for a while to write output queue message
@@ -269,7 +269,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                     request.Context.Operation.Id,
                     inputDep.Context.Operation.ParentId); // ParentId won't be the parentId of the RequestTelemetry since it is Dependency Tree
 
-                // Check that the ParentId for outputDep can be traced back to RequestTelemtry
+                // Check that the ParentId for outputDep can be traced back to RequestTelemetry
                 Assert.Contains(leafDependencies, d => d.Id == inputDep.Id);
             }
 
@@ -280,7 +280,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 request.Context.Operation.Id,
                 queueDependencies.First().Context.Operation.ParentId); // ParentId won't be the parentId of the RequestTelemetry since it is Dependency Tree
 
-            // Check that the ParentId for outputDep can be traced back to RequestTelemtry
+            // Check that the ParentId for outputDep can be traced back to RequestTelemetry
             Assert.Contains(leafDependencies, d => d.Id == queueDependencies.First().Id);
         }
 
@@ -332,7 +332,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                     request.Context.Operation.Id,
                     outputDep.Context.Operation.ParentId); // ParentId won't be the parentId of the RequestTelemetry since it is Dependency Tree
 
-                // Check that the ParentId for outputDep can be traced back to RequestTelemtry
+                // Check that the ParentId for outputDep can be traced back to RequestTelemetry
                 Assert.Contains(leafDependencies, d => d.Id == outputDep.Id);
             }
         }
@@ -443,8 +443,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 })
                 .Build();
 
-            TelemetryConfiguration telemteryConfiguration = host.Services.GetService<TelemetryConfiguration>();
-            telemteryConfiguration.TelemetryChannel = _channel;
+            TelemetryConfiguration telemetryConfiguration = host.Services.GetService<TelemetryConfiguration>();
+            telemetryConfiguration.TelemetryChannel = _channel;
 
             var configuration = host.Services.GetService<IConfiguration>();
 

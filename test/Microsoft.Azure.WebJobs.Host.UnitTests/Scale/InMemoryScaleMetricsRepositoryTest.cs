@@ -86,7 +86,7 @@ namespace ScaleController.Tests
             // if no monitors are presented result will be empty
             monitors = new IScaleMonitor[0];
             result = await _repository.ReadMetricsAsync(monitors);
-            Assert.Equal(0, result.Count);
+            Assert.Empty(result);
         }
 
         [Fact]
@@ -96,7 +96,7 @@ namespace ScaleController.Tests
             var monitors = new IScaleMonitor[] { monitor1 };
 
             var result = await _repository.ReadMetricsAsync(monitors);
-            Assert.Equal(1, result.Count);
+            Assert.Single(result);
             Assert.Empty(result[monitor1]);
         }
 
@@ -107,7 +107,7 @@ namespace ScaleController.Tests
             var monitors = new IScaleMonitor[] { monitor1 };
 
             var result = await _repository.ReadMetricsAsync(monitors);
-            Assert.Equal(1, result.Count);
+            Assert.Single(result);
             Assert.Empty(result[monitor1]);
 
             var log = _loggerProvider.GetAllLogMessages().Single();

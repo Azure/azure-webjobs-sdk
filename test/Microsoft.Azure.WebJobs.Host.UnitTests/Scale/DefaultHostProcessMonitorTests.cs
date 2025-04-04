@@ -396,7 +396,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             localProcessMonitor.GetStatus(_logger);
             logs = _loggerProvider.GetAllLogMessages().ToArray();
             Assert.Equal(2 + numChildProcesses - 1, logs.Length);
-            Assert.Empty(logs.Where(p => p.FormattedMessage.Contains($"[HostMonitor] Host process CPU stats (PID {killedProcess.Id})")));
+            Assert.DoesNotContain(logs, p => p.FormattedMessage.Contains($"[HostMonitor] Host process CPU stats (PID {killedProcess.Id})"));
         }
 
         [Fact]

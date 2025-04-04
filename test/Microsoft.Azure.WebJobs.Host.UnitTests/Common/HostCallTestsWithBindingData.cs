@@ -91,7 +91,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 Assert.Equal(msg2, e.InnerException.InnerException.Message);
                 return;
             }
-            Assert.True(false, "Invoker should have failed");
+            Assert.Fail("Invoker should have failed");
         }
 
         public class FunctionBase

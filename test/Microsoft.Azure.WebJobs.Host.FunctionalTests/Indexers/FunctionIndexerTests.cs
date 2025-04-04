@@ -26,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
     public class FunctionIndexerTests
     {
         [Fact]
-        public void IndexMethod_Throws_IfMethodHasUnboundOutParameterWithJobsAttribute()
+        public async Task IndexMethod_Throws_IfMethodHasUnboundOutParameterWithJobsAttribute()
         {
             // Arrange
             Mock<IFunctionIndexCollector> indexMock = new Mock<IFunctionIndexCollector>(MockBehavior.Strict);
@@ -38,9 +38,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
             FunctionIndexer product = CreateProductUnderTest();
 
             // Act & Assert
-            FunctionIndexingException exception = Assert.Throws<FunctionIndexingException>(
+            FunctionIndexingException exception = await Assert.ThrowsAsync<FunctionIndexingException>(
                 () => product.IndexMethodAsync(typeof(FunctionIndexerTests).GetMethod("FailIndexing"), index,
-                    CancellationToken.None).GetAwaiter().GetResult());
+                    CancellationToken.None));
             InvalidOperationException innerException = exception.InnerException as InvalidOperationException;
             Assert.NotNull(innerException);
             Assert.Equal($"Cannot bind parameter 'parsed' to type Foo&. Make sure the parameter Type is supported by the binding. {Resource.ExtensionInitializationMessage}", innerException.Message);
@@ -76,14 +76,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         [InlineData("MethodWithUnboundOutParameterAndNoJobAttribute")]
         [InlineData("MethodWithGenericParameter")]
         [InlineData("MethodWithNoParameters")]
-        public void IndexMethod_IgnoresMethod_IfNonJobMethod(string method)
+        public async Task IndexMethod_IgnoresMethod_IfNonJobMethod(string method)
         {
             // Arrange
             Mock<IFunctionIndexCollector> indexMock = new Mock<IFunctionIndexCollector>();
             FunctionIndexer product = CreateProductUnderTest();
 
             // Act
-            product.IndexMethodAsync(typeof(FunctionIndexerTests).GetMethod(method), indexMock.Object, CancellationToken.None).GetAwaiter().GetResult();
+            await product.IndexMethodAsync(typeof(FunctionIndexerTests).GetMethod(method), indexMock.Object, CancellationToken.None);
 
             // Verify
             indexMock.Verify(i => i.Add(It.IsAny<IFunctionDefinition>(), It.IsAny<FunctionDescriptor>(), It.IsAny<MethodInfo>()), Times.Never);
@@ -120,15 +120,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         }
 
         [Fact]
-        public void GetFunctionCustomRetry_ReturnsExpected()
+        public async Task GetFunctionCustomRetry_ReturnsExpected()
         {
             // Arrange
             var collector = new TestIndexCollector();
             FunctionIndexer product = CreateProductUnderTest();
 
             // Act & Assert
-            product.IndexMethodAsync(typeof(FunctionIndexerTests).GetMethod("CustomRetry_Test"),
-                collector, CancellationToken.None).GetAwaiter().GetResult();
+            await product.IndexMethodAsync(typeof(FunctionIndexerTests).GetMethod("CustomRetry_Test"),
+                collector, CancellationToken.None);
             var retryStrategy = collector.Functions.First().RetryStrategy;
             Assert.Equal(40, retryStrategy.MaxRetryCount);
             var nextDelay = retryStrategy.GetNextDelay(new RetryContext());
@@ -170,27 +170,27 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Indexers
         }
 
         [Fact]
-        public void IndexMethod_IfMethodReturnsVoid_DoesNotThrow()
+        public async Task IndexMethod_IfMethodReturnsVoid_DoesNotThrow()
         {
             // Arrange
             IFunctionIndexCollector index = CreateStubFunctionIndex();
             FunctionIndexer product = CreateProductUnderTest();
 
             // Act & Assert
-            product.IndexMethodAsync(typeof(FunctionIndexerTests).GetMethod("ReturnVoid"),
-                index, CancellationToken.None).GetAwaiter().GetResult();
+            await product.IndexMethodAsync(typeof(FunctionIndexerTests).GetMethod("ReturnVoid"),
+                index, CancellationToken.None);
         }
 
         [Fact]
-        public void IndexMethod_IfMethodReturnsTask_DoesNotThrow()
+        public async Task IndexMethod_IfMethodReturnsTask_DoesNotThrow()
         {
             // Arrange
             IFunctionIndexCollector index = CreateStubFunctionIndex();
             FunctionIndexer product = CreateProductUnderTest();
 
             // Act & Assert
-            product.IndexMethodAsync(typeof(FunctionIndexerTests).GetMethod("ReturnTask"),
-                index, CancellationToken.None).GetAwaiter().GetResult();
+            await product.IndexMethodAsync(typeof(FunctionIndexerTests).GetMethod("ReturnTask"),
+                index, CancellationToken.None);
         }
 
         [Fact]

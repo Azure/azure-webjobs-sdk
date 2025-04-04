@@ -372,12 +372,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
                 );
             Assert.Equal(monitors1.Count(), 0);
             Assert.Equal(scalers1.Count(), 2);
-            AggregateScaleStatus resutl1 = await scaleManager.GetScaleStatusAsync(context); // Col2
+            AggregateScaleStatus result1 = await scaleManager.GetScaleStatusAsync(context); // Col2
 
-            Assert.Equal(resutl1.TargetWorkerCount, 1);
-            Assert.Equal(resutl1.Vote, ScaleVote.None);
+            Assert.Equal(result1.TargetWorkerCount, 1);
+            Assert.Equal(result1.Vote, ScaleVote.None);
             var logs = _loggerProvider.GetAllLogMessages().Select(x => x.FormattedMessage).ToArray();
-            Assert.Single(logs.Where(x => x == "Unable to use target based scaling for Function 'function1'. Metrics monitoring will be used."));
+            Assert.Single(logs, x => x == "Unable to use target based scaling for Function 'function1'. Metrics monitoring will be used.");
             _loggerProvider.ClearAllLogMessages();
 
             var (monitors2, scalers2) = ScaleManager.GetScalersToSample(
@@ -388,11 +388,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
                 );
             Assert.Equal(monitors2.Count(), 1);
             Assert.Equal(scalers2.Count(), 1);
-            AggregateScaleStatus resutl2 = await scaleManager.GetScaleStatusAsync(context);
-            Assert.Equal(resutl2.TargetWorkerCount, null);
-            Assert.Equal(resutl2.Vote, ScaleVote.ScaleIn);
+            AggregateScaleStatus result2 = await scaleManager.GetScaleStatusAsync(context);
+            Assert.Equal(result2.TargetWorkerCount, null);
+            Assert.Equal(result2.Vote, ScaleVote.ScaleIn);
             logs = _loggerProvider.GetAllLogMessages().Select(x => x.FormattedMessage).ToArray();
-            Assert.Empty(logs.Where(x => x == "Unable to use target based scaling for Function 'function1'. Metrics monitoring will be used."));
+            Assert.DoesNotContain(logs, x => x == "Unable to use target based scaling for Function 'function1'. Metrics monitoring will be used.");
         }
     }
 }

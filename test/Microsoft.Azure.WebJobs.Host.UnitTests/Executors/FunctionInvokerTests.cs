@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
     public class FunctionInvokerTests
     {
         [Fact]
-        public void InvokeAsync_DelegatesToInstanceFactoryAndMethodInvoker()
+        public async Task InvokeAsync_DelegatesToInstanceFactoryAndMethodInvoker()
         {
             // Arrange
             object expectedInstance = new object();
@@ -38,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             // Act
             var instance = product.CreateInstance(functionInstance);
-            product.InvokeAsync(instance, expectedArguments).GetAwaiter().GetResult();
+            await product.InvokeAsync(instance, expectedArguments);
 
             // Assert
             instanceFactoryMock.VerifyAll();
@@ -66,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         }
 
         [Fact]
-        public void InvokeAsync_IfInstanceIsDisposable_DoesNotDisposeWhileTaskIsRunning2()
+        public async Task InvokeAsync_IfInstanceIsDisposable_DoesNotDisposeWhileTaskIsRunning2()
         {
             var prog = new MyProg();
             var tsc = new TaskCompletionSource<object>();
@@ -83,8 +83,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             Assert.False(prog._disposed, "User job should not yet be disposed.");
             tsc.SetResult(true); // This will let method run to completion and call dispose. 
 
-            task.Wait(3000);
-            Assert.True(task.IsCompleted);
+            await tsc.Task;
+            await task;
             Assert.True(prog._disposed, "User job should be disposed.");
         }
 

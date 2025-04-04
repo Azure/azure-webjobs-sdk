@@ -144,7 +144,8 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                 Assert.StartsWith(expectedErrorMessage, e.InnerException.Message);
                 return;
             }
-            Assert.True(false, "Invoker should have failed");
+
+            Assert.Fail("Invoker should have failed");
         }
         public static IHostBuilder ConfigureDefaultTestHost(this IHostBuilder builder, params Type[] types)
         {
@@ -320,7 +321,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                     newlyIntroducedPublicTypes.Length,
                     newlyIntroducedPublicTypes.Length == 1 ? "" : "s",
                     string.Join("\r\n", newlyIntroducedPublicTypes));
-                Assert.True(false, message);
+                Assert.Fail(message);
             }
 
             var missingPublicTypes = expected.Except(actual).ToArray();
@@ -331,7 +332,7 @@ namespace Microsoft.Azure.WebJobs.Host.TestCommon
                     missingPublicTypes.Length,
                     missingPublicTypes.Length == 1 ? "" : "s",
                     string.Join("\r\n", missingPublicTypes));
-                Assert.True(false, message);
+                Assert.Fail(message);
             }
         }
 

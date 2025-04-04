@@ -519,7 +519,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests.ApplicationInsights
                 OperationTelemetry[] telemetries = _channel.Telemetries.OfType<OperationTelemetry>().ToArray();
                 Assert.Equal(2, telemetries.Length);
 
-                Assert.Single(telemetries.Where(t => t.Name == "custom"));
+                Assert.Single(telemetries, t => t.Name == "custom");
                 if (useCustomOperationId)
                 {
                     Assert.Equal(customOperationId, telemetries.Single(t => t.Name == "custom").Context.Operation.Id);

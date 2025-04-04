@@ -1,3 +1,3 @@
 <Project>
-  <Import Project="$(EngBuildRoot)RepositoryInfo.targets" />
+  <Import Project="$(EngBuildRoot)Engineering.targets" />
 </Project>

@@ -27,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             var acs = Environment.GetEnvironmentVariable("AzureWebJobsStorage");
             if (acs == null)
             {
-                Assert.False(true, "Missing AzureWebJobsStorage setting");
+                Assert.Fail("Missing AzureWebJobsStorage setting");
             }
 
             // Create a real Blob Container Sas URI
