@@ -1,13 +1,9 @@
 # This build is used for public PR and CI builds.
-
 trigger:
   batch: true
   branches:
     include:
     - dev
-  tags:
-    include:
-    - 'v*'
 
 schedules:
 # Ensure we build nightly to catch any new CVEs and report SDL often.
@@ -16,12 +12,14 @@ schedules:
   branches:
     include:
     - dev
+    - release/*
   always: true
 
 pr:
   branches:
     include:
     - dev
+    - release/*
 
 resources:
   repositories:

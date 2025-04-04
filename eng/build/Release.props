@@ -2,6 +2,7 @@
 
   <!-- Common NuGet settings -->
   <PropertyGroup>
+    <IsPackable>false</IsPackable> <!-- default nothing packs, unless opted in -->
     <Authors>Microsoft</Authors>
     <Company>Microsoft</Company>
     <Product>Azure WebJobs SDK Script Runtime</Product>
