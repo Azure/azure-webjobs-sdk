@@ -1,0 +1,4 @@
+pipelines:
+  <fill-in>:
+    allowedBranches:
+    - release/*

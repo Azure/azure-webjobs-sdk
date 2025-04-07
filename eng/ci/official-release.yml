@@ -1,0 +1,66 @@
+# Release has no triggers outside of pipeline
+trigger: none
+pr: none
+
+resources:
+  repositories:
+  - repository: 1es
+    type: git
+    name: 1ESPipelineTemplates/1ESPipelineTemplates
+    ref: refs/tags/release
+  - repository: eng
+    type: git
+    name: engineering
+    ref: refs/tags/release
+  pipelines:
+  - pipeline: build
+    source: webjobs-sdk.official
+    trigger:
+      branches:
+      - release/*
+
+variables:
+- template: /ci/variables/cfs.yml@eng
+
+extends:
+  template: v1/1ES.Official.PipelineTemplate.yml@1es
+  parameters:
+    pool:
+      name: 1es-pool-azfunc
+      image: 1es-windows-2022
+      os: windows
+
+    sdl:
+      codeql:
+        # Move codeql for source languages to source analysis stage
+        runSourceLanguagesInSourceAnalysis: true
+
+    stages:
+    - stage: Prepare
+      jobs:
+      - job: Prepare Release
+        steps:
+        - pwsh: |
+            $sourceBranch = "$(resources.pipeline.build.sourceBranch)"
+            Write-Host "Triggered by: $sourceBranch"
+            if (!$sourceBranch.StartsWith("refs/heads/release/"))
+            {
+              Write-Host "##vso[task.LogIssue type=error;]$sourceBranch is not a release branch. Please enqueue for a build produced from a release/* branch."
+              exit 1
+            }
+
+            Write-Host "##vso[build.updatebuildnumber]$(resources.pipeline.build.runName)"
+          displayName: Validate branch
+
+    - stage: Release
+      dependsOn: Prepare
+      jobs:
+      - template: /ci/release-nuget-package.yml@eng
+        parameters:
+          isProduction: true
+          approvers: '[internal]\Azure Functions Core'
+          stagingFeed: public/pre-release
+          artifact:
+            pipeline: build
+            name: drop_packages
+          targetFolder: azure-functions/dotnet/azure-webjobs-sdk/$(resources.pipeline.build.runName)

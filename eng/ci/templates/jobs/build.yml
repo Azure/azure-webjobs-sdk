@@ -17,7 +17,7 @@ jobs:
     - output: pipelineArtifact
       displayName: Publish logs
       path: $(pack_dir)
-      artifact: drop
+      artifact: drop_packages
 
   steps:
     - template: /eng/ci/templates/steps/install-dotnet.yml@self
