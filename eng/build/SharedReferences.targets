@@ -1,0 +1,42 @@
+<Project>
+
+  <Target Name="IncludeSharedItems"
+    BeforeTargets="BeforeCompile"
+    DependsOnTargets="_IncludeSharedCompile;_IncludeSharedEmbeddedResource"
+    Condition="'@(SharedReference)' != ''" />
+
+  <Target Name="_IncludeSharedCompile">
+    <MSBuild Projects="@(SharedReference)" Targets="GetSharedCompileItems" RebaseOutputs="true">
+      <Output TaskParameter="TargetOutputs" ItemName="SharedCompile" />
+    </MSBuild>
+    <ItemGroup>
+      <Compile Include="@(SharedCompile)" LinkBase="%(SharedCompile.SharedLinkBase)" Visible="false" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_IncludeSharedEmbeddedResource">
+    <MSBuild Projects="@(SharedReference)" Targets="GetSharedEmbeddedResourceItems" RebaseOutputs="true">
+      <Output TaskParameter="TargetOutputs" ItemName="SharedEmbeddedResource" />
+    </MSBuild>
+    <ItemGroup>
+      <EmbeddedResource Include="@(SharedEmbeddedResource)" LinkBase="%(SharedEmbeddedResource.SharedLinkBase)" Visible="false" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="GetSharedCompileItems" Outputs="@(_SharedCompile)">
+    <ItemGroup>
+      <_SharedCompile Include="@(Compile)" SharedLinkBase="$(MSBuildProjectName)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="GetSharedEmbeddedResourceItems" Outputs="@(_SharedEmbeddedResource)">
+    <ItemGroup>
+      <_SharedEmbeddedResource Include="@(EmbeddedResource)" SharedLinkBase="$(MSBuildProjectName)">
+        <!-- We need to explicitly set LogicalName to ensure the receiving project will get the same logical name our designer .cs file was generated with -->
+        <RecursiveNamespace>$([System.String]::Copy('%(RecursiveDir)').Replace($([System.IO.Path]::DirectorySeparatorChar.ToString()), '.'))</RecursiveNamespace>
+        <LogicalName Condition="'%(EmbeddedResource.LogicalName)' == ''">$(RootNamespace).%(_SharedEmbeddedResource.RecursiveNamespace)%(Filename).resources</LogicalName>
+      </_SharedEmbeddedResource>
+    </ItemGroup>
+  </Target>
+
+</Project>
