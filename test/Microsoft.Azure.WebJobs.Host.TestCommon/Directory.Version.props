@@ -1,0 +1,4 @@
+<Project>
+  <!-- Ensure this project has the same versioning as src/ directory -->
+  <Import Project="../../src/Directory.Version.props" />
+</Project>

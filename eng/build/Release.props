@@ -55,7 +55,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="$(IconFile)" Pack="true" PackagePath="/" />
+    <Content Include="$(IconFile)" Pack="true" PackagePath="/" Visible="false" />
     <Content Include="$(ReadmeFile)" Pack="true" PackagePath="/" Condition="Exists('$(ReadmeFile)')" />
   </ItemGroup>
 
