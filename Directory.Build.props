@@ -1,0 +1,13 @@
+<Project>
+
+  <!-- paths -->
+  <PropertyGroup>
+    <RepoRoot>$(MSBuildThisFileDirectory)</RepoRoot>
+    <EngRoot>$(RepoRoot)eng/</EngRoot>
+    <EngBuildRoot>$(EngRoot)build/</EngBuildRoot>
+    <EngResourceRoot>$(EngRoot)res/</EngResourceRoot>
+  </PropertyGroup>
+
+  <Import Project="$(EngBuildRoot)Common.props" />
+
+</Project>

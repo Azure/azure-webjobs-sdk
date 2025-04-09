@@ -1,0 +1,46 @@
+<Project>
+  <PropertyGroup>
+    <!-- Packages can have independent versions and only increment when released -->
+    <Version>3.0.41$(VersionSuffix)</Version>
+    <HostStorageVersion>5.0.1$(VersionSuffix)</HostStorageVersion>
+    <LoggingVersion>4.0.3$(VersionSuffix)</LoggingVersion>
+    
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <DebugType>embedded</DebugType>
+    <LatestCommit Condition="$(LatestCommit) == ''">$(CommitHash)</LatestCommit>
+    <CommitHash Condition="$(CommitHash) == ''">N/A</CommitHash>
+    <InformationalVersion>$(Version) Commit hash: $(CommitHash)</InformationalVersion>
+    <Authors>Microsoft</Authors>
+    <Company>Microsoft</Company>
+    <PackageProjectUrl>http://go.microsoft.com/fwlink/?LinkID=320972</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Azure/azure-webjobs-sdk</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
+    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>webjobs.png</PackageIcon>
+    <PackageTags>Microsoft Azure WebJobs AzureFunctions</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <CodeAnalysisRuleSet>$(RepoRoot)src.ruleset</CodeAnalysisRuleSet>
+    <SignAssembly>true</SignAssembly>
+    <DelaySign>true</DelaySign>
+    <AssemblyOriginatorKeyFile>$(EngResourceRoot)PublicKey.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <CI>false</CI>
+    <CI Condition="'$(TF_BUILD)' == 'true'">true</CI>
+    <ContinuousIntegrationBuild>$(CI)</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <Target Name="WebJobsCleanup" AfterTargets="Clean">
+    <RemoveDir Directories="$(TargetDir)" />
+    <RemoveDir Directories="$(ProjectDir)$(BaseIntermediateOutputPath)" />
+  </Target>
+
+  <ItemGroup>
+    <AdditionalFiles Include="$(RepoRoot)stylecop.json" Link="stylecop.json" />
+    <None Include="$(EngResourceRoot)webjobs.png" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+</Project>

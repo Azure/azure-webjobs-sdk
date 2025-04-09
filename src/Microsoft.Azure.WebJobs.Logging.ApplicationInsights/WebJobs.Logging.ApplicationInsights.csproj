@@ -1,6 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.projitems" Label="Shared" />
-  <Import Project="..\..\build\common.props" />
 
   <PropertyGroup>
     <Version>3.0.42$(VersionSuffix)</Version>
@@ -14,10 +13,6 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
   </PropertyGroup>
-
-  <ItemGroup>
-    <AdditionalFiles Include="..\..\stylecop.json" Link="stylecop.json" />
-  </ItemGroup>
 
   <ItemGroup>
     <Content Include="README.md" Pack="true" PackagePath="/" />
