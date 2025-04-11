@@ -5,7 +5,7 @@
     <IsPackable>false</IsPackable> <!-- default nothing packs, unless opted in -->
     <Authors>Microsoft</Authors>
     <Company>Microsoft</Company>
-    <Product>Azure WebJobs SDK Script Runtime</Product>
+    <Product>Azure WebJobs SDK</Product>
     <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
     <PackageProjectUrl>http://go.microsoft.com/fwlink/?LinkID=320972</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Azure/azure-webjobs-sdk</RepositoryUrl>
