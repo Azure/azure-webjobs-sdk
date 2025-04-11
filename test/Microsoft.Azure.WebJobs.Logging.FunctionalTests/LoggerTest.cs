@@ -583,7 +583,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
             Assert.True(instance.ErrorDetails.StartsWith(truncatedPrefix));
             Assert.True(instance.TriggerReason.StartsWith(truncatedPrefix));
 
-            Assert.Equal(0, instance.Arguments.Count); // totally truncated.           
+            Assert.Empty(instance.Arguments); // totally truncated.
         }
 
         [Fact]
