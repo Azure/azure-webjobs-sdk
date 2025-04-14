@@ -6,7 +6,6 @@ using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
-using DotNext.Threading;
 using Microsoft.Azure.WebJobs.Host.TestCommon;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Moq;
@@ -97,19 +96,27 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
         {
             // Arrange
             int executionCount = 0;
-            static Task SecondRunAsync(AsyncManualResetEvent reset)
+
+            static async Task FirstRunAsync(Task gate)
             {
-                reset.Set();
-                return Task.CompletedTask;
+                await gate;
+                await Task.Delay(5);
             }
 
-            using var reset = new AsyncManualResetEvent(false);
+            static async Task SecondRunAsync(TaskCompletionSource tcs)
+            {
+                tcs.SetResult();
+                await Task.Delay(5);
+            }
+
+            var tcs1 = new TaskCompletionSource();
+            var tcs2 = new TaskCompletionSource();
             ITaskSeriesCommand command = CreateCommand(() =>
             {
                 return executionCount++ switch
                 {
-                    0 => new TaskSeriesCommandResult(reset.WaitAsync().AsTask()),
-                    1 => new TaskSeriesCommandResult(SecondRunAsync(reset)),
+                    0 => new TaskSeriesCommandResult(FirstRunAsync(tcs1.Task)),
+                    1 => new TaskSeriesCommandResult(SecondRunAsync(tcs2)),
                     _ => throw new InvalidOperationException("No more iterations needed."),
                 };
             });
@@ -123,10 +130,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
             // If the TaskSeriesTimer ever proceeds to the next iteration without awaiting the first, we will
             // see tcs2.Task be completed early and this test will fail.
             await Task.Delay(10);
-            Assert.Equal(1, executionCount);
-            reset.Set();
-            await reset.WaitAsync(TimeSpan.FromMilliseconds(100));
-            Assert.Equal(2, executionCount);
+            Assert.False(tcs2.Task.IsCompleted);
+            tcs1.SetResult();
+            await tcs2.Task.WaitAsync(TimeSpan.FromMilliseconds(100));
         }
 
         [Fact]
@@ -447,25 +453,26 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
         {
             // Arrange
             int executionCount = 0;
-            using var reset = new AsyncManualResetEvent(false);
-            TimeSpan timeout = TimeSpan.FromMicroseconds(100);
+            var tcs1 = new TaskCompletionSource();
+            var tcs2 = new TaskCompletionSource();
+            TimeSpan timeout = TimeSpan.FromMilliseconds(100);
             ITaskSeriesCommand command = CreateCommand(async () =>
             {
                 executionCount++;
-                reset.Set();
-                await reset.WaitAsync(timeout);
+                tcs1.TrySetResult();
+                await tcs2.Task.WaitAsync(timeout);
                 return new TaskSeriesCommandResult(Task.CompletedTask);
             });
 
             // Act
-            using ITaskSeriesTimer product = CreateProductUnderTest(command);
+            using TaskSeriesTimer product = CreateProductUnderTest(command);
             product.Start();
 
             // Assert
-            await reset.WaitAsync(timeout);
+            await tcs1.Task.WaitAsync(timeout);
             Assert.Equal(1, executionCount);
             Task stop = product.StopAsync(default);
-            reset.Set();
+            tcs2.TrySetResult();
             await stop.WaitAsync(timeout);
 
             Assert.Equal(1, executionCount);
