@@ -2,5 +2,6 @@
 
   <Import Project="$(MSBuildThisFileDirectory)RepositoryInfo.targets" />
   <Import Project="$(MSBuildThisFileDirectory)Release.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)SharedReferences.targets" />
 
 </Project>

@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.projitems" Label="Shared" />
 
   <PropertyGroup>
     <Version>3.0.42$(VersionSuffix)</Version>
@@ -34,6 +33,10 @@
     <PackageReference Include="System.Threading" Version="4.3.0" />
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.0-beta004" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <SharedReference Include="../Microsoft.Azure.WebJobs.Shared/WebJobs.Shared.csproj" />
   </ItemGroup>
 
 </Project>

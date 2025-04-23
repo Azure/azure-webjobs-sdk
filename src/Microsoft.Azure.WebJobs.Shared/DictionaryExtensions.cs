@@ -12,7 +12,8 @@ namespace System.Collections.Generic
             {
                 return (T)value;
             }
-            return default(T);
+
+            return default;
         }
     }
 
@@ -25,7 +26,8 @@ namespace System.Collections.Generic
             {
                 return (T)value;
             }
-            return default(T);
+
+            return default;
         }
     }
 }

@@ -1,0 +1,14 @@
+<Project>
+
+  <PropertyGroup Condition="'$(UsingMicrosoftNoTargetsSdk)' == 'true' AND $(MSBuildProjectName.EndsWith('.Shared'))">
+    <IsSharedProject Condition="'$(IsSharedProject)' == ''">true</IsSharedProject>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsSharedProject)' == 'true'">
+    <IsPackable>false</IsPackable>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+    <EnableDefaultEmbeddedResourceItems>true</EnableDefaultEmbeddedResourceItems>
+  </PropertyGroup>
+
+</Project>

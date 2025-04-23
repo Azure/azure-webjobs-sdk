@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.Build.NoTargets">
+
+  <!--
+    This project is to never be referenced directly. Instead, the files are directly
+    included into each source project individually via targets. The purpose of this
+    csproj is just so the files can show up in Visual Studio.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Microsoft.Azure.WebJobs</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Include packages here as appropriate so that intellisense still works. -->
+    <!-- <PackageReference Include="PackageId" Version="PackageVersion" /> -->
+  </ItemGroup>
+
+</Project>

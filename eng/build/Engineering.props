@@ -25,5 +25,6 @@
   </ItemGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)Release.props" />
+  <Import Project="$(MSBuildThisFileDirectory)SharedReferences.props" />
 
 </Project>
