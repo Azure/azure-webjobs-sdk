@@ -92,50 +92,47 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
         }
 
         [Fact]
-        public void Start_AfterExecute_WaitsForReturnedWait()
+        public async Task Start_AfterExecute_WaitsForReturnedWait()
         {
             // Arrange
-            bool executedOnce = false;
-            bool executedTwice = false;
-            TimeSpan initialInterval = TimeSpan.Zero;
-            // Detect the difference between waiting and not waiting, but keep the test execution time fast.
-            TimeSpan subsequentInterval = TimeSpan.FromMilliseconds(5);
-            Stopwatch stopwatch = new Stopwatch();
+            int executionCount = 0;
 
-            using (EventWaitHandle waitForSecondExecution = new ManualResetEvent(initialState: false))
+            static async Task FirstRunAsync(Task gate)
             {
-                ITaskSeriesCommand command = CreateCommand(() =>
-                {
-                    if (executedTwice)
-                    {
-                        return new TaskSeriesCommandResult(wait: Task.Delay(TimeSpan.FromDays(1)));
-                    }
-
-                    if (!executedOnce)
-                    {
-                        stopwatch.Start();
-                        executedOnce = true;
-                        return new TaskSeriesCommandResult(wait: Task.Delay(subsequentInterval));
-                    }
-                    else
-                    {
-                        stopwatch.Stop();
-                        executedTwice = true;
-                        Assert.True(waitForSecondExecution.Set()); // Guard
-                        return new TaskSeriesCommandResult(wait: Task.Delay(initialInterval));
-                    }
-                });
-
-                using (ITaskSeriesTimer product = CreateProductUnderTest(command))
-                {
-                    // Act
-                    product.Start();
-
-                    // Assert
-                    Assert.True(waitForSecondExecution.WaitOne(1000)); // Guard
-                    AssertGreaterThan(subsequentInterval, stopwatch.Elapsed);
-                }
+                await gate;
+                await Task.Delay(5);
             }
+
+            static async Task SecondRunAsync(TaskCompletionSource tcs)
+            {
+                tcs.SetResult();
+                await Task.Delay(5);
+            }
+
+            var tcs1 = new TaskCompletionSource();
+            var tcs2 = new TaskCompletionSource();
+            ITaskSeriesCommand command = CreateCommand(() =>
+            {
+                return executionCount++ switch
+                {
+                    0 => new TaskSeriesCommandResult(FirstRunAsync(tcs1.Task)),
+                    1 => new TaskSeriesCommandResult(SecondRunAsync(tcs2)),
+                    _ => throw new InvalidOperationException("No more iterations needed."),
+                };
+            });
+
+            // Act
+            using TaskSeriesTimer product = CreateProductUnderTest(command);
+            product.Start();
+
+            // Assert
+            // tcs2.Task is completed by the 2nd run. But the 2nd run should not occur until we unblock the 1st run.
+            // If the TaskSeriesTimer ever proceeds to the next iteration without awaiting the first, we will
+            // see tcs2.Task be completed early and this test will fail.
+            await Task.Delay(10);
+            Assert.False(tcs2.Task.IsCompleted);
+            tcs1.SetResult();
+            await tcs2.Task.WaitAsync(TimeSpan.FromMilliseconds(100));
         }
 
         [Fact]
@@ -452,46 +449,33 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
         }
 
         [Fact]
-        public void StopAsync_TriggersNotExecutingAgain()
+        public async Task StopAsync_TriggersNotExecutingAgain()
         {
             // Arrange
-            using (EventWaitHandle executedOnceWaitHandle = new ManualResetEvent(initialState: false))
+            int executionCount = 0;
+            var tcs1 = new TaskCompletionSource();
+            var tcs2 = new TaskCompletionSource();
+            TimeSpan timeout = TimeSpan.FromMilliseconds(100);
+            ITaskSeriesCommand command = CreateCommand(async () =>
             {
-                ITaskSeriesTimer product = null;
-                Task stop = null;
-                bool executedOnce = false;
-                bool executedTwice = false;
+                executionCount++;
+                tcs1.TrySetResult();
+                await tcs2.Task.WaitAsync(timeout);
+                return new TaskSeriesCommandResult(Task.CompletedTask);
+            });
 
-                ITaskSeriesCommand command = CreateCommand(() =>
-                {
-                    if (!executedOnce)
-                    {
-                        stop = product.StopAsync(CancellationToken.None);
-                        Assert.True(executedOnceWaitHandle.Set()); // Guard
-                        executedOnce = true;
-                        return new TaskSeriesCommandResult(wait: Task.Delay(0));
-                    }
-                    else
-                    {
-                        executedTwice = true;
-                        return new TaskSeriesCommandResult(wait: Task.Delay(0));
-                    }
-                });
+            // Act
+            using TaskSeriesTimer product = CreateProductUnderTest(command);
+            product.Start();
 
-                using (product = CreateProductUnderTest(command))
-                {
-                    product.Start();
+            // Assert
+            await tcs1.Task.WaitAsync(timeout);
+            Assert.Equal(1, executionCount);
+            Task stop = product.StopAsync(default);
+            tcs2.TrySetResult();
+            await stop.WaitAsync(timeout);
 
-                    // Act
-                    bool executed = executedOnceWaitHandle.WaitOne(3000);
-
-                    // Assert
-                    Assert.True(executed); // Guard
-                    Assert.NotNull(stop);
-                    stop.GetAwaiter().GetResult();
-                    Assert.False(executedTwice);
-                }
-            }
+            Assert.Equal(1, executionCount);
         }
 
         [Fact]
@@ -836,8 +820,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Timers
 
         private static void AssertGreaterThan(TimeSpan expected, TimeSpan actual)
         {
-            string message = String.Format("{0} > {1}", actual, expected);
-            Assert.True(actual > expected, message);
+            Assert.True(actual > expected, $"{actual} > {expected}");
         }
 
         private static ITaskSeriesCommand CreateCommand(Func<TaskSeriesCommandResult> execute)
