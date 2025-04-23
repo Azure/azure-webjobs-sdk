@@ -49,7 +49,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             Assert.Equal(3, infoMessage.State.Count());
             Assert.Equal(3, errorMessage.State.Count());
 
-            Assert.Equal(1, resultsLogger.GetLogMessages().Count);
+            Assert.Single(resultsLogger.GetLogMessages());
 
             // TODO: beef these verifications up
         }

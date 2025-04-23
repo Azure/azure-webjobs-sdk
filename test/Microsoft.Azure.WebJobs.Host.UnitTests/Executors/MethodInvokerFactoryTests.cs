@@ -73,7 +73,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void Create_IfMultipleInputParameters_PassesInputArguments(bool isInstance)
+        public async Task Create_IfMultipleInputParameters_PassesInputArguments(bool isInstance)
         {
             // Arrange
             MethodInfo method = GetMethodInfo(isInstance, "TestIntStringObjectArray");
@@ -97,14 +97,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                 };
             MethodInvokerFactoryTests instance = GetInstance(isInstance);
             object[] arguments = new object[] { expectedA, expectedB, expectedC, callback };
-            invoker.InvokeAsync(instance, arguments).GetAwaiter().GetResult();
+            await invoker.InvokeAsync(instance, arguments);
             Assert.True(callbackCalled);
         }
 
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void Create_IfMultipleOutputParameters_SetsOutputArguments(bool isInstance)
+        public async Task Create_IfMultipleOutputParameters_SetsOutputArguments(bool isInstance)
         {
             // Arrange
             MethodInfo method = GetMethodInfo(isInstance, "TestOutIntStringObjectArray");
@@ -128,7 +128,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             };
             MethodInvokerFactoryTests instance = GetInstance(isInstance);
             object[] arguments = new object[] { default(int), null, null, callback };
-            invoker.InvokeAsync(instance, arguments).GetAwaiter().GetResult();
+            await invoker.InvokeAsync(instance, arguments);
             Assert.True(callbackCalled);
             Assert.Equal(expectedA, arguments[0]);
             Assert.Same(expectedB, arguments[1]);
@@ -138,7 +138,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void Create_IfMultipleReferenceParameters_RoundtripsArguments(bool isInstance)
+        public async Task Create_IfMultipleReferenceParameters_RoundtripsArguments(bool isInstance)
         {
             // Arrange
             MethodInfo method = GetMethodInfo(isInstance, "TestByRefIntStringObjectArray");
@@ -168,7 +168,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             };
             MethodInvokerFactoryTests instance = GetInstance(isInstance);
             object[] arguments = new object[] { expectedInitialA, expectedInitialB, expectedInitialC, callback };
-            invoker.InvokeAsync(instance, arguments).GetAwaiter().GetResult();
+            await invoker.InvokeAsync(instance, arguments);
             Assert.True(callbackCalled);
             Assert.Equal(expectedFinalA, arguments[0]);
             Assert.Same(expectedFinalB, arguments[1]);
@@ -178,7 +178,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void Create_IfInOutByRefMethodReturnsTask_RoundtripsArguments(bool isInstance)
+        public async Task Create_IfInOutByRefMethodReturnsTask_RoundtripsArguments(bool isInstance)
         {
             // Arrange
             MethodInfo method = GetMethodInfo(isInstance, "TestInOutByRefReturnTask");
@@ -205,7 +205,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             };
             MethodInvokerFactoryTests instance = GetInstance(isInstance);
             object[] arguments = new object[] { expectedA, expectedInitialB, null, callback };
-            invoker.InvokeAsync(instance, arguments).GetAwaiter().GetResult();
+            await invoker.InvokeAsync(instance, arguments);
             Assert.True(callbackCalled);
             Assert.Same(expectedFinalB, arguments[1]);
             Assert.Same(expectedC, arguments[2]);
@@ -234,7 +234,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void Create_IfParameterlessMethod_CanInvoke(bool isInstance)
+        public async Task Create_IfParameterlessMethod_CanInvoke(bool isInstance)
         {
             // Arrange
             MethodInfo method = GetMethodInfo(isInstance, "ParameterlessMethod");
@@ -247,7 +247,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             {
                 // Assert
                 MethodInvokerFactoryTests instance = GetInstance(isInstance);
-                invoker.InvokeAsync(instance, null).GetAwaiter().GetResult();
+                await invoker.InvokeAsync(instance, null);
                 Assert.True(_parameterlessMethodCalled);
             }
             finally

@@ -276,7 +276,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             Assert.Equal(mockAccount.BlobLeaseClient.Object, innerHandle.BlobLeaseClient);
             Assert.Equal(TestLeaseId, innerHandle.LeaseId);
-            Assert.Equal(1, mockAccount.LastSetMetadata.Keys.Count);
+            Assert.Single(mockAccount.LastSetMetadata.Keys);
             Assert.Equal(mockAccount.LastSetMetadata[BlobLeaseDistributedLockManager.FunctionInstanceMetadataKey], TestInstanceId);
 
             mockAccount.BlobContainerClient.VerifyAll();
@@ -320,7 +320,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
 
             Assert.Equal(mockAccount.BlobLeaseClient.Object, innerHandle.BlobLeaseClient);
             Assert.Equal(TestLeaseId, innerHandle.LeaseId);
-            Assert.Equal(1, mockAccount.LastSetMetadata.Keys.Count);
+            Assert.Single(mockAccount.LastSetMetadata.Keys);
             Assert.Equal(mockAccount.LastSetMetadata[BlobLeaseDistributedLockManager.FunctionInstanceMetadataKey], TestInstanceId);
 
             // wait for enough time that we expect some lease renewals to occur

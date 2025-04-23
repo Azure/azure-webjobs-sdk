@@ -96,7 +96,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [Fact(Skip = "Fix DispatchQueue")]
-        public async void PoisonQueueTest()
+        public async Task PoisonQueueTest()
         {
             _host = new HostBuilder()
                 .ConfigureDefaultTestHost<SampleTriggerWithPoisonQueue>(b =>
@@ -158,7 +158,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 }
             }
 
-            public void PosionQueueProcess([QueueTrigger("azure-webjobs-poison-pqtest")]JObject message)
+            public void PoisonQueueProcess([QueueTrigger("azure-webjobs-poison-pqtest")]JObject message)
             {
                 string functionId = message["FunctionId"].Value<string>();
                 int value = message["Data"]["order"].Value<int>();
@@ -166,7 +166,7 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
                 {
                     PoisonQueueResult = true;
                 }
-                _funcInvocation.Add("PosionQueueProcess");
+                _funcInvocation.Add("PoisonQueueProcess");
                 _output.WriteLine("PoisonQueueProcess" + " elapsed time: " + _stopwatch.ElapsedMilliseconds + " ms");
             }
         }

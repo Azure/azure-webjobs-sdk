@@ -115,7 +115,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Data
         }
 
         [Fact]
-        public void Create_ReturnsNull_IfByRefParameter()
+        public async Task Create_ReturnsNull_IfByRefParameter()
         {
             // Arrange
             IBindingProvider product = new DataBindingProvider();
@@ -125,7 +125,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Data
             BindingProviderContext context = CreateBindingContext(parameterName, parameterType);
 
             // Act
-            IBinding binding = product.TryCreateAsync(context).GetAwaiter().GetResult();
+            IBinding binding = await product.TryCreateAsync(context);
 
             // Assert
             Assert.Null(binding);
@@ -144,7 +144,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Data
         }
 
         [Fact]
-        public void Create_ReturnsNull_IfContainsUnresolvedGenericParameter()
+        public async Task Create_ReturnsNull_IfContainsUnresolvedGenericParameter()
         {
             // Arrange
             IBindingProvider product = new DataBindingProvider();
@@ -154,14 +154,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Data
             BindingProviderContext context = CreateBindingContext(parameterName, parameterType);
 
             // Act
-            IBinding binding = product.TryCreateAsync(context).GetAwaiter().GetResult();
+            IBinding binding = await product.TryCreateAsync(context);
 
             // Assert
             Assert.Null(binding);
         }
 
         [Fact]
-        public void Create_ReturnsBinding_IfContainsResolvedGenericParameter()
+        public async Task Create_ReturnsBinding_IfContainsResolvedGenericParameter()
         {
             // Arrange
             IBindingProvider product = new DataBindingProvider();
@@ -171,7 +171,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings.Data
             BindingProviderContext context = CreateBindingContext(parameterName, parameterType);
 
             // Act
-            IBinding binding = product.TryCreateAsync(context).GetAwaiter().GetResult();
+            IBinding binding = await product.TryCreateAsync(context);
 
             // Assert
             Assert.NotNull(binding);

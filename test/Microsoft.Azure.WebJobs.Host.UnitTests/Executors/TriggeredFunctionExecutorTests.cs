@@ -98,15 +98,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                 functionDescriptor.SharedListenerId = sharedListenerFunctionId;
                 functionId = sharedListenerFunctionId;
             }
-            var instaceFactoryMock = new Mock<ITriggeredFunctionInstanceFactory<int>>();
-            instaceFactoryMock.Setup(m => m.Create(It.IsAny<FunctionInstanceFactoryContext<int>>())).Returns(functionInstance);
+            var instanceFactoryMock = new Mock<ITriggeredFunctionInstanceFactory<int>>();
+            instanceFactoryMock.Setup(m => m.Create(It.IsAny<FunctionInstanceFactoryContext<int>>())).Returns(functionInstance);
 
             var concurrencyOptions = new ConcurrencyOptions
             {
                 DynamicConcurrencyEnabled = dynamicConcurrencyEnabled
             };
             var functionExecutor = GetTestFunctionExecutor(concurrencyOptions: concurrencyOptions);
-            var triggerExecutor = new TriggeredFunctionExecutor<int>(functionDescriptor, functionExecutor, instaceFactoryMock.Object, NullLoggerFactory.Instance);
+            var triggerExecutor = new TriggeredFunctionExecutor<int>(functionDescriptor, functionExecutor, instanceFactoryMock.Object, NullLoggerFactory.Instance);
 
             ConcurrencyStatus concurrencyStatus = null;
             if (dynamicConcurrencyEnabled)
@@ -149,16 +149,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             var functionDescriptor = FunctionExecutorTestHelper.GetFunctionDescriptor();
             var functionInstance = FunctionExecutorTestHelper.CreateFunctionInstance(Guid.NewGuid(), triggerData.TriggerDetails, invocationThrows, functionDescriptor);
             var serviceScopeFactoryMock = new Mock<IServiceScopeFactory>(MockBehavior.Strict);
-            var instaceFactoryMock = new Mock<ITriggeredFunctionInstanceFactory<int>>();
+            var instanceFactoryMock = new Mock<ITriggeredFunctionInstanceFactory<int>>();
 
             var functionExecutor = GetTestFunctionExecutor();
 
-            instaceFactoryMock.Setup(m => m.Create(It.IsAny<FunctionInstanceFactoryContext<int>>())).Returns(functionInstance);
+            instanceFactoryMock.Setup(m => m.Create(It.IsAny<FunctionInstanceFactoryContext<int>>())).Returns(functionInstance);
 
             var testLogger = new TestLogger("Test");
             Mock<ILoggerFactory> factoryMock = new Mock<ILoggerFactory>(MockBehavior.Strict);
             factoryMock.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(testLogger);
-            var triggerExecutor = new TriggeredFunctionExecutor<int>(functionDescriptor, functionExecutor, instaceFactoryMock.Object, factoryMock.Object);
+            var triggerExecutor = new TriggeredFunctionExecutor<int>(functionDescriptor, functionExecutor, instanceFactoryMock.Object, factoryMock.Object);
 
             // Arrange
             HostStartedMessage testMessage = new HostStartedMessage();
@@ -177,7 +177,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             if (invocationThrows)
             {
                 var messages = testLogger.GetLogMessages().Select(p => p.FormattedMessage).ToArray();
-                Assert.Single(messages.Where(x => x == "Function execution failed after '5' retries."));
+                Assert.Single(messages, x => x == "Function execution failed after '5' retries.");
                 Assert.Equal(5, messages.Where(x => x.StartsWith("Waiting for `")).Count());
                 Assert.NotNull(result.Exception.InnerException);
                 Assert.Equal("Test retry exception. invocationCount:6", result.Exception.InnerException.Message);

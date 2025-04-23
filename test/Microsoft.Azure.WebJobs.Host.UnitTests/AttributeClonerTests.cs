@@ -202,7 +202,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             try
             {
                 var cloner = new AttributeCloner<Attr1>(a1, emptyContract, _emptyConfig);
-                Assert.True(false, "Should have caught binding contract mismatch");
+                Assert.Fail("Should have caught binding contract mismatch");
             }
             catch (InvalidOperationException e)
             {
@@ -742,7 +742,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             try
             {
                 new AttributeCloner<ValidationWithAutoResolveAttribute>(attr, GetBindingContract("name"), _emptyConfig);
-                Assert.False(true, "Validation should have failed");
+                Assert.Fail("Validation should have failed");
             }
             catch (InvalidOperationException e)
             {
@@ -769,7 +769,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             try
             {
                 new AttributeCloner<ValidationWithAppSettingAttribute>(attr, GetBindingContract("name"), _emptyConfig);
-                Assert.False(true, "Validation should have failed");
+                Assert.Fail("Validation should have failed");
             }
             catch (InvalidOperationException e)
             {
@@ -808,7 +808,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
 
                     return;
                 }
-                Assert.False(true, "Validation should have failed");
+                Assert.Fail("Validation should have failed");
             }
             catch (InvalidOperationException e)
             {

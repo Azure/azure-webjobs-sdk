@@ -1,11 +1,15 @@
+parameters:
+- name: sign
+  displayName: Sign Files (release/* always signed)
+  type: boolean
+  default: true
+
 trigger:
   batch: true
   branches:
     include:
     - dev
-  tags:
-    include:
-    - 'v*'
+    - release/*
 
 schedules:
 # Ensure we build nightly to catch any new CVEs and report SDL often.
@@ -14,6 +18,7 @@ schedules:
   branches:
     include:
     - dev
+    - release/*
   always: true
 
 # CI only, does not trigger on PRs.
@@ -31,8 +36,14 @@ resources:
     ref: refs/tags/release
 
 variables:
-  - template: /eng/ci/templates/variables/build.yml@self
-  - template: /ci/variables/cfs.yml@eng
+- template: /eng/ci/templates/variables/build.yml@self
+- template: /ci/variables/cfs.yml@eng
+- name: sign
+  readonly: true
+  ${{ if startsWith(variables['Build.SourceBranch'], 'refs/heads/release/') }}:
+    value: true
+  ${{ else }}:
+    value: ${{ parameters.sign }}
 
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1es
@@ -52,7 +63,7 @@ extends:
       jobs:
       - template: /eng/ci/templates/jobs/build.yml@self
         parameters:
-          official: true
+          official: ${{ variables.sign }}
 
     - stage: Test
       dependsOn: '' # Run in parallel

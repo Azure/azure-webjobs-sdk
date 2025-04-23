@@ -583,7 +583,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
             Assert.True(instance.ErrorDetails.StartsWith(truncatedPrefix));
             Assert.True(instance.TriggerReason.StartsWith(truncatedPrefix));
 
-            Assert.Equal(0, instance.Arguments.Count); // totally truncated.           
+            Assert.Empty(instance.Arguments); // totally truncated.
         }
 
         [Fact]
@@ -898,7 +898,7 @@ namespace Microsoft.Azure.WebJobs.Logging.FunctionalTests
                 var acs = Environment.GetEnvironmentVariable("AzureWebJobsDashboard") ?? Environment.GetEnvironmentVariable("AzureWebJobsStorage");
                 if (acs == null)
                 {
-                    Assert.True(false, "Storage connection string environment variable not set. Should be set to an azure storage account connection string to use for testing.");
+                    Assert.Fail("Storage connection string environment variable not set. Should be set to an azure storage account connection string to use for testing.");
                 }
 
                 CloudStorageAccount account = CloudStorageAccount.Parse(acs);

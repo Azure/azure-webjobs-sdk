@@ -201,8 +201,8 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             // verify no errors, and that we do have some throttle warnings
             var logs = GetConcurrencyLogs(host);
-            Assert.Empty(logs.Where(p => p.Level == LogLevel.Error));
-            Assert.NotEmpty(logs.Where(p => p.Level == LogLevel.Warning));
+            Assert.DoesNotContain(logs, p => p.Level == LogLevel.Error);
+            Assert.Contains(logs, p => p.Level == LogLevel.Warning);
 
             // When run for a longer period of time, concurrency for the lightweight function can
             // break away while the heavier function stays limited.

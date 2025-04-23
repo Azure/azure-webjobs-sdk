@@ -8,6 +8,6 @@
     <EngResourceRoot>$(EngRoot)res/</EngResourceRoot>
   </PropertyGroup>
 
-  <Import Project="$(EngBuildRoot)Common.props" />
+  <Import Project="$(EngBuildRoot)Engineering.props" />
 
 </Project>

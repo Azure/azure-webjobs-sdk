@@ -511,7 +511,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Protocols
 
             // Assert
             Assert.NotNull(typeMapping);
-            Assert.Equal(1, typeMapping.Count);
+            Assert.Single(typeMapping);
             Assert.True(typeMapping.ContainsKey("TypeNameInAttribute"));
             Assert.Equal(typeof(TypeWithNameInAttribute), typeMapping["TypeNameInAttribute"]);
         }
@@ -524,7 +524,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Protocols
 
             // Assert
             Assert.NotNull(typeMapping);
-            Assert.Equal(1, typeMapping.Count);
+            Assert.Single(typeMapping);
             Assert.True(typeMapping.ContainsKey("TypeWithoutCustomName"));
             Assert.Equal(typeof(TypeWithoutCustomName), typeMapping["TypeWithoutCustomName"]);
         }

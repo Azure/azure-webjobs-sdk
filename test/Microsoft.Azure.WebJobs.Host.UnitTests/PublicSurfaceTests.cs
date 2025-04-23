@@ -27,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
             {
                 if (name.StartsWith("Microsoft.WindowsAzure"))
                 {
-                    Assert.True(false, "Should not have azure dependency: " + name);
+                    Assert.Fail("Should not have azure dependency: " + name);
                 }
             }
         }

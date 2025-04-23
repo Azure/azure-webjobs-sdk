@@ -6,21 +6,13 @@
     <Description>This package provides the core Types and Attribute definitions for the WebJobs SDK. For more information, please visit https://go.microsoft.com/fwlink/?linkid=2279708.</Description>
     <AssemblyName>Microsoft.Azure.WebJobs</AssemblyName>
     <RootNamespace>Microsoft.Azure.WebJobs</RootNamespace>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <WarningsAsErrors />
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.0-beta004" PrivateAssets="all" />
     <PackageReference Include="System.ComponentModel.Annotations" Version="4.4.0" />
     <PackageReference Include="System.Diagnostics.TraceSource" Version="4.3.0" />
-    <PackageReference Include="System.Memory.Data" Version="1.0.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="README.md" Pack="true" PackagePath="/" />
+    <PackageReference Include="System.Memory.Data" Version="1.0.2" />
   </ItemGroup>
 
 </Project>

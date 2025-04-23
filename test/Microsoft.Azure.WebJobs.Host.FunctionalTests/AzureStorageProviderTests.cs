@@ -64,7 +64,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
             catch (Exception e)
             {
-                Assert.False(true, $"Could not establish connection to BlobService. {e}");
+                Assert.Fail($"Could not establish connection to BlobService. {e}");
             }
         }
 
@@ -77,7 +77,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
             catch (Exception e)
             {
-                Assert.False(true, $"Could not establish connection to BlobService. {e}");
+                Assert.Fail($"Could not establish connection to BlobService. {e}");
             }
         }
 

@@ -106,7 +106,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
 
             // Assert
             Assert.NotNull(bindingData);
-            Assert.Equal(1, bindingData.Count);
+            Assert.Single(bindingData);
             Assert.Equal(12, bindingData["Name"]);
         }
 
@@ -172,7 +172,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
 
             // Assert
             Assert.NotNull(bindingData);
-            Assert.Equal(1, bindingData.Count);
+            Assert.Single(bindingData);
             Assert.Equal(date, bindingData["date"]);
         }
 
@@ -191,7 +191,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
             Assert.NotNull(bindingData);
 
             // Get binding data for the type used when creating the provider
-            Assert.Equal(1, bindingData.Count);
+            Assert.Single(bindingData);
             Assert.Equal(1L, bindingData["a"]);
         }
 
@@ -201,15 +201,15 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
             var provider = BindingDataProvider.FromTemplate(@"A/b/{c}", ignoreCase: true);
 
             var data = provider.GetBindingData("A/b/Test");
-            Assert.Equal(1, data.Count);
+            Assert.Single(data);
             Assert.Equal("Test", data["c"]);
 
             data = provider.GetBindingData("a/b/Test");
-            Assert.Equal(1, data.Count);
+            Assert.Single(data);
             Assert.Equal("Test", data["c"]);
 
             data = provider.GetBindingData("A/B/Test");
-            Assert.Equal(1, data.Count);
+            Assert.Single(data);
             Assert.Equal("Test", data["c"]);
         }
 
@@ -219,7 +219,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Bindings
             var provider = BindingDataProvider.FromTemplate(@"A/b/{c}");
 
             var data = provider.GetBindingData("A/b/Test");
-            Assert.Equal(1, data.Count);
+            Assert.Single(data);
             Assert.Equal("Test", data["c"]);
 
             // Don't expect a match here, since templates are case sensitive
