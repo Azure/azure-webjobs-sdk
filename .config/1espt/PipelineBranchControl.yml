@@ -1,4 +1,0 @@
-pipelines:
-  1385: # webjobs-sdk.release
-    allowedBranches:
-    - release/*
