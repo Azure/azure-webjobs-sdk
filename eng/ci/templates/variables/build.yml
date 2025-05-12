@@ -8,6 +8,6 @@ variables:
 - name: configuration
   value: release
 - name: project
-  value: Webjobs.sln
+  value: WebJobs.sln
 - name: Build.Counter
   value: $[counter(format('{0:yyyyMMdd}', pipeline.startTime), 0)]

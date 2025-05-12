@@ -1,5 +1,12 @@
 <Project>
 
+  <!-- artifacts -->
+  <PropertyGroup>
+    <ArtifactsPath>$(RepoRoot)out</ArtifactsPath>
+    <ArtifactsPublishOutputName>pub</ArtifactsPublishOutputName>
+    <ArtifactsPackageOutputName>pkg</ArtifactsPackageOutputName>
+  </PropertyGroup>
+
   <PropertyGroup>
     <!-- Nuget audit as warnings only, even in TreatWarningsAsErrors. -->
     <!-- Except for in CI, critical will fail the build. -->

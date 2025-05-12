@@ -41,6 +41,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebJobs.Extensions.Rpc.Unit
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebJobs.Shared", "src\Microsoft.Azure.WebJobs.Shared\WebJobs.Shared.csproj", "{404D3F0E-B531-4470-97DB-A0101444AB12}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebJobs.Host.Sources", "src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.Sources.csproj", "{5386A876-23BC-4D3B-98BB-2A6409B1427D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -243,6 +245,18 @@ Global
 		{404D3F0E-B531-4470-97DB-A0101444AB12}.Release|x64.Build.0 = Release|Any CPU
 		{404D3F0E-B531-4470-97DB-A0101444AB12}.Release|x86.ActiveCfg = Release|Any CPU
 		{404D3F0E-B531-4470-97DB-A0101444AB12}.Release|x86.Build.0 = Release|Any CPU
+		{5386A876-23BC-4D3B-98BB-2A6409B1427D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5386A876-23BC-4D3B-98BB-2A6409B1427D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5386A876-23BC-4D3B-98BB-2A6409B1427D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5386A876-23BC-4D3B-98BB-2A6409B1427D}.Debug|x64.Build.0 = Debug|Any CPU
+		{5386A876-23BC-4D3B-98BB-2A6409B1427D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5386A876-23BC-4D3B-98BB-2A6409B1427D}.Debug|x86.Build.0 = Debug|Any CPU
+		{5386A876-23BC-4D3B-98BB-2A6409B1427D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5386A876-23BC-4D3B-98BB-2A6409B1427D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5386A876-23BC-4D3B-98BB-2A6409B1427D}.Release|x64.ActiveCfg = Release|Any CPU
+		{5386A876-23BC-4D3B-98BB-2A6409B1427D}.Release|x64.Build.0 = Release|Any CPU
+		{5386A876-23BC-4D3B-98BB-2A6409B1427D}.Release|x86.ActiveCfg = Release|Any CPU
+		{5386A876-23BC-4D3B-98BB-2A6409B1427D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
