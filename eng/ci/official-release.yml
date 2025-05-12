@@ -1,3 +1,9 @@
+parameters:
+- name: publishToNugetOrg
+  displayName: Publish to nuget.org?
+  type: boolean
+  default: false
+
 # Release has no triggers outside of pipeline
 trigger: none
 pr: none
@@ -15,9 +21,6 @@ resources:
   pipelines:
   - pipeline: build
     source: webjobs-sdk.official
-    trigger:
-      branches:
-      - release/*
 
 variables:
 - template: /ci/variables/cfs.yml@eng
@@ -36,24 +39,27 @@ extends:
         runSourceLanguagesInSourceAnalysis: true
 
     stages:
-    - stage: Prepare
+    - stage: Validate
       jobs:
-      - job: Prepare Release
+      - job: Validate_Branch
         steps:
-        - pwsh: |
-            $sourceBranch = "$(resources.pipeline.build.sourceBranch)"
-            Write-Host "Triggered by: $sourceBranch"
-            if (!$sourceBranch.StartsWith("refs/heads/release/"))
-            {
-              Write-Host "##vso[task.LogIssue type=error;]$sourceBranch is not a release branch. Please enqueue for a build produced from a release/* branch."
-              exit 1
-            }
+        - ${{ if eq(parameters.publishToNugetOrg, true) }}:
+          - pwsh: |
+              $sourceBranch = "$(resources.pipeline.build.sourceBranch)"
+              Write-Host "Triggered by: $sourceBranch"
+              if (!$sourceBranch.StartsWith("refs/heads/release/"))
+              {
+                Write-Host "##vso[task.LogIssue type=error;]$sourceBranch is not a release branch. Please enqueue for a build produced from a release/* branch."
+                exit 1
+              }
+            displayName: Validate branch
 
+        - pwsh: |
             Write-Host "##vso[build.updatebuildnumber]$(resources.pipeline.build.runName)"
-          displayName: Validate branch
+          displayName: Update build number
 
     - stage: Release
-      dependsOn: Prepare
+      dependsOn: Validate
       jobs:
       - template: /ci/release-nuget-package.yml@eng
         parameters:
