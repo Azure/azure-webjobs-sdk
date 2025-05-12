@@ -30,18 +30,16 @@ extends:
   parameters:
     pool:
       name: 1es-pool-azfunc
-      image: 1es-windows-2022
-      os: windows
-
-    sdl:
-      codeql:
-        # Move codeql for source languages to source analysis stage
-        runSourceLanguagesInSourceAnalysis: true
+      image: 1es-ubuntu-22.04
+      os: linux
 
     stages:
     - stage: Validate
       jobs:
       - job: Validate_Branch
+        templateContext:
+          type: validationJob
+
         steps:
         - ${{ if eq(parameters.publishToNugetOrg, true) }}:
           - pwsh: |
