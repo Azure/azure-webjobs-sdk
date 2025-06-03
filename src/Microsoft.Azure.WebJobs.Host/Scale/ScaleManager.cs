@@ -196,7 +196,6 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                             "Failed to get target scaler vote.",
                             targetScaler.TargetScalerDescriptor.FunctionId,
                             exc);
-
                     }
                 }
             }
