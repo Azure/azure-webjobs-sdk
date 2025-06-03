@@ -153,9 +153,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             {
                 Assert.Equal("Computing scale status (WorkerCount=3)", logs[0].FormattedMessage);
                 Assert.Equal("3 scale monitors to sample", logs[1].FormattedMessage);
-                Assert.Equal("Monitor 'func1-test-test' voted 'ScaleIn'", logs[2].FormattedMessage);
-                Assert.Equal("Monitor 'testscalemonitor1' voted 'ScaleOut'", logs[3].FormattedMessage);
-                Assert.Equal("Monitor 'testscalemonitor2' voted 'ScaleIn'", logs[4].FormattedMessage);
+                Assert.Equal("Function 'func1' vote: 'ScaleIn'.", logs[2].FormattedMessage);
+                Assert.Equal("Function 'testscalemonitor1' vote: 'ScaleOut'.", logs[3].FormattedMessage);
+                Assert.Equal("Function 'testscalemonitor2' vote: 'ScaleIn'.", logs[4].FormattedMessage);
                 Assert.Equal(ScaleVote.ScaleOut, status.Vote);
                 Assert.Equal(null, status.TargetWorkerCount);
             }
@@ -163,7 +163,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             {
                 Assert.Equal("1 target scalers to sample", logs[0].FormattedMessage);
                 Assert.Equal("Snapshot dynamic concurrency for target scaler 'func1' is '1'", logs[1].FormattedMessage);
-                Assert.Equal("Target worker count for 'func1' is '2'", logs[2].FormattedMessage);
+                Assert.Equal("Function 'func1' vote: TargetWorkerCount='2'.", logs[2].FormattedMessage);
                 Assert.Equal(ScaleVote.ScaleIn, status.Vote);
                 Assert.Equal(2, status.TargetWorkerCount);
             }
@@ -210,10 +210,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             var logs = _loggerProvider.GetAllLogMessages().ToArray();
             Assert.Equal("Computing scale status (WorkerCount=3)", logs[0].FormattedMessage);
             Assert.Equal("3 scale monitors to sample", logs[1].FormattedMessage);
-            Assert.Equal("Monitor 'testscalemonitor1' voted 'ScaleIn'", logs[2].FormattedMessage);
-            Assert.Equal("Failed to query scale status for monitor 'testscalemonitor2'.", logs[3].FormattedMessage);
+            Assert.Equal("Function 'testscalemonitor1' vote: 'ScaleIn'.", logs[2].FormattedMessage);
+            Assert.Equal("Function 'testscalemonitor2' error: Failed to get scale monitor vote.", logs[3].FormattedMessage);
             Assert.Same(exception, logs[3].Exception);
-            Assert.Equal("Monitor 'testscalemonitor3' voted 'ScaleIn'", logs[4].FormattedMessage);
+            Assert.Equal("Function 'testscalemonitor3' vote: 'ScaleIn'.", logs[4].FormattedMessage);
 
             Assert.Equal(null, status.TargetWorkerCount);
             Assert.Equal(ScaleVote.ScaleIn, status.Vote);
@@ -250,10 +250,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             var logs = _loggerProvider.GetAllLogMessages().ToArray();
             Assert.Equal("3 target scalers to sample", logs[0].FormattedMessage);
             Assert.Equal($"Snapshot dynamic concurrency for target scaler 'func1' is '1'", logs[1].FormattedMessage);
-            Assert.Equal("Target worker count for 'func1' is '3'", logs[2].FormattedMessage);
-            Assert.Equal("Failed to query scale result for target scaler 'func2'.", logs[3].FormattedMessage);
+            Assert.Equal("Function 'func1' vote: TargetWorkerCount='3'.", logs[2].FormattedMessage);
+            Assert.Equal("Function 'func2' error: Failed to get target scaler vote.", logs[3].FormattedMessage);
             Assert.Same("test", logs[3].Exception.Message);
-            Assert.Equal("Target worker count for 'func3' is '-3'", logs[4].FormattedMessage);
+            Assert.Equal("Function 'func3' vote: TargetWorkerCount='-3'.", logs[4].FormattedMessage);
 
             Assert.Equal(3, status.TargetWorkerCount);
             Assert.Equal(ScaleVote.None, status.Vote);
@@ -377,7 +377,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             Assert.Equal(result1.TargetWorkerCount, 1);
             Assert.Equal(result1.Vote, ScaleVote.None);
             var logs = _loggerProvider.GetAllLogMessages().Select(x => x.FormattedMessage).ToArray();
-            Assert.Single(logs, x => x == "Unable to use target based scaling for Function 'function1'. Metrics monitoring will be used.");
+            Assert.Single(logs, x => x == "Function 'function1' error: Unable to use target based scaling, switching to metrics monitor.");
             _loggerProvider.ClearAllLogMessages();
 
             var (monitors2, scalers2) = ScaleManager.GetScalersToSample(
@@ -392,7 +392,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             Assert.Equal(result2.TargetWorkerCount, null);
             Assert.Equal(result2.Vote, ScaleVote.ScaleIn);
             logs = _loggerProvider.GetAllLogMessages().Select(x => x.FormattedMessage).ToArray();
-            Assert.DoesNotContain(logs, x => x == "Unable to use target based scaling for Function 'function1'. Metrics monitoring will be used.");
+            Assert.DoesNotContain(logs, x => x == "Function 'function1' error: Unable to use target based scaling, switching to metrics monitor.");
         }
     }
 }

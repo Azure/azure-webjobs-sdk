@@ -112,10 +112,10 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                             var json = JsonConvert.SerializeObject(metrics);
                             _logger.LogDebug($"Scale metrics sample for monitor '{monitor.Descriptor.Id}': {json}");
                         }
-                        catch (Exception exc) when (!exc.IsFatal())
+                        catch (Exception exc)
                         {
                             // if a particular monitor fails, log and continue
-                            _logger.LogError(exc, $"Failed to collect scale metrics sample for monitor '{monitor.Descriptor.Id}'.");
+                            _logger.LogFunctionScaleError("Failed to collect scale metrics.", monitor.Descriptor.FunctionName, exc);
                         }
                     }
 
