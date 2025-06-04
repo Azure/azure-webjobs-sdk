@@ -35,5 +35,10 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// Gets the ID of the function associated with this monitor.
         /// </summary>
         public string FunctionId { get; }
+
+        /// <summary>
+        /// Gets the name of the function associated with this monitor.
+        /// </summary>
+        internal string FunctionName => !string.IsNullOrEmpty(FunctionId) ? FunctionId : Id;
     }
 }

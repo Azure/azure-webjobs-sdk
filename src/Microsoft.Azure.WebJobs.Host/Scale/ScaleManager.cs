@@ -108,7 +108,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                         };
                         var result = monitor.GetScaleStatus(scaleStatusContext);
 
-                        _logger.LogDebug($"Monitor '{monitor.Descriptor.Id}' voted '{result.Vote.ToString()}'");
+                        _logger.LogFunctionScaleVote(monitor.Descriptor.FunctionName, result.Vote.ToString());
                         string key = monitor.Descriptor.FunctionId ?? monitor.Descriptor.Id;
                         votes.Add(key, new ScaleStatus()
                         {
@@ -117,8 +117,8 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                     }
                     catch (Exception exc) when (!exc.IsFatal())
                     {
-                        // if a particular monitor fails, log and continue
-                        _logger.LogError(exc, $"Failed to query scale status for monitor '{monitor.Descriptor.Id}'.");
+                        // if a particular target scaler fails, log and continue
+                        _logger.LogFunctionScaleError("Failed to get scale monitor vote.", monitor.Descriptor.FunctionName, exc);
                     }
                 }
             }
@@ -169,26 +169,33 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                         catch (NotSupportedException ex)
                         {
                             string targetScalerUniqueId = GetTargetScalerFunctionUniqueId(targetScaler);
-                            _logger.LogWarning($"Unable to use target based scaling for Function '{targetScaler.TargetScalerDescriptor.FunctionId}'. Metrics monitoring will be used.", ex);
+
+                            _logger.LogFunctionScaleError(
+                                "Unable to use target based scaling, switching to metrics monitor.",
+                                targetScaler.TargetScalerDescriptor.FunctionId,
+                                ex);
+
                             lock (_targetScalersInError)
                             {
                                 _targetScalersInError.Add(targetScalerUniqueId);
                             }
 
                             // Adding ScaleVote.None vote
-                            result = new TargetScalerResult
+                            result = new TargetScalerResult 
                             {
                                 TargetWorkerCount = context.WorkerCount
                             };
                         }
-                        _logger.LogDebug($"Target worker count for '{targetScaler.TargetScalerDescriptor.FunctionId}' is '{result.TargetWorkerCount}'");
-
+                        _logger.LogFunctionScaleVote(targetScaler.TargetScalerDescriptor.FunctionId, result.TargetWorkerCount);
                         targetScaleVotes.Add(targetScaler.TargetScalerDescriptor.FunctionId, result);
                     }
-                    catch (Exception exc) when (!exc.IsFatal())
+                    catch (Exception exc)
                     {
                         // if a particular target scaler fails, log and continue
-                        _logger.LogError(exc, $"Failed to query scale result for target scaler '{targetScaler.TargetScalerDescriptor.FunctionId}'.");
+                        _logger.LogFunctionScaleError(
+                            "Failed to get target scaler vote.",
+                            targetScaler.TargetScalerDescriptor.FunctionId,
+                            exc);
                     }
                 }
             }

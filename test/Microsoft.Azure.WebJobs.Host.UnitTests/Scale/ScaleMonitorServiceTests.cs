@@ -89,7 +89,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
                 p =>
                 {
                     Assert.Same(monitor.Exception, p.Exception);
-                    Assert.Equal("Failed to collect scale metrics sample for monitor 'testscalemonitor1'.", p.FormattedMessage);
+                    Assert.Equal("Function 'testscalemonitor1' error: Failed to collect scale metrics.", p.FormattedMessage);
                 });
         }
 
@@ -205,7 +205,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             Assert.Equal("Taking metrics samples for 2 monitor(s).", logs[1].FormattedMessage);
 
             // verify the failure logs for the failing monitor
-            Assert.True(logs.Count(p => p.FormattedMessage.Equals($"Failed to collect scale metrics sample for monitor 'testscalemonitor1'.")) >= 5);
+            Assert.True(logs.Count(p => p.FormattedMessage.Equals($"Function 'testscalemonitor1' error: Failed to collect scale metrics.")) >= 5);
 
             // verify each successful sample is logged
             Assert.True(logs.Count(p => p.FormattedMessage.StartsWith($"Scale metrics sample for monitor 'testscalemonitor2'")) >= 5);
