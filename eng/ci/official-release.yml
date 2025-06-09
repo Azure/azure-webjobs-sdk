@@ -67,4 +67,6 @@ extends:
           artifact:
             pipeline: build
             name: drop_packages
-          targetFolder: azure-functions/dotnet/azure-webjobs-sdk/$(resources.pipeline.build.runName)
+          partnerDrop:
+            serviceConnection: azure-sdk-partner-drops
+            targetFolder: azure-functions/dotnet/azure-webjobs-sdk/$(resources.pipeline.build.runName)
