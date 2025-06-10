@@ -3,6 +3,9 @@ trigger:
     include:
     - dev
     - release/*
+  tags:
+    include:
+    - '*'
 
 resources:
   repositories:
