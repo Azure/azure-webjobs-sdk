@@ -34,30 +34,19 @@ extends:
       os: linux
 
     stages:
-    - stage: Validate
+    - stage: Prepare
       jobs:
-      - job: Validate_Branch
+      - job: Prepare
         templateContext:
           type: validationJob
 
         steps:
-        - ${{ if eq(parameters.publishToNugetOrg, true) }}:
-          - pwsh: |
-              $sourceBranch = "$(resources.pipeline.build.sourceBranch)"
-              Write-Host "Triggered by: $sourceBranch"
-              if (!$sourceBranch.StartsWith("refs/heads/release/"))
-              {
-                Write-Host "##vso[task.LogIssue type=error;]$sourceBranch is not a release branch. Please enqueue for a build produced from a release/* branch."
-                exit 1
-              }
-            displayName: Validate branch
-
         - pwsh: |
             Write-Host "##vso[build.updatebuildnumber]$(resources.pipeline.build.runName)"
           displayName: Update build number
 
     - stage: Release
-      dependsOn: Validate
+      dependsOn: Prepare
       jobs:
       - template: /ci/release-nuget-package.yml@eng
         parameters:
@@ -67,4 +56,7 @@ extends:
           artifact:
             pipeline: build
             name: drop_packages
-          targetFolder: azure-functions/dotnet/azure-webjobs-sdk/$(resources.pipeline.build.runName)
+          ${{ if eq(parameters.publishToNugetOrg, true) }}:
+            partnerDrop:
+              serviceConnection: azure-sdk-partner-drops
+              targetFolder: azure-functions/dotnet/azure-webjobs-sdk/$(resources.pipeline.build.runName)
