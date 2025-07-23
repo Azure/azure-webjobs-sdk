@@ -1,0 +1,44 @@
+// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the MIT License. See License.txt in the project root for license information.
+
+using System;
+using System.Runtime.Serialization;
+using System.Threading.Tasks;
+
+namespace Microsoft.Azure.WebJobs.Host
+{
+    /// <summary>
+    /// Exception thrown when a job function invocation is aborted.
+    /// </summary>
+    [Serializable]
+    public class FunctionAbortedException : FunctionTimeoutException
+    {
+        /// <inheritdoc/>
+        public FunctionAbortedException() : base()
+        {
+        }
+
+        /// <inheritdoc/>
+        public FunctionAbortedException(string message) : base(message)
+        {
+        }
+
+        /// <inheritdoc/>
+        public FunctionAbortedException(string message, Exception innerException) : base(message, innerException)
+        {
+        }
+
+        /// <summary>
+        /// Constructs a new instance.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/>.</param>
+        /// <param name="context">The <see cref="StreamingContext"/>.</param>
+        protected FunctionAbortedException(SerializationInfo info, StreamingContext context) : base(info, context)
+        {
+            if (info == null)
+            {
+                throw new ArgumentNullException(nameof(info));
+            }
+        }
+    }
+}
