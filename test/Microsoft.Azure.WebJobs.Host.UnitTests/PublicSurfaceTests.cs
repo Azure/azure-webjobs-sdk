@@ -130,6 +130,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "FluentBindingRule`1",
                 "FluentBindingRule`1+FluentBinder",
                 "FluentConverterRules`2",
+                "FunctionAbortedException",
                 "FuncAsyncConverter",
                 "FuncAsyncConverter`2",
                 "FuncConverterBuilder",
