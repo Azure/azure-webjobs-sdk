@@ -5,7 +5,7 @@ using System;
 
 namespace Microsoft.Azure.WebJobs.Host
 {
-    internal class FunctionInvocationCanceledException : FunctionInvocationException
+    public class FunctionInvocationCanceledException : FunctionInvocationException
     {
         public FunctionInvocationCanceledException(string invocationId, Exception innerException)
             : base($"The invocation request with id '{invocationId}' was canceled before the request was sent to the worker.", innerException) { }

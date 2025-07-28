@@ -146,6 +146,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "FunctionInstanceExtensions",
                 "FunctionInstanceFactoryContext",
                 "FunctionInstanceLogEntry",
+                "FunctionInvocationCanceledException",
                 "FunctionInvocationContext",
                 "FunctionInvocationException",
                 "FunctionInvocationFilterAttribute",
