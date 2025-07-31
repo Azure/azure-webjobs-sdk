@@ -8,6 +8,6 @@ namespace Microsoft.Azure.WebJobs.Host
     public class FunctionInvocationCanceledException : FunctionInvocationException
     {
         public FunctionInvocationCanceledException(string invocationId, Exception innerException)
-            : base($"The invocation request with id '{invocationId}' was canceled.", innerException) { }
+            : base($"The invocation request with Id '{invocationId}' was canceled.", innerException) { }
     }
 }
