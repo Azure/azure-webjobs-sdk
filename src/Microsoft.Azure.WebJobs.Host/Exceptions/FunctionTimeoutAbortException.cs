@@ -8,20 +8,20 @@ namespace Microsoft.Azure.WebJobs.Host
     /// <summary>
     /// Exception thrown when a function invocation is aborted due to another concurrently running function timing out.
     /// </summary>
-    public class FunctionAbortTimeoutException : FunctionTimeoutException
+    public class FunctionTimeoutAbortException : FunctionTimeoutException
     {
         /// <inheritdoc/>
-        public FunctionAbortTimeoutException() : base()
+        public FunctionTimeoutAbortException() : base()
         {
         }
 
         /// <inheritdoc/>
-        public FunctionAbortTimeoutException(string message) : base(message)
+        public FunctionTimeoutAbortException(string message) : base(message)
         {
         }
 
         /// <inheritdoc/>
-        public FunctionAbortTimeoutException(string message, Exception innerException) : base(message, innerException)
+        public FunctionTimeoutAbortException(string message, Exception innerException) : base(message, innerException)
         {
         }
     }
