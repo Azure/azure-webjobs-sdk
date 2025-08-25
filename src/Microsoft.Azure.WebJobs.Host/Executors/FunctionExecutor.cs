@@ -31,6 +31,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IEnumerable<IFunctionFilter> _globalFunctionFilters;
         private readonly IDrainModeManager _drainModeManager;
         private readonly ConcurrencyManager _concurrencyManager;
+        private readonly ActivitySource activitySource = new ActivitySource(Constants.WebJobsActivitySourceName);
         private int _outstandingInvocations;
         private int _outstandingRetries;
 
@@ -97,43 +98,55 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
 
                 using (_resultsLogger?.BeginFunctionScope(functionInstanceEx, HostOutputMessage.HostInstanceId))
-                using (parameterHelper)
                 {
-                    try
+                    Activity activity = null;
+                    // If no current activity exists, create one for the entire function run.
+                    // HTTP, Service Bus, Event Hub, and other instrumented triggers will have their own activities.
+                    // BeginFunctionScope creates a function activity when AppInsights SDK is enabled.
+                    // In OTel mode, Activity.Current will be null unless the trigger is instrumented.
+                    if (Activity.Current is null)
                     {
-                        parameterHelper.Initialize();
-                        instanceLogEntry = CreateInstanceLogEntry(functionStartedMessage);
-                        await _functionEventCollector.AddAsync(instanceLogEntry);
+                       activity = activitySource.StartActivity(functionInstanceEx.FunctionDescriptor.LogName, ActivityKind.Server);
+                    }
+                    using (parameterHelper)
+                    {
+                        try
+                        {
+                            parameterHelper.Initialize();
+                            instanceLogEntry = CreateInstanceLogEntry(functionStartedMessage);
+                            await _functionEventCollector.AddAsync(instanceLogEntry);
 
-                        functionStartedMessageId = await ExecuteWithLoggingAsync(functionInstanceEx, functionStartedMessage, instanceLogEntry, parameterHelper, logger, cancellationToken);
-                    }
-                    catch (Exception exception)
-                    {
-                        functionStartedMessage.Failure = FunctionFailure.FromException(exception);
-                        exceptionInfo = ExceptionDispatchInfo.Capture(exception);
-                        exceptionInfo = await InvokeExceptionFiltersAsync(parameterHelper.JobInstance, exceptionInfo, functionInstanceEx, parameterHelper.FilterContextProperties, logger, cancellationToken);
-                    }
-                    finally
-                    {
-                        functionStartedMessage.ParameterLogs = parameterHelper.ParameterLogCollector;
-                        functionStartedMessage.EndTime = DateTimeOffset.UtcNow;
-                    }
+                            functionStartedMessageId = await ExecuteWithLoggingAsync(functionInstanceEx, functionStartedMessage, instanceLogEntry, parameterHelper, logger, cancellationToken);
+                        }
+                        catch (Exception exception)
+                        {
+                            functionStartedMessage.Failure = FunctionFailure.FromException(exception);
+                            exceptionInfo = ExceptionDispatchInfo.Capture(exception);
+                            exceptionInfo = await InvokeExceptionFiltersAsync(parameterHelper.JobInstance, exceptionInfo, functionInstanceEx, parameterHelper.FilterContextProperties, logger, cancellationToken);
+                        }
+                        finally
+                        {
+                            functionStartedMessage.ParameterLogs = parameterHelper.ParameterLogCollector;
+                            functionStartedMessage.EndTime = DateTimeOffset.UtcNow;
+                        }
 
-                    // If function started was logged, don't cancel calls to log function completed.
-                    bool loggedStartedEvent = functionStartedMessageId != null;
-                    _functionInstanceLogger.LogFunctionCompleted(functionStartedMessage);
+                        // If function started was logged, don't cancel calls to log function completed.
+                        bool loggedStartedEvent = functionStartedMessageId != null;
+                        _functionInstanceLogger.LogFunctionCompleted(functionStartedMessage);
 
-                    if (instanceLogEntry != null)
-                    {
-                        CompleteInstanceLogEntry(instanceLogEntry, functionStartedMessage.Arguments, exceptionInfo);
-                        await _functionEventCollector.AddAsync(instanceLogEntry);
-                        _resultsLogger?.LogFunctionResult(instanceLogEntry);
-                    }
+                        if (instanceLogEntry != null)
+                        {
+                            CompleteInstanceLogEntry(instanceLogEntry, functionStartedMessage.Arguments, exceptionInfo);
+                            await _functionEventCollector.AddAsync(instanceLogEntry);
+                            _resultsLogger?.LogFunctionResult(instanceLogEntry);
+                        }
 
-                    if (loggedStartedEvent)
-                    {
-                        _functionInstanceLogger.DeleteLogFunctionStarted(functionStartedMessageId);
+                        if (loggedStartedEvent)
+                        {
+                            _functionInstanceLogger.DeleteLogFunctionStarted(functionStartedMessageId);
+                        }
                     }
+                    activity?.Stop();
                 }
 
                 if (exceptionInfo != null)
