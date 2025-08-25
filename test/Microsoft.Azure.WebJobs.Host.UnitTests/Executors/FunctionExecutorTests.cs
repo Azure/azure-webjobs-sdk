@@ -524,7 +524,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         }
     }
 
-    public sealed class ActivityTestListener : IDisposable
+    internal sealed class ActivityTestListener : IDisposable
     {
         public List<Activity> Activities { get; } = new List<Activity>();
         private readonly ActivityListener _listener;
@@ -547,5 +547,4 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             _listener.Dispose();
         }
     }
-
 }
