@@ -7,6 +7,15 @@ trigger:
     include:
     - '*'
 
+schedules:
+# Run once a month to prevent disablement from inactivity.
+- cron: "0 0 1 * *"
+  displayName: Monthly sync
+  branches:
+    include:
+    - dev
+  always: true
+
 resources:
   repositories:
   - repository: eng
