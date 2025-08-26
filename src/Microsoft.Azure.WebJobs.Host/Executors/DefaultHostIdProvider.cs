@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Indexers;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Executors
 {
@@ -18,6 +19,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
     internal class DefaultHostIdProvider : IHostIdProvider
     {
         private readonly ITypeLocator _typeLocator;
+        private readonly ILogger<DefaultHostIdProvider> _logger;
         private string _hostId;
 
         public DefaultHostIdProvider(ITypeLocator typeLocator)
@@ -30,7 +32,13 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             if (_hostId == null)
             {
                 _hostId = ComputeHostId();
+                _logger.LogDebug("Host ID not cached. Computed Host ID: {HostId}", _hostId);
             }
+            else
+            {
+                _logger.LogDebug("Returning cached Host ID: {HostId}", _hostId);
+            }
+
             return Task.FromResult(_hostId);
         }
 
