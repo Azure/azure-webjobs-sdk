@@ -26,7 +26,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             var mockTypeLocator = new Mock<ITypeLocator>(MockBehavior.Strict);
             mockTypeLocator.Setup(p => p.GetTypes()).Returns(new Type[] { type });
-            var idProvider = new DefaultHostIdProvider(mockTypeLocator.Object, );
+            var logger = CreateLogger();
+            var idProvider = new DefaultHostIdProvider(mockTypeLocator.Object, logger);
 
             // as long as this test assembly name stays the same, the ID
             // computed should remain static. If this test is failing
