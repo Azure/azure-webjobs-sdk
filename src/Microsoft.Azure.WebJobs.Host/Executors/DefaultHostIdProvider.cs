@@ -22,9 +22,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly ILogger<DefaultHostIdProvider> _logger;
         private string _hostId;
 
-        public DefaultHostIdProvider(ITypeLocator typeLocator)
+        public DefaultHostIdProvider(ITypeLocator typeLocator, ILogger<DefaultHostIdProvider> logger)
         {
             _typeLocator = typeLocator;
+            _logger = logger;
         }
 
         public Task<string> GetHostIdAsync(CancellationToken cancellationToken)
