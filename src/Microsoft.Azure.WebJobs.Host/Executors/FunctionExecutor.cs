@@ -98,55 +98,44 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
 
                 using (_resultsLogger?.BeginFunctionScope(functionInstanceEx, HostOutputMessage.HostInstanceId))
+                using (var activity = TryCreateFunctionActivity(functionInstanceEx))
+                using (parameterHelper)
                 {
-                    Activity activity = null;
-                    // If no current activity exists, create one for the entire function run.
-                    // HTTP, Service Bus, Event Hub, and other instrumented triggers will have their own activities.
-                    // BeginFunctionScope creates a function activity when AppInsights SDK is enabled.
-                    // In OTel mode, Activity.Current will be null unless the trigger is instrumented.
-                    if (Activity.Current is null)
+                    try
                     {
-                       activity = activitySource.StartActivity(functionInstanceEx.FunctionDescriptor.LogName, ActivityKind.Server);
+                        parameterHelper.Initialize();
+                        instanceLogEntry = CreateInstanceLogEntry(functionStartedMessage);
+                        await _functionEventCollector.AddAsync(instanceLogEntry);
+
+                        functionStartedMessageId = await ExecuteWithLoggingAsync(functionInstanceEx, functionStartedMessage, instanceLogEntry, parameterHelper, logger, cancellationToken);
                     }
-                    using (parameterHelper)
+                    catch (Exception exception)
                     {
-                        try
-                        {
-                            parameterHelper.Initialize();
-                            instanceLogEntry = CreateInstanceLogEntry(functionStartedMessage);
-                            await _functionEventCollector.AddAsync(instanceLogEntry);
-
-                            functionStartedMessageId = await ExecuteWithLoggingAsync(functionInstanceEx, functionStartedMessage, instanceLogEntry, parameterHelper, logger, cancellationToken);
-                        }
-                        catch (Exception exception)
-                        {
-                            functionStartedMessage.Failure = FunctionFailure.FromException(exception);
-                            exceptionInfo = ExceptionDispatchInfo.Capture(exception);
-                            exceptionInfo = await InvokeExceptionFiltersAsync(parameterHelper.JobInstance, exceptionInfo, functionInstanceEx, parameterHelper.FilterContextProperties, logger, cancellationToken);
-                        }
-                        finally
-                        {
-                            functionStartedMessage.ParameterLogs = parameterHelper.ParameterLogCollector;
-                            functionStartedMessage.EndTime = DateTimeOffset.UtcNow;
-                        }
-
-                        // If function started was logged, don't cancel calls to log function completed.
-                        bool loggedStartedEvent = functionStartedMessageId != null;
-                        _functionInstanceLogger.LogFunctionCompleted(functionStartedMessage);
-
-                        if (instanceLogEntry != null)
-                        {
-                            CompleteInstanceLogEntry(instanceLogEntry, functionStartedMessage.Arguments, exceptionInfo);
-                            await _functionEventCollector.AddAsync(instanceLogEntry);
-                            _resultsLogger?.LogFunctionResult(instanceLogEntry);
-                        }
-
-                        if (loggedStartedEvent)
-                        {
-                            _functionInstanceLogger.DeleteLogFunctionStarted(functionStartedMessageId);
-                        }
+                        functionStartedMessage.Failure = FunctionFailure.FromException(exception);
+                        exceptionInfo = ExceptionDispatchInfo.Capture(exception);
+                        exceptionInfo = await InvokeExceptionFiltersAsync(parameterHelper.JobInstance, exceptionInfo, functionInstanceEx, parameterHelper.FilterContextProperties, logger, cancellationToken);
                     }
-                    activity?.Stop();
+                    finally
+                    {
+                        functionStartedMessage.ParameterLogs = parameterHelper.ParameterLogCollector;
+                        functionStartedMessage.EndTime = DateTimeOffset.UtcNow;
+                    }
+
+                    // If function started was logged, don't cancel calls to log function completed.
+                    bool loggedStartedEvent = functionStartedMessageId != null;
+                    _functionInstanceLogger.LogFunctionCompleted(functionStartedMessage);
+
+                    if (instanceLogEntry != null)
+                    {
+                        CompleteInstanceLogEntry(instanceLogEntry, functionStartedMessage.Arguments, exceptionInfo);
+                        await _functionEventCollector.AddAsync(instanceLogEntry);
+                        _resultsLogger?.LogFunctionResult(instanceLogEntry);
+                    }
+
+                    if (loggedStartedEvent)
+                    {
+                        _functionInstanceLogger.DeleteLogFunctionStarted(functionStartedMessageId);
+                    }
                 }
 
                 if (exceptionInfo != null)
@@ -713,6 +702,26 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             return message;
         }
+
+#nullable enable
+        private Activity? TryCreateFunctionActivity(IFunctionInstanceEx functionInstanceEx)
+        {
+            // If no current activity exists, create one for the entire function run.
+            // HTTP, Service Bus, Event Hub, and other instrumented triggers will have their own activities.
+            // BeginFunctionScope creates a function activity when AppInsights SDK is enabled.
+            // In OTel mode, Activity.Current will be null unless the trigger is instrumented.
+            if (Activity.Current is not null)
+            {
+                return null;
+            }
+
+            // Start new activity for the function execution
+            return activitySource.StartActivity(
+                functionInstanceEx.FunctionDescriptor.LogName,
+                ActivityKind.Server
+            );
+        }
+#nullable disable
 
         private static void CompleteStartedMessage(FunctionStartedMessage message, IFunctionOutputDefinition outputDefinition, ParameterHelper parameterHelper)
         {

@@ -62,7 +62,7 @@ namespace SampleHost
         }
 
         /// <summary>
-        /// If there is an error during function invocation, function execution will be retried up to 3 times waiting for "00:00:20" between each retry
+        /// If there is an error during function invocation, function execution will be retried up to 3 times waiting for "00:00:20" between each retry.
         /// </summary>
         /// <param name="events"></param>
         /// <param name="log"></param>
