@@ -1,13 +1,14 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using Microsoft.Azure.WebJobs.Host.Executors;
+using Microsoft.Azure.WebJobs.Host.Indexers;
+using Microsoft.Extensions.Logging;
+using Moq;
 using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host.Executors;
-using Microsoft.Azure.WebJobs.Host.Indexers;
-using Moq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
@@ -25,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             var mockTypeLocator = new Mock<ITypeLocator>(MockBehavior.Strict);
             mockTypeLocator.Setup(p => p.GetTypes()).Returns(new Type[] { type });
-            var idProvider = new DefaultHostIdProvider(mockTypeLocator.Object);
+            var idProvider = new DefaultHostIdProvider(mockTypeLocator.Object, );
 
             // as long as this test assembly name stays the same, the ID
             // computed should remain static. If this test is failing
@@ -39,7 +40,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             // ensure the same ID is returned each time
             mockTypeLocator = new Mock<ITypeLocator>(MockBehavior.Strict);
             mockTypeLocator.Setup(p => p.GetTypes()).Returns(new Type[] { type });
-            idProvider = new DefaultHostIdProvider(mockTypeLocator.Object);
+            var logger = CreateLogger();
+            idProvider = new DefaultHostIdProvider(mockTypeLocator.Object, logger);
             Assert.Equal(expected, await idProvider.GetHostIdAsync(CancellationToken.None));
 
             // ensure once the ID is computed, a cached result is returned
@@ -58,7 +60,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 
             var mockTypeLocator = new Mock<ITypeLocator>(MockBehavior.Strict);
             mockTypeLocator.Setup(p => p.GetTypes()).Returns(new Type[] { type });
-            var idProvider = new DefaultHostIdProvider(mockTypeLocator.Object);
+            var logger = CreateLogger();
+            var idProvider = new DefaultHostIdProvider(mockTypeLocator.Object, logger);
 
             // as long as this test assembly name stays the same, the ID
             // computed should remain static. If this test is failing
@@ -79,6 +82,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         // This is a publically discoverable job function used by the test above
         public static void TestQueueFunction([FakeQueueTrigger] string message)
         {
+        }
+
+        private static ILogger<DefaultHostIdProvider> CreateLogger()
+        {
+            // Use a no-op logger for testing
+            return new LoggerFactory().CreateLogger<DefaultHostIdProvider>();
         }
     }
 }
