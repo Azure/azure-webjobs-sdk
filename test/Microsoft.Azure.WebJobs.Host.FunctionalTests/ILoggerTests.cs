@@ -106,7 +106,7 @@ namespace Microsoft.Azure.WebJobs.Host.FunctionalTests
             }
 
             // Five loggers are the startup, singleton, results, function and function.user
-            Assert.Equal(10, loggerProvider.CreatedLoggers.Count);
+            Assert.Equal(11, loggerProvider.CreatedLoggers.Count);
             var functionLogger = loggerProvider.CreatedLoggers.Where(l => l.Category == LogCategories.CreateFunctionUserCategory(functionName)).Single();
             Assert.Equal(2, functionLogger.GetLogMessages().Count);
             var infoMessage = functionLogger.GetLogMessages()[0];
