@@ -41,7 +41,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             // ensure the same ID is returned each time
             mockTypeLocator = new Mock<ITypeLocator>(MockBehavior.Strict);
             mockTypeLocator.Setup(p => p.GetTypes()).Returns(new Type[] { type });
-            var logger = CreateLogger();
             idProvider = new DefaultHostIdProvider(mockTypeLocator.Object, logger);
             Assert.Equal(expected, await idProvider.GetHostIdAsync(CancellationToken.None));
 
@@ -76,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             // ensure the same ID is returned each time
             mockTypeLocator = new Mock<ITypeLocator>(MockBehavior.Strict);
             mockTypeLocator.Setup(p => p.GetTypes()).Returns(new Type[] { type });
-            idProvider = new DefaultHostIdProvider(mockTypeLocator.Object);
+            idProvider = new DefaultHostIdProvider(mockTypeLocator.Object, logger);
             Assert.Equal(expected, await idProvider.GetHostIdAsync(CancellationToken.None));
         }
 
