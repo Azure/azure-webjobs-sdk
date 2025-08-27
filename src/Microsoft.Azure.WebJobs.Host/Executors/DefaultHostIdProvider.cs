@@ -54,6 +54,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 firstJobMethod = FunctionIndexer.GetJobMethods(type).FirstOrDefault();
                 if (firstJobMethod != null)
                 {
+                    _logger.LogDebug("Found first job method: {Method}", firstJobMethod.Name);
+
                     break;
                 }
             }
@@ -62,6 +64,9 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // If the job host doesn't yet have any job methods (e.g. it's a new project)
             // then a default ID is generated
             string hostName = firstJobMethod?.DeclaringType.Assembly.FullName ?? "Unknown";
+
+            _logger.LogDebug("Computing Host ID. Using host name: {HostName}", hostName);
+
             Guid id;
 
             // CodeQL [SM02196] cannot update the HostId as this would break the customers. MD5 hash is used only for generating unique HostIds and not for encryption or hashing secrets.
