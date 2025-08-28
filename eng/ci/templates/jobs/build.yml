@@ -50,8 +50,11 @@ jobs:
       - template: ci/sign-files.yml@eng
         parameters:
           displayName: Sign assemblies
-          folderPath: src
-          pattern: Microsoft.Azure.WebJobs*.dll
+          folderPath: out/bin
+          minimatch: true
+          pattern: |
+            **/Microsoft.Azure.WebJobs*.dll
+            !**/*Test*.dll
           signType: dll-strong-name
 
     - task: DotNetCoreCLI@2
