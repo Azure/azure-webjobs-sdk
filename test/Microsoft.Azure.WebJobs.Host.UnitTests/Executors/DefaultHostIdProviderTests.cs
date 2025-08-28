@@ -23,7 +23,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             var type = GetType();
             var firstJobMethod = FunctionIndexer.GetJobMethods(type).FirstOrDefault();
             Assert.NotNull(firstJobMethod);
-            Assert.Equal(nameof(TestQueueFunction), firstJobMethod?.DeclaringType.Assembly.FullName.Substring(37));
+            Assert.Equal(nameof(TestQueueFunction), firstJobMethod?.DeclaringType.Assembly.FullName.Substring(65));
             Console.WriteLine("Using assembly: " + firstJobMethod?.DeclaringType.Assembly.FullName);
 
             var mockTypeLocator = new Mock<ITypeLocator>(MockBehavior.Strict);
