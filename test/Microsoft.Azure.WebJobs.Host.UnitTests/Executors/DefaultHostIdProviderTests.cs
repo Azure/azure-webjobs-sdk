@@ -23,8 +23,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             var type = GetType();
             var firstJobMethod = FunctionIndexer.GetJobMethods(type).FirstOrDefault();
             Assert.NotNull(firstJobMethod);
-            Assert.Equal(nameof(TestQueueFunction), firstJobMethod?.DeclaringType.Assembly.FullName.Substring(68));
-            Console.WriteLine("Using assembly: " + firstJobMethod?.DeclaringType.Assembly.FullName);
 
             var mockTypeLocator = new Mock<ITypeLocator>(MockBehavior.Strict);
             mockTypeLocator.Setup(p => p.GetTypes()).Returns(new Type[] { type });
@@ -36,6 +34,9 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             // it likely means we've changed the ID computation algorithm
             // which would be a BREAKING CHANGE
             string expected = "6f77803292aa75ec8e56b07b02b633e3";
+
+            var getHostName = idProvider.GetFirstJobMethod();
+            Assert.Equal("someName", getHostName.Substring(65));
 
             var id = await idProvider.GetHostIdAsync(CancellationToken.None);
             Assert.Equal(expected, id);

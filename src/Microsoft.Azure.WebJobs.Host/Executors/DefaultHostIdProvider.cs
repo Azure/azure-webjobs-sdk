@@ -43,6 +43,34 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             return Task.FromResult(_hostId);
         }
 
+        public string GetFirstJobMethod()
+        {
+            // Search through all types for the first job method.
+            // The reason we have to do this rather than attempt to use the entry assembly
+            // (Assembly.GetEntryAssembly) is because that doesn't work for WebApps, and the
+            // SDK supports both WebApp and Console app hosts.
+            MethodInfo firstJobMethod = null;
+            foreach (var type in _typeLocator.GetTypes())
+            {
+                firstJobMethod = FunctionIndexer.GetJobMethods(type).FirstOrDefault();
+                if (firstJobMethod != null)
+                {
+                    _logger.LogDebug("Found first job method: {Method}", firstJobMethod.Name);
+
+                    break;
+                }
+            }
+
+            // Compute hash and map to Guid
+            // If the job host doesn't yet have any job methods (e.g. it's a new project)
+            // then a default ID is generated
+            string hostName = firstJobMethod?.DeclaringType.Assembly.FullName ?? "Unknown";
+
+            _logger.LogDebug("Computing Host ID. Using host name: {HostName}", hostName);
+
+            return hostName;
+        }
+
         private string ComputeHostId()
         {
             // Search through all types for the first job method.
