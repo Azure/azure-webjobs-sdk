@@ -4,6 +4,7 @@
 
   <PropertyGroup>
     <IsPackable>true</IsPackable>
+    <ArtifactsBinOutputName>bin/src</ArtifactsBinOutputName>
   </PropertyGroup>
 
 </Project>
