@@ -1,10 +1,9 @@
 <Project>
-
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))"
           Condition="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../')) != ''" />
-          
+
   <PropertyGroup>
-    <ArtifactsBinOutputName>bin/sample</ArtifactsBinOutputName>
+    <ArtifactsBinOutputName>bin/test</ArtifactsBinOutputName>
   </PropertyGroup>
 
 </Project>
