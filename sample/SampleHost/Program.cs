@@ -32,19 +32,13 @@ namespace SampleHost
                 {
                     b.SetMinimumLevel(LogLevel.Debug);
                     b.AddConsole();
-
-                    // If this key exists in any config, use it to enable App Insights
-                    string appInsightsKey = context.Configuration["APPINSIGHTS_INSTRUMENTATIONKEY"];
-                    if (!string.IsNullOrEmpty(appInsightsKey))
-                    {
-                        b.AddApplicationInsightsWebJobs(o => o.InstrumentationKey = appInsightsKey);
-                    }
                 })
                 .ConfigureServices(services =>
                 {
                     // add some sample services to demonstrate job class DI
                     services.AddSingleton<ISampleServiceA, SampleServiceA>();
                     services.AddSingleton<ISampleServiceB, SampleServiceB>();
+                    services.AddApplicationInsightsTelemetryWorkerService();
                 })
                 .UseConsoleLifetime();
 

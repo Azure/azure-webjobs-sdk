@@ -30,7 +30,6 @@ jobs:
       arguments: -c $(configuration) --no-build
       projects: |
         test\Microsoft.Azure.WebJobs.Host.FunctionalTests\*.csproj
-        test\Microsoft.Azure.WebJobs.Logging.FunctionalTests\*.csproj
         test\Microsoft.Azure.WebJobs.Host.EndToEndTests\*.csproj
     env:
       AzureWebJobsDashboard: $(Storage)
