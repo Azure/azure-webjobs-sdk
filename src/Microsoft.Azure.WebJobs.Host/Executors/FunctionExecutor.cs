@@ -713,7 +713,12 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private IActivityAbstraction? TryCreateFunctionActivity(IFunctionInstanceEx functionInstanceEx)
         {
             // Return null if no activity source is provided
-            if (_activitySource == null || _activityContextProvider == null)
+            if (_activitySource is null || _activityContextProvider is null)
+            {
+                return null;
+            }
+
+            if (_activityContextProvider.HasCurrentActivity)
             {
                 return null;
             }
@@ -722,12 +727,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // HTTP, Service Bus, Event Hub, and other instrumented triggers will have their own activities.
             // BeginFunctionScope creates a function activity when AppInsights SDK is enabled.
             // In OTel mode, Activity.Current will be null unless the trigger is instrumented.
-            if (_activityContextProvider.HasCurrentActivity)
-            {
-                return null;
-            }
-
-            // Start new activity for the function execution
             return _activitySource.StartActivity(
                 functionInstanceEx.FunctionDescriptor.LogName,
                 ActivityKindAbstraction.Server

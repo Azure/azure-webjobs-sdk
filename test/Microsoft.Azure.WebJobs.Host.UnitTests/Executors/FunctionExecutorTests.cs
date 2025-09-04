@@ -329,6 +329,29 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             return functionExecutor;
         }
 
+        private FunctionExecutor GetActivitySourceWrapperExecutor(DrainModeManager drainModeManager = null)
+        {
+            var mockFunctionInstanceLogger = new Mock<IFunctionInstanceLogger>();
+            var mockFunctionOutputLogger = new NullFunctionOutputLogger();
+            var mockExceptionHandler = new Mock<IWebJobsExceptionHandler>();
+            var mockFunctionEventCollector = new Mock<IAsyncCollector<FunctionInstanceLogEntry>>();
+            var mockConcurrencyManager = new Mock<ConcurrencyManager>();
+            var activityContextProvider = new ActivityContextProvider();
+            var activitySourceAbstraction = new ActivitySourceWrapper("Microsoft.Azure.WebJobs");
+
+            var functionExecutor = new FunctionExecutor(
+                mockFunctionInstanceLogger.Object,
+                mockFunctionOutputLogger,
+                mockExceptionHandler.Object,
+                mockFunctionEventCollector.Object,
+                mockConcurrencyManager.Object,
+                NullLoggerFactory.Instance,
+                null,
+                drainModeManager, activitySourceAbstraction, activityContextProvider);
+
+            return functionExecutor;
+        }
+
         private static void TestFunction()
         {
             // used for a FunctionDescriptor
@@ -453,7 +476,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             };
             var functionDescriptor = FunctionExecutorTestHelper.GetFunctionDescriptor();
             var functionInstance = FunctionExecutorTestHelper.CreateFunctionInstance(Guid.NewGuid(), triggerData.TriggerDetails, false, functionDescriptor, 1000);
-            FunctionExecutor executor = GetTestFunctionExecutor();
+            FunctionExecutor executor = GetActivitySourceWrapperExecutor();
 
             // Arrange
             HostStartedMessage testMessage = new HostStartedMessage();
