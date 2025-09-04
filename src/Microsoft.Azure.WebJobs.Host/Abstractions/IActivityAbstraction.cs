@@ -10,8 +10,6 @@ namespace Microsoft.Azure.WebJobs.Host.Abstractions
     /// </summary>
     public interface IActivityAbstraction : IDisposable
     {
-        string? DisplayName { get; set; }
-        string? OperationName { get; set; }
-        // Add other properties you need from Activity
+        string DisplayName { get; set; }
     }
 }

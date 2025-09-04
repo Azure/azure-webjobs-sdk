@@ -32,8 +32,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IEnumerable<IFunctionFilter> _globalFunctionFilters;
         private readonly IDrainModeManager _drainModeManager;
         private readonly ConcurrencyManager _concurrencyManager;
-        private readonly IActivitySourceAbstraction? _activitySource;
-        private readonly IActivityContextProvider? _activityContextProvider;
+        private readonly IActivitySourceAbstraction _activitySource;
+        private readonly IActivityContextProvider _activityContextProvider;
         private int _outstandingInvocations;
         private int _outstandingRetries;
 
