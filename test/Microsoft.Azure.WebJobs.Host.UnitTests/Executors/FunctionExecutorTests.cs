@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -328,6 +329,28 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             return functionExecutor;
         }
 
+        private FunctionExecutor GetActivitySourceWrapperExecutor(DrainModeManager drainModeManager = null)
+        {
+            var mockFunctionInstanceLogger = new Mock<IFunctionInstanceLogger>();
+            var mockFunctionOutputLogger = new NullFunctionOutputLogger();
+            var mockExceptionHandler = new Mock<IWebJobsExceptionHandler>();
+            var mockFunctionEventCollector = new Mock<IAsyncCollector<FunctionInstanceLogEntry>>();
+            var mockConcurrencyManager = new Mock<ConcurrencyManager>();
+            var activitySourceAbstraction = new ActivitySourceWrapper("Microsoft.Azure.WebJobs");
+
+            var functionExecutor = new FunctionExecutor(
+                mockFunctionInstanceLogger.Object,
+                mockFunctionOutputLogger,
+                mockExceptionHandler.Object,
+                mockFunctionEventCollector.Object,
+                mockConcurrencyManager.Object,
+                NullLoggerFactory.Instance,
+                null,
+                drainModeManager, activitySourceAbstraction);
+
+            return functionExecutor;
+        }
+
         private static void TestFunction()
         {
             // used for a FunctionDescriptor
@@ -441,6 +464,30 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             Assert.Equal(status.OutstandingRetries, 0);
         }
 
+        [Fact]
+        public async Task TryExecuteAsync_DefaultActivity_Expected()
+        {
+            using var testListener = new ActivityTestListener("Microsoft.Azure.WebJobs");
+            var triggerData = new TriggeredFunctionData
+            {
+                TriggerValue = 123,
+                TriggerDetails = new Dictionary<string, string>()
+            };
+            var functionDescriptor = FunctionExecutorTestHelper.GetFunctionDescriptor();
+            var functionInstance = FunctionExecutorTestHelper.CreateFunctionInstance(Guid.NewGuid(), triggerData.TriggerDetails, false, functionDescriptor, 1000);
+            FunctionExecutor executor = GetActivitySourceWrapperExecutor();
+
+            // Arrange
+            HostStartedMessage testMessage = new HostStartedMessage();
+            executor.HostOutputMessage = testMessage;
+
+            await executor.TryExecuteAsync(functionInstance, CancellationToken.None);
+
+            // Assert
+            Assert.True(testListener.Activities.Count > 0, "No activities were captured by the listener.");
+            Assert.Contains(testListener.Activities, a => a.OperationName == "TestFunction");
+        }
+
         private void RunOnFunctionTimeoutTest(bool isDebugging, string expectedMessage)
         {
             System.Timers.Timer timer = new System.Timers.Timer(TimeSpan.FromMinutes(1).TotalMilliseconds);
@@ -496,6 +543,30 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             public static void NoCancellationTokenParameter()
             {
             }
+        }
+    }
+
+    internal sealed class ActivityTestListener : IDisposable
+    {
+        public List<Activity> Activities { get; } = new List<Activity>();
+        private readonly ActivityListener _listener;
+
+        public ActivityTestListener(string sourceName)
+        {
+            _listener = new ActivityListener
+            {
+                ShouldListenTo = s => s.Name == sourceName,
+                Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+                ActivityStarted = activity => Activities.Add(activity),
+                ActivityStopped = _ => { }
+            };
+
+            ActivitySource.AddActivityListener(_listener);
+        }
+
+        public void Dispose()
+        {
+            _listener.Dispose();
         }
     }
 }

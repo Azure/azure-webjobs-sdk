@@ -10,6 +10,7 @@ using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Abstractions;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Indexers;
 using Microsoft.Azure.WebJobs.Host.Loggers;
@@ -31,6 +32,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IEnumerable<IFunctionFilter> _globalFunctionFilters;
         private readonly IDrainModeManager _drainModeManager;
         private readonly ConcurrencyManager _concurrencyManager;
+        private readonly IActivitySourceAbstraction _activitySource;
         private int _outstandingInvocations;
         private int _outstandingRetries;
 
@@ -57,7 +59,8 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 ConcurrencyManager concurrencyManager,
                 ILoggerFactory loggerFactory = null,
                 IEnumerable<IFunctionFilter> globalFunctionFilters = null,
-                IDrainModeManager drainModeManager = null)
+                IDrainModeManager drainModeManager = null,
+                IActivitySourceAbstraction activitySource = null)
         {
             _functionInstanceLogger = functionInstanceLogger ?? throw new ArgumentNullException(nameof(functionInstanceLogger));
             _functionOutputLogger = functionOutputLogger;
@@ -68,6 +71,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _globalFunctionFilters = globalFunctionFilters ?? Enumerable.Empty<IFunctionFilter>();
             _drainModeManager = drainModeManager;
             _concurrencyManager = concurrencyManager ?? throw new ArgumentNullException(nameof(concurrencyManager));
+            _activitySource = activitySource;
         }
 
         public HostOutputMessage HostOutputMessage
@@ -97,6 +101,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
 
                 using (_resultsLogger?.BeginFunctionScope(functionInstanceEx, HostOutputMessage.HostInstanceId))
+                using (_activitySource?.StartActivity(functionInstanceEx))
                 using (parameterHelper)
                 {
                     try

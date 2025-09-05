@@ -158,6 +158,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "FunctionResultAggregatorOptions",
                 "FunctionTimeoutAbortException",
                 "FunctionTimeoutException",
+                "IActivitySourceAbstraction",
                 "IArgumentBinding`1",
                 "IArgumentBindingProvider`1",
                 "IAsyncConverter`2",
