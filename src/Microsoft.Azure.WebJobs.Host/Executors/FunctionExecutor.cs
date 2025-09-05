@@ -101,7 +101,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
 
                 using (_resultsLogger?.BeginFunctionScope(functionInstanceEx, HostOutputMessage.HostInstanceId))
-                using (TryCreateFunctionActivity(functionInstanceEx))
+                using (_activitySource?.StartActivity(functionInstanceEx))
                 using (parameterHelper)
                 {
                     try
@@ -705,23 +705,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
 
             return message;
         }
-
-#nullable enable
-        private IDisposable? TryCreateFunctionActivity(IFunctionInstanceEx functionInstanceEx)
-        {
-            // Return null if no activity source is provided
-            if (_activitySource is null)
-            {
-                return null;
-            }
-
-            // If no current activity exists, create one for the entire function run.
-            // HTTP, Service Bus, Event Hub, and other instrumented triggers will have their own activities.
-            // BeginFunctionScope creates a function activity when AppInsights SDK is enabled.
-            // In OTel mode, Activity.Current will be null unless the trigger is instrumented.
-            return _activitySource.StartActivity(functionInstanceEx);
-        }
-#nullable disable
 
         private static void CompleteStartedMessage(FunctionStartedMessage message, IFunctionOutputDefinition outputDefinition, ParameterHelper parameterHelper)
         {
