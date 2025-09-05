@@ -336,7 +336,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             var mockExceptionHandler = new Mock<IWebJobsExceptionHandler>();
             var mockFunctionEventCollector = new Mock<IAsyncCollector<FunctionInstanceLogEntry>>();
             var mockConcurrencyManager = new Mock<ConcurrencyManager>();
-            var activityContextProvider = new ActivityContextProvider();
             var activitySourceAbstraction = new ActivitySourceWrapper("Microsoft.Azure.WebJobs");
 
             var functionExecutor = new FunctionExecutor(
@@ -347,7 +346,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                 mockConcurrencyManager.Object,
                 NullLoggerFactory.Instance,
                 null,
-                drainModeManager, activitySourceAbstraction, activityContextProvider);
+                drainModeManager, activitySourceAbstraction);
 
             return functionExecutor;
         }

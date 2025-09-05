@@ -1,6 +1,9 @@
 ﻿using Microsoft.Azure.WebJobs.Host.Abstractions;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using System;
 using System.Diagnostics;
+
+#nullable enable
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
 {
@@ -13,50 +16,14 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             _activitySource = new ActivitySource(sourceName);
         }
 
-        public IActivityAbstraction? StartActivity(string name, ActivityKindAbstraction kind = ActivityKindAbstraction.Internal)
+        public IDisposable? StartActivity(IFunctionInstanceEx functionInstance)
         {
-            var activityKind = ConvertActivityKind(kind);
-            var activity = _activitySource.StartActivity(name, activityKind);
-            return activity != null ? new ActivityWrapper(activity) : null;
-        }
-
-        private static ActivityKind ConvertActivityKind(ActivityKindAbstraction kind)
-        {
-            return kind switch
+            if (Activity.Current != null)
             {
-                ActivityKindAbstraction.Internal => ActivityKind.Internal,
-                ActivityKindAbstraction.Server => ActivityKind.Server,
-                ActivityKindAbstraction.Client => ActivityKind.Client,
-                ActivityKindAbstraction.Producer => ActivityKind.Producer,
-                ActivityKindAbstraction.Consumer => ActivityKind.Consumer,
-                _ => ActivityKind.Internal
-            };
+                return null;
+            }
+
+            return _activitySource.StartActivity(functionInstance.FunctionDescriptor.LogName, ActivityKind.Server);
         }
-    }
-
-    public class ActivityWrapper : IActivityAbstraction
-    {
-        private readonly Activity _activity;
-
-        public ActivityWrapper(Activity activity)
-        {
-            _activity = activity ?? throw new ArgumentNullException(nameof(activity));
-        }
-
-        public string? DisplayName
-        {
-            get => _activity.DisplayName;
-            set => _activity.DisplayName = value;
-        }
-
-        public void Dispose()
-        {
-            _activity?.Dispose();
-        }
-    }
-
-    public class ActivityContextProvider : IActivityContextProvider
-    {
-        public bool HasCurrentActivity => Activity.Current != null;
-    }
+    }   
 }

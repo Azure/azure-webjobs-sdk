@@ -3,6 +3,9 @@
 
 #nullable enable
 
+using Microsoft.Azure.WebJobs.Host.Executors;
+using System;
+
 namespace Microsoft.Azure.WebJobs.Host.Abstractions
 {
     /// <summary>
@@ -10,6 +13,6 @@ namespace Microsoft.Azure.WebJobs.Host.Abstractions
     /// </summary>
     public interface IActivitySourceAbstraction
     {
-        IActivityAbstraction? StartActivity(string name, ActivityKindAbstraction kind = ActivityKindAbstraction.Server);
+        IDisposable? StartActivity(IFunctionInstanceEx functionInstance);
     }
 }

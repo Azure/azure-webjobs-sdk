@@ -33,7 +33,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         private readonly IDrainModeManager _drainModeManager;
         private readonly ConcurrencyManager _concurrencyManager;
         private readonly IActivitySourceAbstraction _activitySource;
-        private readonly IActivityContextProvider _activityContextProvider;
         private int _outstandingInvocations;
         private int _outstandingRetries;
 
@@ -61,8 +60,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 ILoggerFactory loggerFactory = null,
                 IEnumerable<IFunctionFilter> globalFunctionFilters = null,
                 IDrainModeManager drainModeManager = null,
-                IActivitySourceAbstraction activitySource = null,
-                IActivityContextProvider activityContextProvider = null)
+                IActivitySourceAbstraction activitySource = null)
         {
             _functionInstanceLogger = functionInstanceLogger ?? throw new ArgumentNullException(nameof(functionInstanceLogger));
             _functionOutputLogger = functionOutputLogger;
@@ -74,7 +72,6 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             _drainModeManager = drainModeManager;
             _concurrencyManager = concurrencyManager ?? throw new ArgumentNullException(nameof(concurrencyManager));
             _activitySource = activitySource;
-            _activityContextProvider = activityContextProvider;
         }
 
         public HostOutputMessage HostOutputMessage
@@ -104,7 +101,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                 }
 
                 using (_resultsLogger?.BeginFunctionScope(functionInstanceEx, HostOutputMessage.HostInstanceId))
-                using (var activity = TryCreateFunctionActivity(functionInstanceEx))
+                using (TryCreateFunctionActivity(functionInstanceEx))
                 using (parameterHelper)
                 {
                     try
@@ -710,15 +707,10 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
         }
 
 #nullable enable
-        private IActivityAbstraction? TryCreateFunctionActivity(IFunctionInstanceEx functionInstanceEx)
+        private IDisposable? TryCreateFunctionActivity(IFunctionInstanceEx functionInstanceEx)
         {
             // Return null if no activity source is provided
-            if (_activitySource is null || _activityContextProvider is null)
-            {
-                return null;
-            }
-
-            if (_activityContextProvider.HasCurrentActivity)
+            if (_activitySource is null)
             {
                 return null;
             }
@@ -727,10 +719,7 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
             // HTTP, Service Bus, Event Hub, and other instrumented triggers will have their own activities.
             // BeginFunctionScope creates a function activity when AppInsights SDK is enabled.
             // In OTel mode, Activity.Current will be null unless the trigger is instrumented.
-            return _activitySource.StartActivity(
-                functionInstanceEx.FunctionDescriptor.LogName,
-                ActivityKindAbstraction.Server
-            );
+            return _activitySource.StartActivity(functionInstanceEx);
         }
 #nullable disable
 
