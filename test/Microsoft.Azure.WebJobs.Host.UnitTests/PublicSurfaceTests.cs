@@ -33,37 +33,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
-        public void WebJobs_Logging_VerifyPublicSurfaceArea()
-        {
-            var assembly = typeof(ILogWriter).Assembly;
-
-            var expected = new[]
-            {
-                "FunctionId",
-                "ActivationEvent",
-                "FunctionInstanceLogItem",
-                "FunctionInstanceStatus",
-                "FunctionStatusExtensions",
-                "FunctionVolumeTimelineEntry",
-                "IAggregateEntry",
-                "IFunctionDefinition",
-                "IFunctionInstanceBaseEntry",
-                "IFunctionInstanceBaseEntryExtensions",
-                "ILogReader",
-                "ILogWriter",
-                "ILogTableProvider",
-                "InstanceCountEntity",
-                "IRecentFunctionEntry",
-                "LogFactory",
-                "ProjectionHelper",
-                "RecentFunctionQuery",
-                "Segment`1"
-            };
-
-            TestHelpers.AssertPublicTypes(expected, assembly);
-        }
-
-        [Fact]
         public void WebJobs_VerifyPublicSurfaceArea()
         {
             // The core WebJobs assembly should be truly minimal and have no extra dependencies. 
