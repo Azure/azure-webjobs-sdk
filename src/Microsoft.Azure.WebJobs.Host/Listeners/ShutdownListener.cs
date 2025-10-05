@@ -17,8 +17,8 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         public ShutdownListener(CancellationToken shutdownToken, IListener innerListener)
         {
             _shutdownToken = shutdownToken;
-            _shutdownRegistration = shutdownToken.Register(Cancel);
             _innerListener = innerListener;
+            _shutdownRegistration = shutdownToken.Register(Cancel);
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
