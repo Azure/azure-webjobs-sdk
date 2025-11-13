@@ -82,7 +82,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// <summary>
         /// Logs an error that occurred while scaling a function, including the function name and exception details.
         /// </summary>
-        internal static void LogFunctionScaleError(this ILogger logger, string message, string functionName, Exception ex)
+        public static void LogFunctionScaleError(this ILogger logger, string message, string functionName, Exception ex)
         {
             _logFunctionScaleError(logger, functionName, message, ex);
         }
