@@ -54,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             LoggerMessage.Define<string, string>(
                 LogLevel.Warning,
                 FunctionScaleWarningEventId,
-                "Function '{functionName}' error: {message}");
+                "Function '{functionName}' warning: {message}");
 
         // <summary>
         // Logs a scale vote for a function with the specified name, vote, and optional reason.
