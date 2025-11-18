@@ -11,6 +11,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
     {
         private static readonly EventId FunctionScaleErrorEventId = new EventId(8001, "FunctionScaleError");
         private static readonly EventId LogFunctionScaleVoteEventId = new EventId(8002, "LogFunctionScaleVote");
+        private static readonly EventId FunctionScaleWarningEventId = new EventId(8003, "FunctionScaleWarning");
 
         // High-performance logging delegates
         private static readonly Action<ILogger, string, string, Exception> _logFunctionScaleVoteSimple =
@@ -49,6 +50,12 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                 FunctionScaleErrorEventId,
                 "Function '{functionName}' error: {message}");
 
+        private static readonly Action<ILogger, string, string, Exception> _logFunctionScaleWarning =
+            LoggerMessage.Define<string, string>(
+                LogLevel.Warning,
+                FunctionScaleWarningEventId,
+                "Function '{functionName}' warning: {message}");
+
         // <summary>
         // Logs a scale vote for a function with the specified name, vote, and optional reason.
         // </summary>
@@ -82,9 +89,17 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// <summary>
         /// Logs an error that occurred while scaling a function, including the function name and exception details.
         /// </summary>
-        internal static void LogFunctionScaleError(this ILogger logger, string message, string functionName, Exception ex)
+        public static void LogFunctionScaleError(this ILogger logger, string message, string functionName, Exception ex)
         {
             _logFunctionScaleError(logger, functionName, message, ex);
+        }
+
+        /// <summary>
+        /// Logs an warning that occurred while scaling a function, including the function name and exception details.
+        /// </summary>
+        public static void LogFunctionScaleWarning(this ILogger logger, string message, string functionName, Exception ex = null)
+        {
+            _logFunctionScaleWarning(logger, functionName, message, ex);
         }
 
         /// <summary>
