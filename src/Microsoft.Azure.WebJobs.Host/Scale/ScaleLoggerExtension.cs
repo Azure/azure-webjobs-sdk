@@ -97,7 +97,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// <summary>
         /// Logs an warning that occurred while scaling a function, including the function name and exception details.
         /// </summary>
-        public static void LogFunctionScaleWarning(this ILogger logger, string message, string functionName, Exception ex)
+        public static void LogFunctionScaleWarning(this ILogger logger, string message, string functionName, Exception ex = null)
         {
             _logFunctionScaleWarning(logger, functionName, message, ex);
         }
