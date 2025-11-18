@@ -486,6 +486,62 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
             Assert.Contains(testListener.Activities, a => a.OperationName == "TestFunction");
         }
 
+        [Fact]
+        public async Task TryExecuteAsync_LoggingPipelineException_CompletesInvocation()
+        {
+            var triggerData = new TriggeredFunctionData
+            {
+                TriggerValue = 123,
+                TriggerDetails = new Dictionary<string, string>()
+            };
+            var functionDescriptor = FunctionExecutorTestHelper.GetFunctionDescriptor();
+            var functionInstance = FunctionExecutorTestHelper.CreateFunctionInstance(Guid.NewGuid(), triggerData.TriggerDetails, false, functionDescriptor, 1000);
+            var parameterHelper = new FunctionExecutor.ParameterHelper((IFunctionInstanceEx)functionInstance);
+
+            // simulate a low level logging pipeline exception
+            var exceptionToThrow = new Exception("Logging failure");
+            var mockFunctionInstanceLogger = new Mock<IFunctionInstanceLogger>();
+            mockFunctionInstanceLogger.Setup(p => p.LogFunctionCompleted(It.IsAny<FunctionCompletedMessage>())).Throws(exceptionToThrow);
+
+            var mockFunctionOutputLogger = new NullFunctionOutputLogger();
+            var mockExceptionHandler = new Mock<IWebJobsExceptionHandler>();
+            var eventCollector = new TestFunctionInstanceLogEntryCollector();
+            var mockConcurrencyManager = new Mock<ConcurrencyManager>();
+
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            TestLoggerProvider loggerProvider = new TestLoggerProvider();
+            loggerFactory.AddProvider(loggerProvider);
+
+            var executor = new FunctionExecutor(
+                mockFunctionInstanceLogger.Object,
+                mockFunctionOutputLogger,
+                mockExceptionHandler.Object,
+                eventCollector,
+                mockConcurrencyManager.Object,
+                loggerFactory,
+                null,
+                null);
+
+            executor.HostOutputMessage = new HostStartedMessage();
+
+            // invoke the function
+            // verify the exception is surfaced
+            var ex = await Assert.ThrowsAsync<Exception>(() => executor.TryExecuteAsync(functionInstance, CancellationToken.None));
+            Assert.Same(exceptionToThrow, ex);
+
+            // verify that the function invocation was marked as completed in the event log
+            var eventLogEntries = eventCollector.Entries.ToArray();
+            Assert.Equal(3, eventLogEntries.Length);
+            var entry = eventLogEntries.Last();
+            Assert.True(entry.IsCompleted);
+
+            // verify expected log entries
+            var log = loggerProvider.GetAllLogMessages().Single();
+            Assert.Equal(LogLevel.Information, log.Level);
+            Assert.Equal("Host.Results", log.Category);
+            Assert.Equal(functionInstance.Id, log.GetStateValue<Guid>("InvocationId"));
+        }
+
         private void RunOnFunctionTimeoutTest(bool isDebugging, string expectedMessage)
         {
             System.Timers.Timer timer = new System.Timers.Timer(TimeSpan.FromMinutes(1).TotalMilliseconds);
@@ -565,6 +621,25 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
         public void Dispose()
         {
             _listener.Dispose();
+        }
+    }
+
+    internal class TestFunctionInstanceLogEntryCollector : IAsyncCollector<FunctionInstanceLogEntry>
+    {
+        private readonly List<FunctionInstanceLogEntry> _entries = new();
+
+        public IReadOnlyList<FunctionInstanceLogEntry> Entries => _entries;
+
+        public Task AddAsync(FunctionInstanceLogEntry item, CancellationToken cancellationToken = default)
+        {
+            _entries.Add(item);
+            return Task.CompletedTask;
+        }
+
+        public Task FlushAsync(CancellationToken cancellationToken = default)
+        {
+            // No-op for test collector
+            return Task.CompletedTask;
         }
     }
 }

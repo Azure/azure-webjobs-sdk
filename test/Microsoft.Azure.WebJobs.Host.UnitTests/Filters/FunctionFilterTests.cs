@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -351,7 +352,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Executors
                 // Verify exception message comes at _throwAtPhase
                 // Last exception wins.
                 var e2 = e.InnerException ?? e;
-                var lastThrowPhase = _throwAtPhase.Split(';').Reverse().First();
+                var lastThrowPhase = ((IEnumerable<string>)_throwAtPhase.Split(';')).Reverse().First();
                 Assert.True(e2.Message.Contains(lastThrowPhase));
             }
             Assert.False(succeed); // Expected method to fail

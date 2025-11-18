@@ -124,20 +124,24 @@ namespace Microsoft.Azure.WebJobs.Host.Executors
                         functionStartedMessage.EndTime = DateTimeOffset.UtcNow;
                     }
 
-                    // If function started was logged, don't cancel calls to log function completed.
-                    bool loggedStartedEvent = functionStartedMessageId != null;
-                    _functionInstanceLogger.LogFunctionCompleted(functionStartedMessage);
-
-                    if (instanceLogEntry != null)
+                    try
                     {
-                        CompleteInstanceLogEntry(instanceLogEntry, functionStartedMessage.Arguments, exceptionInfo);
-                        await _functionEventCollector.AddAsync(instanceLogEntry);
-                        _resultsLogger?.LogFunctionResult(instanceLogEntry);
+                        _functionInstanceLogger.LogFunctionCompleted(functionStartedMessage);
                     }
-
-                    if (loggedStartedEvent)
+                    finally
                     {
-                        _functionInstanceLogger.DeleteLogFunctionStarted(functionStartedMessageId);
+                        if (instanceLogEntry != null)
+                        {
+                            // it's important that we always complete the log entry even in the event of an exceptions above
+                            CompleteInstanceLogEntry(instanceLogEntry, functionStartedMessage.Arguments, exceptionInfo);
+                            await _functionEventCollector.AddAsync(instanceLogEntry);
+                            _resultsLogger?.LogFunctionResult(instanceLogEntry);
+                        }
+
+                        if (functionStartedMessageId != null)
+                        {
+                            _functionInstanceLogger.DeleteLogFunctionStarted(functionStartedMessageId);
+                        }
                     }
                 }
 
