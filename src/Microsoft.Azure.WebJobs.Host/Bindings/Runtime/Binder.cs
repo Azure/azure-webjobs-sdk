@@ -153,8 +153,18 @@ namespace Microsoft.Azure.WebJobs
         /// <returns></returns>
         internal async Task Complete(CancellationToken cancellationToken)
         {
+            if (_binders == null)
+            {
+                return;
+            }
+
             foreach (IValueBinder binder in _binders)
             {
+                if (binder == null)
+                {
+                    continue;
+                }
+
                 // Binding can only be uses for non-Out parameters, and their binders ignore this argument.
                 await binder.SetValueAsync(value: null, cancellationToken: cancellationToken);
             }
