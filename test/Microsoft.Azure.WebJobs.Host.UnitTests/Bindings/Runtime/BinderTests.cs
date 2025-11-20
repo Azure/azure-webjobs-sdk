@@ -34,28 +34,49 @@ public class BinderTests
         mockBindingSource.Setup(s => s.AmbientBindingContext).Returns(new AmbientBindingContext(functionContext, new Dictionary<string, object>().AsReadOnly()));
 
         var binder = new Binder(mockBindingSource.Object);
-        var tasks = new List<Task>();
+        var threads = new List<Thread>();
 
-        // Act
-        // Start many concurrent tasks that call _binders.Add(). This is not thread-safe
-        // and can corrupt the internal state of the List<T>, leading to null entries.
-        for (int t = 0; t < 100_000; t++)
+        const int numConcurrentThreads = 100;
+        const int numTasksPerThread = 10;
+
+        // Call BindAsync simultaneously from many threads. There was a race where this would corrupt
+        // the internal _binders list.
+        for (int i = 0; i < numConcurrentThreads; i++)
         {
-            tasks.Add(Task.Run(async () =>
+            threads.Add(new Thread(() =>
             {
-                for (int i = 0; i < 10; i++)
+                var tasks = new List<Task>();
+                for (int t = 0; t < numTasksPerThread; t++)
                 {
-                    await binder.BindAsync<object>(new TestAttribute());
+                    tasks.Add(binder.BindAsync<object>(new TestAttribute()));
                 }
+
+                Task.WaitAll(tasks.ToArray());
             }));
         }
 
-        await Task.WhenAll(tasks);
+        foreach (var thread in threads)
+        {
+            thread.Start();
+        }
+
+        foreach (var thread in threads)
+        {
+            thread.Join();
+        }
 
         // Now that all concurrent binds are done, call Complete.
         // If the list's internal state was corrupted by the concurrent Add calls,
         // this iteration will likely hit a null element.
         await binder.Complete(CancellationToken.None);
+
+        // Because List resizing is not deterministic, another side effect is having a
+        // different count of binders than expected.
+        var binders = typeof(Binder)
+            .GetField("_binders", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+            .GetValue(binder) as IList<IValueBinder>;
+
+        Assert.Equal(numConcurrentThreads * numTasksPerThread, binders.Count);
     }
 
     private class TestAttribute : Attribute { }
