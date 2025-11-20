@@ -37,7 +37,7 @@ public class BinderTests
         var threads = new List<Thread>();
 
         const int numConcurrentThreads = 100;
-        const int numTasksPerThread = 10;
+        const int numTasksPerThread = 100;
 
         // Call BindAsync simultaneously from many threads. There was a race where this would corrupt
         // the internal _binders list.
