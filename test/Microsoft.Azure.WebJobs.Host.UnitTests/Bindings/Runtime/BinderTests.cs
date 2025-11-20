@@ -72,11 +72,7 @@ public class BinderTests
 
         // Because List resizing is not deterministic, another side effect is having a
         // different count of binders than expected.
-        var binders = typeof(Binder)
-            .GetField("_binders", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-            .GetValue(binder) as IList<IValueBinder>;
-
-        Assert.Equal(numConcurrentThreads * numTasksPerThread, binders.Count);
+        Assert.Equal(numConcurrentThreads * numTasksPerThread, binder.Binders.Count);
     }
 
     private class TestAttribute : Attribute { }

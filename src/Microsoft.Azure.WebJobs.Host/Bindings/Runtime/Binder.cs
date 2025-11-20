@@ -19,6 +19,7 @@ namespace Microsoft.Azure.WebJobs
     /// </summary>
     public class Binder : IBinder, IWatchable, IDisposable
     {
+        private readonly object _bindersLock = new object();
         private readonly IAttributeBindingSource _bindingSource;
         private readonly IList<IValueBinder> _binders = new List<IValueBinder>();
         private readonly RuntimeBindingWatcher _watcher = new RuntimeBindingWatcher();
@@ -53,6 +54,11 @@ namespace Microsoft.Azure.WebJobs
                 }
             }
         }
+
+        /// <summary>
+        /// For testing only.
+        /// </summary>
+        internal IList<IValueBinder> Binders => _binders;
 
         /// <summary>
         /// Gets the binding data.
@@ -133,7 +139,10 @@ namespace Microsoft.Azure.WebJobs
             IValueBinder binder = provider as IValueBinder;
             if (binder != null)
             {
-                _binders.Add(binder);
+                lock (_bindersLock)
+                {
+                    _binders.Add(binder);
+                }
             }
 
             IDisposable disposableProvider = provider as IDisposable;
@@ -153,7 +162,13 @@ namespace Microsoft.Azure.WebJobs
         /// <returns></returns>
         internal async Task Complete(CancellationToken cancellationToken)
         {
-            foreach (IValueBinder binder in _binders)
+            IValueBinder[] binders;
+            lock (_bindersLock)
+            {
+                binders = _binders.ToArray();
+            }
+
+            foreach (IValueBinder binder in binders)
             {
                 // Binding can only be uses for non-Out parameters, and their binders ignore this argument.
                 await binder.SetValueAsync(value: null, cancellationToken: cancellationToken);
