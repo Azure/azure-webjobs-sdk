@@ -445,7 +445,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                         case LogConstants.DurationKey:
                             if (prop.Value is TimeSpan duration)
                             {
-                                currentActivity.AddTag(LogConstants.FunctionExecutionTimeKey, duration.TotalMilliseconds.ToString(CultureInfo.InvariantCulture));
+                                currentActivity.SetTag(LogConstants.FunctionExecutionTimeKey, duration.TotalMilliseconds.ToString(CultureInfo.InvariantCulture));
                             }
                             break;
                         default:
@@ -453,15 +453,15 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                             // the passed-in values without any 'prop__' prefix.
                             if (prop.Value != null)
                             {
-                                currentActivity.AddTag(prop.Key, prop.Value.ToString());
+                                currentActivity.SetTag(prop.Key, prop.Value.ToString());
                             }
 
                             break;
                     }
                 }
 
-                currentActivity.AddTag(LogConstants.CategoryNameKey, _categoryName);
-                currentActivity.AddTag(LogConstants.LogLevelKey, logLevel.ToStringOptimized());
+                currentActivity.SetTag(LogConstants.CategoryNameKey, _categoryName);
+                currentActivity.SetTag(LogConstants.LogLevelKey, logLevel.ToStringOptimized());
 
                 if (scope != null)
                 {
@@ -469,7 +469,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                         scope.TryGetValue(ApplicationInsightsScopeKeys.HttpRequest, out var request) &&
                         request is HttpRequest httpRequest)
                     {
-                        currentActivity.AddTag(LoggingConstants.ClientIpKey, GetIpAddress(httpRequest));
+                        currentActivity.SetTag(LoggingConstants.ClientIpKey, GetIpAddress(httpRequest));
                     }
                 }
             }
