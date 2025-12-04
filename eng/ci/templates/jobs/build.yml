@@ -13,6 +13,25 @@ jobs:
   variables:
   - name: pack_dir
     value: $(Build.ArtifactStagingDirectory)/pkg
+  - name: pack_projects
+    readonly: true
+    ${{ if parameters.skipStorage }}:
+      value: |
+        src\Microsoft.Azure.WebJobs\WebJobs.csproj
+        src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj
+        src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.Sources.csproj
+        src\Microsoft.Azure.WebJobs.Rpc.Core\WebJobs.Rpc.Core.csproj
+        src\Microsoft.Azure.WebJobs.Extensions.Rpc\WebJobs.Extensions.Rpc.csproj
+        test\Microsoft.Azure.WebJobs.Host.TestCommon\WebJobs.Host.TestCommon.csproj
+    ${{ else }}:
+      value: |
+        src\Microsoft.Azure.WebJobs\WebJobs.csproj
+        src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj
+        src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.Sources.csproj
+        src\Microsoft.Azure.WebJobs.Rpc.Core\WebJobs.Rpc.Core.csproj
+        src\Microsoft.Azure.WebJobs.Extensions.Rpc\WebJobs.Extensions.Rpc.csproj
+        src\Microsoft.Azure.WebJobs.Extensions.Storage\WebJobs.Extensions.Storage.csproj
+        test\Microsoft.Azure.WebJobs.Host.TestCommon\WebJobs.Host.TestCommon.csproj
 
   templateContext:
     outputParentDirectory: $(Build.ArtifactStagingDirectory)
@@ -65,15 +84,7 @@ jobs:
         command: custom
         custom: pack
         arguments: -c $(configuration) -v m -o $(pack_dir) --no-build
-        projects: |
-          src\Microsoft.Azure.WebJobs\WebJobs.csproj
-          src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj
-          src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.Sources.csproj
-          src\Microsoft.Azure.WebJobs.Rpc.Core\WebJobs.Rpc.Core.csproj
-          src\Microsoft.Azure.WebJobs.Extensions.Rpc\WebJobs.Extensions.Rpc.csproj
-          test\Microsoft.Azure.WebJobs.Host.TestCommon\WebJobs.Host.TestCommon.csproj
-          ${{ if not(parameters.skipStorage) }}:
-            src\Microsoft.Azure.WebJobs.Extensions.Storage\WebJobs.Extensions.Storage.csproj
+        projects: $(pack_projects)
 
     - ${{ if eq(parameters.official, true) }}:
       - template: ci/sign-files.yml@eng
