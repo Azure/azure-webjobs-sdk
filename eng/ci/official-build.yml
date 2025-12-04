@@ -3,6 +3,9 @@ parameters:
   displayName: Sign Files (release/* always signed)
   type: boolean
   default: true
+- name: skipStorage
+  type: boolean
+  default: false
 
 trigger:
   batch: true
@@ -67,6 +70,7 @@ extends:
       - template: /eng/ci/templates/jobs/build.yml@self
         parameters:
           official: ${{ variables.sign }}
+          skipStorage: ${{ parameters.skipStorage }}
 
     - stage: Test
       dependsOn: '' # Run in parallel
