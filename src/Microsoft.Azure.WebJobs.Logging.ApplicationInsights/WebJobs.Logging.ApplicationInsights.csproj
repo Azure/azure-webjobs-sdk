@@ -9,12 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!--
-    Explicitly referencing a package rather than using a project reference to allow us to release this package 
-    without all of the others in this solution. If changes to WebJobs.Host are needed here, re-introduce the
-    project reference.
-    -->
-    <PackageReference Include="Microsoft.Azure.WebJobs" Version="3.0.39" />
+    <ProjectReference Include="../Microsoft.Azure.WebJobs.Host/WebJobs.Host.csproj" />
   </ItemGroup>
 
   <ItemGroup>
