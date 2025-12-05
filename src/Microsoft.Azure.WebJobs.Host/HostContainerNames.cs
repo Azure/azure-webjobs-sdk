@@ -7,7 +7,7 @@ namespace Microsoft.Azure.WebJobs.Host
     // may point to blobs stored here).
     internal static class HostContainerNames
     {
-        // Note that sometimes this container name is used for the Storage account and sometimes for the Dasboard
+        // Note that sometimes this container name is used for the Storage account and sometimes for the Dashboard
         // account. These containers happen to be the same when the accounts are the same.
         public const string Hosts = "azure-webjobs-hosts";
     }

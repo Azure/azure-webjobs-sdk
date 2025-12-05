@@ -360,7 +360,7 @@ namespace Microsoft.Azure.WebJobs
             return _hostInitializationTask;
         }
 
-        // Caller gaurantees this is single-threaded. 
+        // Caller guarantees this is single-threaded. 
         // Set initializationTask when complete, many threads can wait on that. 
         // When complete, the fields should be initialized to allow runtime usage. 
         private async Task InitializeHostAsync(CancellationToken cancellationToken, TaskCompletionSource<bool> initializationTask)

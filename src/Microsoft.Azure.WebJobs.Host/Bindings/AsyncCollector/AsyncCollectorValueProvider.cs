@@ -9,7 +9,7 @@ namespace Microsoft.Azure.WebJobs.Host.Bindings
 {
     // ValueProvider for binding to an IAsyncCollector.
     // TUser is the parameter type from the user function we're binding to. 
-    // TMessage is from the underying IAsyncCollector<TMessage>
+    // TMessage is from the underlying IAsyncCollector<TMessage>
     internal class AsyncCollectorValueProvider<TUser, TMessage> : IOrderedValueBinder
     {
         private readonly IAsyncCollector<TMessage> _raw;

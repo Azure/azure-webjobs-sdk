@@ -11,7 +11,7 @@ namespace Microsoft.Azure.WebJobs.Logging
 {
     /// <summary>
     /// A logger explicitly for writing out logs to the <see cref="TextWriter"/> returned from <see cref="IFunctionOutput.Output"/>. This 
-    /// is only intended to be used with the Function.{FunctionName}.User logger. Most opertions are no-op otherwise.
+    /// is only intended to be used with the Function.{FunctionName}.User logger. Most operations are no-op otherwise.
     /// </summary>
     internal class FunctionOutputLogger : ILogger
     {
