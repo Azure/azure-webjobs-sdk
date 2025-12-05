@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFrameworks>net6.0;net8.0;net10.0</TargetFrameworks>
     <LangVersion>latest</LangVersion>
     <PackageId>Microsoft.Azure.WebJobs.Extensions.Rpc</PackageId>
     <Description>This package provides RPC capabilities to the WebJobs SDK, allowing extensions to communicate between the host and worker via RPC. For more information, please visit https://go.microsoft.com/fwlink/?linkid=2279708.</Description>
@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Grpc.AspNetCore" Version="2.49.0" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
   </ItemGroup>
 
 </Project>
