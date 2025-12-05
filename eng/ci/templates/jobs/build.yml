@@ -20,6 +20,7 @@ jobs:
         src\Microsoft.Azure.WebJobs\WebJobs.csproj
         src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj
         src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.Sources.csproj
+        src\Microsoft.Azure.WebJobs.Logging.ApplicationInsights\WebJobs.Logging.ApplicationInsights.csproj
         src\Microsoft.Azure.WebJobs.Rpc.Core\WebJobs.Rpc.Core.csproj
         src\Microsoft.Azure.WebJobs.Extensions.Rpc\WebJobs.Extensions.Rpc.csproj
         test\Microsoft.Azure.WebJobs.Host.TestCommon\WebJobs.Host.TestCommon.csproj
@@ -28,6 +29,7 @@ jobs:
         src\Microsoft.Azure.WebJobs\WebJobs.csproj
         src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj
         src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.Sources.csproj
+        src\Microsoft.Azure.WebJobs.Logging.ApplicationInsights\WebJobs.Logging.ApplicationInsights.csproj
         src\Microsoft.Azure.WebJobs.Rpc.Core\WebJobs.Rpc.Core.csproj
         src\Microsoft.Azure.WebJobs.Extensions.Rpc\WebJobs.Extensions.Rpc.csproj
         src\Microsoft.Azure.WebJobs.Extensions.Storage\WebJobs.Extensions.Storage.csproj
