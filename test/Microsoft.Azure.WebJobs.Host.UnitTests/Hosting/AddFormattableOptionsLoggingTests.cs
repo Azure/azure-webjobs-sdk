@@ -3,11 +3,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -122,6 +124,11 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             services.AddLogging();
             services.AddFormattableOptionsLogging();
             services.AddFormattableOptionsLogging();
+
+            // Verify only one OptionsLoggingService is registered despite calling twice.
+            int hostedServiceCount = services
+                .Count(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(OptionsLoggingService));
+            Assert.Equal(1, hostedServiceCount);
 
             using ServiceProvider provider = services.BuildServiceProvider();
 
