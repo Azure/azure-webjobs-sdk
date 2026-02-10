@@ -11,15 +11,22 @@ using Microsoft.Extensions.Logging;
 namespace Microsoft.Azure.WebJobs.Hosting
 {
     /// <summary>
-    /// An <see cref="IHostedService"/> that streams logs from an <see cref="IOptionsLoggingSource"/> into an <see cref="ILogger"/>.
+    /// A background service that drains buffered options log messages from an <see cref="IOptionsLoggingSource"/>
+    /// and writes them to an <see cref="ILogger"/>. This service is part of the options logging infrastructure
+    /// registered by <see cref="WebJobsServiceCollectionExtensions.AddOptionsLogging"/>.
     /// </summary>
-    internal class OptionsLoggingService : IHostedService
+    public sealed class OptionsLoggingService : IHostedService
     {
         private readonly ILogger<OptionsLoggingService> _logger;
         private readonly IOptionsLoggingSource _source;
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
         private Task _processingTask;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="OptionsLoggingService"/> class.
+        /// </summary>
+        /// <param name="source">The source to consume log messages from.</param>
+        /// <param name="logger">The logger to write options logs to.</param>
         public OptionsLoggingService(IOptionsLoggingSource source, ILogger<OptionsLoggingService> logger)
         {
             _logger = logger;

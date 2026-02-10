@@ -16,14 +16,14 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
 {
-    public class WebJobsOptionsFactoryTests
+    public class LoggingOptionsFactoryTests
     {
         [Fact]
         public async Task Factory_LogsOptions()
         {
             IOptionsLoggingSource source = new OptionsLoggingSource();
 
-            IOptionsFactory<TestOptions> factory = new WebJobsOptionsFactory<TestOptions>(GetOptionsFactory<TestOptions>(), source);
+            IOptionsFactory<TestOptions> factory = new LoggingOptionsFactory<TestOptions>(GetOptionsFactory<TestOptions>(), source);
 
             TestOptions options = factory.Create(null);
 
@@ -52,7 +52,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
         {
             IOptionsLoggingSource source = new OptionsLoggingSource();
 
-            IOptionsFactory<LoggerFilterOptions> factory = new WebJobsOptionsFactory<LoggerFilterOptions>(
+            IOptionsFactory<LoggerFilterOptions> factory = new LoggingOptionsFactory<LoggerFilterOptions>(
                 GetOptionsFactory<LoggerFilterOptions>(),
                 source,
                 new LoggerFilterOptionsFormatter());

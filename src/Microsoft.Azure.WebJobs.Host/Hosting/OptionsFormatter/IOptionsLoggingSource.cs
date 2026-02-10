@@ -5,10 +5,20 @@ using System.Threading.Tasks.Dataflow;
 
 namespace Microsoft.Azure.WebJobs.Hosting
 {
-    internal interface IOptionsLoggingSource
+    /// <summary>
+    /// A source for buffering options log messages that can be consumed by <see cref="OptionsLoggingService"/>.
+    /// </summary>
+    public interface IOptionsLoggingSource
     {
+        /// <summary>
+        /// Gets the stream of buffered log messages.
+        /// </summary>
         ISourceBlock<string> LogStream { get; }
 
+        /// <summary>
+        /// Buffers an options log message for later consumption.
+        /// </summary>
+        /// <param name="optionLog">The formatted options log message.</param>
         void LogOptions(string optionLog);
     }
 }
