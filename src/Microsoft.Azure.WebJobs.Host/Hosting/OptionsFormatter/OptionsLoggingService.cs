@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.Hosting
     /// and writes them to an <see cref="ILogger"/>. This service is part of the options logging infrastructure
     /// registered by <see cref="WebJobsServiceCollectionExtensions.AddOptionsLogging"/>.
     /// </summary>
-    public sealed class OptionsLoggingService : IHostedService
+    public sealed class OptionsLoggingService : IHostedService, IDisposable
     {
         private readonly ILogger<OptionsLoggingService> _logger;
         private readonly IOptionsLoggingSource _source;
@@ -42,7 +42,10 @@ namespace Microsoft.Azure.WebJobs.Hosting
         public async Task StopAsync(CancellationToken cancellationToken)
         {
             _cts.Cancel();
-            await _processingTask;
+
+            // Wait for the processing task to complete, or until the cancellationToken is triggered.
+            var delayTask = Task.Delay(Timeout.Infinite, cancellationToken);
+            await Task.WhenAny(_processingTask, delayTask);
         }
 
         private async Task ProcessLogs()
@@ -59,6 +62,11 @@ namespace Microsoft.Azure.WebJobs.Hosting
             {
                 // This occurs during shutdown.
             }
+        }
+
+        public void Dispose()
+        {
+            _cts.Dispose();
         }
     }
 }
