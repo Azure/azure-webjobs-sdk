@@ -220,8 +220,10 @@ namespace Microsoft.Azure.WebJobs
             }
 
             services.TryAddTransient(typeof(OptionsFactory<>));
+
+            // Must use AddTransient (not TryAdd) so the decorator is the last IOptionsFactory<> registration and wins.
             services.AddTransient(typeof(IOptionsFactory<>), typeof(WebJobsOptionsFactory<>));
-            services.AddSingleton<IOptionsLoggingSource, OptionsLoggingSource>();
+            services.TryAddSingleton<IOptionsLoggingSource, OptionsLoggingSource>();
             services.AddSingleton<IHostedService, OptionsLoggingService>();
 
             return services;
