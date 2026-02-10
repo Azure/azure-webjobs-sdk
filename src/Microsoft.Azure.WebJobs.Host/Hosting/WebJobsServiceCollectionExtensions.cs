@@ -205,12 +205,31 @@ namespace Microsoft.Azure.WebJobs
             services.AddSingleton<IScaleMetricsRepository, InMemoryScaleMetricsRepository>();
         }
 
-        private static void AddOptionsLogging(this IServiceCollection services)
+        /// <summary>
+        /// Adds options logging infrastructure that automatically logs options when created,
+        /// if the options type implements <see cref="IOptionsFormatter"/> or has a registered
+        /// <see cref="IOptionsFormatter{TOptions}"/>.
+        /// </summary>
+        /// <param name="services">The service collection to which the options logging services will be added.</param>
+        /// <returns>The <see cref="IServiceCollection"/> for chaining.</returns>
+        public static IServiceCollection AddFormattableOptionsLogging(this IServiceCollection services)
         {
-            services.AddTransient(typeof(OptionsFactory<>));
+            if (services is null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
+            services.TryAddTransient(typeof(OptionsFactory<>));
             services.AddTransient(typeof(IOptionsFactory<>), typeof(WebJobsOptionsFactory<>));
             services.AddSingleton<IOptionsLoggingSource, OptionsLoggingSource>();
             services.AddSingleton<IHostedService, OptionsLoggingService>();
+
+            return services;
+        }
+
+        private static void AddOptionsLogging(this IServiceCollection services)
+        {
+            services.AddFormattableOptionsLogging();
             services.AddSingleton<IOptionsFormatter<LoggerFilterOptions>, LoggerFilterOptionsFormatter>();
         }
 

@@ -13,7 +13,7 @@ namespace Microsoft.Azure.WebJobs.Hosting
     /// <summary>
     /// An <see cref="IHostedService"/> that streams logs from an <see cref="IOptionsLoggingSource"/> into an <see cref="ILogger"/>.
     /// </summary>
-    internal class OptionsLoggingService : IHostedService
+    internal sealed class OptionsLoggingService : IHostedService, IDisposable
     {
         private readonly ILogger<OptionsLoggingService> _logger;
         private readonly IOptionsLoggingSource _source;
@@ -38,6 +38,11 @@ namespace Microsoft.Azure.WebJobs.Hosting
             await _processingTask;
         }
 
+        public void Dispose()
+        {
+            _cts.Dispose();
+        }
+
         private async Task ProcessLogs()
         {
             ISourceBlock<string> source = _source.LogStream;
@@ -45,7 +50,7 @@ namespace Microsoft.Azure.WebJobs.Hosting
             {
                 while (await source.OutputAvailableAsync(_cts.Token))
                 {
-                    _logger.LogInformation(await source.ReceiveAsync());
+                    _logger.LogInformation(await source.ReceiveAsync(_cts.Token));
                 }
             }
             catch (OperationCanceledException)
