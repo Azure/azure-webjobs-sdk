@@ -58,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             IList<string> logs = new List<string>();
             while (await source.LogStream.OutputAvailableAsync(CancellationToken.None))
             {
-                logs.Add(await source.LogStream.ReceiveAsync());
+                logs.Add(await source.LogStream.ReceiveAsync(CancellationToken.None));
             }
 
             string log = Assert.Single(logs);
@@ -84,7 +84,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             IList<string> logs = new List<string>();
             while (await source.LogStream.OutputAvailableAsync(CancellationToken.None))
             {
-                logs.Add(await source.LogStream.ReceiveAsync());
+                logs.Add(await source.LogStream.ReceiveAsync(CancellationToken.None));
             }
 
             Assert.Empty(logs);
@@ -109,7 +109,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             IList<string> logs = new List<string>();
             while (await source.LogStream.OutputAvailableAsync(CancellationToken.None))
             {
-                logs.Add(await source.LogStream.ReceiveAsync());
+                logs.Add(await source.LogStream.ReceiveAsync(CancellationToken.None));
             }
 
             string log = Assert.Single(logs);
@@ -141,7 +141,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Hosting
             IList<string> logs = new List<string>();
             while (await source.LogStream.OutputAvailableAsync(CancellationToken.None))
             {
-                logs.Add(await source.LogStream.ReceiveAsync());
+                logs.Add(await source.LogStream.ReceiveAsync(CancellationToken.None));
             }
 
             string log = Assert.Single(logs);
