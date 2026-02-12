@@ -19,6 +19,7 @@ namespace Microsoft.Azure.WebJobs.Hosting
         private readonly IOptionsLoggingSource _source;
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
         private Task _processingTask;
+        private bool _disposed;
 
         public OptionsLoggingService(IOptionsLoggingSource source, ILogger<OptionsLoggingService> logger)
         {
@@ -40,7 +41,11 @@ namespace Microsoft.Azure.WebJobs.Hosting
 
         public void Dispose()
         {
-            _cts.Dispose();
+            if (!_disposed)
+            {
+                _cts.Dispose();
+                _disposed = true;
+            }
         }
 
         private async Task ProcessLogs()
