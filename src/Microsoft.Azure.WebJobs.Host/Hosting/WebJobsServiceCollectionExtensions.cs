@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
@@ -205,12 +205,33 @@ namespace Microsoft.Azure.WebJobs
             services.AddSingleton<IScaleMetricsRepository, InMemoryScaleMetricsRepository>();
         }
 
+        /// <summary>
+        /// Adds options logging infrastructure that automatically logs options when created,
+        /// if the options type implements <see cref="IOptionsFormatter"/> or has a registered
+        /// <see cref="IOptionsFormatter{TOptions}"/>.
+        /// </summary>
+        /// <param name="services">The service collection to which the options logging services will be added.</param>
+        /// <returns>The <see cref="IServiceCollection"/> for chaining.</returns>
+        public static IServiceCollection AddFormattableOptionsLogging(this IServiceCollection services)
+        {
+            if (services is null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
+            services.TryAddTransient(typeof(OptionsFactory<>));
+
+            // Must use AddTransient (not TryAddTransient) so the decorator overrides an IOptionsFactory<> already registered.
+            services.AddTransient(typeof(IOptionsFactory<>), typeof(WebJobsOptionsFactory<>));
+            services.TryAddSingleton<IOptionsLoggingSource, OptionsLoggingSource>();
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, OptionsLoggingService>());
+
+            return services;
+        }
+
         private static void AddOptionsLogging(this IServiceCollection services)
         {
-            services.AddTransient(typeof(OptionsFactory<>));
-            services.AddTransient(typeof(IOptionsFactory<>), typeof(WebJobsOptionsFactory<>));
-            services.AddSingleton<IOptionsLoggingSource, OptionsLoggingSource>();
-            services.AddSingleton<IHostedService, OptionsLoggingService>();
+            services.AddFormattableOptionsLogging();
             services.AddSingleton<IOptionsFormatter<LoggerFilterOptions>, LoggerFilterOptionsFormatter>();
         }
 
