@@ -29,6 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
         private readonly List<ITargetScaler> _targetScalers;
         private readonly ILogger _testLogger;
         private readonly IOptions<ScaleOptions> _scaleOptions;
+        private readonly IOptions<ConcurrencyOptions> _concurrencyOptions;
         private readonly IConfiguration _configuration;
         private readonly HashSet<string> _targetScalersInError;
 
@@ -60,6 +61,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             {
                 IsTargetScalingEnabled = true,
                 ScaleMetricsSampleInterval = TimeSpan.FromSeconds(10)
+            });
+
+            _concurrencyOptions = Options.Create(new ConcurrencyOptions()
+            {
+                DynamicConcurrencyEnabled = true,
+                SnapshotPersistenceEnabled = true
             });
 
             _configuration = new ConfigurationBuilder()
@@ -144,7 +151,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
                 IsTargetScalingEnabled = tbsEnabled,
             });
 
-            ScaleManager scaleManager = new ScaleManager(_monitorManagerMock.Object, _targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, options, _loggerFactory, _configuration);
+            // Pass ConcurrencyOptions with DC enabled when TBS is enabled to exercise the concurrency snapshot path
+            ScaleManager scaleManager = new ScaleManager(_monitorManagerMock.Object, _targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, options, _loggerFactory, _configuration, tbsEnabled ? _concurrencyOptions : null);
 
             var status = await scaleManager.GetScaleStatusAsync(context);
 
@@ -243,7 +251,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
                 IsTargetScalingEnabled = true,
             });
 
-            ScaleManager scaleManager = new ScaleManager(_monitorManagerMock.Object, _targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, options, _loggerFactory, _configuration);
+            ScaleManager scaleManager = new ScaleManager(_monitorManagerMock.Object, _targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, options, _loggerFactory, _configuration, _concurrencyOptions);
 
             var status = await scaleManager.GetScaleStatusAsync(context);
 
@@ -393,6 +401,82 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             Assert.Equal(result2.Vote, ScaleVote.ScaleIn);
             logs = _loggerProvider.GetAllLogMessages().Select(x => x.FormattedMessage).ToArray();
             Assert.DoesNotContain(logs, x => x == "Function 'function1' error: Unable to use target based scaling, switching to metrics monitor.");
+        }
+
+        [Fact]
+        public async Task GetTargetScalersResult_DynamicConcurrencyDisabled_DoesNotReadConcurrencyStatus()
+        {
+            var context = new ScaleStatusContext { WorkerCount = 1 };
+
+            var targetScaler1 = new TestTargetScaler
+            {
+                Result = new TargetScalerResult { TargetWorkerCount = 2 },
+                TargetScalerDescriptor = new TargetScalerDescriptor("func1")
+            };
+            _targetScalerManagerMock.Setup(p => p.GetTargetScalers()).Returns(new List<ITargetScaler> { targetScaler1 });
+
+            IOptions<ScaleOptions> options = Options.Create(new ScaleOptions { IsTargetScalingEnabled = true });
+
+            // No ConcurrencyOptions passed - DC is disabled by default
+            var concurrencyStatusRepositoryMock = new Mock<IConcurrencyStatusRepository>(MockBehavior.Strict);
+            // No setup for ReadAsync - if it is called the strict mock will throw
+
+            ScaleManager scaleManager = new ScaleManager(_monitorManagerMock.Object, _targetScalerManagerMock.Object, _metricsRepositoryMock.Object, concurrencyStatusRepositoryMock.Object, options, _loggerFactory, _configuration);
+
+            var status = await scaleManager.GetScaleStatusAsync(context);
+
+            // Verify ReadAsync was never called
+            concurrencyStatusRepositoryMock.Verify(p => p.ReadAsync(It.IsAny<CancellationToken>()), Times.Never);
+
+            // Verify the snapshot log is not present
+            var logs = _loggerProvider.GetAllLogMessages().Select(x => x.FormattedMessage).ToArray();
+            Assert.DoesNotContain(logs, x => x.StartsWith("Snapshot dynamic concurrency"));
+
+            Assert.Equal(2, status.TargetWorkerCount);
+        }
+
+        [Theory]
+        [InlineData(true, true, true)]
+        [InlineData(true, false, false)]
+        [InlineData(false, true, false)]
+        [InlineData(false, false, false)]
+        public async Task GetTargetScalersResult_ReadsConcurrencyStatus_OnlyWhenDCAndPersistenceEnabled(bool dynamicConcurrencyEnabled, bool snapshotPersistenceEnabled, bool expectReadCalled)
+        {
+            var context = new ScaleStatusContext { WorkerCount = 1 };
+
+            var targetScaler1 = new TestTargetScaler
+            {
+                Result = new TargetScalerResult { TargetWorkerCount = 2 },
+                TargetScalerDescriptor = new TargetScalerDescriptor("func1")
+            };
+            _targetScalerManagerMock.Setup(p => p.GetTargetScalers()).Returns(new List<ITargetScaler> { targetScaler1 });
+
+            IOptions<ScaleOptions> options = Options.Create(new ScaleOptions { IsTargetScalingEnabled = true });
+            IOptions<ConcurrencyOptions> concurrencyOptions = Options.Create(new ConcurrencyOptions
+            {
+                DynamicConcurrencyEnabled = dynamicConcurrencyEnabled,
+                SnapshotPersistenceEnabled = snapshotPersistenceEnabled
+            });
+
+            var concurrencyStatusRepositoryMock = new Mock<IConcurrencyStatusRepository>(MockBehavior.Strict);
+            if (expectReadCalled)
+            {
+                concurrencyStatusRepositoryMock.Setup(p => p.ReadAsync(It.IsAny<CancellationToken>())).ReturnsAsync(
+                    new HostConcurrencySnapshot
+                    {
+                        FunctionSnapshots = new Dictionary<string, FunctionConcurrencySnapshot>
+                        {
+                            { "func1", new FunctionConcurrencySnapshot { Concurrency = 5 } }
+                        }
+                    });
+            }
+
+            ScaleManager scaleManager = new ScaleManager(_monitorManagerMock.Object, _targetScalerManagerMock.Object, _metricsRepositoryMock.Object, concurrencyStatusRepositoryMock.Object, options, _loggerFactory, _configuration, concurrencyOptions);
+
+            await scaleManager.GetScaleStatusAsync(context);
+
+            var expectedCalls = expectReadCalled ? Times.Once() : Times.Never();
+            concurrencyStatusRepositoryMock.Verify(p => p.ReadAsync(It.IsAny<CancellationToken>()), expectedCalls);
         }
     }
 }

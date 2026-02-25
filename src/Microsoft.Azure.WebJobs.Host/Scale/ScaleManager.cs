@@ -24,6 +24,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         private readonly ILogger _logger;
         private readonly IConfiguration _configuration;
         private IOptions<ScaleOptions> _scaleOptions;
+        private IOptions<ConcurrencyOptions> _concurrencyOptions;
         private static HashSet<string> _targetScalersInError = new HashSet<string>();
 
         public ScaleManager(
@@ -33,7 +34,8 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             IConcurrencyStatusRepository concurrencyStatusRepository,
             IOptions<ScaleOptions> scaleConfiguration,
             ILoggerFactory loggerFactory,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IOptions<ConcurrencyOptions> concurrencyOptions = null)
         {
             _monitorManager = monitorManager;
             _targetScalerManager = targetScalerManager;
@@ -43,6 +45,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             _targetScalersInError = new HashSet<string>();
             _scaleOptions = scaleConfiguration;
             _configuration = configuration;
+            _concurrencyOptions = concurrencyOptions;
         }
 
         // for mock testing only
@@ -139,13 +142,16 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             {
                 _logger.LogDebug($"{targetScalersToProcess.Count()} target scalers to sample");
                 HostConcurrencySnapshot snapshot = null;
-                try
+                if (_concurrencyOptions?.Value is { DynamicConcurrencyEnabled: true, SnapshotPersistenceEnabled: true })
                 {
-                    snapshot = await _concurrencyStatusRepository.ReadAsync(CancellationToken.None);
-                }
-                catch (Exception exc) when (!exc.IsFatal())
-                {
-                    _logger.LogError(exc, $"Failed to read concurrency status repository");
+                    try
+                    {
+                        snapshot = await _concurrencyStatusRepository.ReadAsync(CancellationToken.None);
+                    }
+                    catch (Exception exc) when (!exc.IsFatal())
+                    {
+                        _logger.LogError(exc, $"Failed to read concurrency status repository");
+                    }
                 }
 
                 foreach (var targetScaler in targetScalersToProcess)
