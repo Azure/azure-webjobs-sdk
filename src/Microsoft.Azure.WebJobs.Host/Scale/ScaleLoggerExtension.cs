@@ -16,31 +16,31 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         // High-performance logging delegates
         private static readonly Action<ILogger, string, string, Exception> _logFunctionScaleVoteSimple =
             LoggerMessage.Define<string, string>(
-                LogLevel.Debug,
+                LogLevel.Information,
                 LogFunctionScaleVoteEventId,
                 "Function '{functionName}' vote: '{vote}'.");
 
         private static readonly Action<ILogger, string, string, string, Exception> _logFunctionScaleVoteSimpleWithReason =
             LoggerMessage.Define<string, string, string>(
-                LogLevel.Debug,
+                LogLevel.Information,
                 LogFunctionScaleVoteEventId,
                 "Function '{functionName}' vote: '{vote}'. {reason}");
 
         private static readonly Action<ILogger, string, int, int, int, Exception> _logFunctionScaleVoteDetailed =
             LoggerMessage.Define<string, int, int, int>(
-                LogLevel.Debug,
+                LogLevel.Information,
                 LogFunctionScaleVoteEventId,
                 "Function '{functionName}' vote: TargetWorkerCount='{targetWorkerCount}', QueueLength='{queueLength}', Concurrency='{concurrency}'.");
 
         private static readonly Action<ILogger, string, int, int, int, string, Exception> _logFunctionScaleVoteDetailedWithReason =
             LoggerMessage.Define<string, int, int, int, string>(
-                LogLevel.Debug,
+                LogLevel.Information,
                 LogFunctionScaleVoteEventId,
                 "Function '{functionName}' vote: TargetWorkerCount='{targetWorkerCount}', QueueLength='{queueLength}', Concurrency='{concurrency}'. {reason}");
 
         private static readonly Action<ILogger, string, int, Exception> _logFunctionScaleVoteTargetWorkerCount =
             LoggerMessage.Define<string, int>(
-                LogLevel.Debug,
+                LogLevel.Information,
                 LogFunctionScaleVoteEventId,
                 "Function '{functionName}' vote: TargetWorkerCount='{targetWorkerCount}'.");
 
