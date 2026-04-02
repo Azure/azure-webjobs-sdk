@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -25,7 +26,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         private readonly IConfiguration _configuration;
         private IOptions<ScaleOptions> _scaleOptions;
         private IOptions<ConcurrencyOptions> _concurrencyOptions;
-        internal static HashSet<string> _targetScalersInError = new HashSet<string>();
+        internal static ConcurrentDictionary<string, byte> _targetScalersInError = new ConcurrentDictionary<string, byte>();
 
         public ScaleManager(
             IScaleMonitorManager monitorManager,
@@ -214,7 +215,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                 foreach (var scaler in targetScalers)
                 {
                     string scalerUniqueId = GetTargetScalerFunctionUniqueId(scaler);
-                    if (!_targetScalersInError.Contains(scalerUniqueId))
+                    if (!_targetScalersInError.ContainsKey(scalerUniqueId))
                     {
                         string assemblyName = GetAssemblyName(scaler.GetType());
                         bool featureDisabled = configuration.GetValue<string>(assemblyName) == "0";
@@ -294,10 +295,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                     targetScaler.TargetScalerDescriptor.FunctionId,
                     ex);
 
-                lock (_targetScalersInError)
-                {
-                    _targetScalersInError.Add(scalerUniqueId);
-                }
+                _targetScalersInError.TryAdd(scalerUniqueId, 0);
 
                 return null;
             }
