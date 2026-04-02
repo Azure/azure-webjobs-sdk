@@ -213,6 +213,87 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             var metricsWritten = _metricsRepository.Metrics[monitor2].Take(5);
             Assert.Equal(testMetrics2, metricsWritten);
         }
+        [Fact]
+        public async Task OnTimer_ProbesTargetScalers_FallsBackToMonitor()
+        {
+            // Arrange: create a fresh service with TBS enabled
+            var monitors = new List<IScaleMonitor>
+            {
+                new TestScaleMonitor<ScaleMetrics>("function1-test-test", "function1")
+            };
+            var scalers = new List<ITargetScaler>
+            {
+                new FaultyTargetScaler
+                {
+                    TargetScalerDescriptor = new TargetScalerDescriptor("function1")
+                }
+            };
+
+            var monitorManagerMock = new Mock<IScaleMonitorManager>(MockBehavior.Strict);
+            monitorManagerMock.Setup(p => p.GetMonitors()).Returns(() => monitors);
+            var targetScalerManagerMock = new Mock<ITargetScalerManager>(MockBehavior.Strict);
+            targetScalerManagerMock.Setup(p => p.GetTargetScalers()).Returns(() => scalers);
+
+            var loggerProvider = new TestLoggerProvider();
+            var loggerFactory = new LoggerFactory();
+            loggerFactory.AddProvider(loggerProvider);
+
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string> { { "Microsoft.Azure.WebJobs.Host.UnitTests", "1" } }).Build();
+
+            var options = Options.Create(new ScaleOptions
+            {
+                ScaleMetricsSampleInterval = TimeSpan.FromSeconds(1),
+                IsRuntimeScalingEnabled = true,
+                IsTargetScalingEnabled = true
+            });
+
+            var primaryHostState = new PrimaryHostStateProvider { IsPrimary = true };
+
+            // Clear static state from prior tests
+            ScaleManager._targetScalersInError.Clear();
+
+            var service = new ScaleMonitorService(
+                new Mock<ScaleManager>().Object,
+                new TestMetricsRepository(),
+                options,
+                primaryHostState,
+                monitorManagerMock.Object,
+                targetScalerManagerMock.Object,
+                configuration,
+                loggerFactory);
+
+            // Before starting: target scaler is not in error, so GetScalersToSample returns it as target scaler
+            var (monitors1, scalers1) = ScaleManager.GetScalersToSample(
+                monitorManagerMock.Object, targetScalerManagerMock.Object, options, configuration);
+            Assert.Equal(0, monitors1.Count);
+            Assert.Equal(1, scalers1.Count);
+
+            // Act: start the service — the timer tick will probe the faulty target scaler
+            await service.StartAsync(CancellationToken.None);
+
+            await TestHelpers.Await(() =>
+            {
+                var logs = loggerProvider.GetAllLogMessages();
+                return logs.Any(l => l.FormattedMessage.Contains("Unable to use target based scaling"));
+            });
+
+            await service.StopAsync(CancellationToken.None);
+
+            // Assert: after probing, the faulty scaler is in _targetScalersInError
+            // so GetScalersToSample now returns the incremental monitor instead
+            var (monitors2, scalers2) = ScaleManager.GetScalersToSample(
+                monitorManagerMock.Object, targetScalerManagerMock.Object, options, configuration);
+            Assert.Equal(1, monitors2.Count);
+            Assert.Equal(0, scalers2.Count);
+
+            // Verify the log message includes the ScaleMonitorService caller
+            var errorLogs = loggerProvider.GetAllLogMessages()
+                .Where(l => l.FormattedMessage.Contains("Unable to use target based scaling"))
+                .ToArray();
+            Assert.Single(errorLogs);
+            Assert.Contains("Detected by: ScaleMonitorService", errorLogs[0].FormattedMessage);
+        }
     }
 
     public class TestMetricsRepository : IScaleMetricsRepository

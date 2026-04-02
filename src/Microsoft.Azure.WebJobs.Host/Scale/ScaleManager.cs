@@ -25,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         private readonly IConfiguration _configuration;
         private IOptions<ScaleOptions> _scaleOptions;
         private IOptions<ConcurrencyOptions> _concurrencyOptions;
-        private static HashSet<string> _targetScalersInError = new HashSet<string>();
+        internal static HashSet<string> _targetScalersInError = new HashSet<string>();
 
         public ScaleManager(
             IScaleMonitorManager monitorManager,
@@ -42,7 +42,6 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             _metricsRepository = metricsRepository;
             _concurrencyStatusRepository = concurrencyStatusRepository;
             _logger = loggerFactory?.CreateLogger<ScaleManager>();
-            _targetScalersInError = new HashSet<string>();
             _scaleOptions = scaleConfiguration;
             _configuration = configuration;
             _concurrencyOptions = concurrencyOptions;
@@ -167,27 +166,11 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                                 _logger.LogDebug($"Snapshot dynamic concurrency for target scaler '{targetScaler.TargetScalerDescriptor.FunctionId}' is '{functionSnapshot.Concurrency}'");
                             }
                         }
-                        TargetScalerResult result = null;
-                        try
+                        TargetScalerResult result = await TryGetScaleResultAsync(targetScaler, targetScaleStatusContext, _logger);
+                        if (result == null)
                         {
-                            result = await targetScaler.GetScaleResultAsync(targetScaleStatusContext);
-                        }
-                        catch (NotSupportedException ex)
-                        {
-                            string targetScalerUniqueId = GetTargetScalerFunctionUniqueId(targetScaler);
-
-                            _logger.LogFunctionScaleError(
-                                "Unable to use target based scaling, switching to metrics monitor.",
-                                targetScaler.TargetScalerDescriptor.FunctionId,
-                                ex);
-
-                            lock (_targetScalersInError)
-                            {
-                                _targetScalersInError.Add(targetScalerUniqueId);
-                            }
-
-                            // Adding ScaleVote.None vote
-                            result = new TargetScalerResult 
+                            // Target scaler does not support TBS — use ScaleVote.None
+                            result = new TargetScalerResult
                             {
                                 TargetWorkerCount = context.WorkerCount
                             };
@@ -290,11 +273,40 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             return vote;
         }
 
-        private static string GetTargetScalerFunctionUniqueId(ITargetScaler scaler)
+        /// <summary>
+        /// Attempts to get a scale result from a target scaler. If the scaler throws
+        /// NotSupportedException (e.g. missing Manage claim), it is added to
+        /// _targetScalersInError and null is returned, causing fallback to the
+        /// incremental scale monitor.
+        /// </summary>
+        internal static async Task<TargetScalerResult> TryGetScaleResultAsync(ITargetScaler targetScaler, TargetScalerContext context, ILogger logger, string caller = "GetScaleStatus")
+        {
+            try
+            {
+                return await targetScaler.GetScaleResultAsync(context).ConfigureAwait(false);
+            }
+            catch (NotSupportedException ex)
+            {
+                string scalerUniqueId = GetTargetScalerFunctionUniqueId(targetScaler);
+
+                logger?.LogFunctionScaleError(
+                    $"Unable to use target based scaling, switching to metrics monitor. Detected by: {caller}.",
+                    targetScaler.TargetScalerDescriptor.FunctionId,
+                    ex);
+
+                lock (_targetScalersInError)
+                {
+                    _targetScalersInError.Add(scalerUniqueId);
+                }
+
+                return null;
+            }
+        }
+
+        internal static string GetTargetScalerFunctionUniqueId(ITargetScaler scaler)
         {
             return $"{GetAssemblyName(scaler.GetType())}-{scaler.TargetScalerDescriptor.FunctionId}";
         }
-
 
         private static string GetScaleMonitorFunctionUniqueId(IScaleMonitor monitor)
         {

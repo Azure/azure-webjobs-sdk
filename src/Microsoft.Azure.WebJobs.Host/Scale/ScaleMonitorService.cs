@@ -30,6 +30,8 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         private readonly ITargetScalerManager _targetScalerManager;
         private readonly IConfiguration _configuration;
         private bool _disposed;
+        private static DateTime _nextTargetScalerValidationTime = DateTime.MinValue;
+        private static readonly TimeSpan _targetScalerValidationInterval = TimeSpan.FromMinutes(10);
 
         public ScaleMonitorService(
             IScaleStatusProvider scaleStausProvider,
@@ -93,6 +95,29 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             try
             {
                 var (scaleMonitorsToProcess, targetScalersToSample) = ScaleManager.GetScalersToSample(_monitorManager, _targetScalerManager, _scaleOptions, _configuration);
+
+                // Periodically probe target scalers to discover any that throw NotSupportedException.
+                // This ensures the primary host independently detects target scaler failures,
+                // even when the Scale Controller runs on a different worker.
+                // Runs on first tick, then every 10 minutes to avoid per-tick overhead
+                // while still catching runtime permission changes (e.g. managed identity revocation).
+                if (targetScalersToSample.Any() && DateTime.UtcNow >= _nextTargetScalerValidationTime)
+                {
+                    foreach (var targetScaler in targetScalersToSample)
+                    {
+                        try
+                        {
+                            await ScaleManager.TryGetScaleResultAsync(targetScaler, new TargetScalerContext(), _logger, "ScaleMonitorService").ConfigureAwait(false);
+                        }
+                        catch (Exception)
+                        {
+                            // Ignore transient errors — only NotSupportedException triggers fallback
+                            // and that is already handled inside TryGetScaleResultAsync.
+                        }
+                    }
+
+                    _nextTargetScalerValidationTime = DateTime.UtcNow + _targetScalerValidationInterval;
+                }
 
                 if (scaleMonitorsToProcess.Any())
                 {

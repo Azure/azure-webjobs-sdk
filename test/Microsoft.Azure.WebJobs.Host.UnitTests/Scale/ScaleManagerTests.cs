@@ -385,7 +385,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             Assert.Equal(result1.TargetWorkerCount, 1);
             Assert.Equal(result1.Vote, ScaleVote.None);
             var logs = _loggerProvider.GetAllLogMessages().Select(x => x.FormattedMessage).ToArray();
-            Assert.Single(logs, x => x == "Function 'function1' error: Unable to use target based scaling, switching to metrics monitor.");
+            Assert.Single(logs, x => x == "Function 'function1' error: Unable to use target based scaling, switching to metrics monitor. Detected by: GetScaleStatus.");
             _loggerProvider.ClearAllLogMessages();
 
             var (monitors2, scalers2) = ScaleManager.GetScalersToSample(
@@ -400,7 +400,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             Assert.Equal(result2.TargetWorkerCount, null);
             Assert.Equal(result2.Vote, ScaleVote.ScaleIn);
             logs = _loggerProvider.GetAllLogMessages().Select(x => x.FormattedMessage).ToArray();
-            Assert.DoesNotContain(logs, x => x == "Function 'function1' error: Unable to use target based scaling, switching to metrics monitor.");
+            Assert.DoesNotContain(logs, x => x == "Function 'function1' error: Unable to use target based scaling, switching to metrics monitor. Detected by: GetScaleStatus.");
         }
 
         [Fact]
