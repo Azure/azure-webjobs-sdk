@@ -30,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         private readonly ITargetScalerManager _targetScalerManager;
         private readonly IConfiguration _configuration;
         private bool _disposed;
-        private static DateTime _nextTargetScalerValidationTime = DateTime.MinValue;
+        internal static DateTime _nextTargetScalerValidationTime = DateTime.MinValue;
         private static readonly TimeSpan _targetScalerValidationInterval = TimeSpan.FromMinutes(10);
 
         public ScaleMonitorService(

@@ -252,6 +252,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
 
             // Clear static state from prior tests
             ScaleManager._targetScalersInError.Clear();
+            ScaleMonitorService._nextTargetScalerValidationTime = DateTime.MinValue;
 
             var service = new ScaleMonitorService(
                 new Mock<ScaleManager>().Object,
@@ -266,8 +267,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             // Before starting: target scaler is not in error, so GetScalersToSample returns it as target scaler
             var (monitors1, scalers1) = ScaleManager.GetScalersToSample(
                 monitorManagerMock.Object, targetScalerManagerMock.Object, options, configuration);
-            Assert.Equal(0, monitors1.Count);
-            Assert.Equal(1, scalers1.Count);
+            Assert.Empty(monitors1);
+            Assert.Single(scalers1);
 
             // Act: start the service — the timer tick will probe the faulty target scaler
             await service.StartAsync(CancellationToken.None);
@@ -284,8 +285,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             // so GetScalersToSample now returns the incremental monitor instead
             var (monitors2, scalers2) = ScaleManager.GetScalersToSample(
                 monitorManagerMock.Object, targetScalerManagerMock.Object, options, configuration);
-            Assert.Equal(1, monitors2.Count);
-            Assert.Equal(0, scalers2.Count);
+            Assert.Single(monitors2);
+            Assert.Empty(scalers2);
 
             // Verify the log message includes the ScaleMonitorService caller
             var errorLogs = loggerProvider.GetAllLogMessages()
