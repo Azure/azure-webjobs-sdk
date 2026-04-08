@@ -122,6 +122,9 @@ namespace Microsoft.Azure.WebJobs
             services.AddOptionsLogging();
             // Concurrency management
             services.TryAddSingleton<IConcurrencyStatusRepository, NullConcurrencyStatusRepository>();
+
+            // Target scaler error state
+            services.TryAddSingleton<ITargetScalerErrorRepository, InMemoryTargetScalerErrorRepository>();
             services.TryAddSingleton<IHostProcessMonitor, DefaultHostProcessMonitor>();
             services.TryAddSingleton<IConcurrencyThrottleManager, DefaultConcurrencyThrottleManager>();
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IConcurrencyThrottleProvider, HostHealthThrottleProvider>());
