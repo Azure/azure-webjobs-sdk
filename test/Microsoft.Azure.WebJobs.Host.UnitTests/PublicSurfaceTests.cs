@@ -281,6 +281,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "ITargetScaler",
                 "ITargetScalerManager",
                 "ITargetScalerProvider",
+                "ITargetScalerErrorRepository",
                 "TargetScalerDescriptor",
                 "TargetScalerResult",
                 "TargetScalerContext",

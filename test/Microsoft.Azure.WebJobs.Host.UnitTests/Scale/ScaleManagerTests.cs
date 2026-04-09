@@ -481,5 +481,161 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             var expectedCalls = expectReadCalled ? Times.Once() : Times.Never();
             concurrencyStatusRepositoryMock.Verify(p => p.ReadAsync(It.IsAny<CancellationToken>()), expectedCalls);
         }
+
+        [Fact]
+        public async Task InMemoryTargetScalerErrorRepository_Lifecycle()
+        {
+            var repo = new InMemoryTargetScalerErrorRepository();
+
+            // Initially empty
+            var errors = await repo.GetAsync(CancellationToken.None);
+            Assert.Empty(errors);
+
+            // Add first entry
+            await repo.AddAsync("scaler-a", CancellationToken.None);
+            errors = await repo.GetAsync(CancellationToken.None);
+            Assert.Single(errors);
+            Assert.Contains("scaler-a", errors);
+
+            // Add second entry
+            await repo.AddAsync("scaler-b", CancellationToken.None);
+            errors = await repo.GetAsync(CancellationToken.None);
+            Assert.Equal(2, errors.Count);
+            Assert.Contains("scaler-a", errors);
+            Assert.Contains("scaler-b", errors);
+
+            // Clear
+            await repo.ClearAsync(CancellationToken.None);
+            errors = await repo.GetAsync(CancellationToken.None);
+            Assert.Empty(errors);
+        }
+
+        [Fact]
+        public async Task InMemoryTargetScalerErrorRepository_AddAsync_Idempotent()
+        {
+            var repo = new InMemoryTargetScalerErrorRepository();
+
+            await repo.AddAsync("scaler-a", CancellationToken.None);
+            await repo.AddAsync("scaler-a", CancellationToken.None);
+
+            var errors = await repo.GetAsync(CancellationToken.None);
+            Assert.Single(errors);
+            Assert.Contains("scaler-a", errors);
+        }
+
+        [Fact]
+        public void GetScalersToSample_WithErrorSet_FiltersCorrectly()
+        {
+            var scaleMonitors = new List<IScaleMonitor>
+            {
+                new TestScaleMonitor<ScaleMetrics>("func1-test-test", "func1"),
+                new TestScaleMonitor<ScaleMetrics>("func2-test-test", "func2")
+            };
+            var scaleMonitorManagerMock = new Mock<IScaleMonitorManager>(MockBehavior.Strict);
+            scaleMonitorManagerMock.Setup(x => x.GetMonitors()).Returns(scaleMonitors);
+
+            var targetScalers = new List<ITargetScaler>
+            {
+                new TestTargetScaler { TargetScalerDescriptor = new TargetScalerDescriptor("func1") },
+                new TestTargetScaler { TargetScalerDescriptor = new TargetScalerDescriptor("func2") }
+            };
+            var targetScalerManagerMock = new Mock<ITargetScalerManager>(MockBehavior.Strict);
+            targetScalerManagerMock.Setup(x => x.GetTargetScalers()).Returns(targetScalers);
+
+            var options = Options.Create(new ScaleOptions { IsTargetScalingEnabled = true });
+
+            // Build the error set with func1's scaler ID
+            string func1ScalerId = $"{typeof(TestTargetScaler).Assembly.GetName().Name}-func1";
+            var errored = new HashSet<string> { func1ScalerId };
+
+            var (monitors, scalers) = ScaleManager.GetScalersToSample(
+                scaleMonitorManagerMock.Object,
+                targetScalerManagerMock.Object,
+                options,
+                _configuration,
+                errored);
+
+            // func1 should fall back to monitor, func2 should stay as target scaler
+            Assert.Single(monitors);
+            Assert.Equal("func1", monitors[0].Descriptor.FunctionId);
+            Assert.Single(scalers);
+            Assert.Equal("func2", scalers[0].TargetScalerDescriptor.FunctionId);
+        }
+
+        [Fact]
+        public void GetScalersToSample_WithNullErrorSet_NoFiltering()
+        {
+            var scaleMonitors = new List<IScaleMonitor>
+            {
+                new TestScaleMonitor<ScaleMetrics>("func1-test-test", "func1")
+            };
+            var scaleMonitorManagerMock = new Mock<IScaleMonitorManager>(MockBehavior.Strict);
+            scaleMonitorManagerMock.Setup(x => x.GetMonitors()).Returns(scaleMonitors);
+
+            var targetScalers = new List<ITargetScaler>
+            {
+                new TestTargetScaler { TargetScalerDescriptor = new TargetScalerDescriptor("func1") }
+            };
+            var targetScalerManagerMock = new Mock<ITargetScalerManager>(MockBehavior.Strict);
+            targetScalerManagerMock.Setup(x => x.GetTargetScalers()).Returns(targetScalers);
+
+            var options = Options.Create(new ScaleOptions { IsTargetScalingEnabled = true });
+
+            // Pass null error set — should behave like empty
+            var (monitors, scalers) = ScaleManager.GetScalersToSample(
+                scaleMonitorManagerMock.Object,
+                targetScalerManagerMock.Object,
+                options,
+                _configuration,
+                null);
+
+            Assert.Empty(monitors);   // target scaler takes precedence
+            Assert.Single(scalers);
+        }
+
+        [Fact]
+        public async Task GetScaleStatusAsync_SecondCall_ReadsPersistedError()
+        {
+            // First call: target scaler throws → error persisted
+            // Second call: error read from repo → scaler skipped, no second throw
+            var repo = new InMemoryTargetScalerErrorRepository();
+
+            var targetScalers = new List<ITargetScaler>
+            {
+                new FaultyTargetScaler { TargetScalerDescriptor = new TargetScalerDescriptor("func1") }
+            };
+            _targetScalerManagerMock.Setup(p => p.GetTargetScalers()).Returns(targetScalers);
+
+            var monitors = new List<IScaleMonitor>
+            {
+                new TestScaleMonitor<ScaleMetrics>("func1-test-test", "func1")
+            };
+            _monitorManagerMock.Setup(p => p.GetMonitors()).Returns(monitors);
+
+            var options = Options.Create(new ScaleOptions { IsTargetScalingEnabled = true });
+            var scaleManager = new ScaleManager(
+                _monitorManagerMock.Object,
+                _targetScalerManagerMock.Object,
+                _metricsRepositoryMock.Object,
+                _concurrencyStatusRepositoryMock.Object,
+                repo,
+                options,
+                _loggerFactory,
+                _configuration);
+
+            var context = new ScaleStatusContext { WorkerCount = 1 };
+
+            // First call — triggers the error
+            await scaleManager.GetScaleStatusAsync(context);
+            var logs = _loggerProvider.GetAllLogMessages().Select(x => x.FormattedMessage).ToArray();
+            Assert.Single(logs, x => x.Contains("Unable to use target based scaling"));
+            _loggerProvider.ClearAllLogMessages();
+
+            // Second call — error is read from repo, scaler skipped, no throw
+            await scaleManager.GetScaleStatusAsync(context);
+            logs = _loggerProvider.GetAllLogMessages().Select(x => x.FormattedMessage).ToArray();
+            // The "Unable to use target based scaling" should NOT appear again
+            Assert.DoesNotContain(logs, x => x.Contains("Unable to use target based scaling"));
+        }
     }
 }
