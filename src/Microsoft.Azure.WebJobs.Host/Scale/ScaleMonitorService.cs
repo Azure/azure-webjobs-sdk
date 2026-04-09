@@ -52,7 +52,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             _monitorManager = monitorManager;
             _targetScalerManager = targetScalerManager;
             _configuration = configuration;
-            _targetScalerErrorRepository = targetScalerErrorRepository ?? new InMemoryTargetScalerErrorRepository();
+            _targetScalerErrorRepository = targetScalerErrorRepository ?? new NullTargetScalerErrorRepository();
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)

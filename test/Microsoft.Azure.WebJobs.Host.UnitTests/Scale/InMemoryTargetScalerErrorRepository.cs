@@ -5,13 +5,14 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host.Scale;
 
-namespace Microsoft.Azure.WebJobs.Host.Scale
+namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
 {
     /// <summary>
-    /// In-memory implementation of <see cref="ITargetScalerErrorRepository"/>.
-    /// This is used when no persistent storage is configured. State is only visible
-    /// within the current process and will not be shared across workers.
+    /// In-memory implementation of <see cref="ITargetScalerErrorRepository"/> for testing.
+    /// Stores state in a <see cref="ConcurrentDictionary{TKey,TValue}"/> so tests can
+    /// simulate cross-worker communication using a shared instance.
     /// </summary>
     internal class InMemoryTargetScalerErrorRepository : ITargetScalerErrorRepository
     {
