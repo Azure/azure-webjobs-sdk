@@ -101,6 +101,44 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Singleton
         }
 
         [Fact]
+        public async Task StartAsync_InnerListenerThrows_ReleasesLock()
+        {
+            CancellationToken cancellationToken = new CancellationToken();
+            var lockHandle = new RenewableLockHandle(new SingletonLockHandle(), null);
+            _mockSingletonManager.Setup(p => p.TryLockAsync(_lockId, null, _attribute, cancellationToken, false))
+                .ReturnsAsync(lockHandle);
+            _mockInnerListener.Setup(p => p.StartAsync(cancellationToken)).ThrowsAsync(new InvalidOperationException("Listener failed"));
+            _mockSingletonManager.Setup(p => p.ReleaseLockAsync(lockHandle, cancellationToken)).Returns(Task.FromResult(true));
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() => _listener.StartAsync(cancellationToken));
+
+            _mockSingletonManager.VerifyAll();
+            _mockInnerListener.VerifyAll();
+        }
+
+        [Fact]
+        public async Task TryAcquireLock_InnerListenerThrows_ReleasesLock()
+        {
+            _listener.LockTimer = new System.Timers.Timer
+            {
+                Interval = 30 * 1000
+            };
+            _listener.LockTimer.Start();
+
+            RenewableLockHandle lockHandle = new RenewableLockHandle(new SingletonLockHandle(), null);
+            _mockSingletonManager.Setup(p => p.TryLockAsync(_lockId, null, _attribute, CancellationToken.None, false))
+                .ReturnsAsync(lockHandle);
+            _mockInnerListener.Setup(p => p.StartAsync(CancellationToken.None)).ThrowsAsync(new InvalidOperationException("Listener failed"));
+            _mockSingletonManager.Setup(p => p.ReleaseLockAsync(lockHandle, CancellationToken.None)).Returns(Task.FromResult(true));
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() => _listener.TryAcquireLock());
+
+            Assert.Null(_listener.LockTimer);
+            _mockSingletonManager.VerifyAll();
+            _mockInnerListener.VerifyAll();
+        }
+
+        [Fact]
         public async Task TryAcquireLock_WhenLockAcquired_StopsLockTimerAndStartsListener()
         {
             _listener.LockTimer = new System.Timers.Timer
