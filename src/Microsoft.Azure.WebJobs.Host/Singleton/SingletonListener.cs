@@ -67,7 +67,15 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                 return;
             }
 
-            await _innerListener.StartAsync(cancellationToken);
+            try
+            {
+                await _innerListener.StartAsync(cancellationToken);
+            }
+            catch
+            {
+                await ReleaseLockAsync(cancellationToken);
+                throw;
+            }
 
             _isListening = true;
         }
@@ -132,7 +140,15 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                     LockTimer = null;
                 }
 
-                await _innerListener.StartAsync(CancellationToken.None);
+                try
+                {
+                    await _innerListener.StartAsync(CancellationToken.None);
+                }
+                catch
+                {
+                    await ReleaseLockAsync(CancellationToken.None);
+                    throw;
+                }
 
                 _isListening = true;
             }
