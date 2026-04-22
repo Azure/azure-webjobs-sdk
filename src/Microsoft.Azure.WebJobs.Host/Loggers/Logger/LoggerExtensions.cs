@@ -5,9 +5,8 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Loggers;
-using Microsoft.Azure.WebJobs.Logging;
 
-namespace Microsoft.Extensions.Logging
+namespace Microsoft.Azure.WebJobs.Logging
 {
     /// <summary>
     /// Extension methods for use with <see cref="ILogger"/>.
