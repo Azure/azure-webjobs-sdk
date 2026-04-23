@@ -29,11 +29,5 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             ISet<string> result = new HashSet<string>(_scalersInError.Keys);
             return Task.FromResult(result);
         }
-
-        public Task ClearAsync(CancellationToken cancellationToken)
-        {
-            _scalersInError.Clear();
-            return Task.CompletedTask;
-        }
     }
 }

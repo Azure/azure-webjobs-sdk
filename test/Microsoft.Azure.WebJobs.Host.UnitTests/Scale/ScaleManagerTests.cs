@@ -297,7 +297,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
         [InlineData(false, true, 1, 0)]
         [InlineData(true, false, 1, 0)]
         [InlineData(true, true, 0, 1)]
-        public void GetScalersToSample_Returns_Expected(bool targetBaseScalingEnabled, bool triggerEnabled, int expectedScaleMonitorCount, int expectedTargetScalerCount)
+        public async Task GetScalersToSample_Returns_Expected(bool targetBaseScalingEnabled, bool triggerEnabled, int expectedScaleMonitorCount, int expectedTargetScalerCount)
         {
             List<IScaleMonitor> scaleMonitors = new List<IScaleMonitor>
             {
@@ -325,11 +325,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
                 .AddInMemoryCollection(new Dictionary<string, string> { { "Microsoft.Azure.WebJobs.Host.UnitTests", triggerEnabled ? "1" : "0" } }).Build();
 
 
-            var (scaleMonitorsToProcess, targetScalesToProcess) = ScaleManager.GetScalersToSample(
+            var (scaleMonitorsToProcess, targetScalesToProcess) = await ScaleManager.GetScalersToSample(
                 scaleMonitorManagerMock.Object,
                 targetScalerManagerMock.Object,
                 options,
-                configuration
+                configuration,
+                new NullTargetScalerErrorRepository()
                 );
 
             Assert.Equal(scaleMonitorsToProcess.Count(), expectedScaleMonitorCount);
@@ -372,11 +373,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
 
             ScaleManager scaleManager = new ScaleManager(scaleMonitorManagerMock.Object, targetScalerManagerMock.Object, _metricsRepositoryMock.Object, _concurrencyStatusRepositoryMock.Object, _targetScalerErrorRepository, options, _loggerFactory, _configuration);
 
-            var (monitors1, scalers1) = ScaleManager.GetScalersToSample( //Col1
+            var (monitors1, scalers1) = await ScaleManager.GetScalersToSample( //Col1
                 scaleMonitorManagerMock.Object,
                 targetScalerManagerMock.Object,
                 _scaleOptions,
-                _configuration
+                _configuration,
+                new NullTargetScalerErrorRepository()
                 );
             Assert.Equal(monitors1.Count(), 0);
             Assert.Equal(scalers1.Count(), 2);
@@ -389,13 +391,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             _loggerProvider.ClearAllLogMessages();
 
             // After the error is recorded, subsequent calls should see the fallback
-            var scalersInError = await _targetScalerErrorRepository.GetAsync(CancellationToken.None);
-            var (monitors2, scalers2) = ScaleManager.GetScalersToSample(
+            var (monitors2, scalers2) = await ScaleManager.GetScalersToSample(
                 scaleMonitorManagerMock.Object,
                 targetScalerManagerMock.Object,
                 _scaleOptions,
                 _configuration,
-                scalersInError
+                _targetScalerErrorRepository
                 );
             Assert.Equal(monitors2.Count(), 1);
             Assert.Equal(scalers2.Count(), 1);
@@ -503,11 +504,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             Assert.Equal(2, errors.Count);
             Assert.Contains("scaler-a", errors);
             Assert.Contains("scaler-b", errors);
-
-            // Clear
-            await repo.ClearAsync(CancellationToken.None);
-            errors = await repo.GetAsync(CancellationToken.None);
-            Assert.Empty(errors);
         }
 
         [Fact]
@@ -524,7 +520,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
         }
 
         [Fact]
-        public void GetScalersToSample_WithErrorSet_FiltersCorrectly()
+        public async Task GetScalersToSample_WithErrorSet_FiltersCorrectly()
         {
             var scaleMonitors = new List<IScaleMonitor>
             {
@@ -544,16 +540,17 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
 
             var options = Options.Create(new ScaleOptions { IsTargetScalingEnabled = true });
 
-            // Build the error set with func1's scaler ID
+            // Build an error repository with func1's scaler ID
             string func1ScalerId = $"{typeof(TestTargetScaler).Assembly.GetName().Name}-func1";
-            var errored = new HashSet<string> { func1ScalerId };
+            var errorRepo = new InMemoryTargetScalerErrorRepository();
+            await errorRepo.AddAsync(func1ScalerId, CancellationToken.None);
 
-            var (monitors, scalers) = ScaleManager.GetScalersToSample(
+            var (monitors, scalers) = await ScaleManager.GetScalersToSample(
                 scaleMonitorManagerMock.Object,
                 targetScalerManagerMock.Object,
                 options,
                 _configuration,
-                errored);
+                errorRepo);
 
             // func1 should fall back to monitor, func2 should stay as target scaler
             Assert.Single(monitors);
@@ -563,7 +560,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
         }
 
         [Fact]
-        public void GetScalersToSample_WithNullErrorSet_NoFiltering()
+        public async Task GetScalersToSample_WithNullErrorSet_NoFiltering()
         {
             var scaleMonitors = new List<IScaleMonitor>
             {
@@ -581,13 +578,13 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
 
             var options = Options.Create(new ScaleOptions { IsTargetScalingEnabled = true });
 
-            // Pass null error set — should behave like empty
-            var (monitors, scalers) = ScaleManager.GetScalersToSample(
+            // Pass NullTargetScalerErrorRepository — should behave like empty
+            var (monitors, scalers) = await ScaleManager.GetScalersToSample(
                 scaleMonitorManagerMock.Object,
                 targetScalerManagerMock.Object,
                 options,
                 _configuration,
-                null);
+                new NullTargetScalerErrorRepository());
 
             Assert.Empty(monitors);   // target scaler takes precedence
             Assert.Single(scalers);

@@ -55,22 +55,17 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             _targetScalerErrorRepository = targetScalerErrorRepository ?? new NullTargetScalerErrorRepository();
         }
 
-        public async Task StartAsync(CancellationToken cancellationToken)
+        public Task StartAsync(CancellationToken cancellationToken)
         {
             if (_scaleOptions.Value.IsRuntimeScalingEnabled)
             {
                 _logger.LogInformation("Runtime scale monitoring is enabled.");
 
-                // Clear any persisted target scaler errors from previous runs.
-                // This allows TBS to be re-evaluated after an app restart,
-                // e.g. after the customer grants the Manage claim.
-                await _targetScalerErrorRepository.ClearAsync(cancellationToken);
-
                 // start the timer by setting the due time
                 SetTimerInterval((int)_scaleOptions.Value.ScaleMetricsSampleInterval.TotalMilliseconds);
             }
 
-            return;
+            return Task.CompletedTask;
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
@@ -100,8 +95,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         {
             try
             {
-                var scalersInError = await _targetScalerErrorRepository.GetAsync(CancellationToken.None);
-                var (scaleMonitorsToProcess, targetScalersToSample) = ScaleManager.GetScalersToSample(_monitorManager, _targetScalerManager, _scaleOptions, _configuration, scalersInError);
+                var (scaleMonitorsToProcess, targetScalersToSample) = await ScaleManager.GetScalersToSample(_monitorManager, _targetScalerManager, _scaleOptions, _configuration, _targetScalerErrorRepository);
 
                 if (scaleMonitorsToProcess.Any())
                 {

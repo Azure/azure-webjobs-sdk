@@ -19,10 +19,5 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             ISet<string> result = new HashSet<string>();
             return Task.FromResult(result);
         }
-
-        public Task ClearAsync(CancellationToken cancellationToken)
-        {
-            return Task.CompletedTask;
-        }
     }
 }

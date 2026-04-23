@@ -1,6 +1,7 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json;
 using Xunit;
+using static Microsoft.Azure.WebJobs.Host.BlobStorageTargetScalerErrorRepository;
 
 namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 {
@@ -65,17 +67,18 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
             Assert.True(exists);
 
             string content = await blobClient.DownloadTextAsync();
-            var result = JsonConvert.DeserializeObject<HashSet<string>>(content);
-            Assert.Single(result);
-            Assert.Contains("scaler-a", result);
+            var state = JsonConvert.DeserializeObject<TargetScalerErrorState>(content);
+            Assert.Single(state.Scalers);
+            Assert.Contains("scaler-a", state.Scalers);
+            Assert.NotNull(state.LastUpdated);
 
             // Add another and verify both are present
             await _repository.AddAsync("scaler-b", CancellationToken.None);
             content = await blobClient.DownloadTextAsync();
-            result = JsonConvert.DeserializeObject<HashSet<string>>(content);
-            Assert.Equal(2, result.Count);
-            Assert.Contains("scaler-a", result);
-            Assert.Contains("scaler-b", result);
+            state = JsonConvert.DeserializeObject<TargetScalerErrorState>(content);
+            Assert.Equal(2, state.Scalers.Count);
+            Assert.Contains("scaler-a", state.Scalers);
+            Assert.Contains("scaler-b", state.Scalers);
         }
 
         [Fact]
@@ -83,13 +86,17 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         {
             await DeleteTestBlobsAsync();
 
-            // Write a blob directly
+            // Write a blob directly using the new state format
             string path = await _repository.GetBlobPathAsync(CancellationToken.None);
             BlobContainerClient blobContainerClient = await _repository.GetContainerClientAsync(CancellationToken.None);
             BlobClient blobClient = blobContainerClient.GetBlobClient(path);
 
-            var testData = new HashSet<string> { "scaler-x", "scaler-y" };
-            string content = JsonConvert.SerializeObject(testData);
+            var testState = new TargetScalerErrorState
+            {
+                Scalers = new HashSet<string> { "scaler-x", "scaler-y" },
+                LastUpdated = DateTime.UtcNow
+            };
+            string content = JsonConvert.SerializeObject(testState);
             await blobClient.UploadTextAsync(content, overwrite: true);
 
             // Read via repository
@@ -111,27 +118,40 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
         }
 
         [Fact]
-        public async Task ClearAsync_DeletesBlob()
+        public async Task GetAsync_StaleData_ReturnsEmpty()
         {
             await DeleteTestBlobsAsync();
 
-            // Add an entry so the blob exists
-            await _repository.AddAsync("scaler-a", CancellationToken.None);
-            var errors = await _repository.GetAsync(CancellationToken.None);
-            Assert.Single(errors);
-
-            // Clear
-            await _repository.ClearAsync(CancellationToken.None);
-
-            // Verify blob is gone and GetAsync returns empty
-            var path = await _repository.GetBlobPathAsync(CancellationToken.None);
+            // Write a blob with an old timestamp (beyond the TTL)
+            string path = await _repository.GetBlobPathAsync(CancellationToken.None);
             BlobContainerClient blobContainerClient = await _repository.GetContainerClientAsync(CancellationToken.None);
             BlobClient blobClient = blobContainerClient.GetBlobClient(path);
-            bool exists = await blobClient.ExistsAsync();
-            Assert.False(exists);
 
-            errors = await _repository.GetAsync(CancellationToken.None);
-            Assert.Empty(errors);
+            var staleState = new TargetScalerErrorState
+            {
+                Scalers = new HashSet<string> { "scaler-stale" },
+                LastUpdated = DateTime.UtcNow - BlobStorageTargetScalerErrorRepository.DefaultTtl - TimeSpan.FromMinutes(1)
+            };
+            string content = JsonConvert.SerializeObject(staleState);
+            await blobClient.UploadTextAsync(content, overwrite: true);
+
+            // GetAsync should return empty because data is beyond TTL
+            var result = await _repository.GetAsync(CancellationToken.None);
+            Assert.Empty(result);
+        }
+
+        [Fact]
+        public async Task GetAsync_FreshData_ReturnsScalers()
+        {
+            await DeleteTestBlobsAsync();
+
+            // Write via AddAsync (writes current timestamp)
+            await _repository.AddAsync("scaler-fresh", CancellationToken.None);
+
+            // GetAsync should return the scaler because data is fresh
+            var result = await _repository.GetAsync(CancellationToken.None);
+            Assert.Single(result);
+            Assert.Contains("scaler-fresh", result);
         }
 
         [Fact]
@@ -150,8 +170,6 @@ namespace Microsoft.Azure.WebJobs.Host.EndToEndTests
 
             var result = await localRepository.GetAsync(CancellationToken.None);
             Assert.Empty(result);
-
-            await localRepository.ClearAsync(CancellationToken.None);
         }
 
         private async Task DeleteTestBlobsAsync()

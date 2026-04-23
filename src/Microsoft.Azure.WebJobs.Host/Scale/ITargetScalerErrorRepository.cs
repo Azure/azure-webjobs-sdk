@@ -12,7 +12,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
     /// When a target scaler throws <see cref="System.NotSupportedException"/>, the scaler identifier
     /// is recorded so all instances can fall back to incremental scale monitoring.
     /// </summary>
-    public interface ITargetScalerErrorRepository
+    internal interface ITargetScalerErrorRepository
     {
         /// <summary>
         /// Adds a target scaler identifier to the set of scalers in error.
@@ -28,14 +28,5 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// <param name="cancellationToken">A cancellation token.</param>
         /// <returns>A task that returns the set of scaler identifiers in error.</returns>
         Task<ISet<string>> GetAsync(CancellationToken cancellationToken);
-
-        /// <summary>
-        /// Clears all recorded target scaler errors, allowing scalers to be re-evaluated.
-        /// Called on host startup so that fixes (e.g. granting Manage claim) take effect
-        /// after an app restart.
-        /// </summary>
-        /// <param name="cancellationToken">A cancellation token.</param>
-        /// <returns>A task that completes when the clear is finished.</returns>
-        Task ClearAsync(CancellationToken cancellationToken);
     }
 }

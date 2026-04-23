@@ -215,46 +215,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
         }
 
         [Fact]
-        public async Task StartAsync_ClearsTargetScalerErrors()
-        {
-            // Arrange: create a shared error repository and pre-populate an error
-            var errorRepository = new InMemoryTargetScalerErrorRepository();
-            await errorRepository.AddAsync("Microsoft.Azure.WebJobs.Host.UnitTests-function1", CancellationToken.None);
-            var errors = await errorRepository.GetAsync(CancellationToken.None);
-            Assert.Single(errors);
-
-            var loggerProvider = new TestLoggerProvider();
-            var loggerFactory = new LoggerFactory();
-            loggerFactory.AddProvider(loggerProvider);
-
-            var options = Options.Create(new ScaleOptions
-            {
-                ScaleMetricsSampleInterval = TimeSpan.FromSeconds(1),
-                IsRuntimeScalingEnabled = true,
-                IsTargetScalingEnabled = true
-            });
-
-            var service = new ScaleMonitorService(
-                new Mock<ScaleManager>().Object,
-                new TestMetricsRepository(),
-                options,
-                new PrimaryHostStateProvider { IsPrimary = true },
-                _monitorManagerMock.Object,
-                _targetScalerManagerMock.Object,
-                _configuration,
-                loggerFactory,
-                errorRepository);
-
-            // Act: start the service — ClearAsync should be called
-            await service.StartAsync(CancellationToken.None);
-            await service.StopAsync(CancellationToken.None);
-
-            // Assert: errors should be cleared
-            errors = await errorRepository.GetAsync(CancellationToken.None);
-            Assert.Empty(errors);
-        }
-
-        [Fact]
         public async Task OnTimer_CrossWorkerFallback_SharedRepository()
         {
             // This test simulates the multi-worker scenario:
@@ -317,12 +277,12 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
 
             // Worker B: ScaleMonitorService reads the shared repository and gets the error set
             // GetScalersToSample should now exclude the faulty target scaler and include the incremental monitor
-            var (monitorsResult, scalersResult) = ScaleManager.GetScalersToSample(
+            var (monitorsResult, scalersResult) = await ScaleManager.GetScalersToSample(
                 monitorManagerMock.Object,
                 targetScalerManagerMock.Object,
                 options,
                 configuration,
-                errors);
+                sharedErrorRepository);
 
             Assert.Single(monitorsResult);   // incremental monitor included
             Assert.Empty(scalersResult);     // target scaler excluded
