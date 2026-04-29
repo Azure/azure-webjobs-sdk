@@ -34,6 +34,7 @@ namespace Microsoft.Extensions.Hosting
             services.TryAddSingleton<IAzureBlobStorageProvider, AzureStorageProvider>();
 
             services.AddSingleton<IConcurrencyStatusRepository, BlobStorageConcurrencyStatusRepository>();
+            services.AddSingleton<ITargetScalerErrorRepository, BlobStorageTargetScalerErrorRepository>();
         }
 
         public static void AddAzureStorageScaleServices(this IServiceCollection services)
@@ -41,6 +42,7 @@ namespace Microsoft.Extensions.Hosting
             services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<JobHostInternalStorageOptions>, CoreWebJobsOptionsSetup<JobHostInternalStorageOptions>>());
             services.TryAddSingleton<IAzureBlobStorageProvider, AzureStorageProvider>();
             services.AddSingleton<IConcurrencyStatusRepository, BlobStorageConcurrencyStatusRepository>();
+            services.AddSingleton<ITargetScalerErrorRepository, BlobStorageTargetScalerErrorRepository>();
         }
 
         // This is only called if the host didn't already provide an implementation

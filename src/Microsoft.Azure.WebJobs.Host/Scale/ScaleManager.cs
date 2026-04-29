@@ -21,17 +21,18 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         private readonly ITargetScalerManager _targetScalerManager;
         private readonly IScaleMetricsRepository _metricsRepository;
         private readonly IConcurrencyStatusRepository _concurrencyStatusRepository;
+        private readonly ITargetScalerErrorRepository _targetScalerErrorRepository;
         private readonly ILogger _logger;
         private readonly IConfiguration _configuration;
         private IOptions<ScaleOptions> _scaleOptions;
         private IOptions<ConcurrencyOptions> _concurrencyOptions;
-        private static HashSet<string> _targetScalersInError = new HashSet<string>();
 
         public ScaleManager(
             IScaleMonitorManager monitorManager,
             ITargetScalerManager targetScalerManager,
             IScaleMetricsRepository metricsRepository,
             IConcurrencyStatusRepository concurrencyStatusRepository,
+            ITargetScalerErrorRepository targetScalerErrorRepository,
             IOptions<ScaleOptions> scaleConfiguration,
             ILoggerFactory loggerFactory,
             IConfiguration configuration,
@@ -41,8 +42,8 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             _targetScalerManager = targetScalerManager;
             _metricsRepository = metricsRepository;
             _concurrencyStatusRepository = concurrencyStatusRepository;
+            _targetScalerErrorRepository = targetScalerErrorRepository;
             _logger = loggerFactory?.CreateLogger<ScaleManager>();
-            _targetScalersInError = new HashSet<string>();
             _scaleOptions = scaleConfiguration;
             _configuration = configuration;
             _concurrencyOptions = concurrencyOptions;
@@ -60,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// <returns>A task that returns the <see cref="AggregateScaleStatus"/>.</returns>
         public async Task<AggregateScaleStatus> GetScaleStatusAsync(ScaleStatusContext context)
         {
-            var (scaleMonitorsToProcess, targetScalersToProcess) = GetScalersToSample(_monitorManager, _targetScalerManager, _scaleOptions, _configuration);
+            var (scaleMonitorsToProcess, targetScalersToProcess) = await GetScalersToSample(_monitorManager, _targetScalerManager, _scaleOptions, _configuration, _targetScalerErrorRepository);
 
             var scaleStatuses = await GetScaleMonitorsResultAsync(context, scaleMonitorsToProcess);
             var targetScalerResults = await GetTargetScalersResultAsync(context, targetScalersToProcess);
@@ -181,10 +182,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                                 targetScaler.TargetScalerDescriptor.FunctionId,
                                 ex);
 
-                            lock (_targetScalersInError)
-                            {
-                                _targetScalersInError.Add(targetScalerUniqueId);
-                            }
+                            await _targetScalerErrorRepository.AddAsync(targetScalerUniqueId, CancellationToken.None);
 
                             // Adding ScaleVote.None vote
                             result = new TargetScalerResult 
@@ -212,11 +210,12 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         /// Returns scale monitors and target scalers we want to use based on the configuration.
         /// Scaler monitor will be ignored if a target scaler is defined in the same extensions assembly and TBS is enabled.
         /// </summary>
-        internal static (List<IScaleMonitor>, List<ITargetScaler>) GetScalersToSample(
+        internal static async Task<(List<IScaleMonitor>, List<ITargetScaler>)> GetScalersToSample(
             IScaleMonitorManager monitorManager,
             ITargetScalerManager targetScalerManager,
             IOptions<ScaleOptions> scaleOptions,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ITargetScalerErrorRepository targetScalerErrorRepository)
         {
             var scaleMonitors = monitorManager.GetMonitors();
             var targetScalers = targetScalerManager.GetTargetScalers();
@@ -228,10 +227,11 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             if (scaleOptions.Value.IsTargetScalingEnabled)
             {
                 HashSet<string> targetScalerFunctions = new HashSet<string>();
+                var errored = await targetScalerErrorRepository.GetAsync(CancellationToken.None);
                 foreach (var scaler in targetScalers)
                 {
                     string scalerUniqueId = GetTargetScalerFunctionUniqueId(scaler);
-                    if (!_targetScalersInError.Contains(scalerUniqueId))
+                    if (!errored.Contains(scalerUniqueId))
                     {
                         string assemblyName = GetAssemblyName(scaler.GetType());
                         bool featureDisabled = configuration.GetValue<string>(assemblyName) == "0";

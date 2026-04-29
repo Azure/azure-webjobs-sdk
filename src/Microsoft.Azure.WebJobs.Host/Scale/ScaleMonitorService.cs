@@ -29,6 +29,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         private readonly IScaleMonitorManager _monitorManager;
         private readonly ITargetScalerManager _targetScalerManager;
         private readonly IConfiguration _configuration;
+        private readonly ITargetScalerErrorRepository _targetScalerErrorRepository;
         private bool _disposed;
 
         public ScaleMonitorService(
@@ -39,7 +40,8 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             IScaleMonitorManager monitorManager,
             ITargetScalerManager targetScalerManager,
             IConfiguration configuration,
-            ILoggerFactory loggerFactory)
+            ILoggerFactory loggerFactory,
+            ITargetScalerErrorRepository targetScalerErrorRepository = null)
         {
             _scaleStausProvider = scaleStausProvider;
             _metricsRepository = metricsRepository;
@@ -50,6 +52,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
             _monitorManager = monitorManager;
             _targetScalerManager = targetScalerManager;
             _configuration = configuration;
+            _targetScalerErrorRepository = targetScalerErrorRepository ?? new NullTargetScalerErrorRepository();
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -92,7 +95,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
         {
             try
             {
-                var (scaleMonitorsToProcess, targetScalersToSample) = ScaleManager.GetScalersToSample(_monitorManager, _targetScalerManager, _scaleOptions, _configuration);
+                var (scaleMonitorsToProcess, targetScalersToSample) = await ScaleManager.GetScalersToSample(_monitorManager, _targetScalerManager, _scaleOptions, _configuration, _targetScalerErrorRepository);
 
                 if (scaleMonitorsToProcess.Any())
                 {
