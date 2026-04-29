@@ -47,10 +47,7 @@ namespace Microsoft.Azure.WebJobs.Host
                     // Read current state with ETag
                     var (state, etag) = await ReadBlobWithETagAsync(cancellationToken);
                     var set = state?.Scalers ?? new HashSet<string>();
-                    if (!set.Add(scalerUniqueId))
-                    {
-                        // Already present — still update the timestamp to keep it fresh
-                    }
+                    set.Add(scalerUniqueId);
 
                     var newState = new TargetScalerErrorState
                     {

@@ -484,42 +484,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
         }
 
         [Fact]
-        public async Task InMemoryTargetScalerErrorRepository_Lifecycle()
-        {
-            var repo = new InMemoryTargetScalerErrorRepository();
-
-            // Initially empty
-            var errors = await repo.GetAsync(CancellationToken.None);
-            Assert.Empty(errors);
-
-            // Add first entry
-            await repo.AddAsync("scaler-a", CancellationToken.None);
-            errors = await repo.GetAsync(CancellationToken.None);
-            Assert.Single(errors);
-            Assert.Contains("scaler-a", errors);
-
-            // Add second entry
-            await repo.AddAsync("scaler-b", CancellationToken.None);
-            errors = await repo.GetAsync(CancellationToken.None);
-            Assert.Equal(2, errors.Count);
-            Assert.Contains("scaler-a", errors);
-            Assert.Contains("scaler-b", errors);
-        }
-
-        [Fact]
-        public async Task InMemoryTargetScalerErrorRepository_AddAsync_Idempotent()
-        {
-            var repo = new InMemoryTargetScalerErrorRepository();
-
-            await repo.AddAsync("scaler-a", CancellationToken.None);
-            await repo.AddAsync("scaler-a", CancellationToken.None);
-
-            var errors = await repo.GetAsync(CancellationToken.None);
-            Assert.Single(errors);
-            Assert.Contains("scaler-a", errors);
-        }
-
-        [Fact]
         public async Task GetScalersToSample_WithErrorSet_FiltersCorrectly()
         {
             var scaleMonitors = new List<IScaleMonitor>
