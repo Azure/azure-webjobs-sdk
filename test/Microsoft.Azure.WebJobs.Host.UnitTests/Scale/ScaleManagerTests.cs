@@ -171,7 +171,6 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             {
                 Assert.Equal("1 target scalers to sample", logs[0].FormattedMessage);
                 Assert.Equal("Snapshot dynamic concurrency for target scaler 'func1' is '1'", logs[1].FormattedMessage);
-                Assert.Equal("Function 'func1' vote: TargetWorkerCount='2'.", logs[2].FormattedMessage);
                 Assert.Equal(ScaleVote.ScaleIn, status.Vote);
                 Assert.Equal(2, status.TargetWorkerCount);
             }
@@ -258,10 +257,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Scale
             var logs = _loggerProvider.GetAllLogMessages().ToArray();
             Assert.Equal("3 target scalers to sample", logs[0].FormattedMessage);
             Assert.Equal($"Snapshot dynamic concurrency for target scaler 'func1' is '1'", logs[1].FormattedMessage);
-            Assert.Equal("Function 'func1' vote: TargetWorkerCount='3'.", logs[2].FormattedMessage);
-            Assert.Equal("Function 'func2' error: Failed to get target scaler vote.", logs[3].FormattedMessage);
-            Assert.Same("test", logs[3].Exception.Message);
-            Assert.Equal("Function 'func3' vote: TargetWorkerCount='-3'.", logs[4].FormattedMessage);
+            Assert.Equal("Function 'func2' error: Failed to get target scaler vote.", logs[2].FormattedMessage);
+            Assert.Same("test", logs[2].Exception.Message);
 
             Assert.Equal(3, status.TargetWorkerCount);
             Assert.Equal(ScaleVote.None, status.Vote);

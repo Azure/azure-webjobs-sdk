@@ -190,7 +190,6 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                                 TargetWorkerCount = context.WorkerCount
                             };
                         }
-                        _logger.LogFunctionScaleVote(targetScaler.TargetScalerDescriptor.FunctionId, result.TargetWorkerCount);
                         targetScaleVotes.Add(targetScaler.TargetScalerDescriptor.FunctionId, result);
                     }
                     catch (Exception exc)
