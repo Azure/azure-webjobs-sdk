@@ -60,7 +60,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "SingletonScope",
                 "StorageAccountAttribute",
                 "TimeoutAttribute",
-                "ParameterBindingData"
+                "ParameterBindingData",
+                "AllowArmWebhookAccessAttribute"
             };
 
             TestHelpers.AssertPublicTypes(expected, assembly);
