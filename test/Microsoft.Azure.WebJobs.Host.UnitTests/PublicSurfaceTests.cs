@@ -280,6 +280,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 "SupportsRetryAttribute",
                 "AppServicesHostingUtility",
                 "ITargetScaler",
+                "ITargetScalerErrorRepository",
                 "ITargetScalerManager",
                 "ITargetScalerProvider",
                 "TargetScalerDescriptor",

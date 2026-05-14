@@ -8,11 +8,10 @@ using System.Threading.Tasks;
 namespace Microsoft.Azure.WebJobs.Host.Scale
 {
     /// <summary>
-    /// Provides functionality for persisting target scaler errors across multiple host instances.
-    /// When a target scaler throws <see cref="System.NotSupportedException"/>, the scaler identifier
-    /// is recorded so all instances can fall back to incremental scale monitoring.
+    /// Provides functionality for persisting target scaler errors.
+    /// Used by <see cref="IScaleMonitor"/> to track scalers that are in a faulted state.
     /// </summary>
-    internal interface ITargetScalerErrorRepository
+    public interface ITargetScalerErrorRepository
     {
         /// <summary>
         /// Adds a target scaler identifier to the set of scalers in error.
