@@ -58,6 +58,12 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
             {
                 // Remove the Host instance ID property, since it's not needed.
                 telemetryContext.Properties.Remove(LoggingConstants.HostInstanceIdKey);
+
+                // Remove the AggregationIntervalMs dimension. This dimension is added by the
+                // Application Insights SDK metric aggregation pipeline and is not published on
+                // custom metrics by the OpenTelemetry exporter, so we strip it for consistency
+                // when the custom dimension optimization is enabled.
+                telemetryContext.Properties.Remove(LoggingConstants.AggregationIntervalMsKey);
                 return;
             }
             else

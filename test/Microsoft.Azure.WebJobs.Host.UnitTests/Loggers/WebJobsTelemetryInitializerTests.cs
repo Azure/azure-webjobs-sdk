@@ -127,6 +127,53 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         }
 
         [Fact]
+        public void Initializer_RemovesAggregationIntervalMs_OnMetricTelemetry_WhenOptimizationEnabled()
+        {
+            var metric = new MetricTelemetry("metric", 1.0);
+            metric.Properties["_MS.AggregationIntervalMs"] = "60000";
+            metric.Properties["HostInstanceId"] = Guid.NewGuid().ToString();
+            metric.Properties["custom"] = "value";
+
+            var options = new ApplicationInsightsLoggerOptions { EnableMetricsCustomDimensionOptimization = true };
+            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new WebJobsRoleInstanceProvider(), Options.Create(options));
+
+            initializer.Initialize(metric);
+
+            Assert.False(metric.Properties.ContainsKey("_MS.AggregationIntervalMs"));
+            Assert.False(metric.Properties.ContainsKey("HostInstanceId"));
+            Assert.True(metric.Properties.ContainsKey("custom"));
+        }
+
+        [Fact]
+        public void Initializer_PreservesAggregationIntervalMs_OnMetricTelemetry_WhenOptimizationDisabled()
+        {
+            var metric = new MetricTelemetry("metric", 1.0);
+            metric.Properties["_MS.AggregationIntervalMs"] = "60000";
+
+            var options = new ApplicationInsightsLoggerOptions { EnableMetricsCustomDimensionOptimization = false };
+            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new WebJobsRoleInstanceProvider(), Options.Create(options));
+
+            initializer.Initialize(metric);
+
+            Assert.True(metric.Properties.ContainsKey("_MS.AggregationIntervalMs"));
+            Assert.Equal("60000", metric.Properties["_MS.AggregationIntervalMs"]);
+        }
+
+        [Fact]
+        public void Initializer_DoesNotRemoveAggregationIntervalMs_OnNonMetricTelemetry()
+        {
+            var trace = new TraceTelemetry("hello");
+            trace.Properties["_MS.AggregationIntervalMs"] = "60000";
+
+            var options = new ApplicationInsightsLoggerOptions { EnableMetricsCustomDimensionOptimization = true };
+            var initializer = new WebJobsTelemetryInitializer(new WebJobsSdkVersionProvider(), new WebJobsRoleInstanceProvider(), Options.Create(options));
+
+            initializer.Initialize(trace);
+
+            Assert.True(trace.Properties.ContainsKey("_MS.AggregationIntervalMs"));
+        }
+
+        [Fact]
         public void Initializer_SetsRoleInstance()
         {
             var request = new RequestTelemetry { Name = "custom" };
