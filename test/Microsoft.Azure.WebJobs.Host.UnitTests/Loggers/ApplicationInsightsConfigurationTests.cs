@@ -126,6 +126,46 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         }
 
         [Fact]
+        public void DependencyInjectionConfiguration_MaxTelemetryBufferDelay_DefaultsTo8Seconds()
+        {
+            var builder = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsightsWebJobs(o => o.InstrumentationKey = "some key");
+                });
+
+            using (var host = builder.Build())
+            {
+                var config = host.Services.GetService<TelemetryConfiguration>();
+
+                var channel = Assert.IsType<ServerTelemetryChannel>(config.TelemetryChannel);
+                Assert.Equal(TimeSpan.FromSeconds(8), channel.MaxTelemetryBufferDelay);
+            }
+        }
+
+        [Fact]
+        public void DependencyInjectionConfiguration_MaxTelemetryBufferDelay_CanBeOverridden()
+        {
+            var builder = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsightsWebJobs(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                        o.MaxTelemetryBufferDelay = TimeSpan.FromSeconds(20);
+                    });
+                });
+
+            using (var host = builder.Build())
+            {
+                var config = host.Services.GetService<TelemetryConfiguration>();
+
+                var channel = Assert.IsType<ServerTelemetryChannel>(config.TelemetryChannel);
+                Assert.Equal(TimeSpan.FromSeconds(20), channel.MaxTelemetryBufferDelay);
+            }
+        }
+
+        [Fact]
         public void DependencyInjectionConfiguration_Configures_With_ConnectionString()
         {
             var builder = new HostBuilder()

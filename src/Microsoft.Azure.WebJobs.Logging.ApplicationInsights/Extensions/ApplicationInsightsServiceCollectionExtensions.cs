@@ -334,7 +334,11 @@ namespace Microsoft.Extensions.DependencyInjection
                 }
             }
 
-            (channel as ServerTelemetryChannel)?.Initialize(configuration);
+            if (channel is ServerTelemetryChannel serverTelemetryChannel)
+            {
+                serverTelemetryChannel.MaxTelemetryBufferDelay = options.MaxTelemetryBufferDelay;
+                serverTelemetryChannel.Initialize(configuration);
+            }
 
             QuickPulseTelemetryModule quickPulseModule = null;
             foreach (ITelemetryModule module in telemetryModules)

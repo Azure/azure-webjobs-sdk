@@ -167,6 +167,13 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// </summary>
         public TimeSpan AdaptiveSamplingInitializationDelay { get; set; } = TimeSpan.FromSeconds(15);
 
+        /// <summary>
+        /// Gets or sets the maximum time telemetry is buffered by the <c>ServerTelemetryChannel</c> before it is sent
+        /// to the ingestion endpoint. Lowering this value reduces the delay before telemetry becomes visible, at the
+        /// cost of more frequent network calls. The default value is 8 seconds.
+        /// </summary>
+        public TimeSpan MaxTelemetryBufferDelay { get; set; } = TimeSpan.FromSeconds(8);
+
         public string Format()
         {
             JObject sampling = null;
@@ -260,6 +267,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
                 { nameof(EnableMetricsCustomDimensionOptimization), EnableMetricsCustomDimensionOptimization },
                 { nameof(EnableAdaptiveSamplingDelay), EnableAdaptiveSamplingDelay },
                 { nameof(AdaptiveSamplingInitializationDelay), AdaptiveSamplingInitializationDelay },
+                { nameof(MaxTelemetryBufferDelay), MaxTelemetryBufferDelay },
             };
 
             return options.ToString(Formatting.Indented);
