@@ -165,6 +165,24 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             }
         }
 
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-5)]
+        public void DependencyInjectionConfiguration_MaxTelemetryBufferDelay_ThrowsForNonPositiveValue(int seconds)
+        {
+            var builder = new HostBuilder()
+                .ConfigureLogging(b =>
+                {
+                    b.AddApplicationInsightsWebJobs(o =>
+                    {
+                        o.InstrumentationKey = "some key";
+                        o.MaxTelemetryBufferDelay = TimeSpan.FromSeconds(seconds);
+                    });
+                });
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => builder.Build());
+        }
+
         [Fact]
         public void DependencyInjectionConfiguration_Configures_With_ConnectionString()
         {

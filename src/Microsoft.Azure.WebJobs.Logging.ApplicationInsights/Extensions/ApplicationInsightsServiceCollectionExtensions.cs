@@ -336,6 +336,14 @@ namespace Microsoft.Extensions.DependencyInjection
 
             if (channel is ServerTelemetryChannel serverTelemetryChannel)
             {
+                if (options.MaxTelemetryBufferDelay <= TimeSpan.Zero)
+                {
+                    throw new ArgumentOutOfRangeException(
+                        $"{nameof(ApplicationInsightsLoggerOptions)}.{nameof(ApplicationInsightsLoggerOptions.MaxTelemetryBufferDelay)}",
+                        options.MaxTelemetryBufferDelay,
+                        $"{nameof(ApplicationInsightsLoggerOptions.MaxTelemetryBufferDelay)} must be a positive TimeSpan.");
+                }
+
                 serverTelemetryChannel.MaxTelemetryBufferDelay = options.MaxTelemetryBufferDelay;
                 serverTelemetryChannel.Initialize(configuration);
             }
