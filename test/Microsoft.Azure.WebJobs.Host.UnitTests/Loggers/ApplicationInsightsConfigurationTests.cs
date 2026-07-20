@@ -143,8 +143,10 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
             }
         }
 
-        [Fact]
-        public void DependencyInjectionConfiguration_MaxTelemetryBufferDelay_CanBeOverridden()
+        [Theory]
+        [InlineData(5)]
+        [InlineData(20)]
+        public void DependencyInjectionConfiguration_MaxTelemetryBufferDelay_CanBeOverridden(int seconds)
         {
             var builder = new HostBuilder()
                 .ConfigureLogging(b =>
@@ -152,7 +154,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                     b.AddApplicationInsightsWebJobs(o =>
                     {
                         o.InstrumentationKey = "some key";
-                        o.MaxTelemetryBufferDelay = TimeSpan.FromSeconds(20);
+                        o.MaxTelemetryBufferDelay = TimeSpan.FromSeconds(seconds);
                     });
                 });
 
@@ -161,14 +163,16 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                 var config = host.Services.GetService<TelemetryConfiguration>();
 
                 var channel = Assert.IsType<ServerTelemetryChannel>(config.TelemetryChannel);
-                Assert.Equal(TimeSpan.FromSeconds(20), channel.MaxTelemetryBufferDelay);
+                Assert.Equal(TimeSpan.FromSeconds(seconds), channel.MaxTelemetryBufferDelay);
             }
         }
 
         [Theory]
         [InlineData(0)]
         [InlineData(-5)]
-        public void DependencyInjectionConfiguration_MaxTelemetryBufferDelay_ThrowsForNonPositiveValue(int seconds)
+        [InlineData(1)]
+        [InlineData(4)]
+        public void DependencyInjectionConfiguration_MaxTelemetryBufferDelay_ThrowsForValueBelowMinimum(int seconds)
         {
             var builder = new HostBuilder()
                 .ConfigureLogging(b =>

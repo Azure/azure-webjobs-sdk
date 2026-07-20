@@ -33,6 +33,7 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     internal static class ApplicationInsightsServiceCollectionExtensions
     {
+        private static readonly TimeSpan MinTelemetryBufferDelay = TimeSpan.FromSeconds(5);
 
         public static IServiceCollection AddApplicationInsights(this IServiceCollection services)
         {
@@ -336,12 +337,12 @@ namespace Microsoft.Extensions.DependencyInjection
 
             if (channel is ServerTelemetryChannel serverTelemetryChannel)
             {
-                if (options.MaxTelemetryBufferDelay <= TimeSpan.Zero)
+                if (options.MaxTelemetryBufferDelay < MinTelemetryBufferDelay)
                 {
                     throw new ArgumentOutOfRangeException(
                         $"{nameof(ApplicationInsightsLoggerOptions)}.{nameof(ApplicationInsightsLoggerOptions.MaxTelemetryBufferDelay)}",
                         options.MaxTelemetryBufferDelay,
-                        $"{nameof(ApplicationInsightsLoggerOptions.MaxTelemetryBufferDelay)} must be a positive TimeSpan.");
+                        $"{nameof(ApplicationInsightsLoggerOptions.MaxTelemetryBufferDelay)} must be at least {MinTelemetryBufferDelay.TotalSeconds} seconds.");
                 }
 
                 serverTelemetryChannel.MaxTelemetryBufferDelay = options.MaxTelemetryBufferDelay;

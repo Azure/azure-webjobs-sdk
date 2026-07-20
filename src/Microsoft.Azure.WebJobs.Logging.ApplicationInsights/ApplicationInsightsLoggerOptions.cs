@@ -170,7 +170,7 @@ namespace Microsoft.Azure.WebJobs.Logging.ApplicationInsights
         /// <summary>
         /// Gets or sets the maximum time telemetry is buffered by the <c>ServerTelemetryChannel</c> before it is sent
         /// to the ingestion endpoint. Lowering this value reduces the delay before telemetry becomes visible, at the
-        /// cost of more frequent network calls. The default value is 8 seconds.
+        /// cost of more frequent network calls. The default value is 8 seconds and the minimum is 5 seconds.
         /// </summary>
         public TimeSpan MaxTelemetryBufferDelay { get; set; } = TimeSpan.FromSeconds(8);
 
