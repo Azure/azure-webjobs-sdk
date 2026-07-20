@@ -184,7 +184,8 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
                     });
                 });
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => builder.Build());
+            var exception = Assert.Throws<ArgumentOutOfRangeException>(() => builder.Build());
+            Assert.Equal(nameof(ApplicationInsightsLoggerOptions.MaxTelemetryBufferDelay), exception.ParamName);
         }
 
         [Fact]

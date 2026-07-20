@@ -340,7 +340,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 if (options.MaxTelemetryBufferDelay < MinTelemetryBufferDelay)
                 {
                     throw new ArgumentOutOfRangeException(
-                        $"{nameof(ApplicationInsightsLoggerOptions)}.{nameof(ApplicationInsightsLoggerOptions.MaxTelemetryBufferDelay)}",
+                        nameof(ApplicationInsightsLoggerOptions.MaxTelemetryBufferDelay),
                         options.MaxTelemetryBufferDelay,
                         $"{nameof(ApplicationInsightsLoggerOptions.MaxTelemetryBufferDelay)} must be at least {MinTelemetryBufferDelay.TotalSeconds} seconds.");
                 }
