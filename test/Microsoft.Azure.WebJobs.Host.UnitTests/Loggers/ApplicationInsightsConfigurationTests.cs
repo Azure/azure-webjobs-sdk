@@ -189,6 +189,30 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Loggers
         }
 
         [Fact]
+        public void DependencyInjectionConfiguration_MaxTelemetryBufferDelay_BindsFromConfiguration()
+        {
+            using (var host = CreateHost(
+                configureLogging: (c, b) =>
+                {
+                    // This is how logging config sections are registered by applications (e.g. host.json).
+                    b.AddConfiguration(c.Configuration.GetSection("Logging"));
+                },
+                configureConfiguration: b =>
+                {
+                    b.AddInMemoryCollection(new Dictionary<string, string>
+                    {
+                        { $"Logging:{ApplicationInsightsLoggerProvider.Alias}:{nameof(ApplicationInsightsLoggerOptions.MaxTelemetryBufferDelay)}", "00:00:10" }
+                    });
+                }))
+            {
+                var config = host.Services.GetService<TelemetryConfiguration>();
+
+                var channel = Assert.IsType<ServerTelemetryChannel>(config.TelemetryChannel);
+                Assert.Equal(TimeSpan.FromSeconds(10), channel.MaxTelemetryBufferDelay);
+            }
+        }
+
+        [Fact]
         public void DependencyInjectionConfiguration_Configures_With_ConnectionString()
         {
             var builder = new HostBuilder()
