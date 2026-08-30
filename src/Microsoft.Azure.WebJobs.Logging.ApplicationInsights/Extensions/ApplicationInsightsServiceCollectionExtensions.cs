@@ -33,7 +33,6 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     internal static class ApplicationInsightsServiceCollectionExtensions
     {
-
         public static IServiceCollection AddApplicationInsights(this IServiceCollection services)
         {
             return services.AddApplicationInsights(_ => { }, _ => { });
@@ -334,7 +333,19 @@ namespace Microsoft.Extensions.DependencyInjection
                 }
             }
 
-            (channel as ServerTelemetryChannel)?.Initialize(configuration);
+            if (channel is ServerTelemetryChannel serverTelemetryChannel)
+            {
+                if (options.MaxTelemetryBufferDelay < ApplicationInsightsLoggerOptions.MinTelemetryBufferDelay)
+                {
+                    throw new ArgumentOutOfRangeException(
+                        nameof(ApplicationInsightsLoggerOptions.MaxTelemetryBufferDelay),
+                        options.MaxTelemetryBufferDelay,
+                        $"{nameof(ApplicationInsightsLoggerOptions.MaxTelemetryBufferDelay)} must be at least {ApplicationInsightsLoggerOptions.MinTelemetryBufferDelay.TotalSeconds} seconds.");
+                }
+
+                serverTelemetryChannel.MaxTelemetryBufferDelay = options.MaxTelemetryBufferDelay;
+                serverTelemetryChannel.Initialize(configuration);
+            }
 
             QuickPulseTelemetryModule quickPulseModule = null;
             foreach (ITelemetryModule module in telemetryModules)
