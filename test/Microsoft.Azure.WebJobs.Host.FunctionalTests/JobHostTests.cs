@@ -399,7 +399,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
         }
 
         [Fact]
-        public void CallAsync_WithCancellationToken_PassesCancellationTokenToMethod()
+        public async Task CallAsync_WithCancellationToken_PassesCancellationTokenToMethod()
         {
             // Arrange
             ProgramWithCancellationToken.Cleanup();
@@ -410,7 +410,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests
                 ProgramWithCancellationToken.CancellationTokenSource = source;
 
                 // Act
-                host.CallAsync("BindCancellationToken", null, source.Token);
+                await host.CallAsync("BindCancellationToken", null, source.Token);
 
                 // Assert
                 Assert.True(ProgramWithCancellationToken.IsCancellationRequested);
