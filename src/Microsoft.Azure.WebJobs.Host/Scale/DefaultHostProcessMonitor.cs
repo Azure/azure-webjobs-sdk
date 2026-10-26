@@ -1,12 +1,13 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-// Some of the logic in this file was moved from https://github.com/Azure/azure-functions-host/blob/852eed9ceef6ef56b431428a8eb31f1bd9c97f3b/src/WebJobs.Script/Scale/HostPerformanceManager.cs 
+// Some of the logic in this file was moved from https://github.com/Azure/azure-functions-host/blob/852eed9ceef6ef56b431428a8eb31f1bd9c97f3b/src/WebJobs.Script/Scale/HostPerformanceManager.cs
 
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 

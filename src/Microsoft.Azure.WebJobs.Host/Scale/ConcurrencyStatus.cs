@@ -3,7 +3,7 @@
 
 using System;
 using System.Diagnostics;
-using System.Threading;
+using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Host.Scale
@@ -39,7 +39,7 @@ namespace Microsoft.Azure.WebJobs.Host.Scale
                 throw new ArgumentNullException(nameof(functionId));
             }
             FunctionId = functionId;
-            
+
             CurrentConcurrency = 1;
             OutstandingInvocations = 0;
             MaxConcurrentExecutionsSinceLastAdjustment = 0;
